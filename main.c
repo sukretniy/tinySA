@@ -48,7 +48,7 @@ static MUTEX_DECL(mutex);
 #define FREQ_HARMONICS (config.harmonic_freq_threshold)
 #define IS_HARMONIC_MODE(f) ((f) > FREQ_HARMONICS)
 
-int32_t frequency_offset = 5000;
+int32_t frequency_offset = 12000;
 uint32_t frequency = 10000000;
 int8_t drive_strength = DRIVE_STRENGTH_AUTO;
 int8_t sweep_enabled = TRUE;
