@@ -728,6 +728,13 @@ menu_transform_cb(int item)
   }
 }
 
+static void
+menu_bandwidth_cb(int item)
+{
+  bandwidth = item;
+  draw_menu();
+}
+
 static void 
 choose_active_marker(void)
 {
@@ -1042,12 +1049,23 @@ const menuitem_t menu_transform[] = {
   { MT_NONE, NULL, NULL } // sentinel
 };
 
+const menuitem_t menu_bandwidth[] = {
+  { MT_CALLBACK, "1 kHz", menu_bandwidth_cb },
+  { MT_CALLBACK, "300 Hz", menu_bandwidth_cb },
+  { MT_CALLBACK, "100 Hz", menu_bandwidth_cb },
+  { MT_CALLBACK, "30 Hz", menu_bandwidth_cb },
+  { MT_CALLBACK, "10 Hz", menu_bandwidth_cb },
+  { MT_CANCEL, S_LARROW" BACK", NULL },
+  { MT_NONE, NULL, NULL } // sentinel
+};
+
 const menuitem_t menu_display[] = {
   { MT_SUBMENU, "TRACE", menu_trace },
   { MT_SUBMENU, "FORMAT", menu_format },
   { MT_SUBMENU, "SCALE", menu_scale },
   { MT_SUBMENU, "CHANNEL", menu_channel },
   { MT_SUBMENU, "TRANSFORM", menu_transform },
+  { MT_SUBMENU, "BANDWIDTH", menu_bandwidth },  
   { MT_CANCEL, S_LARROW" BACK", NULL },
   { MT_NONE, NULL, NULL } // sentinel
 };
@@ -1454,6 +1472,11 @@ menu_item_modify_attribute(const menuitem_t *menu, int item,
       *bg = 0x0000;
       *fg = 0xffff;
     }
+  } else if (menu == menu_bandwidth) {
+      if (item == bandwidth) {
+        *bg = 0x0000;
+        *fg = 0xffff;
+      }
   } else if (menu == menu_transform) {
       if ((item == 0 && (domain_mode & DOMAIN_MODE) == DOMAIN_TIME)
        || (item == 1 && (domain_mode & TD_FUNC) == TD_FUNC_LOWPASS_IMPULSE)
