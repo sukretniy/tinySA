@@ -9,15 +9,19 @@
  * Check 1 byte of char bitmap data for get width
  */
 
-#define FONT_GET_DATA(ch)	(&x5x7_bits[ch*7])
-#define FONT_GET_WIDTH(ch)	(7-x5x7_bits[ch*7]&3)
-#define FONT_GET_HEIGHT		7
+#define FONT_GET_DATA(ch)   (&x5x7_bits[ch*7])
+#define FONT_GET_WIDTH(ch)  (8-x5x7_bits[ch*7]&7)
+#define FONT_MAX_WIDTH      7
+#define FONT_GET_HEIGHT     7
 
-#define CHAR5x7_WIDTH_MASK 0x03
-#define CHAR5x7_WIDTH_4px  0x03
-#define CHAR5x7_WIDTH_5px  0x02
-#define CHAR5x7_WIDTH_6px  0x01
-#define CHAR5x7_WIDTH_7px  0x00
+#define CHAR5x7_WIDTH_1px  0x07
+#define CHAR5x7_WIDTH_2px  0x06
+#define CHAR5x7_WIDTH_3px  0x05
+#define CHAR5x7_WIDTH_4px  0x04
+#define CHAR5x7_WIDTH_5px  0x03
+#define CHAR5x7_WIDTH_6px  0x02
+#define CHAR5x7_WIDTH_7px  0x01
+#define CHAR5x7_WIDTH_8px  0x00
 
 /* Font character bitmap data. */
 const uint8_t x5x7_bits[127*7] =
@@ -100,23 +104,23 @@ const uint8_t x5x7_bits[127*7] =
   0b00100000,
 
   /* Character (0x04):
-     width=7
+     width=6
      +--------+
      |        |
-     |  **    |
-     |  **    |
-     | *  *   |
-     | *  *   |
-     |*    *  |
-     |******  |
+     |  *     |
+     |  *     |
+     | * *    |
+     | * *    |
+     |*   *   |
+     |*****   |
      +--------+ */
-  0b00000000|CHAR5x7_WIDTH_7px,
-  0b00110000,
-  0b00110000,
-  0b01001000,
-  0b01001000,
-  0b10000100,
-  0b11111100,
+  0b00000000|CHAR5x7_WIDTH_6px,
+  0b00100000,
+  0b00100000,
+  0b01010000,
+  0b01010000,
+  0b10001000,
+  0b11111000,
 
   /* Character (0x05):
      width=5
@@ -490,7 +494,7 @@ const uint8_t x5x7_bits[127*7] =
      |**      |
      |*       |
      +--------+ */
-  0b10000000|CHAR5x7_WIDTH_5px,
+  0b10000000|CHAR5x7_WIDTH_4px,
   0b11000000,
   0b11100000,
   0b11110000,
@@ -575,22 +579,22 @@ const uint8_t x5x7_bits[127*7] =
   0b10011000,
 
   /* Character (0x1d):
-     width=7
+     width=6
      +--------+
      |        |
      |        |
-     | *   *  |
-     | *   *  |
-     | ** **  |
-     | * * *  |
+     |*   *   |
+     |*   *   |
+     |** **   |
+     |* * *   |
      |*       |
      +--------+ */
-  0b00000000|CHAR5x7_WIDTH_7px,
+  0b00000000|CHAR5x7_WIDTH_6px,
   0b00000000,
-  0b01000100,
-  0b01000100,
-  0b01101100,
-  0b01010100,
+  0b10001000,
+  0b10001000,
+  0b11011000,
+  0b10101000,
   0b10000000,
 
   /* Character (0x1e):
@@ -632,7 +636,7 @@ const uint8_t x5x7_bits[127*7] =
   0b00000000,
 
   /* Character (0x20): ' '
-     width=4
+     width=3
      +--------+
      |        |
      |        |
@@ -651,7 +655,7 @@ const uint8_t x5x7_bits[127*7] =
   0b00000000,
 
   /* Character (0x21): '!'
-     width=4
+     width=3
      +--------+
      |  *     |
      |  *     |
@@ -661,7 +665,7 @@ const uint8_t x5x7_bits[127*7] =
      |        |
      |  *     |
      +--------+ */
-  0b01000000|CHAR5x7_WIDTH_4px,
+  0b01000000|CHAR5x7_WIDTH_3px,
   0b01000000,
   0b01000000,
   0b01000000,
@@ -870,7 +874,7 @@ const uint8_t x5x7_bits[127*7] =
      | *      |
      |*       |
      +--------+ */
-  0b00000000|CHAR5x7_WIDTH_4px,
+  0b00000000|CHAR5x7_WIDTH_3px,
   0b00000000,
   0b00000000,
   0b00000000,
@@ -908,7 +912,7 @@ const uint8_t x5x7_bits[127*7] =
      |**      |
      |**      |
      +--------+ */
-  0b00000000|CHAR5x7_WIDTH_4px,
+  0b00000000|CHAR5x7_WIDTH_3px,
   0b00000000,
   0b00000000,
   0b00000000,

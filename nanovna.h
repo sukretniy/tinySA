@@ -26,6 +26,17 @@
  * main.c
  */
 
+// Minimum frequency set
+#define START_MIN                50000
+// Maximum frequency set
+#define STOP_MAX                 2700000000U
+// Frequency offset (sin_cos table in dsp.c generated for this offset, if change need create new table)
+#define FREQUENCY_OFFSET         5000
+// Speed of light const
+#define SPEED_OF_LIGHT           299792458
+// pi const
+#define VNA_PI                   3.14159265358979323846
+
 #define POINTS_COUNT 101
 extern float measured[2][POINTS_COUNT][2];
 
@@ -71,27 +82,23 @@ extern float measured[2][POINTS_COUNT][2];
 void cal_collect(int type);
 void cal_done(void);
 
-enum {
-  ST_START, ST_STOP, ST_CENTER, ST_SPAN, ST_CW
+#define MAX_FREQ_TYPE 5
+enum stimulus_type {
+  ST_START=0, ST_STOP, ST_CENTER, ST_SPAN, ST_CW
 };
 
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
 
-float my_atof(const char *p);
+double my_atof(const char *p);
 
 void toggle_sweep(void);
+void load_default_properties(void);
 
-extern int8_t sweep_enabled;
-
-/*
- * ui.c
- */
-extern void ui_init(void);
-extern void ui_process(void);
-
-enum { OP_NONE = 0, OP_LEVER, OP_TOUCH, OP_FREQCHANGE };
-extern uint8_t operation_requested;
+#define SWEEP_ENABLE  0x01
+#define SWEEP_ONCE    0x02
+extern int8_t sweep_mode;
+extern const char *info_about[];
 
 /*
  * dsp.c
@@ -115,9 +122,6 @@ void calculate_gamma(float *gamma);
 void fetch_amplitude(float *gamma);
 void fetch_amplitude_ref(float *gamma);
 
-int si5351_set_frequency_with_offset(uint32_t freq, int offset, uint8_t drive_strength);
-
-
 /*
  * tlv320aic3204.c
  */
@@ -126,39 +130,54 @@ extern void tlv320aic3204_init(void);
 extern void tlv320aic3204_set_gain(int lgain, int rgain);
 extern void tlv320aic3204_select(int channel);
 
-
 /*
  * plot.c
  */
-#define OFFSETX 15
-#define OFFSETY 0
-#define WIDTH 291
-#define HEIGHT 230
+
+// Offset of plot area
+#define OFFSETX 10
+#define OFFSETY  0
+
+// WIDTH better be n*(POINTS_COUNT-1)
+#define WIDTH  300
+// HEIGHT = 8*GRIDY
+#define HEIGHT 232
+
+//#define NGRIDY 10
+#define NGRIDY 8
+
+#define FREQUENCIES_XPOS1 OFFSETX
+#define FREQUENCIES_XPOS2 200
+#define FREQUENCIES_YPOS  (240-7)
+
+// GRIDX calculated depends from frequency span
+//#define GRIDY 29
+#define GRIDY (HEIGHT / NGRIDY)
+
+//
+#define CELLOFFSETX 5
+#define AREA_WIDTH_NORMAL  (CELLOFFSETX + WIDTH  + 1 + 4)
+#define AREA_HEIGHT_NORMAL (              HEIGHT + 1)
 
 // Smith/polar chart
-#define P_CENTER_X 145
-#define P_CENTER_Y 115
-#define P_RADIUS 115
-
-#define CELLOFFSETX 5
-#define AREA_WIDTH_NORMAL (WIDTH + CELLOFFSETX*2)
+#define P_CENTER_X (CELLOFFSETX + WIDTH/2)
+#define P_CENTER_Y (HEIGHT/2)
+#define P_RADIUS   (HEIGHT/2)
 
 extern int16_t area_width;
 extern int16_t area_height;
 
-#define GRIDY 23
-
 // font
-
 extern const uint8_t x5x7_bits [];
-#define FONT_GET_DATA(ch)	(&x5x7_bits[ch*7])
-#define FONT_GET_WIDTH(ch)	(7-(x5x7_bits[ch*7]&3))
-#define FONT_GET_HEIGHT		7
+#define FONT_GET_DATA(ch)   (&x5x7_bits[ch*7])
+#define FONT_GET_WIDTH(ch)  (8-(x5x7_bits[ch*7]&7))
+#define FONT_MAX_WIDTH      7
+#define FONT_GET_HEIGHT     7
 
 extern const uint16_t numfont16x22[];
-#define NUM_FONT_GET_DATA(ch)	(&numfont16x22[ch*22])
-#define NUM_FONT_GET_WIDTH  	16
-#define NUM_FONT_GET_HEIGHT		22
+#define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*22])
+#define NUM_FONT_GET_WIDTH      16
+#define NUM_FONT_GET_HEIGHT     22
 
 #define S_DELTA "\004"
 #define S_DEGREE "\037"
@@ -173,9 +192,12 @@ extern const uint16_t numfont16x22[];
 
 #define TRACES_MAX 4
 
-enum {
-  TRC_LOGMAG, TRC_PHASE, TRC_DELAY, TRC_SMITH, TRC_POLAR, TRC_LINEAR, TRC_SWR, TRC_REAL, TRC_IMAG, TRC_R, TRC_X, TRC_OFF
+#define MAX_TRACE_TYPE 12
+enum trace_type {
+  TRC_LOGMAG=0, TRC_PHASE, TRC_DELAY, TRC_SMITH, TRC_POLAR, TRC_LINEAR, TRC_SWR, TRC_REAL, TRC_IMAG, TRC_R, TRC_X, TRC_OFF
 };
+// Mask for define rectangular plot
+#define RECTANGULAR_GRID_MASK ((1<<TRC_LOGMAG)|(1<<TRC_PHASE)|(1<<TRC_DELAY)|(1<<TRC_LINEAR)|(1<<TRC_SWR)|(1<<TRC_REAL)|(1<<TRC_IMAG)|(1<<TRC_R)|(1<<TRC_X))
 
 // LOGMAG: SCALE, REFPOS, REFVAL
 // PHASE: SCALE, REFPOS, REFVAL
@@ -187,33 +209,35 @@ enum {
 // Electrical Delay
 // Phase
 
-typedef struct {
+typedef struct trace {
   uint8_t enabled;
   uint8_t type;
   uint8_t channel;
-  uint8_t polar;
+  uint8_t reserved;
   float scale;
   float refpos;
 } trace_t;
 
-typedef struct {
+#define FREQ_MODE_START_STOP    0x0
+#define FREQ_MODE_CENTER_SPAN   0x1
+#define FREQ_MODE_DOTTED_GRID   0x2
+
+typedef struct config {
   int32_t magic;
   uint16_t dac_value;
   uint16_t grid_color;
   uint16_t menu_normal_color;
   uint16_t menu_active_color;
   uint16_t trace_color[TRACES_MAX];
-  int16_t touch_cal[4];
-  int8_t default_loadcal;
+  int16_t  touch_cal[4];
+  int8_t   freq_mode;
   uint32_t harmonic_freq_threshold;
-
-  uint8_t _reserved[24];
-  int32_t checksum;
+  uint16_t vbat_offset;
+  uint8_t _reserved[22];
+  uint32_t checksum;
 } config_t;
 
 extern config_t config;
-
-//extern trace_t trace[TRACES_MAX];
 
 void set_trace_type(int t, int type);
 void set_trace_channel(int t, int channel);
@@ -222,7 +246,6 @@ void set_trace_refpos(int t, float refpos);
 float get_trace_scale(int t);
 float get_trace_refpos(int t);
 const char *get_trace_typename(int t);
-void draw_battery_status(void);
 
 void set_electrical_delay(float picoseconds);
 float get_electrical_delay(void);
@@ -232,7 +255,7 @@ float groupdelay_from_array(int i, float array[POINTS_COUNT][2]);
 
 #define MARKERS_MAX 4
 
-typedef struct {
+typedef struct marker {
   int8_t enabled;
   int16_t index;
   uint32_t frequency;
@@ -248,7 +271,7 @@ void redraw_frame(void);
 //void redraw_all(void);
 void request_to_draw_cells_behind_menu(void);
 void request_to_draw_cells_behind_numeric_input(void);
-void redraw_marker(int marker, int update_info);
+void redraw_marker(int marker);
 void plot_into_index(float measured[2][POINTS_COUNT][2]);
 void force_set_markmap(void);
 void draw_frequencies(void);
@@ -256,7 +279,7 @@ void draw_all(bool flush);
 
 void draw_cal_status(void);
 
-void markmap_all_markers(void);
+//void markmap_all_markers(void);
 
 void marker_position(int m, int t, int *x, int *y);
 int search_nearest_index(int x, int y, int t);
@@ -265,14 +288,14 @@ int marker_search(void);
 int marker_search_left(int from);
 int marker_search_right(int from);
 
-extern uint16_t redraw_request;
-
+// _request flag for update screen
 #define REDRAW_CELLS      (1<<0)
 #define REDRAW_FREQUENCY  (1<<1)
 #define REDRAW_CAL_STATUS (1<<2)
 #define REDRAW_MARKER     (1<<3)
-
-extern int16_t vbat;
+#define REDRAW_BATTERY    (1<<4)
+#define REDRAW_AREA       (1<<5)
+extern volatile uint8_t redraw_request;
 
 /*
  * ili9341.c
@@ -282,34 +305,36 @@ extern int16_t vbat;
 #define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
 #define RGBHEX(hex) ( (((hex)&0x001c00)<<3) | (((hex)&0x0000f8)<<5) | (((hex)&0xf80000)>>16) | (((hex)&0x00e000)>>13) )
 
-#define DEFAULT_FG_COLOR			RGB565(255,255,255)
-#define DEFAULT_BG_COLOR			RGB565(  0,  0,  0)
-#define DEFAULT_GRID_COLOR			RGB565(128,128,128)
-#define DEFAULT_MENU_COLOR			RGB565(255,255,255)
-#define DEFAULT_MENU_TEXT_COLOR		RGB565(  0,  0,  0)
-#define DEFAULT_MENU_ACTIVE_COLOR	RGB565(180,255,180)
-#define DEFAULT_TRACE_1_COLOR		RGB565(255,255,  0)
-#define DEFAULT_TRACE_2_COLOR		RGB565(  0,255,255)
-#define DEFAULT_TRACE_3_COLOR		RGB565(  0,255,  0)
-#define DEFAULT_TRACE_4_COLOR		RGB565(255,  0,255)
-#define DEFAULT_NORMAL_BAT_COLOR	RGB565( 31,227,  0)
-#define DEFAULT_LOW_BAT_COLOR		RGB565(255,  0,  0)
-#define	DEFAULT_SPEC_INPUT_COLOR	RGB565(128,255,128);
+// Define size of screen buffer in pixels (one pixel 16bit size)
+#define SPI_BUFFER_SIZE             2048
+
+#define DEFAULT_FG_COLOR            RGB565(255,255,255)
+#define DEFAULT_BG_COLOR            RGB565(  0,  0,  0)
+#define DEFAULT_GRID_COLOR          RGB565(128,128,128)
+#define DEFAULT_MENU_COLOR          RGB565(255,255,255)
+#define DEFAULT_MENU_TEXT_COLOR     RGB565(  0,  0,  0)
+#define DEFAULT_MENU_ACTIVE_COLOR   RGB565(180,255,180)
+#define DEFAULT_TRACE_1_COLOR       RGB565(255,255,  0)
+#define DEFAULT_TRACE_2_COLOR       RGB565(  0,255,255)
+#define DEFAULT_TRACE_3_COLOR       RGB565(  0,255,  0)
+#define DEFAULT_TRACE_4_COLOR       RGB565(255,  0,255)
+#define DEFAULT_NORMAL_BAT_COLOR    RGB565( 31,227,  0)
+#define DEFAULT_LOW_BAT_COLOR       RGB565(255,  0,  0)
+#define DEFAULT_SPEC_INPUT_COLOR    RGB565(128,255,128);
 
 extern uint16_t foreground_color;
 extern uint16_t background_color;
 
-extern uint16_t spi_buffer[1024];
+extern uint16_t spi_buffer[SPI_BUFFER_SIZE];
 
 void ili9341_init(void);
-//void ili9341_setRotation(uint8_t r);
 void ili9341_test(int mode);
 void ili9341_bulk(int x, int y, int w, int h);
 void ili9341_fill(int x, int y, int w, int h, int color);
-void setForegroundColor(uint16_t fg);
-void setBackgroundColor(uint16_t fg);
+void ili9341_set_foreground(uint16_t fg);
+void ili9341_set_background(uint16_t fg);
+void ili9341_clear_screen(void);
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
-void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
 void ili9341_drawstringV(const char *str, int x, int y);
@@ -325,12 +350,22 @@ void show_logo(void);
  * flash.c
  */
 #define SAVEAREA_MAX 5
+// Begin addr                   0x08018000
+#define SAVE_CONFIG_AREA_SIZE   0x00008000
+// config save area
+#define SAVE_CONFIG_ADDR        0x08018000
+// properties_t save area
+#define SAVE_PROP_CONFIG_0_ADDR 0x08018800
+#define SAVE_PROP_CONFIG_1_ADDR 0x0801a000
+#define SAVE_PROP_CONFIG_2_ADDR 0x0801b800
+#define SAVE_PROP_CONFIG_3_ADDR 0x0801d000
+#define SAVE_PROP_CONFIG_4_ADDR 0x0801e800
 
-typedef struct {
+typedef struct properties {
   uint32_t magic;
   uint32_t _frequency0;
   uint32_t _frequency1;
-  int16_t _sweep_points;
+  uint16_t _sweep_points;
   uint16_t _cal_status;
 
   uint32_t _frequencies[POINTS_COUNT];
@@ -345,7 +380,7 @@ typedef struct {
   uint8_t _domain_mode; /* 0bxxxxxffm : where ff: TD_FUNC m: DOMAIN_MODE */
   uint8_t _marker_smith_format;
   uint8_t _reserved[50];
-  int32_t checksum;
+  uint32_t checksum;
 } properties_t;
 
 //sizeof(properties_t) == 0x1200
@@ -371,6 +406,10 @@ extern properties_t current_props;
 #define velocity_factor current_props._velocity_factor
 #define marker_smith_format current_props._marker_smith_format
 
+#define FREQ_IS_STARTSTOP() (!(config.freq_mode&FREQ_MODE_CENTER_SPAN))
+#define FREQ_IS_CENTERSPAN() (config.freq_mode&FREQ_MODE_CENTER_SPAN)
+#define FREQ_IS_CW() (frequency0 == frequency1)
+
 int caldata_save(int id);
 int caldata_recall(int id);
 const properties_t *caldata_ref(int id);
@@ -383,29 +422,38 @@ void clear_all_config_prop_data(void);
 /*
  * ui.c
  */
+extern void ui_init(void);
+extern void ui_process(void);
+
+// Irq operation process set
+#define OP_NONE       0x00
+#define OP_LEVER      0x01
+#define OP_TOUCH      0x02
+//#define OP_FREQCHANGE 0x04
+extern volatile uint8_t operation_requested;
 
 // lever_mode
-enum {
-  LM_MARKER, LM_SEARCH, LM_CENTER, LM_SPAN
+enum lever_mode {
+  LM_MARKER, LM_SEARCH, LM_CENTER, LM_SPAN, LM_EDELAY
 };
 
 // marker smith value format
-enum {
+enum marker_smithvalue {
   MS_LIN, MS_LOG, MS_REIM, MS_RX, MS_RLC
 };
 
-typedef struct {
+typedef struct uistat {
   int8_t digit; /* 0~5 */
   int8_t digit_mode;
   int8_t current_trace; /* 0..3 */
   uint32_t value; // for editing at numeric input area
-  uint32_t previous_value;
+//  uint32_t previous_value;
   uint8_t lever_mode;
-  bool marker_delta;
+  uint8_t marker_delta;
+  uint8_t marker_tracking;
 } uistat_t;
 
 extern uistat_t uistat;
-  
 void ui_init(void);
 void ui_show(void);
 void ui_hide(void);
@@ -425,15 +473,22 @@ void enter_dfu(void);
  */
 
 void adc_init(void);
-uint16_t adc_single_read(ADC_TypeDef *adc, uint32_t chsel);
-void adc_start_analog_watchdogd(ADC_TypeDef *adc, uint32_t chsel);
-void adc_stop(ADC_TypeDef *adc);
-void adc_interrupt(ADC_TypeDef *adc);
-int16_t adc_vbat_read(ADC_TypeDef *adc);
+uint16_t adc_single_read(uint32_t chsel);
+void adc_start_analog_watchdogd(uint32_t chsel);
+void adc_stop(void);
+void adc_interrupt(void);
+int16_t adc_vbat_read(void);
 
 /*
  * misclinous
  */
+int plot_printf(char *str, int, const char *fmt, ...);
 #define PULSE do { palClearPad(GPIOC, GPIOC_LED); palSetPad(GPIOC, GPIOC_LED);} while(0)
 
+// Speed profile definition
+#define START_PROFILE   systime_t time = chVTGetSystemTimeX();
+#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "T:%06d", chVTGetSystemTimeX() - time);ili9341_drawstringV(string_buf, 1, 60);}
+// Macros for convert define value to string
+#define STR1(x)  #x
+#define define_to_STR(x)  STR1(x)
 /*EOF*/
