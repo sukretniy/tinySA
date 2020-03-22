@@ -21,14 +21,25 @@
 #include "ch.h"
 #include "hal.h"
 #include "usbcfg.h"
+#ifdef __VNA__
 #include "si5351.h"
+#endif
 #include "nanovna.h"
+#ifdef __VNA__
 #include "fft.h"
+#endif
 
 #include <chprintf.h>
 #include <string.h>
 #include <math.h>
 
+extern uint32_t minFreq;
+extern uint32_t maxFreq;
+uint32_t frequencyStart;
+uint32_t frequencyStop;
+int32_t frequencyExtra;
+#define START_MIN minFreq
+#define STOP_MAX maxFreq
 /*
  *  Shell settings
  */
@@ -69,13 +80,15 @@ static volatile vna_shellcmd_t  shell_function = 0;
 #define ENABLE_INFO_COMMAND
 // Enable color command, allow change config color for traces, grid, menu
 #define ENABLE_COLOR_COMMAND
-
+#ifdef __VNA__
 static void apply_error_term_at(int i);
 static void apply_edelay_at(int i);
 static void cal_interpolate(int s);
+#endif
 static void update_frequencies(void);
 static void set_frequencies(uint32_t start, uint32_t stop, uint16_t points);
 static bool sweep(bool break_on_operation);
+#ifdef __VNA__
 static void transform_domain(void);
 
 #define DRIVE_STRENGTH_AUTO (-1)
@@ -85,14 +98,15 @@ static void transform_domain(void);
 #define  cal_auto_interpolate  TRUE
 
 static int8_t drive_strength = DRIVE_STRENGTH_AUTO;
+#endif
 int8_t sweep_mode = SWEEP_ENABLE;
 volatile uint8_t redraw_request = 0; // contains REDRAW_XXX flags
 
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
   BOARD_NAME,
-  "2016-2020 Copyright @edy555",
-  "Licensed under GPL. See: https://github.com/ttrftech/NanoVNA",
+  "2016-2020 Copyright @Erik Kaashoek",
+  "Licensed under GPL. See: https://github.com/erikkaashoek/tinySA",
   "Version: " VERSION,
   "Build Time: " __DATE__ " - " __TIME__,
   "Kernel: " CH_KERNEL_VERSION,
@@ -103,7 +117,7 @@ const char *info_about[]={
   0 // sentinel
 };
 
-static THD_WORKING_AREA(waThread1, 640);
+static THD_WORKING_AREA(waThread1, 700);
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
@@ -129,7 +143,9 @@ static THD_FUNCTION(Thread1, arg)
     // Process collected data, calculate trace coordinates and plot only if scan
     // completed
     if (sweep_mode & SWEEP_ENABLE && completed) {
+#ifdef __VNA__
       if ((domain_mode & DOMAIN_MODE) == DOMAIN_TIME) transform_domain();
+#endif	  
       // Prepare draw graphics, cache all lines, mark screen cells for redraw
       plot_into_index(measured);
       redraw_request |= REDRAW_CELLS | REDRAW_BATTERY;
@@ -166,6 +182,7 @@ toggle_sweep(void)
   sweep_mode ^= SWEEP_ENABLE;
 }
 
+#ifdef __VNA__
 static float
 bessel0(float x)
 {
@@ -261,9 +278,10 @@ transform_domain(void)
     }
   }
 }
+#endif
 
 // Shell commands output
-static int shell_printf(const char *fmt, ...)
+int shell_printf(const char *fmt, ...)
 {
   va_list ap;
   int formatted_bytes;
@@ -287,9 +305,10 @@ VNA_SHELL_FUNCTION(cmd_resume)
 
   // restore frequencies array and cal
   update_frequencies();
+#ifdef __VNA__
   if (cal_auto_interpolate && (cal_status & CALSTAT_APPLY))
     cal_interpolate(lastsaveid);
-
+#endif
   resume_sweep();
 }
 
@@ -316,6 +335,7 @@ VNA_SHELL_FUNCTION(cmd_reset)
     ;
 }
 
+#ifdef __VNA__
 const int8_t gain_table[] = {
   0,  // 0 ~ 300MHz
   40, // 300 ~ 600MHz
@@ -341,9 +361,12 @@ adjust_gain(uint32_t newfreq)
   }
   return 0;
 }
+#endif
 
 int set_frequency(uint32_t freq)
 {
+  (void) freq;
+#ifdef __VNA__  
   int delay = adjust_gain(freq);
   int8_t ds = drive_strength;
   if (ds == DRIVE_STRENGTH_AUTO) {
@@ -351,6 +374,8 @@ int set_frequency(uint32_t freq)
   }
   delay += si5351_set_frequency(freq, ds);
   return delay;
+#endif
+  return 1;
 }
 
 // Use macro, std isdigit more big
@@ -467,7 +492,7 @@ static int get_str_index(char *v, const char *list)
   }
   return -1;
 }
-
+#ifdef __VNA__
 VNA_SHELL_FUNCTION(cmd_offset)
 {
   if (argc != 1) {
@@ -476,6 +501,7 @@ VNA_SHELL_FUNCTION(cmd_offset)
   }
   si5351_set_frequency_offset(my_atoi(argv[0]));
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_freq)
 {
@@ -490,16 +516,18 @@ VNA_SHELL_FUNCTION(cmd_freq)
 usage:
   shell_printf("usage: freq {frequency(Hz)}\r\n");
 }
-
+#ifdef __VNA__
 VNA_SHELL_FUNCTION(cmd_power)
 {
   if (argc != 1) {
     shell_printf("usage: power {0-3|-1}\r\n");
     return;
   }
+  (void)argv;
   drive_strength = my_atoi(argv[0]);
 //  set_frequency(frequency);
 }
+#endif
 
 #ifdef ENABLE_TIME_COMMAND
 #if HAL_USE_RTC == FALSE
@@ -528,6 +556,7 @@ VNA_SHELL_FUNCTION(cmd_dac)
   dacPutChannelX(&DACD2, 0, value);
 }
 
+#ifdef __VNA__
 VNA_SHELL_FUNCTION(cmd_threshold)
 {
   uint32_t value;
@@ -539,6 +568,7 @@ VNA_SHELL_FUNCTION(cmd_threshold)
   value = my_atoui(argv[0]);
   config.harmonic_freq_threshold = value;
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_saveconfig)
 {
@@ -565,6 +595,7 @@ VNA_SHELL_FUNCTION(cmd_clearconfig)
                "Do reset manually to take effect. Then do touch cal and save.\r\n");
 }
 
+#ifdef __VNA__
 static struct {
   int16_t rms[2];
   int16_t ave[2];
@@ -587,7 +618,9 @@ int16_t dump_selection = 0;
 volatile int16_t wait_count = 0;
 
 float measured[2][POINTS_COUNT][2];
-
+#endif
+measurement_t measured;
+#ifdef __VNA__
 #ifdef ENABLED_DUMP
 static void
 duplicate_buffer_to_dump(int16_t *p)
@@ -637,25 +670,21 @@ static const I2SConfig i2sconfig = {
   0, // i2scfgr
   2 // i2spr
 };
+#endif
 
+#define MAX_DATA    2
 VNA_SHELL_FUNCTION(cmd_data)
 {
   int i;
   int sel = 0;
-  float (*array)[2];
   if (argc == 1)
     sel = my_atoi(argv[0]);
 
-  if (sel == 0 || sel == 1)
-    array = measured[sel];
-  else if (sel >= 2 && sel < 7)
-    array = cal_data[sel-2];
-  else
-    goto usage;
-  for (i = 0; i < sweep_points; i++)
-    shell_printf("%f %f\r\n", array[i][0], array[i][1]);
-  return;
-usage:
+  if (sel >= 0 || sel <= MAX_DATA) {
+    for (i = 0; i < sweep_points; i++)
+      shell_printf("%f %f\r\n", measured[sel][i], 0.0);
+    return;
+  }
   shell_printf("usage: data [array]\r\n");
 }
 
@@ -718,7 +747,7 @@ VNA_SHELL_FUNCTION(cmd_gamma)
   shell_printf("%d %d\r\n", gamma[0], gamma[1]);
 }
 #endif
-
+#ifdef __VNA__
 static void (*sample_func)(float *gamma) = calculate_gamma;
 
 VNA_SHELL_FUNCTION(cmd_sample)
@@ -742,19 +771,22 @@ VNA_SHELL_FUNCTION(cmd_sample)
 usage:
   shell_printf("usage: sample {%s}\r\n", cmd_sample_list);
 }
-
+#endif
 config_t config = {
   .magic =             CONFIG_MAGIC,
   .dac_value =         1922,
   .grid_color =        DEFAULT_GRID_COLOR,
   .menu_normal_color = DEFAULT_MENU_COLOR,
   .menu_active_color = DEFAULT_MENU_ACTIVE_COLOR,
-  .trace_color =       { DEFAULT_TRACE_1_COLOR, DEFAULT_TRACE_2_COLOR, DEFAULT_TRACE_3_COLOR, DEFAULT_TRACE_4_COLOR },
+  .trace_color =       { DEFAULT_TRACE_1_COLOR, DEFAULT_TRACE_2_COLOR, DEFAULT_TRACE_3_COLOR},
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
   .touch_cal =         { 338, 522, 153, 192 },  // 2.8 inch LCD panel
   .freq_mode = FREQ_MODE_START_STOP,
+#ifdef __VNA__
   .harmonic_freq_threshold = 300000000,
-  .vbat_offset = 500
+#endif
+  .vbat_offset = 500,
+  .level_offset =       0
 };
 
 properties_t current_props;
@@ -762,14 +794,13 @@ properties_t *active_props = &current_props;
 
 // NanoVNA Default settings
 static const trace_t def_trace[TRACES_MAX] = {//enable, type, channel, reserved, scale, refpos
-  { 1, TRC_LOGMAG, 0, 0, 10.0, NGRIDY-1 },
-  { 1, TRC_LOGMAG, 1, 0, 10.0, NGRIDY-1 },
-  { 1, TRC_SMITH,  0, 0, 1.0, 0 },
-  { 1, TRC_PHASE,  1, 0, 90.0, NGRIDY/2 }
+    { 0, TRC_LOGMAG, 0, 0, 10.0, (float) NGRIDY+1 },  //Temp
+    { 0, TRC_LOGMAG, 1, 0, 10.0, (float) NGRIDY+1 },  //Stored
+    { 1, TRC_LOGMAG, 2, 0, 10.0, (float) NGRIDY+1 }   //Actual
 };
 
 static const marker_t def_markers[MARKERS_MAX] = {
-  { 1, 30, 0 }, { 0, 40, 0 }, { 0, 60, 0 }, { 0, 80, 0 }
+    { 1, M_REFERENCE, 30, 0 }, { 0, M_DELTA, 40, 0 }, { 0, M_DELTA, 60, 0 }, { 0, M_DELTA, 80, 0 }
 };
 
 // Load propeties default settings
@@ -777,21 +808,29 @@ void load_default_properties(void)
 {
 //Magic add on caldata_save
 //current_props.magic = CONFIG_MAGIC;
-  current_props._frequency0   =     50000;    // start =  50kHz
-  current_props._frequency1   = 900000000;    // end   = 900MHz
+  current_props._frequency0   =         0;    // start =  0Hz
+  current_props._frequency1   = 350000000;    // end   = 350MHz
+  current_props._frequency_IF=  433900000,
+
   current_props._sweep_points = POINTS_COUNT;
+  #ifdef VNA__
   current_props._cal_status   = 0;
 //This data not loaded by default
 //current_props._frequencies[POINTS_COUNT];
 //current_props._cal_data[5][POINTS_COUNT][2];
 //=============================================
   current_props._electrical_delay = 0.0;
+#endif
   memcpy(current_props._trace, def_trace, sizeof(def_trace));
   memcpy(current_props._markers, def_markers, sizeof(def_markers));
+#ifdef __VNA__
   current_props._velocity_factor =  0.7;
+#endif
   current_props._active_marker   = 0;
+#ifdef __VNA__
   current_props._domain_mode     = 0;
   current_props._marker_smith_format = MS_RLC;
+#endif
 //Checksum add on caldata_save
 //current_props.checksum = 0;
 }
@@ -805,9 +844,13 @@ ensure_edit_config(void)
   //memcpy(&current_props, active_props, sizeof(config_t));
   active_props = &current_props;
   // move to uncal state
+#ifdef __VNA__
   cal_status = 0;
+#endif
 }
 
+#include "sa_core.c"
+#ifdef __VNA__
 #define DSP_START(delay) wait_count = delay;
 #define DSP_WAIT_READY   while (wait_count) __WFI();
 
@@ -855,6 +898,7 @@ bool sweep(bool break_on_operation)
   palSetPad(GPIOC, GPIOC_LED);
   return true;
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_scan)
 {
@@ -881,8 +925,10 @@ VNA_SHELL_FUNCTION(cmd_scan)
   }
 
   set_frequencies(start, stop, points);
+#ifdef __VNA__
   if (cal_auto_interpolate && (cal_status & CALSTAT_APPLY))
     cal_interpolate(lastsaveid);
+#endif
   pause_sweep();
   sweep(false);
   // Output data after if set (faster data recive)
@@ -891,8 +937,9 @@ VNA_SHELL_FUNCTION(cmd_scan)
     if (mask) {
       for (i = 0; i < points; i++) {
         if (mask & 1) shell_printf("%u ", frequencies[i]);
-        if (mask & 2) shell_printf("%f %f ", measured[0][i][0], measured[0][i][1]);
-        if (mask & 4) shell_printf("%f %f ", measured[1][i][0], measured[1][i][1]);
+        if (mask & 2) shell_printf("%f %f ", measured[0][i]);
+        if (mask & 4) shell_printf("%f %f ", measured[1][i]);
+        if (mask & 8) shell_printf("%f %f ", measured[2][i]);
         shell_printf("\r\n");
       }
     }
@@ -947,6 +994,7 @@ set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
   // disable at out of sweep range
   for (; i < POINTS_COUNT; i++)
     frequencies[i] = 0;
+  update_rbw(frequencies[1] - frequencies[0]);
 }
 
 static void
@@ -968,7 +1016,9 @@ update_frequencies(void)
 void
 set_sweep_frequency(int type, uint32_t freq)
 {
+#ifdef __VNA__
   int cal_applied = cal_status & CALSTAT_APPLY;
+#endif
 
   // Check frequency for out of bounds (minimum SPAN can be any value)
   if (type != ST_SPAN && freq < START_MIN)
@@ -1032,8 +1082,10 @@ set_sweep_frequency(int type, uint32_t freq)
       break;
   }
   update_frequencies();
+#ifdef __VNA__
   if (cal_auto_interpolate && cal_applied)
     cal_interpolate(lastsaveid);
+#endif
 }
 
 uint32_t
@@ -1091,7 +1143,7 @@ usage:
                "\tsweep {%s} {freq(Hz)}\r\n", sweep_cmd);
 }
 
-
+#ifdef __VNA__
 static void
 eterm_set(int term, float re, float im)
 {
@@ -1508,13 +1560,15 @@ VNA_SHELL_FUNCTION(cmd_recall)
  usage:
   shell_printf("recall {id}\r\n");
 }
+#endif
 
 static const struct {
   const char *name;
   uint16_t refpos;
   float scale_unit;
 } trace_info[] = {
-  { "LOGMAG", NGRIDY-1,  10.0 },
+  { "LOGMAG", NGRIDY,  10.0 },
+#ifdef __VNA__
   { "PHASE",  NGRIDY/2,  90.0 },
   { "DELAY",  NGRIDY/2,  1e-9 },
   { "SMITH",         0,  1.00 },
@@ -1525,12 +1579,17 @@ static const struct {
   { "IMAG",   NGRIDY/2,  0.25 },
   { "R",      NGRIDY/2, 100.0 },
   { "X",      NGRIDY/2, 100.0 }
+#endif
 };
 
+#ifdef __VNA__
 static const char * const trc_channel_name[] = {
   "CH0", "CH1"
 };
-
+#endif
+const char * const trc_channel_name[] = {
+  "ACTUAL", "STORED", "COMPUTED"
+};
 const char *get_trace_typename(int t)
 {
   return trace_info[trace[t].type].name;
@@ -1666,6 +1725,7 @@ usage:
 }
 
 
+#ifdef __VNA__
 void set_electrical_delay(float picoseconds)
 {
   if (electrical_delay != picoseconds) {
@@ -1690,6 +1750,7 @@ VNA_SHELL_FUNCTION(cmd_edelay)
     set_electrical_delay(my_atof(argv[0]));
   }
 }
+#endif
 
 
 VNA_SHELL_FUNCTION(cmd_marker)
@@ -1775,6 +1836,7 @@ VNA_SHELL_FUNCTION(cmd_frequencies)
   }
 }
 
+#ifdef __VNA__
 static void
 set_domain_mode(int mode) // accept DOMAIN_FREQ or DOMAIN_TIME
 {
@@ -1839,6 +1901,7 @@ VNA_SHELL_FUNCTION(cmd_transform)
 usage:
   shell_printf("usage: transform {%s} [...]\r\n", cmd_transform_list);
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_test)
 {
@@ -1896,6 +1959,7 @@ VNA_SHELL_FUNCTION(cmd_test)
   }
 }
 
+#ifdef __VNA__
 VNA_SHELL_FUNCTION(cmd_gain)
 {
   int rvalue;
@@ -1956,6 +2020,7 @@ VNA_SHELL_FUNCTION(cmd_stat)
 //  extern int awd_count;
 //  shell_printf("awd: %d\r\n", awd_count);
 }
+#endif
 
 #ifndef VERSION
 #define VERSION "unknown"
@@ -2079,6 +2144,161 @@ VNA_SHELL_FUNCTION(cmd_threads)
 }
 #endif
 
+
+extern volatile int SI4432_Sel;         // currently selected SI4432
+void SI4432_Write_Byte(byte ADR, byte DATA );
+byte SI4432_Read_Byte( byte ADR );
+int VFO = 0;
+int points = 101; // For 's' and 'm' commands
+
+VNA_SHELL_FUNCTION(cmd_v)
+
+
+{
+    if (argc != 1) {
+        shell_printf("%d\r\n", SI4432_Sel);
+        return;
+    }
+    VFO = my_atoi(argv[0]);
+    shell_printf("VFO %d\r\n", VFO);
+}
+
+int xtoi(char *t)
+{
+
+  int v=0;
+  while (*t) {
+    if ('0' <= *t && *t <= '9')
+      v = v*16 + *t - '0';
+    else if ('a' <= *t && *t <= 'f')
+      v = v*16 + *t - 'a' + 10;
+    else if ('A' <= *t && *t <= 'F')
+      v = v*16 + *t - 'a' + 10;
+    else
+      return v;
+    t++;
+  }
+  return v;
+}
+
+VNA_SHELL_FUNCTION(cmd_x)
+{
+  int rvalue;
+  int lvalue = 0;
+  if (argc != 1 && argc != 2) {
+    shell_printf("usage: x {addr(0-95)} [value(0-FF)]\r\n");
+    return;
+  }
+  rvalue = xtoi(argv[0]);
+  SI4432_Sel = VFO;
+  if (argc == 2){
+    lvalue = xtoi(argv[1]);
+    SI4432_Write_Byte(rvalue, lvalue);
+  } else {
+    lvalue = SI4432_Read_Byte(rvalue);
+    shell_printf("%x\r\n", lvalue);
+  }
+}
+
+VNA_SHELL_FUNCTION(cmd_i)
+{
+  int rvalue;
+  SI4432_Init();
+  shell_printf("SI4432 init done\r\n");
+  if (argc == 1) {
+    rvalue = xtoi(argv[0]);
+    SetRX(rvalue);
+    SetMode(rvalue);
+    shell_printf("SI4432 mode %d set\r\n", rvalue);
+  }
+}
+VNA_SHELL_FUNCTION(cmd_o)
+{
+  (void) argc;
+  int32_t value = my_atoi(argv[0]);
+  if (VFO == 0)
+    frequency_IF = value;
+  setFreq(VFO, value);
+}
+
+VNA_SHELL_FUNCTION(cmd_a)
+{
+  (void)argc;
+  int32_t value = my_atoi(argv[0]);
+  frequencyStart = value;
+}
+
+VNA_SHELL_FUNCTION(cmd_b)
+{
+  (void)argc;
+  int32_t value = my_atoi(argv[0]);
+  frequencyStop = value;
+}
+
+VNA_SHELL_FUNCTION(cmd_t)
+{
+  (void)argc;
+  (void)argv;
+}
+
+VNA_SHELL_FUNCTION(cmd_e)
+{
+  (void)argc;
+  extraVFO = my_atoi(argv[0]);
+  if (extraVFO == -1)
+    extraVFO = false;
+  else
+    extraVFO = true;
+
+  if (argc >1)
+    frequencyExtra = my_atoi(argv[1]);
+}
+
+VNA_SHELL_FUNCTION(cmd_s)
+{
+  (void)argc;
+  points = my_atoi(argv[0]);
+}
+
+VNA_SHELL_FUNCTION(cmd_m)
+{
+  (void)argc;
+  (void)argv;
+  pause_sweep();
+  int32_t f_step = (frequencyStop-frequencyStart)/ points;
+  palClearPad(GPIOC, GPIOC_LED);  // disable led and wait for voltage stabilization
+  update_rbw(f_step);
+  chThdSleepMilliseconds(10);
+  streamPut(shell_stream, '{');
+  for (int i = 0; i<points; i++) {
+      float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, extraVFO);
+      streamPut(shell_stream, 'x');
+      int v = val*2 + 256;
+      streamPut(shell_stream, (uint8_t)(v & 0xFF));
+      streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
+    // enable led
+  }
+  streamPut(shell_stream, '}');
+  palSetPad(GPIOC, GPIOC_LED);
+}
+
+VNA_SHELL_FUNCTION(cmd_p)
+{
+  (void)argc;
+  int p = my_atoi(argv[0]);
+  int a = my_atoi(argv[1]);
+  if (p==5)
+    SetAttenuation(-a);
+//  if (p==6)
+//    SetMode(a);
+}
+
+VNA_SHELL_FUNCTION(cmd_w)
+{
+  (void)argc;
+  int p = my_atoi(argv[0]);
+  SetRBW(p);
+}
 //=============================================================================
 VNA_SHELL_FUNCTION(cmd_help);
 
@@ -2097,7 +2317,9 @@ static const VNAShellCommand commands[] =
     {"version"     , cmd_version     , 0},
     {"reset"       , cmd_reset       , 0},
     {"freq"        , cmd_freq        , CMD_WAIT_MUTEX},
+#ifdef __VNA__
     {"offset"      , cmd_offset      , 0},
+#endif
 #ifdef ENABLE_TIME_COMMAND
     {"time"        , cmd_time        , 0},
 #endif
@@ -2109,11 +2331,13 @@ static const VNAShellCommand commands[] =
     {"dump"        , cmd_dump        , 0},
 #endif
     {"frequencies" , cmd_frequencies , 0},
+#ifdef __VNA__
     {"port"        , cmd_port        , 0},
     {"stat"        , cmd_stat        , 0},
     {"gain"        , cmd_gain        , 0},
     {"power"       , cmd_power       , 0},
     {"sample"      , cmd_sample      , 0},
+#endif
 //  {"gamma"       , cmd_gamma       , 0},
     {"scan"        , cmd_scan        , CMD_WAIT_MUTEX},
     {"sweep"       , cmd_sweep       , 0},
@@ -2122,19 +2346,25 @@ static const VNAShellCommand commands[] =
     {"touchtest"   , cmd_touchtest   , CMD_WAIT_MUTEX},
     {"pause"       , cmd_pause       , 0},
     {"resume"      , cmd_resume      , 0},
+#ifdef __VNA__
     {"cal"         , cmd_cal         , CMD_WAIT_MUTEX},
     {"save"        , cmd_save        , 0},
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX},
+#endif
     {"trace"       , cmd_trace       , 0},
     {"marker"      , cmd_marker      , 0},
+#ifdef __VNA__
     {"edelay"      , cmd_edelay      , 0},
+#endif
     {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
     {"vbat"        , cmd_vbat        , 0},
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
     {"vbat_offset" , cmd_vbat_offset , 0},
 #endif
+#ifdef __VNA__
     {"transform"   , cmd_transform   , 0},
     {"threshold"   , cmd_threshold   , 0},
+#endif
     {"help"        , cmd_help        , 0},
 #ifdef ENABLE_INFO_COMMAND
     {"info"        , cmd_info        , 0},
@@ -2142,6 +2372,18 @@ static const VNAShellCommand commands[] =
 #ifdef ENABLE_COLOR_COMMAND
     {"color"       , cmd_color       , 0},
 #endif
+   { "x", cmd_x,	0 },
+   { "i", cmd_i,	0 },
+   { "v", cmd_v,	0 },
+   { "a", cmd_a,	0 },
+   { "b", cmd_b,	0 },
+   { "t", cmd_t,	0 },
+   { "e", cmd_e,	0 },
+   { "s", cmd_s,	0 },
+   { "m", cmd_m,	0 },
+   { "p", cmd_p,	0 },
+   { "w", cmd_w,	0 },
+   { "o", cmd_o,	0 },
 #ifdef ENABLE_THREADS_COMMAND
     {"threads"     , cmd_threads     , 0},
 #endif
@@ -2269,6 +2511,7 @@ THD_FUNCTION(myshellThread, p)
 }
 #endif
 
+#ifdef __VNA__
 // I2C clock bus setting: depend from STM32_I2C1SW in mcuconf.h
 static const I2CConfig i2ccfg = {
   .timingr =     // TIMINGR register initialization. (use I2C timing configuration tool for STM32F3xx and STM32F0xx microcontrollers (AN4235))
@@ -2296,7 +2539,7 @@ static const I2CConfig i2ccfg = {
   .cr1 = 0,     // CR1 register initialization.
   .cr2 = 0      // CR2 register initialization.
 };
-
+#endif
 static DACConfig dac1cfg1 = {
   //init:         2047U,
   init:         1922U,
@@ -2315,8 +2558,10 @@ int main(void)
 
   //palSetPadMode(GPIOB, 8, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
   //palSetPadMode(GPIOB, 9, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
+#ifdef __VNA__
   i2cStart(&I2CD1, &i2ccfg);
   si5351_init();
+#endif
 
   // MCO on PA8
   //palSetPadMode(GPIOA, 8, PAL_MODE_ALTERNATE(0));
@@ -2342,19 +2587,23 @@ int main(void)
 
 /* restore config */
   config_recall();
+
 /* restore frequencies and calibration 0 slot properties from flash memory */
   caldata_recall(0);
-
+#ifdef __VNA__
   dac1cfg1.init = config.dac_value;
 /*
  * Starting DAC1 driver, setting up the output pin as analog as suggested
  * by the Reference Manual.
  */
   dacStart(&DACD2, &dac1cfg1);
-
+#endif
+  setupSA();
+  sweep_points = 290;
 /* initial frequencies */
   update_frequencies();
 
+#ifdef __VNA__
 /*
  * I2S Initialize
  */
@@ -2363,7 +2612,8 @@ int main(void)
   i2sObjectInit(&I2SD2);
   i2sStart(&I2SD2, &i2sconfig);
   i2sStartExchange(&I2SD2);
-
+#endif
+  area_height = AREA_HEIGHT_NORMAL;
   ui_init();
   //Initialize graph plotting
   plot_init();

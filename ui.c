@@ -52,7 +52,7 @@ uistat_t uistat = {
 #define BIT_DOWN1   1
 
 #define READ_PORT() palReadPort(GPIOA)
-#define BUTTON_MASK 0b1111
+#define BUTTON_MASK 0b1110
 
 static uint16_t last_button = 0b0000;
 static uint32_t last_button_down_ticks;
@@ -67,9 +67,11 @@ enum {
   UI_NORMAL, UI_MENU, UI_NUMERIC, UI_KEYPAD
 };
 
+#ifdef __VNA__
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_SCALE, KM_REFPOS, KM_EDELAY, KM_VELOCITY_FACTOR, KM_SCALEDELAY
 };
+#endif
 
 #define NUMINPUT_LEN 10
 
@@ -120,6 +122,7 @@ static void leave_ui_mode(void);
 static void erase_menu_buttons(void);
 static void ui_process_keypad(void);
 static void ui_process_numeric(void);
+static void choose_active_marker(void);
 
 static void menu_move_back(void);
 static void menu_push_submenu(const menuitem_t *submenu);
@@ -287,7 +290,7 @@ touch_check(void)
   return stat ? EVT_TOUCH_DOWN : EVT_TOUCH_NONE;
 }
 
-static inline void
+void
 touch_wait_release(void)
 {
   while (touch_check() != EVT_TOUCH_RELEASED)
@@ -435,6 +438,7 @@ enum {
 
 typedef void (*menuaction_cb_t)(int item, uint8_t data);
 
+#ifdef __VNA__
 static void
 menu_calop_cb(int item, uint8_t data)
 {
@@ -630,7 +634,6 @@ menu_transform_filter_cb(int item, uint8_t data)
   domain_mode = (domain_mode & ~TD_FUNC) | data;
   ui_mode_normal();
 }
-
 static void 
 choose_active_marker(void)
 {
@@ -647,9 +650,11 @@ static void
 menu_scale_cb(int item, uint8_t data)
 {
   (void)item;
+#ifdef __VNA__
   if (data == KM_SCALE && trace[uistat.current_trace].type == TRC_DELAY) {
     data = KM_SCALEDELAY;
   }
+#endif
   if (btn_wait_release() & EVT_BUTTON_DOWN_LONG) {
     ui_mode_numeric(data);
     ui_process_numeric();
@@ -685,6 +690,7 @@ menu_stimulus_cb(int item, uint8_t data)
     break;
   }
 }
+#endif
 
 static uint32_t
 get_marker_frequency(int marker)
@@ -730,6 +736,7 @@ menu_marker_op_cb(int item, uint8_t data)
       }
     }
     break;
+#ifdef __VNA__
   case 4: /* MARKERS->EDELAY */
     { 
       if (uistat.current_trace == -1)
@@ -739,6 +746,7 @@ menu_marker_op_cb(int item, uint8_t data)
       set_electrical_delay(electrical_delay + (v / 1e-12));
     }
     break;
+#endif
   }
   ui_mode_normal();
   draw_cal_status();
@@ -775,7 +783,7 @@ menu_marker_search_cb(int item, uint8_t data)
   redraw_marker(active_marker);
   select_lever_mode(LM_SEARCH);
 }
-
+#ifdef __VNA__
 static void
 menu_marker_smith_cb(int item, uint8_t data)
 {
@@ -784,6 +792,7 @@ menu_marker_smith_cb(int item, uint8_t data)
   redraw_marker(active_marker);
   draw_menu();
 }
+#endif
 
 static void
 active_marker_select(int item)
@@ -830,7 +839,7 @@ menu_marker_sel_cb(int item, uint8_t data)
   redraw_marker(active_marker);
   draw_menu();
 }
-
+#ifdef __VNA__
 static const menuitem_t menu_calop[] = {
   { MT_CALLBACK, CAL_OPEN,  "OPEN",  menu_calop_cb },
   { MT_CALLBACK, CAL_SHORT, "SHORT", menu_calop_cb },
@@ -1035,6 +1044,9 @@ const menuitem_t menu_top[] = {
   { MT_SUBMENU, 0, "CONFIG", menu_config },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
+#endif
+
+#include "ui_sa.c"
 
 #define MENU_STACK_DEPTH_MAX 4
 const menuitem_t *menu_stack[MENU_STACK_DEPTH_MAX] = {
@@ -1127,7 +1139,7 @@ menu_invoke(int item)
 // Key x, y position (0 - 15) on screen
 #define KP_GET_X(posx) ((posx)*KP_WIDTH + (320-64-KP_WIDTH*4))
 #define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
-
+#ifdef __VNA__
 // Key names
 #define KP_0          0
 #define KP_1          1
@@ -1233,6 +1245,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
 static const char * const keypad_mode_label[] = {
   "START", "STOP", "CENTER", "SPAN", "CW FREQ", "SCALE", "REFPOS", "EDELAY", "VELOCITY%", "DELAY"
 };
+#endif
 
 static void
 draw_keypad(void)
@@ -1315,6 +1328,7 @@ menu_is_multiline(const char *label, const char **l1, const char **l2)
   return TRUE;
 }
 
+#ifdef __VNA__
 static void
 menu_item_modify_attribute(const menuitem_t *menu, int item,
                            uint16_t *fg, uint16_t *bg)
@@ -1384,6 +1398,12 @@ menu_item_modify_attribute(const menuitem_t *menu, int item,
       }
   }
 }
+#endif
+
+#ifndef __VNA__
+extern void menu_item_modify_attribute(
+    const menuitem_t *menu, int item, uint16_t *fg, uint16_t *bg);
+#endif
 
 static void
 draw_menu_buttons(const menuitem_t *menu)
@@ -1482,6 +1502,7 @@ leave_ui_mode()
   }
 }
 
+#ifdef __VNA__
 static void
 fetch_numeric_target(void)
 {
@@ -1528,6 +1549,7 @@ fetch_numeric_target(void)
 //  uistat.previous_value = uistat.value;
 }
 
+
 static void
 set_numeric_value(void)
 {
@@ -1561,6 +1583,7 @@ set_numeric_value(void)
     break;
   }
 }
+#endif
 
 static void
 draw_numeric_area(void)
@@ -1722,7 +1745,7 @@ lever_move(int status, int mode)
 }
 
 #define STEPRATIO 0.2
-
+#ifdef __VNA__
 static void
 lever_edelay(int status)
 {
@@ -1737,7 +1760,7 @@ lever_edelay(int status)
   }
   set_electrical_delay(value);
 }
-
+#endif
 static void
 ui_process_normal(void)
 {
@@ -1758,9 +1781,11 @@ ui_process_normal(void)
         else
         lever_zoom_span(status);
         break;
+#ifdef __VNA__
       case LM_EDELAY:
         lever_edelay(status);
         break;
+#endif
       }
     }
   }
@@ -1812,6 +1837,10 @@ keypad_click(int key)
     }
     /* numeric input done */
     double value = my_atof(kp_buf) * scale;
+#if 1
+    uistat.value = (int)value;
+    set_numeric_value();
+#else
     switch (keypad_mode) {
     case KM_START:
       set_sweep_frequency(ST_START, value);
@@ -1844,7 +1873,7 @@ keypad_click(int key)
       set_trace_scale(uistat.current_trace, value * 1e-12); // pico second
       break;
     }
-
+#endif
     return KP_DONE;
   } else if (c <= 9 && kp_index < NUMINPUT_LEN) {
     kp_buf[kp_index++] = '0' + c;
@@ -2130,11 +2159,15 @@ touch_lever_mode_select(void)
     return TRUE;
   }
   if (touch_y < 25) {
+#ifdef __VNA__
     if (touch_x < FREQUENCIES_XPOS2 && get_electrical_delay() != 0.0) {
       select_lever_mode(LM_EDELAY);
     } else {
+#endif
       select_lever_mode(LM_MARKER);
-    }
+#ifdef __VNA__
+      }
+#endif
     return TRUE;
   }
   return FALSE;
@@ -2191,7 +2224,7 @@ static void extcb1(EXTDriver *extp, expchannel_t channel)
   (void)extp;
   (void)channel;
   operation_requested|=OP_LEVER;
-  //cur_button = READ_PORT() & BUTTON_MASK;
+  // cur_button = READ_PORT() & BUTTON_MASK;
 }
 
 static const EXTConfig extcfg = {
