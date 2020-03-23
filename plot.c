@@ -33,7 +33,7 @@ int fullscreen = true;
 static void cell_draw_marker_info(int x0, int y0);
 static void draw_battery_status(void);
 void cell_draw_test_info(int x0, int y0);
-static void frequency_string(char *buf, size_t len, int32_t freq);
+void frequency_string(char *buf, size_t len, int32_t freq);
 
 static int16_t grid_offset;
 static int16_t grid_width;
@@ -1841,7 +1841,7 @@ static void cell_draw_marker_info(int x0, int y0)
    }
   }
 }
-static void frequency_string(char *buf, size_t len, int32_t freq)
+void frequency_string(char *buf, size_t len, int32_t freq)
 {
   if (freq < 0) {
     freq = -freq;

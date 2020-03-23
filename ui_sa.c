@@ -14,10 +14,12 @@ void SetAttenuation(int);
 void SetPowerLevel(int);
 void SetGenerate(int);
 void SetRBW(int);
+extern int settingBandwidth;
 void SetSpur(int);
 int GetSpur(void);
 void SetAverage(int);
 int GetAverage(void);
+extern int settingAverage;
 void  SetStorage(void);
 void  SetClearStorage(void);
 void  SetSubtractStorage(void);
@@ -159,17 +161,26 @@ static const char * const keypad_mode_label[] = {
 
 int generator_enabled = false;
 
+extern const menuitem_t  menu_lowoutputmode[];
+extern const menuitem_t  menu_highoutputmode[];
+
 static void menu_mode_cb(int item, uint8_t data)
 {
   (void)data;
   switch (item) {
-  case 4: // Change reference output
+  case 4: // Change reference output, should not happen!!!
     break;
   default:
     SetMode(item);
-    menu_move_back();
-    ui_mode_normal();
     draw_cal_status();
+    if (item == 2) { // Activate menu_lowoutputmode as input form
+      set_sweep_frequency(ST_SPAN, 0);
+      menu_push_submenu(menu_lowoutputmode);
+    } else if (item == 3) { // Activate menu_highoutputmode as input form
+      set_sweep_frequency(ST_SPAN, 0);
+      menu_push_submenu(menu_highoutputmode);
+    } else
+      ui_mode_normal(); // Exit menu after setting the mode
     break;
   }
 
@@ -399,6 +410,47 @@ static void menu_scale_cb(int item, uint8_t data)
   draw_cal_status();
 }
 
+static void menu_lowoutputmode_cb(int item, uint8_t data)
+{
+  int status;
+  int km = data;
+//  if (km == KM_SCALE && trace[uistat.current_trace].type == TRC_DELAY) {
+//    km = KM_SCALEDELAY;
+//  }
+  status = btn_wait_release();
+  if (status & EVT_BUTTON_DOWN_LONG) {
+    ui_mode_numeric(km);
+//    ui_process_numeric();
+  } else {
+    area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
+    redraw_frame();         // Remove form numbers
+    ui_mode_keypad(km);
+    ui_process_keypad();
+  }
+  draw_cal_status();
+}
+
+static void menu_highoutputmode_cb(int item, uint8_t data)
+{
+  int status;
+  int km = data;
+//  if (km == KM_SCALE && trace[uistat.current_trace].type == TRC_DELAY) {
+//    km = KM_SCALEDELAY;
+//  }
+  status = btn_wait_release();
+  if (status & EVT_BUTTON_DOWN_LONG) {
+    ui_mode_numeric(km);
+//    ui_process_numeric();
+  } else {
+    area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
+    redraw_frame();         // Remove form numbers
+    ui_mode_keypad(km);
+    ui_process_keypad();
+  }
+  draw_cal_status();
+}
+
+
 static void menu_settings_cb(int item, uint8_t data)
 {
   (void)data;
@@ -465,7 +517,55 @@ static void menu_stimulus_cb(int item, uint8_t data)
 //static void menu_marker_sel_cb(int);
 //static void menu_marker_op_cb(int);
 
+#if 0
+
+#pragma pack(push, 2)
+typedef struct {
+  uint8_t type;
+  int  *data;
+  char *format;
+} menuvalue_t;
+#pragma pack(pop)
+
+enum {
+  MVT_INT, MVT_FLOAT, MVT_STRINGARRAY
+};
+enum {
+MV_AVERAGE, MV_RBW, MV_DBPER, MV_REFER, MV_POWER, MVSAMPLETIME, MV_IFFREQ
+};
+
+static const char *average_text[] =
+{
+ "OFF", "MIN HOLD", "MAX HOLD", "2", "4", "8"
+};
+
+static const menuvalue_t menu_value[] = {
+  { MVT_STRINGARRAY,&settingAverage,  (char *)average_text },
+  { MVT_INT,        &settingBandwidth, "%dkHz" },
+  { MVT_INT,        &settingScale,     "%ddB/" },
+  { MVT_INT,        &settingRefer,     "%dB"   },
+  { MVT_INT,        &settingPower,      "%dB"   },
+  { MVT_INT,        &settingSampleTime, "%dmS"  },
+  { MVT_INT,        %setting_IF,        "%dHz"  },
+  }
+};
+#endif
+
 // ===[MENU DEFINITION]=========================================================
+
+const menuitem_t  menu_lowoutputmode[] = {
+  { MT_CALLBACK, KM_CENTER,     "FREQUENCY",    menu_lowoutputmode_cb},
+  { MT_CALLBACK, KM_ATTENUATION,"LEVEL",        menu_lowoutputmode_cb},
+  { MT_CANCEL,   0,             S_LARROW" BACK",NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+const menuitem_t  menu_highoutputmode[] = {
+  { MT_CALLBACK, KM_CENTER,     "FREQUENCY",    menu_highoutputmode_cb},
+  { MT_CALLBACK, KM_DRIVE,      "LEVEL",        menu_highoutputmode_cb},
+  { MT_CANCEL,   0,             S_LARROW" BACK",NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
 
 static const menuitem_t  menu_average[] = {
   { MT_CALLBACK, 0, "OFF",   menu_average_cb},
@@ -651,6 +751,14 @@ static const menuitem_t menu_top[] = {
 
 #define ACTIVE_COLOR RGBHEX(0x007FFF)
 
+void frequency_string(char *buf, size_t len, int32_t freq);
+
+int menu_is_form(const menuitem_t *menu)
+{
+  return(menu == menu_lowoutputmode ||
+         menu == menu_highoutputmode);
+}
+
 static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, uint16_t *fg, uint16_t *bg)
 {
@@ -722,6 +830,48 @@ static void menu_item_modify_attribute(
       *fg = config.menu_normal_color;
     }
   }
+  if (ui_mode == UI_MENU && menu_is_form(menu)) {
+//    if (item == 0)
+//      redraw_frame();
+    if (item <= 1) {
+
+    area_width = 0;
+//    area_height = HEIGHT - 32;
+    int y = MENU_BUTTON_HEIGHT*item;
+    uint16_t bg = config.menu_normal_color;
+    uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
+    //    ili9341_fill(320-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT-2, bg);
+    ili9341_set_foreground(fg);
+    ili9341_set_background(bg);
+    char buf[10];
+    ili9341_fill(50+25, y, 170, MENU_BUTTON_HEIGHT-2, bg);
+    if (menu == menu_lowoutputmode) {
+    switch (item) {
+    case 0:
+      set_sweep_frequency(ST_SPAN, 0);          // For CW sweep mode
+      frequency_string(buf, sizeof buf, frequency0);
+      break;
+    case 1:
+      plot_printf(buf, sizeof buf, "%ddB", -10 - settingAttenuate);
+      break;
+    }
+    }
+    if (menu == menu_highoutputmode) {
+    switch (item) {
+    case 0:
+      set_sweep_frequency(ST_SPAN, 0);          // For CW sweep mode
+      frequency_string(buf, sizeof buf, frequency0);
+      break;
+    case 1:
+      plot_printf(buf, sizeof buf, "%ddB", -10 - settingDrive);
+      break;
+    }
+    }
+    ili9341_drawstring_size(buf, 130, y+6, 2);
+  }
+  }else{
+    area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
+  }
 }
 
 static void fetch_numeric_target(void)
@@ -775,7 +925,6 @@ static void fetch_numeric_target(void)
   }
 //  uistat.previous_value = uistat.value;
 }
-
 
 static void
 set_numeric_value(void)

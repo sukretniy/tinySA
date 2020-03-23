@@ -1046,6 +1046,11 @@ const menuitem_t menu_top[] = {
 };
 #endif
 
+
+#define MENU_BUTTON_WIDTH  60
+#define MENU_BUTTON_HEIGHT 30
+#define NUM_INPUT_HEIGHT   30
+
 #include "ui_sa.c"
 
 #define MENU_STACK_DEPTH_MAX 4
@@ -1083,6 +1088,10 @@ menu_push_submenu(const menuitem_t *submenu)
   menu_stack[menu_current_level] = submenu;
   ensure_selection();
   erase_menu_buttons();
+  if (menu_is_form(submenu)) {
+    redraw_frame();
+    area_width = 0;
+  }
   draw_menu();
 }
 
@@ -1105,7 +1114,7 @@ menu_invoke(int item)
   const menuitem_t *menu = menu_stack[menu_current_level];
   menu = &menu[item];
 
-  switch (menu->type) {
+  switch (menu->type & 0x0f) {
   case MT_NONE:
   case MT_BLANK:
   case MT_CLOSE:
@@ -1129,10 +1138,6 @@ menu_invoke(int item)
     break;
   }
 }
-
-#define MENU_BUTTON_WIDTH  60
-#define MENU_BUTTON_HEIGHT 30
-#define NUM_INPUT_HEIGHT   30
 
 #define KP_WIDTH     48
 #define KP_HEIGHT    48
@@ -1466,7 +1471,8 @@ menu_apply_touch(void)
       return;
     }
   }
-
+  if (menu_is_form(menu))
+    return;
   touch_wait_release();
   ui_mode_normal();
 }
@@ -2064,8 +2070,12 @@ ui_process_keypad(void)
   }
 
   redraw_frame();
-  request_to_redraw_grid();
-  ui_mode_normal();
+  if (menu_is_form(menu_stack[menu_current_level]))
+    ui_mode_menu(); //Reactivate menu after keypad
+  else {
+    ui_mode_normal();
+    request_to_redraw_grid();
+  }
   //redraw_all();
   touch_start_watchdog();
 }

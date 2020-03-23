@@ -593,7 +593,8 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
     SetRX(settingMode);
     SI4432_SetReference(settingRefer);
     temppeakLevel = -150;
-    setFreq (0, local_IF);
+    if (local_IF)
+      setFreq (0, local_IF);
     if (dirty) {
       scandirty = true;
       dirty = false;
