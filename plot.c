@@ -32,7 +32,7 @@ int fullscreen = true;
 #endif
 static void cell_draw_marker_info(int x0, int y0);
 static void draw_battery_status(void);
-void cell_draw_test_info(int m, int n, int w, int h);
+void cell_draw_test_info(int x0, int y0);
 static void frequency_string(char *buf, size_t len, int32_t freq);
 
 static int16_t grid_offset;
@@ -85,7 +85,7 @@ uint8_t current_mappage = 0;
 // Trace data cache, for faster redraw cells
 //   CELL_X[16:31] x position
 //   CELL_Y[ 0:15] y position
-typedef uint32_t index_t;
+typedef uint32_t  index_t;
 static index_t trace_index[TRACES_MAX][POINTS_COUNT];
 
 #define INDEX(x, y) ((((index_t)x)<<16)|(((index_t)y)))
@@ -1394,7 +1394,8 @@ draw_cell(int m, int n)
       // Check marker icon on cell
       if (x + MARKER_WIDTH >= 0 && x - MARKER_WIDTH < CELLWIDTH &&
           y + MARKER_HEIGHT >= 0 && y - MARKER_HEIGHT < CELLHEIGHT)
-        draw_marker(x, y, config.trace_color[t], i);
+        draw_marker(x, y, marker_color[markers[i].mtype], i);
+//      draw_marker(x, y, config.trace_color[t], i);
     }
   }
 #endif
@@ -1403,7 +1404,7 @@ draw_cell(int m, int n)
   if (n == 0)
     cell_draw_marker_info(x0, y0);
 #endif
-  cell_draw_test_info(m, n, w, h);
+  cell_draw_test_info(x0, y0);
   //  PULSE;
 // Draw reference position (<10 system ticks for all screen calls)
   for (t = 0; t < TRACES_MAX; t++) {
@@ -1456,7 +1457,7 @@ draw_all_cells(bool flush_markmap)
   }
 #ifdef __SCROLL__
   if (waterfall) {
-    for (m = 226; m >= HEIGHT; m -= 1) {		// Scroll down
+    for (m = 226; m >= HEIGHT+3; m -= 1) {		// Scroll down
       uint16_t *buf = &spi_buffer[0];
       ili9341_read_memory(5*5, m, area_width, 1, area_width, buf);
       ili9341_bulk(5*5,m+1, area_width,1);
@@ -1496,7 +1497,7 @@ draw_all_cells(bool flush_markmap)
 #endif
       spi_buffer[i] = RGB565(r,g,b);
     }
-    ili9341_bulk(5*5,HEIGHT, 290,1);
+    ili9341_bulk(5*5,HEIGHT+3, 290,1);
   }
 #endif
 }
@@ -1578,6 +1579,35 @@ cell_drawchar(uint8_t ch, int x, int y)
   return ch_size;
 }
 
+static int
+cell_drawchar_size(uint8_t ch, int x, int y, int size)
+{
+  uint8_t bits;
+  int c, r, ch_size;
+  const uint8_t *char_buf = FONT_GET_DATA(ch);
+  ch_size = FONT_GET_WIDTH(ch);
+  //  if (y <= -FONT_GET_HEIGHT || y >= CELLHEIGHT || x <= -ch_size || x >= CELLWIDTH)
+  //    return ch_size;
+  if (x <= -ch_size*size)
+    return ch_size*size;
+  for (c = 0; c < FONT_GET_HEIGHT; c++) {
+    for (int i=0; i < size; i++) {
+      bits = *char_buf;
+      if ((y + c*size+i) < 0 || (y + c*size+i) >= CELLHEIGHT)
+        continue;
+      for (r = 0; r < ch_size; r++) {
+        for (int j = 0; j < size; j++) {
+          if ((x+r*size + j) >= 0 && (x+r*size+j) < CELLWIDTH && (0x80 & bits))
+            cell_buffer[(y+c*size+i)*CELLWIDTH + (x+r*size+j)] = foreground_color;
+        }
+        bits <<= 1;
+      }
+    }
+    char_buf++;
+  }
+  return ch_size*size;
+}
+
 void
 cell_drawstring(char *str, int x, int y)
 {
@@ -1587,6 +1617,54 @@ cell_drawstring(char *str, int x, int y)
     if (x >= CELLWIDTH)
       return;
     x += cell_drawchar(*str++, x, y);
+  }
+}
+
+void
+cell_drawstring_size(char *str, int x, int y, int size)
+{
+  if (y <= -FONT_GET_HEIGHT*2 || y >= CELLHEIGHT)
+    return;
+  while (*str) {
+    if (x >= CELLWIDTH)
+      return;
+    x += cell_drawchar_size(*str++, x, y, size);
+  }
+}
+
+static int
+cell_drawchar_7x13(uint8_t ch, int x, int y)
+{
+  uint16_t bits;
+  int c, r, ch_size;
+  ch_size = 7;
+  //  if (y <= -FONT_GET_HEIGHT || y >= CELLHEIGHT || x <= -ch_size || x >= CELLWIDTH)
+  //    return ch_size;
+  if (x <= -ch_size)
+    return ch_size;
+  for (c = 0; c < 13; c++) {
+    bits = x7x13b_bits[(ch * 13) + c];
+    if ((y + c) < 0 || (y + c) >= CELLHEIGHT)
+      continue;
+    for (r = 0; r < ch_size; r++) {
+      if ((x+r) >= 0 && (x+r) < CELLWIDTH && (0x8000 & bits))
+        cell_buffer[(y+c)*CELLWIDTH + (x+r)] = foreground_color;
+      bits <<= 1;
+    }
+  }
+  return ch_size;
+}
+
+
+void
+cell_drawstring_7x13(char *str, int x, int y)
+{
+  if (y <= -13 || y >= CELLHEIGHT)
+    return;
+  while (*str) {
+    if (x >= CELLWIDTH)
+      return;
+    x += cell_drawchar_7x13(*str++, x, y);
   }
 }
 
@@ -1737,8 +1815,13 @@ static void cell_draw_marker_info(int x0, int y0)
     for (t = TRACE_ACTUAL; t <= TRACE_ACTUAL; t++) { // Only show info on actual trace
       if (!trace[t].enabled)
         continue;
+#if 1
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
-      int ypos = 1 + (j/2)*(FONT_GET_HEIGHT+1) - y0;
+      int ypos = 1 + (j/2)*(13) - y0;
+#else
+      int xpos = 1 + CELLOFFSETX - x0;
+      int ypos = 1 + j*(FONT_GET_HEIGHT*2+1) - y0;
+#endif
       int k = 0;
       if (i == active_marker)
         buf[k++] = '\033'; // Right arrow (?)
@@ -1748,12 +1831,12 @@ static void cell_draw_marker_info(int x0, int y0)
       buf[k++] = marker_letter[markers[i].mtype];
       buf[k++] = 0;
       ili9341_set_foreground(marker_color[markers[i].mtype]);
-      cell_drawstring(buf, xpos, ypos);
+      cell_drawstring_7x13(buf, xpos, ypos);
       trace_get_value_string(
           t, buf, sizeof buf,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
 //      cell_drawstring_7x13(w, h, buf, xpos+2*7, ypos, config.trace_color[t]);
-      cell_drawstring(buf, xpos+2*7, ypos);
+      cell_drawstring_7x13(buf, xpos+4*7, ypos);
       j++;
    }
   }
@@ -1780,14 +1863,16 @@ static void frequency_string(char *buf, size_t len, int32_t freq)
   }
 #endif
 #ifdef __SA__
+/*
   if (freq < 1000) {
     plot_printf(buf, len, "%dHz", (int)freq);
   } else if (freq < 1000000) {
     plot_printf(buf, len, "%d.%03dkHz",
              (int)(freq / 1000),
              (int)(freq % 1000));
-  } else {
-    plot_printf(buf, len, "%d.%03dMHz",
+  } else
+*/  {
+    plot_printf(buf, len, "%d.%03",
              (int)(freq / 1000000),
              (int)((freq / 1000) % 1000));
   }

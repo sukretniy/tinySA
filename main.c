@@ -71,7 +71,7 @@ static volatile vna_shellcmd_t  shell_function = 0;
 
 //#define ENABLED_DUMP
 // Allow get threads debug info
-//#define ENABLE_THREADS_COMMAND
+#define ENABLE_THREADS_COMMAND
 // RTC time not used
 //#define ENABLE_TIME_COMMAND
 // Enable vbat_offset command, allow change battery voltage correction in config
@@ -117,7 +117,7 @@ const char *info_about[]={
   0 // sentinel
 };
 
-static THD_WORKING_AREA(waThread1, 700);
+static THD_WORKING_AREA(waThread1, 750);
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
@@ -786,7 +786,8 @@ config_t config = {
   .harmonic_freq_threshold = 300000000,
 #endif
   .vbat_offset = 500,
-  .level_offset =       0
+  .low_level_offset =       0,
+  .high_level_offset =      0,
 };
 
 properties_t current_props;
@@ -2221,6 +2222,14 @@ VNA_SHELL_FUNCTION(cmd_o)
   setFreq(VFO, value);
 }
 
+VNA_SHELL_FUNCTION(cmd_d)
+{
+  (void) argc;
+  int32_t a = my_atoi(argv[0]);
+  settingDrive = a;
+}
+
+
 VNA_SHELL_FUNCTION(cmd_a)
 {
   (void)argc;
@@ -2289,8 +2298,12 @@ VNA_SHELL_FUNCTION(cmd_p)
   int a = my_atoi(argv[1]);
   if (p==5)
     SetAttenuation(-a);
-//  if (p==6)
-//    SetMode(a);
+  if (p==6)
+    if (a != GetMode())
+      SetMode(a);
+  if (p==1)
+    if (get_refer_output() != a)
+      set_refer_output(a);
 }
 
 VNA_SHELL_FUNCTION(cmd_w)
@@ -2383,7 +2396,8 @@ static const VNAShellCommand commands[] =
    { "m", cmd_m,	0 },
    { "p", cmd_p,	0 },
    { "w", cmd_w,	0 },
-   { "o", cmd_o,	0 },
+   { "o", cmd_o,    0 },
+   { "d", cmd_d,    0 },
 #ifdef ENABLE_THREADS_COMMAND
     {"threads"     , cmd_threads     , 0},
 #endif
@@ -2539,12 +2553,12 @@ static const I2CConfig i2ccfg = {
   .cr1 = 0,     // CR1 register initialization.
   .cr2 = 0      // CR2 register initialization.
 };
-#endif
 static DACConfig dac1cfg1 = {
   //init:         2047U,
   init:         1922U,
   datamode:     DAC_DHRM_12BIT_RIGHT
 };
+#endif
 
 
 // Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
@@ -2587,9 +2601,9 @@ int main(void)
 
 /* restore config */
   config_recall();
+  caldata_recall(0); // must be done to setup the scanning stuff
 
 /* restore frequencies and calibration 0 slot properties from flash memory */
-  caldata_recall(0);
 #ifdef __VNA__
   dac1cfg1.init = config.dac_value;
 /*

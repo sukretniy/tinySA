@@ -2208,11 +2208,16 @@ void ui_process_touch(void)
   touch_start_watchdog();
 }
 
+static int previous_button_state = 0;
+
 void
 ui_process(void)
 {
-  if (operation_requested&OP_LEVER)
+  int button_state = READ_PORT() & BUTTON_MASK;
+  if (operation_requested&OP_LEVER || previous_button_state != button_state) {
     ui_process_lever();
+    previous_button_state = button_state;
+  }
   if (operation_requested&OP_TOUCH)
     ui_process_touch();
   operation_requested = OP_NONE;

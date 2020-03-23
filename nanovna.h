@@ -210,6 +210,7 @@ extern int16_t area_height;
 
 // font
 extern const uint8_t x5x7_bits [];
+extern const uint16_t x7x13b_bits [];
 #define FONT_GET_DATA(ch)   (&x5x7_bits[ch*7])
 #define FONT_GET_WIDTH(ch)  (8-(x5x7_bits[ch*7]&7))
 #define FONT_MAX_WIDTH      7
@@ -276,13 +277,15 @@ typedef struct config {
   uint32_t harmonic_freq_threshold;
 #endif
   uint16_t vbat_offset;
-   int16_t level_offset;
-  uint8_t _reserved[24];
+  int16_t low_level_offset;
+  int16_t high_level_offset;
+  uint8_t _reserved[22];
   uint32_t checksum;
 } config_t;
 
 extern config_t config;
-#define settingLevelOffset config.level_offset
+//#define settingLevelOffset config.level_offset
+int settingLevelOffset(void);
 
 void set_trace_type(int t, int type);
 void set_trace_channel(int t, int channel);
@@ -492,9 +495,9 @@ extern properties_t current_props;
 #define FREQ_IS_STARTSTOP() (!(config.freq_mode&FREQ_MODE_CENTER_SPAN))
 #define FREQ_IS_CENTERSPAN() (config.freq_mode&FREQ_MODE_CENTER_SPAN)
 #define FREQ_IS_CW() (frequency0 == frequency1)
+int caldata_recall(int id);
 #ifdef __VNA__
 int caldata_save(int id);
-int caldata_recall(int id);
 const properties_t *caldata_ref(int id);
 #endif
 int config_save(void);

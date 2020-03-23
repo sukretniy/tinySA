@@ -383,7 +383,7 @@ void ili9341_bulk(int x, int y, int w, int h)
     SPI_WRITE_16BIT(*buf++);
   }
 }
-
+#else
 static uint8_t ssp_sendrecvdata(void)
 {
   // Start RX clock (by sending data)
@@ -417,7 +417,7 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
   }
   CS_HIGH;
 }
-#else
+
 //
 // Use DMA for send data
 //
@@ -469,7 +469,7 @@ void ili9341_bulk(int x, int y, int w, int h)
                               STM32_DMA_CR_MSIZE_HWORD | STM32_DMA_CR_MINC);
   dmaStreamFlush(w * h);
 }
-
+#if 0  // Read DMA hangs
 // Copy screen data to buffer
 // Warning!!! buffer size must be greater then 3*len + 1 bytes
 void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
@@ -515,6 +515,7 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
     rgbbuf += 3;
   }
 }
+#endif
 #endif
 
 void ili9341_clear_screen(void) 
@@ -567,6 +568,12 @@ static void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_
   ili9341_bulk(x, y, width, height);
 }
 
+int ili9341_size = 1;
+
+void ili9341_charsize(int s)
+{
+  ili9341_size = s;
+}
 void ili9341_drawchar(uint8_t ch, int x, int y)
 {
   blit8BitWidthBitmap(x, y, FONT_GET_WIDTH(ch), FONT_GET_HEIGHT, FONT_GET_DATA(ch));

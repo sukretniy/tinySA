@@ -82,7 +82,7 @@ int settingLNA = false;
 int extraVFO = false;
 
 uint32_t minFreq = 0;
-uint32_t maxFreq = 350000000;
+uint32_t maxFreq = 520000000;
 
 void set_refer_output(int v)
 {
@@ -176,11 +176,24 @@ int GetSubtractStorage(void)
 extern float peakLevel;
 void SetPowerLevel(int o)
 {
-  if (o != 100)
-    settingLevelOffset = o - peakLevel - settingAttenuate + settingLevelOffset;
-  else
-    settingLevelOffset = 0;
+  if (o != 100) {
+    if (settingMode & 1)
+      config.high_level_offset = o - peakLevel - settingAttenuate + settingLevelOffset();
+    else
+      config.low_level_offset = o - peakLevel - settingAttenuate + settingLevelOffset();
+  }
+  else {
+    config.low_level_offset = 0;
+    config.high_level_offset = 0;
+  }
   dirty = true;
+}
+
+int settingLevelOffset(void)
+{
+  if (settingMode & 1)
+    return(config.high_level_offset);
+  return(config.low_level_offset);
 }
 
 void SetRBW(int v)
@@ -594,7 +607,7 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
     if (extraV)
       setFreq (0, local_IF + lf - refferFreq[settingRefer]);    // Offset so fundamental of reffer is visible
     setFreq (1, local_IF + lf);
-    float subRSSI = SI4432_RSSI(lf, (settingMode & 1))+settingLevelOffset+settingAttenuate;
+    float subRSSI = SI4432_RSSI(lf, (settingMode & 1))+settingLevelOffset()+settingAttenuate;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
     t++;
@@ -957,28 +970,28 @@ static void test_acquire(int i)
 
 extern void cell_drawstring_5x7(int w, int h, char *str, int x, int y, uint16_t fg);
 extern void cell_drawstring_7x13(int w, int h, char *str, int x, int y, uint16_t fg);
+void cell_drawstring(char *str, int x, int y);
 
-void cell_draw_test_info(int m, int n, int w, int h)
+static char self_test_status_buf[35];
+void cell_draw_test_info(int x0, int y0)
 {
 #define INFO_SPACING    13
-  char buf[35];
+//  char self_test_status_buf[35];
   if (!show_test_info)
     return;
   for (int i = -1; i < TEST_COUNT+1; i++) {
-    int xpos = 25;
-    int ypos = 40+i*INFO_SPACING;
-    xpos -= m * CELLWIDTH -CELLOFFSETX;
-    ypos -= n * CELLHEIGHT;
+    int xpos = 25 - x0;
+    int ypos = 40+i*INFO_SPACING - y0;
     unsigned int color = RGBHEX(0xFFFFFF);
     if (i == -1) {
-        plot_printf(buf, sizeof buf, "Self test status:");
+        plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Self test status:");
     } else if (i == TEST_COUNT) {
         if (test_wait)
-          plot_printf(buf, sizeof buf, "Touch screen to continue");
+          plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Touch screen to continue");
         else
-          buf[0] = 0;
+          self_test_status_buf[0] = 0;
       } else {
-      plot_printf(buf, sizeof buf, "Test %d: %s%s", i+1, test_fail_cause[i], test_text[test_status[i]] );
+      plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Test %d: %s%s", i+1, test_fail_cause[i], test_text[test_status[i]] );
       if (test_status[i] == TS_PASS)
         color = RGBHEX(0x00FF00);
       else if (test_status[i] == TS_CRITICAL)
@@ -988,7 +1001,8 @@ void cell_draw_test_info(int m, int n, int w, int h)
       else
         color = RGBHEX(0x0000FF);
     }
-    cell_drawstring(buf, xpos, ypos, color);
+    ili9341_set_foreground(color);
+    cell_drawstring(self_test_status_buf, xpos, ypos);
   }
 }
 
@@ -1137,7 +1151,7 @@ void self_test(void)
       break;
     case TP_10MHZEXTRA:                         // Swept receiver
       extraVFO = true; //Sweep BPF
-      // Fall through intended!!!!!!
+      goto common;
     case TP_10MHZ:                              // 10MHz input
       common:
       set_refer_output(2);

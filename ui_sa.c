@@ -200,6 +200,7 @@ void menu_autosettings_cb(int item, uint8_t data)
   set_refer_output(1);
   SetAttenuation(0);
   SetPowerLevel(100); // Reset
+  SetClearStorage();
   SetRBW(0);
   dirty = true;
   menu_move_back();
@@ -751,7 +752,7 @@ static void fetch_numeric_target(void)
     uistat.value = settingAttenuate;
      break;
   case KM_ACTUALPOWER:
-    uistat.value = settingLevelOffset;
+    uistat.value = settingLevelOffset();
     break;
   case KM_IF:
     uistat.value = frequency_IF;
