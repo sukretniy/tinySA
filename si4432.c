@@ -226,8 +226,8 @@ void SI4432_Set_Frequency ( long Freq ) {
 #endif
 }
 
-int stepDelay = 1500;
-int settingSpeed = 0;
+int actualStepDelay = 1500;
+
 
 float SI4432_RSSI(uint32_t i, int s)
 {
@@ -239,7 +239,7 @@ float SI4432_RSSI(uint32_t i, int s)
   } else
 #endif
     SI4432_Sel = s;
-    chThdSleepMicroseconds(stepDelay);
+    chThdSleepMicroseconds(actualStepDelay);
     RSSI_RAW = (unsigned char)SI4432_Read_Byte( 0x26 ) ;
     if (settingMode < 2 && RSSI_RAW == 0)
       SI4432_Init();

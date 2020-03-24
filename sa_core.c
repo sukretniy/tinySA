@@ -80,6 +80,7 @@ int settingDrive=0; // 0-3 , 3=+20dBm
 int settingAGC = true;
 int settingLNA = false;
 int extraVFO = false;
+int settingStepDelay = 0;
 
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
@@ -101,9 +102,22 @@ void SetGenerate(int g)
   dirty = true;
 }
 
+void SetDrive(int d)
+{
+  settingDrive = d;
+  dirty = true;
+}
+
+void SetIF(int f)
+{
+  frequency_IF = f;
+  dirty = true;
+}
+
 int GetMode(void)
 {
   return(settingMode);
+  dirty = true;
 }
 
 void SetMode(int m)
@@ -141,6 +155,7 @@ void SetStorage(void)
     stored_t[i] = actual_t[i];
   settingShowStorage = true;
   trace[TRACE_STORED].enabled = true;
+  dirty = true;
 }
 
 int GetStorage(void)
@@ -193,6 +208,7 @@ int settingLevelOffset(void)
 {
   if (settingMode & 1)
     return(config.high_level_offset);
+  dirty = true;
   return(config.low_level_offset);
 }
 
@@ -211,6 +227,12 @@ int GetRBW(void)
 void SetSpur(int v)
 {
   settingSpur = v;
+  dirty = true;
+}
+
+void SetStepDelay(int d)
+{
+  settingStepDelay = d;
   dirty = true;
 }
 
@@ -234,6 +256,7 @@ int GetAverage(void)
 void ToggleLNA(void)
 {
   settingLNA = !settingLNA;
+  dirty = true;
 }
 
 int GetLNA(void)
@@ -244,6 +267,7 @@ int GetLNA(void)
 void ToggleAGC(void)
 {
   settingAGC = !settingAGC;
+  dirty = true;
 }
 
 int GetAGC(void)
@@ -570,21 +594,23 @@ void update_rbw(uint32_t delta_f)
   dirty = true;
 }
 
+static int old_lf = -1;
+
 float perform(bool break_on_operation, int i, int32_t f, int extraV)
 {
   long local_IF = ((settingMode & 1) == 0?frequency_IF + (int)(rbw < 300.0?settingSpur * 1000 * rbw :0):0);
-  if (i == 0) {
-    if (settingSpeed == 0){
+  if (i == 0 && dirty) {
+    if (settingStepDelay == 0){
       if (rbw < 10.0)
-        stepDelay = 2500;
+        actualStepDelay = 2500;
       else if (rbw <30.0)
-        stepDelay = 2000;
+        actualStepDelay = 2000;
       else if (rbw <100.0)
-        stepDelay = 1000;
+        actualStepDelay = 1000;
       else
-        stepDelay = 500;
+        actualStepDelay = 500;
     } else
-      stepDelay = settingSpeed;
+      actualStepDelay = settingStepDelay;
 
 //    setupSA();
 
@@ -595,10 +621,10 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
     temppeakLevel = -150;
     if (local_IF)
       setFreq (0, local_IF);
-    if (dirty) {
+//    if (dirty) {
       scandirty = true;
       dirty = false;
-    }
+//    }
   }
   volatile int subSteps = ((int)(2 * vbw / rbw));
   float RSSI = -150.0;
@@ -607,57 +633,17 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
     int lf = (uint32_t)(f + (int)(t * 500 * rbw));
     if (extraV)
       setFreq (0, local_IF + lf - refferFreq[settingRefer]);    // Offset so fundamental of reffer is visible
-    setFreq (1, local_IF + lf);
+    if (lf != old_lf)                                           // only set on change
+      setFreq (1, local_IF + lf);
+    old_lf = lf;
     float subRSSI = SI4432_RSSI(lf, (settingMode & 1))+settingLevelOffset()+settingAttenuate;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
     t++;
-    if (operation_requested && break_on_operation)
+    if ((operation_requested && break_on_operation ) || (settingMode & 2 )) // output modes do not step.
       subSteps = 0;         // abort
   } while (subSteps-- > 0);
   return(RSSI);
-#if 0
-  temp_t[i] = RSSI;
-  if (settingSubtractStorage) {
-    RSSI = RSSI - stored_t[i] ;
-  }
-  if (scandirty || settingAverage == AV_OFF)
-    actual_t[i] = RSSI;
-  else {
-    switch(settingAverage) {
-    case AV_MIN: if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
-    case AV_MAX: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
-    case AV_2: actual_t[i] = (actual_t[i] + RSSI) / 2.0; break;
-    case AV_4: actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
-    case AV_8: actual_t[i] = (actual_t[i]*7 + RSSI) / 8.0; break;
-    }
-  }
-  if (frequencies[i] > 1000000) {
-    if (temppeakLevel < actual_t[i]) {
-      temppeakIndex = i;
-      temppeakLevel = actual_t[i];
-    }
-  }
-  if (temp_t[i] == 0) {
-    SI4432_Init();
-  }
-  if (i == POINTS_COUNT -1) {
-    if (scandirty) {
-      scandirty = false;
-    }
-    peakIndex = temppeakIndex;
-    peakLevel = actual_t[peakIndex];
-    peakFreq = frequencies[peakIndex];
-    settingSpur = -settingSpur;
-    int peak_marker = 0;
-    markers[peak_marker].enabled = true;
-    markers[peak_marker].index = peakIndex;
-    markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
-//    redraw_marker(peak_marker, FALSE);
-
-
-  }
-#endif
 }
 
 // main loop for measurement
@@ -881,7 +867,7 @@ void draw_cal_status(void)
   ili9341_drawstring("Scan:", x, y);
 
   y += YSTEP;
-  int32_t t = (int)((2* vbwSteps * sweep_points * ( stepDelay / 100) )) /10 * (settingSpur ? 2 : 1); // in mS
+  int32_t t = (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10 * (settingSpur ? 2 : 1); // in mS
   if (t>1000)
     plot_printf(buf, BLEN, "%dS",(t+500)/1000);
   else

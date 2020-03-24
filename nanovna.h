@@ -572,8 +572,8 @@ int plot_printf(char *str, int, const char *fmt, ...);
 #define PULSE do { palClearPad(GPIOC, GPIOC_LED); palSetPad(GPIOC, GPIOC_LED);} while(0)
 extern int settingAttenuate;
 extern int settingPowerCal;
-extern int stepDelay;
-extern int settingSpeed;
+extern int settingStepDelay;
+extern int actualStepDelay;
 extern int settingMode;
 void update_rbw(uint32_t delta_f);
 

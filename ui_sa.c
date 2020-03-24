@@ -14,6 +14,9 @@ void SetAttenuation(int);
 void SetPowerLevel(int);
 void SetGenerate(int);
 void SetRBW(int);
+void SetDrive(int d);
+void SetIF(int f);
+void SetStepDelay(int t);
 extern int settingBandwidth;
 void SetSpur(int);
 int GetSpur(void);
@@ -35,8 +38,8 @@ extern int extraVFO;
 extern int settingDrive;
 extern int settingLNA;
 extern int settingAGC;
-extern int settingSpeed;
-extern int stepDelay;
+// extern int settingSpeed;
+extern int settingStepDelay;
 
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION, KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE
@@ -414,6 +417,7 @@ static void menu_lowoutputmode_cb(int item, uint8_t data)
 {
   int status;
   int km = data;
+  (void) item;
 //  if (km == KM_SCALE && trace[uistat.current_trace].type == TRC_DELAY) {
 //    km = KM_SCALEDELAY;
 //  }
@@ -434,6 +438,8 @@ static void menu_highoutputmode_cb(int item, uint8_t data)
 {
   int status;
   int km = data;
+  (void) item;
+
 //  if (km == KM_SCALE && trace[uistat.current_trace].type == TRC_DELAY) {
 //    km = KM_SCALEDELAY;
 //  }
@@ -843,13 +849,13 @@ static void menu_item_modify_attribute(
     //    ili9341_fill(320-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT-2, bg);
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
-    char buf[10];
+    char buf[15];
     ili9341_fill(50+25, y, 170, MENU_BUTTON_HEIGHT-2, bg);
     if (menu == menu_lowoutputmode) {
     switch (item) {
     case 0:
       set_sweep_frequency(ST_SPAN, 0);          // For CW sweep mode
-      frequency_string(buf, sizeof buf, frequency0);
+      plot_printf(buf, sizeof buf, "%3.3fMHz", frequency0 / 1000000.0);
       break;
     case 1:
       plot_printf(buf, sizeof buf, "%ddB", -10 - settingAttenuate);
@@ -908,7 +914,7 @@ static void fetch_numeric_target(void)
     uistat.value = frequency_IF;
     break;
   case KM_SAMPLETIME:
-    uistat.value = settingSpeed;
+    uistat.value = settingStepDelay;
     break;
   case KM_DRIVE:
     uistat.value = settingDrive;
@@ -963,14 +969,14 @@ set_numeric_value(void)
     config_save();
     break;
   case KM_IF:
-    frequency_IF = uistat.value;
+    SetIF(uistat.value);
     config_save();
     break;
   case KM_SAMPLETIME:
-    settingSpeed = uistat.value;
+    SetStepDelay(uistat.value);
     break;
   case KM_DRIVE:
-    settingDrive = uistat.value;
+    SetDrive(uistat.value);
     break;
   }
 }
