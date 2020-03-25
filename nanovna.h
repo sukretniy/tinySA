@@ -33,14 +33,18 @@
 #define POINTS_COUNT     290
 #define MARKER_COUNT    4
 
-#define TRACE_COUNT     3
+#define TRACES_MAX 3
+#define TRACE_AGE       3
 #define TRACE_ACTUAL    2
 #define TRACE_STORED    1
 #define TRACE_TEMP      0
+// #define age_t     measured[TRACE_AGE]
 #define stored_t  measured[TRACE_STORED]
 #define actual_t  measured[TRACE_ACTUAL]
 #define temp_t    measured[TRACE_TEMP]
-typedef float measurement_t[3][POINTS_COUNT];
+
+
+typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
 #endif
 
@@ -243,8 +247,6 @@ extern const uint16_t numfont16x22[];
 #define S_OHM   "\036"
 // trace 
 
-#define TRACES_MAX 3
-
 #define MAX_TRACE_TYPE 12
 enum trace_type {
   TRC_LOGMAG=0, TRC_PHASE, TRC_DELAY, TRC_SMITH, TRC_POLAR, TRC_LINEAR, TRC_SWR, TRC_REAL, TRC_IMAG, TRC_R, TRC_X, TRC_OFF
@@ -418,7 +420,7 @@ void show_logo(void);
  * flash.c
  */
 
-#if 0
+#if 1
 #define SAVEAREA_MAX 5
 // Begin addr                   0x08018000
 #define SAVE_CONFIG_AREA_SIZE   0x00008000

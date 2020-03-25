@@ -132,7 +132,6 @@ void SI4432_Reset(void)
 {
   int count = 0;
   // always perform a system reset (don't send 0x87)
-again:
   SI4432_Write_Byte( 0x07, 0x80);
   chThdSleepMilliseconds(25);
   // wait for chiprdy bit
@@ -147,7 +146,6 @@ void SI4432_Transmit(int d)
   SI4432_Write_Byte(0x6D, (byte) (0x1C+d));
   if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 2)
     return; // Already in transmit mode
-again:
   chThdSleepMilliseconds(20);
   SI4432_Write_Byte( 0x07, 0x0b);
   chThdSleepMilliseconds(20);
@@ -161,7 +159,6 @@ void SI4432_Receive(void)
   int count = 0;
   if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 1)
     return; // Already in receive mode
-again:
   SI4432_Write_Byte( 0x07, 0x07);
   chThdSleepMilliseconds(10);
   while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 1) {
@@ -188,7 +185,7 @@ static short RBW_choices[] = {     // Each triple is:  ndec, fils, WISH*10
 
 float SI4432_SET_RBW(float w)  {
   uint8_t dwn3=0;
-  uint32_t WISH = (uint32_t)(w * 10.0);
+  int32_t WISH = (uint32_t)(w * 10.0);
   uint8_t ndec, fils, i;
   if (WISH > 6207)   WISH=6207;     // Final value in RBW_choices[]
   if (WISH > 1379) dwn3 = 1 ;
@@ -232,6 +229,7 @@ int actualStepDelay = 1500;
 float SI4432_RSSI(uint32_t i, int s)
 {
   int RSSI_RAW;
+  (void) i;
   // SEE DATASHEET PAGE 61
 #ifdef USE_SI4463
   if (SI4432_Sel == 2) {
@@ -252,7 +250,7 @@ float SI4432_RSSI(uint32_t i, int s)
 }
 
 
-void SI4432_Sub_Init()
+void SI4432_Sub_Init(void)
 {
   SI4432_Reset();
   SI4432_Write_Byte(0x05, 0x0);
