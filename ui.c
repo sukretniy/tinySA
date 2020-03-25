@@ -1461,8 +1461,8 @@ draw_menu_buttons(const menuitem_t *menu)
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
     if (menu[i].type & MT_FORM) {
-      ili9341_fill(320-active_button_width+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT*2+2, bg);
-      ili9341_drawstring_size(text, 320-active_button_width+5, y+10, 2);
+      ili9341_fill(320-active_button_width+3, y+6, active_button_width-6, 2+FONT_GET_HEIGHT*2+2, bg);
+      ili9341_drawstring_size(text, 320-active_button_width+5, y+8, 2);
     } else {
     if (menu_is_multiline(menu[i].label, &l1, &l2)) {
       ili9341_fill(320-active_button_width+3, y+5, active_button_width-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
