@@ -41,9 +41,12 @@ extern int settingAGC;
 // extern int settingSpeed;
 extern int settingStepDelay;
 
+
+
 enum {
-  KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION, KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE
+  KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION, KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE
 };
+
 
 
 #define KP_X(x) (48*(x) + 2 + (320-BUTTON_WIDTH-192))
@@ -166,27 +169,28 @@ int generator_enabled = false;
 
 extern const menuitem_t  menu_lowoutputmode[];
 extern const menuitem_t  menu_highoutputmode[];
+extern const menuitem_t  menu_top[];
 
 static void menu_mode_cb(int item, uint8_t data)
 {
   (void)data;
+  SetMode(item-1);
+  draw_cal_status();
   switch (item) {
-  case 4: // Change reference output, should not happen!!!
+  case 1:
+    menu_push_submenu(menu_top);
     break;
-  default:
-    SetMode(item);
-    draw_cal_status();
-    if (item == 2) { // Activate menu_lowoutputmode as input form
-      set_sweep_frequency(ST_SPAN, 0);
-      menu_push_submenu(menu_lowoutputmode);
-    } else if (item == 3) { // Activate menu_highoutputmode as input form
-      set_sweep_frequency(ST_SPAN, 0);
-      menu_push_submenu(menu_highoutputmode);
-    } else
-      ui_mode_normal(); // Exit menu after setting the mode
+  case 2:
+    menu_push_submenu(menu_top);
+    break;
+  case 3:
+    menu_push_submenu(menu_lowoutputmode);
+    break;
+  case 4:
+    menu_push_submenu(menu_highoutputmode);
     break;
   }
-
+  draw_cal_status();
 }
 
 extern int dirty;
@@ -260,24 +264,25 @@ static void menu_dfu_cb(int item, uint8_t data)
   }
 }
 
-int menu_refer_value[]={-1,0,1,2,3,4,5,6};
-static void menu_refer_cb(int item, uint8_t data)
+int menu_reffer_value[]={-1,0,1,2,3,4,5,6};
+char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
+static void menu_reffer_cb(int item, uint8_t data)
 {
   (void)data;
 //Serial.println(item);
-  set_refer_output(menu_refer_value[item]); 
+  set_refer_output(menu_reffer_value[item]);
   menu_move_back();
-  ui_mode_normal();
+//  ui_mode_normal();   // Stay in menu mode
   draw_cal_status();
 }
 
-static void menu_refer_cb2(int item, uint8_t data)
+static void menu_reffer_cb2(int item, uint8_t data)
 {
   (void)data;
 //Serial.println(item);
-  set_refer_output(menu_refer_value[item+5]); 
+  set_refer_output(menu_reffer_value[item+5]);
   menu_move_back();
-  ui_mode_normal();
+  //  ui_mode_normal();   // Stay in menu mode
   draw_cal_status();
 }
 
@@ -560,16 +565,18 @@ static const menuvalue_t menu_value[] = {
 // ===[MENU DEFINITION]=========================================================
 
 const menuitem_t  menu_lowoutputmode[] = {
-  { MT_CALLBACK, KM_CENTER,     "FREQUENCY",    menu_lowoutputmode_cb},
-  { MT_CALLBACK, KM_ATTENUATION,"LEVEL",        menu_lowoutputmode_cb},
-  { MT_CANCEL,   0,             S_LARROW" BACK",NULL },
+  { MT_FORM | MT_TITLE,    0,             "LOW OUTPUT",  NULL},
+  { MT_FORM | MT_CALLBACK, KM_CENTER,     "FREQ: %s",    menu_lowoutputmode_cb},
+  { MT_FORM | MT_CALLBACK, KM_ATTENUATION,"LEVEL: %s",   menu_lowoutputmode_cb},
+  { MT_FORM | MT_CANCEL,   0,             S_LARROW" BACK",NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 const menuitem_t  menu_highoutputmode[] = {
-  { MT_CALLBACK, KM_CENTER,     "FREQUENCY",    menu_highoutputmode_cb},
-  { MT_CALLBACK, KM_DRIVE,      "LEVEL",        menu_highoutputmode_cb},
-  { MT_CANCEL,   0,             S_LARROW" BACK",NULL },
+  { MT_FORM | MT_TITLE,    0,             "HIGH OUTPUT", NULL},
+  { MT_FORM | MT_CALLBACK, KM_CENTER,     "FREQ: %s",    menu_highoutputmode_cb},
+  { MT_FORM | MT_CALLBACK, KM_DRIVE,      "LEVEL",       menu_highoutputmode_cb},
+  { MT_FORM | MT_CANCEL,   0,             S_LARROW" BACK",NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
@@ -615,22 +622,22 @@ static const menuitem_t menu_dBper[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_refer2[] = {
-  { MT_CALLBACK, 0, "3MHz" ,   menu_refer_cb2},
-  { MT_CALLBACK, 0, "2MHz" ,   menu_refer_cb2},
-  { MT_CALLBACK, 0, "1MHz" ,   menu_refer_cb2},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+static const menuitem_t menu_reffer2[] = {
+  { MT_FORM | MT_CALLBACK, 0, "3MHz" ,   menu_reffer_cb2},
+  { MT_FORM | MT_CALLBACK, 0, "2MHz" ,   menu_reffer_cb2},
+  { MT_FORM | MT_CALLBACK, 0, "1MHz" ,   menu_reffer_cb2},
+  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_refer[] = {
-  { MT_CALLBACK, 0, "OFF"  ,   menu_refer_cb},
-  { MT_CALLBACK, 0, "30MHz",   menu_refer_cb},
-  { MT_CALLBACK, 0, "15MHz",   menu_refer_cb},
-  { MT_CALLBACK, 0, "10MHz",   menu_refer_cb},
-  { MT_CALLBACK, 0, "4MHz" ,   menu_refer_cb},
-  { MT_SUBMENU,  0, S_RARROW" MORE", menu_refer2},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+static const menuitem_t menu_reffer[] = {
+  { MT_FORM | MT_CALLBACK, 0, "OFF"  ,   menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK, 0, "30MHz",   menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK, 0, "15MHz",   menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK, 0, "10MHz",   menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK, 0, "4MHz" ,   menu_reffer_cb},
+  { MT_FORM | MT_SUBMENU,  0, S_RARROW" MORE", menu_reffer2},
+  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -693,16 +700,6 @@ static const menuitem_t menu_dfu[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_mode[] = {
-  { MT_CALLBACK, 0, "\2LOW\0INPUT", menu_mode_cb},
-  { MT_CALLBACK, 0, "\2HIGH\0INPUT",menu_mode_cb},
-  { MT_CALLBACK, 0, "\2LOW\0OUTPUT", menu_mode_cb},
-  { MT_CALLBACK, 0, "\2HIGH\0OUTPUT",menu_mode_cb},
-  { MT_SUBMENU,  0, "\2REFER\0OUTPUT",menu_refer},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
-};
-
 static const menuitem_t menu_settings2[] =
 {
 //  { MT_CALLBACK, 0, "TRACK",            menu_settings2_cb},
@@ -738,14 +735,25 @@ static const menuitem_t menu_config[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_top[] = {
-  { MT_CALLBACK, 0, "AUTO",       menu_autosettings_cb},
-  { MT_SUBMENU,  0, "SCAN",       menu_stimulus},
-  { MT_SUBMENU,  0, "MARKER",     menu_marker},
-  { MT_SUBMENU,  0, "DISPLAY",    menu_scale},
-  { MT_SUBMENU,  0, "STORAGE",    menu_storage},
-  { MT_SUBMENU,  0, "MODE",       menu_mode},
-  { MT_SUBMENU,  0, "CONFIG",     menu_config},
+static const menuitem_t menu_mode[] = {
+  { MT_FORM | MT_TITLE,    0, "MODE",     NULL},
+  { MT_FORM | MT_CALLBACK, 0, "LOW INPUT", menu_mode_cb},
+  { MT_FORM | MT_CALLBACK, 0, "HIGH INPUT",menu_mode_cb},
+  { MT_FORM | MT_CALLBACK, 0, "LOW OUTPUT", menu_mode_cb},
+  { MT_FORM | MT_CALLBACK, 0, "HIGH OUTPUT",menu_mode_cb},
+  { MT_FORM | MT_SUBMENU,  0, "CAL OUTPUT: %s",menu_reffer},
+//  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+const menuitem_t menu_top[] = {
+  { MT_CALLBACK, 0, "AUTO",         menu_autosettings_cb},
+  { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
+  { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "DISPLAY",      menu_scale},
+  { MT_SUBMENU,  0, "STORAGE",      menu_storage},
+  { MT_SUBMENU,  0, "CONFIG",       menu_config},
+  { MT_CANCEL,   0, S_LARROW" MODE",NULL},
   { MT_NONE,     0, NULL, NULL } // sentinel,
  // MENUITEM_CLOSE,
 };
@@ -761,24 +769,29 @@ void frequency_string(char *buf, size_t len, int32_t freq);
 
 int menu_is_form(const menuitem_t *menu)
 {
-  return(menu == menu_lowoutputmode ||
-         menu == menu_highoutputmode);
+  int i;
+  for (i = 0; MT_MASK(menu[i].type) != MT_NONE; i++)
+    if (menu[i].type & MT_FORM)
+      return (true);
+  return(false);
 }
 
 static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, uint16_t *fg, uint16_t *bg)
 {
   if (menu == menu_mode) {
-    if (item == GetMode()){
+    if (item == GetMode()+1) {
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
+    } else if (item == 5) {
+      plot_printf(uistat.text, sizeof uistat.text, menu_reffer_text[get_refer_output()+1]);
     }
-  } else if (menu == menu_refer) {
+  } else if (menu == menu_reffer) {
     if (item < 5 && item == get_refer_output() + 1){
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
-  } else if (menu == menu_refer2) {
+  } else if (menu == menu_reffer2) {
     if (item == get_refer_output() - 4){
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
@@ -837,44 +850,46 @@ static void menu_item_modify_attribute(
     }
   }
   if (ui_mode == UI_MENU && menu_is_form(menu)) {
-//    if (item == 0)
-//      redraw_frame();
+    //    if (item == 0)
+    //      redraw_frame();
     if (item <= 1) {
 
-    area_width = 0;
-//    area_height = HEIGHT - 32;
-    int y = MENU_BUTTON_HEIGHT*item;
-    uint16_t bg = config.menu_normal_color;
-    uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
-    //    ili9341_fill(320-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT-2, bg);
-    ili9341_set_foreground(fg);
-    ili9341_set_background(bg);
-    char buf[15];
-    ili9341_fill(50+25, y, 170, MENU_BUTTON_HEIGHT-2, bg);
-    if (menu == menu_lowoutputmode) {
-    switch (item) {
-    case 0:
-      set_sweep_frequency(ST_SPAN, 0);          // For CW sweep mode
-      plot_printf(buf, sizeof buf, "%3.3fMHz", frequency0 / 1000000.0);
-      break;
-    case 1:
-      plot_printf(buf, sizeof buf, "%ddB", -10 - settingAttenuate);
-      break;
+      area_width = 0;
+#if 0
+      //    area_height = HEIGHT - 32;
+      int y = MENU_BUTTON_HEIGHT*item;
+      uint16_t bg = config.menu_normal_color;
+      uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
+      //    ili9341_fill(320-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT-2, bg);
+      ili9341_set_foreground(fg);
+      ili9341_set_background(bg);
+      char buf[15];
+      ili9341_fill(50+25, y, 170, MENU_BUTTON_HEIGHT-2, bg);
+      if (menu == menu_lowoutputmode) {
+        switch (item) {
+        case 0:
+          set_sweep_frequency(ST_SPAN, 0);          // For CW sweep mode
+          plot_printf(buf, sizeof buf, "%3.3fMHz", frequency0 / 1000000.0);
+          break;
+        case 1:
+          plot_printf(buf, sizeof buf, "%ddB", -10 - settingAttenuate);
+          break;
+        }
+      }
+      if (menu == menu_highoutputmode) {
+        switch (item) {
+        case 0:
+          set_sweep_frequency(ST_SPAN, 0);          // For CW sweep mode
+          plot_printf(buf, sizeof buf, "%3.3fMHz", frequency0 / 1000000.0);
+          break;
+        case 1:
+          plot_printf(buf, sizeof buf, "%ddB", -10 - settingDrive);
+          break;
+        }
+      }
+      ili9341_drawstring_size(buf, 130, y+6, 2);
+#endif
     }
-    }
-    if (menu == menu_highoutputmode) {
-    switch (item) {
-    case 0:
-      set_sweep_frequency(ST_SPAN, 0);          // For CW sweep mode
-      frequency_string(buf, sizeof buf, frequency0);
-      break;
-    case 1:
-      plot_printf(buf, sizeof buf, "%ddB", -10 - settingDrive);
-      break;
-    }
-    }
-    ili9341_drawstring_size(buf, 130, y+6, 2);
-  }
   }else{
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
@@ -885,39 +900,53 @@ static void fetch_numeric_target(void)
   switch (keypad_mode) {
   case KM_START:
     uistat.value = get_sweep_frequency(ST_START);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_STOP:
     uistat.value = get_sweep_frequency(ST_STOP);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_CENTER:
     uistat.value = get_sweep_frequency(ST_CENTER);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_SPAN:
     uistat.value = get_sweep_frequency(ST_SPAN);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_CW:
     uistat.value = get_sweep_frequency(ST_CW);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_SCALE:
     uistat.value = get_trace_scale(uistat.current_trace) * 1000;
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB/", uistat.value / 1000);
     break;
   case KM_REFPOS:
     uistat.value = get_trace_refpos(uistat.current_trace) * 1000;
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value / 1000);
     break;
   case KM_ATTENUATION:
     uistat.value = settingAttenuate;
+    if (GetMode() == M_GENLOW)
+      uistat.value += 10;           // compensation for dB offset during low output mode
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
      break;
   case KM_ACTUALPOWER:
     uistat.value = settingLevelOffset();
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
     break;
   case KM_IF:
     uistat.value = frequency_IF;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_SAMPLETIME:
     uistat.value = settingStepDelay;
+    plot_printf(uistat.text, sizeof uistat.text, "%3duS", uistat.value);
     break;
   case KM_DRIVE:
     uistat.value = settingDrive;
+    plot_printf(uistat.text, sizeof uistat.text, "%3ddB", uistat.value);
     break;
 
   }
@@ -962,6 +991,8 @@ set_numeric_value(void)
     set_trace_refpos(2, NGRIDY - uistat.value / get_trace_scale(0));
     break;
   case KM_ATTENUATION:
+    if (GetMode() == M_GENLOW)
+      uistat.value -= 10;           // compensation for dB offset during low output mode
     SetAttenuation(uistat.value);
     break;
   case KM_ACTUALPOWER:

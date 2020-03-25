@@ -122,6 +122,13 @@ enum {
 enum {
   M_LOW, M_HIGH, M_GENLOW, M_GENHIGH,
 };
+
+#define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
+#define MODE_INPUT(x)  ((x) == M_LOW || (x) == M_HIGH )
+#define MODE_HIGH(x)  ((x) == M_HIGH || (x) == M_GENHIGH )
+#define MODE_LOW(x)  ((x) == M_LOW || (x) == M_GENLOW )
+#define MODE_SELECT(x) (MODE_HIGH(x) ? 1 : 0)
+
 #define SWEEP_ENABLE  0x01
 #define SWEEP_ONCE    0x02
 extern int8_t sweep_mode;
@@ -537,6 +544,7 @@ typedef struct uistat {
   uint8_t lever_mode;
   uint8_t marker_delta;
   uint8_t marker_tracking;
+  char text[20];
 } uistat_t;
 
 extern uistat_t uistat;
@@ -576,6 +584,7 @@ extern int settingStepDelay;
 extern int actualStepDelay;
 extern int settingMode;
 void update_rbw(uint32_t delta_f);
+int GetActualRBW(void);
 
 #define byte uint8_t
 extern volatile int SI4432_Sel;         // currently selected SI4432

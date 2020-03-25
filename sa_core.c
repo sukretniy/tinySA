@@ -75,12 +75,14 @@ int settingSpur = 0;
 int settingAverage = 0;
 int settingShowStorage = 0;
 int settingSubtractStorage = 0;
-int settingMode = 0;
+int settingMode = M_LOW;
 int settingDrive=0; // 0-3 , 3=+20dBm
 int settingAGC = true;
 int settingLNA = false;
 int extraVFO = false;
 int settingStepDelay = 0;
+float rbw = 0;
+float vbw = 0;
 
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
@@ -122,21 +124,31 @@ int GetMode(void)
 
 void SetMode(int m)
 {
+  if (settingMode == m)
+    return;
   settingMode = m;
   switch(m) {
   case M_LOW:
-  case M_GENLOW:
-    minFreq = 0;
-    maxFreq = 520000000;
     set_sweep_frequency(ST_START, (int32_t) 0);
     set_sweep_frequency(ST_STOP, (int32_t) 300000000);
+    goto min_max_low;
+  case M_GENLOW:
+    set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
+    set_sweep_frequency(ST_SPAN, 0);
+  min_max_low:
+    minFreq = 0;
+    maxFreq = 520000000;
     break;
   case M_HIGH:
-  case M_GENHIGH:
-    minFreq = 260000000;
-    maxFreq = 960000000;
     set_sweep_frequency(ST_START, (int32_t) 300000000);
     set_sweep_frequency(ST_STOP, (int32_t) 960000000);
+    goto min_max_high;
+  case M_GENHIGH:
+    set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
+    set_sweep_frequency(ST_SPAN, 0);
+  min_max_high:
+    minFreq = 240000000;
+    maxFreq = 960000000;
     break;
   }
   dirty = true;
@@ -192,9 +204,9 @@ extern float peakLevel;
 void SetPowerLevel(int o)
 {
   if (o != 100) {
-    if (settingMode & 1)
+    if (settingMode == M_HIGH)
       config.high_level_offset = o - peakLevel - settingAttenuate + settingLevelOffset();
-    else
+    else if (settingMode == M_LOW)
       config.low_level_offset = o - peakLevel - settingAttenuate + settingLevelOffset();
   }
   else {
@@ -206,10 +218,11 @@ void SetPowerLevel(int o)
 
 int settingLevelOffset(void)
 {
-  if (settingMode & 1)
+  if (settingMode == M_HIGH)
     return(config.high_level_offset);
-  dirty = true;
-  return(config.low_level_offset);
+  if (settingMode == M_LOW)
+    return(config.high_level_offset);
+  return(0);
 }
 
 void SetRBW(int v)
@@ -224,6 +237,10 @@ int GetRBW(void)
   return(settingBandwidth);
 }
 
+int GetActualRBW(void)
+{
+  return((int) rbw);
+}
 void SetSpur(int v)
 {
   settingSpur = v;
@@ -287,8 +304,6 @@ int temppeakIndex;
 #define BARSTART  24
 
 
-float rbw = 0;
-float vbw = 0;
 int vbwSteps = 1;
 
 #if 0
@@ -586,7 +601,7 @@ void update_rbw(uint32_t delta_f)
     rbw = 2.6;
   if (rbw > 600)
     rbw = 600;
-  SI4432_Sel = (settingMode & 1);
+  SI4432_Sel =  MODE_SELECT(settingMode);
   rbw = SI4432_SET_RBW(rbw);
   vbwSteps = ((int)(2 * vbw / rbw));
   if (vbwSteps < 1)
@@ -598,7 +613,7 @@ static int old_lf = -1;
 
 float perform(bool break_on_operation, int i, int32_t f, int extraV)
 {
-  long local_IF = ((settingMode & 1) == 0?frequency_IF + (int)(rbw < 300.0?settingSpur * 1000 * rbw :0):0);
+  long local_IF = (MODE_LOW(settingMode)?frequency_IF + (int)(rbw < 300.0?settingSpur * 1000 * rbw :0):0);
   if (i == 0 && dirty) {
     if (settingStepDelay == 0){
       if (rbw < 10.0)
@@ -636,11 +651,11 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
     if (lf != old_lf)                                           // only set on change
       setFreq (1, local_IF + lf);
     old_lf = lf;
-    float subRSSI = SI4432_RSSI(lf, (settingMode & 1))+settingLevelOffset()+settingAttenuate;
+    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(settingMode))+settingLevelOffset()+settingAttenuate;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
     t++;
-    if ((operation_requested && break_on_operation ) || (settingMode & 2 )) // output modes do not step.
+    if ((operation_requested && break_on_operation ) || (MODE_OUTPUT(settingMode))) // output modes do not step.
       subSteps = 0;         // abort
   } while (subSteps-- > 0);
   return(RSSI);
@@ -944,10 +959,9 @@ static void test_acquire(int i)
 {
   pause_sweep();
   if (test_case[i].center < 300)
-    settingMode = 0;
+    settingMode = M_LOW;
   else
-    settingMode = 1;
-
+    settingMode = M_HIGH;
   set_sweep_frequency(ST_CENTER, (int32_t)test_case[i].center * 1000000);
   set_sweep_frequency(ST_SPAN, (int32_t)test_case[i].span * 1000000);
   sweep(false);
@@ -1174,7 +1188,7 @@ void self_test(void)
   set_trace_refpos(1, NGRIDY - (-10) / get_trace_scale(0));
   set_trace_refpos(2, NGRIDY - (-10) / get_trace_scale(0));
   set_refer_output(0);
-  settingMode = 0;
+  settingMode = M_LOW;
   draw_cal_status();
 
   menu_autosettings_cb(0);

@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
+/* Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
  * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
@@ -796,12 +795,19 @@ static void trace_get_value_string(
   } else {
     dfreq = frequencies[i];
   }
-  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
+  if (GetActualRBW()  < 10)
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
+  else if (GetActualRBW()  < 100)
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.2f" , (dfreq + 5000) / 1000000.0);
+  else
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
+
+//  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
     v = logmag(&coeff[i]);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else
-      plot_printf(buf, len, " %s %.2f", buf2, v - rlevel);
+      plot_printf(buf, len, "%s %.1f", buf2, v - rlevel);
 }
 #ifdef __VNA__
 static int
@@ -1817,26 +1823,35 @@ static void cell_draw_marker_info(int x0, int y0)
         continue;
 #if 1
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
-      int ypos = 1 + (j/2)*(13) - y0;
+//      int ypos = 1 + (j/2)*(13) - y0;
+      int ypos = 1 + (j/2)*(16) - y0;
 #else
       int xpos = 1 + CELLOFFSETX - x0;
       int ypos = 1 + j*(FONT_GET_HEIGHT*2+1) - y0;
 #endif
       int k = 0;
-      if (i == active_marker)
+      if (i == active_marker) {
+//        ili9341_set_foreground(DEFAULT_BG_COLOR);
+//        ili9341_set_background(marker_color[markers[i].mtype]);
         buf[k++] = '\033'; // Right arrow (?)
-      else
+      } else {
+//        ili9341_set_background(DEFAULT_BG_COLOR);
+//        ili9341_set_foreground(marker_color[markers[i].mtype]);
         buf[k++] = ' ';
+//        buf[k++] = ' ';
+      }
       buf[k++] = i+'1';
-      buf[k++] = marker_letter[markers[i].mtype];
+//      buf[k++] = marker_letter[markers[i].mtype];
       buf[k++] = 0;
+      ili9341_set_background(DEFAULT_BG_COLOR);
       ili9341_set_foreground(marker_color[markers[i].mtype]);
       cell_drawstring_7x13(buf, xpos, ypos);
+//      cell_drawstring_size(buf, xpos, ypos, 2);
       trace_get_value_string(
           t, buf, sizeof buf,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
-//      cell_drawstring_7x13(w, h, buf, xpos+2*7, ypos, config.trace_color[t]);
-      cell_drawstring_7x13(buf, xpos+4*7, ypos);
+      cell_drawstring_7x13(buf, xpos+3*7, ypos);
+//      cell_drawstring_size(buf, xpos+3*7, ypos, 2);
       j++;
    }
   }

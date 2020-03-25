@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
+/* Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
  * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
@@ -31,6 +30,7 @@ uistat_t uistat = {
  lever_mode: LM_MARKER,
  marker_delta: FALSE,
  marker_tracking : FALSE,
+ text : "",
 };
 
 #define NO_EVENT                    0
@@ -433,8 +433,11 @@ enum {
   MT_SUBMENU,
   MT_CALLBACK,
   MT_CANCEL,
+  MT_TITLE,
   MT_CLOSE
 };
+#define MT_FORM 0x80        // Or with menu type to get large button with current value
+#define MT_MASK(x) (0x7F & (x))
 
 typedef void (*menuaction_cb_t)(int item, uint8_t data);
 
@@ -1048,6 +1051,7 @@ const menuitem_t menu_top[] = {
 
 
 #define MENU_BUTTON_WIDTH  60
+#define MENU_FORM_WIDTH    290
 #define MENU_BUTTON_HEIGHT 30
 #define NUM_INPUT_HEIGHT   30
 
@@ -1055,7 +1059,7 @@ const menuitem_t menu_top[] = {
 
 #define MENU_STACK_DEPTH_MAX 4
 const menuitem_t *menu_stack[MENU_STACK_DEPTH_MAX] = {
-  menu_top, NULL, NULL, NULL
+  menu_mode, NULL, NULL, NULL
 };
 
 static void
@@ -1063,7 +1067,7 @@ ensure_selection(void)
 {
   const menuitem_t *menu = menu_stack[menu_current_level];
   int i;
-  for (i = 0; menu[i].type != MT_NONE; i++)
+  for (i = 0; MT_MASK(menu[i].type) != MT_NONE; i++)
     ;
   if (selection >= i)
     selection = i-1;
@@ -1074,20 +1078,20 @@ menu_move_back(void)
 {
   if (menu_current_level == 0)
     return;
+  erase_menu_buttons();
   menu_current_level--;
   ensure_selection();
-  erase_menu_buttons();
   draw_menu();
 }
 
 static void
 menu_push_submenu(const menuitem_t *submenu)
 {
+  erase_menu_buttons();
   if (menu_current_level < MENU_STACK_DEPTH_MAX-1)
     menu_current_level++;
   menu_stack[menu_current_level] = submenu;
   ensure_selection();
-  erase_menu_buttons();
   if (menu_is_form(submenu)) {
     redraw_frame();
     area_width = 0;
@@ -1264,6 +1268,7 @@ draw_keypad(void)
     ili9341_set_background(bg);
     int x = KP_GET_X(keypads[i].x);
     int y = KP_GET_Y(keypads[i].y);
+//     ili9341_fill(x, y, KP_WIDTH, KP_HEIGHT, DEFAULT_MENU_TEXT_COLOR); // black area around button, causes flicker....
     ili9341_fill(x+2, y+2, KP_WIDTH-4, KP_HEIGHT-4, bg);
     ili9341_drawfont(keypads[i].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
@@ -1414,30 +1419,55 @@ static void
 draw_menu_buttons(const menuitem_t *menu)
 {
   int i = 0;
+  char text[30];
   for (i = 0; i < 7; i++) {
     const char *l1, *l2;
-    if (menu[i].type == MT_NONE)
+    if (MT_MASK(menu[i].type) == MT_NONE)
       break;
-    if (menu[i].type == MT_BLANK)
+    if (MT_MASK(menu[i].type) == MT_BLANK)
       continue;
     int y = MENU_BUTTON_HEIGHT*i;
-    uint16_t bg = config.menu_normal_color;
-    uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
+    uint16_t bg;
+    uint16_t fg;
+    if (MT_MASK(menu[i].type) == MT_TITLE) {
+      fg = config.menu_normal_color;
+      bg = DEFAULT_MENU_TEXT_COLOR;
+    } else {
+      bg = config.menu_normal_color;
+      fg = DEFAULT_MENU_TEXT_COLOR;
+    }
     // focus only in MENU mode but not in KEYPAD mode
     if (ui_mode == UI_MENU && i == selection)
       bg = config.menu_active_color;
-    ili9341_fill(320-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT-2, bg);
-    
-    menu_item_modify_attribute(menu, i, &fg, &bg);
+
+    uint16_t old_bg = bg;
+    int active_button_width;
+    menu_item_modify_attribute(menu, i, &fg, &bg);      // before plot_printf to create status text
+    if (menu[i].type & MT_FORM) {
+      active_button_width = MENU_FORM_WIDTH;
+      if (MT_MASK(menu[i].type) == MT_CALLBACK) {       // Only callback can have value
+        keypad_mode = menu[i].data;
+        fetch_numeric_target();
+      }
+      plot_printf(text, sizeof text, menu[i].label, uistat.text);
+    }
+    else
+      active_button_width = MENU_BUTTON_WIDTH;
+    ili9341_fill(320-active_button_width, y, active_button_width, MENU_BUTTON_HEIGHT-2, old_bg);    // Set button to unmodified background color
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
-    if (menu_is_multiline(menu[i].label, &l1, &l2)) {
-      ili9341_fill(320-MENU_BUTTON_WIDTH+3, y+5, MENU_BUTTON_WIDTH-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
-      ili9341_drawstring(l1, 320-MENU_BUTTON_WIDTH+5, y+7);
-      ili9341_drawstring(l2, 320-MENU_BUTTON_WIDTH+5, y+7+FONT_GET_HEIGHT+1);
+    if (menu[i].type & MT_FORM) {
+      ili9341_fill(320-active_button_width+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT*2+2, bg);
+      ili9341_drawstring_size(text, 320-active_button_width+5, y+10, 2);
     } else {
-      ili9341_fill(320-MENU_BUTTON_WIDTH+3, y+8, MENU_BUTTON_WIDTH-6, 2+FONT_GET_HEIGHT+2, bg);
-      ili9341_drawstring(menu[i].label, 320-MENU_BUTTON_WIDTH+5, y+10);
+    if (menu_is_multiline(menu[i].label, &l1, &l2)) {
+      ili9341_fill(320-active_button_width+3, y+5, active_button_width-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
+      ili9341_drawstring(l1, 320-active_button_width+5, y+7);
+      ili9341_drawstring(l2, 320-active_button_width+5, y+7+FONT_GET_HEIGHT+1);
+    } else {
+      ili9341_fill(320-active_button_width+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT+2, bg);
+      ili9341_drawstring(menu[i].label, 320-active_button_width+5, y+10);
+    }
     }
   }
 }
@@ -1461,12 +1491,18 @@ menu_apply_touch(void)
 
   touch_position(&touch_x, &touch_y);
   for (i = 0; i < 7; i++) {
-    if (menu[i].type == MT_NONE)
+    if (MT_MASK(menu[i].type) == MT_NONE)
       break;
-    if (menu[i].type == MT_BLANK)
+    if (MT_MASK(menu[i].type == MT_BLANK) || MT_MASK(menu[i].type) == MT_TITLE)
       continue;
     int y = MENU_BUTTON_HEIGHT*i;
-    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT && 320-MENU_BUTTON_WIDTH < touch_x) {
+    int active_button_width;
+    if (menu[i].type & MT_FORM)
+      active_button_width = MENU_FORM_WIDTH;
+    else
+      active_button_width = MENU_BUTTON_WIDTH;
+
+    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT && 320-active_button_width < touch_x) {
       menu_select_touch(i);
       return;
     }
@@ -1486,7 +1522,8 @@ draw_menu(void)
 static void
 erase_menu_buttons(void)
 {
-  ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*7, DEFAULT_BG_COLOR);
+  ili9341_fill(area_width, 0, 320 - area_width, area_height, DEFAULT_BG_COLOR);
+//  ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*7, DEFAULT_BG_COLOR);
 }
 
 static void
@@ -1649,7 +1686,8 @@ ui_mode_keypad(int _keypad_mode)
   ui_mode = UI_KEYPAD;
   area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   area_height = HEIGHT - 32;
-  draw_menu();
+  if (!menu_is_form(menu_stack[menu_current_level]))
+    draw_menu();
   draw_keypad();
   draw_numeric_area_frame();
   draw_numeric_input("");
