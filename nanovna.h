@@ -123,6 +123,10 @@ enum {
   M_LOW, M_HIGH, M_GENLOW, M_GENHIGH,
 };
 
+enum {
+  MO_NONE, MO_AM, MO_NFM, MO_WFM,
+};
+
 #define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
 #define MODE_INPUT(x)  ((x) == M_LOW || (x) == M_HIGH )
 #define MODE_HIGH(x)  ((x) == M_HIGH || (x) == M_GENHIGH )

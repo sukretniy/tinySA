@@ -1095,6 +1095,10 @@ menu_push_submenu(const menuitem_t *submenu)
   if (menu_is_form(submenu)) {
     redraw_frame();
     area_width = 0;
+  } else {
+    redraw_frame();
+    request_to_redraw_grid();
+    area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
   draw_menu();
 }

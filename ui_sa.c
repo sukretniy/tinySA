@@ -38,13 +38,16 @@ extern int extraVFO;
 extern int settingDrive;
 extern int settingLNA;
 extern int settingAGC;
+void SetModulation(int);
+extern int settingModulation;
 // extern int settingSpeed;
 extern int settingStepDelay;
 
 
 
 enum {
-  KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION, KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE
+  KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_HIGHOUTLEVEL
 };
 
 
@@ -136,6 +139,7 @@ static const keypads_t keypads_level[] = {
 
 
 static const keypads_t * const keypads_mode_tbl[] = {
+  NULL,         // never used
   keypads_freq, // start
   keypads_freq, // stop
   keypads_freq, // center
@@ -148,6 +152,8 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_freq, // IF
   keypads_level, // sample time
   keypads_scale, // drive
+  keypads_level,    // KM_LOWOUTLEVEL
+  keypads_level,    // KM_HIGHOUTLEVEL
 };
 
 #ifdef __VNA__
@@ -157,7 +163,7 @@ static const char * const keypad_mode_label[] = {
 #endif
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
-  "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", "ATTENUATION", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE"
+  "error", "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", "ATTENUATION", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL"
 };
 #endif
 
@@ -169,6 +175,7 @@ int generator_enabled = false;
 
 extern const menuitem_t  menu_lowoutputmode[];
 extern const menuitem_t  menu_highoutputmode[];
+extern const menuitem_t  menu_modulation[];
 extern const menuitem_t  menu_top[];
 
 static void menu_mode_cb(int item, uint8_t data)
@@ -213,15 +220,20 @@ void menu_autosettings_cb(int item, uint8_t data)
   set_trace_refpos(2, - value / get_trace_scale(0) + NGRIDY);
 
   active_marker = 0;
-  menu_marker_type_cb(M_REFERENCE,M_REFERENCE);
 
-  set_refer_output(1);
+  for (int i = 0; i<MARKER_COUNT; i++ ) {
+      markers[i].mtype = M_NORMAL;
+  }
+  markers[0].mtype = M_REFERENCE;
+
+  //  set_refer_output(1);
+
   SetAttenuation(0);
-  SetPowerLevel(100); // Reset
+//  SetPowerLevel(100); // Reset
   SetClearStorage();
   SetRBW(0);
   dirty = true;
-  menu_move_back();
+//  menu_move_back();   // stay in input menu
   ui_mode_normal();
   draw_cal_status();
 }
@@ -264,6 +276,19 @@ static void menu_dfu_cb(int item, uint8_t data)
   }
 }
 
+int menu_modulation_value[]={0, MO_NONE,MO_AM, MO_NFM, MO_WFM};
+char *menu_modulation_text[]={"NONE","AM","NARROW FM","WIDE FM"};
+static void menu_modulation_cb(int item, uint8_t data)
+{
+  (void)data;
+//Serial.println(item);
+  SetModulation(menu_modulation_value[item]);
+  menu_move_back();
+//  ui_mode_normal();   // Stay in menu mode
+  draw_cal_status();
+}
+
+
 int menu_reffer_value[]={-1,0,1,2,3,4,5,6};
 char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
 static void menu_reffer_cb(int item, uint8_t data)
@@ -294,7 +319,7 @@ static void menu_spur_cb(int item, uint8_t data)
     SetSpur(0);
   else
     SetSpur(1); // must be 0 or 1 !!!!
-  menu_move_back();
+//  menu_move_back();
   ui_mode_normal();
   draw_cal_status();
 }
@@ -426,19 +451,26 @@ static void menu_lowoutputmode_cb(int item, uint8_t data)
 //  if (km == KM_SCALE && trace[uistat.current_trace].type == TRC_DELAY) {
 //    km = KM_SCALEDELAY;
 //  }
+
   status = btn_wait_release();
-  if (status & EVT_BUTTON_DOWN_LONG) {
-    ui_mode_numeric(km);
-//    ui_process_numeric();
-  } else {
-    area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
-    redraw_frame();         // Remove form numbers
-    ui_mode_keypad(km);
-    ui_process_keypad();
+
+  if (item == 3) {
+    menu_push_submenu(menu_modulation);
+  } else
+  {
+    if (status & EVT_BUTTON_DOWN_LONG) {
+      ui_mode_numeric(km);
+      //    ui_process_numeric();
+    } else {
+      area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
+      redraw_frame();         // Remove form numbers
+      ui_mode_keypad(km);
+      ui_process_keypad();
+    }
   }
   draw_cal_status();
 }
-
+#if 0
 static void menu_highoutputmode_cb(int item, uint8_t data)
 {
   int status;
@@ -460,7 +492,7 @@ static void menu_highoutputmode_cb(int item, uint8_t data)
   }
   draw_cal_status();
 }
-
+#endif
 
 static void menu_settings_cb(int item, uint8_t data)
 {
@@ -500,22 +532,23 @@ static void menu_stimulus_cb(int item, uint8_t data)
 {
   (void) data;
   int status;
-  switch (item) {
-  case 0: /* START */
-  case 1: /* STOP */
-  case 2: /* CENTER */
-  case 3: /* SPAN */
-  case 4: /* CW */
+  int km = item+KM_START;
+  switch (km) {
+  case KM_START: /* START */
+  case KM_STOP: /* STOP */
+  case KM_CENTER: /* CENTER */
+  case KM_SPAN: /* SPAN */
+  case KM_CW: /* CW */
     status = btn_wait_release();
     if (status & EVT_BUTTON_DOWN_LONG) {
-      ui_mode_numeric(item);
+      ui_mode_numeric(km);
 //      ui_process_numeric();
     } else {
-      ui_mode_keypad(item);
+      ui_mode_keypad(km);
       ui_process_keypad();
     }
     break;
-  case 5: /* PAUSE */
+  case KM_CW+1: /* PAUSE */
     toggle_sweep();
     menu_move_back();
     ui_mode_normal();
@@ -564,18 +597,30 @@ static const menuvalue_t menu_value[] = {
 
 // ===[MENU DEFINITION]=========================================================
 
+const menuitem_t  menu_modulation[] = {
+  { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
+  { MT_FORM | MT_CALLBACK, 0,  "NONE",      menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, 0,  "AM",        menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, 0,  "NARROW FM", menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, 0,  "WIDE FM",   menu_modulation_cb},
+  { MT_FORM | MT_CANCEL,   0,             S_LARROW" BACK",NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
 const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_TITLE,    0,             "LOW OUTPUT",  NULL},
   { MT_FORM | MT_CALLBACK, KM_CENTER,     "FREQ: %s",    menu_lowoutputmode_cb},
-  { MT_FORM | MT_CALLBACK, KM_ATTENUATION,"LEVEL: %s",   menu_lowoutputmode_cb},
+  { MT_FORM | MT_CALLBACK, KM_LOWOUTLEVEL, "LEVEL: %s",   menu_lowoutputmode_cb},
+  { MT_FORM | MT_SUBMENU,  0,              "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_CANCEL,   0,             S_LARROW" BACK",NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_TITLE,    0,             "HIGH OUTPUT", NULL},
-  { MT_FORM | MT_CALLBACK, KM_CENTER,     "FREQ: %s",    menu_highoutputmode_cb},
-  { MT_FORM | MT_CALLBACK, KM_DRIVE,      "LEVEL",       menu_highoutputmode_cb},
+  { MT_FORM | MT_CALLBACK, KM_CENTER,     "FREQ: %s",    menu_lowoutputmode_cb},    // same menu as low mode
+  { MT_FORM | MT_CALLBACK, KM_HIGHOUTLEVEL,      "LEVEL: %s",   menu_lowoutputmode_cb},
+  { MT_FORM | MT_SUBMENU,  0,              "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_CANCEL,   0,             S_LARROW" BACK",NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -786,6 +831,10 @@ static void menu_item_modify_attribute(
     } else if (item == 5) {
       plot_printf(uistat.text, sizeof uistat.text, menu_reffer_text[get_refer_output()+1]);
     }
+  } else if (menu == menu_lowoutputmode || menu == menu_highoutputmode) {
+    if (item == 3) {
+      plot_printf(uistat.text, sizeof uistat.text, menu_modulation_text[settingModulation]);
+    }
   } else if (menu == menu_reffer) {
     if (item < 5 && item == get_refer_output() + 1){
       *bg = DEFAULT_MENU_TEXT_COLOR;
@@ -928,8 +977,6 @@ static void fetch_numeric_target(void)
     break;
   case KM_ATTENUATION:
     uistat.value = settingAttenuate;
-    if (GetMode() == M_GENLOW)
-      uistat.value += 10;           // compensation for dB offset during low output mode
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
      break;
   case KM_ACTUALPOWER:
@@ -948,7 +995,15 @@ static void fetch_numeric_target(void)
     uistat.value = settingDrive;
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", uistat.value);
     break;
-
+  case KM_LOWOUTLEVEL:
+    uistat.value = settingAttenuate;
+    uistat.value = -10 - uistat.value;           // compensation for dB offset during low output mode
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
+    break;
+  case KM_HIGHOUTLEVEL:
+    uistat.value = settingDrive*5 + 5;
+    plot_printf(uistat.text, sizeof uistat.text, "%3ddB", uistat.value);
+    break;
   }
   
   {
@@ -991,8 +1046,6 @@ set_numeric_value(void)
     set_trace_refpos(2, NGRIDY - uistat.value / get_trace_scale(0));
     break;
   case KM_ATTENUATION:
-    if (GetMode() == M_GENLOW)
-      uistat.value -= 10;           // compensation for dB offset during low output mode
     SetAttenuation(uistat.value);
     break;
   case KM_ACTUALPOWER:
@@ -1007,6 +1060,14 @@ set_numeric_value(void)
     SetStepDelay(uistat.value);
     break;
   case KM_DRIVE:
+    SetDrive(uistat.value);
+    break;
+  case KM_LOWOUTLEVEL:
+    uistat.value = -10 - uistat.value ;           // compensation for dB offset during low output mode
+    SetAttenuation(uistat.value);
+    break;
+  case KM_HIGHOUTLEVEL:
+    uistat.value = uistat.value / 5 - 1 ;           // compensation for dB offset during high output mode
     SetDrive(uistat.value);
     break;
   }

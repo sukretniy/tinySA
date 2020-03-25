@@ -1503,7 +1503,7 @@ draw_all_cells(bool flush_markmap)
 #endif
       spi_buffer[i] = RGB565(r,g,b);
     }
-    ili9341_bulk(5*5,HEIGHT+3, 290,1);
+    ili9341_bulk(5*5,HEIGHT+3, area_width,1);
   }
 #endif
 }

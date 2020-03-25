@@ -64,7 +64,7 @@ int scandirty = true;
 //---------------- menu system -----------------------
 
 int settingAttenuate = 0;
-int settingGenerate = 0;
+// int settingGenerate = 0;
 int settingBandwidth = 0;
 
 //int settingLevelOffset = 0;
@@ -80,6 +80,7 @@ int settingDrive=0; // 0-3 , 3=+20dBm
 int settingAGC = true;
 int settingLNA = false;
 int extraVFO = false;
+int settingModulation = MO_NONE;
 int settingStepDelay = 0;
 float rbw = 0;
 float vbw = 0;
@@ -98,11 +99,13 @@ int get_refer_output(void)
   return(settingRefer);
 }
 
+#if 0
 void SetGenerate(int g)
 {
   settingGenerate = g;
   dirty = true;
 }
+#endif
 
 void SetDrive(int d)
 {
@@ -110,6 +113,11 @@ void SetDrive(int d)
   dirty = true;
 }
 
+void SetModulation(int m)
+{
+  settingModulation = m;
+  dirty = true;
+}
 void SetIF(int f)
 {
   frequency_IF = f;
@@ -157,6 +165,12 @@ void SetMode(int m)
 
 void SetAttenuation(int a)
 {
+  if (a<0)
+    a = 0;
+  if (a> 31)
+    a=31;
+  if (settingAttenuate == a)
+    return;
   settingAttenuate = a;
   dirty = true;
 }
@@ -610,6 +624,7 @@ void update_rbw(uint32_t delta_f)
 }
 
 static int old_lf = -1;
+static int modulation_counter = 0;
 
 float perform(bool break_on_operation, int i, int32_t f, int extraV)
 {
@@ -631,6 +646,16 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
 
     int p = settingAttenuate * 2;
     PE4302_Write_Byte(p);
+    if (settingModulation == MO_NFM ) {
+      SI4432_Sel = 1;
+      SI4432_Write_Byte(0x7A, 1);  // Use frequency hopping channel width for FM modulation
+    } else if (settingModulation == MO_WFM ) {
+      SI4432_Sel = 1;
+      SI4432_Write_Byte(0x7A, 10);  // Use frequency hopping channel width for FM modulation
+    } else {
+      SI4432_Sel = 1;
+      SI4432_Write_Byte(0x79, 0);  // IF no FM back to channel 0
+    }
     SetRX(settingMode);
     SI4432_SetReference(settingRefer);
     temppeakLevel = -150;
@@ -640,6 +665,23 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
       scandirty = true;
       dirty = false;
 //    }
+  }
+  if (settingModulation == MO_AM) {
+    int p = settingAttenuate * 2 + modulation_counter;
+    PE4302_Write_Byte(p);
+    if (modulation_counter == 3)
+      modulation_counter = 0;
+    else
+      modulation_counter++;
+    chThdSleepMicroseconds(250);
+  } else if (settingModulation == MO_NFM || settingModulation == MO_WFM ) {
+      SI4432_Sel = 1;
+      SI4432_Write_Byte(0x79, modulation_counter);  // Use frequency hopping channel for FM modulation
+      if (modulation_counter == 3)
+        modulation_counter = 0;
+      else
+        modulation_counter++;
+      chThdSleepMicroseconds(250);
   }
   volatile int subSteps = ((int)(2 * vbw / rbw));
   float RSSI = -150.0;
@@ -651,6 +693,8 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
     if (lf != old_lf)                                           // only set on change
       setFreq (1, local_IF + lf);
     old_lf = lf;
+    if (MODE_OUTPUT(settingMode))
+      return(0);
     float subRSSI = SI4432_RSSI(lf, MODE_SELECT(settingMode))+settingLevelOffset()+settingAttenuate;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
