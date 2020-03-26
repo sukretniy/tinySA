@@ -130,47 +130,6 @@ int GetMode(void)
   dirty = true;
 }
 
-void SetMode(int m)
-{
-  if (settingMode == m)
-    return;
-  settingMode = m;
-  switch(m) {
-  case M_LOW:
-    set_sweep_frequency(ST_START, (int32_t) 0);
-    set_sweep_frequency(ST_STOP, (int32_t) 300000000);
-    SetRefpos(-10);
-    goto min_max_low;
-  case M_GENLOW:
-    set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
-    set_sweep_frequency(ST_SPAN, 0);
-    settingSpur = 0;        // Not for output mode
-    settingRefer = -1;      // No refer output in output mode
-  min_max_low:
-    minFreq = 0;
-    maxFreq = 520000000;
-    break;
-  case M_HIGH:
-    set_sweep_frequency(ST_START, (int32_t) 300000000);
-    set_sweep_frequency(ST_STOP, (int32_t) 960000000);
-    SetRefpos(-30);
-    goto min_max_high;
-  case M_GENHIGH:
-    set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
-    set_sweep_frequency(ST_SPAN, 0);
-    settingRefer = -1;      // No refer output in output mode
-  min_max_high:
-    minFreq = 240000000;
-    maxFreq = 960000000;
-    extraVFO = false;       // Not possible in high mode
-    settingSpur = 0;        // Not possible in high mode
-    break;
-  }
-  settingAttenuate = 0;
-  dirty = true;
-}
-
-
 void SetAttenuation(int a)
 {
   if (a<0)
@@ -336,6 +295,56 @@ void SetRefpos(int level)
   set_trace_refpos(2, NGRIDY - level / get_trace_scale(0));
   dirty = true;
 }
+
+void SetScale(int s) {
+  set_trace_scale(0, s);
+  set_trace_scale(1, s);
+  set_trace_scale(2, s);
+}
+
+void SetMode(int m)
+{
+  if (settingMode == m)
+    return;
+  settingMode = m;
+  switch(m) {
+  case M_LOW:
+    set_sweep_frequency(ST_START, (int32_t) 0);
+    set_sweep_frequency(ST_STOP, (int32_t) 300000000);
+    SetRefpos(-10);
+    goto min_max_low;
+  case M_GENLOW:
+    set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
+    set_sweep_frequency(ST_SPAN, 0);
+    settingSpur = 0;        // Not for output mode
+    settingRefer = -1;      // No refer output in output mode
+  min_max_low:
+    minFreq = 0;
+    maxFreq = 520000000;
+    break;
+  case M_HIGH:
+    set_sweep_frequency(ST_START, (int32_t) 300000000);
+    set_sweep_frequency(ST_STOP, (int32_t) 960000000);
+    SetRefpos(-30);
+    goto min_max_high;
+  case M_GENHIGH:
+    set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
+    set_sweep_frequency(ST_SPAN, 0);
+    settingRefer = -1;      // No refer output in output mode
+  min_max_high:
+    minFreq = 240000000;
+    maxFreq = 960000000;
+    extraVFO = false;       // Not possible in high mode
+    settingSpur = 0;        // Not possible in high mode
+    break;
+  }
+  settingAttenuate = 0;
+  SetRBW(0);
+  SetScale(10);
+  dirty = true;
+}
+
+
 //------------------------------------------
 
 

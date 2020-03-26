@@ -30,8 +30,11 @@ void toggle_waterfall(void);
 void SetMode(int);
 int GetMode(void);
 void SetRefpos(int);
+void SetScale(int);
 void AllDirty(void);
 void MenuDirty(void);
+void ToggleLNA(void);
+void ToggleAGC(void);
 void redrawHisto(void);
 void self_test(void);
 extern int32_t frequencyExtra;
@@ -207,33 +210,21 @@ void menu_autosettings_cb(int item, uint8_t data)
 {
   (void)item;
   (void)data;
-  SetMode(GetMode());
-//  set_sweep_frequency(ST_START, (int32_t) 0);
-//  set_sweep_frequency(ST_STOP, (int32_t) 300000000);
-
-  int value = 10; // 10dB/
-  set_trace_scale(0, value);
-  set_trace_scale(1, value);
-  set_trace_scale(2, value);
-
-  value = -10; // Top at -10dB
-  set_trace_refpos(0, - value / get_trace_scale(0) + NGRIDY);
-  set_trace_refpos(1, - value / get_trace_scale(0) + NGRIDY);
-  set_trace_refpos(2, - value / get_trace_scale(0) + NGRIDY);
+  int current_mode = GetMode();
+  SetMode(-1);              // Force setmode to do something
+  SetMode(current_mode);
 
   active_marker = 0;
-
-  for (int i = 0; i<MARKER_COUNT; i++ ) {
-      markers[i].mtype = M_NORMAL;
+  for (int i = 1; i<MARKER_COUNT; i++ ) {
+      markers[i].enabled = false;
   }
+  markers[0].enabled = true;
   markers[0].mtype = M_REFERENCE;
 
   //  set_refer_output(1);
 
-  SetAttenuation(0);
 //  SetPowerLevel(100); // Reset
   SetClearStorage();
-  SetRBW(0);
   dirty = true;
 //  menu_move_back();   // stay in input menu
   ui_mode_normal();
@@ -393,9 +384,7 @@ int menu_dBper_value[]={1,2,5,10,20};
 static void menu_dBper_cb(int item, uint8_t data)
 {
   (void)data;
-  set_trace_scale(0, menu_dBper_value[item]);
-  set_trace_scale(1, menu_dBper_value[item]);
-  set_trace_scale(2, menu_dBper_value[item]);
+  SetScale(menu_dBper_value[item]);
   menu_move_back();
   ui_mode_normal();
   draw_cal_status();
@@ -428,7 +417,7 @@ static void choose_active_marker(void)
 
 static void menu_scale_cb(int item, uint8_t data)
 {
-  (void)data;
+  (void)item;
   int status;
   status = btn_wait_release();
   if (status & EVT_BUTTON_DOWN_LONG) {
@@ -494,7 +483,7 @@ static void menu_highoutputmode_cb(int item, uint8_t data)
 
 static void menu_settings_cb(int item, uint8_t data)
 {
-  (void)data;
+  (void)item;
   int status;
   status = btn_wait_release();
   if (status & EVT_BUTTON_DOWN_LONG) {
