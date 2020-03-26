@@ -1051,7 +1051,9 @@ const menuitem_t menu_top[] = {
 
 
 #define MENU_BUTTON_WIDTH  60
+#define MENU_BUTTON_START  (320-MENU_BUTTON_WIDTH)
 #define MENU_FORM_WIDTH    290
+#define MENU_FORM_START    (320 - MENU_FORM_WIDTH)
 #define MENU_BUTTON_HEIGHT 30
 #define NUM_INPUT_HEIGHT   30
 
@@ -1423,6 +1425,7 @@ static void
 draw_menu_buttons(const menuitem_t *menu)
 {
   int i = 0;
+  int bw = 320;
   char text[30];
   for (i = 0; i < 7; i++) {
     const char *l1, *l2;
@@ -1457,20 +1460,31 @@ draw_menu_buttons(const menuitem_t *menu)
     }
     else
       active_button_width = MENU_BUTTON_WIDTH;
-    ili9341_fill(320-active_button_width, y, active_button_width, MENU_BUTTON_HEIGHT-2, old_bg);    // Set button to unmodified background color
+    ili9341_fill(bw-active_button_width, y, active_button_width, MENU_BUTTON_HEIGHT-4, old_bg);    // Set button to unmodified background color
+
+    // 3D button accent
+
+    if (MT_MASK(menu[i].type) != MT_TITLE) {
+        ili9341_fill(bw-active_button_width, y,    2,                      MENU_BUTTON_HEIGHT-4, LIGHT_GREY);    // Set button to unmodified background color
+        ili9341_fill(bw-active_button_width, y,    active_button_width,    2,                      LIGHT_GREY);    // Set button to unmodified background color
+        ili9341_fill(bw-2, y,    2,                      MENU_BUTTON_HEIGHT-4, DARK_GREY);    // Set button to unmodified background color
+        ili9341_fill(bw-active_button_width, y+MENU_BUTTON_HEIGHT-4, active_button_width, 2, DARK_GREY);    // Set button to unmodified background color
+    }
+
+
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
     if (menu[i].type & MT_FORM) {
-      ili9341_fill(320-active_button_width+3, y+6, active_button_width-6, 2+FONT_GET_HEIGHT*2+2, bg);
-      ili9341_drawstring_size(text, 320-active_button_width+5, y+8, 2);
+      ili9341_fill(bw-active_button_width+3, y+6, active_button_width-6, 2+FONT_GET_HEIGHT*2+2, bg);
+      ili9341_drawstring_size(text, bw-active_button_width+5, y+8, 2);
     } else {
     if (menu_is_multiline(menu[i].label, &l1, &l2)) {
-      ili9341_fill(320-active_button_width+3, y+5, active_button_width-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
-      ili9341_drawstring(l1, 320-active_button_width+5, y+7);
-      ili9341_drawstring(l2, 320-active_button_width+5, y+7+FONT_GET_HEIGHT+1);
+      ili9341_fill(bw-active_button_width+3, y+5, active_button_width-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
+      ili9341_drawstring(l1, bw-active_button_width+5, y+7);
+      ili9341_drawstring(l2, bw-active_button_width+5, y+7+FONT_GET_HEIGHT+1);
     } else {
-      ili9341_fill(320-active_button_width+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT+2, bg);
-      ili9341_drawstring(menu[i].label, 320-active_button_width+5, y+10);
+      ili9341_fill(bw-active_button_width+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT+2, bg);
+      ili9341_drawstring(menu[i].label, bw-active_button_width+5, y+10);
     }
     }
   }
