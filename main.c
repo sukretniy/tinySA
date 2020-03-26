@@ -786,8 +786,8 @@ config_t config = {
   .harmonic_freq_threshold = 300000000,
 #endif
   .vbat_offset = 500,
-  .low_level_offset =       0,
-  .high_level_offset =      0,
+  .low_level_offset =       100,    // Uncalibrated
+  .high_level_offset =      100,    // Uncalibrated
 };
 
 properties_t current_props;

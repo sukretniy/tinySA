@@ -29,6 +29,7 @@ void  SetSubtractStorage(void);
 void toggle_waterfall(void);
 void SetMode(int);
 int GetMode(void);
+void SetRefpos(int);
 void AllDirty(void);
 void MenuDirty(void);
 void redrawHisto(void);
@@ -177,6 +178,7 @@ extern const menuitem_t  menu_lowoutputmode[];
 extern const menuitem_t  menu_highoutputmode[];
 extern const menuitem_t  menu_modulation[];
 extern const menuitem_t  menu_top[];
+extern const menuitem_t  menu_tophigh[];
 
 static void menu_mode_cb(int item, uint8_t data)
 {
@@ -188,7 +190,7 @@ static void menu_mode_cb(int item, uint8_t data)
     menu_push_submenu(menu_top);
     break;
   case 2:
-    menu_push_submenu(menu_top);
+    menu_push_submenu(menu_tophigh);
     break;
   case 3:
     menu_push_submenu(menu_lowoutputmode);
@@ -205,7 +207,7 @@ void menu_autosettings_cb(int item, uint8_t data)
 {
   (void)item;
   (void)data;
-  SetMode(M_LOW);
+  SetMode(GetMode());
 //  set_sweep_frequency(ST_START, (int32_t) 0);
 //  set_sweep_frequency(ST_STOP, (int32_t) 300000000);
 
@@ -428,16 +430,12 @@ static void menu_scale_cb(int item, uint8_t data)
 {
   (void)data;
   int status;
-  int km = KM_REFPOS + item;
-//  if (km == KM_SCALE && trace[uistat.current_trace].type == TRC_DELAY) {
-//    km = KM_SCALEDELAY;
-//  }
   status = btn_wait_release();
   if (status & EVT_BUTTON_DOWN_LONG) {
-    ui_mode_numeric(km);
+    ui_mode_numeric(data);
 //    ui_process_numeric();
   } else {
-    ui_mode_keypad(km);
+    ui_mode_keypad(data);
     ui_process_keypad();
   }
   draw_cal_status();
@@ -498,13 +496,12 @@ static void menu_settings_cb(int item, uint8_t data)
 {
   (void)data;
   int status;
-  int km = KM_ACTUALPOWER+item;
   status = btn_wait_release();
   if (status & EVT_BUTTON_DOWN_LONG) {
-    ui_mode_numeric(km);
+    ui_mode_numeric(data);
     //    ui_process_numeric();
   } else {
-    ui_mode_keypad(km);
+    ui_mode_keypad(data);
     ui_process_keypad();
   }
   draw_cal_status();
@@ -515,10 +512,10 @@ static void menu_settings2_cb(int item, uint8_t data)
   (void)data;
   switch(item) {
   case 0:
-    settingAGC = !settingAGC;
+    ToggleAGC();
     break;
   case 1:
-    settingLNA = !settingLNA;
+    ToggleLNA();;
     break;
   case 2:
     extraVFO = !extraVFO;
@@ -687,15 +684,26 @@ static const menuitem_t menu_reffer[] = {
 };
 
 static const menuitem_t menu_scale[] = {
-  { MT_CALLBACK, 0, "\2REF\0LEVEL",  menu_scale_cb},
-  { MT_SUBMENU,  0, "\2SCALE/\0DIV",     menu_dBper},
-  { MT_CALLBACK, 0, "ATTEN",         menu_scale_cb},
-  { MT_SUBMENU,  0, "AVERAGE",       menu_average},
-  { MT_CALLBACK, 0, "\2SPUR\0REDUCT.",menu_spur_cb},
-  { MT_SUBMENU,  0, "RBW",           menu_rbw},
+  { MT_CALLBACK, KM_REFPOS,         "\2REF\0LEVEL",  menu_scale_cb},
+  { MT_SUBMENU,  0,                 "\2SCALE/\0DIV",     menu_dBper},
+  { MT_CALLBACK, KM_ATTENUATION,    "ATTEN",         menu_scale_cb},
+  { MT_SUBMENU,  0,                 "AVERAGE",       menu_average},
+  { MT_CALLBACK, 0,                 "\2SPUR\0REDUCT.",menu_spur_cb},
+  { MT_SUBMENU,  0,                 "RBW",           menu_rbw},
+  { MT_CANCEL,   0,                 S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_scalehigh[] = {
+  { MT_CALLBACK, KM_REFPOS, "\2REF\0LEVEL",  menu_scale_cb},
+  { MT_SUBMENU,  0,         "\2SCALE/\0DIV", menu_dBper},
+  { MT_SUBMENU,  0,         "AVERAGE",       menu_average},
+  { MT_SUBMENU,  0,         "RBW",           menu_rbw},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
+
+
 
 static const menuitem_t menu_stimulus[] = {
   { MT_CALLBACK, 0, "START",            menu_stimulus_cb},
@@ -740,14 +748,13 @@ static const menuitem_t menu_marker[] = {
 };
 
 static const menuitem_t menu_dfu[] = {
-  { MT_CALLBACK, 0, "ENTER DFU", menu_dfu_cb},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_FORM | MT_CALLBACK, 0, "ENTER DFU", menu_dfu_cb},
+  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_settings2[] =
 {
-//  { MT_CALLBACK, 0, "TRACK",            menu_settings2_cb},
   { MT_CALLBACK, 0, "AGC",              menu_settings2_cb},
   { MT_CALLBACK, 0, "LNA",              menu_settings2_cb},
   { MT_CALLBACK, 0, "BPF",              menu_settings2_cb},
@@ -757,36 +764,53 @@ static const menuitem_t menu_settings2[] =
 
 static const menuitem_t menu_settings[] =
 {
-  { MT_CALLBACK, 0, "\2ACTUAL\0POWER",  menu_settings_cb},
-  { MT_CALLBACK, 0, "\2IF\0FREQ",       menu_settings_cb},
-  { MT_CALLBACK, 0, "\2SAMPLE\0TIME",   menu_settings_cb},
-  { MT_CALLBACK, 0, "\2LO\0DRIVE",      menu_settings_cb},
-  { MT_SUBMENU,  0, S_RARROW" MORE",    menu_settings2},
+  { MT_CALLBACK, KM_ACTUALPOWER,    "\2ACTUAL\0POWER",  menu_settings_cb},
+  { MT_CALLBACK, KM_IF,             "\2IF\0FREQ",       menu_settings_cb},
+  { MT_CALLBACK, KM_SAMPLETIME,     "\2SAMPLE\0TIME",   menu_settings_cb},
+  { MT_CALLBACK, KM_DRIVE,          "\2LO\0DRIVE",      menu_settings_cb},
+  { MT_SUBMENU,  0,                 S_RARROW" MORE",    menu_settings2},
+  { MT_CANCEL,   0,                 S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
 
-//  { MT_SUBMENU,  0, "RBW", menu_rbw},
+
+static const menuitem_t menu_settingshigh2[] =
+{
+  { MT_CALLBACK, 0, "AGC",              menu_settings2_cb},
+  { MT_CALLBACK, 0, "LNA",              menu_settings2_cb},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_settingshigh[] =
+{
+  { MT_CALLBACK, KM_ACTUALPOWER,    "\2ACTUAL\0POWER",  menu_settings_cb},
+  { MT_CALLBACK, KM_SAMPLETIME,     "\2SAMPLE\0TIME",   menu_settings_cb},
+  { MT_SUBMENU,  0,                 S_RARROW" MORE",    menu_settingshigh2},
+  { MT_CANCEL,   0,                 S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_config[] = {
-  { MT_CALLBACK, 0, "\2TOUCH\0CAL",     menu_config_cb},
-  { MT_CALLBACK, 0, "\2TOUCH\0TEST",    menu_config_cb},
-  { MT_CALLBACK, 0, "\2SELF\0TEST",     menu_config_cb},
-  { MT_CALLBACK, 0, "VERSION",          menu_config_cb},
-  { MT_SUBMENU,  0, "SETTINGS",         menu_settings},
+  { MT_FORM | MT_CALLBACK, 0, "TOUCH CAL",     menu_config_cb},
+  { MT_FORM | MT_CALLBACK, 0, "TOUCH TEST",    menu_config_cb},
+  { MT_FORM | MT_CALLBACK, 0, "SELF TEST",     menu_config_cb},
+  { MT_FORM | MT_CALLBACK, 0, "VERSION",          menu_config_cb},
+//  { MT_SUBMENU,  0, "SETTINGS",         menu_settings},
 //  { MT_SUBMENU,  0, "RBW", menu_rbw},
-  { MT_SUBMENU,  0, S_RARROW"DFU",  menu_dfu},
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_FORM | MT_SUBMENU,  0, S_RARROW"DFU",  menu_dfu},
+  { MT_FORM | MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_mode[] = {
-  { MT_FORM | MT_TITLE,    0, "MODE",     NULL},
-  { MT_FORM | MT_CALLBACK, 0, "LOW INPUT", menu_mode_cb},
-  { MT_FORM | MT_CALLBACK, 0, "HIGH INPUT",menu_mode_cb},
-  { MT_FORM | MT_CALLBACK, 0, "LOW OUTPUT", menu_mode_cb},
-  { MT_FORM | MT_CALLBACK, 0, "HIGH OUTPUT",menu_mode_cb},
-  { MT_FORM | MT_SUBMENU,  0, "CAL OUTPUT: %s",menu_reffer},
+  { MT_FORM | MT_TITLE,    0, "MODE",           NULL},
+  { MT_FORM | MT_CALLBACK, 0, "LOW INPUT",      menu_mode_cb},
+  { MT_FORM | MT_CALLBACK, 0, "HIGH INPUT",     menu_mode_cb},
+  { MT_FORM | MT_CALLBACK, 0, "LOW OUTPUT",     menu_mode_cb},
+  { MT_FORM | MT_CALLBACK, 0, "HIGH OUTPUT",    menu_mode_cb},
+  { MT_FORM | MT_SUBMENU,  0, "CAL OUTPUT: %s", menu_reffer},
+  { MT_FORM | MT_SUBMENU,  0, "CONFIG",         menu_config},
 //  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -797,7 +821,19 @@ const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "DISPLAY",      menu_scale},
   { MT_SUBMENU,  0, "STORAGE",      menu_storage},
-  { MT_SUBMENU,  0, "CONFIG",       menu_config},
+  { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
+  { MT_CANCEL,   0, S_LARROW" MODE",NULL},
+  { MT_NONE,     0, NULL, NULL } // sentinel,
+ // MENUITEM_CLOSE,
+};
+
+const menuitem_t menu_tophigh[] = {
+  { MT_CALLBACK, 0, "AUTO",         menu_autosettings_cb},
+  { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
+  { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "DISPLAY",      menu_scalehigh},
+  { MT_SUBMENU,  0, "STORAGE",      menu_storage},
+  { MT_SUBMENU,  0, "SETTINGS",     menu_settingshigh},
   { MT_CANCEL,   0, S_LARROW" MODE",NULL},
   { MT_NONE,     0, NULL, NULL } // sentinel,
  // MENUITEM_CLOSE,
@@ -884,7 +920,7 @@ static void menu_item_modify_attribute(
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
-  } else if (menu == menu_settings2) {
+  } else if (menu == menu_settings2 || menu == menu_settingshigh2) {
     if (item ==0 && settingAGC){
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
@@ -893,7 +929,7 @@ static void menu_item_modify_attribute(
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
-    if (item == 2 && extraVFO){
+    if (item == 2 && extraVFO){         // should not happen in high mode
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
@@ -1041,9 +1077,7 @@ set_numeric_value(void)
     set_trace_scale(2, uistat.value / 1000.0);
     break;
   case KM_REFPOS:
-    set_trace_refpos(0, NGRIDY - uistat.value / get_trace_scale(0));
-    set_trace_refpos(1, NGRIDY - uistat.value / get_trace_scale(0));
-    set_trace_refpos(2, NGRIDY - uistat.value / get_trace_scale(0));
+    SetRefpos(uistat.value);
     break;
   case KM_ATTENUATION:
     SetAttenuation(uistat.value);

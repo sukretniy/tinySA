@@ -1900,6 +1900,9 @@ draw_frequencies(void)
 {
   char buf1[32];
   char buf2[32]; buf2[0] = 0;
+  if (MODE_OUTPUT(settingMode))     // No frequencies during output
+    return;
+
 #ifdef __VNA__
   if ((domain_mode & DOMAIN_MODE) == DOMAIN_FREQ) {
 #endif
