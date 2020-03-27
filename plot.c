@@ -1144,9 +1144,9 @@ marker_search(void)
   if (uistat.current_trace == -1)
     return -1;
 
-  int value = CELL_Y(trace_index[uistat.current_trace][0]);
+  int value = CELL_Y(trace_index[TRACE_ACTUAL][0]);
   for (i = 0; i < sweep_points; i++) {
-    index_t index = trace_index[uistat.current_trace][i];
+    index_t index = trace_index[TRACE_ACTUAL][i];
     if ((*compare)(value, CELL_Y(index))) {
       value = CELL_Y(index);
       found = i;
@@ -1167,21 +1167,21 @@ marker_search_left(int from)
 {
   int i;
   int found = -1;
-
+#define MINMAX_DELTA    -10
   if (uistat.current_trace == -1)
     return -1;
 
-  int value = CELL_Y(trace_index[uistat.current_trace][from]);
+  int value = CELL_Y(trace_index[TRACE_ACTUAL][from]);
   for (i = from - 1; i >= 0; i--) {
-    index_t index = trace_index[uistat.current_trace][i];
-    if ((*compare)(value, CELL_Y(index)))
+    index_t index = trace_index[TRACE_ACTUAL][i];
+    if ((*compare)(value - MINMAX_DELTA, CELL_Y(index)))
       break;
     value = CELL_Y(index);
   }
 
   for (; i >= 0; i--) {
-    index_t index = trace_index[uistat.current_trace][i];
-    if ((*compare)(CELL_Y(index), value)) {
+    index_t index = trace_index[TRACE_ACTUAL][i];
+    if ((*compare)(CELL_Y(index), value + MINMAX_DELTA)) {
       break;
     }
     found = i;
@@ -1198,17 +1198,16 @@ marker_search_right(int from)
 
   if (uistat.current_trace == -1)
     return -1;
-
-  int value = CELL_Y(trace_index[uistat.current_trace][from]);
+  int value = CELL_Y(trace_index[TRACE_ACTUAL][from]);
   for (i = from + 1; i < sweep_points; i++) {
-    index_t index = trace_index[uistat.current_trace][i];
+    index_t index = trace_index[TRACE_ACTUAL][i];
     if ((*compare)(value, CELL_Y(index)))
       break;
     value = CELL_Y(index);
   }
 
   for (; i < sweep_points; i++) {
-    index_t index = trace_index[uistat.current_trace][i];
+    index_t index = trace_index[TRACE_ACTUAL][i];
     if ((*compare)(CELL_Y(index), value)) {
       break;
     }
@@ -1902,7 +1901,7 @@ draw_frequencies(void)
   char buf2[32]; buf2[0] = 0;
   if (MODE_OUTPUT(settingMode))     // No frequencies during output
     return;
-  if (current_menu_is_form())
+  if (current_menu_is_form() && !in_selftest)
     return;
 
 #ifdef __VNA__

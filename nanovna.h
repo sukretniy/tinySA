@@ -307,6 +307,7 @@ void set_trace_refpos(int t, float refpos);
 float get_trace_scale(int t);
 float get_trace_refpos(int t);
 const char *get_trace_typename(int t);
+extern int in_selftest;
 
 #ifdef __VNA
 void set_electrical_delay(float picoseconds);

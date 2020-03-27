@@ -715,12 +715,24 @@ static const menuitem_t menu_marker_type[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+const menuitem_t menu_marker_search[] = {
+  //{ MT_CALLBACK, "OFF", menu_marker_search_cb },
+  { MT_CALLBACK, 0, "MAXIMUM", menu_marker_search_cb },
+  { MT_CALLBACK, 0, "MINIMUM", menu_marker_search_cb },
+  { MT_CALLBACK, 0, "\2SEARCH\0" S_LARROW" LEFT", menu_marker_search_cb },
+  { MT_CALLBACK, 0, "\2SEARCH\0" S_RARROW" RIGHT", menu_marker_search_cb },
+  { MT_CALLBACK, 0, "TRACKING", menu_marker_search_cb },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_marker_sel[] = {
   { MT_CALLBACK, 0, "MARKER 1",     menu_marker_sel_cb},
   { MT_CALLBACK, 0, "MARKER 2",     menu_marker_sel_cb},
   { MT_CALLBACK, 0, "MARKER 3",     menu_marker_sel_cb},
   { MT_CALLBACK, 0, "MARKER 4",     menu_marker_sel_cb},
   { MT_CALLBACK, 0, "ALL OFF",      menu_marker_sel_cb},
+  { MT_SUBMENU,  0, "\2SEARCH\0MARKER",     menu_marker_search},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
