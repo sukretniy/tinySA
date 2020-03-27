@@ -75,7 +75,7 @@ int settingSpur = 0;
 int settingAverage = 0;
 int settingShowStorage = 0;
 int settingSubtractStorage = 0;
-int settingMode = M_LOW;
+int settingMode = -1;       // Initialize to unknown state
 int settingDrive=0; // 0-3 , 3=+20dBm
 int settingAGC = true;
 int settingLNA = false;
@@ -704,6 +704,8 @@ void draw_cal_status(void)
   ili9341_fill(x, y, OFFSETX, HEIGHT, 0x0000);
 
   if (MODE_OUTPUT(settingMode))     // No cal status during output
+    return;
+  if (current_menu_is_form())
     return;
 
   ili9341_set_background(DEFAULT_BG_COLOR);

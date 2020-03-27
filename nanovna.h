@@ -525,6 +525,7 @@ void clear_all_config_prop_data(void);
  */
 extern void ui_init(void);
 extern void ui_process(void);
+int current_menu_is_form(void);
 
 // Irq operation process set
 #define OP_NONE       0x00

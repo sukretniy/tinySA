@@ -846,6 +846,7 @@ int menu_is_form(const menuitem_t *menu)
   return(false);
 }
 
+
 static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, uint16_t *fg, uint16_t *bg)
 {

@@ -1902,6 +1902,8 @@ draw_frequencies(void)
   char buf2[32]; buf2[0] = 0;
   if (MODE_OUTPUT(settingMode))     // No frequencies during output
     return;
+  if (current_menu_is_form())
+    return;
 
 #ifdef __VNA__
   if ((domain_mode & DOMAIN_MODE) == DOMAIN_FREQ) {
