@@ -75,7 +75,7 @@ int settingSpur = 0;
 int settingAverage = 0;
 int settingShowStorage = 0;
 int settingSubtractStorage = 0;
-int settingMode = -1;       // Initialize to unknown state
+int settingMode = M_LOW;
 int settingDrive=0; // 0-3 , 3=+20dBm
 int settingAGC = true;
 int settingLNA = false;
@@ -309,31 +309,35 @@ void SetMode(int m)
   settingMode = m;
   switch(m) {
   case M_LOW:
+    minFreq = 0;
+    maxFreq = 520000000;
     set_sweep_frequency(ST_START, (int32_t) 0);
     set_sweep_frequency(ST_STOP, (int32_t) 300000000);
     SetRefpos(-10);
-    goto min_max_low;
+    settingSpur = 0;        // Not for output mode
+    break;
   case M_GENLOW:
+    minFreq = 0;
+    maxFreq = 520000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     settingSpur = 0;        // Not for output mode
     settingRefer = -1;      // No refer output in output mode
-  min_max_low:
-    minFreq = 0;
-    maxFreq = 520000000;
     break;
   case M_HIGH:
+    minFreq = 240000000;
+    maxFreq = 960000000;
     set_sweep_frequency(ST_START, (int32_t) 300000000);
     set_sweep_frequency(ST_STOP, (int32_t) 960000000);
     SetRefpos(-30);
-    goto min_max_high;
+    goto common_high;
   case M_GENHIGH:
+    minFreq = 240000000;
+    maxFreq = 960000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
     set_sweep_frequency(ST_SPAN, 0);
     settingRefer = -1;      // No refer output in output mode
-  min_max_high:
-    minFreq = 240000000;
-    maxFreq = 960000000;
+  common_high:
     extraVFO = false;       // Not possible in high mode
     settingSpur = 0;        // Not possible in high mode
     break;
@@ -506,13 +510,14 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
     }
     SetRX(settingMode);
     SI4432_SetReference(settingRefer);
-    if (local_IF)
-      setFreq (0, local_IF);
+
 //    if (dirty) {
       scandirty = true;
       dirty = false;
 //    }
   }
+  if (i == 0 && ( scandirty || settingSpur) && local_IF)
+    setFreq (0, local_IF);
   if (settingModulation == MO_AM) {
     int p = settingAttenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
@@ -561,6 +566,10 @@ static bool sweep(bool break_on_operation)
 again:
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], extraVFO);
+    // back to toplevel to handle ui operation
+    if (operation_requested && break_on_operation)
+      return false;
+
     if (settingSpur == 1) {                           // First pass
       temp_t[i] = RSSI;
       continue;                                       // Skip all other processing
@@ -590,29 +599,27 @@ again:
       }
     }
     if (i == sweep_points -1) {
-      if (scandirty) {
-        scandirty = false;
-      }
-      peakIndex = temppeakIndex;
-      peakLevel = actual_t[peakIndex];
-      peakFreq = frequencies[peakIndex];
-      settingSpur = -settingSpur;
-      int peak_marker = 0;
-      markers[peak_marker].enabled = true;
-      markers[peak_marker].index = peakIndex;
-      markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
-      //    redraw_marker(peak_marker, FALSE);
 
 
     }
-    // back to toplevel to handle ui operation
-    if (operation_requested && break_on_operation)
-      return false;
   }
   if (settingSpur == 1) {
     settingSpur = -1;
     goto again;
+  } else if (settingSpur == -1)
+    settingSpur = 1;
+
+  if (scandirty) {
+    scandirty = false;
   }
+  peakIndex = temppeakIndex;
+  peakLevel = actual_t[peakIndex];
+  peakFreq = frequencies[peakIndex];
+  int peak_marker = 0;
+  markers[peak_marker].enabled = true;
+  markers[peak_marker].index = peakIndex;
+  markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
+  //    redraw_marker(peak_marker, FALSE);
   palSetPad(GPIOC, GPIOC_LED);
   return true;
 }

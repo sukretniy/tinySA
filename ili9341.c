@@ -592,6 +592,16 @@ void ili9341_drawstring(const char *str, int x, int y)
   }
 }
 
+void ili9341_drawstring_7x13(const char *str, int x, int y)
+{
+  while (*str) {
+    uint8_t ch = *str++;
+    const uint16_t *char_buf = &x7x13b_bits[(ch * 13)];
+    blit16BitWidthBitmap(x, y, 7, 11, char_buf);
+    x += 7;
+  }
+}
+
 void ili9341_drawstringV(const char *str, int x, int y)
 {
   ili9341_set_rotation(DISPLAY_ROTATION_270);

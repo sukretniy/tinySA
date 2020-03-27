@@ -1488,12 +1488,26 @@ draw_menu_buttons(const menuitem_t *menu)
       ili9341_drawstring_size(text, active_button_start+5, y+8, 2);
     } else {
     if (menu_is_multiline(menu[i].label, &l1, &l2)) {
+#define BIG_BUTTON_FONT 1
+#ifdef BIG_BUTTON_FONT
+#undef FONT_HEIGHT
+#define FONT_HEIGHT 13
+      ili9341_fill(active_button_start+1, y+1, active_button_width-2, 13+13 -2, bg);
+      ili9341_drawstring_7x13(l1, active_button_start+2, y+1);
+      ili9341_drawstring_7x13(l2, active_button_start+2, y+1+13-1);
+#else
       ili9341_fill(active_button_start+3, y+5, active_button_width-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
       ili9341_drawstring(l1, active_button_start+5, y+7);
       ili9341_drawstring(l2, active_button_start+5, y+7+FONT_GET_HEIGHT+1);
+#endif
     } else {
+#ifdef BIG_BUTTON_FONT
+      ili9341_fill(active_button_start+1, y+1, active_button_width-2, 13+13 -2, bg);
+      ili9341_drawstring_7x13(menu[i].label, active_button_start+2, y+6);
+#else
       ili9341_fill(active_button_start+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT+2, bg);
       ili9341_drawstring(menu[i].label, active_button_start+5, y+10);
+#endif
     }
     }
   }
