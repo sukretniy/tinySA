@@ -354,6 +354,7 @@ void SetMode(int m)
 
 
 float peakLevel;
+float min_level;
 uint32_t peakFreq;
 int peakIndex;
 float temppeakLevel;
@@ -486,15 +487,20 @@ static const int spur_table[] =
    830000,
    880000,
    949000,
+  1390000,
   1468000,
   1830000,
   1900000,
+  2770000,
   2840000,
   2880000,
+  4710000,
   4780000,
   4800000,
   4880000,
-  6510000
+  6510000,
+  6750000,
+  6790000,
   6860000,
   7340000,
   8100000,
@@ -630,7 +636,8 @@ static bool sweep(bool break_on_operation)
   float RSSI;
   palClearPad(GPIOC, GPIOC_LED);
   temppeakLevel = -150;
-//  spur_old_stepdelay = 0;
+  float temp_min_level = 100;
+  //  spur_old_stepdelay = 0;
 again:
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], extraVFO);
@@ -666,10 +673,8 @@ again:
         temppeakLevel = actual_t[i];
       }
     }
-    if (i == sweep_points -1) {
-
-
-    }
+    if (temp_min_level > actual_t[i])
+      temp_min_level = actual_t[i];
   }
   if (settingSpur == 1) {
     settingSpur = -1;
@@ -684,6 +689,20 @@ again:
   peakIndex = temppeakIndex;
   peakLevel = actual_t[peakIndex];
   peakFreq = frequencies[peakIndex];
+  min_level = temp_min_level;
+#if 0                           // Auto ref level setting
+  int scale = get_trace_scale(2);
+  int rp = (NGRIDY - get_trace_refpos(2)) * scale;
+  if (scale > 0 && peakLevel > rp && peakLevel - min_level < 8 * scale ) {
+    SetRefpos((((int)(peakLevel/scale)) + 1) * scale);
+  }
+  if (scale > 0 && min_level < rp - 9*scale && peakLevel - min_level < 8 * scale ) {
+    int new_rp = (((int)((min_level + 9*scale)/scale)) - 1) * scale;
+    if (new_rp < rp)
+      SetRefpos(new_rp);
+  }
+
+#endif
   int peak_marker = 0;
   markers[peak_marker].enabled = true;
   markers[peak_marker].index = peakIndex;

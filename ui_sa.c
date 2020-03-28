@@ -1035,7 +1035,7 @@ static void fetch_numeric_target(void)
     break;
   case KM_LOWOUTLEVEL:
     uistat.value = settingAttenuate;
-    uistat.value = -10 - uistat.value;           // compensation for dB offset during low output mode
+    uistat.value = -5 - uistat.value;           // compensation for dB offset during low output mode
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
     break;
   case KM_HIGHOUTLEVEL:
@@ -1099,7 +1099,7 @@ set_numeric_value(void)
     SetDrive(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
-    uistat.value = -10 - uistat.value ;           // compensation for dB offset during low output mode
+    uistat.value = -5 - uistat.value ;           // compensation for dB offset during low output mode
     SetAttenuation(uistat.value);
     break;
   case KM_HIGHOUTLEVEL:

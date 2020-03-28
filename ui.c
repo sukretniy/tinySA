@@ -1052,7 +1052,7 @@ const menuitem_t menu_top[] = {
 
 #define MENU_BUTTON_WIDTH  60
 #define MENU_BUTTON_START  (320-MENU_BUTTON_WIDTH)
-#define MENU_FORM_WIDTH    290
+#define MENU_FORM_WIDTH    295
 #define MENU_FORM_START    (320 - MENU_FORM_WIDTH)
 #define MENU_BUTTON_HEIGHT 30
 #define NUM_INPUT_HEIGHT   30
@@ -1484,8 +1484,8 @@ draw_menu_buttons(const menuitem_t *menu)
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
     if (menu[i].type & MT_FORM) {
-      ili9341_fill(active_button_start+3, y+6, active_button_width-6, 2+FONT_GET_HEIGHT*2+2, bg);
-      ili9341_drawstring_size(text, active_button_start+5, y+8, 2);
+      ili9341_fill(active_button_start+2, y+2, active_button_width-4, FONT_GET_HEIGHT*2+8, bg);
+      ili9341_drawstring_size(text, active_button_start+6, y+6, 2);
     } else {
     if (menu_is_multiline(menu[i].label, &l1, &l2)) {
 #define BIG_BUTTON_FONT 1
