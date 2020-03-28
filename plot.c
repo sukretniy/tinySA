@@ -67,7 +67,7 @@ typedef uint32_t map_t;
 uint16_t marker_color[3] =
 {
  RGBHEX(0xFFFFFF),
- RGBHEX(0x0000FF),
+ RGBHEX(0xFFFF00),
  RGBHEX(0x00FF00)
 };
 

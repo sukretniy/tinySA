@@ -476,12 +476,75 @@ void update_rbw(uint32_t delta_f)
   dirty = true;
 }
 
+//static int spur_old_stepdelay = 0;
+static int spur_IF =            433900000;
+static int spur_alternate_IF =  433700000;
+static const int spur_table[] =
+{
+   470000,
+   780000,
+   830000,
+   880000,
+   949000,
+  1468000,
+  1830000,
+  1900000,
+  2840000,
+  2880000,
+  4780000,
+  4800000,
+  4880000,
+  6510000
+  6860000,
+  7340000,
+  8100000,
+  8200000,
+  8880000,
+//  9970000,    10MHz!!!!!!
+ 10870000,
+ 11420000,
+ 14880000,
+ 16820000,
+};
+
+int avoid_spur(int f)
+{
+  int window = ((int)rbw ) * 1000*2;
+  if (window < 50000)
+    window = 50000;
+  if (! settingMode == M_LOW)
+    return false ;
+  if (frequency_IF != spur_IF)
+    return false;
+  if (rbw > 300.0)
+    return(false);
+//  if (spur_old_stepdelay != 0 && actualStepDelay != spur_old_stepdelay)  // restore stepdelay
+//    actualStepDelay = spur_old_stepdelay;
+  for (int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
+    if (f/window == spur_table[i]/window) {
+//      spur_old_stepdelay = actualStepDelay;
+//      actualStepDelay += 4000;
+      return true;
+    }
+  }
+  return false;
+}
+
 static int old_lf = -1;
 static int modulation_counter = 0;
+static int old_local_IF = -1;
 
 float perform(bool break_on_operation, int i, int32_t f, int extraV)
 {
-  long local_IF = (MODE_LOW(settingMode)?frequency_IF + (int)(rbw < 300.0?settingSpur * 1000 * rbw :0):0);
+//  long local_IF = (MODE_LOW(settingMode)?frequency_IF + (int)(rbw < 300.0?settingSpur * 1000 * rbw :0):0);
+  long local_IF;
+  if (MODE_HIGH(settingMode))
+    local_IF = 0;
+  else if (avoid_spur(f))
+    local_IF = spur_alternate_IF;
+  else
+    local_IF = frequency_IF;
+
   if (i == 0 && dirty) {
     if (settingStepDelay == 0){
       if (rbw < 10.0)
@@ -517,8 +580,11 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
       dirty = false;
 //    }
   }
-  if (i == 0 && ( scandirty || settingSpur) && local_IF)
+//  if (i == 0 && ( scandirty || settingSpur) && local_IF)
+  if (local_IF && old_local_IF != local_IF) {
     setFreq (0, local_IF);
+    old_local_IF = local_IF;
+  }
   if (settingModulation == MO_AM) {
     int p = settingAttenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
@@ -564,6 +630,7 @@ static bool sweep(bool break_on_operation)
   float RSSI;
   palClearPad(GPIOC, GPIOC_LED);
   temppeakLevel = -150;
+//  spur_old_stepdelay = 0;
 again:
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], extraVFO);
@@ -612,6 +679,7 @@ again:
 
   if (scandirty) {
     scandirty = false;
+    draw_cal_status();
   }
   peakIndex = temppeakIndex;
   peakLevel = actual_t[peakIndex];
@@ -705,10 +773,6 @@ void draw_cal_status(void)
 
 #define XSTEP   40
 
-//  if (!sweep_enabled)
-//    perform(true, 0, frequencies[0], false);
-
-
   ili9341_fill(x, y, OFFSETX, HEIGHT, 0x0000);
 
   if (MODE_OUTPUT(settingMode))     // No cal status during output
@@ -786,6 +850,9 @@ void draw_cal_status(void)
   plot_printf(buf, BLEN, "%dkHz",(int)vbw);
   buf[5]=0;
   ili9341_drawstring(buf, x, y);
+
+  if (dirty)
+    ili9341_set_foreground(BRIGHT_COLOR_RED);
 
   y += YSTEP*2;
   ili9341_drawstring("Scan:", x, y);
@@ -886,6 +953,10 @@ static void test_acquire(int i)
 #endif
   set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
   set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
+  SetAverage(4);
+  sweep(false);
+  sweep(false);
+  sweep(false);
   sweep(false);
   plot_into_index(measured);
   redraw_request |= REDRAW_CELLS | REDRAW_FREQUENCY;
@@ -989,7 +1060,6 @@ int validate_above(void) {
 void test_validate(int i)
 {
 //  draw_all(TRUE);
-  SetRefpos(test_case[i].pass+10);
   switch (test_case[i].kind) {
   case TC_SET:
     if (test_case[i].pass == 0) {
@@ -997,8 +1067,10 @@ void test_validate(int i)
         SetPowerLevel(test_value);
     } else
       SetPowerLevel(test_case[i].pass);
-    case TC_MEASURE:
+    goto common;
+  case TC_MEASURE:
     case TC_SIGNAL:           // Validate signal
+ common:
     if (validate_peak_within(i, 5.0))                // Validate Peak
       test_status[i] = TS_PASS;
     else if (validate_peak_within(i, 10.0))
@@ -1084,6 +1156,7 @@ void self_test(void)
     switch(test_case[i].setup) {                // Prepare test conditions
     case TPH_SILENT:                             // No input signal
       SetMode(M_HIGH);
+      goto common_silent;
     case TP_SILENT:                             // No input signal
       SetMode(M_LOW);
 common_silent:
@@ -1118,9 +1191,7 @@ common_silent:
       goto common;
     }
     trace[TRACE_STORED].enabled = true;
-    set_trace_refpos(0, NGRIDY - (test_case[i].pass + 30) / get_trace_scale(0));
-    set_trace_refpos(1, NGRIDY - (test_case[i].pass + 30) / get_trace_scale(0));
-    set_trace_refpos(2, NGRIDY - (test_case[i].pass + 30) / get_trace_scale(0));
+    SetRefpos(test_case[i].pass+10);
     draw_cal_status();
     test_acquire(i);                        // Acquire test
     test_validate(i);                       // Validate test
