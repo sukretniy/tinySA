@@ -298,8 +298,8 @@ static void menu_modulation_cb(int item, uint8_t data)
 }
 
 
-int menu_reffer_value[]={-1,0,1,2,3,4,5,6};
-char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
+const int menu_reffer_value[]={-1,0,1,2,3,4,5,6};
+const char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
 static void menu_reffer_cb(int item, uint8_t data)
 {
   (void)data;
@@ -384,7 +384,7 @@ static void menu_marker_type_cb(int item, uint8_t data)
 }
 
 
-int rbwsel[]={0,3,10,30,100,300};
+const int rbwsel[]={0,3,10,30,100,300};
 
 static void menu_rbw_cb(int item, uint8_t data)
 {

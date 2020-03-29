@@ -470,8 +470,8 @@ void update_rbw(uint32_t delta_f)
 }
 
 //static int spur_old_stepdelay = 0;
-static int spur_IF =            433900000;
-static int spur_alternate_IF =  433700000;
+static const int spur_IF =            433900000;
+static const int spur_alternate_IF =  433700000;
 static const int spur_table[] =
 {
    470000,
@@ -545,14 +545,21 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
 
   if (i == 0 && dirty) {
     if (settingStepDelay == 0){
-      if (rbw < 10.0)
-        actualStepDelay = 2500;
-      else if (rbw <30.0)
-        actualStepDelay = 2000;
-      else if (rbw <100.0)
-        actualStepDelay = 1000;
-      else
-        actualStepDelay = 500;
+      if (MODE_LOW(settingMode)) {
+        if      (rbw >300.0)    actualStepDelay =  400;
+        else if (rbw >100.0)    actualStepDelay =  500;
+        else if (rbw > 30.0)    actualStepDelay =  900;
+        else if (rbw > 10.0)    actualStepDelay =  900;
+        else if (rbw >  3.0)    actualStepDelay = 1000;
+        else                    actualStepDelay = 1500;
+      } else {
+        if      (rbw >300.0)    actualStepDelay =  900;
+        else if (rbw >100.0)    actualStepDelay =  900;
+        else if (rbw > 30.0)    actualStepDelay =  900;
+        else if (rbw > 10.0)    actualStepDelay = 1800;
+        else if (rbw >  3.0)    actualStepDelay = 6000;
+        else                    actualStepDelay = 8000;
+      }
     } else
       actualStepDelay = settingStepDelay;
 
@@ -766,9 +773,9 @@ void PeakSearch()
 }
 #endif
 
-char *averageText[] = { "OFF", "MIN", "MAX", "2", "4", "8"};
-char *dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
-int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
+const char *averageText[] = { "OFF", "MIN", "MAX", "2", "4", "8"};
+const char *dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
+const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
 
 void draw_cal_status(void)
 {

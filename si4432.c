@@ -172,7 +172,7 @@ void SI4432_Receive(void)
 // User asks for an RBW of WISH, go through table finding the last triple
 // for which WISH is greater than the first entry, use those values,
 // Return the first entry of the following triple for the RBW actually achieved
-static short RBW_choices[] = {     // Each triple is:  ndec, fils, WISH*10
+static const short RBW_choices[] = {     // Each triple is:  ndec, fils, WISH*10
      0, 5,1,26, 5,2,28, 5,3,31, 5,4,32, 5,5,37, 5,6,42, 5,7,
     45,4,1,    49,4,2,    54,4,3,    59,4,4,    61,4,5,    72,4,6,    82,4,7,
     88,3,1,    95,3,2,   106,3,3,   115,3,4,   121,3,5,   142,3,6,   162,3,7,
