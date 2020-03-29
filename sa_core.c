@@ -21,7 +21,6 @@ int settingStepDelay = 0;
 float actual_rbw = 0;
 float setting_vbw = 0;
 int settingSpur = 0;
-
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
 
