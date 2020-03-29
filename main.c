@@ -2256,11 +2256,11 @@ VNA_SHELL_FUNCTION(cmd_t)
 VNA_SHELL_FUNCTION(cmd_e)
 {
   (void)argc;
-  extraVFO = my_atoi(argv[0]);
-  if (extraVFO == -1)
-    extraVFO = false;
+  trackingVFO = my_atoi(argv[0]);
+  if (trackingVFO == -1)
+    trackingVFO = false;
   else
-    extraVFO = true;
+    trackingVFO = true;
 
   if (argc >1)
     frequencyExtra = my_atoi(argv[1]);
@@ -2283,7 +2283,7 @@ VNA_SHELL_FUNCTION(cmd_m)
   chThdSleepMilliseconds(10);
   streamPut(shell_stream, '{');
   for (int i = 0; i<points; i++) {
-      float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, extraVFO);
+      float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, trackingVFO);
       streamPut(shell_stream, 'x');
       int v = val*2 + 256;
       streamPut(shell_stream, (uint8_t)(v & 0xFF));

@@ -2,92 +2,33 @@
 
 #include "SI4432.h"		// comment out for simulation
 
-#if 0
-//-----------------SI4432 dummy------------------
-void SI4432_Write_Byte(unsigned char ADR, unsigned char DATA ) {}
-unsigned char SI4432_Read_Byte(unsigned char ADR) {return ADR;}
-float SI4432_SET_RBW(float WISH) {return (WISH > 600.0?600: (WISH<3.0?3:WISH));}
-void SI4432_SetReference(int p) {}
-void SI4432_Set_Frequency(long f) {}
-void PE4302_Write_Byte(unsigned char DATA ) {}
-void PE4302_init(void) {}
-#endif
+int settingMode = M_LOW;
 
-#ifdef __SIMULATION__
-unsigned long seed = 123456789;
-extern float rbw;
-float myfrand(void)
-{
-  seed = (unsigned int) (1103515245 * seed + 12345) ;
-  return ((float) seed) / 1000000000.0;
-}
-#define NOISE  ((myfrand()-2) * 2)  // +/- 4 dBm noise
-extern int settingAttenuate;
-
-//#define LEVEL(i, f, v) (v * (1-(fabs(f - frequencies[i])/rbw/1000)))
-
-float LEVEL(uint32_t i, uint32_t f, int v)
-{
-  float dv;
-  float df = fabs((float)f - (float)i);
-  if (df < rbw*1000)
-    dv = df/(rbw*1000);
-  else
-    dv =  1 + 50*(df - rbw*1000)/(rbw*1000);
-  return (v - dv - settingAttenuate);
-}
-
-float Simulated_SI4432_RSSI(uint32_t i, int s)
-{
-  SI4432_Sel = s;
-  float v = -100 + log10(rbw)*10 + NOISE;
-  if(s == 0) {
-    v = fmax(LEVEL(i,10000000,-20),v);
-    v = fmax(LEVEL(i,20000000,-40),v);
-    v = fmax(LEVEL(i,30000000,-30),v);
-    v = fmax(LEVEL(i,40000000,-90),v);
-  } else {
-    v = fmax(LEVEL(i,320000000,-20),v);
-    v = fmax(LEVEL(i,340000000,-40),v);
-    v = fmax(LEVEL(i,360000000,-30),v);
-    v = fmax(LEVEL(i,380000000,-90),v);
-  }
-  return(v);
-}
-
-#endif
-//--------------------- Frequency control -----------------------
 
 int dirty = true;
 int scandirty = true;
-
-//---------------- menu system -----------------------
-
 int settingAttenuate = 0;
-// int settingGenerate = 0;
-int settingBandwidth = 0;
-
-//int settingLevelOffset = 0;
-
-int settingRefer = -1;  // Off by default
-int refferFreq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
-int settingSpur = 0;
+int settingRBW = 0;
 int settingAverage = 0;
 int settingShowStorage = 0;
 int settingSubtractStorage = 0;
-int settingMode = M_LOW;
 int settingDrive=0; // 0-3 , 3=+20dBm
 int settingAGC = true;
 int settingLNA = false;
-int extraVFO = false;
+int trackingVFO = false;
 int settingModulation = MO_NONE;
 int settingStepDelay = 0;
-float rbw = 0;
-float vbw = 0;
-int in_selftest = false;
+float actual_rbw = 0;
+float setting_vbw = 0;
+int settingSpur = 0;
 
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
+
+int settingRefer = -1;  // Off by default
+const int refferFreq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
+
+int in_selftest = false;
 
 void set_refer_output(int v)
 {
@@ -224,19 +165,19 @@ int level_is_calibrated(void)
 
 void SetRBW(int v)
 {
-  settingBandwidth = v;
+  settingRBW = v;
   update_rbw(frequencies[1] - frequencies[0]);
   dirty = true;
 }
 
 int GetRBW(void)
 {
-  return(settingBandwidth);
+  return(settingRBW);
 }
 
 int GetActualRBW(void)
 {
-  return((int) rbw);
+  return((int) actual_rbw);
 }
 void SetSpur(int v)
 {
@@ -271,6 +212,17 @@ void ToggleLNA(void)
 {
   settingLNA = !settingLNA;
   dirty = true;
+}
+
+void ToggleVFO(void)
+{
+  trackingVFO = !trackingVFO;
+  dirty = true;
+}
+
+int GetExtraVFO(void)
+{
+  return(trackingVFO);
 }
 
 int GetLNA(void)
@@ -339,7 +291,7 @@ void SetMode(int m)
     set_sweep_frequency(ST_SPAN, 0);
     settingRefer = -1;      // No refer output in output mode
   common_high:
-    extraVFO = false;       // Not possible in high mode
+    trackingVFO = false;       // Not possible in high mode
     settingSpur = 0;        // Not possible in high mode
     break;
   }
@@ -452,26 +404,26 @@ case M_GENHIGH: // Direct output from 1
 
 void update_rbw(uint32_t delta_f)
 {
-  vbw = (delta_f)/1000.0;
-  rbw = settingBandwidth;
-//  float old_rbw = rbw;
-  if (rbw == 0)
-    rbw = 2*vbw;
-  if (rbw < 2.6)
-    rbw = 2.6;
-  if (rbw > 600)
-    rbw = 600;
+  setting_vbw = (delta_f)/1000.0;
+  actual_rbw = settingRBW;
+//  float old_rbw = actual_rbw;
+  if (actual_rbw == 0)
+    actual_rbw = 2*setting_vbw;
+  if (actual_rbw < 2.6)
+    actual_rbw = 2.6;
+  if (actual_rbw > 600)
+    actual_rbw = 600;
   SI4432_Sel =  MODE_SELECT(settingMode);
-  rbw = SI4432_SET_RBW(rbw);
-  vbwSteps = ((int)(2 * vbw / rbw));
+  actual_rbw = SI4432_SET_RBW(actual_rbw);
+  vbwSteps = ((int)(2 * setting_vbw / actual_rbw));
   if (vbwSteps < 1)
     vbwSteps = 1;
   dirty = true;
 }
 
 //static int spur_old_stepdelay = 0;
-static const int spur_IF =            433900000;
-static const int spur_alternate_IF =  433700000;
+static const unsigned int spur_IF =            433900000;
+static const unsigned int spur_alternate_IF =  433700000;
 static const int spur_table[] =
 {
    470000,
@@ -507,18 +459,18 @@ static const int spur_table[] =
 
 int avoid_spur(int f)
 {
-  int window = ((int)rbw ) * 1000*2;
+  int window = ((int)actual_rbw ) * 1000*2;
   if (window < 50000)
     window = 50000;
   if (! settingMode == M_LOW)
     return false ;
   if (frequency_IF != spur_IF)
     return false;
-  if (rbw > 300.0)
+  if (actual_rbw > 300.0)
     return(false);
 //  if (spur_old_stepdelay != 0 && actualStepDelay != spur_old_stepdelay)  // restore stepdelay
 //    actualStepDelay = spur_old_stepdelay;
-  for (int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
+  for (unsigned int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
     if (f/window == spur_table[i]/window) {
 //      spur_old_stepdelay = actualStepDelay;
 //      actualStepDelay += 4000;
@@ -528,13 +480,11 @@ int avoid_spur(int f)
   return false;
 }
 
-static int old_lf = -1;
 static int modulation_counter = 0;
-static int old_local_IF = -1;
 
 float perform(bool break_on_operation, int i, int32_t f, int extraV)
 {
-//  long local_IF = (MODE_LOW(settingMode)?frequency_IF + (int)(rbw < 300.0?settingSpur * 1000 * rbw :0):0);
+//  long local_IF = (MODE_LOW(settingMode)?frequency_IF + (int)(actual_rbw < 300.0?settingSpur * 1000 * actual_rbw :0):0);
   long local_IF;
   if (MODE_HIGH(settingMode))
     local_IF = 0;
@@ -546,18 +496,18 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
   if (i == 0 && dirty) {
     if (settingStepDelay == 0){
       if (MODE_LOW(settingMode)) {
-        if      (rbw >300.0)    actualStepDelay =  400;
-        else if (rbw >100.0)    actualStepDelay =  500;
-        else if (rbw > 30.0)    actualStepDelay =  900;
-        else if (rbw > 10.0)    actualStepDelay =  900;
-        else if (rbw >  3.0)    actualStepDelay = 1000;
+        if      (actual_rbw >300.0)    actualStepDelay =  400;
+        else if (actual_rbw >100.0)    actualStepDelay =  500;
+        else if (actual_rbw > 30.0)    actualStepDelay =  900;
+        else if (actual_rbw > 10.0)    actualStepDelay =  900;
+        else if (actual_rbw >  3.0)    actualStepDelay = 1000;
         else                    actualStepDelay = 1500;
       } else {
-        if      (rbw >300.0)    actualStepDelay =  900;
-        else if (rbw >100.0)    actualStepDelay =  900;
-        else if (rbw > 30.0)    actualStepDelay =  900;
-        else if (rbw > 10.0)    actualStepDelay = 1800;
-        else if (rbw >  3.0)    actualStepDelay = 6000;
+        if      (actual_rbw >300.0)    actualStepDelay =  900;
+        else if (actual_rbw >100.0)    actualStepDelay =  900;
+        else if (actual_rbw > 30.0)    actualStepDelay =  900;
+        else if (actual_rbw > 10.0)    actualStepDelay = 1800;
+        else if (actual_rbw >  3.0)    actualStepDelay = 6000;
         else                    actualStepDelay = 8000;
       }
     } else
@@ -605,15 +555,14 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
         modulation_counter++;
       chThdSleepMicroseconds(250);
   }
-  volatile int subSteps = ((int)(2 * vbw / rbw));
+  volatile int subSteps = ((int)(2 * setting_vbw / actual_rbw));
   float RSSI = -150.0;
   int t = 0;
   do {
-    int lf = (uint32_t)(f + (int)(t * 500 * rbw));
+    int lf = (uint32_t)(f + (int)(t * 500 * actual_rbw));
     if (extraV)
       setFreq (0, local_IF + lf - refferFreq[settingRefer]);    // Offset so fundamental of reffer is visible
     setFreq (1, local_IF + lf);
-    old_lf = lf;
     if (MODE_OUTPUT(settingMode))
       return(0);
     float subRSSI = SI4432_RSSI(lf, MODE_SELECT(settingMode))+settingLevelOffset()+settingAttenuate;
@@ -636,7 +585,7 @@ static bool sweep(bool break_on_operation)
   //  spur_old_stepdelay = 0;
 again:
   for (int i = 0; i < sweep_points; i++) {
-    RSSI = perform(break_on_operation, i, frequencies[i], extraVFO);
+    RSSI = perform(break_on_operation, i, frequencies[i], trackingVFO);
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
@@ -843,7 +792,7 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
-  if (settingBandwidth)
+  if (settingRBW)
     color = BRIGHT_COLOR_GREEN;
   else
     color = DEFAULT_FG_COLOR;
@@ -853,7 +802,7 @@ void draw_cal_status(void)
   ili9341_drawstring("RBW:", x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "%dkHz", (int)rbw);
+  plot_printf(buf, BLEN, "%dkHz", (int)actual_rbw);
   buf[5]=0;
   ili9341_drawstring(buf, x, y);
 
@@ -862,7 +811,7 @@ void draw_cal_status(void)
   ili9341_drawstring("VBW:", x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "%dkHz",(int)vbw);
+  plot_printf(buf, BLEN, "%dkHz",(int)setting_vbw);
   buf[5]=0;
   ili9341_drawstring(buf, x, y);
 
@@ -1161,7 +1110,7 @@ int test_validate(int i)
 
 void test_prepare(int i)
 {
-  extraVFO = false; //Default test setup
+  trackingVFO = false; //Default test setup
   switch(test_case[i].setup) {                // Prepare test conditions
   case TPH_SILENT:                             // No input signal
     SetMode(M_HIGH);
@@ -1175,7 +1124,7 @@ common_silent:
     break;
   case TP_10MHZEXTRA:                         // Swept receiver
     SetMode(M_LOW);
-    extraVFO = true; //Sweep BPF
+    trackingVFO = true; //Sweep BPF
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input
@@ -1305,3 +1254,5 @@ void calibrate(void)
   in_selftest = false;
   menu_autosettings_cb(0);
 }
+
+

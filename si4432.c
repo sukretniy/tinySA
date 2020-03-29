@@ -368,3 +368,60 @@ void PE4302_Write_Byte(unsigned char DATA )
 }
 
 #endif
+
+
+
+#if 0
+//-----------------SI4432 dummy------------------
+void SI4432_Write_Byte(unsigned char ADR, unsigned char DATA ) {}
+unsigned char SI4432_Read_Byte(unsigned char ADR) {return ADR;}
+float SI4432_SET_RBW(float WISH) {return (WISH > 600.0?600: (WISH<3.0?3:WISH));}
+void SI4432_SetReference(int p) {}
+void SI4432_Set_Frequency(long f) {}
+void PE4302_Write_Byte(unsigned char DATA ) {}
+void PE4302_init(void) {}
+#endif
+
+#ifdef __SIMULATION__
+unsigned long seed = 123456789;
+extern float actual_rbw;
+float myfrand(void)
+{
+  seed = (unsigned int) (1103515245 * seed + 12345) ;
+  return ((float) seed) / 1000000000.0;
+}
+#define NOISE  ((myfrand()-2) * 2)  // +/- 4 dBm noise
+extern int settingAttenuate;
+
+//#define LEVEL(i, f, v) (v * (1-(fabs(f - frequencies[i])/actual_rbw/1000)))
+
+float LEVEL(uint32_t i, uint32_t f, int v)
+{
+  float dv;
+  float df = fabs((float)f - (float)i);
+  if (df < actual_rbw*1000)
+    dv = df/(actual_rbw*1000);
+  else
+    dv =  1 + 50*(df - actual_rbw*1000)/(actual_rbw*1000);
+  return (v - dv - settingAttenuate);
+}
+
+float Simulated_SI4432_RSSI(uint32_t i, int s)
+{
+  SI4432_Sel = s;
+  float v = -100 + log10(actual_rbw)*10 + NOISE;
+  if(s == 0) {
+    v = fmax(LEVEL(i,10000000,-20),v);
+    v = fmax(LEVEL(i,20000000,-40),v);
+    v = fmax(LEVEL(i,30000000,-30),v);
+    v = fmax(LEVEL(i,40000000,-90),v);
+  } else {
+    v = fmax(LEVEL(i,320000000,-20),v);
+    v = fmax(LEVEL(i,340000000,-40),v);
+    v = fmax(LEVEL(i,360000000,-30),v);
+    v = fmax(LEVEL(i,380000000,-90),v);
+  }
+  return(v);
+}
+
+#endif

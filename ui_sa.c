@@ -17,7 +17,7 @@ void SetRBW(int);
 void SetDrive(int d);
 void SetIF(int f);
 void SetStepDelay(int t);
-extern int settingBandwidth;
+extern int settingRBW;
 void SetSpur(int);
 int GetSpur(void);
 void SetAverage(int);
@@ -38,7 +38,7 @@ void ToggleAGC(void);
 void redrawHisto(void);
 void self_test(void);
 extern int32_t frequencyExtra;
-extern int extraVFO;
+extern int trackingVFO;
 extern int settingDrive;
 extern int settingLNA;
 extern int settingAGC;
@@ -523,7 +523,7 @@ static void menu_settings2_cb(int item, uint8_t data)
     ToggleLNA();;
     break;
   case 2:
-    extraVFO = !extraVFO;
+    ToggleVFO();
     break;
   }
   draw_cal_status();
@@ -920,7 +920,7 @@ static void menu_item_modify_attribute(
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
-    if (item == 2 && extraVFO){         // should not happen in high mode
+    if (item == 2 && trackingVFO){         // should not happen in high mode
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
