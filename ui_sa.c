@@ -216,19 +216,35 @@ void menu_autosettings_cb(int item, uint8_t data)
 
   active_marker = 0;
   for (int i = 1; i<MARKER_COUNT; i++ ) {
-      markers[i].enabled = false;
+    markers[i].enabled = false;
   }
   markers[0].enabled = true;
   markers[0].mtype = M_REFERENCE;
 
   //  set_refer_output(1);
 
-//  SetPowerLevel(100); // Reset
+  //  SetPowerLevel(100); // Reset
   SetClearStorage();
   dirty = true;
-//  menu_move_back();   // stay in input menu
+  //  menu_move_back();   // stay in input menu
   ui_mode_normal();
   draw_cal_status();
+}
+
+static void menu_calibrate_cb(int item, uint8_t data)
+{
+  (void)data;
+  switch (item) {
+  case 1:
+    calibrate();
+    menu_move_back();
+    ui_mode_normal();
+    break;
+  case 2:
+    reset_calibration();
+    draw_menu();
+    break;
+  }
 }
 
 static void menu_config_cb(int item, uint8_t data)
@@ -236,27 +252,27 @@ static void menu_config_cb(int item, uint8_t data)
   (void)data;
   switch (item) {
   case 0:
-      touch_cal_exec();
-      redraw_frame();
-      request_to_redraw_grid();
-      draw_menu();
-      break;
+    touch_cal_exec();
+    redraw_frame();
+    request_to_redraw_grid();
+    draw_menu();
+    break;
   case 1:
-      touch_draw_test();
-      redraw_frame();
-      request_to_redraw_grid();
-      draw_menu();
-      break;
+    touch_draw_test();
+    redraw_frame();
+    request_to_redraw_grid();
+    draw_menu();
+    break;
   case 2:
-      menu_move_back();
-      ui_mode_normal();
-      self_test();
-      break;
-  case 3:
-      show_version();
-      redraw_frame();
-      request_to_redraw_grid();
-      draw_menu();
+    menu_move_back();
+    ui_mode_normal();
+    self_test();
+    break;
+  case 4:
+    show_version();
+    redraw_frame();
+    request_to_redraw_grid();
+    draw_menu();
   }
 }
 
@@ -544,43 +560,6 @@ static void menu_stimulus_cb(int item, uint8_t data)
   draw_cal_status();
 }
 
-//static void menu_marker_sel_cb(int);
-//static void menu_marker_op_cb(int);
-
-#if 0
-
-#pragma pack(push, 2)
-typedef struct {
-  uint8_t type;
-  int  *data;
-  char *format;
-} menuvalue_t;
-#pragma pack(pop)
-
-enum {
-  MVT_INT, MVT_FLOAT, MVT_STRINGARRAY
-};
-enum {
-MV_AVERAGE, MV_RBW, MV_DBPER, MV_REFER, MV_POWER, MVSAMPLETIME, MV_IFFREQ
-};
-
-static const char *average_text[] =
-{
- "OFF", "MIN HOLD", "MAX HOLD", "2", "4", "8"
-};
-
-static const menuvalue_t menu_value[] = {
-  { MVT_STRINGARRAY,&settingAverage,  (char *)average_text },
-  { MVT_INT,        &settingBandwidth, "%dkHz" },
-  { MVT_INT,        &settingScale,     "%ddB/" },
-  { MVT_INT,        &settingRefer,     "%dB"   },
-  { MVT_INT,        &settingPower,      "%dB"   },
-  { MVT_INT,        &settingSampleTime, "%dmS"  },
-  { MVT_INT,        %setting_IF,        "%dHz"  },
-  }
-};
-#endif
-
 // ===[MENU DEFINITION]=========================================================
 
 const menuitem_t  menu_modulation[] = {
@@ -792,11 +771,21 @@ static const menuitem_t menu_settingshigh[] =
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_calibrate[] =
+{
+ { MT_FORM | MT_TITLE,      0, "CONNECT INPUT AND OUTPUT",  NULL},
+ { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
+ { MT_FORM | MT_CALLBACK,   0, "RESET CALBRATION",          menu_calibrate_cb},
+ { MT_FORM | MT_CANCEL,     0, S_LARROW" BACK",             NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_config[] = {
   { MT_FORM | MT_CALLBACK, 0, "TOUCH CAL",     menu_config_cb},
   { MT_FORM | MT_CALLBACK, 0, "TOUCH TEST",    menu_config_cb},
   { MT_FORM | MT_CALLBACK, 0, "SELF TEST",     menu_config_cb},
-  { MT_FORM | MT_CALLBACK, 0, "VERSION",          menu_config_cb},
+  { MT_FORM | MT_SUBMENU,  0, "CALIBRATE",     menu_calibrate},
+  { MT_FORM | MT_CALLBACK, 0, "VERSION",       menu_config_cb},
 //  { MT_SUBMENU,  0, "SETTINGS",         menu_settings},
 //  { MT_SUBMENU,  0, "RBW", menu_rbw},
   { MT_FORM | MT_SUBMENU,  0, S_RARROW"DFU",  menu_dfu},

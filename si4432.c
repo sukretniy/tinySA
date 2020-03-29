@@ -133,7 +133,7 @@ void SI4432_Reset(void)
   int count = 0;
   // always perform a system reset (don't send 0x87)
   SI4432_Write_Byte( 0x07, 0x80);
-  chThdSleepMilliseconds(25);
+  chThdSleepMilliseconds(50);
   // wait for chiprdy bit
   while (count++ < 100 && ( SI4432_Read_Byte ( 0x04 ) & 0x02 ) == 0) {
     chThdSleepMilliseconds(10);
@@ -146,11 +146,11 @@ void SI4432_Transmit(int d)
   SI4432_Write_Byte(0x6D, (byte) (0x1C+d));
   if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 2)
     return; // Already in transmit mode
-  chThdSleepMilliseconds(20);
+  chThdSleepMilliseconds(10);
   SI4432_Write_Byte( 0x07, 0x0b);
   chThdSleepMilliseconds(20);
   while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 2) {
-    chThdSleepMilliseconds(1);
+    chThdSleepMilliseconds(10);
   }
 }
 
@@ -159,8 +159,9 @@ void SI4432_Receive(void)
   int count = 0;
   if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 1)
     return; // Already in receive mode
-  SI4432_Write_Byte( 0x07, 0x07);
   chThdSleepMilliseconds(10);
+  SI4432_Write_Byte( 0x07, 0x07);
+  chThdSleepMilliseconds(20);
   while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 1) {
     chThdSleepMilliseconds(5);
   }

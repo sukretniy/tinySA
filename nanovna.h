@@ -620,5 +620,7 @@ int GetStorage(void);
 int GetSubtractStorage(void);
 int get_waterfall(void);
 
+void calibrate(void);
+void reset_calibration(void);
 
 /*EOF*/

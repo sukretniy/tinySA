@@ -1100,7 +1100,7 @@ markmap_marker(int marker)
   int t;
   if (!markers[marker].enabled)
     return;
-  for (t = 0; t < TRACES_MAX; t++) {
+  for (t = TRACE_ACTUAL; t < TRACE_ACTUAL; t++) {
     if (!trace[t].enabled)
       continue;
     index_t index = trace_index[t][markers[marker].index];
@@ -1390,9 +1390,10 @@ draw_cell(int m, int n)
   for (i = 0; i < MARKERS_MAX; i++) {
     if (!markers[i].enabled)
       continue;
-    for (t = 0; t < TRACES_MAX; t++) {
-      if (!trace[t].enabled)
-        continue;
+//    for (t = 0; t < TRACES_MAX; t++) {
+//      if (!trace[t].enabled)
+//        continue;
+      t = TRACE_ACTUAL;
       index_t index = trace_index[t][markers[i].index];
       int x = CELL_X(index) - x0 - X_MARKER_OFFSET;
       int y = CELL_Y(index) - y0 - Y_MARKER_OFFSET;
@@ -1401,7 +1402,7 @@ draw_cell(int m, int n)
           y + MARKER_HEIGHT >= 0 && y - MARKER_HEIGHT < CELLHEIGHT)
         draw_marker(x, y, marker_color[markers[i].mtype], i);
 //      draw_marker(x, y, config.trace_color[t], i);
-    }
+//    }
   }
 #endif
 // Draw trace and marker info on the top (50 system ticks for all screen calls)
