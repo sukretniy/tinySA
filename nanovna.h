@@ -121,7 +121,7 @@ void load_default_properties(void);
 
 extern float perform(bool b, int i, int32_t f, int e);
 enum {
-  AV_OFF, AV_MIN, AV_MAX, AV_2, AV_4, AV_8
+  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16
 };
 enum {
   M_LOW, M_HIGH, M_GENLOW, M_GENHIGH,

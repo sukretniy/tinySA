@@ -593,12 +593,12 @@ const menuitem_t  menu_highoutputmode[] = {
 };
 
 static const menuitem_t  menu_average[] = {
-  { MT_CALLBACK, 0, "OFF",   menu_average_cb},
-  { MT_CALLBACK, 0, "MIN",   menu_average_cb},
-  { MT_CALLBACK, 0, "MAX",   menu_average_cb},
-  { MT_CALLBACK, 0, " 2 ",   menu_average_cb},
+  { MT_CALLBACK, 0, " OFF",   menu_average_cb},
+  { MT_CALLBACK, 0, "\2 MIN\0 HOLD",   menu_average_cb},
+  { MT_CALLBACK, 0, "\2 MAX\0 HOLD",   menu_average_cb},
+  { MT_CALLBACK, 0, "\2 MAX\0 DECAY",   menu_average_cb},
   { MT_CALLBACK, 0, " 4 ",   menu_average_cb},
-  { MT_CALLBACK, 0, " 8 ",   menu_average_cb},
+  { MT_CALLBACK, 0, " 16 ",   menu_average_cb},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };

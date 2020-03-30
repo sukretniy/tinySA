@@ -511,6 +511,8 @@ int avoid_spur(int f)
 
 static int modulation_counter = 0;
 
+char age[POINTS_COUNT];
+
 float perform(bool break_on_operation, int i, int32_t f, int tracking)
 {
 //  long local_IF = (MODE_LOW(setting_mode)?frequency_IF + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw :0):0);
@@ -594,15 +596,26 @@ static bool sweep(bool break_on_operation)
       RSSI = RSSI - stored_t[i] ;
     }
     //   stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
-    if (scandirty || setting_average == AV_OFF)
+    if (scandirty || setting_average == AV_OFF) {
       actual_t[i] = RSSI;
-    else {
+      age[i] = 0;
+    } else {
       switch(setting_average) {
-      case AV_MIN: if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
-      case AV_MAX: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
-      case AV_2: actual_t[i] = (actual_t[i] + RSSI) / 2.0; break;
-      case AV_4: actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
-      case AV_8: actual_t[i] = (actual_t[i]*7 + RSSI) / 8.0; break;
+      case AV_MIN:      if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
+      case AV_MAX_HOLD: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
+      case AV_MAX_DECAY:
+        if (actual_t[i] < RSSI) {
+          actual_t[i] = RSSI;
+          age[i] = 0;
+        } else {
+          if (age[i] > 20)
+            actual_t[i] -= 0.5;
+          else
+            age[i] += 1;
+        }
+        break;
+      case AV_4:  actual_t[i] = (actual_t[i] + RSSI) / 4.0; break;
+      case AV_16: actual_t[i] = (actual_t[i]*3 + RSSI) / 16.0; break;
       }
     }
     if (frequencies[i] > 1000000) {
