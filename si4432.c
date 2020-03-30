@@ -240,8 +240,8 @@ float SI4432_RSSI(uint32_t i, int s)
     SI4432_Sel = s;
     chThdSleepMicroseconds(actualStepDelay);
     RSSI_RAW = (unsigned char)SI4432_Read_Byte( 0x26 ) ;
-    if (settingMode < 2 && RSSI_RAW == 0)
-      SI4432_Init();
+ //   if (MODE_INPUT(setting_mode) && RSSI_RAW == 0)
+ //     SI4432_Init();
   float dBm = 0.5 * RSSI_RAW - 120.0 ;
 #ifdef __SIMULATION__
   dBm = Simulated_SI4432_RSSI(i,s);

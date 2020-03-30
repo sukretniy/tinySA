@@ -17,12 +17,12 @@ void SetRBW(int);
 void SetDrive(int d);
 void SetIF(int f);
 void SetStepDelay(int t);
-extern int settingRBW;
+extern int setting_rbw;
 void SetSpur(int);
 int GetSpur(void);
 void SetAverage(int);
 int GetAverage(void);
-extern int settingAverage;
+extern int setting_average;
 void  SetStorage(void);
 void  SetClearStorage(void);
 void  SetSubtractStorage(void);
@@ -38,14 +38,14 @@ void ToggleAGC(void);
 void redrawHisto(void);
 void self_test(void);
 extern int32_t frequencyExtra;
-extern int trackingVFO;
-extern int settingDrive;
-extern int settingLNA;
-extern int settingAGC;
+extern int setting_tracking;
+extern int setting_drive;
+extern int setting_lna;
+extern int setting_agc;
 void SetModulation(int);
-extern int settingModulation;
+extern int setting_modulation;
 // extern int settingSpeed;
-extern int settingStepDelay;
+extern int setting_step_delay;
 
 
 
@@ -324,6 +324,7 @@ static void menu_spur_cb(int item, uint8_t data)
 {
   (void)data;
   (void)item;
+#if 0
   if (GetSpur())
     SetSpur(0);
   else
@@ -331,6 +332,7 @@ static void menu_spur_cb(int item, uint8_t data)
 //  menu_move_back();
   ui_mode_normal();
   draw_cal_status();
+#endif
 }
 
 static void menu_storage_cb(int item, uint8_t data)
@@ -523,7 +525,7 @@ static void menu_settings2_cb(int item, uint8_t data)
     ToggleLNA();;
     break;
   case 2:
-    ToggleVFO();
+    toggle_tracking();
     break;
   }
   draw_cal_status();
@@ -860,7 +862,7 @@ static void menu_item_modify_attribute(
     }
   } else if (menu == menu_lowoutputmode || menu == menu_highoutputmode) {
     if (item == 3) {
-      plot_printf(uistat.text, sizeof uistat.text, menu_modulation_text[settingModulation]);
+      plot_printf(uistat.text, sizeof uistat.text, menu_modulation_text[setting_modulation]);
     }
   } else if (menu == menu_reffer) {
     if (item < 5 && item == get_refer_output() + 1){
@@ -878,10 +880,12 @@ static void menu_item_modify_attribute(
       *fg = config.menu_normal_color;
     }
   } else if (menu == menu_scale) {
+#if 0
     if (item == 4 /* Spur reduction */ && GetSpur()) {
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
+#endif
   } else if (menu == menu_average) {
     if (item == GetAverage()){
       *bg = DEFAULT_MENU_TEXT_COLOR;
@@ -912,15 +916,15 @@ static void menu_item_modify_attribute(
       *fg = config.menu_normal_color;
     }
   } else if (menu == menu_settings2 || menu == menu_settingshigh2) {
-    if (item ==0 && settingAGC){
+    if (item ==0 && setting_agc){
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
-    if (item == 1 && settingLNA){
+    if (item == 1 && setting_lna){
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
-    if (item == 2 && trackingVFO){         // should not happen in high mode
+    if (item == 2 && setting_tracking){         // should not happen in high mode
       *bg = DEFAULT_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
@@ -948,7 +952,7 @@ static void menu_item_modify_attribute(
           plot_printf(buf, sizeof buf, "%3.3fMHz", frequency0 / 1000000.0);
           break;
         case 1:
-          plot_printf(buf, sizeof buf, "%ddB", -10 - settingAttenuate);
+          plot_printf(buf, sizeof buf, "%ddB", -10 - setting_attenuate);
           break;
         }
       }
@@ -959,7 +963,7 @@ static void menu_item_modify_attribute(
           plot_printf(buf, sizeof buf, "%3.3fMHz", frequency0 / 1000000.0);
           break;
         case 1:
-          plot_printf(buf, sizeof buf, "%ddB", -10 - settingDrive);
+          plot_printf(buf, sizeof buf, "%ddB", -10 - setting_drive);
           break;
         }
       }
@@ -1003,7 +1007,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value / 1000);
     break;
   case KM_ATTENUATION:
-    uistat.value = settingAttenuate;
+    uistat.value = setting_attenuate;
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
      break;
   case KM_ACTUALPOWER:
@@ -1015,20 +1019,20 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_SAMPLETIME:
-    uistat.value = settingStepDelay;
+    uistat.value = setting_step_delay;
     plot_printf(uistat.text, sizeof uistat.text, "%3duS", uistat.value);
     break;
   case KM_DRIVE:
-    uistat.value = settingDrive;
+    uistat.value = setting_drive;
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", uistat.value);
     break;
   case KM_LOWOUTLEVEL:
-    uistat.value = settingAttenuate;
+    uistat.value = setting_attenuate;
     uistat.value = -5 - uistat.value;           // compensation for dB offset during low output mode
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
     break;
   case KM_HIGHOUTLEVEL:
-    uistat.value = settingDrive*5 + 5;
+    uistat.value = setting_drive*5 + 5;
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", uistat.value);
     break;
   }

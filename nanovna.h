@@ -410,6 +410,7 @@ void ili9341_clear_screen(void);
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
+void ili9341_drawstring_7x13(const char *str, int x, int y);
 void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size);
 void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size);
@@ -588,12 +589,12 @@ int16_t adc_vbat_read(void);
  */
 int plot_printf(char *str, int, const char *fmt, ...);
 #define PULSE do { palClearPad(GPIOC, GPIOC_LED); palSetPad(GPIOC, GPIOC_LED);} while(0)
-extern int settingAttenuate;
+extern int setting_attenuate;
 extern int settingPowerCal;
-extern int settingStepDelay;
+extern int setting_step_delay;
 extern int actualStepDelay;
-extern int settingMode;
-void update_rbw(uint32_t delta_f);
+extern int setting_mode;
+void update_rbw(void);
 int GetActualRBW(void);
 
 #define byte uint8_t
@@ -619,8 +620,11 @@ int GetRBW(void);
 int GetStorage(void);
 int GetSubtractStorage(void);
 int get_waterfall(void);
-
+void toggle_tracking(void);
 void calibrate(void);
 void reset_calibration(void);
-
+void SetRefpos(int);
+void SetScale(int);
+void SetRBW(int);
+void SetRX(int);
 /*EOF*/

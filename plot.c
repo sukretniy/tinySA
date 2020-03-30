@@ -1900,7 +1900,7 @@ draw_frequencies(void)
 {
   char buf1[32];
   char buf2[32]; buf2[0] = 0;
-  if (MODE_OUTPUT(settingMode))     // No frequencies during output
+  if (MODE_OUTPUT(setting_mode))     // No frequencies during output
     return;
   if (current_menu_is_form() && !in_selftest)
     return;

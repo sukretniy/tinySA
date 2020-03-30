@@ -2,61 +2,105 @@
 
 #include "SI4432.h"		// comment out for simulation
 
-int settingMode = M_LOW;
+int setting_mode = M_LOW;
 
 
 int dirty = true;
 int scandirty = true;
-int settingAttenuate = 0;
-int settingRBW = 0;
-int settingAverage = 0;
-int settingShowStorage = 0;
-int settingSubtractStorage = 0;
-int settingDrive=0; // 0-3 , 3=+20dBm
-int settingAGC = true;
-int settingLNA = false;
-int trackingVFO = false;
-int settingModulation = MO_NONE;
-int settingStepDelay = 0;
+int setting_attenuate = 0;
+int setting_rbw = 0;
+int setting_average = 0;
+int setting_show_stored = 0;
+int setting_subtract_stored = 0;
+int setting_drive=0; // 0-3 , 3=+20dBm
+int setting_agc = true;
+int setting_lna = false;
+int setting_tracking = false;
+int setting_modulation = MO_NONE;
+int setting_step_delay = 0;
+int setting_frequency_step;
 float actual_rbw = 0;
 float setting_vbw = 0;
-int settingSpur = 0;
+
+int vbwSteps = 1;
+
+//int setting_spur = 0;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
 
-int settingRefer = -1;  // Off by default
-const int refferFreq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
+int setting_refer = -1;  // Off by default
+const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
 int in_selftest = false;
 
+void reset_settings(int m)
+{
+  setting_mode = m;
+  setting_attenuate = 0;
+  setting_rbw = 0;
+  setting_average = 0;
+  setting_show_stored = 0;
+  setting_subtract_stored = 0;
+  setting_drive=0; // 0-3 , 3=+20dBm
+  setting_agc = true;
+  setting_lna = false;
+  setting_tracking = false;
+  setting_modulation = MO_NONE;
+  setting_step_delay = 0;
+  setting_vbw = 0;
+//  setting_spur = 0;
+  switch(m) {
+  case M_LOW:
+    minFreq = 0;
+    maxFreq = 520000000;
+    set_sweep_frequency(ST_START, (int32_t) 0);
+    set_sweep_frequency(ST_STOP, (int32_t) 350000000);
+    SetRefpos(-10);
+    break;
+  case M_GENLOW:
+    minFreq = 0;
+    maxFreq = 520000000;
+    set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
+    set_sweep_frequency(ST_SPAN, 0);
+    break;
+  case M_HIGH:
+    minFreq = 240000000;
+    maxFreq = 960000000;
+    set_sweep_frequency(ST_START, (int32_t) minFreq);
+    set_sweep_frequency(ST_STOP, (int32_t) maxFreq);
+    SetRefpos(-30);
+    break;
+  case M_GENHIGH:
+    minFreq = 240000000;
+    maxFreq = 960000000;
+    set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
+    set_sweep_frequency(ST_SPAN, 0);
+    break;
+  }
+  SetScale(10);
+  dirty = true;
+}
+
 void set_refer_output(int v)
 {
-  settingRefer = v;
+  setting_refer = v;
   dirty = true;
 }
 
 int get_refer_output(void)
 {
-  return(settingRefer);
+  return(setting_refer);
 }
-
-#if 0
-void SetGenerate(int g)
-{
-  settingGenerate = g;
-  dirty = true;
-}
-#endif
 
 void SetDrive(int d)
 {
-  settingDrive = d;
+  setting_drive = d;
   dirty = true;
 }
 
 void SetModulation(int m)
 {
-  settingModulation = m;
+  setting_modulation = m;
   dirty = true;
 }
 void SetIF(int f)
@@ -67,7 +111,7 @@ void SetIF(int f)
 
 int GetMode(void)
 {
-  return(settingMode);
+  return(setting_mode);
   dirty = true;
 }
 
@@ -77,9 +121,9 @@ void SetAttenuation(int a)
     a = 0;
   if (a> 31)
     a=31;
-  if (settingAttenuate == a)
+  if (setting_attenuate == a)
     return;
-  settingAttenuate = a;
+  setting_attenuate = a;
   dirty = true;
 }
 
@@ -87,49 +131,50 @@ void SetStorage(void)
 {
   for (int i=0; i<POINTS_COUNT;i++)
     stored_t[i] = actual_t[i];
-  settingShowStorage = true;
+  setting_show_stored = true;
   trace[TRACE_STORED].enabled = true;
   dirty = true;
 }
 
 int GetStorage(void)
 {
-  return(settingShowStorage);
+  return(setting_show_stored);
 }
 
 void SetClearStorage(void)
 {
-  settingShowStorage = false;
-  settingSubtractStorage = false;
+  setting_show_stored = false;
+  setting_subtract_stored = false;
   trace[TRACE_STORED].enabled = false;
   dirty = true;
 }
 
 void SetSubtractStorage(void)
 {
-  if (!settingSubtractStorage) {
-    if (!settingShowStorage)
+  if (!setting_subtract_stored) {
+    if (!setting_show_stored)
       SetStorage();
-    settingSubtractStorage = true;
+    setting_subtract_stored = true;
   } else {
-    settingSubtractStorage = false;
+    setting_subtract_stored = false;
   }
   dirty = true;
 }
 
 int GetSubtractStorage(void)
 {
-  return(settingSubtractStorage);
+  return(setting_subtract_stored);
 }
 
 extern float peakLevel;
 void SetPowerLevel(int o)
 {
+  float new_offset = o - peakLevel - setting_attenuate + settingLevelOffset();
   if (o != 100) {
-    if (settingMode == M_HIGH)
-      config.high_level_offset = o - peakLevel - settingAttenuate + settingLevelOffset();
-    else if (settingMode == M_LOW)
-      config.low_level_offset = o - peakLevel - settingAttenuate + settingLevelOffset();
+    if (setting_mode == M_HIGH)
+      config.high_level_offset = new_offset;
+    else if (setting_mode == M_LOW)
+      config.low_level_offset = new_offset;
   }
   else {
     config.low_level_offset = 100;
@@ -140,12 +185,12 @@ void SetPowerLevel(int o)
 
 int settingLevelOffset(void)
 {
-  if (settingMode == M_HIGH) {
+  if (setting_mode == M_HIGH) {
     if (config.high_level_offset == 100)
       return 0;
     return(config.high_level_offset);
   }
-  if (settingMode == M_LOW) {
+  if (setting_mode == M_LOW) {
     if (config.low_level_offset == 100)
       return 0;
     return(config.low_level_offset);
@@ -155,89 +200,86 @@ int settingLevelOffset(void)
 
 int level_is_calibrated(void)
 {
-  if (settingMode == M_HIGH && config.high_level_offset != 100)
+  if (setting_mode == M_HIGH && config.high_level_offset != 100)
     return 1;
-  if (settingMode == M_LOW && config.low_level_offset != 100)
+  if (setting_mode == M_LOW && config.low_level_offset != 100)
     return 1;
   return(0);
 }
 
 void SetRBW(int v)
 {
-  settingRBW = v;
-  update_rbw(frequencies[1] - frequencies[0]);
+  setting_rbw = v;
+  update_rbw();
   dirty = true;
 }
 
 int GetRBW(void)
 {
-  return(settingRBW);
+  return(setting_rbw);
 }
 
 int GetActualRBW(void)
 {
   return((int) actual_rbw);
 }
+#if 0
 void SetSpur(int v)
 {
-  settingSpur = v;
+//  setting_spur = v;
   dirty = true;
 }
+#endif
 
 void SetStepDelay(int d)
 {
-  settingStepDelay = d;
+  setting_step_delay = d;
   dirty = true;
-}
-
-int GetSpur(void)
-{
-  return(settingSpur);
 }
 
 void SetAverage(int v)
 {
-  settingAverage = v;
+  setting_average = v;
   trace[TRACE_TEMP].enabled = (v != 0);
   dirty = true;
 }
 
 int GetAverage(void)
 {
-  return(settingAverage);
+  return(setting_average);
 }
 
 void ToggleLNA(void)
 {
-  settingLNA = !settingLNA;
+  setting_lna = !setting_lna;
   dirty = true;
 }
 
-void ToggleVFO(void)
+void toggle_tracking(void)
 {
-  trackingVFO = !trackingVFO;
+  setting_tracking = !setting_tracking;
   dirty = true;
 }
 
 int GetExtraVFO(void)
 {
-  return(trackingVFO);
+  return(setting_tracking);
 }
 
 int GetLNA(void)
 {
-  return(settingLNA);
+  return(setting_lna);
 }
 
 void ToggleAGC(void)
 {
-  settingAGC = !settingAGC;
+  setting_agc = !setting_agc;
   dirty = true;
 }
 
 int GetAGC(void)
 {
-  return(settingAGC);
+  return(setting_agc);
 }
 
 void SetRefpos(int level)
@@ -256,50 +298,46 @@ void SetScale(int s) {
 
 void SetMode(int m)
 {
-  if (settingMode == m)
+  if (setting_mode == m)
     return;
-  settingMode = m;
-  switch(m) {
-  case M_LOW:
-    minFreq = 0;
-    maxFreq = 520000000;
-    set_sweep_frequency(ST_START, (int32_t) 0);
-    set_sweep_frequency(ST_STOP, (int32_t) 300000000);
-    SetRefpos(-10);
-    settingSpur = 0;        // Not for output mode
-    break;
-  case M_GENLOW:
-    minFreq = 0;
-    maxFreq = 520000000;
-    set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
-    set_sweep_frequency(ST_SPAN, 0);
-    settingSpur = 0;        // Not for output mode
-    settingRefer = -1;      // No refer output in output mode
-    break;
-  case M_HIGH:
-    minFreq = 240000000;
-    maxFreq = 960000000;
-    set_sweep_frequency(ST_START, (int32_t) 300000000);
-    set_sweep_frequency(ST_STOP, (int32_t) 960000000);
-    SetRefpos(-30);
-    goto common_high;
-  case M_GENHIGH:
-    minFreq = 240000000;
-    maxFreq = 960000000;
-    set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
-    set_sweep_frequency(ST_SPAN, 0);
-    settingRefer = -1;      // No refer output in output mode
-  common_high:
-    trackingVFO = false;       // Not possible in high mode
-    settingSpur = 0;        // Not possible in high mode
-    break;
-  }
-  settingAttenuate = 0;
-  SetRBW(0);
-  SetScale(10);
-  dirty = true;
+  reset_settings(m);
 }
 
+void apply_settings(void)
+{
+  if (setting_step_delay == 0){
+    if (MODE_LOW(setting_mode)) {
+      if      (actual_rbw >300.0)    actualStepDelay =  400;
+      else if (actual_rbw >100.0)    actualStepDelay =  500;
+      else if (actual_rbw > 30.0)    actualStepDelay =  900;
+      else if (actual_rbw > 10.0)    actualStepDelay =  900;
+      else if (actual_rbw >  3.0)    actualStepDelay = 1000;
+      else                    actualStepDelay = 1500;
+    } else {
+      if      (actual_rbw >300.0)    actualStepDelay =  900;
+      else if (actual_rbw >100.0)    actualStepDelay =  900;
+      else if (actual_rbw > 30.0)    actualStepDelay =  900;
+      else if (actual_rbw > 10.0)    actualStepDelay = 1800;
+      else if (actual_rbw >  3.0)    actualStepDelay = 6000;
+      else                    actualStepDelay = 8000;
+    }
+  } else
+    actualStepDelay = setting_step_delay;
+  PE4302_Write_Byte(setting_attenuate * 2);
+  if (setting_modulation == MO_NFM ) {
+    SI4432_Sel = 1;
+    SI4432_Write_Byte(0x7A, 1);  // Use frequency hopping channel width for FM modulation
+  } else if (setting_modulation == MO_WFM ) {
+    SI4432_Sel = 1;
+    SI4432_Write_Byte(0x7A, 10);  // Use frequency hopping channel width for FM modulation
+  } else {
+    SI4432_Sel = 1;
+    SI4432_Write_Byte(0x79, 0);  // IF no FM back to channel 0
+  }
+  SetRX(setting_mode);
+  SI4432_SetReference(setting_refer);
+  update_rbw();
+}
 
 //------------------------------------------
 
@@ -310,11 +348,6 @@ uint32_t peakFreq;
 int peakIndex;
 float temppeakLevel;
 int temppeakIndex;
-
-#define BARSTART  24
-
-
-int vbwSteps = 1;
 
 void setupSA(void)
 {
@@ -346,8 +379,8 @@ void SetSwitchReceive(void) {
 
 void SetAGCLNA(void) {
   unsigned char v = 0x40;
-  if (settingAGC) v |= 0x20;
-  if (settingLNA) v |= 0x10;
+  if (setting_agc) v |= 0x20;
+  if (setting_lna) v |= 0x10;
   SI4432_Write_Byte(0x69, v);
 }
 
@@ -363,8 +396,8 @@ case M_LOW:     // Mixed into 0
     SI4432_Sel = 1;
     SetSwitchReceive();
 //    SI4432_Receive(); For noise testing only
-    SI4432_Transmit(settingDrive);
-    // SI4432_SetReference(settingRefer);
+    SI4432_Transmit(setting_drive);
+    // SI4432_SetReference(setting_refer);
     break;
 case M_HIGH:    // Direct into 1
     // SI4432_SetReference(-1); // Stop reference output
@@ -381,11 +414,11 @@ case M_HIGH:    // Direct into 1
 case M_GENLOW:  // Mixed output from 0
     SI4432_Sel = 0;
     SetSwitchTransmit();
-    SI4432_Transmit(settingDrive);
+    SI4432_Transmit(setting_drive);
 
     SI4432_Sel = 1;
     SetSwitchReceive();
-    SI4432_Transmit(settingDrive);
+    SI4432_Transmit(setting_drive);
 
     break;
 case M_GENHIGH: // Direct output from 1
@@ -395,16 +428,16 @@ case M_GENHIGH: // Direct output from 1
 
     SI4432_Sel = 1;
     SetSwitchTransmit();
-    SI4432_Transmit(settingDrive);
+    SI4432_Transmit(setting_drive);
 
     break;
   }
 }
 
-void update_rbw(uint32_t delta_f)
+void update_rbw(void)
 {
-  setting_vbw = (delta_f)/1000.0;
-  actual_rbw = settingRBW;
+  setting_vbw = (setting_frequency_step)/1000.0;
+  actual_rbw = setting_rbw;
 //  float old_rbw = actual_rbw;
   if (actual_rbw == 0)
     actual_rbw = 2*setting_vbw;
@@ -412,9 +445,12 @@ void update_rbw(uint32_t delta_f)
     actual_rbw = 2.6;
   if (actual_rbw > 600)
     actual_rbw = 600;
-  SI4432_Sel =  MODE_SELECT(settingMode);
+
+  SI4432_Sel =  MODE_SELECT(setting_mode);
   actual_rbw = SI4432_SET_RBW(actual_rbw);
+
   vbwSteps = ((int)(2 * setting_vbw / actual_rbw));
+
   if (vbwSteps < 1)
     vbwSteps = 1;
   dirty = true;
@@ -461,14 +497,8 @@ int avoid_spur(int f)
   int window = ((int)actual_rbw ) * 1000*2;
   if (window < 50000)
     window = 50000;
-  if (! settingMode == M_LOW)
-    return false ;
-  if (frequency_IF != spur_IF)
-    return false;
-  if (actual_rbw > 300.0)
+  if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw > 300.0)
     return(false);
-//  if (spur_old_stepdelay != 0 && actualStepDelay != spur_old_stepdelay)  // restore stepdelay
-//    actualStepDelay = spur_old_stepdelay;
   for (unsigned int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
     if (f/window == spur_table[i]/window) {
 //      spur_old_stepdelay = actualStepDelay;
@@ -481,11 +511,11 @@ int avoid_spur(int f)
 
 static int modulation_counter = 0;
 
-float perform(bool break_on_operation, int i, int32_t f, int extraV)
+float perform(bool break_on_operation, int i, int32_t f, int tracking)
 {
-//  long local_IF = (MODE_LOW(settingMode)?frequency_IF + (int)(actual_rbw < 300.0?settingSpur * 1000 * actual_rbw :0):0);
+//  long local_IF = (MODE_LOW(setting_mode)?frequency_IF + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw :0):0);
   long local_IF;
-  if (MODE_HIGH(settingMode))
+  if (MODE_HIGH(setting_mode))
     local_IF = 0;
   else if (avoid_spur(f))
     local_IF = spur_alternate_IF;
@@ -493,59 +523,22 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
     local_IF = frequency_IF;
 
   if (i == 0 && dirty) {
-    if (settingStepDelay == 0){
-      if (MODE_LOW(settingMode)) {
-        if      (actual_rbw >300.0)    actualStepDelay =  400;
-        else if (actual_rbw >100.0)    actualStepDelay =  500;
-        else if (actual_rbw > 30.0)    actualStepDelay =  900;
-        else if (actual_rbw > 10.0)    actualStepDelay =  900;
-        else if (actual_rbw >  3.0)    actualStepDelay = 1000;
-        else                    actualStepDelay = 1500;
-      } else {
-        if      (actual_rbw >300.0)    actualStepDelay =  900;
-        else if (actual_rbw >100.0)    actualStepDelay =  900;
-        else if (actual_rbw > 30.0)    actualStepDelay =  900;
-        else if (actual_rbw > 10.0)    actualStepDelay = 1800;
-        else if (actual_rbw >  3.0)    actualStepDelay = 6000;
-        else                    actualStepDelay = 8000;
-      }
-    } else
-      actualStepDelay = settingStepDelay;
-
-//    setupSA();
-
-    int p = settingAttenuate * 2;
-    PE4302_Write_Byte(p);
-    if (settingModulation == MO_NFM ) {
-      SI4432_Sel = 1;
-      SI4432_Write_Byte(0x7A, 1);  // Use frequency hopping channel width for FM modulation
-    } else if (settingModulation == MO_WFM ) {
-      SI4432_Sel = 1;
-      SI4432_Write_Byte(0x7A, 10);  // Use frequency hopping channel width for FM modulation
-    } else {
-      SI4432_Sel = 1;
-      SI4432_Write_Byte(0x79, 0);  // IF no FM back to channel 0
-    }
-    SetRX(settingMode);
-    SI4432_SetReference(settingRefer);
-
-//    if (dirty) {
-      scandirty = true;
-      dirty = false;
-//    }
+    apply_settings();
+    scandirty = true;
+    dirty = false;
   }
   if (local_IF) {
     setFreq (0, local_IF);
   }
-  if (settingModulation == MO_AM) {
-    int p = settingAttenuate * 2 + modulation_counter;
+  if (setting_modulation == MO_AM) {
+    int p = setting_attenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
     if (modulation_counter == 3)
       modulation_counter = 0;
     else
       modulation_counter++;
     chThdSleepMicroseconds(250);
-  } else if (settingModulation == MO_NFM || settingModulation == MO_WFM ) {
+  } else if (setting_modulation == MO_NFM || setting_modulation == MO_WFM ) {
       SI4432_Sel = 1;
       SI4432_Write_Byte(0x79, modulation_counter);  // Use frequency hopping channel for FM modulation
       if (modulation_counter == 3)
@@ -554,23 +547,22 @@ float perform(bool break_on_operation, int i, int32_t f, int extraV)
         modulation_counter++;
       chThdSleepMicroseconds(250);
   }
-  volatile int subSteps = ((int)(2 * setting_vbw / actual_rbw));
   float RSSI = -150.0;
   int t = 0;
   do {
     int lf = (uint32_t)(f + (int)(t * 500 * actual_rbw));
-    if (extraV)
-      setFreq (0, local_IF + lf - refferFreq[settingRefer]);    // Offset so fundamental of reffer is visible
+    if (tracking)
+      setFreq (0, local_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
     setFreq (1, local_IF + lf);
-    if (MODE_OUTPUT(settingMode))
+    if (MODE_OUTPUT(setting_mode))
       return(0);
-    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(settingMode))+settingLevelOffset()+settingAttenuate;
+    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+setting_attenuate;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
     t++;
-    if ((operation_requested && break_on_operation ) || (MODE_OUTPUT(settingMode))) // output modes do not step.
-      subSteps = 0;         // abort
-  } while (subSteps-- > 0);
+    if ((operation_requested && break_on_operation ) || (MODE_OUTPUT(setting_mode))) // output modes do not step.
+      break;         // abort
+  } while (t < vbwSteps);
   return(RSSI);
 }
 
@@ -582,28 +574,28 @@ static bool sweep(bool break_on_operation)
   temppeakLevel = -150;
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
-again:
+//again:
   for (int i = 0; i < sweep_points; i++) {
-    RSSI = perform(break_on_operation, i, frequencies[i], trackingVFO);
+    RSSI = perform(break_on_operation, i, frequencies[i], setting_tracking);
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
 
-    if (settingSpur == 1) {                           // First pass
-      temp_t[i] = RSSI;
-      continue;                                       // Skip all other processing
-    }
-    if (settingSpur == -1)                            // Second pass
-      RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
+//    if (setting_spur == 1) {                           // First pass
+//      temp_t[i] = RSSI;
+//      continue;                                       // Skip all other processing
+//    }
+//    if (setting_spur == -1)                            // Second pass
+//      RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
     temp_t[i] = RSSI;
-    if (settingSubtractStorage) {
+    if (setting_subtract_stored) {
       RSSI = RSSI - stored_t[i] ;
     }
     //   stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
-    if (scandirty || settingAverage == AV_OFF)
+    if (scandirty || setting_average == AV_OFF)
       actual_t[i] = RSSI;
     else {
-      switch(settingAverage) {
+      switch(setting_average) {
       case AV_MIN: if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
       case AV_MAX: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
       case AV_2: actual_t[i] = (actual_t[i] + RSSI) / 2.0; break;
@@ -620,11 +612,11 @@ again:
     if (temp_min_level > actual_t[i])
       temp_min_level = actual_t[i];
   }
-  if (settingSpur == 1) {
-    settingSpur = -1;
-    goto again;
-  } else if (settingSpur == -1)
-    settingSpur = 1;
+//  if (setting_spur == 1) {
+//    setting_spur = -1;
+//    goto again;
+//  } else if (setting_spur == -1)
+//    setting_spur = 1;
 
   if (scandirty) {
     scandirty = false;
@@ -708,7 +700,7 @@ void PeakSearch()
   peakIndex = temppeakIndex;
   peakLevel = actual_t[peakIndex];
   peakFreq = frequencies[peakIndex];
-  settingSpur = -settingSpur;
+  setting_spur = -setting_spur;
   int peak_marker = 0;
   markers[peak_marker].enabled = true;
   markers[peak_marker].index = peakIndex;
@@ -738,7 +730,7 @@ void draw_cal_status(void)
 
   ili9341_fill(x, y, OFFSETX, HEIGHT, 0x0000);
 
-  if (MODE_OUTPUT(settingMode))     // No cal status during output
+  if (MODE_OUTPUT(setting_mode))     // No cal status during output
     return;
   if (current_menu_is_form() && !in_selftest)
     return;
@@ -759,29 +751,29 @@ void draw_cal_status(void)
   plot_printf(buf, BLEN, "%ddB/",(int)get_trace_scale(0));
   ili9341_drawstring(buf, x, y);
 
-  if (settingAttenuate) {
+  if (setting_attenuate) {
     ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     y += YSTEP*2;
     ili9341_drawstring("Attn:", x, y);
 
     y += YSTEP;
-    plot_printf(buf, BLEN, "-%ddB", settingAttenuate);
+    plot_printf(buf, BLEN, "-%ddB", setting_attenuate);
     buf[5]=0;
     ili9341_drawstring(buf, x, y);
   }
 
-  if (settingAverage>0) {
+  if (setting_average>0) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
     y += YSTEP*2;
     ili9341_drawstring("Aver:", x, y);
 
     y += YSTEP;
-    plot_printf(buf, BLEN, "%s",averageText[settingAverage]);
+    plot_printf(buf, BLEN, "%s",averageText[setting_average]);
     buf[5]=0;
     ili9341_drawstring(buf, x, y);
   }
-
-  if (settingSpur) {
+#if 0
+  if (setting_spur) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
     y += YSTEP*2;
     ili9341_drawstring("Spur:", x, y);
@@ -790,8 +782,9 @@ void draw_cal_status(void)
     plot_printf(buf, BLEN, "ON");
     ili9341_drawstring(buf, x, y);
   }
+#endif
 
-  if (settingRBW)
+  if (setting_rbw)
     color = BRIGHT_COLOR_GREEN;
   else
     color = DEFAULT_FG_COLOR;
@@ -821,7 +814,7 @@ void draw_cal_status(void)
   ili9341_drawstring("Scan:", x, y);
 
   y += YSTEP;
-  int32_t t = (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10 * (settingSpur ? 2 : 1); // in mS
+  int32_t t = (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10  /* * (setting_spur ? 2 : 1) */; // in mS
   if (t>1000)
     plot_printf(buf, BLEN, "%dS",(t+500)/1000);
   else
@@ -831,13 +824,13 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
 
-  if (settingRefer >= 0) {
+  if (setting_refer >= 0) {
     ili9341_set_foreground(BRIGHT_COLOR_RED);
     y += YSTEP*2;
     ili9341_drawstring("Ref:", x, y);
 
     y += YSTEP;
-    plot_printf(buf, BLEN, "%dMHz",refMHz[settingRefer]);
+    plot_printf(buf, BLEN, "%dMHz",reffer_freq[setting_refer]/1000000);
     buf[5]=0;
     ili9341_drawstring(buf, x, y);
   }
@@ -911,9 +904,9 @@ static void test_acquire(int i)
   pause_sweep();
 #if 0
   if (test_case[i].center < 300)
-    settingMode = M_LOW;
+    setting_mode = M_LOW;
   else
-    settingMode = M_HIGH;
+    setting_mode = M_HIGH;
 #endif
   set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
   set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
@@ -1109,7 +1102,7 @@ int test_validate(int i)
 
 void test_prepare(int i)
 {
-  trackingVFO = false; //Default test setup
+  setting_tracking = false; //Default test setup
   switch(test_case[i].setup) {                // Prepare test conditions
   case TPH_SILENT:                             // No input signal
     SetMode(M_HIGH);
@@ -1123,7 +1116,7 @@ common_silent:
     break;
   case TP_10MHZEXTRA:                         // Swept receiver
     SetMode(M_LOW);
-    trackingVFO = true; //Sweep BPF
+    setting_tracking = true; //Sweep BPF
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input

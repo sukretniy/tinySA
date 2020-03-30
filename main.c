@@ -998,7 +998,8 @@ set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
   // disable at out of sweep range
   for (; i < POINTS_COUNT; i++)
     frequencies[i] = 0;
-  update_rbw(frequencies[1] - frequencies[0]);
+  setting_frequency_step = delta;
+  update_rbw();
 }
 
 static void
@@ -2229,7 +2230,7 @@ VNA_SHELL_FUNCTION(cmd_d)
 {
   (void) argc;
   int32_t a = my_atoi(argv[0]);
-  settingDrive = a;
+  setting_drive = a;
 }
 
 
@@ -2256,11 +2257,11 @@ VNA_SHELL_FUNCTION(cmd_t)
 VNA_SHELL_FUNCTION(cmd_e)
 {
   (void)argc;
-  trackingVFO = my_atoi(argv[0]);
-  if (trackingVFO == -1)
-    trackingVFO = false;
+  setting_tracking = my_atoi(argv[0]);
+  if (setting_tracking == -1)
+    setting_tracking = false;
   else
-    trackingVFO = true;
+    setting_tracking = true;
 
   if (argc >1)
     frequencyExtra = my_atoi(argv[1]);
@@ -2279,11 +2280,12 @@ VNA_SHELL_FUNCTION(cmd_m)
   pause_sweep();
   int32_t f_step = (frequencyStop-frequencyStart)/ points;
   palClearPad(GPIOC, GPIOC_LED);  // disable led and wait for voltage stabilization
-  update_rbw(f_step);
+  setting_frequency_step = f_step;
+  update_rbw();
   chThdSleepMilliseconds(10);
   streamPut(shell_stream, '{');
   for (int i = 0; i<points; i++) {
-      float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, trackingVFO);
+      float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, setting_tracking);
       streamPut(shell_stream, 'x');
       int v = val*2 + 256;
       streamPut(shell_stream, (uint8_t)(v & 0xFF));
