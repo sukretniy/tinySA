@@ -384,39 +384,6 @@ void ili9341_bulk(int x, int y, int w, int h)
   }
 }
 #else
-static uint8_t ssp_sendrecvdata(void)
-{
-  // Start RX clock (by sending data)
-  SPI_WRITE_8BIT(0);
-  while (SPI_RX_IS_EMPTY && SPI_IS_BUSY)
-    ;
-  return SPI_READ_DATA;
-}
-
-void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
-{
-  // uint8_t xx[4] = { x >> 8, x, (x+w-1) >> 8, (x+w-1) };
-  // uint8_t yy[4] = { y >> 8, y, (y+h-1) >> 8, (y+h-1) };
-  uint32_t xx = __REV16(x | ((x + w - 1) << 16));
-  uint32_t yy = __REV16(y | ((y + h - 1) << 16));
-  send_command(ILI9341_COLUMN_ADDRESS_SET, 4, (uint8_t *)&xx);
-  send_command(ILI9341_PAGE_ADDRESS_SET, 4, (uint8_t*)&yy);
-  send_command(ILI9341_MEMORY_READ, 0, NULL);
-
-  // Skip data from rx buffer
-  while (SPI_RX_IS_NOT_EMPTY)
-    (void) SPI_READ_DATA;
-  // require 8bit dummy clock
-  ssp_sendrecvdata();
-  while (len-- > 0) {
-    // read data is always 18bit
-    uint8_t r = ssp_sendrecvdata();
-    uint8_t g = ssp_sendrecvdata();
-    uint8_t b = ssp_sendrecvdata();
-    *out++ = RGB565(r, g, b);
-  }
-  CS_HIGH;
-}
 
 //
 // Use DMA for send data
@@ -469,7 +436,7 @@ void ili9341_bulk(int x, int y, int w, int h)
                               STM32_DMA_CR_MSIZE_HWORD | STM32_DMA_CR_MINC);
   dmaStreamFlush(w * h);
 }
-#if 0  // Read DMA hangs
+#if 1  // Read DMA hangs
 // Copy screen data to buffer
 // Warning!!! buffer size must be greater then 3*len + 1 bytes
 void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
@@ -515,6 +482,41 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
     rgbbuf += 3;
   }
 }
+#else
+static uint8_t ssp_sendrecvdata(void)
+{
+  // Start RX clock (by sending data)
+  SPI_WRITE_8BIT(0);
+  while (SPI_RX_IS_EMPTY && SPI_IS_BUSY)
+    ;
+  return SPI_READ_DATA;
+}
+
+void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
+{
+  // uint8_t xx[4] = { x >> 8, x, (x+w-1) >> 8, (x+w-1) };
+  // uint8_t yy[4] = { y >> 8, y, (y+h-1) >> 8, (y+h-1) };
+  uint32_t xx = __REV16(x | ((x + w - 1) << 16));
+  uint32_t yy = __REV16(y | ((y + h - 1) << 16));
+  send_command(ILI9341_COLUMN_ADDRESS_SET, 4, (uint8_t *)&xx);
+  send_command(ILI9341_PAGE_ADDRESS_SET, 4, (uint8_t*)&yy);
+  send_command(ILI9341_MEMORY_READ, 0, NULL);
+
+  // Skip data from rx buffer
+  while (SPI_RX_IS_NOT_EMPTY)
+    (void) SPI_READ_DATA;
+  // require 8bit dummy clock
+  ssp_sendrecvdata();
+  while (len-- > 0) {
+    // read data is always 18bit
+    uint8_t r = ssp_sendrecvdata();
+    uint8_t g = ssp_sendrecvdata();
+    uint8_t b = ssp_sendrecvdata();
+    *out++ = RGB565(r, g, b);
+  }
+  CS_HIGH;
+}
+
 #endif
 #endif
 
@@ -587,6 +589,16 @@ void ili9341_drawstring(const char *str, int x, int y)
     uint16_t w = FONT_GET_WIDTH(ch);
     blit8BitWidthBitmap(x, y, w, FONT_GET_HEIGHT, char_buf);
     x += w;
+  }
+}
+
+void ili9341_drawstring_7x13(const char *str, int x, int y)
+{
+  while (*str) {
+    uint8_t ch = *str++;
+    const uint16_t *char_buf = &x7x13b_bits[(ch * 13)];
+    blit16BitWidthBitmap(x, y, 7, 11, char_buf);
+    x += 7;
   }
 }
 

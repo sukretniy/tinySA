@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
+/* Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
  * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
@@ -33,7 +32,7 @@ int fullscreen = true;
 static void cell_draw_marker_info(int x0, int y0);
 static void draw_battery_status(void);
 void cell_draw_test_info(int x0, int y0);
-static void frequency_string(char *buf, size_t len, int32_t freq);
+void frequency_string(char *buf, size_t len, int32_t freq);
 
 static int16_t grid_offset;
 static int16_t grid_width;
@@ -68,7 +67,7 @@ typedef uint32_t map_t;
 uint16_t marker_color[3] =
 {
  RGBHEX(0xFFFFFF),
- RGBHEX(0x0000FF),
+ RGBHEX(0xFFFF00),
  RGBHEX(0x00FF00)
 };
 
@@ -796,12 +795,19 @@ static void trace_get_value_string(
   } else {
     dfreq = frequencies[i];
   }
-  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
+  if (GetActualRBW()  < 10)
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
+  else if (GetActualRBW()  < 100)
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.2f" , (dfreq + 5000) / 1000000.0);
+  else
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
+
+//  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
     v = logmag(&coeff[i]);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else
-      plot_printf(buf, len, " %s %.2f", buf2, v - rlevel);
+      plot_printf(buf, len, "%s %.1f", buf2, v - rlevel);
 }
 #ifdef __VNA__
 static int
@@ -1094,7 +1100,7 @@ markmap_marker(int marker)
   int t;
   if (!markers[marker].enabled)
     return;
-  for (t = 0; t < TRACES_MAX; t++) {
+  for (t = TRACE_ACTUAL; t < TRACE_ACTUAL; t++) {
     if (!trace[t].enabled)
       continue;
     index_t index = trace_index[t][markers[marker].index];
@@ -1138,9 +1144,9 @@ marker_search(void)
   if (uistat.current_trace == -1)
     return -1;
 
-  int value = CELL_Y(trace_index[uistat.current_trace][0]);
+  int value = CELL_Y(trace_index[TRACE_ACTUAL][0]);
   for (i = 0; i < sweep_points; i++) {
-    index_t index = trace_index[uistat.current_trace][i];
+    index_t index = trace_index[TRACE_ACTUAL][i];
     if ((*compare)(value, CELL_Y(index))) {
       value = CELL_Y(index);
       found = i;
@@ -1161,21 +1167,21 @@ marker_search_left(int from)
 {
   int i;
   int found = -1;
-
+#define MINMAX_DELTA    -10
   if (uistat.current_trace == -1)
     return -1;
 
-  int value = CELL_Y(trace_index[uistat.current_trace][from]);
+  int value = CELL_Y(trace_index[TRACE_ACTUAL][from]);
   for (i = from - 1; i >= 0; i--) {
-    index_t index = trace_index[uistat.current_trace][i];
-    if ((*compare)(value, CELL_Y(index)))
+    index_t index = trace_index[TRACE_ACTUAL][i];
+    if ((*compare)(value - MINMAX_DELTA, CELL_Y(index)))
       break;
     value = CELL_Y(index);
   }
 
   for (; i >= 0; i--) {
-    index_t index = trace_index[uistat.current_trace][i];
-    if ((*compare)(CELL_Y(index), value)) {
+    index_t index = trace_index[TRACE_ACTUAL][i];
+    if ((*compare)(CELL_Y(index), value + MINMAX_DELTA)) {
       break;
     }
     found = i;
@@ -1192,17 +1198,16 @@ marker_search_right(int from)
 
   if (uistat.current_trace == -1)
     return -1;
-
-  int value = CELL_Y(trace_index[uistat.current_trace][from]);
+  int value = CELL_Y(trace_index[TRACE_ACTUAL][from]);
   for (i = from + 1; i < sweep_points; i++) {
-    index_t index = trace_index[uistat.current_trace][i];
+    index_t index = trace_index[TRACE_ACTUAL][i];
     if ((*compare)(value, CELL_Y(index)))
       break;
     value = CELL_Y(index);
   }
 
   for (; i < sweep_points; i++) {
-    index_t index = trace_index[uistat.current_trace][i];
+    index_t index = trace_index[TRACE_ACTUAL][i];
     if ((*compare)(CELL_Y(index), value)) {
       break;
     }
@@ -1385,9 +1390,10 @@ draw_cell(int m, int n)
   for (i = 0; i < MARKERS_MAX; i++) {
     if (!markers[i].enabled)
       continue;
-    for (t = 0; t < TRACES_MAX; t++) {
-      if (!trace[t].enabled)
-        continue;
+//    for (t = 0; t < TRACES_MAX; t++) {
+//      if (!trace[t].enabled)
+//        continue;
+      t = TRACE_ACTUAL;
       index_t index = trace_index[t][markers[i].index];
       int x = CELL_X(index) - x0 - X_MARKER_OFFSET;
       int y = CELL_Y(index) - y0 - Y_MARKER_OFFSET;
@@ -1396,7 +1402,7 @@ draw_cell(int m, int n)
           y + MARKER_HEIGHT >= 0 && y - MARKER_HEIGHT < CELLHEIGHT)
         draw_marker(x, y, marker_color[markers[i].mtype], i);
 //      draw_marker(x, y, config.trace_color[t], i);
-    }
+//    }
   }
 #endif
 // Draw trace and marker info on the top (50 system ticks for all screen calls)
@@ -1497,7 +1503,7 @@ draw_all_cells(bool flush_markmap)
 #endif
       spi_buffer[i] = RGB565(r,g,b);
     }
-    ili9341_bulk(5*5,HEIGHT+3, 290,1);
+    ili9341_bulk(5*5,HEIGHT+3, area_width,1);
   }
 #endif
 }
@@ -1817,31 +1823,40 @@ static void cell_draw_marker_info(int x0, int y0)
         continue;
 #if 1
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
-      int ypos = 1 + (j/2)*(13) - y0;
+//      int ypos = 1 + (j/2)*(13) - y0;
+      int ypos = 1 + (j/2)*(16) - y0;
 #else
       int xpos = 1 + CELLOFFSETX - x0;
       int ypos = 1 + j*(FONT_GET_HEIGHT*2+1) - y0;
 #endif
       int k = 0;
-      if (i == active_marker)
+      if (i == active_marker) {
+//        ili9341_set_foreground(DEFAULT_BG_COLOR);
+//        ili9341_set_background(marker_color[markers[i].mtype]);
         buf[k++] = '\033'; // Right arrow (?)
-      else
+      } else {
+//        ili9341_set_background(DEFAULT_BG_COLOR);
+//        ili9341_set_foreground(marker_color[markers[i].mtype]);
         buf[k++] = ' ';
+//        buf[k++] = ' ';
+      }
       buf[k++] = i+'1';
-      buf[k++] = marker_letter[markers[i].mtype];
+//      buf[k++] = marker_letter[markers[i].mtype];
       buf[k++] = 0;
+      ili9341_set_background(DEFAULT_BG_COLOR);
       ili9341_set_foreground(marker_color[markers[i].mtype]);
       cell_drawstring_7x13(buf, xpos, ypos);
+//      cell_drawstring_size(buf, xpos, ypos, 2);
       trace_get_value_string(
           t, buf, sizeof buf,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
-//      cell_drawstring_7x13(w, h, buf, xpos+2*7, ypos, config.trace_color[t]);
-      cell_drawstring_7x13(buf, xpos+4*7, ypos);
+      cell_drawstring_7x13(buf, xpos+3*7, ypos);
+//      cell_drawstring_size(buf, xpos+3*7, ypos, 2);
       j++;
    }
   }
 }
-static void frequency_string(char *buf, size_t len, int32_t freq)
+void frequency_string(char *buf, size_t len, int32_t freq)
 {
   if (freq < 0) {
     freq = -freq;
@@ -1885,6 +1900,11 @@ draw_frequencies(void)
 {
   char buf1[32];
   char buf2[32]; buf2[0] = 0;
+  if (MODE_OUTPUT(setting_mode))     // No frequencies during output
+    return;
+  if (current_menu_is_form() && !in_selftest)
+    return;
+
 #ifdef __VNA__
   if ((domain_mode & DOMAIN_MODE) == DOMAIN_FREQ) {
 #endif

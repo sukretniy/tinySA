@@ -33,14 +33,18 @@
 #define POINTS_COUNT     290
 #define MARKER_COUNT    4
 
-#define TRACE_COUNT     3
+#define TRACES_MAX 3
+#define TRACE_AGE       3
 #define TRACE_ACTUAL    2
 #define TRACE_STORED    1
 #define TRACE_TEMP      0
+// #define age_t     measured[TRACE_AGE]
 #define stored_t  measured[TRACE_STORED]
 #define actual_t  measured[TRACE_ACTUAL]
 #define temp_t    measured[TRACE_TEMP]
-typedef float measurement_t[3][POINTS_COUNT];
+
+
+typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
 #endif
 
@@ -117,11 +121,22 @@ void load_default_properties(void);
 
 extern float perform(bool b, int i, int32_t f, int e);
 enum {
-  AV_OFF, AV_MIN, AV_MAX, AV_2, AV_4, AV_8
+  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16
 };
 enum {
   M_LOW, M_HIGH, M_GENLOW, M_GENHIGH,
 };
+
+enum {
+  MO_NONE, MO_AM, MO_NFM, MO_WFM,
+};
+
+#define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
+#define MODE_INPUT(x)  ((x) == M_LOW || (x) == M_HIGH )
+#define MODE_HIGH(x)  ((x) == M_HIGH || (x) == M_GENHIGH )
+#define MODE_LOW(x)  ((x) == M_LOW || (x) == M_GENLOW )
+#define MODE_SELECT(x) (MODE_HIGH(x) ? 1 : 0)
+
 #define SWEEP_ENABLE  0x01
 #define SWEEP_ONCE    0x02
 extern int8_t sweep_mode;
@@ -232,8 +247,6 @@ extern const uint16_t numfont16x22[];
 #define S_OHM   "\036"
 // trace 
 
-#define TRACES_MAX 3
-
 #define MAX_TRACE_TYPE 12
 enum trace_type {
   TRC_LOGMAG=0, TRC_PHASE, TRC_DELAY, TRC_SMITH, TRC_POLAR, TRC_LINEAR, TRC_SWR, TRC_REAL, TRC_IMAG, TRC_R, TRC_X, TRC_OFF
@@ -294,6 +307,7 @@ void set_trace_refpos(int t, float refpos);
 float get_trace_scale(int t);
 float get_trace_refpos(int t);
 const char *get_trace_typename(int t);
+extern int in_selftest;
 
 #ifdef __VNA
 void set_electrical_delay(float picoseconds);
@@ -364,6 +378,8 @@ extern volatile uint8_t redraw_request;
 
 #define DEFAULT_FG_COLOR            RGB565(255,255,255)
 #define DEFAULT_BG_COLOR            RGB565(  0,  0,  0)
+#define DARK_GREY                   RGB565(140,140,140)
+#define LIGHT_GREY                  RGB565(220,220,220)
 #define DEFAULT_GRID_COLOR          RGB565(128,128,128)
 #define DEFAULT_MENU_COLOR          RGB565(255,255,255)
 #define DEFAULT_MENU_TEXT_COLOR     RGB565(  0,  0,  0)
@@ -394,6 +410,7 @@ void ili9341_clear_screen(void);
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
+void ili9341_drawstring_7x13(const char *str, int x, int y);
 void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size);
 void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size);
@@ -407,7 +424,7 @@ void show_logo(void);
  * flash.c
  */
 
-#if 0
+#if 1
 #define SAVEAREA_MAX 5
 // Begin addr                   0x08018000
 #define SAVE_CONFIG_AREA_SIZE   0x00008000
@@ -456,6 +473,7 @@ typedef struct properties {
 #ifdef __VNA__
   uint8_t _domain_mode; /* 0bxxxxxffm : where ff: TD_FUNC m: DOMAIN_MODE */
   uint8_t _marker_smith_format;
+  uint8_t _bandwidth;
 #endif  
   uint8_t _reserved[2];
   uint32_t checksum;
@@ -490,6 +508,7 @@ extern properties_t current_props;
 #define domain_mode current_props._domain_mode
 #define velocity_factor current_props._velocity_factor
 #define marker_smith_format current_props._marker_smith_format
+#define bandwidth current_props._bandwidth
 #endif
 
 #define FREQ_IS_STARTSTOP() (!(config.freq_mode&FREQ_MODE_CENTER_SPAN))
@@ -510,6 +529,7 @@ void clear_all_config_prop_data(void);
  */
 extern void ui_init(void);
 extern void ui_process(void);
+int current_menu_is_form(void);
 
 // Irq operation process set
 #define OP_NONE       0x00
@@ -537,6 +557,7 @@ typedef struct uistat {
   uint8_t lever_mode;
   uint8_t marker_delta;
   uint8_t marker_tracking;
+  char text[20];
 } uistat_t;
 
 extern uistat_t uistat;
@@ -570,12 +591,13 @@ int16_t adc_vbat_read(void);
  */
 int plot_printf(char *str, int, const char *fmt, ...);
 #define PULSE do { palClearPad(GPIOC, GPIOC_LED); palSetPad(GPIOC, GPIOC_LED);} while(0)
-extern int settingAttenuate;
+extern int setting_attenuate;
 extern int settingPowerCal;
-extern int stepDelay;
-extern int settingSpeed;
-extern int settingMode;
-void update_rbw(uint32_t delta_f);
+extern int setting_step_delay;
+extern int actualStepDelay;
+extern int setting_mode;
+void update_rbw(void);
+int GetActualRBW(void);
 
 #define byte uint8_t
 extern volatile int SI4432_Sel;         // currently selected SI4432
@@ -590,7 +612,7 @@ void SI4432_SetReference(int freq);
 
 // Speed profile definition
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
-#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "T:%06d", chVTGetSystemTimeX() - time);ili9341_drawstringV(string_buf, 1, 60);}
+#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "T:%06d", chVTGetSystemTimeX() - time);ili9341_drawstringV(string_buf, 1, 180);}
 // Macros for convert define value to string
 #define STR1(x)  #x
 #define define_to_STR(x)  STR1(x)
@@ -600,6 +622,11 @@ int GetRBW(void);
 int GetStorage(void);
 int GetSubtractStorage(void);
 int get_waterfall(void);
-
-
+void toggle_tracking(void);
+void calibrate(void);
+void reset_calibration(void);
+void SetRefpos(int);
+void SetScale(int);
+void SetRBW(int);
+void SetRX(int);
 /*EOF*/

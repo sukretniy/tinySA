@@ -615,7 +615,16 @@ int16_t dump_buffer[AUDIO_BUFFER_LEN];
 int16_t dump_selection = 0;
 #endif
 
-volatile int16_t wait_count = 0;
+volatile uint8_t wait_count = 0;
+volatile uint8_t accumerate_count = 0;
+
+const int8_t bandwidth_accumerate_count[] = {
+  1, // 1kHz
+  3, // 300Hz
+  10, // 100Hz
+  33, // 30Hz
+  100 // 10Hz
+};
 
 float measured[2][POINTS_COUNT][2];
 #endif
@@ -643,13 +652,16 @@ void i2s_end_callback(I2SDriver *i2sp, size_t offset, size_t n)
   (void)i2sp;
   (void)n;
 
-  if (wait_count > 0) {
-    if (wait_count == 1) 
-      dsp_process(p, n);
-#ifdef ENABLED_DUMP
-      duplicate_buffer_to_dump(p);
-#endif
+  if (wait_count > 1) {
     --wait_count;
+  } else if (wait_count > 0) {
+    if (accumerate_count > 0) {
+      dsp_process(p, n);
+      accumerate_count--;
+    }
+#ifdef ENABLED_DUMP
+    duplicate_buffer_to_dump(p);
+#endif
   }
 
 #if PORT_SUPPORTS_RT
@@ -786,8 +798,8 @@ config_t config = {
   .harmonic_freq_threshold = 300000000,
 #endif
   .vbat_offset = 500,
-  .low_level_offset =       0,
-  .high_level_offset =      0,
+  .low_level_offset =       100,    // Uncalibrated
+  .high_level_offset =      100,    // Uncalibrated
 };
 
 properties_t current_props;
@@ -801,7 +813,10 @@ static const trace_t def_trace[TRACES_MAX] = {//enable, type, channel, reserved,
 };
 
 static const marker_t def_markers[MARKERS_MAX] = {
-    { 1, M_REFERENCE, 30, 0 }, { 0, M_DELTA, 40, 0 }, { 0, M_DELTA, 60, 0 }, { 0, M_DELTA, 80, 0 }
+    { 1, M_REFERENCE, 30, 0 },
+    { 0, M_NORMAL, 40, 0 },
+    { 0, M_NORMAL, 60, 0 },
+    { 0, M_NORMAL, 80, 0 }
 };
 
 // Load propeties default settings
@@ -868,20 +883,20 @@ bool sweep(bool break_on_operation)
     if (frequencies[i] == 0) break;
     delay = set_frequency(frequencies[i]);     // 700
     tlv320aic3204_select(0);                   // 60 CH0:REFLECT, reset and begin measure
-    DSP_START(delay + ((i == 0) ? 1 : 0));     // 1900
+    dsp_start(delay + ((i == 0) ? 1 : 0));     // 1900
     //================================================
     // Place some code thats need execute while delay
     //================================================
-    DSP_WAIT_READY;
+    dsp_wait();
     // calculate reflection coefficient
     (*sample_func)(measured[0][i]);            // 60
 
     tlv320aic3204_select(1);                   // 60 CH1:TRANSMISSION, reset and begin measure
-    DSP_START(DELAY_CHANNEL_CHANGE);           // 1700
+    dsp_start(DELAY_CHANNEL_CHANGE);           // 1700
     //================================================
     // Place some code thats need execute while delay
     //================================================
-    DSP_WAIT_READY;
+    dsp_wait();
     // calculate transmission coefficient
     (*sample_func)(measured[1][i]);            // 60
                                                // ======== 170 ===========
@@ -995,7 +1010,8 @@ set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
   // disable at out of sweep range
   for (; i < POINTS_COUNT; i++)
     frequencies[i] = 0;
-  update_rbw(frequencies[1] - frequencies[0]);
+  setting_frequency_step = delta;
+  update_rbw();
 }
 
 static void
@@ -2226,7 +2242,7 @@ VNA_SHELL_FUNCTION(cmd_d)
 {
   (void) argc;
   int32_t a = my_atoi(argv[0]);
-  settingDrive = a;
+  setting_drive = a;
 }
 
 
@@ -2253,11 +2269,11 @@ VNA_SHELL_FUNCTION(cmd_t)
 VNA_SHELL_FUNCTION(cmd_e)
 {
   (void)argc;
-  extraVFO = my_atoi(argv[0]);
-  if (extraVFO == -1)
-    extraVFO = false;
+  setting_tracking = my_atoi(argv[0]);
+  if (setting_tracking == -1)
+    setting_tracking = false;
   else
-    extraVFO = true;
+    setting_tracking = true;
 
   if (argc >1)
     frequencyExtra = my_atoi(argv[1]);
@@ -2276,11 +2292,12 @@ VNA_SHELL_FUNCTION(cmd_m)
   pause_sweep();
   int32_t f_step = (frequencyStop-frequencyStart)/ points;
   palClearPad(GPIOC, GPIOC_LED);  // disable led and wait for voltage stabilization
-  update_rbw(f_step);
+  setting_frequency_step = f_step;
+  update_rbw();
   chThdSleepMilliseconds(10);
   streamPut(shell_stream, '{');
   for (int i = 0; i<points; i++) {
-      float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, extraVFO);
+      float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, setting_tracking);
       streamPut(shell_stream, 'x');
       int v = val*2 + 256;
       streamPut(shell_stream, (uint8_t)(v & 0xFF));
