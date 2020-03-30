@@ -473,6 +473,7 @@ typedef struct properties {
 #ifdef __VNA__
   uint8_t _domain_mode; /* 0bxxxxxffm : where ff: TD_FUNC m: DOMAIN_MODE */
   uint8_t _marker_smith_format;
+  uint8_t _bandwidth;
 #endif  
   uint8_t _reserved[2];
   uint32_t checksum;
@@ -507,6 +508,7 @@ extern properties_t current_props;
 #define domain_mode current_props._domain_mode
 #define velocity_factor current_props._velocity_factor
 #define marker_smith_format current_props._marker_smith_format
+#define bandwidth current_props._bandwidth
 #endif
 
 #define FREQ_IS_STARTSTOP() (!(config.freq_mode&FREQ_MODE_CENTER_SPAN))
