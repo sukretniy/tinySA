@@ -835,6 +835,14 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
+  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+  y += YSTEP*2;
+  if (MODE_LOW(setting_mode))
+      ili9341_drawstring_7x13("M:L", x, y);
+  else
+    ili9341_drawstring_7x13("M:H", x, y);
+
+
   y = HEIGHT-7 + OFFSETY;
   plot_printf(buf, BLEN, "%ddB", (int)(yMax - get_trace_scale(0) * NGRIDY));
   buf[5]=0;
