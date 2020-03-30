@@ -187,7 +187,7 @@ static void menu_mode_cb(int item, uint8_t data)
 {
   (void)data;
   SetMode(item-1);
-  draw_cal_status();
+//  draw_cal_status();
   switch (item) {
   case 1:
     menu_push_submenu(menu_top);
@@ -202,7 +202,7 @@ static void menu_mode_cb(int item, uint8_t data)
     menu_push_submenu(menu_highoutputmode);
     break;
   }
-  draw_cal_status();
+//  draw_cal_status();
 }
 
 extern int dirty;

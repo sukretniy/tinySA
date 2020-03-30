@@ -577,6 +577,8 @@ static bool sweep(bool break_on_operation)
 //again:
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], setting_tracking);
+
+//START_PROFILE
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
@@ -611,6 +613,7 @@ static bool sweep(bool break_on_operation)
     }
     if (temp_min_level > actual_t[i])
       temp_min_level = actual_t[i];
+//STOP_PROFILE
   }
 //  if (setting_spur == 1) {
 //    setting_spur = -1;

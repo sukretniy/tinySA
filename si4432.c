@@ -215,7 +215,7 @@ void SI4432_Set_Frequency ( long Freq ) {
   int N = Freq / 10000000;
   Carrier = ( 4 * ( Freq - N * 10000000 )) / 625;
   int Freq_Band = ( N - 24 ) | ( hbsel << 5 ) | ( sbsel << 6 );
-#if 1
+#if 0
   SI4432_Write_Byte ( 0x75, Freq_Band );
   SI4432_Write_Byte ( 0x76, (Carrier>>8) & 0xFF );
   SI4432_Write_Byte ( 0x77, Carrier & 0xFF  );
@@ -237,15 +237,17 @@ float SI4432_RSSI(uint32_t i, int s)
     RSSI_RAW = Si446x_getRSSI();
   } else
 #endif
+//START_PROFILE
     SI4432_Sel = s;
     chThdSleepMicroseconds(actualStepDelay);
     RSSI_RAW = (unsigned char)SI4432_Read_Byte( 0x26 ) ;
  //   if (MODE_INPUT(setting_mode) && RSSI_RAW == 0)
  //     SI4432_Init();
-  float dBm = 0.5 * RSSI_RAW - 120.0 ;
+  float dBm = (RSSI_RAW-240)/2.0;
 #ifdef __SIMULATION__
   dBm = Simulated_SI4432_RSSI(i,s);
 #endif
+//STOP_PROFILE
   // Serial.println(dBm,2);
   return dBm ;
 }
