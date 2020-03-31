@@ -434,10 +434,13 @@ enum {
   MT_CALLBACK,
   MT_CANCEL,
   MT_TITLE,
-  MT_CLOSE
+  MT_CLOSE,
+  MT_KEYPAD
 };
-#define MT_FORM 0x80        // Or with menu type to get large button with current value
-#define MT_MASK(x) (0x7F & (x))
+#define MT_FORM     0x80        // Or with menu type to get large button with current value
+#define MT_BACK     0x40
+#define MT_LEAVE    0x20
+#define MT_MASK(x) (0xF & (x))
 
 typedef void (*menuaction_cb_t)(int item, uint8_t data);
 
@@ -767,15 +770,15 @@ menu_marker_op_cb(int item, uint8_t data)
 static void
 menu_marker_search_cb(int item, uint8_t data)
 {
-  (void)data;
+  (void)item;
   int i = -1;
   if (active_marker == -1)
     return;
 
-  switch (item) {
+  switch (data) {
   case 0: /* maximum */
   case 1: /* minimum */
-    set_marker_search(item);
+    set_marker_search(data);
     i = marker_search();
     break;
   case 2: /* search Left */
@@ -1145,10 +1148,11 @@ menu_move_top(void)
 static void
 menu_invoke(int item)
 {
+  int status;
   const menuitem_t *menu = menu_stack[menu_current_level];
   menu = &menu[item];
 
-  switch (menu->type & 0x0f) {
+  switch (MT_MASK(menu->type)) {
   case MT_NONE:
   case MT_BLANK:
   case MT_CLOSE:
@@ -1164,11 +1168,29 @@ menu_invoke(int item)
     if (cb == NULL)
       return;
     (*cb)(item, menu->data);
+    if (!(menu->type & MT_FORM))
+      draw_cal_status();
     break;
   }
 
   case MT_SUBMENU:
     menu_push_submenu((const menuitem_t*)menu->reference);
+    break;
+
+  case MT_KEYPAD:
+    status = btn_wait_release();
+    if (status & EVT_BUTTON_DOWN_LONG) {
+      ui_mode_numeric(menu->data);
+      //    ui_process_numeric();
+    } else {
+      if (menu->type & MT_FORM) {
+        area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
+        redraw_frame();         // Remove form numbers
+      }
+      ui_mode_keypad(menu->data);
+      ui_process_keypad();
+    }
+    draw_cal_status();
     break;
   }
 }
@@ -1482,7 +1504,7 @@ draw_menu_buttons(const menuitem_t *menu)
     if (menu[i].type & MT_FORM) {
       active_button_start = 320 - MENU_FORM_WIDTH;
       active_button_width = MENU_FORM_WIDTH - 30;       // Shorten at the right
-      if (MT_MASK(menu[i].type) == MT_CALLBACK) {       // Only callback can have value
+      if (MT_MASK(menu[i].type) == MT_KEYPAD) {         // Only keypad retrieves value
         keypad_mode = menu[i].data;
         fetch_numeric_target();
       }

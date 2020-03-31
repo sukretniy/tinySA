@@ -117,7 +117,7 @@ const char *info_about[]={
   0 // sentinel
 };
 
-static THD_WORKING_AREA(waThread1, 750);
+static THD_WORKING_AREA(waThread1, 730);
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
@@ -2140,7 +2140,7 @@ VNA_SHELL_FUNCTION(cmd_threads)
   thread_t *tp;
   (void)argc;
   (void)argv;
-  shell_printf("stklimit|   stack|stk free|    addr|refs|prio|    state|        name"VNA_SHELL_NEWLINE_STR);
+  shell_printf("stklimit|   |stk free|    addr|refs|prio|    state|        name"VNA_SHELL_NEWLINE_STR);
   tp = chRegFirstThread();
   do {
     uint32_t max_stack_use = 0U;
