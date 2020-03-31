@@ -780,8 +780,7 @@ static void menu_item_modify_attribute(
   int mark = false;
   if (menu == menu_mode) {
     if (item == GetMode()+1)  {
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     } else if (item == 5) {
       plot_printf(uistat.text, sizeof uistat.text, menu_reffer_text[get_refer_output()+1]);
     }
@@ -793,73 +792,59 @@ static void menu_item_modify_attribute(
     }
   } else if (menu == menu_reffer) {
     if (item < 5 && item == get_refer_output() + 1){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
-    }
+      mark = true;
+   }
   } else if (menu == menu_reffer2) {
     if (item == get_refer_output() - 4){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
   } else if (menu == menu_stimulus) {
     if (item == 5 /* PAUSE */ && !(sweep_mode&SWEEP_ENABLE)) {
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
   } else if (menu == menu_scale) {
 #if 0
     if (item == 4 /* Spur reduction */ && GetSpur()) {
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
-    }
+      mark = true;
+   }
 #endif
   } else if (menu == menu_average) {
     if (item == GetAverage()){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
   } else if (menu == menu_dBper) {
     if (menu_dBper_value[item] == get_trace_scale(1)){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
   } else if (menu == menu_rbw) {
     if (rbwsel[item] == GetRBW()){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
 
   } else if (menu == menu_drive || menu == menu_drive_wide) {
     if (item == setting_drive){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
 
   } else if (menu == menu_storage) {
     if (item ==0 && GetStorage()){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
     if (item == 2 && GetSubtractStorage()){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
     if (item == 3 && get_waterfall()){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
   } else if (menu == menu_settings2 || menu == menu_settingshigh2) {
     if (item ==0 && setting_agc){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
     if (item == 1 && setting_lna){
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
     if (item == 2 && setting_tracking){         // should not happen in high mode
-      *bg = DEFAULT_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
+      mark = true;
     }
   }
   if (mark) {
