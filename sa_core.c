@@ -458,7 +458,7 @@ void update_rbw(void)
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433900000;
-static const unsigned int spur_alternate_IF =  433700000;
+static const unsigned int spur_alternate_IF =  434100000;
 static const int spur_table[] =
 {
    470000,
@@ -568,10 +568,16 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   return(RSSI);
 }
 
+#define MAX_MAX 4
+#define MAX_NOISE 10    //  10dB
+int16_t max_index[MAX_MAX];
+int16_t cur_max = 0;
+
 // main loop for measurement
 static bool sweep(bool break_on_operation)
 {
   float RSSI;
+  int16_t downslope = true;
   palClearPad(GPIOC, GPIOC_LED);
   temppeakLevel = -150;
   float temp_min_level = 100;
@@ -580,7 +586,6 @@ static bool sweep(bool break_on_operation)
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], setting_tracking);
 
-//START_PROFILE
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
@@ -618,6 +623,54 @@ static bool sweep(bool break_on_operation)
       case AV_16: actual_t[i] = (actual_t[i]*3 + RSSI) / 16.0; break;
       }
     }
+#if 1
+// START_PROFILE
+    if (i == 0) {
+      cur_max = 0;          // Always at least one maximum
+      temppeakIndex = 0;
+      temppeakLevel = actual_t[i];
+      max_index[i] = 0;
+      downslope = true;
+    }
+    if (downslope) {
+      if (temppeakLevel > actual_t[i]) {    // Follow down
+        temppeakIndex = i;                  // Latest minimum
+        temppeakLevel = actual_t[i];
+      } else if (temppeakLevel + MAX_NOISE < actual_t[i]) {    // Local minimum found
+        temppeakIndex = i;                          // This is now the latest maximum
+        temppeakLevel = actual_t[i];
+        downslope = false;
+      }
+    } else {
+      if (temppeakLevel < actual_t[i]) {    // Follow up
+        temppeakIndex = i;
+        temppeakLevel = actual_t[i];
+      } else if (temppeakLevel - MAX_NOISE > actual_t[i]) {    // Local max found
+
+          int j = 0;                                            // Insertion index
+          while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
+            j++;
+          if (j < MAX_MAX) {                                    // Larger then one of the previous found
+            int k = MAX_MAX-1;
+            while (k > j) {                                      // Shift to make room for max
+              max_index[k] = max_index[k-1];
+//              maxlevel_index[k] = maxlevel_index[k-1];        // Only for debugging
+              k--;
+            }
+            max_index[j] = temppeakIndex;
+//            maxlevel_index[j] = actual_t[temppeakIndex];      // Only for debugging
+            if (cur_max < MAX_MAX) {
+              cur_max++;
+            }
+//STOP_PROFILE
+          }
+          temppeakIndex = i;            // Latest minimum
+          temppeakLevel = actual_t[i];
+
+          downslope = true;
+      }
+    }
+#else
     if (frequencies[i] > 1000000) {
       if (temppeakLevel < actual_t[i]) {
         temppeakIndex = i;
@@ -626,7 +679,7 @@ static bool sweep(bool break_on_operation)
     }
     if (temp_min_level > actual_t[i])
       temp_min_level = actual_t[i];
-//STOP_PROFILE
+#endif
   }
 //  if (setting_spur == 1) {
 //    setting_spur = -1;
@@ -638,9 +691,37 @@ static bool sweep(bool break_on_operation)
     scandirty = false;
     draw_cal_status();
   }
-  peakIndex = temppeakIndex;
+#if 1
+  int i = 0;
+  int m = 0;
+  while (i < cur_max) {                                 // For all maxima found
+    while (m < MARKERS_MAX) {
+      if (markers[m].enabled == M_TRACKING_ENABLED) {   // Available marker found
+        markers[m].index = max_index[i];
+        markers[m].frequency = frequencies[markers[m].index];
+        m++;
+        break;                          // Next maximum
+      }
+      m++;                              // Try next marker
+    }
+    i++;
+  }
+  while (m < MARKERS_MAX) {
+    if (markers[m].enabled == M_TRACKING_ENABLED ) {    // More available markers found
+      markers[m].index = 0;                             // Enabled but no max
+      markers[m].frequency = frequencies[markers[m].index];
+    }
+    m++;                              // Try next marker
+  }
+  peakIndex = max_index[0];
   peakLevel = actual_t[peakIndex];
   peakFreq = frequencies[peakIndex];
+#else
+  int peak_marker = 0;
+  markers[peak_marker].enabled = true;
+  markers[peak_marker].index = peakIndex;
+  markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
+#endif
   min_level = temp_min_level;
 #if 0                           // Auto ref level setting
   int scale = get_trace_scale(2);
@@ -655,79 +736,11 @@ static bool sweep(bool break_on_operation)
   }
 
 #endif
-  int peak_marker = 0;
-  markers[peak_marker].enabled = true;
-  markers[peak_marker].index = peakIndex;
-  markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
   //    redraw_marker(peak_marker, FALSE);
   palSetPad(GPIOC, GPIOC_LED);
   return true;
 }
 
-
-#if 0
-void PeakSearch()
-{
-#define PEAKSTACK   4
-#define PEAKDISTANCE    10
-  int level = 0;
-  int searchLeft[PEAKSTACK];
-  int peakIndex[PEAKSTACK];
-  int peak_marker = 0;
-  searchLeft[level] = true;
-  peakIndex[level] = markers[peak_marker].index;
-  level++;
-  searchLeft[level] = true;
-  int peakFrom;
-  int peakTo;
-  while (peak_marker < 4){
-    if (searchLeft[level])
-    {
-      int fromLevel = level;
-      while (fromLevel > 0 && searchLeft[fromLevel])
-        fromLevel--
-      if(fromLevel == 0) {
-        peakFrom = PEAKDISTANCE;
-      } else {
-        peakFrom = peakIndex[fromLevel] + PEAKDISTANCE;
-      }
-      peakTo = peakIndex[level] - PEAKDISTANCE;
-    } else {
-      int toLevel = level;
-      while (toLevel > 0 && !searchLeft[toLevel])
-        toLevel--
-      if(toLevel == 0) {
-        peakTo = POINTS_COUNT - 1 - PEAKDISTANCE;
-      } else {
-        peakTo = peakIndex[fromLevel] - PEAKDISTANCE;
-      }
-      peakFrom = peakIndex[level] + PEAKDISTANCE;
-    }
-    float peakMax = actual_t[peakFrom];
-    int peakIndex = peakFrom;
-    for (int i = peakFrom; i < peakTo; i++) {
-      if (peakMax < actual_t[i]) {
-        peakMax = actual_t[i];
-        peakIndex = i;
-      }
-    }
-
-
-  peakIndex = temppeakIndex;
-  peakLevel = actual_t[peakIndex];
-  peakFreq = frequencies[peakIndex];
-  setting_spur = -setting_spur;
-  int peak_marker = 0;
-  markers[peak_marker].enabled = true;
-  markers[peak_marker].index = peakIndex;
-  markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
-//    redraw_marker(peak_marker, FALSE);
-
-
-}
-
-}
-#endif
 
 const char *averageText[] = { "OFF", "MIN", "MAX", "2", "4", "8"};
 const char *dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};

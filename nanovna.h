@@ -199,8 +199,8 @@ extern int _height;
 #define CELLWIDTH  (32)
 #define CELLHEIGHT (32)
 
-//#define NGRIDY 10
-#define NGRIDY 9
+#define NGRIDY 10
+//#define NGRIDY 9
 
 #define FREQUENCIES_XPOS1 OFFSETX
 #define FREQUENCIES_XPOS2 200
@@ -316,7 +316,11 @@ float groupdelay_from_array(int i, float array[POINTS_COUNT][2]);
 #endif
 // marker
 enum {
-  M_REFERENCE, M_NORMAL, M_DELTA
+  M_REFERENCE, M_NORMAL, M_DELTA, M_TRACKING
+};
+
+enum {
+  M_DISABLED, M_ENABLED, M_TRACKING_ENABLED
 };
 
 typedef struct {
@@ -404,8 +408,13 @@ void ili9341_init(void);
 void ili9341_test(int mode);
 void ili9341_bulk(int x, int y, int w, int h);
 void ili9341_fill(int x, int y, int w, int h, int color);
+#if 0
 void ili9341_set_foreground(uint16_t fg);
 void ili9341_set_background(uint16_t fg);
+#else
+#define ili9341_set_foreground(fg) {  foreground_color = fg; }
+#define ili9341_set_background(bg) {  background_color = bg;}
+#endif
 void ili9341_clear_screen(void);
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
@@ -427,15 +436,15 @@ void show_logo(void);
 #if 1
 #define SAVEAREA_MAX 5
 // Begin addr                   0x08018000
-#define SAVE_CONFIG_AREA_SIZE   0x00008000
+#define SAVE_CONFIG_AREA_SIZE   0x00000800
 // config save area
-#define SAVE_CONFIG_ADDR        0x08018000
+#define SAVE_CONFIG_ADDR        0x0801C000
 // properties_t save area
-#define SAVE_PROP_CONFIG_0_ADDR 0x08018800
-#define SAVE_PROP_CONFIG_1_ADDR 0x0801a000
-#define SAVE_PROP_CONFIG_2_ADDR 0x0801b800
-#define SAVE_PROP_CONFIG_3_ADDR 0x0801d000
-#define SAVE_PROP_CONFIG_4_ADDR 0x0801e800
+#define SAVE_PROP_CONFIG_0_ADDR 0x0801C800
+#define SAVE_PROP_CONFIG_1_ADDR 0x0801D000
+#define SAVE_PROP_CONFIG_2_ADDR 0x0801D800
+#define SAVE_PROP_CONFIG_3_ADDR 0x0801E000
+#define SAVE_PROP_CONFIG_4_ADDR 0x0801E800
 #else
 #define SAVEAREA_MAX 4
 // Begin addr                   0x0801C000
