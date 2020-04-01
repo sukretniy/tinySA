@@ -906,6 +906,9 @@ static void menu_item_modify_attribute(
       mark = true;
     else if (item == markers[active_marker].mtype)
       mark = true;
+  } else if (menu == menu_marker_sel) {
+    if (item < MARKERS_MAX && markers[item].enabled)
+      mark = true;
   }
   if (mark) {
     *bg = DEFAULT_MENU_TEXT_COLOR;
