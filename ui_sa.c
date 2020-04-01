@@ -167,7 +167,7 @@ static const char * const keypad_mode_label[] = {
 #endif
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
-  "error", "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", "ATTENUATION", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL"
+  "error", "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL"
 };
 #endif
 
@@ -326,12 +326,12 @@ static void menu_drive_cb(int item, uint8_t data)
 
 
 
+#if 0
 
 static void menu_spur_cb(int item, uint8_t data)
 {
   (void)data;
   (void)item;
-#if 0
   if (GetSpur())
     SetSpur(0);
   else
@@ -339,8 +339,8 @@ static void menu_spur_cb(int item, uint8_t data)
 //  menu_move_back();
   ui_mode_normal();
   draw_cal_status();
-#endif
 }
+#endif
 
 static void menu_storage_cb(int item, uint8_t data)
 {
@@ -527,7 +527,7 @@ static const menuitem_t  menu_average[] = {
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
-
+#if 0
 static const menuitem_t menu_storage[] = {
   { MT_CALLBACK, 0, "STORE",    menu_storage_cb},
   { MT_CALLBACK, 1, "CLEAR",    menu_storage_cb},
@@ -536,6 +536,7 @@ static const menuitem_t menu_storage[] = {
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
+#endif
 
 static const menuitem_t menu_rbw[] = {
   { MT_CALLBACK, 0, "  AUTO",   menu_rbw_cb},
@@ -578,6 +579,36 @@ static const menuitem_t menu_reffer[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_acquire[] = {
+  { MT_CALLBACK, 0, "AUTO",     menu_autosettings_cb},
+  { MT_KEYPAD, KM_ATTENUATION,  "ATTEN",            NULL},
+  { MT_SUBMENU,0,               "RBW",              menu_rbw},
+  { MT_SUBMENU,0,               "AVERAGE",          menu_average},
+  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_acquirehigh[] = {
+  { MT_CALLBACK, 0, "AUTO",     menu_autosettings_cb},
+  { MT_SUBMENU,0,               "RBW",              menu_rbw},
+  { MT_SUBMENU,0,               "AVERAGE",          menu_average},
+  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
+
+static const menuitem_t menu_display[] = {
+  { MT_KEYPAD, KM_REFPOS,       "\2REF\0LEVEL",     NULL},
+  { MT_SUBMENU,0,               "\2SCALE/\0DIV",    menu_dBper},
+  { MT_CALLBACK, 0, "STORE",    menu_storage_cb},
+  { MT_CALLBACK, 1, "CLEAR",    menu_storage_cb},
+  { MT_CALLBACK, 2, "SUBTRACT", menu_storage_cb},
+  { MT_CALLBACK, 3, "WATERFALL",menu_storage_cb},
+  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
+#if 0
 static const menuitem_t menu_scale[] = {
   { MT_KEYPAD, KM_REFPOS,       "\2REF\0LEVEL",     NULL},
   { MT_SUBMENU,0,               "\2SCALE/\0DIV",    menu_dBper},
@@ -598,7 +629,7 @@ static const menuitem_t menu_scalehigh[] = {
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
-
+#endif
 
 static const menuitem_t menu_stimulus[8] = {
   { MT_KEYPAD,  KM_START,   "START",            NULL},
@@ -730,7 +761,30 @@ static const menuitem_t menu_mode[] = {
 //  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
+#if 1
+const menuitem_t menu_top[] = {
+  { MT_SUBMENU,  0, "ACQUIRE",      menu_acquire},
+  { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
+  { MT_SUBMENU,  0, "DISPLAY",      menu_display},
+  { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
+  { MT_CANCEL,   0, S_LARROW" MODE",NULL},
+  { MT_NONE,     0, NULL, NULL } // sentinel,
+ // MENUITEM_CLOSE,
+};
 
+const menuitem_t menu_tophigh[] =
+{
+ { MT_SUBMENU,  0, "ACQUIRE",      menu_acquirehigh},
+ { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
+ { MT_SUBMENU,  0, "DISPLAY",      menu_display},
+ { MT_SUBMENU,  0, "MARKER",       menu_marker},
+ { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
+ { MT_CANCEL,   0, S_LARROW" MODE",NULL},
+ { MT_NONE,     0, NULL, NULL } // sentinel,
+ // MENUITEM_CLOSE,
+};
+#else
 const menuitem_t menu_top[] = {
   { MT_CALLBACK, 0, "AUTO",         menu_autosettings_cb},
   { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
@@ -754,7 +808,7 @@ const menuitem_t menu_tophigh[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel,
  // MENUITEM_CLOSE,
 };
-
+#endif
 // ===[MENU DEFINITION END]======================================================
 
 #undef BOARD_NAME
@@ -802,12 +856,6 @@ static void menu_item_modify_attribute(
     if (item == 5 /* PAUSE */ && !(sweep_mode&SWEEP_ENABLE)) {
       mark = true;
     }
-  } else if (menu == menu_scale) {
-#if 0
-    if (item == 4 /* Spur reduction */ && GetSpur()) {
-      mark = true;
-   }
-#endif
   } else if (menu == menu_average) {
     if (item == GetAverage()){
       mark = true;
@@ -826,14 +874,14 @@ static void menu_item_modify_attribute(
       mark = true;
     }
 
-  } else if (menu == menu_storage) {
-    if (item ==0 && GetStorage()){
+  } else if (menu == menu_display) {
+    if (item ==2 && GetStorage()){
       mark = true;
     }
-    if (item == 2 && GetSubtractStorage()){
+    if (item == 4 && GetSubtractStorage()){
       mark = true;
     }
-    if (item == 3 && get_waterfall()){
+    if (item == 5 && get_waterfall()){
       mark = true;
     }
   } else if (menu == menu_settings2 || menu == menu_settingshigh2) {

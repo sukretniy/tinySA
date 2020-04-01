@@ -1328,14 +1328,22 @@ draw_keypad(void)
     i++;
   }
 }
+static int
+menu_is_multiline(const char *label, const char **l1, const char **l2);
 
 static void
 draw_numeric_area_frame(void)
 {
+  char *l1;
+  char *l2;
   ili9341_fill(0, 240-NUM_INPUT_HEIGHT, 320, NUM_INPUT_HEIGHT, config.menu_normal_color);
   ili9341_set_foreground(DEFAULT_MENU_TEXT_COLOR);
   ili9341_set_background(config.menu_normal_color);
-  ili9341_drawstring(keypad_mode_label[keypad_mode], 10, 240-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+  if (menu_is_multiline(keypad_mode_label[keypad_mode], &l1, &l2)) {
+    ili9341_drawstring_7x13(l1, 10, 240-NUM_INPUT_HEIGHT+1);
+    ili9341_drawstring_7x13(l2, 10, 240-NUM_INPUT_HEIGHT/2 + 1);
+  } else
+    ili9341_drawstring_7x13(keypad_mode_label[keypad_mode], 10, 240-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   //ili9341_drawfont(KP_KEYPAD, 300, 216);
 }
 
