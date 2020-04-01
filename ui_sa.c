@@ -216,9 +216,9 @@ void menu_autosettings_cb(int item, uint8_t data)
 
   active_marker = 0;
   for (int i = 1; i<MARKER_COUNT; i++ ) {
-    markers[i].enabled = false;
+    markers[i].enabled = M_DISABLED;
   }
-  markers[0].enabled = true;
+  markers[0].enabled = M_TRACKING_ENABLED;
   markers[0].mtype = M_REFERENCE;
 
   //  set_refer_output(1);
@@ -384,7 +384,13 @@ static void menu_marker_type_cb(int item, uint8_t data)
           markers[i].mtype = M_NORMAL;
       }
     }
-    markers[active_marker].mtype = data;
+    if (data == M_TRACKING) {
+      if (markers[active_marker].enabled == M_ENABLED)
+        markers[active_marker].enabled = M_TRACKING_ENABLED;
+      else
+        markers[active_marker].enabled = M_ENABLED;
+    } else
+      markers[active_marker].mtype = data;
   }
   markmap_all_markers();
 //  redraw_marker(active_marker, TRUE);
@@ -647,6 +653,7 @@ static const menuitem_t menu_marker_type[] = {
   { MT_CALLBACK, M_REFERENCE,   "REFERENCE",    menu_marker_type_cb},
   { MT_CALLBACK, M_NORMAL,      "NORMAL",       menu_marker_type_cb},
   { MT_CALLBACK, M_DELTA,       "DELTA",        menu_marker_type_cb},
+  { MT_CALLBACK, M_TRACKING,    "TRACKING",     menu_marker_type_cb},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -894,6 +901,11 @@ static void menu_item_modify_attribute(
     if (item == 2 && setting_tracking){         // should not happen in high mode
       mark = true;
     }
+  } else if (menu == menu_marker_type && active_marker >= 0 && markers[active_marker].enabled) {
+    if (item == 3 && markers[active_marker].enabled == M_TRACKING_ENABLED)
+      mark = true;
+    else if (item == markers[active_marker].mtype)
+      mark = true;
   }
   if (mark) {
     *bg = DEFAULT_MENU_TEXT_COLOR;

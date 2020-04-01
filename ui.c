@@ -833,18 +833,18 @@ menu_marker_sel_cb(int item, uint8_t data)
     if (markers[item].enabled) {
       if (item == active_marker) {
         // disable if active trace is selected
-        markers[item].enabled = FALSE;
+        markers[item].enabled = M_DISABLED;
         active_marker_select(-1);
       } else {
         active_marker_select(item);
       }
     } else {
-      markers[item].enabled = TRUE;
+      markers[item].enabled = M_TRACKING_ENABLED; // default tracking enabled
       active_marker_select(item);
     }
   } else if (item == 4) { /* all off */
       for (t = 0; t < MARKERS_MAX; t++)
-        markers[t].enabled = FALSE;
+        markers[t].enabled = M_DISABLED;
       previous_marker = -1;
       active_marker = -1;      
   } else if (item == 5) { /* marker delta */
@@ -1334,8 +1334,8 @@ menu_is_multiline(const char *label, const char **l1, const char **l2);
 static void
 draw_numeric_area_frame(void)
 {
-  char *l1;
-  char *l2;
+  const char *l1;
+  const char *l2;
   ili9341_fill(0, 240-NUM_INPUT_HEIGHT, 320, NUM_INPUT_HEIGHT, config.menu_normal_color);
   ili9341_set_foreground(DEFAULT_MENU_TEXT_COLOR);
   ili9341_set_background(config.menu_normal_color);

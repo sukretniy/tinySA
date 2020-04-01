@@ -524,7 +524,7 @@ void ili9341_clear_screen(void)
 {
   ili9341_fill(0, 0, ILI9341_WIDTH, ILI9341_HEIGHT, background_color);
 }
-
+#if 0
 void ili9341_set_foreground(uint16_t fg)
 {
   foreground_color = fg;
@@ -534,7 +534,7 @@ void ili9341_set_background(uint16_t bg)
 {
   background_color = bg; 
 }
-
+#endif
 void ili9341_set_rotation(uint8_t r)
 {
   //  static const uint8_t rotation_const[]={DISPLAY_ROTATION_0, DISPLAY_ROTATION_90,
