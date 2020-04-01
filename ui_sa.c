@@ -352,6 +352,10 @@ static void menu_measure_cb(int item, uint8_t data)
         markers[i].mtype = M_DELTA;
       }
       markers[0].mtype = M_REFERENCE;
+      ui_mode_keypad(KM_CENTER);
+      ui_process_keypad();
+      set_sweep_frequency(ST_START, 0);
+      set_sweep_frequency(ST_STOP, uistat.value*5);
       break;
     case 1:
       for (int i = 0; i< MARKERS_MAX; i++) {
@@ -359,6 +363,10 @@ static void menu_measure_cb(int item, uint8_t data)
         markers[i].mtype = M_DELTA;
       }
       markers[0].mtype = M_REFERENCE;
+      ui_mode_keypad(KM_CENTER);
+      ui_process_keypad();
+      ui_mode_keypad(KM_SPAN);
+      ui_process_keypad();
       break;
     case 2:
       break;

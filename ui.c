@@ -1091,7 +1091,7 @@ ensure_selection(void)
 {
   const menuitem_t *menu = menu_stack[menu_current_level];
   int i;
-  for (i = 0; MT_MASK(menu[i].type) != MT_NONE; i++)
+  for (i = 0; MT_MASK(menu[i].type) != MT_NONE && MT_MASK(menu[i].type) != MT_TITLE  ; i++)
     ;
   if (selection >= i)
     selection = i-1;
@@ -1767,7 +1767,7 @@ ui_mode_numeric(int _keypad_mode)
 static void
 ui_mode_keypad(int _keypad_mode)
 {
-  if (ui_mode == UI_KEYPAD)
+  if (ui_mode == UI_KEYPAD && keypad_mode == _keypad_mode )
     return;
 
   // keypads array
@@ -2337,6 +2337,7 @@ void ui_process_touch(void)
       // switch menu mode after release
       touch_wait_release();
       selection = -1; // hide keyboard mode selection
+      ensure_selection();
       ui_mode_menu();
       break;
     case UI_MENU:
@@ -2359,6 +2360,7 @@ ui_process(void)
   int button_state = READ_PORT() & BUTTON_MASK;
   if (ui_mode == UI_NORMAL && current_menu_is_form()) {     //   Force into menu mode
     selection = -1; // hide keyboard mode selection
+    ensure_selection();
     ui_mode_menu();
   }
   if (operation_requested&OP_LEVER || previous_button_state != button_state) {

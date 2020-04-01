@@ -1465,10 +1465,10 @@ draw_all_cells(bool flush_markmap)
   if (waterfall) {
     for (m = 226; m >= HEIGHT+3; m -= 1) {		// Scroll down
       uint16_t *buf = &spi_buffer[0];
-      ili9341_read_memory(5*5, m, area_width, 1, area_width, buf);
-      ili9341_bulk(5*5,m+1, area_width,1);
+      ili9341_read_memory(5*5, m, 290, 1, 290, buf);
+      ili9341_bulk(5*5,m+1, 290,1);
     }
-    for (int i=0; i<area_width; i++) {			// Add new topline
+    for (int i=0; i<290; i++) {			// Add new topline
 #if 0
       int k = (actual_t[i]+120 + 10)* 3 / 2;
       unsigned int r=0,g=0,b=0;
@@ -1503,7 +1503,7 @@ draw_all_cells(bool flush_markmap)
 #endif
       spi_buffer[i] = RGB565(r,g,b);
     }
-    ili9341_bulk(5*5,HEIGHT+3, area_width,1);
+    ili9341_bulk(5*5,HEIGHT+3, 290,1);
   }
 #endif
 }
