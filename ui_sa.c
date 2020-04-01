@@ -342,6 +342,34 @@ static void menu_spur_cb(int item, uint8_t data)
 }
 #endif
 
+static void menu_measure_cb(int item, uint8_t data)
+{
+  (void)item;
+  switch(data) {
+    case 0:                                     // IMD
+      for (int i = 0; i< MARKERS_MAX; i++) {
+        markers[i].enabled = M_TRACKING_ENABLED;
+        markers[i].mtype = M_DELTA;
+      }
+      markers[0].mtype = M_REFERENCE;
+      break;
+    case 1:
+      for (int i = 0; i< MARKERS_MAX; i++) {
+        markers[i].enabled = M_TRACKING_ENABLED;
+        markers[i].mtype = M_DELTA;
+      }
+      markers[0].mtype = M_REFERENCE;
+      break;
+    case 2:
+      break;
+    case 3:
+      break;
+  }
+  menu_move_back();
+  ui_mode_normal();
+//  draw_cal_status();
+}
+
 static void menu_storage_cb(int item, uint8_t data)
 {
   (void)item;
@@ -717,6 +745,12 @@ static const menuitem_t menu_settings[] =
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_measure[] = {
+  { MT_CALLBACK, 0, "IMD",      menu_measure_cb},
+  { MT_CALLBACK, 1, "IIP3",     menu_measure_cb},
+  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
 
 static const menuitem_t menu_settingshigh2[] =
 {
@@ -774,6 +808,7 @@ const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
   { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
   { MT_CANCEL,   0, S_LARROW" MODE",NULL},
   { MT_NONE,     0, NULL, NULL } // sentinel,
@@ -786,6 +821,7 @@ const menuitem_t menu_tophigh[] =
  { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
  { MT_SUBMENU,  0, "DISPLAY",      menu_display},
  { MT_SUBMENU,  0, "MARKER",       menu_marker},
+ { MT_SUBMENU,  0, "MEASURE",      menu_measure},
  { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
  { MT_CANCEL,   0, S_LARROW" MODE",NULL},
  { MT_NONE,     0, NULL, NULL } // sentinel,

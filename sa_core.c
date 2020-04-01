@@ -458,7 +458,7 @@ void update_rbw(void)
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433900000;
-static const unsigned int spur_alternate_IF =  433700000;
+static const unsigned int spur_alternate_IF =  434100000;
 static const int spur_table[] =
 {
    470000,
@@ -569,7 +569,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
 }
 
 #define MAX_MAX 4
-#define MAX_NOISE 20    //  10dB
+#define MAX_NOISE 10    //  10dB
 int16_t max_index[MAX_MAX];
 int16_t cur_max = 0;
 
