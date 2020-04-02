@@ -199,8 +199,8 @@ extern int _height;
 #define CELLWIDTH  (32)
 #define CELLHEIGHT (32)
 
-#define NGRIDY 10
-//#define NGRIDY 9
+//#define NGRIDY 10
+#define NGRIDY 9
 
 #define FREQUENCIES_XPOS1 OFFSETX
 #define FREQUENCIES_XPOS2 200

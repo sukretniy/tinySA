@@ -528,7 +528,7 @@ static const menuitem_t menu_drive_wide[] = {
   { MT_FORM | MT_CALLBACK, 2, " 15dBm",   menu_drive_cb},
   { MT_FORM | MT_CALLBACK, 3, " 20dBm",   menu_drive_cb},
   { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 const menuitem_t  menu_modulation[] = {
@@ -538,7 +538,7 @@ const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_CALLBACK, 2,  "NARROW FM", menu_modulation_cb},
   { MT_FORM | MT_CALLBACK, 3,  "WIDE FM",   menu_modulation_cb},
   { MT_FORM | MT_CANCEL,   0,             S_LARROW" BACK",NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 const menuitem_t  menu_lowoutputmode[] = {
@@ -547,7 +547,7 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,  "LEVEL: %s",        NULL},
   { MT_FORM | MT_SUBMENU,  0,               "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_CANCEL,   0,           S_LARROW" BACK",    NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 const menuitem_t  menu_highoutputmode[] = {
@@ -556,7 +556,7 @@ const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_SUBMENU,   0,          "LEVEL: %s",        menu_drive_wide},
   { MT_FORM | MT_SUBMENU,   0,          "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_CANCEL,    0,          S_LARROW" BACK",NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t  menu_average[] = {
@@ -607,7 +607,7 @@ static const menuitem_t menu_reffer2[] = {
   { MT_FORM | MT_CALLBACK, 6, "2MHz" ,   menu_reffer_cb},
   { MT_FORM | MT_CALLBACK, 7, "1MHz" ,   menu_reffer_cb},
   { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_reffer[] = {
@@ -618,7 +618,7 @@ static const menuitem_t menu_reffer[] = {
   { MT_FORM | MT_CALLBACK, 4, "4MHz" ,   menu_reffer_cb},
   { MT_FORM | MT_SUBMENU,  0, S_RARROW" MORE", menu_reffer2},
   { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_acquire[] = {
@@ -627,7 +627,7 @@ static const menuitem_t menu_acquire[] = {
   { MT_SUBMENU,0,               "RBW",              menu_rbw},
   { MT_SUBMENU,0,               "AVERAGE",          menu_average},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
-  { MT_NONE,   0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_acquirehigh[] = {
@@ -730,7 +730,7 @@ static const menuitem_t menu_marker[] = {
 static const menuitem_t menu_dfu[] = {
   { MT_FORM | MT_CALLBACK, 0, "ENTER DFU",      menu_dfu_cb},
   { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK",  NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_settings2[] =
@@ -783,7 +783,7 @@ static const menuitem_t menu_calibrate[] =
  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
  { MT_FORM | MT_CALLBACK,   0, "RESET CALBRATION",          menu_calibrate_cb},
  { MT_FORM | MT_CANCEL,     0, S_LARROW" BACK",             NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_config[] = {
@@ -796,7 +796,7 @@ static const menuitem_t menu_config[] = {
 //  { MT_SUBMENU,  0, "RBW", menu_rbw},
   { MT_FORM | MT_SUBMENU,  0, S_RARROW"DFU",  menu_dfu},
   { MT_FORM | MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_mode[] = {
@@ -808,7 +808,7 @@ static const menuitem_t menu_mode[] = {
   { MT_FORM | MT_SUBMENU,  0, "CAL OUTPUT: %s", menu_reffer},
   { MT_FORM | MT_SUBMENU,  0, "CONFIG",         menu_config},
 //  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
+  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 #if 1
 const menuitem_t menu_top[] = {

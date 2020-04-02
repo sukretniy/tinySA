@@ -742,7 +742,7 @@ static bool sweep(bool break_on_operation)
 }
 
 
-const char *averageText[] = { "OFF", "MIN", "MAX", "2", "4", "8"};
+const char *averageText[] = { "OFF", "MIN", "MAX", "MAXD", "4", "16"};
 const char *dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
 const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
 
