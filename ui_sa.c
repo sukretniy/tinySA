@@ -5,6 +5,7 @@ static void menu_marker_type_cb(int item, uint8_t data);
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
 void clearDisplay(void);
+void reset_settings(int);
 //void ui_process_touch(void);
 void SetPowerGrid(int);
 void SetRefLevel(int);
@@ -37,13 +38,18 @@ void ToggleLNA(void);
 void ToggleAGC(void);
 void redrawHisto(void);
 void self_test(void);
+void set_decay(int);
+void set_noise(int);
 extern int32_t frequencyExtra;
 extern int setting_tracking;
 extern int setting_drive;
 extern int setting_lna;
 extern int setting_agc;
+extern int setting_decay;
+extern int setting_noise;
 void SetModulation(int);
 extern int setting_modulation;
+void set_measurement(int);
 // extern int settingSpeed;
 extern int setting_step_delay;
 
@@ -51,7 +57,7 @@ extern int setting_step_delay;
 
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_HIGHOUTLEVEL
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE
 };
 
 
@@ -157,7 +163,8 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_level, // sample time
   keypads_scale, // drive
   keypads_level,    // KM_LOWOUTLEVEL
-  keypads_level,    // KM_HIGHOUTLEVEL
+  keypads_level,    // KM_DECAY
+  keypads_level,    // KM_NOISE
 };
 
 #ifdef __VNA__
@@ -167,7 +174,7 @@ static const char * const keypad_mode_label[] = {
 #endif
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
-  "error", "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL"
+  "error", "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL"
 };
 #endif
 
@@ -210,9 +217,7 @@ void menu_autosettings_cb(int item, uint8_t data)
 {
   (void)item;
   (void)data;
-  int current_mode = GetMode();
-  SetMode(-1);              // Force setmode to do something
-  SetMode(current_mode);
+  reset_settings(GetMode());
 
   active_marker = 0;
   for (int i = 1; i<MARKER_COUNT; i++ ) {
@@ -346,7 +351,12 @@ static void menu_measure_cb(int item, uint8_t data)
 {
   (void)item;
   switch(data) {
-    case 0:                                     // IMD
+    case M_OFF:                                     // Off
+      reset_settings(GetMode());
+      set_measurement(M_OFF);
+      break;
+    case M_IMD:                                     // IMD
+      reset_settings(GetMode());
       for (int i = 0; i< MARKERS_MAX; i++) {
         markers[i].enabled = M_TRACKING_ENABLED;
         markers[i].mtype = M_DELTA;
@@ -356,8 +366,10 @@ static void menu_measure_cb(int item, uint8_t data)
       ui_process_keypad();
       set_sweep_frequency(ST_START, 0);
       set_sweep_frequency(ST_STOP, uistat.value*5);
+      set_measurement(M_IMD);
       break;
-    case 1:
+    case M_OIP3:                                     // OIP3
+      reset_settings(GetMode());
       for (int i = 0; i< MARKERS_MAX; i++) {
         markers[i].enabled = M_TRACKING_ENABLED;
         markers[i].mtype = M_DELTA;
@@ -367,10 +379,8 @@ static void menu_measure_cb(int item, uint8_t data)
       ui_process_keypad();
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
-      break;
-    case 2:
-      break;
-    case 3:
+      set_sweep_frequency(ST_SPAN, uistat.value*4);
+      set_measurement(M_OIP3);
       break;
   }
   menu_move_back();
@@ -484,8 +494,8 @@ static void choose_active_marker(void)
 
 static void menu_settings2_cb(int item, uint8_t data)
 {
-  (void)data;
-  switch(item) {
+  (void)item;
+  switch(data) {
   case 0:
     ToggleAGC();
     break;
@@ -560,12 +570,12 @@ const menuitem_t  menu_highoutputmode[] = {
 };
 
 static const menuitem_t  menu_average[] = {
-  { MT_CALLBACK, 0, " OFF",             menu_average_cb},
-  { MT_CALLBACK, 1, "\2 MIN\0 HOLD",    menu_average_cb},
-  { MT_CALLBACK, 2, "\2 MAX\0 HOLD",    menu_average_cb},
-  { MT_CALLBACK, 3, "\2 MAX\0 DECAY",   menu_average_cb},
-  { MT_CALLBACK, 4, " 4 ",              menu_average_cb},
-  { MT_CALLBACK, 5, " 16 ",             menu_average_cb},
+  { MT_CALLBACK, 0, "OFF",             menu_average_cb},
+  { MT_CALLBACK, 1, "\2MIN\0HOLD",    menu_average_cb},
+  { MT_CALLBACK, 2, "\2MAX\0HOLD",    menu_average_cb},
+  { MT_CALLBACK, 3, "\2MAX\0DECAY",   menu_average_cb},
+  { MT_CALLBACK, 4, "AVER 4",           menu_average_cb},
+  { MT_CALLBACK, 5, "AVER 16",          menu_average_cb},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -623,9 +633,9 @@ static const menuitem_t menu_reffer[] = {
 
 static const menuitem_t menu_acquire[] = {
   { MT_CALLBACK, 0, "AUTO",     menu_autosettings_cb},
-  { MT_KEYPAD, KM_ATTENUATION,  "ATTEN",            NULL},
-  { MT_SUBMENU,0,               "RBW",              menu_rbw},
-  { MT_SUBMENU,0,               "AVERAGE",          menu_average},
+  { MT_KEYPAD, KM_ATTENUATION,  "ATTEN",         NULL},
+  { MT_SUBMENU,0,               "RBW",           menu_rbw},
+  { MT_SUBMENU,0,               "CALC",          menu_average},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -633,7 +643,7 @@ static const menuitem_t menu_acquire[] = {
 static const menuitem_t menu_acquirehigh[] = {
   { MT_CALLBACK, 0, "AUTO",     menu_autosettings_cb},
   { MT_SUBMENU,0,               "RBW",              menu_rbw},
-  { MT_SUBMENU,0,               "AVERAGE",          menu_average},
+  { MT_SUBMENU,0,               "CALC",          menu_average},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -736,8 +746,10 @@ static const menuitem_t menu_dfu[] = {
 static const menuitem_t menu_settings2[] =
 {
   { MT_CALLBACK, 0, "AGC",              menu_settings2_cb},
-  { MT_CALLBACK, 0, "LNA",              menu_settings2_cb},
-  { MT_CALLBACK, 0, "BPF",              menu_settings2_cb},
+  { MT_CALLBACK, 1, "LNA",              menu_settings2_cb},
+  { MT_CALLBACK, 2, "BPF",              menu_settings2_cb},
+  { MT_KEYPAD, KM_DECAY,                "\2HOLD\0TIME",   NULL},
+  { MT_KEYPAD, KM_NOISE,                "\2NOISE\0LEVEL",   NULL},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -754,8 +766,9 @@ static const menuitem_t menu_settings[] =
 };
 
 static const menuitem_t menu_measure[] = {
-  { MT_CALLBACK, 0, "IMD",      menu_measure_cb},
-  { MT_CALLBACK, 1, "IIP3",     menu_measure_cb},
+  { MT_CALLBACK, M_OFF,  "OFF",      menu_measure_cb},
+  { MT_CALLBACK, M_IMD,  "IMD",      menu_measure_cb},
+  { MT_CALLBACK, M_OIP3, "OIP3",     menu_measure_cb},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -763,7 +776,9 @@ static const menuitem_t menu_measure[] = {
 static const menuitem_t menu_settingshigh2[] =
 {
   { MT_CALLBACK, 0, "AGC",              menu_settings2_cb},
-  { MT_CALLBACK, 0, "LNA",              menu_settings2_cb},
+  { MT_CALLBACK, 1, "LNA",              menu_settings2_cb},
+  { MT_KEYPAD, KM_DECAY,                "\2HOLD\0TIME",   NULL},
+  { MT_KEYPAD, KM_NOISE,                "\2NOISE\0LEVEL",   NULL},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1025,9 +1040,13 @@ static void fetch_numeric_target(void)
     uistat.value = -5 - uistat.value;           // compensation for dB offset during low output mode
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
     break;
-  case KM_HIGHOUTLEVEL:
-    uistat.value = setting_drive*5 + 5;
-    plot_printf(uistat.text, sizeof uistat.text, "%3ddB", uistat.value);
+  case KM_DECAY:
+    uistat.value = setting_decay;
+    plot_printf(uistat.text, sizeof uistat.text, "%3d", uistat.value);
+    break;
+  case KM_NOISE:
+    uistat.value = setting_noise;
+    plot_printf(uistat.text, sizeof uistat.text, "%3d", uistat.value);
     break;
   }
   
@@ -1089,9 +1108,11 @@ set_numeric_value(void)
     uistat.value = -5 - uistat.value ;           // compensation for dB offset during low output mode
     SetAttenuation(uistat.value);
     break;
-  case KM_HIGHOUTLEVEL:
-    uistat.value = uistat.value / 5 - 1 ;           // compensation for dB offset during high output mode
-    SetDrive(uistat.value);
+  case KM_DECAY:
+    set_decay(uistat.value);
+    break;
+  case KM_NOISE:
+    set_noise(uistat.value);
     break;
   }
 }

@@ -1108,6 +1108,8 @@ menu_move_back(void)
     return;
   erase_menu_buttons();
   menu_current_level--;
+  if (selection >= 0)
+    selection = 0;
   ensure_selection();
   draw_menu();
 }
@@ -1119,6 +1121,8 @@ menu_push_submenu(const menuitem_t *submenu)
   if (menu_current_level < MENU_STACK_DEPTH_MAX-1)
     menu_current_level++;
   menu_stack[menu_current_level] = submenu;
+  if (selection >= 0)
+    selection = 0;
   ensure_selection();
   if (menu_is_form(submenu)) {
     redraw_frame();
@@ -1940,6 +1944,10 @@ ui_process_menu(void)
   int status = btn_check();
   if (status != 0) {
     if (status & EVT_BUTTON_SINGLE_CLICK) {
+      if (selection == -1) {
+        selection = 0;
+        goto activate;
+      }
       menu_invoke(selection);
     } else {
       do {
@@ -1947,13 +1955,14 @@ ui_process_menu(void)
           // close menu if next item is sentinel
           if (menu_stack[menu_current_level][selection+1].type == MT_NONE)
             goto menuclose;
-          if (!(menu_stack[menu_current_level][selection+1].type == MT_FORM | MT_NONE))
+          if (!(menu_stack[menu_current_level][selection+1].type == (MT_FORM | MT_NONE)))
             selection++;
         }
         if (status & EVT_DOWN) {
           if (! ( selection == 0 && menu_stack[menu_current_level][0].type & MT_FORM))
             selection--;
         }
+activate:
         ensure_selection();
         draw_menu();
         status = btn_wait_release();
@@ -2210,7 +2219,7 @@ ui_process_keypad(void)
   redraw_frame();
   if (menu_is_form(menu_stack[menu_current_level])) {
     ui_mode_menu(); //Reactivate menu after keypad
-    selection = 0;
+    selection = -1;
     ensure_selection();
   } else {
     ui_mode_normal();

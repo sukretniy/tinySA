@@ -638,4 +638,10 @@ void SetRefpos(int);
 void SetScale(int);
 void SetRBW(int);
 void SetRX(int);
+extern int setting_measurement;
+
+enum {
+  M_OFF, M_IMD, M_OIP3
+};
+
 /*EOF*/

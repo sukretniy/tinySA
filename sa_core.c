@@ -19,8 +19,11 @@ int setting_tracking = false;
 int setting_modulation = MO_NONE;
 int setting_step_delay = 0;
 int setting_frequency_step;
+int setting_decay;
+int setting_noise;
 float actual_rbw = 0;
 float setting_vbw = 0;
+int setting_measurement;
 
 int vbwSteps = 1;
 
@@ -48,6 +51,9 @@ void reset_settings(int m)
   setting_modulation = MO_NONE;
   setting_step_delay = 0;
   setting_vbw = 0;
+  setting_decay=20;
+  setting_noise=20;
+  setting_measurement = M_OFF;
 //  setting_spur = 0;
   switch(m) {
   case M_LOW:
@@ -92,6 +98,27 @@ int get_refer_output(void)
   return(setting_refer);
 }
 
+void set_decay(int d)
+{
+  if (d < 0 || d > 200)
+    return;
+  setting_decay = d;
+  dirty = true;
+}
+
+void set_noise(int d)
+{
+  if (d < 5 || d > 200)
+    return;
+  setting_noise = d;
+  dirty = true;
+}
+
+void set_measurement(int m)
+{
+  setting_measurement = m;
+  dirty = true;
+}
 void SetDrive(int d)
 {
   setting_drive = d;
@@ -455,6 +482,64 @@ void update_rbw(void)
     vbwSteps = 1;
   dirty = true;
 }
+#define MAX_MAX 4
+int
+search_maximum(int m, int center, int span)
+{
+  int from = center - span/2;
+  int found = false;
+  int to = center + span/2;
+  int cur_max = 0;          // Always at least one maximum
+  int max_index[4];
+  temppeakIndex = 0;
+  temppeakLevel = actual_t[from];
+  max_index[cur_max] = from;
+  int downslope = true;
+
+  for (int i = from; i <= to; i++) {
+    if (downslope) {
+      if (temppeakLevel > actual_t[i]) {    // Follow down
+        temppeakIndex = i;                  // Latest minimum
+        temppeakLevel = actual_t[i];
+      } else if (temppeakLevel + setting_noise < actual_t[i]) {    // Local minimum found
+        temppeakIndex = i;                          // This is now the latest maximum
+        temppeakLevel = actual_t[i];
+        downslope = false;
+      }
+    } else {
+      if (temppeakLevel < actual_t[i]) {    // Follow up
+        temppeakIndex = i;
+        temppeakLevel = actual_t[i];
+      } else if (temppeakLevel - setting_noise > actual_t[i]) {    // Local max found
+
+        found = true;
+        int j = 0;                                            // Insertion index
+        while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
+          j++;
+        if (j < MAX_MAX) {                                    // Larger then one of the previous found
+          int k = MAX_MAX-1;
+          while (k > j) {                                      // Shift to make room for max
+            max_index[k] = max_index[k-1];
+            //              maxlevel_index[k] = maxlevel_index[k-1];        // Only for debugging
+            k--;
+          }
+          max_index[j] = temppeakIndex;
+          //            maxlevel_index[j] = actual_t[temppeakIndex];      // Only for debugging
+          if (cur_max < MAX_MAX) {
+            cur_max++;
+          }
+          //STOP_PROFILE
+        }
+        temppeakIndex = i;            // Latest minimum
+        temppeakLevel = actual_t[i];
+
+        downslope = true;
+      }
+    }
+  }
+  markers[m].index = max_index[0];
+  return found;
+}
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433900000;
@@ -569,7 +654,6 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
 }
 
 #define MAX_MAX 4
-#define MAX_NOISE 10    //  10dB
 int16_t max_index[MAX_MAX];
 int16_t cur_max = 0;
 
@@ -613,14 +697,14 @@ static bool sweep(bool break_on_operation)
           actual_t[i] = RSSI;
           age[i] = 0;
         } else {
-          if (age[i] > 20)
+          if (age[i] > setting_decay)
             actual_t[i] -= 0.5;
           else
             age[i] += 1;
         }
         break;
-      case AV_4:  actual_t[i] = (actual_t[i] + RSSI) / 4.0; break;
-      case AV_16: actual_t[i] = (actual_t[i]*3 + RSSI) / 16.0; break;
+      case AV_4:  actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
+      case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
       }
     }
 #if 1
@@ -629,14 +713,14 @@ static bool sweep(bool break_on_operation)
       cur_max = 0;          // Always at least one maximum
       temppeakIndex = 0;
       temppeakLevel = actual_t[i];
-      max_index[i] = 0;
+      max_index[0] = 0;
       downslope = true;
     }
     if (downslope) {
       if (temppeakLevel > actual_t[i]) {    // Follow down
         temppeakIndex = i;                  // Latest minimum
         temppeakLevel = actual_t[i];
-      } else if (temppeakLevel + MAX_NOISE < actual_t[i]) {    // Local minimum found
+      } else if (temppeakLevel + setting_noise < actual_t[i]) {    // Local minimum found
         temppeakIndex = i;                          // This is now the latest maximum
         temppeakLevel = actual_t[i];
         downslope = false;
@@ -645,7 +729,7 @@ static bool sweep(bool break_on_operation)
       if (temppeakLevel < actual_t[i]) {    // Follow up
         temppeakIndex = i;
         temppeakLevel = actual_t[i];
-      } else if (temppeakLevel - MAX_NOISE > actual_t[i]) {    // Local max found
+      } else if (temppeakLevel - setting_noise > actual_t[i]) {    // Local max found
 
           int j = 0;                                            // Insertion index
           while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
@@ -713,6 +797,20 @@ static bool sweep(bool break_on_operation)
     }
     m++;                              // Try next marker
   }
+  if (setting_measurement == M_IMD && markers[0].index > 10) {
+    markers[1].enabled = search_maximum(1, markers[0].index*2, 8);
+    markers[2].enabled = search_maximum(2, markers[0].index*3, 12);
+    markers[3].enabled = search_maximum(3, markers[0].index*4, 16);
+  } else if (setting_measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) {
+    int l = markers[0].index;
+    int r = markers[1].index;
+    if (r < l) {
+      l = markers[1].index;
+      r = markers[0].index;
+    }
+    markers[2].enabled = search_maximum(2, l - (r-l), 10);
+    markers[3].enabled = search_maximum(3, r + (r-l), 10);
+  }
   peakIndex = max_index[0];
   peakLevel = actual_t[peakIndex];
   peakFreq = frequencies[peakIndex];
@@ -742,7 +840,7 @@ static bool sweep(bool break_on_operation)
 }
 
 
-const char *averageText[] = { "OFF", "MIN", "MAX", "MAXD", "4", "16"};
+const char *averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16"};
 const char *dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
 const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
 
@@ -794,7 +892,7 @@ void draw_cal_status(void)
   if (setting_average>0) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
     y += YSTEP*2;
-    ili9341_drawstring("Aver:", x, y);
+    ili9341_drawstring("Calc:", x, y);
 
     y += YSTEP;
     plot_printf(buf, BLEN, "%s",averageText[setting_average]);
