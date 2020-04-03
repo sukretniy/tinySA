@@ -8,6 +8,7 @@ int setting_mode = M_LOW;
 int dirty = true;
 int scandirty = true;
 int setting_attenuate = 0;
+int setting_step_atten;
 int setting_rbw = 0;
 int setting_average = 0;
 int setting_show_stored = 0;
@@ -40,6 +41,7 @@ void reset_settings(int m)
 {
   setting_mode = m;
   setting_attenuate = 0;
+  setting_step_atten = 0;
   setting_rbw = 0;
   setting_average = 0;
   setting_show_stored = 0;
@@ -64,6 +66,7 @@ void reset_settings(int m)
     SetRefpos(-10);
     break;
   case M_GENLOW:
+    setting_drive=1; // 0-3 , 3=+20dBm
     minFreq = 0;
     maxFreq = 520000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
@@ -121,7 +124,14 @@ void set_measurement(int m)
 }
 void SetDrive(int d)
 {
-  setting_drive = d;
+  setting_drive = (d & 3);
+  if (setting_mode == M_GENHIGH) {
+    if (!(d & 4))
+      setting_step_atten = 1;
+    else
+      setting_step_atten = 0;
+    setting_drive = d;
+  }
   dirty = true;
 }
 
@@ -142,14 +152,55 @@ int GetMode(void)
   dirty = true;
 }
 
+
+#define POWER_STEP  0           // Should be 5 dB but appearently it is lower
+#define POWER_OFFSET    2
+#define SWITCH_ATTENUATION  29
+
+int GetAttenuation(void)
+{
+  if (setting_mode == M_GENLOW) {
+    if (setting_step_atten)
+      return ( - (POWER_OFFSET + setting_attenuate - (setting_step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
+    else
+      return ( -(POWER_OFFSET + setting_attenuate));
+  }
+  return(setting_attenuate);
+}
+
+
 void SetAttenuation(int a)
 {
+  a = a + POWER_OFFSET;
+  if (setting_mode == M_GENLOW) {
+    if( a >  - SWITCH_ATTENUATION + 3*POWER_STEP) {
+      setting_step_atten = 0;
+    } else {
+      a = a + SWITCH_ATTENUATION;
+#if 0
+      if (a >= 2 * POWER_STEP) {
+        setting_step_atten = 3;       // Max drive
+        a = a - 2 * POWER_STEP;
+      } else if (a >= POWER_STEP ) {
+        setting_step_atten = 2;       // Max drive
+        a = a - POWER_STEP;
+       } else {
+         setting_step_atten = 1;
+      }
+#else
+      setting_step_atten = 1;     // drive level is unpredictable
+#endif
+    }
+    a = -a;
+  } else {
+    setting_step_atten = 0;
+  }
   if (a<0)
-    a = 0;
+      a = 0;
   if (a> 31)
     a=31;
-  if (setting_attenuate == a)
-    return;
+//  if (setting_attenuate == a)
+//    return;
   setting_attenuate = a;
   dirty = true;
 }
@@ -440,8 +491,13 @@ case M_HIGH:    // Direct into 1
     break;
 case M_GENLOW:  // Mixed output from 0
     SI4432_Sel = 0;
-    SetSwitchTransmit();
-    SI4432_Transmit(setting_drive);
+    if (setting_step_atten) {
+      SetSwitchReceive();
+      SI4432_Transmit(setting_step_atten-1);
+    } else {
+      SetSwitchTransmit();
+      SI4432_Transmit(0);     // To prevent damage to the BPF always set low drive
+    }
 
     SI4432_Sel = 1;
     SetSwitchReceive();
@@ -454,8 +510,12 @@ case M_GENHIGH: // Direct output from 1
     SetSwitchReceive();
 
     SI4432_Sel = 1;
-    SetSwitchTransmit();
-    SI4432_Transmit(setting_drive);
+    if (setting_step_atten) {
+      SetSwitchReceive();
+    } else {
+      SetSwitchTransmit();
+    }
+    SI4432_Transmit(setting_drive & 3);
 
     break;
   }
