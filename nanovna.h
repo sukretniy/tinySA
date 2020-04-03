@@ -199,8 +199,8 @@ extern int _height;
 #define CELLWIDTH  (32)
 #define CELLHEIGHT (32)
 
-#define NGRIDY 10
-//#define NGRIDY 9
+//#define NGRIDY 10
+#define NGRIDY 9
 
 #define FREQUENCIES_XPOS1 OFFSETX
 #define FREQUENCIES_XPOS2 200
@@ -638,4 +638,10 @@ void SetRefpos(int);
 void SetScale(int);
 void SetRBW(int);
 void SetRX(int);
+extern int setting_measurement;
+
+enum {
+  M_OFF, M_IMD, M_OIP3
+};
+
 /*EOF*/

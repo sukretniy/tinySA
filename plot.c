@@ -1,5 +1,4 @@
-/* Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
- * All rights reserved.
+/* All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1100,7 +1099,7 @@ markmap_marker(int marker)
   int t;
   if (!markers[marker].enabled)
     return;
-  for (t = TRACE_ACTUAL; t < TRACE_ACTUAL; t++) {
+  for (t = TRACE_ACTUAL; t <= TRACE_ACTUAL; t++) {
     if (!trace[t].enabled)
       continue;
     index_t index = trace_index[t][markers[marker].index];
@@ -1398,10 +1397,18 @@ draw_cell(int m, int n)
       int x = CELL_X(index) - x0 - X_MARKER_OFFSET;
       int y = CELL_Y(index) - y0 - Y_MARKER_OFFSET;
       // Check marker icon on cell
+#if 1
+
+      if (x + MARKER_WIDTH >= 0 && x < CELLWIDTH &&
+          y + MARKER_HEIGHT >= 0 && y < CELLHEIGHT)
+        draw_marker(x, y, marker_color[markers[i].mtype], i);
+#else
+
       if (x + MARKER_WIDTH >= 0 && x - MARKER_WIDTH < CELLWIDTH &&
           y + MARKER_HEIGHT >= 0 && y - MARKER_HEIGHT < CELLHEIGHT)
         draw_marker(x, y, marker_color[markers[i].mtype], i);
-//      draw_marker(x, y, config.trace_color[t], i);
+#endif
+      //      draw_marker(x, y, config.trace_color[t], i);
 //    }
   }
 #endif
@@ -1814,6 +1821,23 @@ static void cell_draw_marker_info(int x0, int y0)
     }
   }
   for (int i = 0; i < MARKER_COUNT; i++) {
+    if (i >= 2 && setting_measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
+      float il = logmag(&(actual_t[markers[2].index]));
+      float ir = logmag(&(actual_t[markers[3].index]));
+      float sl = logmag(&(actual_t[markers[0].index]));
+      float sr = logmag(&(actual_t[markers[1].index]));
+      sl = (sl + sr)/2;
+      il = (il + ir)/2;
+
+      il = sl+ (sl - il)/2;
+      plot_printf(buf, sizeof buf, "OIP3: %4.1fdB", il);
+      j = 2;
+      int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
+      int ypos = 1 + (j/2)*(16) - y0;
+
+      cell_drawstring_7x13(buf, xpos, ypos);
+      break;
+    }
     if (!markers[i].enabled)
       continue;
     int idx = markers[i].index;
