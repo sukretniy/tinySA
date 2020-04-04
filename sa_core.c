@@ -171,8 +171,8 @@ int GetAttenuation(void)
 
 void SetAttenuation(int a)
 {
-  a = a + POWER_OFFSET;
   if (setting_mode == M_GENLOW) {
+    a = a + POWER_OFFSET;
     if( a >  - SWITCH_ATTENUATION + 3*POWER_STEP) {
       setting_step_atten = 0;
     } else {
