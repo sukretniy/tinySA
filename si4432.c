@@ -359,14 +359,38 @@ void PE4302_init(void) {
   CS_PE_LOW;
 }
 
-extern void shiftOut(uint8_t val);
+#define PE4302_DELAY 100
+
+void PE4302_shiftOut(uint8_t val)
+{
+     uint8_t i;
+     SI4432_log(SI4432_Sel);
+     SI4432_log(val);
+     for (i = 0; i < 8; i++)  {
+           if (val & (1 << (7 - i)))
+             SPI2_SDI_HIGH;
+           else
+             SPI2_SDI_LOW;
+           chThdSleepMicroseconds(PE4302_DELAY);
+           SPI2_CLK_HIGH;
+           chThdSleepMicroseconds(PE4302_DELAY);
+           SPI2_CLK_LOW;
+           chThdSleepMicroseconds(PE4302_DELAY);
+     }
+}
 
 void PE4302_Write_Byte(unsigned char DATA )
 {
+  chThdSleepMicroseconds(PE4302_DELAY);
   SPI2_CLK_LOW;
-  shiftOut(DATA);
+  chThdSleepMicroseconds(PE4302_DELAY);
+  PE4302_shiftOut(DATA);
+  chThdSleepMicroseconds(PE4302_DELAY);
   CS_PE_HIGH;
+  chThdSleepMicroseconds(PE4302_DELAY);
   CS_PE_LOW;
+  chThdSleepMicroseconds(PE4302_DELAY);
+
 }
 
 #endif
