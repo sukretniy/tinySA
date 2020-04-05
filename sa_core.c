@@ -46,7 +46,7 @@ void reset_settings(int m)
   setting_average = 0;
   setting_show_stored = 0;
   setting_subtract_stored = 0;
-  setting_drive=0; // 0-3 , 3=+20dBm
+  setting_drive=1; // 0-3 , 3=+20dBm
   setting_agc = true;
   setting_lna = false;
   setting_tracking = false;
@@ -66,7 +66,6 @@ void reset_settings(int m)
     SetRefpos(-10);
     break;
   case M_GENLOW:
-    setting_drive=1; // 0-3 , 3=+20dBm
     minFreq = 0;
     maxFreq = 520000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
