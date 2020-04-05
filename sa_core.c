@@ -602,39 +602,11 @@ search_maximum(int m, int center, int span)
 }
 
 //static int spur_old_stepdelay = 0;
-static const unsigned int spur_IF =            433900000;
-static const unsigned int spur_alternate_IF =  434100000;
+static const unsigned int spur_IF =            433800000;
+static const unsigned int spur_alternate_IF =  433600000;
 static const int spur_table[] =
 {
    470000,
-   780000,
-   830000,
-   880000,
-   949000,
-  1390000,
-  1468000,
-  1830000,
-  1900000,
-  2770000,
-  2840000,
-  2880000,
-  4710000,
-  4780000,
-  4800000,
-  4880000,
-  6510000,
-  6750000,
-  6790000,
-  6860000,
-  7340000,
-  8100000,
-  8200000,
-  8880000,
-//  9970000,    10MHz!!!!!!
- 10870000,
- 11420000,
- 14880000,
- 16820000,
 };
 
 int avoid_spur(int f)
@@ -642,7 +614,7 @@ int avoid_spur(int f)
   int window = ((int)actual_rbw ) * 1000*2;
   if (window < 50000)
     window = 50000;
-  if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw > 300.0)
+  if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw >= 300.0)
     return(false);
   for (unsigned int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
     if (f/window == spur_table[i]/window) {
