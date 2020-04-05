@@ -242,7 +242,7 @@ static void menu_calibrate_cb(int item, uint8_t data)
   (void)data;
   switch (item) {
   case 1:
-    calibrate();
+    sweep_mode = SWEEP_CALIBRATE;
     menu_move_back();
     ui_mode_normal();
     break;
@@ -272,7 +272,7 @@ static void menu_config_cb(int item, uint8_t data)
   case 2:
     menu_move_back();
     ui_mode_normal();
-    self_test();
+    sweep_mode = SWEEP_SELFTEST;
     break;
   case 4:
     show_version();

@@ -2469,3 +2469,20 @@ ui_init()
 
   touch_start_watchdog();
 }
+
+void wait_user(void)
+{
+  adc_stop();
+  touch_wait_release();
+#if 0
+  operation_requested = OP_NONE;
+  while (true) {
+    if (operation_requested & OP_TOUCH)
+      break;
+    if (operation_requested & OP_LEVER)
+      break;
+  }
+#endif
+  touch_start_watchdog();
+}
+
