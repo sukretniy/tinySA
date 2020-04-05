@@ -1074,7 +1074,7 @@ static const struct {
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -25, 20,    -70},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75, 0,     -85},       // 9 LPF cutoff
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -25, 30,    -85 },      // 11 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -25, 30,    -80 },      // 11 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -50, 30,    -85 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,   0,     0},
@@ -1129,7 +1129,7 @@ void cell_draw_test_info(int x0, int y0)
   do {
     i++;
     int xpos = 25 - x0;
-    int ypos = 40+i*INFO_SPACING - y0;
+    int ypos = 50+i*INFO_SPACING - y0;
     unsigned int color = RGBHEX(0xFFFFFF);
     if (i == -1) {
         plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Self test status:");
@@ -1341,7 +1341,6 @@ common_silent:
 }
 
 extern void menu_autosettings_cb(int item);
-extern void touch_wait_release(void);
 
 void self_test(void)
 {
@@ -1359,25 +1358,25 @@ void self_test(void)
     test_prepare(i);
     test_acquire(i);                        // Acquire test
     test_status[i] = test_validate(i);                       // Validate test
-    chThdSleepMilliseconds(1000);
     if (test_status[i] != TS_PASS) {
-      touch_wait_release();
+      wait_user();
     }
     i++;
   }
-  touch_wait_release();
-    //  chThdSleepMilliseconds(2000);
+  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+  ili9341_drawstring_7x13("Self test complete", 30, 120);
+  ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
+  wait_user();
+
+  sweep_mode = SWEEP_ENABLE;
   show_test_info = FALSE;
   trace[TRACE_STORED].enabled = false;
   set_trace_refpos(0, NGRIDY - (-10) / get_trace_scale(0));
   set_trace_refpos(1, NGRIDY - (-10) / get_trace_scale(0));
   set_trace_refpos(2, NGRIDY - (-10) / get_trace_scale(0));
   set_refer_output(0);
-  SetMode(M_LOW);
-  SetAverage(0);
-  draw_cal_status();
+  reset_settings(M_LOW);
   in_selftest = false;
-  menu_autosettings_cb(0);
 }
 
 void reset_calibration(void)
@@ -1394,18 +1393,21 @@ void calibrate(void)
   float last_peak_level;
   in_selftest = true;
   SetPowerLevel(100);
-  menu_autosettings_cb(0);
+  reset_settings(M_LOW);
   int i = 10;       // calibrate low mode power on 30 MHz;
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
     SetRBW(power_rbw[j]);
     test_prepare(i);
     test_acquire(i);                        // Acquire test
     local_test_status = test_validate(i);                       // Validate test
-    chThdSleepMilliseconds(1000);
+//    chThdSleepMilliseconds(1000);
     if (local_test_status != TS_PASS) {
- //     touch_wait_release();
+      ili9341_set_foreground(BRIGHT_COLOR_RED);
+      ili9341_drawstring_7x13("Calibration failed", 30, 120);
+      goto quit;
     } else
       SetPowerLevel(-25);
+    goto  done;
   }
   i = 11;           // Measure 270MHz in low mode
   SetRBW(100);
@@ -1423,23 +1425,28 @@ void calibrate(void)
     test_prepare(i);
     test_acquire(i);                        // Acquire test
     local_test_status = test_validate(i);                       // Validate test
-    chThdSleepMilliseconds(1000);
     if (local_test_status != TS_PASS) {
-      touch_wait_release();
+      ili9341_set_foreground(BRIGHT_COLOR_RED);
+      ili9341_drawstring_7x13("Calibration failed", 30, 120);
+      goto quit;
     } else
       SetPowerLevel(last_peak_level);
     }
-  touch_wait_release();
+done:
+  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+  ili9341_drawstring_7x13("Calibration complete", 30, 120);
+quit:
+  ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
+  wait_user();
+
+  in_selftest = false;
+  sweep_mode = SWEEP_ENABLE;
   trace[TRACE_STORED].enabled = false;
   set_trace_refpos(0, NGRIDY - (-10) / get_trace_scale(0));
   set_trace_refpos(1, NGRIDY - (-10) / get_trace_scale(0));
   set_trace_refpos(2, NGRIDY - (-10) / get_trace_scale(0));
   set_refer_output(0);
-  SetMode(M_LOW);
-  SetAverage(0);
-  draw_cal_status();
-  in_selftest = false;
-  menu_autosettings_cb(0);
+  reset_settings(M_LOW);
 }
 
 

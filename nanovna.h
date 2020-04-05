@@ -139,6 +139,9 @@ enum {
 
 #define SWEEP_ENABLE  0x01
 #define SWEEP_ONCE    0x02
+#define SWEEP_CALIBRATE 0x04
+#define SWEEP_SELFTEST  0x08
+
 extern int8_t sweep_mode;
 extern const char *info_about[];
 

@@ -117,7 +117,7 @@ const char *info_about[]={
   0 // sentinel
 };
 
-static THD_WORKING_AREA(waThread1, 730);
+static THD_WORKING_AREA(waThread1, 900);
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
@@ -128,6 +128,10 @@ static THD_FUNCTION(Thread1, arg)
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
       completed = sweep(true);
       sweep_mode&=~SWEEP_ONCE;
+    } else if (sweep_mode & SWEEP_SELFTEST) {
+      self_test();                                  // call from lowest level to save stack space
+    } else if (sweep_mode & SWEEP_CALIBRATE) {
+      calibrate();                                  // call from lowest level to save stack space
     } else {
       __WFI();
     }
