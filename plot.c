@@ -1838,6 +1838,15 @@ static void cell_draw_marker_info(int x0, int y0)
       cell_drawstring_7x13(buf, xpos, ypos);
       break;
     }
+    if (i >= 2 && in_selftest) {
+      plot_printf(buf, sizeof buf, "DO NOT SWITCH OFF!!");
+      j = 2;
+      int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
+      int ypos = 1 + (j/2)*(16) - y0;
+
+      cell_drawstring_7x13(buf, xpos, ypos);
+      break;
+    }
     if (!markers[i].enabled)
       continue;
     int idx = markers[i].index;

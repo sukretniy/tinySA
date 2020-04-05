@@ -1100,7 +1100,7 @@ void cell_draw_test_info(int x0, int y0)
   do {
     i++;
     int xpos = 25 - x0;
-    int ypos = 40+i*INFO_SPACING - y0;
+    int ypos = 50+i*INFO_SPACING - y0;
     unsigned int color = RGBHEX(0xFFFFFF);
     if (i == -1) {
         plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Self test status:");
