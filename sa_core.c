@@ -722,7 +722,7 @@ static bool sweep(bool break_on_operation)
 {
   float RSSI;
   int16_t downslope = true;
-  palClearPad(GPIOC, GPIOC_LED);
+  palClearPad(GPIOB, GPIOB_LED);
   temppeakLevel = -150;
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
@@ -895,7 +895,7 @@ static bool sweep(bool break_on_operation)
 
 #endif
   //    redraw_marker(peak_marker, FALSE);
-  palSetPad(GPIOC, GPIOC_LED);
+  palSetPad(GPIOB, GPIOB_LED);
   return true;
 }
 

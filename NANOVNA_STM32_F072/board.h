@@ -84,7 +84,7 @@
 #define GPIO_LO_SEL             15
 
 
-#define GPIOC_LED               13
+#define GPIOB_LED               11
 
 #define GPIOF_OSC_IN            0
 #define GPIOF_OSC_OUT           1

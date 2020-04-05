@@ -877,7 +877,7 @@ bool sweep(bool break_on_operation)
 {
   int i, delay;
   // blink LED while scanning
-  palClearPad(GPIOC, GPIOC_LED);
+  palClearPad(GPIOB, GPIOB_LED);
   // Power stabilization after LED off, also align timings on i == 0
   for (i = 0; i < sweep_points; i++) {         // 5300
     if (frequencies[i] == 0) break;
@@ -911,7 +911,7 @@ bool sweep(bool break_on_operation)
       return false;
   }
   // blink LED while scanning
-  palSetPad(GPIOC, GPIOC_LED);
+  palSetPad(GPIOB, GPIOB_LED);
   return true;
 }
 #endif
@@ -1928,14 +1928,14 @@ VNA_SHELL_FUNCTION(cmd_test)
 #if 0
   int i;
   for (i = 0; i < 100; i++) {
-    palClearPad(GPIOC, GPIOC_LED);
+    palClearPad(GPIOB, GPIOB_LED);
     set_frequency(10000000);
-    palSetPad(GPIOC, GPIOC_LED);
+    palSetPad(GPIOB, GPIOB_LED);
     chThdSleepMilliseconds(50);
 
-    palClearPad(GPIOC, GPIOC_LED);
+    palClearPad(GPIOB, GPIOB_LED);
     set_frequency(90000000);
-    palSetPad(GPIOC, GPIOC_LED);
+    palSetPad(GPIOB, GPIOB_LED);
     chThdSleepMilliseconds(50);
   }
 #endif
@@ -1947,9 +1947,9 @@ VNA_SHELL_FUNCTION(cmd_test)
     mode = my_atoi(argv[0]);
 
   for (i = 0; i < 20; i++) {
-    palClearPad(GPIOC, GPIOC_LED);
+    palClearPad(GPIOB, GPIOB_LED);
     ili9341_test(mode);
-    palSetPad(GPIOC, GPIOC_LED);
+    palSetPad(GPIOB, GPIOB_LED);
     chThdSleepMilliseconds(50);
   }
 #endif
@@ -2291,7 +2291,7 @@ VNA_SHELL_FUNCTION(cmd_m)
   (void)argv;
   pause_sweep();
   int32_t f_step = (frequencyStop-frequencyStart)/ points;
-  palClearPad(GPIOC, GPIOC_LED);  // disable led and wait for voltage stabilization
+  palClearPad(GPIOB, GPIOB_LED);  // disable led and wait for voltage stabilization
   setting_frequency_step = f_step;
   update_rbw();
   chThdSleepMilliseconds(10);
@@ -2305,7 +2305,7 @@ VNA_SHELL_FUNCTION(cmd_m)
     // enable led
   }
   streamPut(shell_stream, '}');
-  palSetPad(GPIOC, GPIOC_LED);
+  palSetPad(GPIOB, GPIOB_LED);
 }
 
 VNA_SHELL_FUNCTION(cmd_p)
