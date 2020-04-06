@@ -171,21 +171,24 @@ void SI4432_Receive(void)
 }
 
 
-// First entry of each triple is RBW in khz times 10, so 377 = 37.7khz
 // User asks for an RBW of WISH, go through table finding the last triple
 // for which WISH is greater than the first entry, use those values,
 // Return the first entry of the following triple for the RBW actually achieved
-static const short RBW_choices[] = {     // Each triple is:  ndec, fils, WISH*10
-     0, 5,1,26, 5,2,28, 5,3,31, 5,4,32, 5,5,37, 5,6,42, 5,7,
-    45,4,1,    49,4,2,    54,4,3,    59,4,4,    61,4,5,    72,4,6,    82,4,7,
-    88,3,1,    95,3,2,   106,3,3,   115,3,4,   121,3,5,   142,3,6,   162,3,7,
-   175,2,1,   189,2,2,   210,2,3,   227,2,4,   240,2,5,   282,2,6,   322,2,7,
-   347,1,1,   377,1,2,   417,1,3,   452,1,4,   479,1,5,   562,1,6,   641,1,7,
-   692,0,1,   752,0,2,   832,0,3,   900,0,4,   953,0,5,  1121,0,6,  1279,0,7,
-  1379,1,4,  1428,1,5,  1678,1,9,  1811,0,15, 1915,0,1,  2251,0,2,  2488,0,3,
-  2693,0,4,  2849,0,8,  3355,0,9,  3618,0,10, 4202,0,11, 4684,0,12, 5188,0,13,
-  5770,0,14,   6207
+static const short RBW_choices[] = {     // Each quadrupple is:  ndec, fils, WISH*10, corr*10
+     5,1,26,5,    5,2,28,5,     5,3,31,5,     5,4,32,5,     5,5,37,5,     5,6,42,5,
+     5,7,45,5,    4,1,49,5,
+     4,2,54,5,    4,3,59,5,     4,4,61,5,     4,5,72,5,     4,6,82,5,     4,7,88,5,
+     3,1,95,5,    3,2,106,5,    3,3,115,5,    3,4,121,5,    3,5,142,5,    3,6,162,5,
+     3,7,175,5,   2,1,189,5,    2,2,210,5,    2,3,227,5,    2,4,240,5,    2,5,282,5,
+     2,6,322,5,   2,7,347,5,    1,1,377,5,    1,2,417,5,    1,3,452,5,    1,4,479,5,
+     1,5,562,5,   1,6,641,5,    1,7,692,5,    0,1,752,5,    0,2,832,5,    0,3,900,5,
+     0,4,953,5,   0,5,1121,5,   0,6,1279,5,   0,7,1379,5,   1,4,1428,5,   1,5,1678,5,
+     1,9,1811,5,  0,15,1915,5,  0,1,2251,5,   0,2,2488,5,   0,3,2693,5,
+     0,4,2849,5,  0,8,3355,5,   0,9,3618,5,   0,10,4202,5,  0,11,4684,5,  0,12,5188,5,
+     0,13,5770,5, 0,14,6207,5
 };
+
+static float SI4432_RSSI_correction = 0;
 
 float SI4432_SET_RBW(float w)  {
   uint8_t dwn3=0;
@@ -193,17 +196,24 @@ float SI4432_SET_RBW(float w)  {
   uint8_t ndec, fils, i;
   if (WISH > 6207)   WISH=6207;     // Final value in RBW_choices[]
   if (WISH > 1379) dwn3 = 1 ;
-  for (i=3; i<sizeof(RBW_choices)/sizeof(RBW_choices[0]); i+=3)
-    if (WISH <= RBW_choices[i])  break;
-  ndec = RBW_choices[i-2];
-  fils = RBW_choices[i-1];
-  WISH = RBW_choices[i];        // RBW achieved by Si4432 in Hz
+  for (i=3; i<sizeof(RBW_choices)/sizeof(RBW_choices[0]); i+=4)
+    if (WISH <= RBW_choices[i-1])  break;
+  ndec = RBW_choices[i-3];
+  fils = RBW_choices[i-2];
+  WISH = RBW_choices[i-1];        // RBW achieved by Si4432 in Hz
+  SI4432_RSSI_correction = RBW_choices[i]/10.0;
   uint8_t BW = (dwn3 << 7) | (ndec << 4) | fils ;
   SI4432_Write_Byte(0x1C , BW ) ;
   return ((float)WISH / 10.0) ;
 }
 
-
+float SI4432_RBW_table(int i){
+  if (i < 0)
+    return 0;
+  if (i * 4 >= (sizeof RBW_choices) / 2 )
+    return 0;
+  return(RBW_choices[i*4-1]);
+}
 
 void SI4432_Set_Frequency ( long Freq ) {
   int hbsel;

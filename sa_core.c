@@ -13,7 +13,7 @@ int setting_rbw = 0;
 int setting_average = 0;
 int setting_show_stored = 0;
 int setting_subtract_stored = 0;
-int setting_drive=0; // 0-3 , 3=+20dBm
+int setting_drive=1; // 0-3 , 3=+20dBm
 int setting_agc = true;
 int setting_lna = false;
 int setting_tracking = false;
@@ -24,6 +24,7 @@ int setting_decay;
 int setting_noise;
 float actual_rbw = 0;
 float setting_vbw = 0;
+
 int setting_measurement;
 
 int vbwSteps = 1;
@@ -55,6 +56,9 @@ void reset_settings(int m)
   setting_vbw = 0;
   setting_decay=20;
   setting_noise=20;
+  trace[TRACE_STORED].enabled = false;
+  trace[TRACE_TEMP].enabled = false;
+
   setting_measurement = M_OFF;
 //  setting_spur = 0;
   switch(m) {
@@ -1047,7 +1051,7 @@ static const struct {
  {TC_END,       0,              0,      0,      0,   0,     0},
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25, 30,    -80 },      // 11 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 13 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -50, 30,    -85 },       // 14 Calibrate power high mode
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -35, 30,    -50 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,   0,     0},
 };
 
@@ -1338,13 +1342,10 @@ void self_test(void)
   ili9341_drawstring_7x13("Self test complete", 30, 120);
   ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
   wait_user();
+  ili9341_clear_screen();
 
   sweep_mode = SWEEP_ENABLE;
   show_test_info = FALSE;
-  trace[TRACE_STORED].enabled = false;
-  set_trace_refpos(0, NGRIDY - (-10) / get_trace_scale(0));
-  set_trace_refpos(1, NGRIDY - (-10) / get_trace_scale(0));
-  set_trace_refpos(2, NGRIDY - (-10) / get_trace_scale(0));
   set_refer_output(0);
   reset_settings(M_LOW);
   in_selftest = false;
@@ -1355,7 +1356,7 @@ void reset_calibration(void)
   SetPowerLevel(100);
 }
 
-#define CALIBRATE_RBWS  5
+#define CALIBRATE_RBWS  1
 const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
 void calibrate(void)
@@ -1376,9 +1377,10 @@ void calibrate(void)
       ili9341_set_foreground(BRIGHT_COLOR_RED);
       ili9341_drawstring_7x13("Calibration failed", 30, 120);
       goto quit;
-    } else
-      SetPowerLevel(-25);
-    goto  done;
+    } else {
+      SetPowerLevel(-23);
+      chThdSleepMilliseconds(1000);
+    }
   }
   i = 11;           // Measure 270MHz in low mode
   SetRBW(100);
@@ -1388,10 +1390,10 @@ void calibrate(void)
   local_test_status = test_validate(i);                       // Validate test
   chThdSleepMilliseconds(1000);
 
-  config.high_level_offset = -20;           /// Preliminary setting
+  config.high_level_offset = 0;           /// Preliminary setting
 
   i = 12;           // Calibrate 270MHz in high mode
-  for (int j = 0; j < CALIBRATE_RBWS-1; j++) {
+  for (int j = 0; j < CALIBRATE_RBWS; j++) {
     SetRBW(power_rbw[j]);
     test_prepare(i);
     test_acquire(i);                        // Acquire test
@@ -1402,20 +1404,17 @@ void calibrate(void)
       goto quit;
     } else
       SetPowerLevel(last_peak_level);
+      chThdSleepMilliseconds(1000);
     }
-done:
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 30, 120);
 quit:
   ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
   wait_user();
+  ili9341_clear_screen();
 
   in_selftest = false;
   sweep_mode = SWEEP_ENABLE;
-  trace[TRACE_STORED].enabled = false;
-  set_trace_refpos(0, NGRIDY - (-10) / get_trace_scale(0));
-  set_trace_refpos(1, NGRIDY - (-10) / get_trace_scale(0));
-  set_trace_refpos(2, NGRIDY - (-10) / get_trace_scale(0));
   set_refer_output(0);
   reset_settings(M_LOW);
 }

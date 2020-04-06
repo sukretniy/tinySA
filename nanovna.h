@@ -642,6 +642,9 @@ void SetScale(int);
 void SetRBW(int);
 void SetRX(int);
 extern int setting_measurement;
+void self_test(void);
+void wait_user(void);
+void calibrate(void);
 
 enum {
   M_OFF, M_IMD, M_OIP3
