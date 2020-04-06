@@ -1469,11 +1469,13 @@ draw_all_cells(bool flush_markmap)
     clear_markmap();
   }
 #ifdef __SCROLL__
+  int w = area_width - 5;
+  if (w < 5) w = 5;
   if (waterfall) {
     for (m = 226; m >= HEIGHT+3; m -= 1) {		// Scroll down
       uint16_t *buf = &spi_buffer[0];
-      ili9341_read_memory(5*5, m, 290, 1, 290, buf);
-      ili9341_bulk(5*5,m+1, 290,1);
+      ili9341_read_memory(5*5, m, w, 1, w, buf);
+      ili9341_bulk(5*5,m+1, w,1);
     }
     for (int i=0; i<290; i++) {			// Add new topline
 #if 0
@@ -1510,7 +1512,7 @@ draw_all_cells(bool flush_markmap)
 #endif
       spi_buffer[i] = RGB565(r,g,b);
     }
-    ili9341_bulk(5*5,HEIGHT+3, 290,1);
+    ili9341_bulk(5*5,HEIGHT+3, w,1);
   }
 #endif
 }
