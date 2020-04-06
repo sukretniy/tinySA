@@ -444,6 +444,10 @@ void setFreq(int V, unsigned long freq)
 {
   SI4432_Sel = V;
   if (old_freq[V] != freq) {
+    if (V == 0) {
+      V = -V;
+      V = -V;
+    }
     SI4432_Set_Frequency(freq);
     old_freq[V] = freq;
   }
@@ -685,7 +689,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   long local_IF;
   if (MODE_HIGH(setting_mode))
     local_IF = 0;
-  else if (avoid_spur(f))
+  else if (setting_mode == M_LOW && avoid_spur(f))
     local_IF = spur_alternate_IF;
   else
     local_IF = frequency_IF;
@@ -698,7 +702,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   if (local_IF) {
     setFreq (0, local_IF);
   }
-  if (setting_modulation == MO_AM) {
+  if (MODE_OUTPUT(setting_mode) && setting_modulation == MO_AM) {
     int p = setting_attenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
     if (modulation_counter == 3)
@@ -706,7 +710,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
     else
       modulation_counter++;
     chThdSleepMicroseconds(250);
-  } else if (setting_modulation == MO_NFM || setting_modulation == MO_WFM ) {
+  } else if (MODE_OUTPUT(setting_mode) && (setting_modulation == MO_NFM || setting_modulation == MO_WFM )) {
       SI4432_Sel = 1;
       SI4432_Write_Byte(0x79, modulation_counter);  // Use frequency hopping channel for FM modulation
       if (modulation_counter == 3)
@@ -719,16 +723,22 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   int t = 0;
   do {
     int lf = (uint32_t)(f + (int)(t * 500 * actual_rbw));
-    if (tracking)
+    if (MODE_INPUT(setting_mode) && tracking)
       setFreq (0, local_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
+#if 0
+    if (lf >11000000 || lf < 9000000) {
+      lf = lf;
+      break;
+    }
+#endif
     setFreq (1, local_IF + lf);
-    if (MODE_OUTPUT(setting_mode))
+    if (MODE_OUTPUT(setting_mode))              // No substepping in output mode
       return(0);
     float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+setting_attenuate;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
     t++;
-    if ((operation_requested && break_on_operation ) || (MODE_OUTPUT(setting_mode))) // output modes do not step.
+    if (operation_requested && break_on_operation) // output modes do not step.
       break;         // abort
   } while (t < vbwSteps);
   return(RSSI);
@@ -747,70 +757,70 @@ static bool sweep(bool break_on_operation)
   temppeakLevel = -150;
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
-//again:
+  //again:
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], setting_tracking);
 
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
-
-//    if (setting_spur == 1) {                           // First pass
-//      temp_t[i] = RSSI;
-//      continue;                                       // Skip all other processing
-//    }
-//    if (setting_spur == -1)                            // Second pass
-//      RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
-    temp_t[i] = RSSI;
-    if (setting_subtract_stored) {
-      RSSI = RSSI - stored_t[i] ;
-    }
-    //   stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
-    if (scandirty || setting_average == AV_OFF) {
-      actual_t[i] = RSSI;
-      age[i] = 0;
-    } else {
-      switch(setting_average) {
-      case AV_MIN:      if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
-      case AV_MAX_HOLD: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
-      case AV_MAX_DECAY:
-        if (actual_t[i] < RSSI) {
-          actual_t[i] = RSSI;
-          age[i] = 0;
-        } else {
-          if (age[i] > setting_decay)
-            actual_t[i] -= 0.5;
-          else
-            age[i] += 1;
+    if (MODE_INPUT(setting_mode)) {
+      //    if (setting_spur == 1) {                           // First pass
+      //      temp_t[i] = RSSI;
+      //      continue;                                       // Skip all other processing
+      //    }
+      //    if (setting_spur == -1)                            // Second pass
+      //      RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
+      temp_t[i] = RSSI;
+      if (setting_subtract_stored) {
+        RSSI = RSSI - stored_t[i] ;
+      }
+      //   stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
+      if (scandirty || setting_average == AV_OFF) {
+        actual_t[i] = RSSI;
+        age[i] = 0;
+      } else {
+        switch(setting_average) {
+        case AV_MIN:      if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
+        case AV_MAX_HOLD: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
+        case AV_MAX_DECAY:
+          if (actual_t[i] < RSSI) {
+            actual_t[i] = RSSI;
+            age[i] = 0;
+          } else {
+            if (age[i] > setting_decay)
+              actual_t[i] -= 0.5;
+            else
+              age[i] += 1;
+          }
+          break;
+        case AV_4:  actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
+        case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
         }
-        break;
-      case AV_4:  actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
-      case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
       }
-    }
 #if 1
-// START_PROFILE
-    if (i == 0) {
-      cur_max = 0;          // Always at least one maximum
-      temppeakIndex = 0;
-      temppeakLevel = actual_t[i];
-      max_index[0] = 0;
-      downslope = true;
-    }
-    if (downslope) {
-      if (temppeakLevel > actual_t[i]) {    // Follow down
-        temppeakIndex = i;                  // Latest minimum
+      // START_PROFILE
+      if (i == 0) {
+        cur_max = 0;          // Always at least one maximum
+        temppeakIndex = 0;
         temppeakLevel = actual_t[i];
-      } else if (temppeakLevel + setting_noise < actual_t[i]) {    // Local minimum found
-        temppeakIndex = i;                          // This is now the latest maximum
-        temppeakLevel = actual_t[i];
-        downslope = false;
+        max_index[0] = 0;
+        downslope = true;
       }
-    } else {
-      if (temppeakLevel < actual_t[i]) {    // Follow up
-        temppeakIndex = i;
-        temppeakLevel = actual_t[i];
-      } else if (temppeakLevel - setting_noise > actual_t[i]) {    // Local max found
+      if (downslope) {
+        if (temppeakLevel > actual_t[i]) {    // Follow down
+          temppeakIndex = i;                  // Latest minimum
+          temppeakLevel = actual_t[i];
+        } else if (temppeakLevel + setting_noise < actual_t[i]) {    // Local minimum found
+          temppeakIndex = i;                          // This is now the latest maximum
+          temppeakLevel = actual_t[i];
+          downslope = false;
+        }
+      } else {
+        if (temppeakLevel < actual_t[i]) {    // Follow up
+          temppeakIndex = i;
+          temppeakLevel = actual_t[i];
+        } else if (temppeakLevel - setting_noise > actual_t[i]) {    // Local max found
 
           int j = 0;                                            // Insertion index
           while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
@@ -819,20 +829,21 @@ static bool sweep(bool break_on_operation)
             int k = MAX_MAX-1;
             while (k > j) {                                      // Shift to make room for max
               max_index[k] = max_index[k-1];
-//              maxlevel_index[k] = maxlevel_index[k-1];        // Only for debugging
+              //              maxlevel_index[k] = maxlevel_index[k-1];        // Only for debugging
               k--;
             }
             max_index[j] = temppeakIndex;
-//            maxlevel_index[j] = actual_t[temppeakIndex];      // Only for debugging
+            //            maxlevel_index[j] = actual_t[temppeakIndex];      // Only for debugging
             if (cur_max < MAX_MAX) {
               cur_max++;
             }
-//STOP_PROFILE
+            //STOP_PROFILE
           }
           temppeakIndex = i;            // Latest minimum
           temppeakLevel = actual_t[i];
 
           downslope = true;
+        }
       }
     }
 #else
@@ -846,75 +857,77 @@ static bool sweep(bool break_on_operation)
       temp_min_level = actual_t[i];
 #endif
   }
-//  if (setting_spur == 1) {
-//    setting_spur = -1;
-//    goto again;
-//  } else if (setting_spur == -1)
-//    setting_spur = 1;
+  //  if (setting_spur == 1) {
+  //    setting_spur = -1;
+  //    goto again;
+  //  } else if (setting_spur == -1)
+  //    setting_spur = 1;
 
   if (scandirty) {
     scandirty = false;
     draw_cal_status();
   }
 #if 1
-  int i = 0;
-  int m = 0;
-  while (i < cur_max) {                                 // For all maxima found
+  if (MODE_INPUT(setting_mode)) {
+    int i = 0;
+    int m = 0;
+    while (i < cur_max) {                                 // For all maxima found
+      while (m < MARKERS_MAX) {
+        if (markers[m].enabled == M_TRACKING_ENABLED) {   // Available marker found
+          markers[m].index = max_index[i];
+          markers[m].frequency = frequencies[markers[m].index];
+          m++;
+          break;                          // Next maximum
+        }
+        m++;                              // Try next marker
+      }
+      i++;
+    }
     while (m < MARKERS_MAX) {
-      if (markers[m].enabled == M_TRACKING_ENABLED) {   // Available marker found
-        markers[m].index = max_index[i];
+      if (markers[m].enabled == M_TRACKING_ENABLED ) {    // More available markers found
+        markers[m].index = 0;                             // Enabled but no max
         markers[m].frequency = frequencies[markers[m].index];
-        m++;
-        break;                          // Next maximum
       }
       m++;                              // Try next marker
     }
-    i++;
-  }
-  while (m < MARKERS_MAX) {
-    if (markers[m].enabled == M_TRACKING_ENABLED ) {    // More available markers found
-      markers[m].index = 0;                             // Enabled but no max
-      markers[m].frequency = frequencies[markers[m].index];
+    if (setting_measurement == M_IMD && markers[0].index > 10) {
+      markers[1].enabled = search_maximum(1, markers[0].index*2, 8);
+      markers[2].enabled = search_maximum(2, markers[0].index*3, 12);
+      markers[3].enabled = search_maximum(3, markers[0].index*4, 16);
+    } else if (setting_measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) {
+      int l = markers[0].index;
+      int r = markers[1].index;
+      if (r < l) {
+        l = markers[1].index;
+        r = markers[0].index;
+      }
+      markers[2].enabled = search_maximum(2, l - (r-l), 10);
+      markers[3].enabled = search_maximum(3, r + (r-l), 10);
     }
-    m++;                              // Try next marker
-  }
-  if (setting_measurement == M_IMD && markers[0].index > 10) {
-    markers[1].enabled = search_maximum(1, markers[0].index*2, 8);
-    markers[2].enabled = search_maximum(2, markers[0].index*3, 12);
-    markers[3].enabled = search_maximum(3, markers[0].index*4, 16);
-  } else if (setting_measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) {
-    int l = markers[0].index;
-    int r = markers[1].index;
-    if (r < l) {
-      l = markers[1].index;
-      r = markers[0].index;
-    }
-    markers[2].enabled = search_maximum(2, l - (r-l), 10);
-    markers[3].enabled = search_maximum(3, r + (r-l), 10);
-  }
-  peakIndex = max_index[0];
-  peakLevel = actual_t[peakIndex];
-  peakFreq = frequencies[peakIndex];
+    peakIndex = max_index[0];
+    peakLevel = actual_t[peakIndex];
+    peakFreq = frequencies[peakIndex];
 #else
-  int peak_marker = 0;
-  markers[peak_marker].enabled = true;
-  markers[peak_marker].index = peakIndex;
-  markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
+    int peak_marker = 0;
+    markers[peak_marker].enabled = true;
+    markers[peak_marker].index = peakIndex;
+    markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
 #endif
-  min_level = temp_min_level;
+    min_level = temp_min_level;
 #if 0                           // Auto ref level setting
-  int scale = get_trace_scale(2);
-  int rp = (NGRIDY - get_trace_refpos(2)) * scale;
-  if (scale > 0 && peakLevel > rp && peakLevel - min_level < 8 * scale ) {
-    SetRefpos((((int)(peakLevel/scale)) + 1) * scale);
-  }
-  if (scale > 0 && min_level < rp - 9*scale && peakLevel - min_level < 8 * scale ) {
-    int new_rp = (((int)((min_level + 9*scale)/scale)) - 1) * scale;
-    if (new_rp < rp)
-      SetRefpos(new_rp);
-  }
+    int scale = get_trace_scale(2);
+    int rp = (NGRIDY - get_trace_refpos(2)) * scale;
+    if (scale > 0 && peakLevel > rp && peakLevel - min_level < 8 * scale ) {
+      SetRefpos((((int)(peakLevel/scale)) + 1) * scale);
+    }
+    if (scale > 0 && min_level < rp - 9*scale && peakLevel - min_level < 8 * scale ) {
+      int new_rp = (((int)((min_level + 9*scale)/scale)) - 1) * scale;
+      if (new_rp < rp)
+        SetRefpos(new_rp);
+    }
 
 #endif
+  }
   //    redraw_marker(peak_marker, FALSE);
   palSetPad(GPIOC, GPIOC_LED);
   return true;

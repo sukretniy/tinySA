@@ -131,6 +131,8 @@ byte SI4432_Read_Byte( byte ADR )
 void SI4432_Reset(void)
 {
   int count = 0;
+  SI4432_Read_Byte ( 0x03 );    // Clear pending interrupts
+  SI4432_Read_Byte ( 0x04 );
   // always perform a system reset (don't send 0x87)
   SI4432_Write_Byte( 0x07, 0x80);
   chThdSleepMilliseconds(50);
@@ -225,7 +227,7 @@ void SI4432_Set_Frequency ( long Freq ) {
   int N = Freq / 10000000;
   Carrier = ( 4 * ( Freq - N * 10000000 )) / 625;
   int Freq_Band = ( N - 24 ) | ( hbsel << 5 ) | ( sbsel << 6 );
-#if 0
+#if 1
   SI4432_Write_Byte ( 0x75, Freq_Band );
   SI4432_Write_Byte ( 0x76, (Carrier>>8) & 0xFF );
   SI4432_Write_Byte ( 0x77, Carrier & 0xFF  );
@@ -266,6 +268,20 @@ float SI4432_RSSI(uint32_t i, int s)
 void SI4432_Sub_Init(void)
 {
   SI4432_Reset();
+
+
+  //set VCO and PLL Only for SI4432 V2
+  SI4432_Write_Byte(0x72, 0x1F); //write 0x1F to the Frequency Deviation register
+  SI4432_Write_Byte(0x5A, 0x7F); //write 0x7F to the VCO Current Trimming register
+  SI4432_Write_Byte(0x58, 0x80); //write 0xD7 to the ChargepumpCurrentTrimmingOverride register
+  SI4432_Write_Byte(0x59, 0x40); //write 0x40 to the Divider Current Trimming register
+
+  //set the AGC
+  SI4432_Write_Byte(0x6A, 0x0B); //write 0x0B to the AGC Override 2 register
+  //set ADC reference voltage to 0.9V
+  SI4432_Write_Byte(0x68, 0x04); //write 0x04 to the Deltasigma ADC Tuning 2 register
+  SI4432_Write_Byte(0x1F, 0x03); //write 0x03 to the Clock Recovery Gearshift Override register
+
   SI4432_Write_Byte(0x05, 0x0);
   SI4432_Write_Byte(0x06, 0x0);
   // Enable receiver chain
