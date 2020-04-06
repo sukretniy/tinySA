@@ -529,9 +529,9 @@ const char *menu_drive_text[]={"-24dBm","-20dBm","-16dBm","-12dBm","  6dBm"," 10
 
 static const menuitem_t menu_drive[] = {
   { MT_CALLBACK, 3, " 20dBm",   menu_drive_cb},
-  { MT_CALLBACK, 2, " 15dBm",   menu_drive_cb},
-  { MT_CALLBACK, 1, " 10dBm",   menu_drive_cb},
-  { MT_CALLBACK, 0, "  5dBm",   menu_drive_cb},
+  { MT_CALLBACK, 2, " 16dBm",   menu_drive_cb},
+  { MT_CALLBACK, 1, " 12dBm",   menu_drive_cb},
+  { MT_CALLBACK, 0, "  8dBm",   menu_drive_cb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
