@@ -452,6 +452,7 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
   // Skip SPI rx buffer
   while (SPI_RX_IS_NOT_EMPTY) (void)SPI_READ_DATA;
   // Init Rx DMA buffer, size, mode (spi and mem data size is 8 bit)
+  chSysLock();
   dmaStreamSetMemory0(dmarx, rgbbuf);
   dmaStreamSetTransactionSize(dmarx, data_size);
   dmaStreamSetMode(dmarx, rxdmamode | STM32_DMA_CR_PSIZE_BYTE | STM32_DMA_CR_MSIZE_BYTE |
@@ -466,7 +467,18 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
   dmaStreamEnable(dmarx);
   // Wait DMA completion
   dmaWaitCompletion(dmatx);
+#if 1
+  int count = 0;
+  while ((dmarx)->channel->CNDTR > 0U) {
+    chThdSleepMicroseconds(100);
+    if (count++ > 10)
+      break;
+  }
+  dmaStreamDisable(dmarx);
+#else
   dmaWaitCompletion(dmarx);
+#endif;
+  chSysUnlock();
   CS_HIGH;
 
   // Parce recived data
