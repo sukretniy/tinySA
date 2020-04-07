@@ -603,7 +603,14 @@ static const unsigned int spur_IF =            433800000;
 static const unsigned int spur_alternate_IF =  434000000;
 static const int spur_table[] =
 {
-   870000,
+ 420000,
+ 490000,
+ 510000,
+ 1600000,
+ 1840000,
+ 2960000,
+/*
+ 870000,
    970000,
   1460000,
   1610000,
@@ -619,6 +626,7 @@ static const int spur_table[] =
   8140000,
   10870000,
   14880000,
+*/
 #ifdef IF_AT_4339
   780000,
    830000,
@@ -1375,7 +1383,7 @@ extern float SI4432_force_RBW(int i);
 
 void self_test(void)
 {
-#if 1                   // RAttenuator test
+#if 0                 // RAttenuator test
   int local_test_status;
   in_selftest = true;
   reset_settings(M_LOW);

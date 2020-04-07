@@ -830,7 +830,7 @@ void load_default_properties(void)
 //current_props.magic = CONFIG_MAGIC;
   current_props._frequency0   =         0;    // start =  0Hz
   current_props._frequency1   = 350000000;    // end   = 350MHz
-  current_props._frequency_IF=  433900000,
+  current_props._frequency_IF=  433800000,
 
   current_props._sweep_points = POINTS_COUNT;
   #ifdef VNA__
