@@ -412,25 +412,25 @@ void PE4302_shiftOut(uint8_t val)
              SPI2_SDI_HIGH;
            else
              SPI2_SDI_LOW;
-           chThdSleepMicroseconds(PE4302_DELAY);
+//           chThdSleepMicroseconds(PE4302_DELAY);
            SPI2_CLK_HIGH;
-           chThdSleepMicroseconds(PE4302_DELAY);
+//           chThdSleepMicroseconds(PE4302_DELAY);
            SPI2_CLK_LOW;
-           chThdSleepMicroseconds(PE4302_DELAY);
+//           chThdSleepMicroseconds(PE4302_DELAY);
      }
 }
 
 void PE4302_Write_Byte(unsigned char DATA )
 {
-  chThdSleepMicroseconds(PE4302_DELAY);
+//  chThdSleepMicroseconds(PE4302_DELAY);
   SPI2_CLK_LOW;
-  chThdSleepMicroseconds(PE4302_DELAY);
+//  chThdSleepMicroseconds(PE4302_DELAY);
   PE4302_shiftOut(DATA);
-  chThdSleepMicroseconds(PE4302_DELAY);
+//  chThdSleepMicroseconds(PE4302_DELAY);
   CS_PE_HIGH;
-  chThdSleepMicroseconds(PE4302_DELAY);
+//  chThdSleepMicroseconds(PE4302_DELAY);
   CS_PE_LOW;
-  chThdSleepMicroseconds(PE4302_DELAY);
+//  chThdSleepMicroseconds(PE4302_DELAY);
 
 }
 
