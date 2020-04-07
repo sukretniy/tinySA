@@ -467,7 +467,7 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
   dmaStreamEnable(dmarx);
   // Wait DMA completion
   dmaWaitCompletion(dmatx);
-#if 1
+#if 0
   int count = 0;
   while ((dmarx)->channel->CNDTR > 0U) {
     chThdSleepMicroseconds(100);
@@ -477,7 +477,7 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
   dmaStreamDisable(dmarx);
 #else
   dmaWaitCompletion(dmarx);
-#endif;
+#endif
   chSysUnlock();
   CS_HIGH;
 
