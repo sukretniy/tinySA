@@ -761,7 +761,7 @@ static bool sweep(bool break_on_operation)
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
-    if (MODE_OUTPUT(setting_mode)) {
+    if (MODE_OUTPUT(setting_mode) && setting_modulation == MO_NONE) {
       osalThreadSleepMilliseconds(10);
     }
 
@@ -1495,7 +1495,7 @@ void calibrate(void)
       ili9341_drawstring_7x13("Calibration failed", 30, 120);
       goto quit;
     } else {
-      SetPowerLevel(-23);
+      SetPowerLevel(-22);           // Should be -22.5dBm
       chThdSleepMilliseconds(1000);
     }
   }
