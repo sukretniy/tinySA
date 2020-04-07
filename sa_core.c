@@ -13,7 +13,7 @@ int setting_rbw = 0;
 int setting_average = 0;
 int setting_show_stored = 0;
 int setting_subtract_stored = 0;
-int setting_drive=1; // 0-3 , 3=+20dBm
+int setting_drive=13; // 0-7 , 7=+20dBm, 3dB steps
 int setting_agc = true;
 int setting_lna = false;
 int setting_tracking = false;
@@ -42,12 +42,12 @@ void reset_settings(int m)
 {
   setting_mode = m;
   setting_attenuate = 0;
-  setting_step_atten = 0;
   setting_rbw = 0;
   setting_average = 0;
   setting_show_stored = 0;
   setting_subtract_stored = 0;
-  setting_drive=1; // 0-3 , 3=+20dBm
+  setting_drive=13;
+  setting_step_atten = 0;       // Only used in low output mode
   setting_agc = true;
   setting_lna = false;
   setting_tracking = false;
@@ -70,6 +70,7 @@ void reset_settings(int m)
     SetRefpos(-10);
     break;
   case M_GENLOW:
+    setting_drive=8;
     minFreq = 0;
     maxFreq = 520000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
@@ -83,6 +84,7 @@ void reset_settings(int m)
     SetRefpos(-30);
     break;
   case M_GENHIGH:
+    setting_drive=8;
     minFreq = 240000000;
     maxFreq = 960000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
@@ -127,14 +129,7 @@ void set_measurement(int m)
 }
 void SetDrive(int d)
 {
-  setting_drive = (d & 3);
-  if (setting_mode == M_GENHIGH) {
-    if (!(d & 4))
-      setting_step_atten = 1;
-    else
-      setting_step_atten = 0;
-    setting_drive = d;
-  }
+  setting_drive = d;
   dirty = true;
 }
 
@@ -157,16 +152,16 @@ int GetMode(void)
 
 
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
-#define POWER_OFFSET    2
+#define POWER_OFFSET    12
 #define SWITCH_ATTENUATION  29
 
 int GetAttenuation(void)
 {
   if (setting_mode == M_GENLOW) {
     if (setting_step_atten)
-      return ( - (POWER_OFFSET + setting_attenuate - (setting_step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
+      return ( -(POWER_OFFSET + setting_attenuate - (setting_step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
     else
-      return ( -(POWER_OFFSET + setting_attenuate));
+      return ( -POWER_OFFSET - setting_attenuate + (setting_drive & 7) * 3);
   }
   return(setting_attenuate);
 }
@@ -175,24 +170,27 @@ int GetAttenuation(void)
 void SetAttenuation(int a)
 {
   if (setting_mode == M_GENLOW) {
+    setting_drive = 0;
     a = a + POWER_OFFSET;
-    if( a >  - SWITCH_ATTENUATION + 3*POWER_STEP) {
+    if (a > 0) {
+      setting_drive++;
+      a = a - 3;
+    }
+    if (a > 0) {
+      setting_drive++;
+      a = a - 3;
+    }
+    if (a > 0) {
+      setting_drive++;
+      a = a - 3;
+    }
+    if (a > 0)
+      a = 0;
+    if( a >  - SWITCH_ATTENUATION) {
       setting_step_atten = 0;
     } else {
       a = a + SWITCH_ATTENUATION;
-#if 0
-      if (a >= 2 * POWER_STEP) {
-        setting_step_atten = 3;       // Max drive
-        a = a - 2 * POWER_STEP;
-      } else if (a >= POWER_STEP ) {
-        setting_step_atten = 2;       // Max drive
-        a = a - POWER_STEP;
-       } else {
-         setting_step_atten = 1;
-      }
-#else
-      setting_step_atten = 1;     // drive level is unpredictable
-#endif
+      setting_step_atten = 1;
     }
     a = -a;
   } else {
@@ -387,21 +385,14 @@ void SetMode(int m)
 void apply_settings(void)
 {
   if (setting_step_delay == 0){
-    if (MODE_LOW(setting_mode)) {
-      if      (actual_rbw >300.0)    actualStepDelay =  400;
-      else if (actual_rbw >100.0)    actualStepDelay =  500;
-      else if (actual_rbw > 30.0)    actualStepDelay =  900;
-      else if (actual_rbw > 10.0)    actualStepDelay =  900;
-      else if (actual_rbw >  3.0)    actualStepDelay = 1000;
-      else                    actualStepDelay = 1500;
-    } else {
-      if      (actual_rbw >300.0)    actualStepDelay =  900;
-      else if (actual_rbw >100.0)    actualStepDelay =  900;
-      else if (actual_rbw > 30.0)    actualStepDelay =  900;
-      else if (actual_rbw > 10.0)    actualStepDelay = 1800;
-      else if (actual_rbw >  3.0)    actualStepDelay = 6000;
-      else                    actualStepDelay = 8000;
-    }
+      if      (actual_rbw >142.0)    actualStepDelay =  350;
+      else if (actual_rbw > 75.0)    actualStepDelay =  450;
+      else if (actual_rbw > 56.0)    actualStepDelay =  600;
+      else if (actual_rbw > 37.0)    actualStepDelay =  800;
+      else if (actual_rbw > 18.0)    actualStepDelay = 1100;
+      else if (actual_rbw >  9.0)    actualStepDelay = 2000;
+      else if (actual_rbw >  5.0)    actualStepDelay = 3500;
+      else                           actualStepDelay = 6000;
   } else
     actualStepDelay = setting_step_delay;
   PE4302_Write_Byte(setting_attenuate * 2);
@@ -443,6 +434,10 @@ void setFreq(int V, unsigned long freq)
 {
   SI4432_Sel = V;
   if (old_freq[V] != freq) {
+    if (V == 0) {
+      V = -V;
+      V = -V;
+    }
     SI4432_Set_Frequency(freq);
     old_freq[V] = freq;
   }
@@ -496,15 +491,14 @@ case M_GENLOW:  // Mixed output from 0
     SI4432_Sel = 0;
     if (setting_step_atten) {
       SetSwitchReceive();
-      SI4432_Transmit(setting_step_atten-1);
     } else {
       SetSwitchTransmit();
-      SI4432_Transmit(0);     // To prevent damage to the BPF always set low drive
     }
+    SI4432_Transmit(setting_drive);        // Not to overdrive the mixer
 
     SI4432_Sel = 1;
     SetSwitchReceive();
-    SI4432_Transmit(setting_drive);
+    SI4432_Transmit(13);                 // Fix LO drive a 10dBm
 
     break;
 case M_GENHIGH: // Direct output from 1
@@ -513,12 +507,12 @@ case M_GENHIGH: // Direct output from 1
     SetSwitchReceive();
 
     SI4432_Sel = 1;
-    if (setting_step_atten) {
+    if (setting_drive < 8) {
       SetSwitchReceive();
     } else {
       SetSwitchTransmit();
     }
-    SI4432_Transmit(setting_drive & 3);
+    SI4432_Transmit(setting_drive);
 
     break;
   }
@@ -606,18 +600,71 @@ search_maximum(int m, int center, int span)
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433800000;
-static const unsigned int spur_alternate_IF =  433600000;
+static const unsigned int spur_alternate_IF =  434000000;
 static const int spur_table[] =
 {
-   470000,
+ 420000,
+ 490000,
+ 510000,
+ 1600000,
+ 1840000,
+ 2960000,
+/*
+ 870000,
+   970000,
+  1460000,
+  1610000,
+  1840000,
+  2840000,
+  2890000,
+  2970000,
+  4780000,
+  4810000,
+  4850000,
+  4880000,
+  8100000,
+  8140000,
+  10870000,
+  14880000,
+*/
+#ifdef IF_AT_4339
+  780000,
+   830000,
+   880000,
+   949000,
+  1390000,
+  1468000,
+  1830000,
+  1900000,
+  2770000,
+  2840000,
+  2880000,
+  4710000,
+  4780000,
+  4800000,
+  4880000,
+  6510000,
+  6750000,
+  6790000,
+  6860000,
+  7340000,
+  8100000,
+  8200000,
+  8880000,
+//  9970000,    10MHz!!!!!!
+ 10870000,
+ 11420000,
+ 14880000,
+ 16820000,
+#endif
 };
 
 int avoid_spur(int f)
 {
   int window = ((int)actual_rbw ) * 1000*2;
-  if (window < 50000)
-    window = 50000;
-  if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw >= 300.0)
+//  if (window < 50000)
+//    window = 50000;
+  if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw > 300.0)
     return(false);
   for (unsigned int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
     if (f/window == spur_table[i]/window) {
@@ -639,7 +686,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   long local_IF;
   if (MODE_HIGH(setting_mode))
     local_IF = 0;
-  else if (avoid_spur(f))
+  else if (setting_mode == M_LOW && avoid_spur(f))
     local_IF = spur_alternate_IF;
   else
     local_IF = frequency_IF;
@@ -652,7 +699,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   if (local_IF) {
     setFreq (0, local_IF);
   }
-  if (setting_modulation == MO_AM) {
+  if (MODE_OUTPUT(setting_mode) && setting_modulation == MO_AM) {
     int p = setting_attenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
     if (modulation_counter == 3)
@@ -660,7 +707,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
     else
       modulation_counter++;
     chThdSleepMicroseconds(250);
-  } else if (setting_modulation == MO_NFM || setting_modulation == MO_WFM ) {
+  } else if (MODE_OUTPUT(setting_mode) && (setting_modulation == MO_NFM || setting_modulation == MO_WFM )) {
       SI4432_Sel = 1;
       SI4432_Write_Byte(0x79, modulation_counter);  // Use frequency hopping channel for FM modulation
       if (modulation_counter == 3)
@@ -673,16 +720,22 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   int t = 0;
   do {
     int lf = (uint32_t)(f + (int)(t * 500 * actual_rbw));
-    if (tracking)
+    if (MODE_INPUT(setting_mode) && tracking)
       setFreq (0, local_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
+#if 0
+    if (lf >11000000 || lf < 9000000) {
+      lf = lf;
+      break;
+    }
+#endif
     setFreq (1, local_IF + lf);
-    if (MODE_OUTPUT(setting_mode))
+    if (MODE_OUTPUT(setting_mode))              // No substepping in output mode
       return(0);
     float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+setting_attenuate;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
     t++;
-    if ((operation_requested && break_on_operation ) || (MODE_OUTPUT(setting_mode))) // output modes do not step.
+    if (operation_requested && break_on_operation) // output modes do not step.
       break;         // abort
   } while (t < vbwSteps);
   return(RSSI);
@@ -701,70 +754,74 @@ static bool sweep(bool break_on_operation)
   temppeakLevel = -150;
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
-//again:
+  //again:
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], setting_tracking);
 
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
+    if (MODE_OUTPUT(setting_mode)) {
+      osalThreadSleepMilliseconds(10);
+    }
 
-//    if (setting_spur == 1) {                           // First pass
-//      temp_t[i] = RSSI;
-//      continue;                                       // Skip all other processing
-//    }
-//    if (setting_spur == -1)                            // Second pass
-//      RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
-    temp_t[i] = RSSI;
-    if (setting_subtract_stored) {
-      RSSI = RSSI - stored_t[i] ;
-    }
-    //   stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
-    if (scandirty || setting_average == AV_OFF) {
-      actual_t[i] = RSSI;
-      age[i] = 0;
-    } else {
-      switch(setting_average) {
-      case AV_MIN:      if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
-      case AV_MAX_HOLD: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
-      case AV_MAX_DECAY:
-        if (actual_t[i] < RSSI) {
-          actual_t[i] = RSSI;
-          age[i] = 0;
-        } else {
-          if (age[i] > setting_decay)
-            actual_t[i] -= 0.5;
-          else
-            age[i] += 1;
+    if (MODE_INPUT(setting_mode)) {
+      //    if (setting_spur == 1) {                           // First pass
+      //      temp_t[i] = RSSI;
+      //      continue;                                       // Skip all other processing
+      //    }
+      //    if (setting_spur == -1)                            // Second pass
+      //      RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
+      temp_t[i] = RSSI;
+      if (setting_subtract_stored) {
+        RSSI = RSSI - stored_t[i] ;
+      }
+      //   stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
+      if (scandirty || setting_average == AV_OFF) {
+        actual_t[i] = RSSI;
+        age[i] = 0;
+      } else {
+        switch(setting_average) {
+        case AV_MIN:      if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
+        case AV_MAX_HOLD: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
+        case AV_MAX_DECAY:
+          if (actual_t[i] < RSSI) {
+            actual_t[i] = RSSI;
+            age[i] = 0;
+          } else {
+            if (age[i] > setting_decay)
+              actual_t[i] -= 0.5;
+            else
+              age[i] += 1;
+          }
+          break;
+        case AV_4:  actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
+        case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
         }
-        break;
-      case AV_4:  actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
-      case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
       }
-    }
 #if 1
-// START_PROFILE
-    if (i == 0) {
-      cur_max = 0;          // Always at least one maximum
-      temppeakIndex = 0;
-      temppeakLevel = actual_t[i];
-      max_index[0] = 0;
-      downslope = true;
-    }
-    if (downslope) {
-      if (temppeakLevel > actual_t[i]) {    // Follow down
-        temppeakIndex = i;                  // Latest minimum
+      // START_PROFILE
+      if (i == 0) {
+        cur_max = 0;          // Always at least one maximum
+        temppeakIndex = 0;
         temppeakLevel = actual_t[i];
-      } else if (temppeakLevel + setting_noise < actual_t[i]) {    // Local minimum found
-        temppeakIndex = i;                          // This is now the latest maximum
-        temppeakLevel = actual_t[i];
-        downslope = false;
+        max_index[0] = 0;
+        downslope = true;
       }
-    } else {
-      if (temppeakLevel < actual_t[i]) {    // Follow up
-        temppeakIndex = i;
-        temppeakLevel = actual_t[i];
-      } else if (temppeakLevel - setting_noise > actual_t[i]) {    // Local max found
+      if (downslope) {
+        if (temppeakLevel > actual_t[i]) {    // Follow down
+          temppeakIndex = i;                  // Latest minimum
+          temppeakLevel = actual_t[i];
+        } else if (temppeakLevel + setting_noise < actual_t[i]) {    // Local minimum found
+          temppeakIndex = i;                          // This is now the latest maximum
+          temppeakLevel = actual_t[i];
+          downslope = false;
+        }
+      } else {
+        if (temppeakLevel < actual_t[i]) {    // Follow up
+          temppeakIndex = i;
+          temppeakLevel = actual_t[i];
+        } else if (temppeakLevel - setting_noise > actual_t[i]) {    // Local max found
 
           int j = 0;                                            // Insertion index
           while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
@@ -773,20 +830,21 @@ static bool sweep(bool break_on_operation)
             int k = MAX_MAX-1;
             while (k > j) {                                      // Shift to make room for max
               max_index[k] = max_index[k-1];
-//              maxlevel_index[k] = maxlevel_index[k-1];        // Only for debugging
+              //              maxlevel_index[k] = maxlevel_index[k-1];        // Only for debugging
               k--;
             }
             max_index[j] = temppeakIndex;
-//            maxlevel_index[j] = actual_t[temppeakIndex];      // Only for debugging
+            //            maxlevel_index[j] = actual_t[temppeakIndex];      // Only for debugging
             if (cur_max < MAX_MAX) {
               cur_max++;
             }
-//STOP_PROFILE
+            //STOP_PROFILE
           }
           temppeakIndex = i;            // Latest minimum
           temppeakLevel = actual_t[i];
 
           downslope = true;
+        }
       }
     }
 #else
@@ -800,75 +858,77 @@ static bool sweep(bool break_on_operation)
       temp_min_level = actual_t[i];
 #endif
   }
-//  if (setting_spur == 1) {
-//    setting_spur = -1;
-//    goto again;
-//  } else if (setting_spur == -1)
-//    setting_spur = 1;
+  //  if (setting_spur == 1) {
+  //    setting_spur = -1;
+  //    goto again;
+  //  } else if (setting_spur == -1)
+  //    setting_spur = 1;
 
   if (scandirty) {
     scandirty = false;
     draw_cal_status();
   }
 #if 1
-  int i = 0;
-  int m = 0;
-  while (i < cur_max) {                                 // For all maxima found
+  if (MODE_INPUT(setting_mode)) {
+    int i = 0;
+    int m = 0;
+    while (i < cur_max) {                                 // For all maxima found
+      while (m < MARKERS_MAX) {
+        if (markers[m].enabled == M_TRACKING_ENABLED) {   // Available marker found
+          markers[m].index = max_index[i];
+          markers[m].frequency = frequencies[markers[m].index];
+          m++;
+          break;                          // Next maximum
+        }
+        m++;                              // Try next marker
+      }
+      i++;
+    }
     while (m < MARKERS_MAX) {
-      if (markers[m].enabled == M_TRACKING_ENABLED) {   // Available marker found
-        markers[m].index = max_index[i];
+      if (markers[m].enabled == M_TRACKING_ENABLED ) {    // More available markers found
+        markers[m].index = 0;                             // Enabled but no max
         markers[m].frequency = frequencies[markers[m].index];
-        m++;
-        break;                          // Next maximum
       }
       m++;                              // Try next marker
     }
-    i++;
-  }
-  while (m < MARKERS_MAX) {
-    if (markers[m].enabled == M_TRACKING_ENABLED ) {    // More available markers found
-      markers[m].index = 0;                             // Enabled but no max
-      markers[m].frequency = frequencies[markers[m].index];
+    if (setting_measurement == M_IMD && markers[0].index > 10) {
+      markers[1].enabled = search_maximum(1, markers[0].index*2, 8);
+      markers[2].enabled = search_maximum(2, markers[0].index*3, 12);
+      markers[3].enabled = search_maximum(3, markers[0].index*4, 16);
+    } else if (setting_measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) {
+      int l = markers[0].index;
+      int r = markers[1].index;
+      if (r < l) {
+        l = markers[1].index;
+        r = markers[0].index;
+      }
+      markers[2].enabled = search_maximum(2, l - (r-l), 10);
+      markers[3].enabled = search_maximum(3, r + (r-l), 10);
     }
-    m++;                              // Try next marker
-  }
-  if (setting_measurement == M_IMD && markers[0].index > 10) {
-    markers[1].enabled = search_maximum(1, markers[0].index*2, 8);
-    markers[2].enabled = search_maximum(2, markers[0].index*3, 12);
-    markers[3].enabled = search_maximum(3, markers[0].index*4, 16);
-  } else if (setting_measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) {
-    int l = markers[0].index;
-    int r = markers[1].index;
-    if (r < l) {
-      l = markers[1].index;
-      r = markers[0].index;
-    }
-    markers[2].enabled = search_maximum(2, l - (r-l), 10);
-    markers[3].enabled = search_maximum(3, r + (r-l), 10);
-  }
-  peakIndex = max_index[0];
-  peakLevel = actual_t[peakIndex];
-  peakFreq = frequencies[peakIndex];
+    peakIndex = max_index[0];
+    peakLevel = actual_t[peakIndex];
+    peakFreq = frequencies[peakIndex];
 #else
-  int peak_marker = 0;
-  markers[peak_marker].enabled = true;
-  markers[peak_marker].index = peakIndex;
-  markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
+    int peak_marker = 0;
+    markers[peak_marker].enabled = true;
+    markers[peak_marker].index = peakIndex;
+    markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
 #endif
-  min_level = temp_min_level;
+    min_level = temp_min_level;
 #if 0                           // Auto ref level setting
-  int scale = get_trace_scale(2);
-  int rp = (NGRIDY - get_trace_refpos(2)) * scale;
-  if (scale > 0 && peakLevel > rp && peakLevel - min_level < 8 * scale ) {
-    SetRefpos((((int)(peakLevel/scale)) + 1) * scale);
-  }
-  if (scale > 0 && min_level < rp - 9*scale && peakLevel - min_level < 8 * scale ) {
-    int new_rp = (((int)((min_level + 9*scale)/scale)) - 1) * scale;
-    if (new_rp < rp)
-      SetRefpos(new_rp);
-  }
+    int scale = get_trace_scale(2);
+    int rp = (NGRIDY - get_trace_refpos(2)) * scale;
+    if (scale > 0 && peakLevel > rp && peakLevel - min_level < 8 * scale ) {
+      SetRefpos((((int)(peakLevel/scale)) + 1) * scale);
+    }
+    if (scale > 0 && min_level < rp - 9*scale && peakLevel - min_level < 8 * scale ) {
+      int new_rp = (((int)((min_level + 9*scale)/scale)) - 1) * scale;
+      if (new_rp < rp)
+        SetRefpos(new_rp);
+    }
 
 #endif
+  }
   //    redraw_marker(peak_marker, FALSE);
   palSetPad(GPIOB, GPIOB_LED);
   return true;
@@ -1027,7 +1087,7 @@ enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_30MHZ, TPH_30MHZ
 };
 
-#define TEST_COUNT  14
+#define TEST_COUNT  16
 
 static const struct {
   int kind;
@@ -1050,8 +1110,10 @@ static const struct {
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75, 0,     -85},       // 9 LPF cutoff
  {TC_END,       0,              0,      0,      0,   0,     0},
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25, 30,    -80 },      // 11 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 13 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -35, 30,    -50 },       // 14 Calibrate power high mode
+ {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 12 Measure powerlevel and noise
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -35, 30,    -50 },       // 13 Calibrate power high mode
+ {TC_END,       0,              0,      0,      0,   0,     0},
+ {TC_MEASURE,   TP_30MHZ,       30,     1,      -25, 30,    -80 },      // 15 Measure RBW step time
  {TC_END,       0,              0,      0,      0,   0,     0},
 };
 
@@ -1071,6 +1133,7 @@ static float test_value;
 
 static void test_acquire(int i)
 {
+  (void)i;
   pause_sweep();
 #if 0
   if (test_case[i].center < 300)
@@ -1078,8 +1141,6 @@ static void test_acquire(int i)
   else
     setting_mode = M_HIGH;
 #endif
-  set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
-  set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
   SetAverage(4);
   sweep(false);
   sweep(false);
@@ -1312,13 +1373,67 @@ common_silent:
   }
   trace[TRACE_STORED].enabled = true;
   SetRefpos(test_case[i].pass+10);
+  set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
+  set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
   draw_cal_status();
 }
 
 extern void menu_autosettings_cb(int item);
+extern float SI4432_force_RBW(int i);
 
 void self_test(void)
 {
+#if 0                 // RAttenuator test
+  int local_test_status;
+  in_selftest = true;
+  reset_settings(M_LOW);
+  int i = 14;       // calibrate low mode power on 30 MHz;
+  test_prepare(i);
+  for (int j= 0; j < 32; j++ ) {
+    test_prepare(i);
+    SetAttenuation(j);
+    test_acquire(i);                        // Acquire test
+    local_test_status = test_validate(i);                       // Validate test
+    shell_printf("Target %d, actual %f\n\r",j, peakLevel);
+  }
+  return;
+#else
+
+#if 0                   // RBW step time search
+  int local_test_status;
+  in_selftest = true;
+  reset_settings(M_LOW);
+  int i = 14;       // calibrate low mode power on 30 MHz;
+  test_prepare(i);
+  setting_step_delay = 6000;
+  for (int j= 0; j < 57; j++ ) {
+    setting_step_delay = setting_step_delay * 4/3;
+    setting_rbw = SI4432_force_RBW(j);
+    shell_printf("RBW = %d, ",setting_rbw);
+    test_prepare(i);
+    test_acquire(i);                        // Acquire test
+    local_test_status = test_validate(i);                       // Validate test
+    float saved_peakLevel = peakLevel;
+    if (peakLevel < -30) {
+      shell_printf("Peak level too low, abort\n\r");
+      return;
+    }
+
+    shell_printf("Start level = %f, ",peakLevel);
+    while (setting_step_delay > 100 && peakLevel > saved_peakLevel - 1) {
+      setting_step_delay = setting_step_delay * 3 / 4;
+//      test_prepare(i);
+//      shell_printf("RBW = %f\n\r",SI4432_force_RBW(j));
+      test_acquire(i);                        // Acquire test
+      local_test_status = test_validate(i);                       // Validate test
+ //     shell_printf("Step %f, %d",peakLevel, setting_step_delay);
+    }
+    setting_step_delay = setting_step_delay * 4 / 3;
+    shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting_step_delay);
+  }
+  return;
+#else
+
   in_selftest = true;
   menu_autosettings_cb(0);
   for (int i=0; i < TEST_COUNT; i++) {          // All test cases waiting
@@ -1349,6 +1464,8 @@ void self_test(void)
   set_refer_output(0);
   reset_settings(M_LOW);
   in_selftest = false;
+#endif
+#endif
 }
 
 void reset_calibration(void)

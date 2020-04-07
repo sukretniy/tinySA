@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2016-2017, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
  * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
@@ -116,7 +115,7 @@ const char *info_about[]={
   "Platform: " PLATFORM_NAME,
   0 // sentinel
 };
-
+extern int dirty;
 static THD_WORKING_AREA(waThread1, 900);
 static THD_FUNCTION(Thread1, arg)
 {
@@ -126,7 +125,8 @@ static THD_FUNCTION(Thread1, arg)
   while (1) {
     bool completed = false;
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
-      completed = sweep(true);
+//      if (dirty)
+        completed = sweep(true);
       sweep_mode&=~SWEEP_ONCE;
     } else if (sweep_mode & SWEEP_SELFTEST) {
       self_test();                                  // call from lowest level to save stack space
@@ -830,7 +830,7 @@ void load_default_properties(void)
 //current_props.magic = CONFIG_MAGIC;
   current_props._frequency0   =         0;    // start =  0Hz
   current_props._frequency1   = 350000000;    // end   = 350MHz
-  current_props._frequency_IF=  433900000,
+  current_props._frequency_IF=  433800000,
 
   current_props._sweep_points = POINTS_COUNT;
   #ifdef VNA__

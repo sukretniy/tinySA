@@ -126,6 +126,7 @@ static void choose_active_marker(void);
 
 static void menu_move_back(void);
 static void menu_push_submenu(const menuitem_t *submenu);
+static const menuitem_t menu_marker_type[];
 
 static int btn_check(void)
 {
@@ -842,6 +843,9 @@ menu_marker_sel_cb(int item, uint8_t data)
       markers[item].enabled = M_TRACKING_ENABLED; // default tracking enabled
       active_marker_select(item);
     }
+    if (markers[item].enabled)
+      menu_push_submenu(menu_marker_type);
+
   } else if (item == 4) { /* all off */
       for (t = 0; t < MARKERS_MAX; t++)
         markers[t].enabled = M_DISABLED;
