@@ -709,9 +709,19 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
     chThdSleepMicroseconds(250);
   } else if (MODE_OUTPUT(setting_mode) && (setting_modulation == MO_NFM || setting_modulation == MO_WFM )) {
       SI4432_Sel = 1;
-      SI4432_Write_Byte(0x79, modulation_counter);  // Use frequency hopping channel for FM modulation
-      if (modulation_counter == 3)
-        modulation_counter = 0;
+      int offset;
+      if (setting_modulation == MO_NFM ) {
+        offset = modulation_counter ;
+        SI4432_Write_Byte(0x73, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
+        SI4432_Write_Byte(0x74, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+      }
+      else {
+        offset = modulation_counter * 100;
+        SI4432_Write_Byte(0x73, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
+        SI4432_Write_Byte(0x74, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+      }
+      if (modulation_counter == 2)
+        modulation_counter = -2;
       else
         modulation_counter++;
       chThdSleepMicroseconds(250);
