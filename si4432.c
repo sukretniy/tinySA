@@ -145,12 +145,14 @@ void SI4432_Reset(void)
 void SI4432_Transmit(int d)
 {
   int count = 0;
-  SI4432_Write_Byte(0x6D, (byte) (0x1C+d));
+  SI4432_Write_Byte(0x6D, (byte) (0x18+(d & 7)));
   if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 2)
     return; // Already in transmit mode
-  chThdSleepMilliseconds(10);
-  SI4432_Write_Byte( 0x07, 0x0b);
   chThdSleepMilliseconds(20);
+  SI4432_Write_Byte( 0x07, 0x03);
+  chThdSleepMilliseconds(20);
+  SI4432_Write_Byte( 0x07, 0x0b);
+  chThdSleepMilliseconds(30);
   while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 2) {
     chThdSleepMilliseconds(10);
   }
@@ -161,9 +163,11 @@ void SI4432_Receive(void)
   int count = 0;
   if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 1)
     return; // Already in receive mode
-  chThdSleepMilliseconds(10);
-  SI4432_Write_Byte( 0x07, 0x07);
   chThdSleepMilliseconds(20);
+  SI4432_Write_Byte( 0x07, 0x03);
+  chThdSleepMilliseconds(20);
+  SI4432_Write_Byte( 0x07, 0x07);
+  chThdSleepMilliseconds(30);
   while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 1) {
     chThdSleepMilliseconds(5);
   }
@@ -174,17 +178,17 @@ void SI4432_Receive(void)
 // for which WISH is greater than the first entry, use those values,
 // Return the first entry of the following triple for the RBW actually achieved
 static const short RBW_choices[] = {     // Each quadrupple is:  ndec, fils, WISH*10, corr*10
-     5,1,26,5,    5,2,28,5,     5,3,31,5,     5,4,32,5,     5,5,37,5,     5,6,42,5,
-     5,7,45,5,    4,1,49,5,
-     4,2,54,5,    4,3,59,5,     4,4,61,5,     4,5,72,5,     4,6,82,5,     4,7,88,5,
-     3,1,95,5,    3,2,106,5,    3,3,115,5,    3,4,121,5,    3,5,142,5,    3,6,162,5,
-     3,7,175,5,   2,1,189,5,    2,2,210,5,    2,3,227,5,    2,4,240,5,    2,5,282,5,
-     2,6,322,5,   2,7,347,5,    1,1,377,5,    1,2,417,5,    1,3,452,5,    1,4,479,5,
-     1,5,562,5,   1,6,641,5,    1,7,692,5,    0,1,752,5,    0,2,832,5,    0,3,900,5,
-     0,4,953,5,   0,5,1121,5,   0,6,1279,5,   0,7,1379,5,   1,4,1428,5,   1,5,1678,5,
-     1,9,1811,5,  0,15,1915,5,  0,1,2251,5,   0,2,2488,5,   0,3,2693,5,
-     0,4,2849,5,  0,8,3355,5,   0,9,3618,5,   0,10,4202,5,  0,11,4684,5,  0,12,5188,5,
-     0,13,5770,5, 0,14,6207,5
+     5,1,26,0,    5,2,28,0,     5,3,31,0,     5,4,32,0,     5,5,37,0,     5,6,42,10,
+     5,7,45,10,    4,1,49,10,
+     4,2,54,10,    4,3,59,10,     4,4,61,10,     4,5,72,10,     4,6,82,10,     4,7,88,10,
+     3,1,95,10,    3,2,106,5,    3,3,115,0,    3,4,121,0,    3,5,142,0,    3,6,162,10,
+     3,7,175,10,   2,1,189,10,    2,2,210,10,    2,3,227,10,    2,4,240,10,    2,5,282,5,
+     2,6,322,10,   2,7,347,10,    1,1,377,10,    1,2,417,10,    1,3,452,10,    1,4,479,5,
+     1,5,562,10,   1,6,641,10,    1,7,692,10,    0,1,752,10,    0,2,832,10,    0,3,900,5,
+     0,4,953,10,   0,5,1121,10,   0,6,1279,10,   0,7,1379,5,   1,4,1428,0,   1,5,1678,-10,
+     1,9,1811,65,  0,15,1915,120,  0,1,2251,-5,   0,2,2488,0,   0,3,2693,-5,
+     0,4,2849,0,  0,8,3355,30,   0,9,3618,60,   0,10,4202,25,  0,11,4684,25,  0,12,5188,35,
+     0,13,5770,35, 0,14,6207,35
 };
 
 static float SI4432_RSSI_correction = 0;
@@ -203,7 +207,12 @@ float SI4432_SET_RBW(float w)  {
   SI4432_RSSI_correction = RBW_choices[i]/10.0;
   uint8_t BW = (dwn3 << 7) | (ndec << 4) | fils ;
   SI4432_Write_Byte(0x1C , BW ) ;
-  return ((float)WISH / 10.0) ;
+  return (((float)WISH) / 10.0) ;
+}
+
+float SI4432_force_RBW(int i)
+{
+  return(SI4432_SET_RBW((float)(RBW_choices[i*4+2]/10.0)));
 }
 
 float SI4432_RBW_table(int i){
@@ -255,7 +264,7 @@ float SI4432_RSSI(uint32_t i, int s)
     RSSI_RAW = (unsigned char)SI4432_Read_Byte( 0x26 ) ;
  //   if (MODE_INPUT(setting_mode) && RSSI_RAW == 0)
  //     SI4432_Init();
-  float dBm = (RSSI_RAW-240)/2.0;
+  float dBm = (RSSI_RAW-240)/2.0 - SI4432_RSSI_correction;
 #ifdef __SIMULATION__
   dBm = Simulated_SI4432_RSSI(i,s);
 #endif

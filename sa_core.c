@@ -13,7 +13,7 @@ int setting_rbw = 0;
 int setting_average = 0;
 int setting_show_stored = 0;
 int setting_subtract_stored = 0;
-int setting_drive=1; // 0-3 , 3=+20dBm
+int setting_drive=13; // 0-7 , 7=+20dBm, 3dB steps
 int setting_agc = true;
 int setting_lna = false;
 int setting_tracking = false;
@@ -42,12 +42,12 @@ void reset_settings(int m)
 {
   setting_mode = m;
   setting_attenuate = 0;
-  setting_step_atten = 0;
   setting_rbw = 0;
   setting_average = 0;
   setting_show_stored = 0;
   setting_subtract_stored = 0;
-  setting_drive=0; // 0-3 , 3=+20dBm
+  setting_drive=13;
+  setting_step_atten = 0;       // Only used in low output mode
   setting_agc = true;
   setting_lna = false;
   setting_tracking = false;
@@ -70,7 +70,7 @@ void reset_settings(int m)
     SetRefpos(-10);
     break;
   case M_GENLOW:
-    setting_drive=1; // 0-3 , 3=+20dBm
+    setting_drive=8;
     minFreq = 0;
     maxFreq = 520000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
@@ -84,6 +84,7 @@ void reset_settings(int m)
     SetRefpos(-30);
     break;
   case M_GENHIGH:
+    setting_drive=8;
     minFreq = 240000000;
     maxFreq = 960000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
@@ -128,14 +129,7 @@ void set_measurement(int m)
 }
 void SetDrive(int d)
 {
-  setting_drive = (d & 3);
-  if (setting_mode == M_GENHIGH) {
-    if (!(d & 4))
-      setting_step_atten = 1;
-    else
-      setting_step_atten = 0;
-    setting_drive = d;
-  }
+  setting_drive = d;
   dirty = true;
 }
 
@@ -158,16 +152,16 @@ int GetMode(void)
 
 
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
-#define POWER_OFFSET    2
+#define POWER_OFFSET    12
 #define SWITCH_ATTENUATION  29
 
 int GetAttenuation(void)
 {
   if (setting_mode == M_GENLOW) {
     if (setting_step_atten)
-      return ( - (POWER_OFFSET + setting_attenuate - (setting_step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
+      return ( -(POWER_OFFSET + setting_attenuate - (setting_step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
     else
-      return ( -(POWER_OFFSET + setting_attenuate));
+      return ( -POWER_OFFSET - setting_attenuate + (setting_drive & 7) * 3);
   }
   return(setting_attenuate);
 }
@@ -176,24 +170,27 @@ int GetAttenuation(void)
 void SetAttenuation(int a)
 {
   if (setting_mode == M_GENLOW) {
+    setting_drive = 0;
     a = a + POWER_OFFSET;
-    if( a >  - SWITCH_ATTENUATION + 3*POWER_STEP) {
+    if (a > 0) {
+      setting_drive++;
+      a = a - 3;
+    }
+    if (a > 0) {
+      setting_drive++;
+      a = a - 3;
+    }
+    if (a > 0) {
+      setting_drive++;
+      a = a - 3;
+    }
+    if (a > 0)
+      a = 0;
+    if( a >  - SWITCH_ATTENUATION) {
       setting_step_atten = 0;
     } else {
       a = a + SWITCH_ATTENUATION;
-#if 0
-      if (a >= 2 * POWER_STEP) {
-        setting_step_atten = 3;       // Max drive
-        a = a - 2 * POWER_STEP;
-      } else if (a >= POWER_STEP ) {
-        setting_step_atten = 2;       // Max drive
-        a = a - POWER_STEP;
-       } else {
-         setting_step_atten = 1;
-      }
-#else
-      setting_step_atten = 1;     // drive level is unpredictable
-#endif
+      setting_step_atten = 1;
     }
     a = -a;
   } else {
@@ -388,21 +385,14 @@ void SetMode(int m)
 void apply_settings(void)
 {
   if (setting_step_delay == 0){
-    if (MODE_LOW(setting_mode)) {
-      if      (actual_rbw >300.0)    actualStepDelay =  400;
-      else if (actual_rbw >100.0)    actualStepDelay =  500;
-      else if (actual_rbw > 30.0)    actualStepDelay =  900;
-      else if (actual_rbw > 10.0)    actualStepDelay =  900;
-      else if (actual_rbw >  3.0)    actualStepDelay = 1000;
-      else                    actualStepDelay = 1500;
-    } else {
-      if      (actual_rbw >300.0)    actualStepDelay =  900;
-      else if (actual_rbw >100.0)    actualStepDelay =  900;
-      else if (actual_rbw > 30.0)    actualStepDelay =  900;
-      else if (actual_rbw > 10.0)    actualStepDelay = 1800;
-      else if (actual_rbw >  3.0)    actualStepDelay = 6000;
-      else                    actualStepDelay = 8000;
-    }
+      if      (actual_rbw >142.0)    actualStepDelay =  350;
+      else if (actual_rbw > 75.0)    actualStepDelay =  450;
+      else if (actual_rbw > 56.0)    actualStepDelay =  600;
+      else if (actual_rbw > 37.0)    actualStepDelay =  800;
+      else if (actual_rbw > 18.0)    actualStepDelay = 1100;
+      else if (actual_rbw >  9.0)    actualStepDelay = 2000;
+      else if (actual_rbw >  5.0)    actualStepDelay = 3500;
+      else                           actualStepDelay = 6000;
   } else
     actualStepDelay = setting_step_delay;
   PE4302_Write_Byte(setting_attenuate * 2);
@@ -501,15 +491,14 @@ case M_GENLOW:  // Mixed output from 0
     SI4432_Sel = 0;
     if (setting_step_atten) {
       SetSwitchReceive();
-      SI4432_Transmit(setting_step_atten-1);
     } else {
       SetSwitchTransmit();
-      SI4432_Transmit(0);     // To prevent damage to the BPF always set low drive
     }
+    SI4432_Transmit(setting_drive);        // Not to overdrive the mixer
 
     SI4432_Sel = 1;
     SetSwitchReceive();
-    SI4432_Transmit(setting_drive);
+    SI4432_Transmit(13);                 // Fix LO drive a 10dBm
 
     break;
 case M_GENHIGH: // Direct output from 1
@@ -518,12 +507,12 @@ case M_GENHIGH: // Direct output from 1
     SetSwitchReceive();
 
     SI4432_Sel = 1;
-    if (setting_step_atten) {
+    if (setting_drive < 8) {
       SetSwitchReceive();
     } else {
       SetSwitchTransmit();
     }
-    SI4432_Transmit(setting_drive & 3);
+    SI4432_Transmit(setting_drive);
 
     break;
   }
@@ -764,6 +753,10 @@ static bool sweep(bool break_on_operation)
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
+    if (MODE_OUTPUT(setting_mode)) {
+      osalThreadSleepMilliseconds(10);
+    }
+
     if (MODE_INPUT(setting_mode)) {
       //    if (setting_spur == 1) {                           // First pass
       //      temp_t[i] = RSSI;
@@ -1086,7 +1079,7 @@ enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_30MHZ, TPH_30MHZ
 };
 
-#define TEST_COUNT  14
+#define TEST_COUNT  16
 
 static const struct {
   int kind;
@@ -1109,8 +1102,10 @@ static const struct {
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75, 0,     -85},       // 9 LPF cutoff
  {TC_END,       0,              0,      0,      0,   0,     0},
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25, 30,    -80 },      // 11 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 13 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -35, 30,    -50 },       // 14 Calibrate power high mode
+ {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 12 Measure powerlevel and noise
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -35, 30,    -50 },       // 13 Calibrate power high mode
+ {TC_END,       0,              0,      0,      0,   0,     0},
+ {TC_MEASURE,   TP_30MHZ,       30,     1,      -25, 30,    -80 },      // 15 Measure RBW step time
  {TC_END,       0,              0,      0,      0,   0,     0},
 };
 
@@ -1130,6 +1125,7 @@ static float test_value;
 
 static void test_acquire(int i)
 {
+  (void)i;
   pause_sweep();
 #if 0
   if (test_case[i].center < 300)
@@ -1137,8 +1133,6 @@ static void test_acquire(int i)
   else
     setting_mode = M_HIGH;
 #endif
-  set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
-  set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
   SetAverage(4);
   sweep(false);
   sweep(false);
@@ -1371,13 +1365,67 @@ common_silent:
   }
   trace[TRACE_STORED].enabled = true;
   SetRefpos(test_case[i].pass+10);
+  set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
+  set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
   draw_cal_status();
 }
 
 extern void menu_autosettings_cb(int item);
+extern float SI4432_force_RBW(int i);
 
 void self_test(void)
 {
+#if 1                   // RAttenuator test
+  int local_test_status;
+  in_selftest = true;
+  reset_settings(M_LOW);
+  int i = 14;       // calibrate low mode power on 30 MHz;
+  test_prepare(i);
+  for (int j= 0; j < 32; j++ ) {
+    test_prepare(i);
+    SetAttenuation(j);
+    test_acquire(i);                        // Acquire test
+    local_test_status = test_validate(i);                       // Validate test
+    shell_printf("Target %d, actual %f\n\r",j, peakLevel);
+  }
+  return;
+#else
+
+#if 0                   // RBW step time search
+  int local_test_status;
+  in_selftest = true;
+  reset_settings(M_LOW);
+  int i = 14;       // calibrate low mode power on 30 MHz;
+  test_prepare(i);
+  setting_step_delay = 6000;
+  for (int j= 0; j < 57; j++ ) {
+    setting_step_delay = setting_step_delay * 4/3;
+    setting_rbw = SI4432_force_RBW(j);
+    shell_printf("RBW = %d, ",setting_rbw);
+    test_prepare(i);
+    test_acquire(i);                        // Acquire test
+    local_test_status = test_validate(i);                       // Validate test
+    float saved_peakLevel = peakLevel;
+    if (peakLevel < -30) {
+      shell_printf("Peak level too low, abort\n\r");
+      return;
+    }
+
+    shell_printf("Start level = %f, ",peakLevel);
+    while (setting_step_delay > 100 && peakLevel > saved_peakLevel - 1) {
+      setting_step_delay = setting_step_delay * 3 / 4;
+//      test_prepare(i);
+//      shell_printf("RBW = %f\n\r",SI4432_force_RBW(j));
+      test_acquire(i);                        // Acquire test
+      local_test_status = test_validate(i);                       // Validate test
+ //     shell_printf("Step %f, %d",peakLevel, setting_step_delay);
+    }
+    setting_step_delay = setting_step_delay * 4 / 3;
+    shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting_step_delay);
+  }
+  return;
+#else
+
   in_selftest = true;
   menu_autosettings_cb(0);
   for (int i=0; i < TEST_COUNT; i++) {          // All test cases waiting
@@ -1408,6 +1456,8 @@ void self_test(void)
   set_refer_output(0);
   reset_settings(M_LOW);
   in_selftest = false;
+#endif
+#endif
 }
 
 void reset_calibration(void)

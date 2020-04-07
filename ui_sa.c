@@ -521,35 +521,49 @@ static void menu_pause_cb(int item, uint8_t data)
 }
 
 //const int menu_drive_value[]={5,10,15,20};
-const char *menu_drive_text[]={"-24dBm","-20dBm","-16dBm","-12dBm","  6dBm"," 10dBm"," 14dBm"," 18dBm"};
+const char *menu_drive_text[]={"-30dBm","-27dBm","-24dBm","-21dBm","-18dBm","-15dBm","-12dBm","  -9dBm", " -6dBm"," -3dBm","  0dBm","  3dBm","  6dBm"," 10dBm"," 14dBm"," 18dBm"};
 
 
 
 // ===[MENU DEFINITION]=========================================================
 
 static const menuitem_t menu_drive[] = {
-  { MT_CALLBACK, 3, " 20dBm",   menu_drive_cb},
-  { MT_CALLBACK, 2, " 16dBm",   menu_drive_cb},
-  { MT_CALLBACK, 1, " 12dBm",   menu_drive_cb},
-  { MT_CALLBACK, 0, "  8dBm",   menu_drive_cb},
+  { MT_CALLBACK, 7, " 20dBm",   menu_drive_cb},
+  { MT_CALLBACK, 6, " 16dBm",   menu_drive_cb},
+  { MT_CALLBACK, 5, " 12dBm",   menu_drive_cb},
+  { MT_CALLBACK, 4, "  8dBm",   menu_drive_cb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_drive_wide2[] = {
-  { MT_FORM | MT_CALLBACK, 2, "-16dBm",   menu_drive_cb  },
-  { MT_FORM | MT_CALLBACK, 1, "-20dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 0, "-24dBm",   menu_drive_cb},
+static const menuitem_t menu_drive_wide3[] = {
+ { MT_FORM | MT_CALLBACK, 5, "-15dBm",   menu_drive_cb  },
+ { MT_FORM | MT_CALLBACK, 4, "-18dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 3, "-21dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 2, "-24dBm",   menu_drive_cb  },
+ { MT_FORM | MT_CALLBACK, 1, "-27dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 0, "-30dBm",   menu_drive_cb},
   { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
-  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
+ { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_drive_wide2[] = {
+ { MT_FORM | MT_CALLBACK, 10, "  0dBm",   menu_drive_cb  },
+ { MT_FORM | MT_CALLBACK, 9, " -3dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 8, " -6dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 7, " -9dBm",   menu_drive_cb  },
+ { MT_FORM | MT_CALLBACK, 6, "-12dBm",   menu_drive_cb},
+ { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide3},
+ { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
+ { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide[] = {
-  { MT_FORM | MT_CALLBACK, 7, " 18dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 6, " 14dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 5, " 10dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 4, "  6dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 3, "-12dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 15, " 18dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 14, " 14dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 13, " 10dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 12, "  6dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 11, "  3dBm",   menu_drive_cb},
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide2},
   { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
@@ -951,7 +965,7 @@ static void menu_item_modify_attribute(
       mark = true;
     }
 
-  } else if (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2) {
+  } else if (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2|| menu == menu_drive_wide3) {
     if (menu[item].data == setting_drive){
       mark = true;
     }

@@ -125,7 +125,7 @@ static THD_FUNCTION(Thread1, arg)
   while (1) {
     bool completed = false;
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
-      if (dirty)
+//      if (dirty)
         completed = sweep(true);
       sweep_mode&=~SWEEP_ONCE;
     } else if (sweep_mode & SWEEP_SELFTEST) {
