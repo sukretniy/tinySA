@@ -278,12 +278,13 @@ void SI4432_Sub_Init(void)
 {
   SI4432_Reset();
 
-
+#if 1           // Not sure if these add any value
   //set VCO and PLL Only for SI4432 V2
   SI4432_Write_Byte(0x72, 0x1F); //write 0x1F to the Frequency Deviation register
   SI4432_Write_Byte(0x5A, 0x7F); //write 0x7F to the VCO Current Trimming register
   SI4432_Write_Byte(0x58, 0x80); //write 0xD7 to the ChargepumpCurrentTrimmingOverride register
   SI4432_Write_Byte(0x59, 0x40); //write 0x40 to the Divider Current Trimming register
+#endif
 
   //set the AGC
   SI4432_Write_Byte(0x6A, 0x0B); //write 0x0B to the AGC Override 2 register

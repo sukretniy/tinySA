@@ -13,7 +13,7 @@ int setting_rbw = 0;
 int setting_average = 0;
 int setting_show_stored = 0;
 int setting_subtract_stored = 0;
-int setting_drive=13; // 0-7 , 7=+20dBm, 3dB steps
+int setting_drive; // 0-7 , 7=+20dBm, 3dB steps
 int setting_agc = true;
 int setting_lna = false;
 int setting_tracking = false;
@@ -46,7 +46,7 @@ void reset_settings(int m)
   setting_average = 0;
   setting_show_stored = 0;
   setting_subtract_stored = 0;
-  setting_drive=13;
+  setting_drive=12;
   setting_step_atten = 0;       // Only used in low output mode
   setting_agc = true;
   setting_lna = false;
@@ -494,11 +494,11 @@ case M_GENLOW:  // Mixed output from 0
     } else {
       SetSwitchTransmit();
     }
-    SI4432_Transmit(setting_drive);        // Not to overdrive the mixer
+    SI4432_Transmit(setting_drive);
 
     SI4432_Sel = 1;
     SetSwitchReceive();
-    SI4432_Transmit(13);                 // Fix LO drive a 10dBm
+    SI4432_Transmit(12);                 // Fix LO drive a 10dBm
 
     break;
 case M_GENHIGH: // Direct output from 1
@@ -516,6 +516,10 @@ case M_GENHIGH: // Direct output from 1
 
     break;
   }
+  SI4432_Sel = 1;
+  SI4432_Write_Byte(0x73, 0);  // Back to nominal offset
+  SI4432_Write_Byte(0x74, 0);
+
 }
 
 void update_rbw(void)
