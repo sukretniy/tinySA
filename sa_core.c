@@ -1,8 +1,8 @@
-// ---------------------------------------------------
 
 #include "SI4432.h"		// comment out for simulation
 
-int setting_mode = M_LOW;
+int setting_mode = -1;      // To force initialzation
+
 
 
 int dirty = true;
@@ -152,7 +152,7 @@ int GetMode(void)
 
 
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
-#define POWER_OFFSET    12
+#define POWER_OFFSET    20
 #define SWITCH_ATTENUATION  29
 
 int GetAttenuation(void)
@@ -170,7 +170,7 @@ int GetAttenuation(void)
 void SetAttenuation(int a)
 {
   if (setting_mode == M_GENLOW) {
-    setting_drive = 0;
+    setting_drive = 8;              // Start at lowest drive level;
     a = a + POWER_OFFSET;
     if (a > 0) {
       setting_drive++;
@@ -385,9 +385,9 @@ void SetMode(int m)
 void apply_settings(void)
 {
   if (setting_step_delay == 0){
-      if      (actual_rbw >142.0)    actualStepDelay =  350;
-      else if (actual_rbw > 75.0)    actualStepDelay =  450;
-      else if (actual_rbw > 56.0)    actualStepDelay =  600;
+      if      (actual_rbw >142.0)    actualStepDelay =  450;
+      else if (actual_rbw > 75.0)    actualStepDelay =  550;
+      else if (actual_rbw > 56.0)    actualStepDelay =  650;
       else if (actual_rbw > 37.0)    actualStepDelay =  800;
       else if (actual_rbw > 18.0)    actualStepDelay = 1100;
       else if (actual_rbw >  9.0)    actualStepDelay = 2000;

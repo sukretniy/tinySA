@@ -528,10 +528,10 @@ const char *menu_drive_text[]={"-30dBm","-27dBm","-24dBm","-21dBm","-18dBm","-15
 // ===[MENU DEFINITION]=========================================================
 
 static const menuitem_t menu_drive[] = {
-  { MT_CALLBACK, 7, " 20dBm",   menu_drive_cb},
-  { MT_CALLBACK, 6, " 16dBm",   menu_drive_cb},
-  { MT_CALLBACK, 5, " 12dBm",   menu_drive_cb},
-  { MT_CALLBACK, 4, "  8dBm",   menu_drive_cb},
+  { MT_CALLBACK, 15, " 20dBm",   menu_drive_cb},
+  { MT_CALLBACK, 14, " 16dBm",   menu_drive_cb},
+  { MT_CALLBACK, 13, " 12dBm",   menu_drive_cb},
+  { MT_CALLBACK, 12, "  8dBm",   menu_drive_cb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
