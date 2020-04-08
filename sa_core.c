@@ -8,6 +8,7 @@ int setting_mode = -1;      // To force initialzation
 int dirty = true;
 int scandirty = true;
 int setting_attenuate = 0;
+int setting_auto_attenuation;
 int setting_step_atten;
 int setting_rbw = 0;
 int setting_average = 0;
@@ -45,6 +46,7 @@ void reset_settings(int m)
   setting_rbw = 0;
   setting_average = 0;
   setting_show_stored = 0;
+  setting_auto_attenuation = true;
   setting_subtract_stored = 0;
   setting_drive=12;
   setting_step_atten = 0;       // Only used in low output mode
@@ -68,6 +70,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_START, (int32_t) 0);
     set_sweep_frequency(ST_STOP, (int32_t) 350000000);
     SetRefpos(-10);
+    setting_attenuate = 30;
     break;
   case M_GENLOW:
     setting_drive=8;
@@ -166,6 +169,12 @@ int GetAttenuation(void)
   return(setting_attenuate);
 }
 
+void set_auto_attenuation(void)
+{
+  setting_auto_attenuation = true;
+  setting_attenuate = 30;
+
+}
 
 void SetAttenuation(int a)
 {
@@ -202,6 +211,7 @@ void SetAttenuation(int a)
     a=31;
 //  if (setting_attenuate == a)
 //    return;
+  setting_auto_attenuation = false;
   setting_attenuate = a;
   dirty = true;
 }
@@ -881,6 +891,17 @@ static bool sweep(bool break_on_operation)
   if (scandirty) {
     scandirty = false;
     draw_cal_status();
+  }
+  if (setting_mode == M_LOW && setting_auto_attenuation ) {
+    if (actual_t[max_index[0]] - setting_attenuate < -30 && setting_attenuate >= 10) {
+      setting_attenuate -= 10;
+      redraw_request |= REDRAW_CAL_STATUS;
+      dirty = true;                               // Must be  above if(scandirty!!!!!)
+    } else if (actual_t[max_index[0]] - setting_attenuate > -20 && setting_attenuate <= 20) {
+      setting_attenuate += 10;
+      redraw_request |= REDRAW_CAL_STATUS;
+      dirty = true;                               // Must be  above if(scandirty!!!!!)
+    }
   }
 #if 1
   if (MODE_INPUT(setting_mode)) {

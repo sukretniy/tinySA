@@ -13,6 +13,7 @@ void set_refer_output(int);
 int get_refer_output(void);
 void SetAttenuation(int);
 int GetAttenuation(void);
+void set_auto_attenuation(void);
 void SetPowerLevel(int);
 void SetGenerate(int);
 void SetRBW(int);
@@ -387,6 +388,13 @@ static void menu_measure_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
+static void menu_atten_cb(int item, uint8_t data)
+{
+  set_auto_attenuation();
+  menu_move_back();
+  ui_mode_normal();
+}
+
 static void menu_storage_cb(int item, uint8_t data)
 {
   (void)item;
@@ -609,16 +617,6 @@ static const menuitem_t  menu_average[] = {
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
-#if 0
-static const menuitem_t menu_storage[] = {
-  { MT_CALLBACK, 0, "STORE",    menu_storage_cb},
-  { MT_CALLBACK, 1, "CLEAR",    menu_storage_cb},
-  { MT_CALLBACK, 2, "SUBTRACT", menu_storage_cb},
-  { MT_CALLBACK, 3, "WATERFALL",menu_storage_cb},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,      0, NULL, NULL } // sentinel
-};
-#endif
 
 static const menuitem_t menu_rbw[] = {
   { MT_CALLBACK, 0, "  AUTO",   menu_rbw_cb},
@@ -650,6 +648,7 @@ static const menuitem_t menu_reffer2[] = {
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+
 static const menuitem_t menu_reffer[] = {
   { MT_FORM | MT_CALLBACK, 0, "OFF"  ,   menu_reffer_cb},
   { MT_FORM | MT_CALLBACK, 1, "30MHz",   menu_reffer_cb},
@@ -661,57 +660,41 @@ static const menuitem_t menu_reffer[] = {
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_acquire[] = {
-  { MT_CALLBACK, 0, "AUTO",     menu_autosettings_cb},
-  { MT_KEYPAD, KM_ATTENUATION,  "ATTEN",         NULL},
-  { MT_SUBMENU,0,               "RBW",           menu_rbw},
-  { MT_SUBMENU,0,               "CALC",          menu_average},
+static const menuitem_t menu_atten[] = {
+  { MT_CALLBACK,0,               "AUTO",           menu_atten_cb},
+  { MT_KEYPAD, KM_ATTENUATION,  "MANUAL",         NULL},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_acquire[] = {
+  { MT_CALLBACK, 0, "RESET",            menu_autosettings_cb},
+  { MT_SUBMENU, 0,  "ATTEN",            menu_atten},
+  { MT_SUBMENU,0,   "RBW",              menu_rbw},
+  { MT_SUBMENU,0,   "AVER",             menu_average},
+  { MT_CANCEL, 0,   S_LARROW" BACK",    NULL },
+  { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_acquirehigh[] = {
-  { MT_CALLBACK, 0, "AUTO",     menu_autosettings_cb},
+  { MT_CALLBACK, 0, "RESET",     menu_autosettings_cb},
   { MT_SUBMENU,0,               "RBW",              menu_rbw},
-  { MT_SUBMENU,0,               "CALC",          menu_average},
+  { MT_SUBMENU,0,               "AVER",          menu_average},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 
 static const menuitem_t menu_display[] = {
-  { MT_KEYPAD, KM_REFPOS,       "\2REF\0LEVEL",     NULL},
-  { MT_SUBMENU,0,               "\2SCALE/\0DIV",    menu_dBper},
-  { MT_CALLBACK, 0, "STORE",    menu_storage_cb},
-  { MT_CALLBACK, 1, "CLEAR",    menu_storage_cb},
-  { MT_CALLBACK, 2, "SUBTRACT", menu_storage_cb},
-  { MT_CALLBACK, 3, "WATERFALL",menu_storage_cb},
-  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_KEYPAD,  KM_REFPOS,  "\2REF\0LEVEL",     NULL},
+  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",    menu_dBper},
+  { MT_CALLBACK,0,          "STORE",    menu_storage_cb},
+  { MT_CALLBACK,1,          "CLEAR",    menu_storage_cb},
+  { MT_CALLBACK,2,          "SUBTRACT", menu_storage_cb},
+  { MT_CALLBACK,3,          "WATERFALL",menu_storage_cb},
+  { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
-
-#if 0
-static const menuitem_t menu_scale[] = {
-  { MT_KEYPAD, KM_REFPOS,       "\2REF\0LEVEL",     NULL},
-  { MT_SUBMENU,0,               "\2SCALE/\0DIV",    menu_dBper},
-  { MT_KEYPAD, KM_ATTENUATION,  "ATTEN",            NULL},
-  { MT_SUBMENU,0,               "AVERAGE",          menu_average},
-  { MT_KEYPAD, 0,               "\2SPUR\0REDUCT.",  menu_spur_cb},
-  { MT_SUBMENU,0,               "RBW",              menu_rbw},
-  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
-  { MT_NONE,   0, NULL, NULL } // sentinel
-};
-
-static const menuitem_t menu_scalehigh[] = {
-  { MT_KEYPAD, KM_REFPOS,   "\2REF\0LEVEL",  NULL},
-  { MT_SUBMENU,0,           "\2SCALE/\0DIV", menu_dBper},
-  { MT_SUBMENU,0,           "AVERAGE",       menu_average},
-  { MT_SUBMENU,0,           "RBW",           menu_rbw},
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE,   0, NULL, NULL } // sentinel
-};
-
-#endif
 
 static const menuitem_t menu_stimulus[8] = {
   { MT_KEYPAD,  KM_START,   "START",            NULL},
@@ -858,7 +841,7 @@ static const menuitem_t menu_mode[] = {
 #if 1
 const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "ACQUIRE",      menu_acquire},
-  { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
+  { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "MEASURE",      menu_measure},
@@ -871,7 +854,7 @@ const menuitem_t menu_top[] = {
 const menuitem_t menu_tophigh[] =
 {
  { MT_SUBMENU,  0, "ACQUIRE",      menu_acquirehigh},
- { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
+ { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
  { MT_SUBMENU,  0, "DISPLAY",      menu_display},
  { MT_SUBMENU,  0, "MARKER",       menu_marker},
  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
