@@ -635,9 +635,15 @@ static const int spur_table[] =
  420000,
  490000,
  510000,
- 1600000,
- 1840000,
- 2960000,
+ 1592000,
+ 1834000,
+ 2734000,
+ 2942000,
+ 4914000,
+ 7371000,
+ 8236000,
+ 8928000,
+ 18928000,
 /*
  870000,
    970000,
@@ -711,12 +717,11 @@ char age[POINTS_COUNT];
 
 float perform(bool break_on_operation, int i, int32_t f, int tracking)
 {
-//  long local_IF = (MODE_LOW(setting_mode)?frequency_IF + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw :0):0);
+  int was_avoiding_spur = false;
+  //  long local_IF = (MODE_LOW(setting_mode)?frequency_IF + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw :0):0);
   long local_IF;
   if (MODE_HIGH(setting_mode))
     local_IF = 0;
-  else if (setting_mode == M_LOW && avoid_spur(f))
-    local_IF = spur_alternate_IF;
   else
     local_IF = frequency_IF;
 
@@ -724,9 +729,6 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
     apply_settings();
     scandirty = true;
     dirty = false;
-  }
-  if (local_IF) {
-    setFreq (0, local_IF);
   }
   if (MODE_OUTPUT(setting_mode) && setting_modulation == MO_AM) {
     int p = setting_attenuate * 2 + modulation_counter;
@@ -759,8 +761,17 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   int t = 0;
   do {
     int lf = (uint32_t)(f + (int)(t * 500 * actual_rbw));
-    if (MODE_INPUT(setting_mode) && tracking)
-      setFreq (0, local_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
+    if (setting_mode == M_LOW && tracking) {
+      setFreq (0, frequency_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
+    } else if (MODE_LOW(setting_mode)) {
+      if (setting_mode == M_LOW && avoid_spur(f)) {
+        local_IF = spur_alternate_IF;
+      } else
+        local_IF = frequency_IF ;
+    } else
+      local_IF= 0;
+    if (local_IF)
+      setFreq (0, local_IF);
 #if 0
     if (lf >11000000 || lf < 9000000) {
       lf = lf;
@@ -1184,11 +1195,11 @@ static const struct {
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -25, 20,    -70},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75, 0,     -85},       // 9 LPF cutoff
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -25, 30,    -80 },      // 11 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -30, 30,    -80 },      // 11 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 12 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -35, 30,    -50 },       // 13 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     1,      -25, 30,    -80 },      // 15 Measure RBW step time
+ {TC_MEASURE,   TP_30MHZ,       30,     1,      -30, 30,    -80 },      // 15 Measure RBW step time
  {TC_END,       0,              0,      0,      0,   0,     0},
 };
 
