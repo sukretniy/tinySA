@@ -908,7 +908,7 @@ static bool sweep(bool break_on_operation)
     scandirty = false;
     draw_cal_status();
   }
-  if (setting_mode == M_LOW && setting_auto_attenuation && max_index[0] > 0) {
+  if (!in_selftest && setting_mode == M_LOW && setting_auto_attenuation && max_index[0] > 0) {
     if (actual_t[max_index[0]] - setting_attenuate < -30 && setting_attenuate >= 10) {
       setting_attenuate -= setting_scale;
       redraw_request |= REDRAW_CAL_STATUS;
@@ -919,7 +919,7 @@ static bool sweep(bool break_on_operation)
       dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
   }
-  if (MODE_INPUT(setting_mode) && setting_auto_reflevel && max_index[0] > 0) {
+  if (!in_selftest && MODE_INPUT(setting_mode) && setting_auto_reflevel && max_index[0] > 0) {
     if (actual_t[max_index[0]] > setting_reflevel - setting_scale/2) {
       SetReflevel(setting_reflevel + setting_scale);
       redraw_request |= REDRAW_CAL_STATUS;
@@ -1028,8 +1028,12 @@ void draw_cal_status(void)
   int yMax = setting_reflevel;
   plot_printf(buf, BLEN, "%ddB", yMax);
   buf[5]=0;
-  if (level_is_calibrated())
-    color = DEFAULT_FG_COLOR;
+  if (level_is_calibrated()) {
+    if (setting_auto_reflevel)
+      color = BRIGHT_COLOR_GREEN;
+    else
+      color = DEFAULT_FG_COLOR;
+  }
   else
     color = BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
@@ -1039,16 +1043,18 @@ void draw_cal_status(void)
   plot_printf(buf, BLEN, "%ddB/",(int)setting_scale);
   ili9341_drawstring(buf, x, y);
 
-  if (setting_attenuate) {
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
-    y += YSTEP*2;
-    ili9341_drawstring("Attn:", x, y);
+  if (setting_auto_attenuation)
+    color = BRIGHT_COLOR_GREEN;
+  else
+    color = DEFAULT_FG_COLOR;
+  ili9341_set_foreground(color);
+  y += YSTEP*2;
+  ili9341_drawstring("Attn:", x, y);
 
-    y += YSTEP;
-    plot_printf(buf, BLEN, "-%ddB", setting_attenuate);
-    buf[5]=0;
-    ili9341_drawstring(buf, x, y);
-  }
+  y += YSTEP;
+  plot_printf(buf, BLEN, "-%ddB", setting_attenuate);
+  buf[5]=0;
+  ili9341_drawstring(buf, x, y);
 
   if (setting_average>0) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
@@ -1135,7 +1141,10 @@ void draw_cal_status(void)
   plot_printf(buf, BLEN, "%ddB", (int)(yMax - setting_scale * NGRIDY));
   buf[5]=0;
   if (level_is_calibrated())
-    color = DEFAULT_FG_COLOR;
+    if (setting_auto_reflevel)
+      color = BRIGHT_COLOR_GREEN;
+    else
+      color = DEFAULT_FG_COLOR;
   else
     color = BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
@@ -1441,6 +1450,7 @@ common_silent:
   SetReflevel(test_case[i].pass+10);
   set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
   set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
+  SetAttenuation(0);
   draw_cal_status();
 }
 
