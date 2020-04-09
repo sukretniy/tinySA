@@ -763,15 +763,15 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
     int lf = (uint32_t)(f + (int)(t * 500 * actual_rbw));
     if (setting_mode == M_LOW && tracking) {
       setFreq (0, frequency_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
+      local_IF = frequency_IF ;
     } else if (MODE_LOW(setting_mode)) {
       if (setting_mode == M_LOW && avoid_spur(f)) {
         local_IF = spur_alternate_IF;
       } else
         local_IF = frequency_IF ;
+      setFreq (0, local_IF);
     } else
       local_IF= 0;
-    if (local_IF)
-      setFreq (0, local_IF);
 #if 0
     if (lf >11000000 || lf < 9000000) {
       lf = lf;
