@@ -1005,6 +1005,12 @@ static void menu_item_modify_attribute(
   } else if (menu == menu_marker_sel) {
     if (item < MARKERS_MAX && markers[item].enabled)
       mark = true;
+  } else if (menu == menu_reflevel) {
+    if ((item  == 0 && setting_auto_reflevel) || (item == 1 && !setting_auto_reflevel))
+      mark = true;
+  } else if (menu == menu_atten) {
+    if ((item  == 0 && setting_auto_attenuation ) || (item  == 1 && !setting_auto_attenuation))
+      mark = true;
   }
   if (mark) {
     *bg = DEFAULT_MENU_TEXT_COLOR;
