@@ -17,6 +17,9 @@ int setting_subtract_stored = 0;
 int setting_drive; // 0-7 , 7=+20dBm, 3dB steps
 int setting_agc = true;
 int setting_lna = false;
+int setting_auto_reflevel;
+int setting_reflevel;
+int setting_scale;
 int setting_tracking = false;
 int setting_modulation = MO_NONE;
 int setting_step_delay = 0;
@@ -42,6 +45,8 @@ int in_selftest = false;
 void reset_settings(int m)
 {
   setting_mode = m;
+  SetScale(10);
+  SetReflevel(-10);
   setting_attenuate = 0;
   setting_rbw = 0;
   setting_average = 0;
@@ -56,8 +61,9 @@ void reset_settings(int m)
   setting_modulation = MO_NONE;
   setting_step_delay = 0;
   setting_vbw = 0;
+  setting_auto_reflevel = true;     // Must be after SetReflevel
   setting_decay=20;
-  setting_noise=20;
+  setting_noise=5;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
 
@@ -69,7 +75,6 @@ void reset_settings(int m)
     maxFreq = 520000000;
     set_sweep_frequency(ST_START, (int32_t) 0);
     set_sweep_frequency(ST_STOP, (int32_t) 350000000);
-    SetRefpos(-10);
     setting_attenuate = 30;
     break;
   case M_GENLOW:
@@ -84,7 +89,6 @@ void reset_settings(int m)
     maxFreq = 960000000;
     set_sweep_frequency(ST_START, (int32_t) minFreq);
     set_sweep_frequency(ST_STOP, (int32_t) maxFreq);
-    SetRefpos(-30);
     break;
   case M_GENHIGH:
     setting_drive=8;
@@ -94,7 +98,6 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     break;
   }
-  SetScale(10);
   dirty = true;
 }
 
@@ -119,7 +122,7 @@ void set_decay(int d)
 
 void set_noise(int d)
 {
-  if (d < 5 || d > 200)
+  if (d < 2 || d > 50)
     return;
   setting_noise = d;
   dirty = true;
@@ -173,7 +176,11 @@ void set_auto_attenuation(void)
 {
   setting_auto_attenuation = true;
   setting_attenuate = 30;
+}
 
+void set_auto_reflevel(void)
+{
+  setting_auto_reflevel = true;
 }
 
 void SetAttenuation(int a)
@@ -211,7 +218,6 @@ void SetAttenuation(int a)
     a=31;
 //  if (setting_attenuate == a)
 //    return;
-  setting_auto_attenuation = false;
   setting_attenuate = a;
   dirty = true;
 }
@@ -371,20 +377,29 @@ int GetAGC(void)
   return(setting_agc);
 }
 
-void SetRefpos(int level)
+void SetReflevel(int level)
 {
+  setting_reflevel = (level / setting_scale) * setting_scale;
   set_trace_refpos(0, NGRIDY - level / get_trace_scale(0));
   set_trace_refpos(1, NGRIDY - level / get_trace_scale(0));
   set_trace_refpos(2, NGRIDY - level / get_trace_scale(0));
   dirty = true;
 }
 
+//int GetRefpos(void) {
+//  return (NGRIDY - get_trace_refpos(2)) * get_trace_scale(2);
+//}
+
 void SetScale(int s) {
+  setting_scale = s;
   set_trace_scale(0, s);
   set_trace_scale(1, s);
   set_trace_scale(2, s);
 }
 
+//int GetScale(void) {
+//  return get_trace_refpos(2);
+//}
 void SetMode(int m)
 {
   if (setting_mode == m)
@@ -878,9 +893,10 @@ static bool sweep(bool break_on_operation)
         temppeakLevel = actual_t[i];
       }
     }
+#endif
     if (temp_min_level > actual_t[i])
       temp_min_level = actual_t[i];
-#endif
+
   }
   //  if (setting_spur == 1) {
   //    setting_spur = -1;
@@ -892,13 +908,28 @@ static bool sweep(bool break_on_operation)
     scandirty = false;
     draw_cal_status();
   }
-  if (setting_mode == M_LOW && setting_auto_attenuation ) {
+  if (setting_mode == M_LOW && setting_auto_attenuation && max_index[0] > 0) {
     if (actual_t[max_index[0]] - setting_attenuate < -30 && setting_attenuate >= 10) {
-      setting_attenuate -= 10;
+      setting_attenuate -= setting_scale;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
     } else if (actual_t[max_index[0]] - setting_attenuate > -20 && setting_attenuate <= 20) {
-      setting_attenuate += 10;
+      setting_attenuate += setting_scale;
+      redraw_request |= REDRAW_CAL_STATUS;
+      dirty = true;                               // Must be  above if(scandirty!!!!!)
+    }
+  }
+  if (MODE_INPUT(setting_mode) && setting_auto_reflevel && max_index[0] > 0) {
+    if (actual_t[max_index[0]] > setting_reflevel - setting_scale/2) {
+      SetReflevel(setting_reflevel + setting_scale);
+      redraw_request |= REDRAW_CAL_STATUS;
+      dirty = true;                               // Must be  above if(scandirty!!!!!)
+    } else if (temp_min_level < setting_reflevel - 9 * setting_scale && actual_t[max_index[0]] < setting_reflevel -  setting_scale * 3 / 2) {
+      SetReflevel(setting_reflevel - setting_scale);
+      redraw_request |= REDRAW_CAL_STATUS;
+      dirty = true;                               // Must be  above if(scandirty!!!!!)
+    } else if (temp_min_level > setting_reflevel - 9 * setting_scale + setting_scale * 3 / 2) {
+      SetReflevel(setting_reflevel + setting_scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
@@ -951,15 +982,15 @@ static bool sweep(bool break_on_operation)
 #endif
     min_level = temp_min_level;
 #if 0                           // Auto ref level setting
-    int scale = get_trace_scale(2);
-    int rp = (NGRIDY - get_trace_refpos(2)) * scale;
+    int scale = setting_scale;
+    int rp = GetRepos();
     if (scale > 0 && peakLevel > rp && peakLevel - min_level < 8 * scale ) {
-      SetRefpos((((int)(peakLevel/scale)) + 1) * scale);
+      SetReflevel((((int)(peakLevel/scale)) + 1) * scale);
     }
     if (scale > 0 && min_level < rp - 9*scale && peakLevel - min_level < 8 * scale ) {
       int new_rp = (((int)((min_level + 9*scale)/scale)) - 1) * scale;
       if (new_rp < rp)
-        SetRefpos(new_rp);
+        SetReflevel(new_rp);
     }
 
 #endif
@@ -994,7 +1025,7 @@ void draw_cal_status(void)
 
   ili9341_set_background(DEFAULT_BG_COLOR);
 
-  int yMax = (NGRIDY - get_trace_refpos(0)) * get_trace_scale(0);
+  int yMax = setting_reflevel;
   plot_printf(buf, BLEN, "%ddB", yMax);
   buf[5]=0;
   if (level_is_calibrated())
@@ -1005,7 +1036,7 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
   y += YSTEP*2;
-  plot_printf(buf, BLEN, "%ddB/",(int)get_trace_scale(0));
+  plot_printf(buf, BLEN, "%ddB/",(int)setting_scale);
   ili9341_drawstring(buf, x, y);
 
   if (setting_attenuate) {
@@ -1101,7 +1132,7 @@ void draw_cal_status(void)
 
 
   y = HEIGHT-7 + OFFSETY;
-  plot_printf(buf, BLEN, "%ddB", (int)(yMax - get_trace_scale(0) * NGRIDY));
+  plot_printf(buf, BLEN, "%ddB", (int)(yMax - setting_scale * NGRIDY));
   buf[5]=0;
   if (level_is_calibrated())
     color = DEFAULT_FG_COLOR;
@@ -1407,7 +1438,7 @@ common_silent:
     goto common;
   }
   trace[TRACE_STORED].enabled = true;
-  SetRefpos(test_case[i].pass+10);
+  SetReflevel(test_case[i].pass+10);
   set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
   set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
   draw_cal_status();
