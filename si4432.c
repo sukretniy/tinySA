@@ -239,7 +239,7 @@ void SI4432_Set_Frequency ( long Freq ) {
   int N = Freq / 10000000;
   Carrier = ( 4 * ( Freq - N * 10000000 )) / 625;
   int Freq_Band = ( N - 24 ) | ( hbsel << 5 ) | ( sbsel << 6 );
-#if 1
+#if 0
   SI4432_Write_Byte ( 0x75, Freq_Band );
   SI4432_Write_Byte ( 0x76, (Carrier>>8) & 0xFF );
   SI4432_Write_Byte ( 0x77, Carrier & 0xFF  );
@@ -282,19 +282,28 @@ void SI4432_Sub_Init(void)
 {
   SI4432_Reset();
 
-#if 1           // Not sure if these add any value
+
+  SI4432_Write_Byte(0x69, 0x60); //AGC override according to WBS3
+
+
+#if 0           // Not sure if these add any value
   //set VCO and PLL Only for SI4432 V2
   SI4432_Write_Byte(0x72, 0x1F); //write 0x1F to the Frequency Deviation register
+  // VCO tuning registers
   SI4432_Write_Byte(0x5A, 0x7F); //write 0x7F to the VCO Current Trimming register
   SI4432_Write_Byte(0x58, 0x80); //write 0xD7 to the ChargepumpCurrentTrimmingOverride register
   SI4432_Write_Byte(0x59, 0x40); //write 0x40 to the Divider Current Trimming register
 #endif
-
-  //set the AGC
+#if 0
+  //set the AGC,  BAD FOR PERFORMANCE!!!!!!
   SI4432_Write_Byte(0x6A, 0x0B); //write 0x0B to the AGC Override 2 register
-  //set ADC reference voltage to 0.9V
+  //set ADC reference voltage to 0.9V,  BAD FOR PERFORMANCE!!!!!!
   SI4432_Write_Byte(0x68, 0x04); //write 0x04 to the Deltasigma ADC Tuning 2 register
+
   SI4432_Write_Byte(0x1F, 0x03); //write 0x03 to the Clock Recovery Gearshift Override register
+
+#endif
+
 
   SI4432_Write_Byte(0x05, 0x0);
   SI4432_Write_Byte(0x06, 0x0);
