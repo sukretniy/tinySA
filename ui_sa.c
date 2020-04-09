@@ -13,6 +13,9 @@ void set_refer_output(int);
 int get_refer_output(void);
 void SetAttenuation(int);
 int GetAttenuation(void);
+void set_auto_attenuation(void);
+void set_auto_reflevel(void);
+
 void SetPowerLevel(int);
 void SetGenerate(int);
 void SetRBW(int);
@@ -31,7 +34,7 @@ void  SetSubtractStorage(void);
 void toggle_waterfall(void);
 void SetMode(int);
 int GetMode(void);
-void SetRefpos(int);
+void SetReflevel(int);
 void SetScale(int);
 void AllDirty(void);
 void MenuDirty(void);
@@ -48,6 +51,10 @@ extern int setting_lna;
 extern int setting_agc;
 extern int setting_decay;
 extern int setting_noise;
+extern int setting_auto_reflevel;
+extern int setting_auto_attenuation;
+extern int setting_reflevel;
+extern int setting_scale;
 void SetModulation(int);
 extern int setting_modulation;
 void set_measurement(int);
@@ -387,6 +394,24 @@ static void menu_measure_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
+static void menu_atten_cb(int item, uint8_t data)
+{
+  (void)item;
+  (void)data;
+  set_auto_attenuation();
+  menu_move_back();
+  ui_mode_normal();
+}
+
+static void menu_reflevel_cb(int item, uint8_t data)
+{
+  (void)item;
+  (void)data;
+  set_auto_reflevel();
+  menu_move_back();
+  ui_mode_normal();
+}
+
 static void menu_storage_cb(int item, uint8_t data)
 {
   (void)item;
@@ -528,10 +553,10 @@ const char *menu_drive_text[]={"-30dBm","-27dBm","-24dBm","-21dBm","-18dBm","-15
 // ===[MENU DEFINITION]=========================================================
 
 static const menuitem_t menu_drive[] = {
-  { MT_CALLBACK, 7, " 20dBm",   menu_drive_cb},
-  { MT_CALLBACK, 6, " 16dBm",   menu_drive_cb},
-  { MT_CALLBACK, 5, " 12dBm",   menu_drive_cb},
-  { MT_CALLBACK, 4, "  8dBm",   menu_drive_cb},
+  { MT_CALLBACK, 15, " 20dBm",   menu_drive_cb},
+  { MT_CALLBACK, 14, " 16dBm",   menu_drive_cb},
+  { MT_CALLBACK, 13, " 12dBm",   menu_drive_cb},
+  { MT_CALLBACK, 12, "  8dBm",   menu_drive_cb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -609,16 +634,6 @@ static const menuitem_t  menu_average[] = {
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
-#if 0
-static const menuitem_t menu_storage[] = {
-  { MT_CALLBACK, 0, "STORE",    menu_storage_cb},
-  { MT_CALLBACK, 1, "CLEAR",    menu_storage_cb},
-  { MT_CALLBACK, 2, "SUBTRACT", menu_storage_cb},
-  { MT_CALLBACK, 3, "WATERFALL",menu_storage_cb},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,      0, NULL, NULL } // sentinel
-};
-#endif
 
 static const menuitem_t menu_rbw[] = {
   { MT_CALLBACK, 0, "  AUTO",   menu_rbw_cb},
@@ -650,6 +665,7 @@ static const menuitem_t menu_reffer2[] = {
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+
 static const menuitem_t menu_reffer[] = {
   { MT_FORM | MT_CALLBACK, 0, "OFF"  ,   menu_reffer_cb},
   { MT_FORM | MT_CALLBACK, 1, "30MHz",   menu_reffer_cb},
@@ -661,57 +677,48 @@ static const menuitem_t menu_reffer[] = {
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_acquire[] = {
-  { MT_CALLBACK, 0, "AUTO",     menu_autosettings_cb},
-  { MT_KEYPAD, KM_ATTENUATION,  "ATTEN",         NULL},
-  { MT_SUBMENU,0,               "RBW",           menu_rbw},
-  { MT_SUBMENU,0,               "CALC",          menu_average},
+static const menuitem_t menu_atten[] = {
+  { MT_CALLBACK,0,               "AUTO",           menu_atten_cb},
+  { MT_KEYPAD, KM_ATTENUATION,  "MANUAL",         NULL},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_acquire[] = {
+  { MT_CALLBACK, 0, "RESET",            menu_autosettings_cb},
+  { MT_SUBMENU, 0,  "ATTEN",            menu_atten},
+  { MT_SUBMENU,0,   "RBW",              menu_rbw},
+  { MT_SUBMENU,0,   "AVER",             menu_average},
+  { MT_CANCEL, 0,   S_LARROW" BACK",    NULL },
+  { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_acquirehigh[] = {
-  { MT_CALLBACK, 0, "AUTO",     menu_autosettings_cb},
+  { MT_CALLBACK, 0, "RESET",     menu_autosettings_cb},
   { MT_SUBMENU,0,               "RBW",              menu_rbw},
-  { MT_SUBMENU,0,               "CALC",          menu_average},
+  { MT_SUBMENU,0,               "AVER",          menu_average},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_reflevel[] = {
+  { MT_CALLBACK,0,          "AUTO",    menu_reflevel_cb},
+  { MT_KEYPAD,  KM_REFPOS,  "MANUAL",     NULL},
+  { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 
 static const menuitem_t menu_display[] = {
-  { MT_KEYPAD, KM_REFPOS,       "\2REF\0LEVEL",     NULL},
-  { MT_SUBMENU,0,               "\2SCALE/\0DIV",    menu_dBper},
-  { MT_CALLBACK, 0, "STORE",    menu_storage_cb},
-  { MT_CALLBACK, 1, "CLEAR",    menu_storage_cb},
-  { MT_CALLBACK, 2, "SUBTRACT", menu_storage_cb},
-  { MT_CALLBACK, 3, "WATERFALL",menu_storage_cb},
-  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
+  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_dBper},
+  { MT_CALLBACK,0,          "STORE",        menu_storage_cb},
+  { MT_CALLBACK,1,          "CLEAR",        menu_storage_cb},
+  { MT_CALLBACK,2,          "SUBTRACT",     menu_storage_cb},
+  { MT_CALLBACK,3,          "WATERFALL",    menu_storage_cb},
+  { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
-
-#if 0
-static const menuitem_t menu_scale[] = {
-  { MT_KEYPAD, KM_REFPOS,       "\2REF\0LEVEL",     NULL},
-  { MT_SUBMENU,0,               "\2SCALE/\0DIV",    menu_dBper},
-  { MT_KEYPAD, KM_ATTENUATION,  "ATTEN",            NULL},
-  { MT_SUBMENU,0,               "AVERAGE",          menu_average},
-  { MT_KEYPAD, 0,               "\2SPUR\0REDUCT.",  menu_spur_cb},
-  { MT_SUBMENU,0,               "RBW",              menu_rbw},
-  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
-  { MT_NONE,   0, NULL, NULL } // sentinel
-};
-
-static const menuitem_t menu_scalehigh[] = {
-  { MT_KEYPAD, KM_REFPOS,   "\2REF\0LEVEL",  NULL},
-  { MT_SUBMENU,0,           "\2SCALE/\0DIV", menu_dBper},
-  { MT_SUBMENU,0,           "AVERAGE",       menu_average},
-  { MT_SUBMENU,0,           "RBW",           menu_rbw},
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE,   0, NULL, NULL } // sentinel
-};
-
-#endif
 
 static const menuitem_t menu_stimulus[8] = {
   { MT_KEYPAD,  KM_START,   "START",            NULL},
@@ -858,7 +865,7 @@ static const menuitem_t menu_mode[] = {
 #if 1
 const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "ACQUIRE",      menu_acquire},
-  { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
+  { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "MEASURE",      menu_measure},
@@ -871,7 +878,7 @@ const menuitem_t menu_top[] = {
 const menuitem_t menu_tophigh[] =
 {
  { MT_SUBMENU,  0, "ACQUIRE",      menu_acquirehigh},
- { MT_SUBMENU,  0, "SCAN",         menu_stimulus},
+ { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
  { MT_SUBMENU,  0, "DISPLAY",      menu_display},
  { MT_SUBMENU,  0, "MARKER",       menu_marker},
  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
@@ -1038,12 +1045,12 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_SCALE:
-    uistat.value = get_trace_scale(uistat.current_trace) * 1000;
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB/", uistat.value / 1000);
+    uistat.value = setting_scale;
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB/", uistat.value);
     break;
   case KM_REFPOS:
-    uistat.value = get_trace_refpos(uistat.current_trace) * 1000;
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value / 1000);
+    uistat.value = setting_reflevel;
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
     break;
   case KM_ATTENUATION:
     uistat.value = GetAttenuation();
@@ -1114,9 +1121,11 @@ set_numeric_value(void)
     set_trace_scale(2, uistat.value / 1000.0);
     break;
   case KM_REFPOS:
-    SetRefpos(uistat.value);
+    setting_auto_reflevel = false;
+    SetReflevel(uistat.value);
     break;
   case KM_ATTENUATION:
+    setting_auto_attenuation = false;
     SetAttenuation(uistat.value);
     break;
   case KM_ACTUALPOWER:

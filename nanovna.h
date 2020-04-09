@@ -637,7 +637,7 @@ int get_waterfall(void);
 void toggle_tracking(void);
 void calibrate(void);
 void reset_calibration(void);
-void SetRefpos(int);
+void SetReflevel(int);
 void SetScale(int);
 void SetRBW(int);
 void SetRX(int);
