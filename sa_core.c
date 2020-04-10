@@ -634,8 +634,9 @@ static const int spur_table[] =
  580000,
  961000,
  1600000,
- 1837000,
- 2755000,
+ 1837000,           // Real signal
+ 2755000,           // Real signal
+ 2760000,
  2961000,
  4933000,
  4960000,
@@ -664,7 +665,7 @@ static const int spur_table[] =
  7371
 
 
-/*
+
  870000,
    970000,
   1460000,
@@ -713,6 +714,23 @@ static const int spur_table[] =
  16820000,
 #endif
 };
+
+int binary_search(int f)
+{
+  int L = 0;
+  int R =  (sizeof spur_table)/sizeof(int);
+  while (L <= R) {
+    int m = (L + R) / 2;
+    if (spur_table[m] < f)
+      L = m + 1;
+    else if (spur_table[m] > f)
+      R = m - 1;
+    else
+       return m;
+  }
+  return 0;
+}
+
 
 int avoid_spur(int f)
 {

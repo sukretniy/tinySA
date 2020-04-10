@@ -218,9 +218,16 @@ float SI4432_force_RBW(int i)
 float SI4432_RBW_table(int i){
   if (i < 0)
     return 0;
-  if (i * 4 >= (sizeof RBW_choices) / 2 )
+  if (i * 4 >= (int)(sizeof RBW_choices) / 2 )
     return 0;
   return(RBW_choices[i*4-1]);
+}
+
+int setting_10mhz = 10000000;
+
+void set_10mhz(int f)
+{
+  setting_10mhz = f;
 }
 
 void SI4432_Set_Frequency ( long Freq ) {
@@ -233,8 +240,8 @@ void SI4432_Set_Frequency ( long Freq ) {
     hbsel = 0;
   }
   int sbsel = 1;
-  int N = Freq / 10000000;
-  Carrier = ( 4 * ( Freq - N * 10000000 )) / 625;
+  int N = Freq / setting_10mhz;
+  Carrier = ( 4 * ( Freq - N * setting_10mhz )) / 625;
   int Freq_Band = ( N - 24 ) | ( hbsel << 5 ) | ( sbsel << 6 );
 #if 0
   SI4432_Write_Byte ( 0x75, Freq_Band );

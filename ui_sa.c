@@ -55,6 +55,8 @@ extern int setting_auto_reflevel;
 extern int setting_auto_attenuation;
 extern int setting_reflevel;
 extern int setting_scale;
+extern int setting_10mhz;
+void set_10mhz(int);
 void SetModulation(int);
 extern int setting_modulation;
 void set_measurement(int);
@@ -65,7 +67,7 @@ extern int setting_step_delay;
 
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ
 };
 
 
@@ -173,6 +175,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_level,    // KM_LOWOUTLEVEL
   keypads_level,    // KM_DECAY
   keypads_level,    // KM_NOISE
+  keypads_level,    // KM_10MHz
 };
 
 #ifdef __VNA__
@@ -610,6 +613,7 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,  "LEVEL: %s",        NULL},
   { MT_FORM | MT_SUBMENU,  0,               "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,         "SPAN: %s",         NULL},
+  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
   { MT_FORM | MT_CANCEL,   0,           S_LARROW" BACK",    NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -787,6 +791,7 @@ static const menuitem_t menu_settings2[] =
   { MT_CALLBACK, 2, "BPF",              menu_settings2_cb},
   { MT_KEYPAD, KM_DECAY,                "\2HOLD\0TIME",   NULL},
   { MT_KEYPAD, KM_NOISE,                "\2NOISE\0LEVEL",   NULL},
+  { MT_KEYPAD, KM_10MHZ,                "\00210MHZ\0ACTUAL",   NULL},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1090,6 +1095,11 @@ static void fetch_numeric_target(void)
     uistat.value = setting_noise;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", uistat.value);
     break;
+  case KM_10MHZ:
+    uistat.value = setting_10mhz;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
+    break;
+
   }
   
   {
@@ -1156,6 +1166,13 @@ set_numeric_value(void)
     break;
   case KM_NOISE:
     set_noise(uistat.value);
+    break;
+  case KM_10MHZ:
+    if (uistat.value < 9000000) {
+      set_10mhz(setting_10mhz + uistat.value);
+    } else
+      set_10mhz(uistat.value);
+    dirty = true;
     break;
   }
 }
