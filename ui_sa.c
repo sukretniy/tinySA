@@ -731,6 +731,7 @@ static const menuitem_t menu_stimulus[8] = {
   { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
   { MT_KEYPAD,  KM_CW,      "CW FREQ",          NULL},
   { MT_CALLBACK,0,          "\2PAUSE\0SWEEP",   menu_pause_cb},
+  { MT_SUBMENU,0,               "RBW",              menu_rbw},
   { MT_CANCEL,  0,          S_LARROW" BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
 };

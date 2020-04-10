@@ -1497,7 +1497,7 @@ draw_menu_buttons(const menuitem_t *menu)
 {
   int i = 0;
   char text[30];
-  for (i = 0; i < 7; i++) {
+  for (i = 0; i < 8; i++) {
     const char *l1, *l2;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
@@ -1597,7 +1597,7 @@ menu_apply_touch(void)
   int i;
 
   touch_position(&touch_x, &touch_y);
-  for (i = 0; i < 7; i++) {
+  for (i = 0; i < 8; i++) {
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
     if (MT_MASK(menu[i].type == MT_BLANK) || MT_MASK(menu[i].type) == MT_TITLE)
@@ -1629,8 +1629,9 @@ draw_menu(void)
 static void
 erase_menu_buttons(void)
 {
-  ili9341_fill(area_width, 0, 320 - area_width, area_height, DEFAULT_BG_COLOR);
-//  ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*7, DEFAULT_BG_COLOR);
+//  ili9341_fill(area_width, 0, 320 - area_width, area_height, DEFAULT_BG_COLOR);
+  ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+  draw_frequencies();
 }
 
 static void
