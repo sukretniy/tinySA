@@ -632,17 +632,40 @@ static const unsigned int spur_alternate_IF =  434000000;
 static const int spur_table[] =
 {
  580000,
+ 961000,
  1600000,
- 1834000,
+ 1837000,           // Real signal
+ 2755000,           // Real signal
+ 2760000,
+ 2961000,
  4933000,
  4960000,
+ 6961000,
+ 6980000,
+ 8267000,
+ 8961000,
  10000000,
  10960000,
+ 11600000,
  16960000,
  22960000,
  28960000,
 
-/*
+ /*
+0.52
+6.96
+1.84
+2.77
+
+
+
+ 4934
+ 4960
+ 8928
+ 7371
+
+
+
  870000,
    970000,
   1460000,
@@ -692,6 +715,23 @@ static const int spur_table[] =
 #endif
 };
 
+int binary_search(int f)
+{
+  int L = 0;
+  int R =  (sizeof spur_table)/sizeof(int);
+  while (L <= R) {
+    int m = (L + R) / 2;
+    if (spur_table[m] < f)
+      L = m + 1;
+    else if (spur_table[m] > f)
+      R = m - 1;
+    else
+       return m;
+  }
+  return 0;
+}
+
+
 int avoid_spur(int f)
 {
   int window = ((int)actual_rbw ) * 1000*2;
@@ -699,8 +739,9 @@ int avoid_spur(int f)
 //    window = 50000;
   if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw > 300.0)
     return(false);
+  f = f + window/2;
   for (unsigned int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
-    if (f/window == spur_table[i]/window) {
+    if (f/window == (spur_table[i] + window/2)/window) {
 //      spur_old_stepdelay = actualStepDelay;
 //      actualStepDelay += 4000;
       return true;
@@ -757,7 +798,8 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   float RSSI = -150.0;
   int t = 0;
   do {
-    int lf = (uint32_t)(f + (int)(t * 500 * actual_rbw));
+    int lf = (uint32_t)(f + (int)((t * 500  - vbwSteps * 250)  * actual_rbw));
+    if (lf < 0) lf = 0;
     if (setting_mode == M_LOW && tracking) {
       setFreq (0, frequency_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
       local_IF = frequency_IF ;
