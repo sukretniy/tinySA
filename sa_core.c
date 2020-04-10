@@ -1,4 +1,3 @@
-
 #include "SI4432.h"		// comment out for simulation
 
 int setting_mode = -1;      // To force initialzation
@@ -717,7 +716,6 @@ char age[POINTS_COUNT];
 
 float perform(bool break_on_operation, int i, int32_t f, int tracking)
 {
-  int was_avoiding_spur = false;
   //  long local_IF = (MODE_LOW(setting_mode)?frequency_IF + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw :0):0);
   long local_IF;
   if (MODE_HIGH(setting_mode))
@@ -765,7 +763,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
       setFreq (0, frequency_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
       local_IF = frequency_IF ;
     } else if (MODE_LOW(setting_mode)) {
-      if (setting_mode == M_LOW && avoid_spur(f)) {
+      if (setting_mode == M_LOW && !in_selftest && avoid_spur(f)) {
         local_IF = spur_alternate_IF;
       } else
         local_IF = frequency_IF ;
@@ -1041,29 +1039,31 @@ void draw_cal_status(void)
   buf[5]=0;
   if (level_is_calibrated()) {
     if (setting_auto_reflevel)
-      color = BRIGHT_COLOR_GREEN;
-    else
       color = DEFAULT_FG_COLOR;
+    else
+      color = BRIGHT_COLOR_GREEN;
   }
   else
     color = BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
   ili9341_drawstring(buf, x, y);
 
+  color = DEFAULT_FG_COLOR;
+  ili9341_set_foreground(color);
   y += YSTEP*2;
   plot_printf(buf, BLEN, "%ddB/",(int)setting_scale);
   ili9341_drawstring(buf, x, y);
 
   if (setting_auto_attenuation)
-    color = BRIGHT_COLOR_GREEN;
-  else
     color = DEFAULT_FG_COLOR;
+  else
+    color = BRIGHT_COLOR_GREEN;
   ili9341_set_foreground(color);
   y += YSTEP*2;
   ili9341_drawstring("Attn:", x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "-%ddB", setting_attenuate);
+  plot_printf(buf, BLEN, "%ddB", -setting_attenuate);
   buf[5]=0;
   ili9341_drawstring(buf, x, y);
 
@@ -1113,7 +1113,13 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
   if (dirty)
-    ili9341_set_foreground(BRIGHT_COLOR_RED);
+    color = BRIGHT_COLOR_RED;
+  else if (setting_step_delay)
+    color = BRIGHT_COLOR_GREEN;
+  else
+    color = DEFAULT_FG_COLOR;
+
+    ili9341_set_foreground(color);
 
   y += YSTEP*2;
   ili9341_drawstring("Scan:", x, y);
@@ -1153,9 +1159,9 @@ void draw_cal_status(void)
   buf[5]=0;
   if (level_is_calibrated())
     if (setting_auto_reflevel)
-      color = BRIGHT_COLOR_GREEN;
-    else
       color = DEFAULT_FG_COLOR;
+    else
+      color = BRIGHT_COLOR_GREEN;
   else
     color = BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
@@ -1468,9 +1474,70 @@ common_silent:
 extern void menu_autosettings_cb(int item);
 extern float SI4432_force_RBW(int i);
 
+int last_spur = 0;
+int add_spur(int f)
+{
+  for (int i = 0; i < last_spur; i++) {
+    if (temp_t[i] == f) {
+      stored_t[i] += 1;
+      return stored_t[i];
+    }
+  }
+  if (last_spur < 290) {
+    temp_t[last_spur] = f;
+    stored_t[last_spur++] = 1;
+  }
+  return 1;
+}
+
 void self_test(void)
 {
-#if 0                 // RAttenuator test
+#if 1
+  in_selftest = true;
+  reset_settings(M_LOW);
+  test_prepare(4);
+  int f;           // Start search at 400kHz
+//  int i = 0;                     // Index in spur table (temp_t)
+  float p2, p1, p;
+
+#define FREQ_STEP   3000
+
+  SetRBW(FREQ_STEP/1000);
+  last_spur = 0;
+  for (int j = 0; j < 10; j++) {
+
+    p2 = perform(false, 0, f, false);
+    vbwSteps = 1;
+    f += FREQ_STEP;
+    p1 = perform(false, 1, f, false);
+    f += FREQ_STEP;
+    shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d\n\r", p2, p1, frequency_IF);
+
+    f = 400000;
+    while (f < 100000000) {
+      p = perform(false, 1, f, false);
+#define SPUR_DELTA  6
+      if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
+//        temp_t[i++] = f - FREQ_STEP;
+        shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - FREQ_STEP)/1000, add_spur(f - FREQ_STEP));
+      }
+      //    else
+      //      shell_printf("%f at %d\n\r", p1,f - FREQ_STEP);
+      p2 = p1;
+      p1 = p;
+      f += FREQ_STEP;
+    }
+  }
+  shell_printf("\n\rTable for IF at %d\n\r", frequency_IF);
+  for (int j = 0; j < last_spur; j++) {
+    if ((int)stored_t[j] > 1)
+      shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
+  }
+  while(1) ;
+  return;
+
+
+#elif 0                 // RAttenuator test
   int local_test_status;
   in_selftest = true;
   reset_settings(M_LOW);
@@ -1484,9 +1551,8 @@ void self_test(void)
     shell_printf("Target %d, actual %f\n\r",j, peakLevel);
   }
   return;
-#else
-
-#if 0                   // RBW step time search
+#elif 0
+                  // RBW step time search
   int local_test_status;
   in_selftest = true;
   reset_settings(M_LOW);
@@ -1551,7 +1617,6 @@ void self_test(void)
   set_refer_output(0);
   reset_settings(M_LOW);
   in_selftest = false;
-#endif
 #endif
 }
 
