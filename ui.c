@@ -720,11 +720,12 @@ get_marker_frequency(int marker)
 static void
 menu_marker_op_cb(int item, uint8_t data)
 {
+  (void)item;
   uint32_t freq = get_marker_frequency(active_marker);
   if (freq == 0)
     return; // no active marker
 
-  switch (item) {
+  switch (data) {
   case 0: /* MARKER->START */
   case 1: /* MARKER->STOP */
   case 2: /* MARKER->CENTER */

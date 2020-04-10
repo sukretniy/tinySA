@@ -129,9 +129,13 @@ static THD_FUNCTION(Thread1, arg)
         completed = sweep(true);
       sweep_mode&=~SWEEP_ONCE;
     } else if (sweep_mode & SWEEP_SELFTEST) {
-      self_test();                                  // call from lowest level to save stack space
+      // call from lowest level to save stack space
+      self_test();
+      sweep_mode = SWEEP_ENABLE;
     } else if (sweep_mode & SWEEP_CALIBRATE) {
-      calibrate();                                  // call from lowest level to save stack space
+      // call from lowest level to save stack space
+      calibrate();
+      sweep_mode = SWEEP_ENABLE;
     } else {
       __WFI();
     }
@@ -166,6 +170,12 @@ static THD_FUNCTION(Thread1, arg)
     draw_all(completed);  // flush markmap only if scan completed to prevent
                           // remaining traces
   }
+}
+
+int
+is_paused(void)
+{
+  return !(sweep_mode & SWEEP_ENABLE);
 }
 
 static inline void
