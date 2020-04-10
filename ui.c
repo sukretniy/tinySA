@@ -764,6 +764,7 @@ menu_marker_op_cb(int item, uint8_t data)
     break;
 #endif
   }
+  menu_move_back();
   ui_mode_normal();
   draw_cal_status();
   //redraw_all();
