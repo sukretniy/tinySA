@@ -1491,7 +1491,7 @@ int add_spur(int f)
 
 void self_test(void)
 {
-#if 1
+#if 0
   in_selftest = true;
   reset_settings(M_LOW);
   test_prepare(4);
