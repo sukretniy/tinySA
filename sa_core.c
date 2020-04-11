@@ -1238,8 +1238,8 @@ static const struct {
   float stop;
 } test_case [TEST_COUNT] =
 {// Condition   Preparation     Center  Span    Pass Width  Stop
- {TC_BELOW,     TP_SILENT,      0.001,  0.0005,  -10,0,     0},         // 1 Zero Hz leakage
- {TC_BELOW,     TP_SILENT,      0.01,  0.01,  -40,   0,     0},         // 2 Phase noise of zero Hz
+ {TC_BELOW,     TP_SILENT,      0.005,  0.01,  -10,0,     0},         // 1 Zero Hz leakage
+ {TC_BELOW,     TP_SILENT,      0.01,   0.01,  -40,   0,     0},         // 2 Phase noise of zero Hz
  {TC_SIGNAL,    TP_10MHZ,       20,     7,      -40, 30,    -90 },      // 3
  {TC_SIGNAL,    TP_10MHZ,       30,     7,      -30, 30,    -90 },      // 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75, 0,     0},         // 5  Wide band noise floor low mode
@@ -1280,11 +1280,11 @@ static void test_acquire(int i)
   else
     setting_mode = M_HIGH;
 #endif
-  SetAverage(4);
+//  SetAverage(4);
   sweep(false);
-  sweep(false);
-  sweep(false);
-  sweep(false);
+//  sweep(false);
+//  sweep(false);
+//  sweep(false);
   plot_into_index(measured);
   redraw_request |= REDRAW_CELLS | REDRAW_FREQUENCY;
 }
@@ -1463,7 +1463,8 @@ int test_validate(int i)
 
   if (current_test_status != TS_PASS || test_case[i+1].kind == TC_END)
     test_wait = true;
-//  draw_frequencies();
+  test_status[i] = current_test_status;     // Must be set before draw_all() !!!!!!!!
+  //  draw_frequencies();
 //  draw_cal_status();
   draw_all(TRUE);
   resume_sweep();
@@ -1654,8 +1655,8 @@ void self_test(void)
     i++;
   }
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Self test complete", 30, 120);
-  ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
+  ili9341_drawstring_7x13("Self test complete", 50, 200);
+  ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
   wait_user();
   ili9341_clear_screen();
 

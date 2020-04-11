@@ -1554,6 +1554,9 @@ draw_menu_buttons(const menuitem_t *menu)
     if (menu[i].type & MT_FORM) {
       ili9341_fill(active_button_start+2, y+2, active_button_width-4, FONT_GET_HEIGHT*2+8, bg);
       ili9341_drawstring_size(text, active_button_start+6, y+6, 2);
+//      blit16BitWidthBitmap(240,y+6,16,16,&icons[3*16]);
+//      blit16BitWidthBitmap(256,y+6,16,16,&icons[0]);
+
     } else {
     if (menu_is_multiline(menu[i].label, &l1, &l2)) {
 #define BIG_BUTTON_FONT 1

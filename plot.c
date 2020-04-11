@@ -1558,7 +1558,10 @@ void
 request_to_draw_cells_behind_menu(void)
 {
   // Values Hardcoded from ui.c
-  invalidate_rect(320-70, 0, 319, 239);
+  if (current_menu_is_form())
+    invalidate_rect(25, 0, 319, 239);
+  else
+    invalidate_rect(320-60, 0, 319, 239);
   redraw_request |= REDRAW_CELLS;
 }
 
@@ -1843,8 +1846,8 @@ static void cell_draw_marker_info(int x0, int y0)
     if (i >= 2 && in_selftest) {
       plot_printf(buf, sizeof buf, "DO NOT SWITCH OFF!!");
       j = 2;
-      int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
-      int ypos = 1 + (j/2)*(16) - y0;
+      int xpos = 1 + CELLOFFSETX +25 - x0;
+      int ypos = 1 + 16 - y0;
 
       cell_drawstring_7x13(buf, xpos, ypos);
       break;
