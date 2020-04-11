@@ -718,17 +718,19 @@ static const int spur_table[] =
 int binary_search(int f)
 {
   int L = 0;
-  int R =  (sizeof spur_table)/sizeof(int);
+  int R =  (sizeof spur_table)/sizeof(int) - 1;
+  int fmin =  f - ((int)actual_rbw ) * 1000;
+  int fplus = f + ((int)actual_rbw ) * 1000;
   while (L <= R) {
     int m = (L + R) / 2;
-    if (spur_table[m] < f)
+    if (spur_table[m] < fmin)
       L = m + 1;
-    else if (spur_table[m] > f)
+    else if (spur_table[m] > fplus)
       R = m - 1;
     else
-       return m;
+       return true; // index is m
   }
-  return 0;
+  return false;
 }
 
 
@@ -739,15 +741,19 @@ int avoid_spur(int f)
 //    window = 50000;
   if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw > 300.0)
     return(false);
+  return binary_search(f);
+#if 0
   f = f + window/2;
   for (unsigned int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
     if (f/window == (spur_table[i] + window/2)/window) {
 //      spur_old_stepdelay = actualStepDelay;
 //      actualStepDelay += 4000;
+      binary_search(f);
       return true;
     }
   }
   return false;
+#endif
 }
 
 static int modulation_counter = 0;

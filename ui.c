@@ -842,7 +842,7 @@ menu_marker_sel_cb(int item, uint8_t data)
         active_marker_select(item);
       }
     } else {
-      markers[item].enabled = M_TRACKING_ENABLED; // default tracking enabled
+      markers[item].enabled = M_ENABLED; // default tracking enabled
       active_marker_select(item);
     }
     if (markers[item].enabled)

@@ -1,4 +1,3 @@
-
 void markmap_all_markers(void);
 static void menu_marker_type_cb(int item, uint8_t data);
 
@@ -895,6 +894,7 @@ const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "LEVEL",        menu_level},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
   { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
   { MT_CANCEL,   0, S_LARROW" MODE",NULL},
   { MT_NONE,     0, NULL, NULL } // sentinel,
@@ -907,6 +907,7 @@ const menuitem_t menu_tophigh[] = {
   { MT_SUBMENU,  0, "LEVEL",        menu_levelhigh},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
   { MT_SUBMENU,  0, "SETTINGS",     menu_settingshigh},
   { MT_CANCEL,   0, S_LARROW" MODE",NULL},
   { MT_NONE,     0, NULL, NULL } // sentinel,
