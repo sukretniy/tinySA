@@ -1429,7 +1429,9 @@ draw_cell(int m, int n)
   if (n == 0)
     cell_draw_marker_info(x0, y0);
 #endif
+#ifdef __SELFTEST__
   cell_draw_test_info(x0, y0);
+#endif
   //  PULSE;
 // Draw reference position (<10 system ticks for all screen calls)
   for (t = 0; t < TRACES_MAX; t++) {

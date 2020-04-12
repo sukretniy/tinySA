@@ -65,6 +65,7 @@ extern int setting_step_delay;
 void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
                                  const uint16_t *bitmap);
 
+
 const uint16_t left_icons [] =
 {
 #define I_EMPTY 0*16
@@ -333,7 +334,6 @@ const uint16_t right_icons [] =
         0b0000000000000000,
 };
 
-
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ
@@ -454,7 +454,8 @@ static const char * const keypad_mode_label[] = {
 #endif
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
-  "error", "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL"
+  "error", "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", // 0-7
+  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", "OFFSET" // 8-16
 };
 #endif
 
@@ -630,6 +631,7 @@ static void menu_measure_cb(int item, uint8_t data)
 {
   (void)item;
   menu_move_back();
+#ifdef __MEASURE__
   switch(data) {
     case M_OFF:                                     // Off
       reset_settings(GetMode());
@@ -682,6 +684,7 @@ static void menu_measure_cb(int item, uint8_t data)
 
       break;
   }
+#endif
 //  selection = -1;
   ui_mode_normal();
 //  draw_cal_status();

@@ -1567,10 +1567,12 @@ draw_menu_buttons(const menuitem_t *menu)
     if (menu[i].type & MT_FORM) {
       ili9341_fill(active_button_start+2, y+2, active_button_width-4, FONT_GET_HEIGHT*2+8, bg);
       ili9341_drawstring_size(text, active_button_start+6, y+6, 2);
+#ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
         blit16BitWidthBitmap(240,y+6,16,16,&left_icons[((menu[i].data >>4)&0xf)*16]);
         blit16BitWidthBitmap(256,y+6,16,16,&right_icons[((menu[i].data >>0)&0xf)*16]);
       }
+#endif
     } else {
       if (menu_is_multiline(menu[i].label, &l1, &l2)) {
 #define BIG_BUTTON_FONT 1
@@ -1841,11 +1843,15 @@ lever_move_marker(int status)
     if (active_marker >= 0 && markers[active_marker].enabled) {
       if ((status & EVT_DOWN) && markers[active_marker].index > 0) {
         markers[active_marker].index -= step;
+        if (markers[active_marker].index < 5)
+          markers[active_marker].index = 5 ;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
       }
       if ((status & EVT_UP) && markers[active_marker].index < sweep_points-1) {
         markers[active_marker].index += step;
+        if (markers[active_marker].index  > POINTS_COUNT-5)
+          markers[active_marker].index = POINTS_COUNT-5 ;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
       }
