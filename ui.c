@@ -29,6 +29,7 @@ uistat_t uistat = {
  current_trace: 0,
  lever_mode: LM_MARKER,
  marker_delta: FALSE,
+ marker_noise: FALSE,
  marker_tracking : FALSE,
  text : "",
 };
@@ -441,6 +442,7 @@ enum {
 #define MT_FORM     0x80        // Or with menu type to get large button with current value
 #define MT_BACK     0x40
 #define MT_LEAVE    0x20
+#define MT_ICON     0x10
 #define MT_MASK(x) (0xF & (x))
 
 typedef void (*menuaction_cb_t)(int item, uint8_t data);
@@ -791,7 +793,7 @@ menu_marker_search_cb(int item, uint8_t data)
     i = marker_search_right(markers[active_marker].index);
     break;
   case 4: /* tracking */
-    uistat.marker_tracking = !uistat.marker_tracking;
+    markers[active_marker].mtype ^= M_TRACKING;
     break;
   }
   if (i != -1)
@@ -831,7 +833,7 @@ static void
 menu_marker_sel_cb(int item, uint8_t data)
 {
   (void)data;
-  int t;
+//  int t;
   if (item >= 0 && item < MARKERS_MAX) {
     if (markers[item].enabled) {
       if (item == active_marker) {
@@ -842,19 +844,30 @@ menu_marker_sel_cb(int item, uint8_t data)
         active_marker_select(item);
       }
     } else {
-      markers[item].enabled = M_ENABLED; // default tracking enabled
+      markers[item].enabled = M_ENABLED;
       active_marker_select(item);
+      markers[item].mtype = M_NORMAL;
+      markers[item].mtype |= (uistat.marker_delta ? M_DELTA : 0);
+      markers[item].mtype |= (uistat.marker_noise ? M_NOISE : 0);
+      markers[item].mtype |= (uistat.marker_tracking ? M_TRACKING : 0);
     }
-    if (markers[item].enabled)
-      menu_push_submenu(menu_marker_type);
-
+ //   if (markers[item].enabled)
+ //     menu_push_submenu(menu_marker_type);
+#if 0
   } else if (item == 4) { /* all off */
       for (t = 0; t < MARKERS_MAX; t++)
         markers[t].enabled = M_DISABLED;
       previous_marker = -1;
       active_marker = -1;      
-  } else if (item == 5) { /* marker delta */
+#endif
+  } else if (item == 4) { /* marker delta */
     uistat.marker_delta = !uistat.marker_delta;
+  } else if (item == 5) { /* marker noise */
+    uistat.marker_noise = !uistat.marker_noise;
+    // if (uistat.marker_noise) uistat.marker_delta = true;     //Default behavior
+  } else if (item == 6) { /* marker tracking */
+    uistat.marker_tracking = !uistat.marker_tracking;
+    // if (uistat.marker_tracking) uistat.marker_noise = false; //Default behavior
   }
   redraw_marker(active_marker);
   draw_menu();
@@ -1554,32 +1567,33 @@ draw_menu_buttons(const menuitem_t *menu)
     if (menu[i].type & MT_FORM) {
       ili9341_fill(active_button_start+2, y+2, active_button_width-4, FONT_GET_HEIGHT*2+8, bg);
       ili9341_drawstring_size(text, active_button_start+6, y+6, 2);
-//      blit16BitWidthBitmap(240,y+6,16,16,&icons[3*16]);
-//      blit16BitWidthBitmap(256,y+6,16,16,&icons[0]);
-
+      if (menu[i].type & MT_ICON) {
+        blit16BitWidthBitmap(240,y+6,16,16,&left_icons[((menu[i].data >>4)&0xf)*16]);
+        blit16BitWidthBitmap(256,y+6,16,16,&right_icons[((menu[i].data >>0)&0xf)*16]);
+      }
     } else {
-    if (menu_is_multiline(menu[i].label, &l1, &l2)) {
+      if (menu_is_multiline(menu[i].label, &l1, &l2)) {
 #define BIG_BUTTON_FONT 1
 #ifdef BIG_BUTTON_FONT
 #undef FONT_HEIGHT
 #define FONT_HEIGHT 13
-      ili9341_fill(active_button_start+1, y+1, active_button_width-2, 13+13 -2, bg);
-      ili9341_drawstring_7x13(l1, active_button_start+2, y+1);
-      ili9341_drawstring_7x13(l2, active_button_start+2, y+1+13-1);
+        ili9341_fill(active_button_start+1, y+1, active_button_width-2, 13+13 -2, bg);
+        ili9341_drawstring_7x13(l1, active_button_start+2, y+1);
+        ili9341_drawstring_7x13(l2, active_button_start+2, y+1+13-1);
 #else
-      ili9341_fill(active_button_start+3, y+5, active_button_width-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
-      ili9341_drawstring(l1, active_button_start+5, y+7);
-      ili9341_drawstring(l2, active_button_start+5, y+7+FONT_GET_HEIGHT+1);
+        ili9341_fill(active_button_start+3, y+5, active_button_width-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
+        ili9341_drawstring(l1, active_button_start+5, y+7);
+        ili9341_drawstring(l2, active_button_start+5, y+7+FONT_GET_HEIGHT+1);
 #endif
-    } else {
+      } else {
 #ifdef BIG_BUTTON_FONT
-      ili9341_fill(active_button_start+1, y+1, active_button_width-2, 13+13 -2, bg);
-      ili9341_drawstring_7x13(menu[i].label, active_button_start+2, y+6);
+        ili9341_fill(active_button_start+1, y+1, active_button_width-2, 13+13 -2, bg);
+        ili9341_drawstring_7x13(menu[i].label, active_button_start+2, y+6);
 #else
-      ili9341_fill(active_button_start+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT+2, bg);
-      ili9341_drawstring(menu[i].label, active_button_start+5, y+10);
+        ili9341_fill(active_button_start+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT+2, bg);
+        ili9341_drawstring(menu[i].label, active_button_start+5, y+10);
 #endif
-    }
+      }
     }
   }
 }
@@ -1799,7 +1813,7 @@ ui_mode_keypad(int _keypad_mode)
   ui_mode = UI_KEYPAD;
   area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   area_height = HEIGHT - 32;
-  if (!menu_is_form(menu_stack[menu_current_level]))
+  if (!current_menu_is_form())
     draw_menu();
   draw_keypad();
   draw_numeric_area_frame();
@@ -1821,17 +1835,24 @@ ui_mode_normal(void)
 static void
 lever_move_marker(int status)
 {
+  int step = 1;
+  int count = 0;
   do {
     if (active_marker >= 0 && markers[active_marker].enabled) {
       if ((status & EVT_DOWN) && markers[active_marker].index > 0) {
-        markers[active_marker].index--;
+        markers[active_marker].index -= step;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
       }
       if ((status & EVT_UP) && markers[active_marker].index < sweep_points-1) {
-        markers[active_marker].index++;
+        markers[active_marker].index += step;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
+      }
+      count++;
+      if (count > 10) {
+        step *= 2;
+        count = 0;
       }
     }
     status = btn_wait_release();
@@ -2227,7 +2248,7 @@ ui_process_keypad(void)
   }
 
   redraw_frame();
-  if (menu_is_form(menu_stack[menu_current_level])) {
+  if (current_menu_is_form()) {
     ui_mode_menu(); //Reactivate menu after keypad
     selection = -1;
     ensure_selection();
@@ -2342,6 +2363,41 @@ touch_lever_mode_select(void)
   return FALSE;
 }
 
+static int
+touch_marker_select(void)
+{
+  int selected_marker = 0;
+  int touch_x, touch_y;
+  touch_position(&touch_x, &touch_y);
+  if (current_menu_is_form() || touch_x > 320-MENU_BUTTON_WIDTH || touch_x < 25 || touch_y > 30)
+    return FALSE;
+  if (touch_y > 15)
+    selected_marker = 2;
+  selected_marker += (touch_x >150 ? 1 : 0);
+  for (int i = 0; i < MARKERS_MAX; i++) {
+    if (markers[i].enabled) {
+      if (selected_marker == 0) {
+        active_marker = i;
+        break;
+      }
+      selected_marker --;
+    }
+  }
+  if (touch_y < 25) {
+#ifdef __VNA__
+    if (touch_x < FREQUENCIES_XPOS2 && get_electrical_delay() != 0.0) {
+      select_lever_mode(LM_EDELAY);
+    } else {
+#endif
+      select_lever_mode(LM_MARKER);
+#ifdef __VNA__
+      }
+#endif
+    return TRUE;
+  }
+  return FALSE;
+}
+
 static
 void ui_process_touch(void)
 {
@@ -2355,11 +2411,14 @@ void ui_process_touch(void)
       // Try drag marker
       if (touch_pickup_marker())
         break;
+      if (touch_marker_select())
+        break;
       // Try select lever mode (top and bottom screen)
       if (touch_lever_mode_select()) {
         touch_wait_release();
         break;
       }
+
       // switch menu mode after release
       touch_wait_release();
       selection = -1; // hide keyboard mode selection

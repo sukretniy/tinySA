@@ -736,7 +736,7 @@ int binary_search(int f)
 
 int avoid_spur(int f)
 {
-  int window = ((int)actual_rbw ) * 1000*2;
+//  int window = ((int)actual_rbw ) * 1000*2;
 //  if (window < 50000)
 //    window = 50000;
   if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw > 300.0)
@@ -826,7 +826,12 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
     setFreq (1, local_IF + lf);
     if (MODE_OUTPUT(setting_mode))              // No substepping in output mode
       return(0);
-    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+setting_attenuate;
+    float signal_path_loss;
+    if (setting_mode == M_LOW)
+      signal_path_loss = -9.5;      // Loss in dB
+    else
+      signal_path_loss = 7;         // Loss in dB (+ is gain)
+    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+ setting_attenuate - signal_path_loss;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
     t++;
@@ -965,11 +970,11 @@ static bool sweep(bool break_on_operation)
     draw_cal_status();
   }
   if (!in_selftest && setting_mode == M_LOW && setting_auto_attenuation && max_index[0] > 0) {
-    if (actual_t[max_index[0]] - setting_attenuate < -30 && setting_attenuate >= 10) {
+    if (actual_t[max_index[0]] - setting_attenuate < -32 && setting_attenuate >= 10) {
       setting_attenuate -= setting_scale;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (actual_t[max_index[0]] - setting_attenuate > -20 && setting_attenuate <= 20) {
+    } else if (actual_t[max_index[0]] - setting_attenuate > -18 && setting_attenuate <= 20) {
       setting_attenuate += setting_scale;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
@@ -980,11 +985,11 @@ static bool sweep(bool break_on_operation)
       SetReflevel(setting_reflevel + setting_scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (temp_min_level < setting_reflevel - 9 * setting_scale && actual_t[max_index[0]] < setting_reflevel -  setting_scale * 3 / 2) {
+    } else if (temp_min_level < setting_reflevel - 9 * setting_scale - 2 && actual_t[max_index[0]] < setting_reflevel -  setting_scale * 3 / 2) {
       SetReflevel(setting_reflevel - setting_scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (temp_min_level > setting_reflevel - 9 * setting_scale + setting_scale * 3 / 2) {
+    } else if (temp_min_level > setting_reflevel - 9 * setting_scale + setting_scale + 2) {
       SetReflevel(setting_reflevel + setting_scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
@@ -996,7 +1001,7 @@ static bool sweep(bool break_on_operation)
     int m = 0;
     while (i < cur_max) {                                 // For all maxima found
       while (m < MARKERS_MAX) {
-        if (markers[m].enabled == M_TRACKING_ENABLED) {   // Available marker found
+        if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
           markers[m].frequency = frequencies[markers[m].index];
           m++;
@@ -1007,7 +1012,7 @@ static bool sweep(bool break_on_operation)
       i++;
     }
     while (m < MARKERS_MAX) {
-      if (markers[m].enabled == M_TRACKING_ENABLED ) {    // More available markers found
+      if (markers[m].enabled && markers[m].mtype & M_TRACKING) {    // More available markers found
         markers[m].index = 0;                             // Enabled but no max
         markers[m].frequency = frequencies[markers[m].index];
       }
@@ -1024,8 +1029,8 @@ static bool sweep(bool break_on_operation)
         l = markers[1].index;
         r = markers[0].index;
       }
-      markers[2].enabled = search_maximum(2, l - (r-l), 10);
-      markers[3].enabled = search_maximum(3, r + (r-l), 10);
+    } else if (setting_measurement == M_PHASE_NOISE  && markers[0].index > 10) {
+      markers[1].index =  markers[0].index + (setting_mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
     }
     peakIndex = max_index[0];
     peakLevel = actual_t[peakIndex];
@@ -1238,21 +1243,21 @@ static const struct {
   float stop;
 } test_case [TEST_COUNT] =
 {// Condition   Preparation     Center  Span    Pass Width  Stop
- {TC_BELOW,     TP_SILENT,      0.005,  0.01,  -10,0,     0},         // 1 Zero Hz leakage
- {TC_BELOW,     TP_SILENT,      0.01,   0.01,  -40,   0,     0},         // 2 Phase noise of zero Hz
- {TC_SIGNAL,    TP_10MHZ,       20,     7,      -40, 30,    -90 },      // 3
- {TC_SIGNAL,    TP_10MHZ,       30,     7,      -30, 30,    -90 },      // 4
- {TC_BELOW,     TP_SILENT,      200,    100,    -75, 0,     0},         // 5  Wide band noise floor low mode
- {TC_BELOW,     TPH_SILENT,     600,    720,    -75, 0,     0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20, 50,    -70 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -25, 20,    -70},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       430,    60,     -75, 0,     -85},       // 9 LPF cutoff
+ {TC_BELOW,     TP_SILENT,      0.005,  0.01,  0,0,     0},         // 1 Zero Hz leakage
+ {TC_BELOW,     TP_SILENT,      0.01,   0.01,  -30,   0,     0},         // 2 Phase noise of zero Hz
+ {TC_SIGNAL,    TP_10MHZ,       20,     7,      -37, 30,    -80 },      // 3
+ {TC_SIGNAL,    TP_10MHZ,       30,     7,      -32, 30,    -80 },      // 4
+ {TC_BELOW,     TP_SILENT,      200,    100,    -70, 0,     0},         // 5  Wide band noise floor low mode
+ {TC_BELOW,     TPH_SILENT,     600,    720,    -65, 0,     0},         // 6 Wide band noise floor high mode
+ {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -13, 55,    -60 },      // 7 BPF loss and stop band
+ {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18, 20,    -60},       // 8 BPF pass band flatness
+ {TC_BELOW,     TP_30MHZ,       430,    60,     -65, 0,     -75},       // 9 LPF cutoff
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -30, 30,    -80 },      // 11 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 12 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -35, 30,    -50 },       // 13 Calibrate power high mode
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5, 30,  -70 },      // 11 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       270,    4,      -45, 30,    -75 },       // 12 Measure powerlevel and noise
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -45, 30,    -75 },       // 13 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     1,      -30, 30,    -80 },      // 15 Measure RBW step time
+ {TC_MEASURE,   TP_30MHZ,       30,     1,      -20, 30,    -70 },      // 15 Measure RBW step time
  {TC_END,       0,              0,      0,      0,   0,     0},
 };
 

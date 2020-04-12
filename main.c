@@ -827,10 +827,10 @@ static const trace_t def_trace[TRACES_MAX] = {//enable, type, channel, reserved,
 };
 
 static const marker_t def_markers[MARKERS_MAX] = {
-    { M_TRACKING_ENABLED,   M_REFERENCE, 30, 0 },
-    { M_DISABLED,           M_NORMAL,   40, 0 },
-    { M_DISABLED,           M_NORMAL,   60, 0 },
-    { M_DISABLED,           M_NORMAL,   80, 0 }
+    { M_ENABLED,            M_REFERENCE | M_TRACKING,   30, 0 },
+    { M_DISABLED,           M_NORMAL,                   40, 0 },
+    { M_DISABLED,           M_NORMAL,                   60, 0 },
+    { M_DISABLED,           M_NORMAL,                   80, 0 }
 };
 
 // Load propeties default settings

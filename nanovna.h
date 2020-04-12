@@ -319,11 +319,11 @@ float groupdelay_from_array(int i, float array[POINTS_COUNT][2]);
 #endif
 // marker
 enum {
-  M_REFERENCE, M_NORMAL, M_DELTA, M_TRACKING
+  M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_TRACKING=8 // Tracking must be last.
 };
 
 enum {
-  M_DISABLED, M_ENABLED, M_TRACKING_ENABLED
+  M_DISABLED = false, M_ENABLED = true
 };
 
 typedef struct {
@@ -332,7 +332,6 @@ typedef struct {
   int16_t index;
   uint32_t frequency;
 } marker_t;
-
 
 #define MARKERS_MAX 4
 
@@ -568,6 +567,7 @@ typedef struct uistat {
 //  uint32_t previous_value;
   uint8_t lever_mode;
   uint8_t marker_delta;
+  uint8_t marker_noise;
   uint8_t marker_tracking;
   char text[20];
 } uistat_t;
@@ -647,7 +647,7 @@ void wait_user(void);
 void calibrate(void);
 
 enum {
-  M_OFF, M_IMD, M_OIP3
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE
 };
 
 /*EOF*/
