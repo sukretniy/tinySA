@@ -567,15 +567,42 @@ void update_rbw(void)
     vbwSteps = 1;
   dirty = true;
 }
+
+int binary_search_frequency(int f)
+{
+  int L = 0;
+  int R =  (sizeof frequencies)/sizeof(int) - 1;
+  int fmin =  f - ((int)actual_rbw ) * 1000;
+  int fplus = f + ((int)actual_rbw ) * 1000;
+  while (L <= R) {
+    int m = (L + R) / 2;
+    if (frequencies[m] < fmin)
+      L = m + 1;
+    else if (frequencies[m] > fplus)
+      R = m - 1;
+    else
+       return m; // index is m
+  }
+  return -1;
+}
+
+
 #define MAX_MAX 4
 int
 search_maximum(int m, int center, int span)
 {
+  center = binary_search_frequency(center);
+  if (center < 0)
+    return false;
   int from = center - span/2;
   int found = false;
   int to = center + span/2;
   int cur_max = 0;          // Always at least one maximum
   int max_index[4];
+  if (from<0)
+    from = 0;
+  if (to > POINTS_COUNT-1)
+    to = POINTS_COUNT-1;
   temppeakIndex = 0;
   temppeakLevel = actual_t[from];
   max_index[cur_max] = from;
@@ -1019,9 +1046,9 @@ static bool sweep(bool break_on_operation)
       m++;                              // Try next marker
     }
     if (setting_measurement == M_IMD && markers[0].index > 10) {
-      markers[1].enabled = search_maximum(1, markers[0].index*2, 8);
-      markers[2].enabled = search_maximum(2, markers[0].index*3, 12);
-      markers[3].enabled = search_maximum(3, markers[0].index*4, 16);
+      markers[1].enabled = search_maximum(1, frequencies[markers[0].index]*2, 8);
+      markers[2].enabled = search_maximum(2, frequencies[markers[0].index]*3, 12);
+      markers[3].enabled = search_maximum(3, frequencies[markers[0].index]*4, 16);
     } else if (setting_measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) {
       int l = markers[0].index;
       int r = markers[1].index;
