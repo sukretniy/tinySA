@@ -1045,6 +1045,7 @@ static bool sweep(bool break_on_operation)
       }
       m++;                              // Try next marker
     }
+#ifdef __MEASURE__
     if (setting_measurement == M_IMD && markers[0].index > 10) {
       markers[1].enabled = search_maximum(1, frequencies[markers[0].index]*2, 8);
       markers[2].enabled = search_maximum(2, frequencies[markers[0].index]*3, 12);
@@ -1059,6 +1060,7 @@ static bool sweep(bool break_on_operation)
     } else if (setting_measurement == M_PHASE_NOISE  && markers[0].index > 10) {
       markers[1].index =  markers[0].index + (setting_mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
     }
+#endif
     peakIndex = max_index[0];
     peakLevel = actual_t[peakIndex];
     peakFreq = frequencies[peakIndex];
@@ -1249,6 +1251,7 @@ void draw_cal_status(void)
 }
 
 // -------------------- Self testing -------------------------------------------------
+#ifdef __SELFTEST__
 
 enum {
   TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END,
@@ -1569,10 +1572,13 @@ int add_spur(int f)
   }
   return 1;
 }
+#endif
 
 void self_test(void)
 {
-#if 0
+#ifdef __SELFTEST__
+
+  #if 0
   in_selftest = true;
   reset_settings(M_LOW);
   test_prepare(4);
@@ -1698,6 +1704,8 @@ void self_test(void)
   reset_settings(M_LOW);
   in_selftest = false;
 #endif
+
+#endif
 }
 
 void reset_calibration(void)
@@ -1710,6 +1718,7 @@ const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
 void calibrate(void)
 {
+#ifdef __CALIBRATE__
   int local_test_status;
   float last_peak_level;
   in_selftest = true;
@@ -1766,6 +1775,7 @@ quit:
   sweep_mode = SWEEP_ENABLE;
   set_refer_output(0);
   reset_settings(M_LOW);
+#endif
 }
 
 

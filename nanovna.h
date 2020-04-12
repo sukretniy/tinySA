@@ -26,6 +26,10 @@
 //#define __SIMULATION__
 //#define __PIPELINE__
 #define __SCROLL__
+#define __ICONS__
+#define __MEASURE__
+#define __SELFTEST__
+
 /*
  * main.c
  */
