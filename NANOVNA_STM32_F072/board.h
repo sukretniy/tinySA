@@ -21,7 +21,7 @@
  * Board identifier.
  */
 #define BOARD_NANOVNA_STM32_F072
-#define BOARD_NAME              "tinySA"
+#define BOARD_NAME              "tinySA v0.1"
 #define BOARD_VERSION			0
 /*
  * Board frequencies.
