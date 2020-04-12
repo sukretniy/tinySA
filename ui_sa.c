@@ -1,4 +1,3 @@
-
 void markmap_all_markers(void);
 static void menu_marker_type_cb(int item, uint8_t data);
 
@@ -63,6 +62,276 @@ void set_measurement(int);
 // extern int settingSpeed;
 extern int setting_step_delay;
 
+void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
+                                 const uint16_t *bitmap);
+
+const uint16_t left_icons [] =
+{
+#define I_EMPTY 0*16
+        0x0000,
+        0x0000,
+        0x0000,
+        0x0001,
+        0x0001,
+        0x0001,
+        0x0000,
+        0x0000,
+        0x0000,
+        0x0000,
+        0x0001,
+        0x0001,
+        0x0001,
+        0x0000,
+        0x0000,
+        0x0000,
+
+#define I_HIGH_INPUT 1*16
+        /* +-----------------+
+           |                 |
+           |          **     |
+           |           ***   |
+           |    ************ |
+           |           ***   |
+           |          **     |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           +-----------------+ */
+        0x0000,
+        0x0000,
+        0x0060,
+        0x0039,
+        0x0fff,
+        0x0039,
+        0x0060,
+        0x0000,
+        0x0000,
+        0x0000,
+        0x0001,
+        0x0001,
+        0x0001,
+        0x0000,
+        0x0000,
+        0x0000,
+
+#define I_LOW_INPUT 2*16
+        /* +-----------------+
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |                 |
+           |          **     |
+           |          ****   |
+           |    ************ |
+           |          ****   |
+           |          **     |
+           |                 |
+           +-----------------+ */
+        0x0000,
+        0x0000,
+        0x0000,
+        0x0001,
+        0x0001,
+        0x0001,
+        0x0000,
+        0x0000,
+        0x0000,
+        0x0000,
+        0x0060,
+        0x0039,
+        0x0fff,
+        0x0039,
+        0x0060,
+        0x0000,
+
+#define I_LOW_OUTPUT 3*16
+
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000000000001,
+        0b0000000000000001,
+        0b0000000000000001,
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000110000000,
+        0b0000011110000001,
+        0b0000111111111111,
+        0b0000011110000001,
+        0b0000000110000000,
+        0b0000000000000000,
+        0b0000000000000000,
+
+#define I_HIGH_OUTPUT 4*16
+
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000110000000,
+        0b0000011110000001,
+        0b0000111111111111,
+        0b0000011110000001,
+        0b0000000110000000,
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000000000001,
+        0b0000000000000001,
+        0b0000000000000001,
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000000000000,
+
+#define I_CONNECT 5*16
+
+        0b0000000000000000,
+        0b0000000000000000,
+        0b0000000000110000,
+        0b0000000000111101,
+        0b0000001111111111,
+        0b0000010000111101,
+        0b0000100000110000,
+        0b0001000000000000,
+        0b0001000000000000,
+        0b0000100000110000,
+        0b0000010000111101,
+        0b0000001111111111,
+        0b0000000000111101,
+        0b0000000000110000,
+        0b0000000000000000,
+        0b0000000000000000,
+
+};
+
+const uint16_t right_icons [] =
+{
+#define I_SA    0
+ /* Character 0 (0x00):
+    width 16
+    +-----------------+
+    |                 |
+    | *************** |
+    | *             * |
+    |**             * |
+    | *  *          * |
+    | *  *          * |
+    | *  *   *      * |
+    | *  *   *      * |
+    | *  *   *   *  * |
+    | *  * * *   *  * |
+    | *  * * * * *  * |
+    | *  * * * * *  * |
+    |** *********** * |
+    | *             * |
+    | *************** |
+    |                 |
+    +-----------------+ */
+ 0x0000,
+ 0x7fff,
+ 0x4001,
+ 0xc001,
+ 0xc001,
+ 0xc001,
+ 0x4801,
+ 0x4801,
+ 0x4a89,
+ 0x4aa9,
+ 0xcaa9,
+ 0xdffd,
+ 0xc001,
+ 0x4001,
+ 0x7fff,
+ 0x0000,
+
+#define I_GEN   1
+ /* Character 0 (0x00):
+    width 16
+    +-----------------+
+    |                 |
+    | *************** |
+    | *             * |
+    |**             * |
+    | *  *****   ** * |
+    | *  *   *   *  * |
+    | *  *   *   *  * |
+    | *  *   *   *  * |
+    | *  *   *   *  * |
+    | *  *   *   *  * |
+    | *  *   *   *  * |
+    | * **   *****  * |
+    |**             * |
+    | *             * |
+    | *************** |
+    |                 |
+    +-----------------+ */
+ 0x0000,
+ 0x7fff,
+ 0x4001,
+ 0xc001,
+ 0xcf8d,
+ 0xc889,
+ 0x4889,
+ 0x4889,
+ 0x4889,
+ 0x4889,
+ 0xc889,
+ 0xd8f9,
+ 0xc001,
+ 0x4001,
+ 0x7fff,
+ 0x0000,
+
+#define I_CONFIG 2
+
+        0b0000000000000000,
+        0b0111111111111111,
+        0b0100000000000001,
+        0b1100000011000001,
+        0b1100001110001001,
+        0b1100011100011101,
+        0b0100001110111001,
+        0b0100001111111001,
+        0b0100011111110001,
+        0b0100111110000001,
+        0b1101111100000001,
+        0b1101111000000001,
+        0b1100100000000001,
+        0b0100000000000001,
+        0b0111111111111111,
+        0b0000000000000000,
+
+#define I_SINUS 3
+
+        0b0000000000000000,
+        0b0111111111111111,  // 1
+        0b0100000000000001,  // 2
+        0b1100000000000001,  // 3
+        0b1100000000110001,  // 4
+        0b1100000001001001,  // 5
+        0b0100000010000101,  // 6
+        0b0101000010000101,  // 7
+        0b0101000010000101,  // 8
+        0b0101000010000001,  // 9
+        0b1100100100000001,  //10
+        0b1100011000000001,  //11
+        0b1100000000000001,  //12
+        0b0100000000000001,  //13
+        0b0111111111111111,  //14
+        0b0000000000000000,
+};
 
 
 enum {
@@ -234,8 +503,8 @@ void menu_autosettings_cb(int item, uint8_t data)
   for (int i = 1; i<MARKER_COUNT; i++ ) {
     markers[i].enabled = M_DISABLED;
   }
-  markers[0].enabled = M_TRACKING_ENABLED;
-  markers[0].mtype = M_REFERENCE;
+  markers[0].enabled = M_ENABLED;
+  markers[0].mtype = M_REFERENCE | M_TRACKING;
 
   //  set_refer_output(1);
 
@@ -280,6 +549,7 @@ static void menu_config_cb(int item, uint8_t data)
     draw_menu();
     break;
   case 2:
+    sweep_mode = 0;         // Suspend sweep to save time
     menu_move_back();
     ui_mode_normal();
     sweep_mode = SWEEP_SELFTEST;
@@ -359,6 +629,7 @@ static void menu_spur_cb(int item, uint8_t data)
 static void menu_measure_cb(int item, uint8_t data)
 {
   (void)item;
+  menu_move_back();
   switch(data) {
     case M_OFF:                                     // Off
       reset_settings(GetMode());
@@ -367,10 +638,10 @@ static void menu_measure_cb(int item, uint8_t data)
     case M_IMD:                                     // IMD
       reset_settings(GetMode());
       for (int i = 0; i< MARKERS_MAX; i++) {
-        markers[i].enabled = M_TRACKING_ENABLED;
-        markers[i].mtype = M_DELTA;
+        markers[i].enabled = M_ENABLED;
+        markers[i].mtype = M_DELTA | M_TRACKING;
       }
-      markers[0].mtype = M_REFERENCE;
+      markers[0].mtype = M_REFERENCE | M_TRACKING;
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
       set_sweep_frequency(ST_START, 0);
@@ -380,10 +651,10 @@ static void menu_measure_cb(int item, uint8_t data)
     case M_OIP3:                                     // OIP3
       reset_settings(GetMode());
       for (int i = 0; i< MARKERS_MAX; i++) {
-        markers[i].enabled = M_TRACKING_ENABLED;
-        markers[i].mtype = M_DELTA;
+        markers[i].enabled = M_ENABLED;
+        markers[i].mtype = M_DELTA | M_TRACKING;
       }
-      markers[0].mtype = M_REFERENCE;
+      markers[0].mtype = M_REFERENCE | M_TRACKING;
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
       ui_mode_keypad(KM_SPAN);
@@ -391,8 +662,27 @@ static void menu_measure_cb(int item, uint8_t data)
       set_sweep_frequency(ST_SPAN, uistat.value*4);
       set_measurement(M_OIP3);
       break;
+    case M_PHASE_NOISE:                             // Phase noise
+      reset_settings(GetMode());
+      for (int i = 0; i< MARKERS_MAX; i++) {
+        markers[i].enabled = M_DISABLED;
+        markers[i].mtype = M_NORMAL;
+      }
+      markers[0].enabled = M_ENABLED;
+      markers[0].mtype = M_REFERENCE | M_TRACKING;
+      markers[1].enabled = M_ENABLED;
+      markers[1].mtype = M_DELTA | M_NOISE;
+      ui_mode_keypad(KM_CENTER);
+      ui_process_keypad();
+      ui_mode_keypad(KM_SPAN);
+      ui_process_keypad();
+      set_sweep_frequency(ST_SPAN, uistat.value*4);
+      set_measurement(M_PHASE_NOISE);
+      SetAverage(4);
+
+      break;
   }
-  menu_move_back();
+//  selection = -1;
   ui_mode_normal();
 //  draw_cal_status();
 }
@@ -449,25 +739,28 @@ static void menu_average_cb(int item, uint8_t data)
 static void menu_marker_type_cb(int item, uint8_t data)
 {
   (void)item;
-  if (markers[active_marker].enabled)
+  if (markers[active_marker].enabled == M_ENABLED)
   {
-    if (data == M_REFERENCE) {
+    if (data == M_NORMAL) {
+      markers[active_marker].mtype = M_NORMAL;
+    } else if (data == M_REFERENCE) {
       for (int i = 0; i<MARKER_COUNT; i++ ) {
-        if (markers[i].mtype ==M_REFERENCE)
-          markers[i].mtype = M_NORMAL;
+        if (markers[i].mtype & M_REFERENCE)
+          markers[i].mtype &= ~M_REFERENCE;
       }
-    }
-    if (data == M_TRACKING) {
-      if (markers[active_marker].enabled == M_ENABLED)
-        markers[active_marker].enabled = M_TRACKING_ENABLED;
+      markers[active_marker].mtype |= M_REFERENCE;
+    } else {
+      if (data == M_DELTA && (markers[active_marker].mtype & M_REFERENCE))
+        markers[active_marker].mtype &= ~M_REFERENCE;
+      if (markers[active_marker].mtype & data)
+        markers[active_marker].mtype &= ~data;
       else
-        markers[active_marker].enabled = M_ENABLED;
-    } else
-      markers[active_marker].mtype = data;
+        markers[active_marker].mtype |= data;
+    }
   }
   markmap_all_markers();
 //  redraw_marker(active_marker, TRUE);
-  menu_move_back();
+//  menu_move_back();
   draw_menu();
 }
 
@@ -512,7 +805,7 @@ static void choose_active_marker(void)
 {
   int i;
   for (i = 0; i < MARKER_COUNT; i++)
-    if (markers[i].enabled) {
+    if (markers[i].enabled == M_ENABLED) {
       active_marker = i;
       return;
     }
@@ -700,9 +993,10 @@ static const menuitem_t menu_reflevel[] = {
 
 static const menuitem_t menu_marker_type[] = {
   { MT_CALLBACK, M_REFERENCE,   "REFERENCE",    menu_marker_type_cb},
-  { MT_CALLBACK, M_NORMAL,      "NORMAL",       menu_marker_type_cb},
   { MT_CALLBACK, M_DELTA,       "DELTA",        menu_marker_type_cb},
+  { MT_CALLBACK, M_NOISE,       "NOISE",        menu_marker_type_cb},
   { MT_CALLBACK, M_TRACKING,    "TRACKING",     menu_marker_type_cb},
+  { MT_CALLBACK, M_NORMAL,      "NORMAL",     menu_marker_type_cb},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -718,6 +1012,22 @@ const menuitem_t menu_marker_search[] = {
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
+const menuitem_t menu_marker_sel[] = {
+  { MT_CALLBACK, 1, "MARKER 1", menu_marker_sel_cb },
+  { MT_CALLBACK, 2, "MARKER 2", menu_marker_sel_cb },
+  { MT_CALLBACK, 3, "MARKER 3", menu_marker_sel_cb },
+  { MT_CALLBACK, 4, "MARKER 4", menu_marker_sel_cb },
+//  { MT_CALLBACK, 0, "ALL OFF", menu_marker_sel_cb },
+  { MT_CALLBACK, 0, "DELTA", menu_marker_sel_cb },
+  { MT_CALLBACK, 0, "NOISE", menu_marker_sel_cb },
+  { MT_CALLBACK, 0, "TRACKING", menu_marker_sel_cb },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+
+
+#if 0
 static const menuitem_t menu_marker_sel[] = {
   { MT_CALLBACK, 0, "MARKER 1",             menu_marker_sel_cb},
   { MT_CALLBACK, 0, "MARKER 2",             menu_marker_sel_cb},
@@ -728,14 +1038,25 @@ static const menuitem_t menu_marker_sel[] = {
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
+#endif
+
+const menuitem_t menu_marker_ops[] = {
+  { MT_CALLBACK, ST_START, S_RARROW"START", menu_marker_op_cb },
+  { MT_CALLBACK, ST_STOP, S_RARROW"STOP", menu_marker_op_cb },
+  { MT_CALLBACK, ST_CENTER, S_RARROW"CENTER", menu_marker_op_cb },
+  { MT_CALLBACK, ST_SPAN, S_RARROW"SPAN", menu_marker_op_cb },
+ // { MT_CALLBACK, 0, S_RARROW"EDELAY", menu_marker_op_cb },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+
 
 static const menuitem_t menu_marker[] = {
-  { MT_SUBMENU,  0, "\2SELECT\0MARKER",     menu_marker_sel},
+  { MT_SUBMENU,  0, "\2SELECT\0MARKERS",    menu_marker_sel},
   { MT_SUBMENU,  0, "\2MARKER\0TYPE",       menu_marker_type},
-  { MT_CALLBACK, ST_START,  S_RARROW"START",        menu_marker_op_cb},
-  { MT_CALLBACK, ST_STOP,   S_RARROW"STOP",         menu_marker_op_cb},
-  { MT_CALLBACK, ST_CENTER, S_RARROW"CENTER",       menu_marker_op_cb},
-  { MT_CALLBACK, ST_SPAN,   S_RARROW"SPAN",         menu_marker_op_cb},
+  { MT_SUBMENU,  0, "\2MARKER\0OPS",        menu_marker_ops},
+  { MT_SUBMENU,  0, "\2SEARCH\0MARKER",     menu_marker_search},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -748,12 +1069,12 @@ static const menuitem_t menu_dfu[] = {
 
 static const menuitem_t menu_settings2[] =
 {
-  { MT_CALLBACK, 0, "AGC",              menu_settings2_cb},
-  { MT_CALLBACK, 1, "LNA",              menu_settings2_cb},
-  { MT_CALLBACK, 2, "BPF",              menu_settings2_cb},
-  { MT_KEYPAD, KM_DECAY,                "\2HOLD\0TIME",   NULL},
-  { MT_KEYPAD, KM_NOISE,                "\2NOISE\0LEVEL",   NULL},
-  { MT_KEYPAD, KM_10MHZ,                "\00210MHZ\0ACTUAL",   NULL},
+  { MT_CALLBACK, 0,     "AGC",                  menu_settings2_cb},
+  { MT_CALLBACK, 1,     "LNA",                  menu_settings2_cb},
+  { MT_CALLBACK, 2,     "BPF",                  menu_settings2_cb},
+  { MT_KEYPAD, KM_DECAY,"\2HOLD\0TIME",         NULL},
+  { MT_KEYPAD, KM_NOISE,"\2NOISE\0LEVEL",       NULL},
+  { MT_KEYPAD, KM_10MHZ,"\00210MHZ\0ACTUAL",    NULL},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -770,9 +1091,10 @@ static const menuitem_t menu_settings[] =
 };
 
 static const menuitem_t menu_measure[] = {
-  { MT_CALLBACK, M_OFF,  "OFF",      menu_measure_cb},
-  { MT_CALLBACK, M_IMD,  "IMD",      menu_measure_cb},
-  { MT_CALLBACK, M_OIP3, "OIP3",     menu_measure_cb},
+  { MT_CALLBACK, M_OFF,         "OFF",      menu_measure_cb},
+  { MT_CALLBACK, M_IMD,         "IMD",      menu_measure_cb},
+  { MT_CALLBACK, M_OIP3,        "OIP3",     menu_measure_cb},
+  { MT_CALLBACK, M_PHASE_NOISE, "\2PHASE\0NOISE",menu_measure_cb},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -879,12 +1201,12 @@ static const menuitem_t menu_stimulus[] = {
 
 static const menuitem_t menu_mode[] = {
   { MT_FORM | MT_TITLE,    0, "MODE",           NULL},
-  { MT_FORM | MT_CALLBACK, 0, "LOW INPUT",      menu_mode_cb},
-  { MT_FORM | MT_CALLBACK, 0, "HIGH INPUT",     menu_mode_cb},
-  { MT_FORM | MT_CALLBACK, 0, "LOW OUTPUT",     menu_mode_cb},
-  { MT_FORM | MT_CALLBACK, 0, "HIGH OUTPUT",    menu_mode_cb},
-  { MT_FORM | MT_SUBMENU,  0, "CAL OUTPUT: %s", menu_reffer},
-  { MT_FORM | MT_SUBMENU,  0, "CONFIG",         menu_config},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,   "LOW INPUT",      menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,  "HIGH INPUT",     menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS, "LOW OUTPUT",     menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,"HIGH OUTPUT",    menu_mode_cb},
+  { MT_FORM | MT_SUBMENU  | MT_ICON,    I_CONNECT+I_GEN,    "CAL OUTPUT: %s", menu_reffer},
+  { MT_FORM | MT_SUBMENU  | MT_ICON,    I_EMPTY+I_CONFIG,"CONFIG",         menu_config},
 //  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -895,6 +1217,7 @@ const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "LEVEL",        menu_level},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
   { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
   { MT_CANCEL,   0, S_LARROW" MODE",NULL},
   { MT_NONE,     0, NULL, NULL } // sentinel,
@@ -907,6 +1230,7 @@ const menuitem_t menu_tophigh[] = {
   { MT_SUBMENU,  0, "LEVEL",        menu_levelhigh},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
   { MT_SUBMENU,  0, "SETTINGS",     menu_settingshigh},
   { MT_CANCEL,   0, S_LARROW" MODE",NULL},
   { MT_NONE,     0, NULL, NULL } // sentinel,
@@ -999,7 +1323,7 @@ static void menu_item_modify_attribute(
       mark = true;
     }
 
-  } else if (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2|| menu == menu_drive_wide3) {
+  } else if (MT_MASK(menu[item].type) != MT_CALLBACK && (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2|| menu == menu_drive_wide3)) {
     if (data == setting_drive){
       mark = true;
     }
@@ -1027,13 +1351,22 @@ static void menu_item_modify_attribute(
     if (item == 2 && setting_tracking){         // should not happen in high mode
       mark = true;
     }
-  } else if (menu == menu_marker_type && active_marker >= 0 && markers[active_marker].enabled) {
-    if (item == 3 && markers[active_marker].enabled == M_TRACKING_ENABLED)
+  } else if (menu == menu_marker_type && active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {
+    if (data & markers[active_marker].mtype)
       mark = true;
-    else if (item == markers[active_marker].mtype)
+    else if (data==markers[active_marker].mtype)    // This catches the M_NORMAL case
+      mark = true;
+  } else if (menu == menu_marker_search) {
+    if (item == 4 && markers[active_marker].mtype & M_TRACKING)
       mark = true;
   } else if (menu == menu_marker_sel) {
     if (item < MARKERS_MAX && markers[item].enabled)
+      mark = true;
+    else if (item == 4 && uistat.marker_delta)
+      mark = true;
+    else if (item == 5 && uistat.marker_noise)
+      mark = true;
+    else if (item == 6 && uistat.marker_tracking)
       mark = true;
   } else if (menu == menu_reflevel) {
     if ((item  == 0 && setting_auto_reflevel) || (item == 1 && !setting_auto_reflevel))

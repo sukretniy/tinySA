@@ -567,15 +567,42 @@ void update_rbw(void)
     vbwSteps = 1;
   dirty = true;
 }
+
+int binary_search_frequency(int f)
+{
+  int L = 0;
+  int R =  (sizeof frequencies)/sizeof(int) - 1;
+  int fmin =  f - ((int)actual_rbw ) * 1000;
+  int fplus = f + ((int)actual_rbw ) * 1000;
+  while (L <= R) {
+    int m = (L + R) / 2;
+    if (frequencies[m] < fmin)
+      L = m + 1;
+    else if (frequencies[m] > fplus)
+      R = m - 1;
+    else
+       return m; // index is m
+  }
+  return -1;
+}
+
+
 #define MAX_MAX 4
 int
 search_maximum(int m, int center, int span)
 {
+  center = binary_search_frequency(center);
+  if (center < 0)
+    return false;
   int from = center - span/2;
   int found = false;
   int to = center + span/2;
   int cur_max = 0;          // Always at least one maximum
   int max_index[4];
+  if (from<0)
+    from = 0;
+  if (to > POINTS_COUNT-1)
+    to = POINTS_COUNT-1;
   temppeakIndex = 0;
   temppeakLevel = actual_t[from];
   max_index[cur_max] = from;
@@ -718,36 +745,42 @@ static const int spur_table[] =
 int binary_search(int f)
 {
   int L = 0;
-  int R =  (sizeof spur_table)/sizeof(int);
+  int R =  (sizeof spur_table)/sizeof(int) - 1;
+  int fmin =  f - ((int)actual_rbw ) * 1000;
+  int fplus = f + ((int)actual_rbw ) * 1000;
   while (L <= R) {
     int m = (L + R) / 2;
-    if (spur_table[m] < f)
+    if (spur_table[m] < fmin)
       L = m + 1;
-    else if (spur_table[m] > f)
+    else if (spur_table[m] > fplus)
       R = m - 1;
     else
-       return m;
+       return true; // index is m
   }
-  return 0;
+  return false;
 }
 
 
 int avoid_spur(int f)
 {
-  int window = ((int)actual_rbw ) * 1000*2;
+//  int window = ((int)actual_rbw ) * 1000*2;
 //  if (window < 50000)
 //    window = 50000;
   if (! setting_mode == M_LOW || frequency_IF != spur_IF || actual_rbw > 300.0)
     return(false);
+  return binary_search(f);
+#if 0
   f = f + window/2;
   for (unsigned int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
     if (f/window == (spur_table[i] + window/2)/window) {
 //      spur_old_stepdelay = actualStepDelay;
 //      actualStepDelay += 4000;
+      binary_search(f);
       return true;
     }
   }
   return false;
+#endif
 }
 
 static int modulation_counter = 0;
@@ -820,7 +853,12 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
     setFreq (1, local_IF + lf);
     if (MODE_OUTPUT(setting_mode))              // No substepping in output mode
       return(0);
-    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+setting_attenuate;
+    float signal_path_loss;
+    if (setting_mode == M_LOW)
+      signal_path_loss = -9.5;      // Loss in dB
+    else
+      signal_path_loss = 7;         // Loss in dB (+ is gain)
+    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+ setting_attenuate - signal_path_loss;
     if (RSSI < subRSSI)
       RSSI = subRSSI;
     t++;
@@ -959,11 +997,11 @@ static bool sweep(bool break_on_operation)
     draw_cal_status();
   }
   if (!in_selftest && setting_mode == M_LOW && setting_auto_attenuation && max_index[0] > 0) {
-    if (actual_t[max_index[0]] - setting_attenuate < -30 && setting_attenuate >= 10) {
+    if (actual_t[max_index[0]] - setting_attenuate < -32 && setting_attenuate >= 10) {
       setting_attenuate -= setting_scale;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (actual_t[max_index[0]] - setting_attenuate > -20 && setting_attenuate <= 20) {
+    } else if (actual_t[max_index[0]] - setting_attenuate > -18 && setting_attenuate <= 20) {
       setting_attenuate += setting_scale;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
@@ -974,11 +1012,11 @@ static bool sweep(bool break_on_operation)
       SetReflevel(setting_reflevel + setting_scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (temp_min_level < setting_reflevel - 9 * setting_scale && actual_t[max_index[0]] < setting_reflevel -  setting_scale * 3 / 2) {
+    } else if (temp_min_level < setting_reflevel - 9 * setting_scale - 2 && actual_t[max_index[0]] < setting_reflevel -  setting_scale * 3 / 2) {
       SetReflevel(setting_reflevel - setting_scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (temp_min_level > setting_reflevel - 9 * setting_scale + setting_scale * 3 / 2) {
+    } else if (temp_min_level > setting_reflevel - 9 * setting_scale + setting_scale + 2) {
       SetReflevel(setting_reflevel + setting_scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
@@ -990,7 +1028,7 @@ static bool sweep(bool break_on_operation)
     int m = 0;
     while (i < cur_max) {                                 // For all maxima found
       while (m < MARKERS_MAX) {
-        if (markers[m].enabled == M_TRACKING_ENABLED) {   // Available marker found
+        if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
           markers[m].frequency = frequencies[markers[m].index];
           m++;
@@ -1001,16 +1039,16 @@ static bool sweep(bool break_on_operation)
       i++;
     }
     while (m < MARKERS_MAX) {
-      if (markers[m].enabled == M_TRACKING_ENABLED ) {    // More available markers found
+      if (markers[m].enabled && markers[m].mtype & M_TRACKING) {    // More available markers found
         markers[m].index = 0;                             // Enabled but no max
         markers[m].frequency = frequencies[markers[m].index];
       }
       m++;                              // Try next marker
     }
     if (setting_measurement == M_IMD && markers[0].index > 10) {
-      markers[1].enabled = search_maximum(1, markers[0].index*2, 8);
-      markers[2].enabled = search_maximum(2, markers[0].index*3, 12);
-      markers[3].enabled = search_maximum(3, markers[0].index*4, 16);
+      markers[1].enabled = search_maximum(1, frequencies[markers[0].index]*2, 8);
+      markers[2].enabled = search_maximum(2, frequencies[markers[0].index]*3, 12);
+      markers[3].enabled = search_maximum(3, frequencies[markers[0].index]*4, 16);
     } else if (setting_measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) {
       int l = markers[0].index;
       int r = markers[1].index;
@@ -1018,8 +1056,8 @@ static bool sweep(bool break_on_operation)
         l = markers[1].index;
         r = markers[0].index;
       }
-      markers[2].enabled = search_maximum(2, l - (r-l), 10);
-      markers[3].enabled = search_maximum(3, r + (r-l), 10);
+    } else if (setting_measurement == M_PHASE_NOISE  && markers[0].index > 10) {
+      markers[1].index =  markers[0].index + (setting_mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
     }
     peakIndex = max_index[0];
     peakLevel = actual_t[peakIndex];
@@ -1232,21 +1270,21 @@ static const struct {
   float stop;
 } test_case [TEST_COUNT] =
 {// Condition   Preparation     Center  Span    Pass Width  Stop
- {TC_BELOW,     TP_SILENT,      0.001,  0.0005,  -10,0,     0},         // 1 Zero Hz leakage
- {TC_BELOW,     TP_SILENT,      0.01,  0.01,  -40,   0,     0},         // 2 Phase noise of zero Hz
- {TC_SIGNAL,    TP_10MHZ,       20,     7,      -40, 30,    -90 },      // 3
- {TC_SIGNAL,    TP_10MHZ,       30,     7,      -30, 30,    -90 },      // 4
- {TC_BELOW,     TP_SILENT,      200,    100,    -75, 0,     0},         // 5  Wide band noise floor low mode
- {TC_BELOW,     TPH_SILENT,     600,    720,    -75, 0,     0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20, 50,    -70 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -25, 20,    -70},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       430,    60,     -75, 0,     -85},       // 9 LPF cutoff
+ {TC_BELOW,     TP_SILENT,      0.005,  0.01,  0,0,     0},         // 1 Zero Hz leakage
+ {TC_BELOW,     TP_SILENT,      0.01,   0.01,  -30,   0,     0},         // 2 Phase noise of zero Hz
+ {TC_SIGNAL,    TP_10MHZ,       20,     7,      -37, 30,    -80 },      // 3
+ {TC_SIGNAL,    TP_10MHZ,       30,     7,      -32, 30,    -80 },      // 4
+ {TC_BELOW,     TP_SILENT,      200,    100,    -70, 0,     0},         // 5  Wide band noise floor low mode
+ {TC_BELOW,     TPH_SILENT,     600,    720,    -65, 0,     0},         // 6 Wide band noise floor high mode
+ {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -13, 55,    -60 },      // 7 BPF loss and stop band
+ {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18, 20,    -60},       // 8 BPF pass band flatness
+ {TC_BELOW,     TP_30MHZ,       430,    60,     -65, 0,     -75},       // 9 LPF cutoff
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -30, 30,    -80 },      // 11 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -85 },       // 12 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -35, 30,    -50 },       // 13 Calibrate power high mode
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5, 30,  -70 },      // 11 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       270,    4,      -45, 30,    -75 },       // 12 Measure powerlevel and noise
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -45, 30,    -75 },       // 13 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     1,      -30, 30,    -80 },      // 15 Measure RBW step time
+ {TC_MEASURE,   TP_30MHZ,       30,     1,      -20, 30,    -70 },      // 15 Measure RBW step time
  {TC_END,       0,              0,      0,      0,   0,     0},
 };
 
@@ -1274,11 +1312,11 @@ static void test_acquire(int i)
   else
     setting_mode = M_HIGH;
 #endif
-  SetAverage(4);
+//  SetAverage(4);
   sweep(false);
-  sweep(false);
-  sweep(false);
-  sweep(false);
+//  sweep(false);
+//  sweep(false);
+//  sweep(false);
   plot_into_index(measured);
   redraw_request |= REDRAW_CELLS | REDRAW_FREQUENCY;
 }
@@ -1457,7 +1495,8 @@ int test_validate(int i)
 
   if (current_test_status != TS_PASS || test_case[i+1].kind == TC_END)
     test_wait = true;
-//  draw_frequencies();
+  test_status[i] = current_test_status;     // Must be set before draw_all() !!!!!!!!
+  //  draw_frequencies();
 //  draw_cal_status();
   draw_all(TRUE);
   resume_sweep();
@@ -1648,8 +1687,8 @@ void self_test(void)
     i++;
   }
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Self test complete", 30, 120);
-  ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
+  ili9341_drawstring_7x13("Self test complete", 50, 200);
+  ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
   wait_user();
   ili9341_clear_screen();
 

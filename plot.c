@@ -63,18 +63,28 @@ typedef uint16_t map_t;
 typedef uint32_t map_t;
 #endif
 
-uint16_t marker_color[3] =
+uint16_t marker_color(int mtype)
 {
- RGBHEX(0xFFFFFF),
- RGBHEX(0xFFFF00),
- RGBHEX(0x00FF00)
-};
+  if (mtype & M_REFERENCE)
+    return(RGBHEX(0xFFFFFF));
+  if (mtype & M_DELTA)
+    return(RGBHEX(0x00FF00));
+  if (mtype & M_NOISE)
+    return(RGBHEX(0x00FFFF));
+  return(RGBHEX(0xFFFF00));
+}
 
-char marker_letter[3] =
+//#if 4 != M_TRACKING
+//#error "Wrong marker numbers"
+//#endif
+
+char marker_letter[5] =
 {
  'R',
+ ' ',
+ 'D',
  'N',
- 'D'
+ 'T'
 };
 
 map_t   markmap[2][MAX_MARKMAP_Y];
@@ -782,7 +792,7 @@ static void trace_get_value_string(
   buf2[0]=' ';
   uint32_t dfreq = 0;
   float rlevel = 0;
-  if (mtype == M_DELTA) {
+  if (mtype & M_DELTA) {
     if (ri > i) {
       dfreq = frequencies[ri] - frequencies[i];
       buf2[0] = '-';
@@ -803,10 +813,12 @@ static void trace_get_value_string(
 
 //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
     v = logmag(&coeff[i]);
+    if (mtype & M_NOISE)
+      v = v - 10*log10(GetActualRBW()*1000.0);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else
-      plot_printf(buf, len, "%s %.1f", buf2, v - rlevel);
+      plot_printf(buf, len, "%s %.1f%s", buf2, v - rlevel,(mtype & M_NOISE?"/Hz":""));
 }
 #ifdef __VNA__
 static int
@@ -1401,12 +1413,12 @@ draw_cell(int m, int n)
 
       if (x + MARKER_WIDTH >= 0 && x < CELLWIDTH &&
           y + MARKER_HEIGHT >= 0 && y < CELLHEIGHT)
-        draw_marker(x, y, marker_color[markers[i].mtype], i);
+        draw_marker(x, y, marker_color(markers[i].mtype), i);
 #else
 
       if (x + MARKER_WIDTH >= 0 && x - MARKER_WIDTH < CELLWIDTH &&
           y + MARKER_HEIGHT >= 0 && y - MARKER_HEIGHT < CELLHEIGHT)
-        draw_marker(x, y, marker_color[markers[i].mtype], i);
+        draw_marker(x, y, marker_color(markers[i].mtype), i);
 #endif
       //      draw_marker(x, y, config.trace_color[t], i);
 //    }
@@ -1558,7 +1570,10 @@ void
 request_to_draw_cells_behind_menu(void)
 {
   // Values Hardcoded from ui.c
-  invalidate_rect(320-70, 0, 319, 239);
+  if (current_menu_is_form())
+    invalidate_rect(25, 0, 319, 239);
+  else
+    invalidate_rect(320-60, 0, 319, 239);
   redraw_request |= REDRAW_CELLS;
 }
 
@@ -1817,7 +1832,7 @@ static void cell_draw_marker_info(int x0, int y0)
   int ref_marker = 0;
   int j = 0;
   for (int i = 0; i < MARKER_COUNT; i++) {
-    if (markers[i].enabled && markers[i].mtype == M_REFERENCE) {
+    if (markers[i].enabled && markers[i].mtype & M_REFERENCE) {
       ref_marker = i;
       break;
     }
@@ -1840,15 +1855,17 @@ static void cell_draw_marker_info(int x0, int y0)
       cell_drawstring_7x13(buf, xpos, ypos);
       break;
     }
+#if 0
     if (i >= 2 && in_selftest) {
       plot_printf(buf, sizeof buf, "DO NOT SWITCH OFF!!");
       j = 2;
-      int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
-      int ypos = 1 + (j/2)*(16) - y0;
+      int xpos = 1 + CELLOFFSETX +25 - x0;
+      int ypos = 1 + 16 - y0;
 
       cell_drawstring_7x13(buf, xpos, ypos);
       break;
     }
+#endif
     if (!markers[i].enabled)
       continue;
     int idx = markers[i].index;
@@ -1867,25 +1884,31 @@ static void cell_draw_marker_info(int x0, int y0)
       int k = 0;
       if (i == active_marker) {
 //        ili9341_set_foreground(DEFAULT_BG_COLOR);
-//        ili9341_set_background(marker_color[markers[i].mtype]);
+//        ili9341_set_background(marker_color(markers[i].mtype));
         buf[k++] = '\033'; // Right arrow (?)
       } else {
 //        ili9341_set_background(DEFAULT_BG_COLOR);
-//        ili9341_set_foreground(marker_color[markers[i].mtype]);
+//        ili9341_set_foreground(marker_color(markers[i].mtype));
         buf[k++] = ' ';
 //        buf[k++] = ' ';
       }
       buf[k++] = i+'1';
-//      buf[k++] = marker_letter[markers[i].mtype];
+      if (markers[i].mtype & M_REFERENCE)
+        buf[k++] = 'R';
+      if (markers[i].mtype & M_DELTA)
+        buf[k++] = 'D';
+      if (markers[i].mtype & M_NOISE)
+        buf[k++] = 'N';
       buf[k++] = 0;
       ili9341_set_background(DEFAULT_BG_COLOR);
-      ili9341_set_foreground(marker_color[markers[i].mtype]);
+      ili9341_set_foreground(marker_color(markers[i].mtype));
       cell_drawstring_7x13(buf, xpos, ypos);
+      xpos += strlen(buf)*7;
 //      cell_drawstring_size(buf, xpos, ypos, 2);
       trace_get_value_string(
           t, buf, sizeof buf,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
-      cell_drawstring_7x13(buf, xpos+3*7, ypos);
+      cell_drawstring_7x13(buf, xpos, ypos);
 //      cell_drawstring_size(buf, xpos+3*7, ypos, 2);
       j++;
    }
