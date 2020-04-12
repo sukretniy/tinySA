@@ -752,6 +752,7 @@ static void menu_marker_type_cb(int item, uint8_t data)
           markers[i].mtype &= ~M_REFERENCE;
       }
       markers[active_marker].mtype |= M_REFERENCE;
+      markers[active_marker].mtype &= ~M_DELTA;
     } else {
       if (data == M_DELTA && (markers[active_marker].mtype & M_REFERENCE))
         markers[active_marker].mtype &= ~M_REFERENCE;
@@ -1357,9 +1358,13 @@ static void menu_item_modify_attribute(
   } else if (menu == menu_marker_type && active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {
     if (data & markers[active_marker].mtype)
       mark = true;
-    else if (data==markers[active_marker].mtype)    // This catches the M_NORMAL case
+    else if (item < 5 && data==markers[active_marker].mtype)    // This catches the M_NORMAL case
       mark = true;
   } else if (menu == menu_marker_search) {
+    if (item == 0 && search_is_greater())
+      mark = true;
+    if (item == 1 && !search_is_greater())
+      mark = true;
     if (item == 4 && markers[active_marker].mtype & M_TRACKING)
       mark = true;
   } else if (menu == menu_marker_sel) {
