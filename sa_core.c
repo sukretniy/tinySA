@@ -27,6 +27,7 @@ int setting_decay;
 int setting_noise;
 float actual_rbw = 0;
 float setting_vbw = 0;
+int  setting_tracking_output;
 
 int setting_measurement;
 
@@ -63,6 +64,7 @@ void reset_settings(int m)
   setting_auto_reflevel = true;     // Must be after SetReflevel
   setting_decay=20;
   setting_noise=5;
+  setting_tracking_output = false;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
 
@@ -135,6 +137,18 @@ void set_measurement(int m)
 void SetDrive(int d)
 {
   setting_drive = d;
+  dirty = true;
+}
+
+void set_tracking_output(int t)
+{
+  setting_tracking_output = t;
+  dirty = true;
+}
+
+void toggle_tracking_output(void)
+{
+  setting_tracking_output = !setting_tracking_output;
   dirty = true;
 }
 
@@ -420,6 +434,7 @@ void apply_settings(void)
   } else
     actualStepDelay = setting_step_delay;
   PE4302_Write_Byte(setting_attenuate * 2);
+#if 0
   if (setting_modulation == MO_NFM ) {
     SI4432_Sel = 1;
     SI4432_Write_Byte(0x7A, 1);  // Use frequency hopping channel width for FM modulation
@@ -430,6 +445,7 @@ void apply_settings(void)
     SI4432_Sel = 1;
     SI4432_Write_Byte(0x79, 0);  // IF no FM back to channel 0
   }
+#endif
   SetRX(setting_mode);
   SI4432_SetReference(setting_refer);
   update_rbw();
@@ -494,7 +510,10 @@ case M_LOW:     // Mixed into 0
     SetAGCLNA();
 
     SI4432_Sel = 1;
-    SetSwitchReceive();
+    if (setting_tracking_output)
+      SetSwitchTransmit();
+    else
+      SetSwitchReceive();
 //    SI4432_Receive(); For noise testing only
     SI4432_Transmit(setting_drive);
     // SI4432_SetReference(setting_refer);
@@ -521,9 +540,13 @@ case M_GENLOW:  // Mixed output from 0
     SI4432_Transmit(setting_drive);
 
     SI4432_Sel = 1;
-    SetSwitchReceive();
-    SI4432_Transmit(12);                 // Fix LO drive a 10dBm
-
+    if (setting_modulation == MO_EXTERNAL) {
+      SetSwitchTransmit();  // High input for external LO scuh as tracking output of other tinySA
+      SI4432_Receive();
+    } else {
+      SetSwitchReceive();
+      SI4432_Transmit(12);                 // Fix LO drive a 10dBm
+    }
     break;
 case M_GENHIGH: // Direct output from 1
     SI4432_Sel = 0;
@@ -576,9 +599,9 @@ int binary_search_frequency(int f)
   int fplus = f + ((int)actual_rbw ) * 1000;
   while (L <= R) {
     int m = (L + R) / 2;
-    if (frequencies[m] < fmin)
+    if ((int)frequencies[m] < fmin)
       L = m + 1;
-    else if (frequencies[m] > fplus)
+    else if ((int)frequencies[m] > fplus)
       R = m - 1;
     else
        return m; // index is m

@@ -1512,9 +1512,9 @@ draw_all_cells(bool flush_markmap)
         b = (k-128)*4;
       }
 #else
-      volatile int k = (actual_t[i]+120)* 2;
-      if (k > 255) k = 255;
-      volatile unsigned int r=0,g=0,b=0;
+      int k = (actual_t[i]+120)* 2 * 8;
+      k &= 255;
+      unsigned int r=0,g=0,b=0;
       if (k < 64) {
         b = 255;
         g = k*2 + 128;
@@ -2089,6 +2089,7 @@ toggle_waterfall(void)
 {
   if (!waterfall) {
     _height = HEIGHT_SCROLL;
+    ili9341_fill(5*5, HEIGHT, 320 - 5*5, 236-HEIGHT, 0);
     waterfall = true;
     fullscreen = false;
   } else {
