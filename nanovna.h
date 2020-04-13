@@ -132,7 +132,7 @@ enum {
 };
 
 enum {
-  MO_NONE, MO_AM, MO_NFM, MO_WFM,
+  MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL,
 };
 
 #define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )

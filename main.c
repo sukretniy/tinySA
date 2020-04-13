@@ -2662,6 +2662,7 @@ int main(void)
   ui_init();
   //Initialize graph plotting
   plot_init();
+
   redraw_frame();
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 

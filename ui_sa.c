@@ -45,6 +45,7 @@ void set_decay(int);
 void set_noise(int);
 extern int32_t frequencyExtra;
 extern int setting_tracking;
+extern int setting_tracking_output;
 extern int setting_drive;
 extern int setting_lna;
 extern int setting_agc;
@@ -150,12 +151,12 @@ const uint16_t left_icons [] =
         0x0000,
         0x0000,
         0x0000,
-        0x0000,
         0x0060,
         0x0039,
         0x0fff,
         0x0039,
         0x0060,
+        0x0000,
         0x0000,
 
 #define I_LOW_OUTPUT 3*16
@@ -170,9 +171,9 @@ const uint16_t left_icons [] =
         0b0000000000000000,
         0b0000000000000000,
         0b0000000110000000,
-        0b0000011110000001,
+        0b0000011100000001,
         0b0000111111111111,
-        0b0000011110000001,
+        0b0000011100000001,
         0b0000000110000000,
         0b0000000000000000,
         0b0000000000000000,
@@ -182,9 +183,9 @@ const uint16_t left_icons [] =
         0b0000000000000000,
         0b0000000000000000,
         0b0000000110000000,
-        0b0000011110000001,
+        0b0000011100000001,
         0b0000111111111111,
-        0b0000011110000001,
+        0b0000011100000001,
         0b0000000110000000,
         0b0000000000000000,
         0b0000000000000000,
@@ -300,16 +301,16 @@ const uint16_t right_icons [] =
         0b0000000000000000,
         0b0111111111111111,
         0b0100000000000001,
-        0b1100000011000001,
-        0b1100001110001001,
-        0b1100011100011101,
-        0b0100001110111001,
+        0b1100000010000001,
+        0b1100001111000001,
+        0b1100011110001001,
+        0b0100011100011101,
+        0b0100011110111001,
         0b0100001111111001,
         0b0100011111110001,
-        0b0100111110000001,
+        0b1100111110000001,
         0b1101111100000001,
-        0b1101111000000001,
-        0b1100100000000001,
+        0b1100111000000001,
         0b0100000000000001,
         0b0111111111111111,
         0b0000000000000000,
@@ -454,7 +455,7 @@ static const char * const keypad_mode_label[] = {
 #endif
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
-  "error", "START", "STOP", "CENTER", "SPAN", "CW FREQ", "REFPOS", "SCALE", // 0-7
+  "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
   "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", "OFFSET" // 8-16
 };
 #endif
@@ -573,8 +574,8 @@ static void menu_dfu_cb(int item, uint8_t data)
 }
 
 
-const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM};
-const char *menu_modulation_text[]={"NONE","AM","NARROW FM","WIDE FM"};
+const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
+const char *menu_modulation_text[]={"NONE","AM","NARROW FM","WIDE FM", "EXTERNAL"};
 
 static void menu_modulation_cb(int item, uint8_t data)
 {
@@ -752,6 +753,7 @@ static void menu_marker_type_cb(int item, uint8_t data)
           markers[i].mtype &= ~M_REFERENCE;
       }
       markers[active_marker].mtype |= M_REFERENCE;
+      markers[active_marker].mtype &= ~M_DELTA;
     } else {
       if (data == M_DELTA && (markers[active_marker].mtype & M_REFERENCE))
         markers[active_marker].mtype &= ~M_REFERENCE;
@@ -828,6 +830,9 @@ static void menu_settings2_cb(int item, uint8_t data)
   case 2:
     toggle_tracking();
     break;
+  case 3:
+    toggle_tracking_output();
+    break;
   }
   draw_menu();
 //  draw_cal_status();
@@ -899,6 +904,7 @@ const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_CALLBACK, 1,  "AM",        menu_modulation_cb},
   { MT_FORM | MT_CALLBACK, 2,  "NARROW FM", menu_modulation_cb},
   { MT_FORM | MT_CALLBACK, 3,  "WIDE FM",   menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, 4,  "EXTERNAL",  menu_modulation_cb},
   { MT_FORM | MT_CANCEL,   0,             S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1057,7 +1063,7 @@ const menuitem_t menu_marker_ops[] = {
 
 static const menuitem_t menu_marker[] = {
   { MT_SUBMENU,  0, "\2SELECT\0MARKERS",    menu_marker_sel},
-  { MT_SUBMENU,  0, "\2MARKER\0TYPE",       menu_marker_type},
+  { MT_SUBMENU,  0, "\2CHANGE\0MARKER",       menu_marker_type},
   { MT_SUBMENU,  0, "\2MARKER\0OPS",        menu_marker_ops},
   { MT_SUBMENU,  0, "\2SEARCH\0MARKER",     menu_marker_search},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
@@ -1084,12 +1090,13 @@ static const menuitem_t menu_settings2[] =
 
 static const menuitem_t menu_settings[] =
 {
-  { MT_KEYPAD, KM_ACTUALPOWER,    "\2ACTUAL\0POWER",  NULL},
-  { MT_KEYPAD, KM_IF,             "\2IF\0FREQ",       NULL},
-  { MT_KEYPAD, KM_SAMPLETIME,     "\2SAMPLE\0TIME",   NULL},
-  { MT_SUBMENU,0,                 "\2LO\0DRIVE",      menu_drive},
-  { MT_SUBMENU,  0,                 S_RARROW" MORE",    menu_settings2},
-  { MT_CANCEL,   0,                 S_LARROW" BACK", NULL },
+  { MT_CALLBACK, 3,             "\2TRACKING\0OUTPUT",menu_settings2_cb},
+  { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
+  { MT_KEYPAD, KM_IF,           "\2IF\0FREQ",       NULL},
+  { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0TIME",   NULL},
+  { MT_SUBMENU,0,               "\2LO\0DRIVE",      menu_drive},
+  { MT_SUBMENU,  0,             S_RARROW" MORE",    menu_settings2},
+  { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1147,7 +1154,7 @@ static const menuitem_t menu_acquire[] = {
   { MT_CALLBACK, 0, "RESET",            menu_autosettings_cb},
   { MT_SUBMENU, 0,  "ATTEN",            menu_atten},
   { MT_SUBMENU,0,   "RBW",              menu_rbw},
-  { MT_SUBMENU,0,   "AVER",             menu_average},
+  { MT_SUBMENU,0,   "CALC",             menu_average},
   { MT_CANCEL, 0,   S_LARROW" BACK",    NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1155,7 +1162,7 @@ static const menuitem_t menu_acquire[] = {
 static const menuitem_t menu_acquirehigh[] = {
   { MT_CALLBACK, 0,             "RESET",     menu_autosettings_cb},
   { MT_SUBMENU,0,               "RBW",       menu_rbw},
-  { MT_SUBMENU,0,               "AVER",      menu_average},
+  { MT_SUBMENU,0,               "CALC",      menu_average},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1194,7 +1201,7 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_STOP,    "STOP",             NULL},
   { MT_KEYPAD,  KM_CENTER,  "CENTER",           NULL},
   { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
-  { MT_KEYPAD,  KM_CW,      "CW FREQ",          NULL},
+  { MT_KEYPAD,  KM_CW,      "\2ZERO\0SPAN",          NULL},
   { MT_SUBMENU,0,           "RBW",              menu_rbw},
   { MT_CANCEL,  0,          S_LARROW" BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
@@ -1203,13 +1210,13 @@ static const menuitem_t menu_stimulus[] = {
 
 
 static const menuitem_t menu_mode[] = {
-  { MT_FORM | MT_TITLE,    0, "MODE",           NULL},
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,   "LOW INPUT",      menu_mode_cb},
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,  "HIGH INPUT",     menu_mode_cb},
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS, "LOW OUTPUT",     menu_mode_cb},
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,"HIGH OUTPUT",    menu_mode_cb},
-  { MT_FORM | MT_SUBMENU  | MT_ICON,    I_CONNECT+I_GEN,    "CAL OUTPUT: %s", menu_reffer},
-  { MT_FORM | MT_SUBMENU  | MT_ICON,    I_EMPTY+I_CONFIG,"CONFIG",         menu_config},
+  { MT_FORM | MT_TITLE,                 0,                      "MODE",           NULL},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "LOW INPUT",      menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "HIGH INPUT",     menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "LOW OUTPUT",     menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "HIGH OUTPUT",    menu_mode_cb},
+  { MT_FORM | MT_SUBMENU  | MT_ICON,    I_CONNECT+I_GEN,        "CAL OUTPUT: %s", menu_reffer},
+  { MT_FORM | MT_SUBMENU  | MT_ICON,    I_EMPTY+I_CONFIG,       "CONFIG",         menu_config},
 //  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1318,7 +1325,11 @@ static void menu_item_modify_attribute(
       mark = true;
     }
   } else if (menu == menu_dBper) {
-    if (data == get_trace_scale(1)){
+    if (data == setting_scale){
+      mark = true;
+    }
+  } else if (menu == menu_measure && MT_MASK(menu[item].type) == MT_CALLBACK) {
+    if (data == setting_measurement){
       mark = true;
     }
   } else if (menu == menu_rbw) {
@@ -1330,7 +1341,10 @@ static void menu_item_modify_attribute(
     if (data == setting_drive){
       mark = true;
     }
-
+  } else if (menu == menu_modulation && MT_MASK(menu[item].type) == MT_CALLBACK) {
+    if (data == setting_modulation){
+      mark = true;
+    }
   } else if (menu == menu_display) {
     if (item ==0 && is_paused()){
       mark = true;
@@ -1342,6 +1356,10 @@ static void menu_item_modify_attribute(
       mark = true;
     }
     if (item == 4 && get_waterfall()){
+      mark = true;
+    }
+  } else if (menu == menu_settings) {
+    if (item ==0 && setting_tracking_output){
       mark = true;
     }
   } else if (menu == menu_settings2 || menu == menu_settingshigh2) {
@@ -1357,9 +1375,13 @@ static void menu_item_modify_attribute(
   } else if (menu == menu_marker_type && active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {
     if (data & markers[active_marker].mtype)
       mark = true;
-    else if (data==markers[active_marker].mtype)    // This catches the M_NORMAL case
+    else if (item < 5 && data==markers[active_marker].mtype)    // This catches the M_NORMAL case
       mark = true;
   } else if (menu == menu_marker_search) {
+    if (item == 0 && search_is_greater())
+      mark = true;
+    if (item == 1 && !search_is_greater())
+      mark = true;
     if (item == 4 && markers[active_marker].mtype & M_TRACKING)
       mark = true;
   } else if (menu == menu_marker_sel) {
