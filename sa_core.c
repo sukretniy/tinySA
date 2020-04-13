@@ -862,8 +862,11 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
     } else if (MODE_LOW(setting_mode)) {
       if (setting_mode == M_LOW && !in_selftest && avoid_spur(f)) {
         local_IF = spur_alternate_IF;
-      } else
+      } else {
         local_IF = frequency_IF ;
+      }
+      if (setting_mode == M_GENLOW && setting_modulation == MO_EXTERNAL)
+        local_IF += lf;
       setFreq (0, local_IF);
     } else
       local_IF= 0;
