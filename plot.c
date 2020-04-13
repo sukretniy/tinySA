@@ -1467,6 +1467,12 @@ draw_cell(int m, int n)
   ili9341_bulk(OFFSETX + x0, OFFSETY + y0, w, h);
 }
 
+extern float peakLevel;
+extern float min_level;
+int w_max = -130;
+int w_min = 0;
+
+
 static void
 draw_all_cells(bool flush_markmap)
 {
@@ -1512,6 +1518,27 @@ draw_all_cells(bool flush_markmap)
         b = (k-128)*4;
       }
 #else
+      if (w_min > (int)min_level)
+        w_min = (int)min_level;
+      if (w_max < (int)peakLevel)
+        w_max = (int)peakLevel;
+/*
+      def rgb(minimum, maximum, value):
+          minimum, maximum = float(minimum), float(maximum)
+          ratio = 2 * (value-minimum) / (maximum - minimum)
+          b = int(max(0, 255*(1 - ratio)))
+          r = int(max(0, 255*(ratio - 1)))
+          g = 255 - b - r
+          return r, g, b
+  */
+      int r,g,b;
+      float ratio = (int)(510.0 * (actual_t[i] - w_min) / (w_max - actual_t[i]));
+      b = 255 - ratio;
+      if (b < 0) b = 0;
+      r = ratio - 255;
+      if (r < 0) r = 0;
+      g = 255 - b - r;
+#if 0
       int k = (actual_t[i]+120)* 2 * 8;
       k &= 255;
       unsigned int r=0,g=0,b=0;
@@ -1529,6 +1556,7 @@ draw_all_cells(bool flush_markmap)
         g = 255 - (k-192)*2;
         r = 255;
       }
+#endif
 #endif
       spi_buffer[i] = RGB565(r,g,b);
     }
@@ -2079,6 +2107,7 @@ redraw_frame(void)
   draw_cal_status();
 }
 
+
 int get_waterfall(void)
 {
   return(waterfall);
@@ -2092,6 +2121,11 @@ toggle_waterfall(void)
     ili9341_fill(5*5, HEIGHT, 320 - 5*5, 236-HEIGHT, 0);
     waterfall = true;
     fullscreen = false;
+    w_min = (int)min_level;
+    w_max = (int)peakLevel;
+    if (w_max < w_min + 20)
+      w_max = w_min + 20;
+
   } else {
     _height = HEIGHT_NOSCROLL;
     waterfall = false;
