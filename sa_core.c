@@ -1170,7 +1170,7 @@ void draw_cal_status(void)
   ili9341_drawstring("Attn:", x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "%ddB", -setting_attenuate);
+  plot_printf(buf, BLEN, "%ddB", setting_attenuate);
   buf[5]=0;
   ili9341_drawstring(buf, x, y);
 
