@@ -365,6 +365,10 @@ void set_marker_search(int mode);
 int marker_search(void);
 int marker_search_left(int from);
 int marker_search_right(int from);
+int marker_search_left_max(int from);
+int marker_search_right_max(int from);
+int marker_search_left_min(int from);
+int marker_search_right_min(int from);
 
 // _request flag for update screen
 #define REDRAW_CELLS      (1<<0)
@@ -380,7 +384,10 @@ extern volatile uint8_t redraw_request;
  */
 // SPI bus revert byte order
 //gggBBBbb RRRrrGGG
-#define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
+#define byteReverse16(x) (uint16_t)(((x) << 8) & 0xff00) | (((x) >> 8) & 0xff)
+#define RGB565(r,g,b)     byteReverse16( ((((uint16_t)r)<<8)&0b1111100000000000) | ((((uint16_t)g)<<3)&0b0000011111100000) | ((((uint16_t)b)>>3)&0b0000000000011111) )
+
+//#define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
 #define RGBHEX(hex) ( (((hex)&0x001c00)<<3) | (((hex)&0x0000f8)<<5) | (((hex)&0xf80000)>>16) | (((hex)&0x00e000)>>13) )
 
 // Define size of screen buffer in pixels (one pixel 16bit size)
@@ -651,7 +658,7 @@ void wait_user(void);
 void calibrate(void);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND
 };
 
 /*EOF*/

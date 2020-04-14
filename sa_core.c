@@ -99,6 +99,13 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     break;
   }
+  for (int i = 0; i< MARKERS_MAX; i++) {
+    markers[i].enabled = M_DISABLED;
+    markers[i].mtype = M_NORMAL;
+  }
+  markers[0].mtype = M_REFERENCE | M_TRACKING;
+  markers[0].enabled = M_ENABLED;
+
   dirty = true;
 }
 
@@ -965,7 +972,7 @@ static bool sweep(bool break_on_operation)
         if (temppeakLevel > actual_t[i]) {    // Follow down
           temppeakIndex = i;                  // Latest minimum
           temppeakLevel = actual_t[i];
-        } else if (temppeakLevel + setting_noise < actual_t[i]) {    // Local minimum found
+        } else if (temppeakLevel + setting_noise < actual_t[i] ) {    // Local minimum found
           temppeakIndex = i;                          // This is now the latest maximum
           temppeakLevel = actual_t[i];
           downslope = false;
@@ -974,7 +981,7 @@ static bool sweep(bool break_on_operation)
         if (temppeakLevel < actual_t[i]) {    // Follow up
           temppeakIndex = i;
           temppeakLevel = actual_t[i];
-        } else if (temppeakLevel - setting_noise > actual_t[i]) {    // Local max found
+        } else if (actual_t[i] < temppeakLevel - setting_noise) {    // Local max found
 
           int j = 0;                                            // Insertion index
           while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
@@ -1085,6 +1092,23 @@ static bool sweep(bool break_on_operation)
       }
     } else if (setting_measurement == M_PHASE_NOISE  && markers[0].index > 10) {
       markers[1].index =  markers[0].index + (setting_mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
+    } else if (setting_measurement == M_STOP_BAND  && markers[0].index > 10) {
+      markers[1].index =  marker_search_left_min(markers[0].index);
+      if (markers[1].index < 0) markers[1].index = 0;
+      markers[2].index =  marker_search_right_min(markers[0].index);
+      if (markers[2].index < 0) markers[1].index = POINTS_COUNT - 1;
+    } else if (setting_measurement == M_PASS_BAND  && markers[0].index > 10) {
+      int t = markers[0].index;
+      float v = actual_t[t];
+      while (t > 0 && actual_t[t] > v - 3.0)
+        t --;
+      if (t > 0)
+        markers[1].index = t;
+      t = markers[0].index;
+      while (t < POINTS_COUNT - 1 && actual_t[t] > v - 3.0)
+        t ++;
+      if (t < POINTS_COUNT - 1 )
+        markers[2].index = t;
     }
 #endif
     peakIndex = max_index[0];
@@ -1116,7 +1140,130 @@ static bool sweep(bool break_on_operation)
   return true;
 }
 
+//------------------------------- SEARCH ---------------------------------------------
 
+int
+marker_search_left_max(int from)
+{
+  int i;
+  int found = -1;
+  if (uistat.current_trace == -1)
+    return -1;
+
+  int value = actual_t[from];
+  for (i = from - 1; i >= 0; i--) {
+    int new_value = actual_t[i];
+    if (new_value < value) {
+      value = new_value;
+      found = i;
+    } else if (new_value > value + setting_noise )
+      break;
+  }
+
+  for (; i >= 0; i--) {
+    int new_value = actual_t[i];
+    if (new_value > value) {
+      value = new_value;
+      found = i;
+    } else if (new_value < value  - setting_noise )
+      break;
+  }
+  return found;
+}
+
+int
+marker_search_right_max(int from)
+{
+  int i;
+  int found = -1;
+
+  if (uistat.current_trace == -1)
+    return -1;
+  int value = actual_t[from];
+  for (i = from + 1; i < sweep_points; i++) {
+    int new_value = actual_t[i];
+    if (new_value < value) {    // follow down
+      value = new_value;
+      found = i;
+    } else if (new_value > value + setting_noise) // larger then lowest value + noise
+      break;    //  past the minimum
+  }
+  for (; i < sweep_points; i++) {
+    int new_value = actual_t[i];
+    if (new_value > value) {    // follow up
+      value = new_value;
+      found = i;
+    } else if (new_value < value - setting_noise)
+      break;
+  }
+  return found;
+}
+
+#define MINMAX_DELTA 10
+
+
+int
+marker_search_left_min(int from)
+{
+  int i;
+  int found = from;
+  if (uistat.current_trace == -1)
+    return -1;
+
+  int value = actual_t[from];
+  for (i = from - 1; i >= 0; i--) {
+    int new_value = actual_t[i];
+    if (new_value > value) {
+      value = new_value;        // follow up
+//      found = i;
+    } else if (new_value < value - MINMAX_DELTA )
+      break;  // past the maximum
+  }
+
+  for (; i >= 0; i--) {
+    int new_value = actual_t[i];
+    if (new_value < value) {
+      value = new_value;        // follow down
+      found = i;
+    } else if (new_value > value  + MINMAX_DELTA )
+      break;
+  }
+  return found;
+}
+
+int
+marker_search_right_min(int from)
+{
+  int i;
+  int found = from;
+
+  if (uistat.current_trace == -1)
+    return -1;
+  int value = actual_t[from];
+  for (i = from + 1; i < sweep_points; i++) {
+    int new_value = actual_t[i];
+    if (new_value > value) {    // follow up
+      value = new_value;
+//      found = i;
+    } else if (new_value < value - MINMAX_DELTA) // less then largest value - noise
+      break;    // past the maximum
+  }
+  for (; i < sweep_points; i++) {
+    int new_value = actual_t[i];
+    if (new_value < value) {    // follow down
+      value = new_value;
+      found = i;
+    } else if (new_value > value + MINMAX_DELTA) // larger then smallest value + noise
+      break;
+  }
+  return found;
+}
+
+
+
+
+
+// -------------------------- CAL STATUS ---------------------------------------------
 const char *averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16"};
 const char *dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
 const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };

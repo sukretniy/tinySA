@@ -686,6 +686,36 @@ static void menu_measure_cb(int item, uint8_t data)
       SetAverage(4);
 
       break;
+    case M_STOP_BAND:                             // STop band measurement
+      reset_settings(GetMode());
+      markers[1].enabled = M_ENABLED;
+      markers[1].mtype = M_DELTA;
+      markers[2].enabled = M_ENABLED;
+      markers[2].mtype = M_DELTA;
+      ui_mode_keypad(KM_CENTER);
+      ui_process_keypad();
+      ui_mode_keypad(KM_SPAN);
+      ui_process_keypad();
+      set_sweep_frequency(ST_SPAN, uistat.value*4);
+      set_measurement(M_STOP_BAND);
+//      SetAverage(4);
+
+      break;
+    case M_PASS_BAND:                             // STop band measurement
+      reset_settings(GetMode());
+      markers[1].enabled = M_ENABLED;
+      markers[1].mtype = M_DELTA;
+      markers[2].enabled = M_ENABLED;
+      markers[2].mtype = M_DELTA;
+      ui_mode_keypad(KM_CENTER);
+      ui_process_keypad();
+      ui_mode_keypad(KM_SPAN);
+      ui_process_keypad();
+      set_sweep_frequency(ST_SPAN, uistat.value*2);
+      set_measurement(M_PASS_BAND);
+//      SetAverage(4);
+
+      break;
   }
 #endif
 //  selection = -1;
@@ -1014,10 +1044,10 @@ static const menuitem_t menu_marker_type[] = {
 
 const menuitem_t menu_marker_search[] = {
   //{ MT_CALLBACK, "OFF", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "MAXIMUM",                      menu_marker_search_cb },
-  { MT_CALLBACK, 1, "MINIMUM",                      menu_marker_search_cb },
-  { MT_CALLBACK, 2, "\2SEARCH\0" S_LARROW" LEFT",   menu_marker_search_cb },
-  { MT_CALLBACK, 3, "\2SEARCH\0" S_RARROW" RIGHT",  menu_marker_search_cb },
+  { MT_CALLBACK, 0, "\2MIN\0" S_LARROW" LEFT",                      menu_marker_search_cb },
+  { MT_CALLBACK, 1, "\2MIN\0" S_RARROW" RIGHT",                      menu_marker_search_cb },
+  { MT_CALLBACK, 2, "\2MAX\0" S_LARROW" LEFT",   menu_marker_search_cb },
+  { MT_CALLBACK, 3, "\2MAX\0" S_RARROW" RIGHT",  menu_marker_search_cb },
   { MT_CALLBACK, 4, "TRACKING",                     menu_marker_search_cb },
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
@@ -1104,9 +1134,11 @@ static const menuitem_t menu_settings[] =
 
 static const menuitem_t menu_measure[] = {
   { MT_CALLBACK, M_OFF,         "OFF",      menu_measure_cb},
-  { MT_CALLBACK, M_IMD,         "IMD",      menu_measure_cb},
+  { MT_CALLBACK, M_IMD,         "MARMONICS",menu_measure_cb},
   { MT_CALLBACK, M_OIP3,        "OIP3",     menu_measure_cb},
   { MT_CALLBACK, M_PHASE_NOISE, "\2PHASE\0NOISE",menu_measure_cb},
+  { MT_CALLBACK, M_STOP_BAND, "\2STOP\0BAND",menu_measure_cb},
+  { MT_CALLBACK, M_PASS_BAND, "\2PASS\0BAND",menu_measure_cb},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };

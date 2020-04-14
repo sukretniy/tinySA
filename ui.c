@@ -781,16 +781,24 @@ menu_marker_search_cb(int item, uint8_t data)
     return;
 
   switch (data) {
+  case 0: /* search Left */
+    i = marker_search_left_min(markers[active_marker].index);
+    break;
+  case 1: /* search right */
+    i = marker_search_right_min(markers[active_marker].index);
+    break;
+#if 0
   case 0: /* maximum */
   case 1: /* minimum */
     set_marker_search(data);
     i = marker_search();
     break;
+#endif
   case 2: /* search Left */
-    i = marker_search_left(markers[active_marker].index);
+    i = marker_search_left_max(markers[active_marker].index);
     break;
   case 3: /* search right */
-    i = marker_search_right(markers[active_marker].index);
+    i = marker_search_right_max(markers[active_marker].index);
     break;
   case 4: /* tracking */
     markers[active_marker].mtype ^= M_TRACKING;
@@ -1651,7 +1659,10 @@ static void
 erase_menu_buttons(void)
 {
 //  ili9341_fill(area_width, 0, 320 - area_width, area_height, DEFAULT_BG_COLOR);
-  ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+  if (current_menu_is_form())
+    ili9341_fill(5*5, 0,320-5*5, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+  else
+    ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
   draw_frequencies();
 }
 
@@ -1843,15 +1854,15 @@ lever_move_marker(int status)
     if (active_marker >= 0 && markers[active_marker].enabled) {
       if ((status & EVT_DOWN) && markers[active_marker].index > 0) {
         markers[active_marker].index -= step;
-        if (markers[active_marker].index < 5)
-          markers[active_marker].index = 5 ;
+        if (markers[active_marker].index < 0)
+          markers[active_marker].index = 0 ;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
       }
       if ((status & EVT_UP) && markers[active_marker].index < sweep_points-1) {
         markers[active_marker].index += step;
-        if (markers[active_marker].index  > POINTS_COUNT-5)
-          markers[active_marker].index = POINTS_COUNT-5 ;
+        if (markers[active_marker].index  > POINTS_COUNT-1)
+          markers[active_marker].index = POINTS_COUNT-1 ;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
       }
