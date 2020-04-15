@@ -888,7 +888,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
       return(0);
     float signal_path_loss;
     if (setting_mode == M_LOW)
-      signal_path_loss = -9.5;      // Loss in dB
+      signal_path_loss = -9.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
     else
       signal_path_loss = 7;         // Loss in dB (+ is gain)
     float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+ setting_attenuate - signal_path_loss;

@@ -16,9 +16,14 @@
  * the Free Software Foundation, Inc., 51 Franklin Street,
  * Boston, MA 02110-1301, USA.
  */
+//#define HAL_USE_SERIAL 1
+//#define STM32_SERIAL_USE_USART1  1
 
 #include "ch.h"
 #include "hal.h"
+
+//#include "hal_serial.h"
+
 #include "usbcfg.h"
 #ifdef __VNA__
 #include "si5351.h"
@@ -2591,6 +2596,39 @@ static DACConfig dac1cfg1 = {
 };
 #endif
 
+#if 0
+/*
+ * UART driver configuration structure.
+ */
+static UARTConfig uart_cfg_1 = {
+    NULL,   //txend1,
+    NULL,   //txend2,
+    NULL,   //rxend,
+    NULL,   //rxchar,
+    NULL,   //rxerr,
+    800000,
+    0,
+    0,      //USART_CR2_LINEN,
+    0
+};
+#endif
+
+#if 1
+static const SerialConfig default_config =
+{
+  9600,
+  0,
+  USART_CR2_STOP2_BITS,
+  0
+};
+#endif
+
+myWrite(char *buf)
+{
+  int len = strlen(buf);
+  while(len-- > 0)
+    sdPut(&SD1,*buf++);
+}
 
 // Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
 // Profile stack usage (enable threads command by def ENABLE_THREADS_COMMAND) show:
@@ -2625,7 +2663,35 @@ int main(void)
   usbStart(serusbcfg.usbp, &usbcfg);
   usbConnectBus(serusbcfg.usbp);
 
-/*
+#if 0
+ /*
+  * UART initialize
+  */
+  uartStart(&UARTD1, &uart_cfg_1);
+
+  uartStartSend(&UARTD1, 1, "H");
+  uartStartReceive(&UARTD1, 1, buf);
+#endif
+
+#if 1
+  palSetPadMode(GPIOA, 9, PAL_MODE_ALTERNATE(1));  // USART1 TX.
+  palSetPadMode(GPIOA,10, PAL_MODE_ALTERNATE(1)); // USART1 RX.
+
+  uint8_t buf[10];
+  sdStart(&SD1,&default_config);
+  osalThreadSleepMilliseconds(10);
+  myWrite("Hallo!?");
+
+  osalThreadSleepMilliseconds(10);
+
+  sdReadTimeout(&SD1,buf,10, 10);
+
+  sdWrite(&SD1,(const uint8_t *)"Test123",7);
+  osalThreadSleepMilliseconds(10);
+  sdReadTimeout(&SD1,buf,10, 10);
+#endif
+
+  /*
  * SPI LCD Initialize
  */
   ili9341_init();
