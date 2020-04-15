@@ -609,7 +609,7 @@ void ili9341_drawstring_7x13(const char *str, int x, int y)
   while (*str) {
     uint8_t ch = *str++;
     const uint16_t *char_buf = &x7x13b_bits[(ch * 13)]; // All chars start at row 2
-    blit16BitWidthBitmap(x, y, 7, 12, char_buf);        // Only 'Q' has 12 rows
+    blit16BitWidthBitmap(x, y, 7, 13, char_buf);        // Only 'Q' has 12 rows, 'g' requires 13 rows
     x += 7;
   }
 }
