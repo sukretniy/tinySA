@@ -647,6 +647,7 @@ static void menu_measure_cb(int item, uint8_t data)
         markers[i].mtype = M_DELTA | M_TRACKING;
       }
       markers[0].mtype = M_REFERENCE | M_TRACKING;
+      kp_help_text = "Frequency of fundamental";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
       set_sweep_frequency(ST_START, 0);
@@ -660,11 +661,16 @@ static void menu_measure_cb(int item, uint8_t data)
         markers[i].mtype = M_DELTA | M_TRACKING;
       }
       markers[0].mtype = M_REFERENCE | M_TRACKING;
+      kp_help_text = "Frequency of left signal";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
-      ui_mode_keypad(KM_SPAN);
+      int left =  uistat.value;
+      kp_help_text = "Right signal";
+      ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
-      set_sweep_frequency(ST_SPAN, uistat.value*4);
+      int right =  uistat.value;
+      set_sweep_frequency(ST_CENTER, (left+right)/2);
+      set_sweep_frequency(ST_SPAN, (right - left)*4);
       set_measurement(M_OIP3);
       break;
     case M_PHASE_NOISE:                             // Phase noise
@@ -677,8 +683,10 @@ static void menu_measure_cb(int item, uint8_t data)
       markers[0].mtype = M_REFERENCE | M_TRACKING;
       markers[1].enabled = M_ENABLED;
       markers[1].mtype = M_DELTA | M_NOISE;
+      kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
+      kp_help_text = "Frequency offset";
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
       set_sweep_frequency(ST_SPAN, uistat.value*4);
@@ -692,8 +700,10 @@ static void menu_measure_cb(int item, uint8_t data)
       markers[1].mtype = M_DELTA;
       markers[2].enabled = M_ENABLED;
       markers[2].mtype = M_DELTA;
+      kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
+      kp_help_text = "Width of signal";
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
       set_sweep_frequency(ST_SPAN, uistat.value*4);
@@ -707,8 +717,10 @@ static void menu_measure_cb(int item, uint8_t data)
       markers[1].mtype = M_DELTA;
       markers[2].enabled = M_ENABLED;
       markers[2].mtype = M_DELTA;
+      kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
+      kp_help_text = "Width of signal";
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
       set_sweep_frequency(ST_SPAN, uistat.value*2);
@@ -717,6 +729,7 @@ static void menu_measure_cb(int item, uint8_t data)
 
       break;
   }
+  kp_help_text = NULL;
 #endif
 //  selection = -1;
   ui_mode_normal();

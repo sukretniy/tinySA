@@ -81,6 +81,7 @@ static uint8_t keypad_mode;
 static uint8_t keypads_last_index;
 static char    kp_buf[NUMINPUT_LEN+1];
 static int8_t  kp_index = 0;
+static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int8_t  selection = 0;
 
@@ -1390,9 +1391,9 @@ draw_numeric_input(const char *buf)
   int focused = FALSE;
   uint16_t xsim = 0b0010010000000000;
 
+  uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
+  uint16_t bg = config.menu_normal_color;
   for (i = 0, x = 64; i < 10 && buf[i]; i++, xsim<<=1) {
-    uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
-    uint16_t bg = config.menu_normal_color;
     int c = buf[i];
     if (c == '.')
       c = KP_PERIOD;
@@ -1419,7 +1420,18 @@ draw_numeric_input(const char *buf)
     x += xsim&0x8000 ? NUM_FONT_GET_WIDTH+2+8 : NUM_FONT_GET_WIDTH+2;
   }
   // erase last
-  ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+//  ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+  ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, 320-64, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+  if (buf[0] == 0 && kp_help_text != NULL) {
+    ili9341_set_foreground(fg);
+    ili9341_set_background(bg);
+    const char *l1,*l2;
+    if (menu_is_multiline(kp_help_text, &l1, &l2)) {
+    ili9341_drawstring_7x13(l1, 64+NUM_FONT_GET_WIDTH+2, 240-NUM_INPUT_HEIGHT+1);
+    ili9341_drawstring_7x13(l2, 64+NUM_FONT_GET_WIDTH+2, 240-NUM_INPUT_HEIGHT/2 + 1);
+  } else
+    ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, 240-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+  }
 }
 
 static int
