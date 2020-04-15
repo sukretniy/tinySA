@@ -309,9 +309,9 @@ static const uint8_t ili9341_init_seq[] = {
   // gamma set for curve 01/2/04/08
   ILI9341_GAMMA_SET, 1, 0x01,
   // positive gamma correction
-//ILI9341_POSITIVE_GAMMA_CORRECTION, 15, 0x1F,  0x1A,  0x18,  0x0A,  0x0F,  0x06,  0x45,  0x87,  0x32,  0x0A,  0x07,  0x02,  0x07, 0x05,  0x00,
+ILI9341_POSITIVE_GAMMA_CORRECTION, 15, 0x1F,  0x1A,  0x18,  0x0A,  0x0F,  0x06,  0x45,  0x87,  0x32,  0x0A,  0x07,  0x02,  0x07, 0x05,  0x00,
   // negativ gamma correction
-//ILI9341_NEGATIVE_GAMMA_CORRECTION, 15, 0x00,  0x25,  0x27,  0x05,  0x10,  0x09,  0x3A,  0x78,  0x4D,  0x05,  0x18,  0x0D,  0x38, 0x3A,  0x1F,
+ILI9341_NEGATIVE_GAMMA_CORRECTION, 15, 0x00,  0x25,  0x27,  0x05,  0x10,  0x09,  0x3A,  0x78,  0x4D,  0x05,  0x18,  0x0D,  0x38, 0x3A,  0x1F,
   // Column Address Set
 //ILI9341_COLUMN_ADDRESS_SET, 4, 0x00, 0x00, 0x01, 0x3f, // width 320
   // Page Address Set
@@ -609,7 +609,7 @@ void ili9341_drawstring_7x13(const char *str, int x, int y)
   while (*str) {
     uint8_t ch = *str++;
     const uint16_t *char_buf = &x7x13b_bits[(ch * 13)]; // All chars start at row 2
-    blit16BitWidthBitmap(x, y, 7, 12, char_buf);        // Only 'Q' has 12 rows
+    blit16BitWidthBitmap(x, y, 7, 13, char_buf);        // Only 'Q' has 12 rows, 'g' requires 13 rows
     x += 7;
   }
 }

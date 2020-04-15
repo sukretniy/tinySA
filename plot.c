@@ -1141,10 +1141,10 @@ marker_position(int m, int t, int *x, int *y)
   *y = CELL_Y(index);
 }
 
-static int greater(int x, int y) { return x > y; }
-static int lesser(int x, int y) { return x < y; }
+static int greater(int x, int y, int d) { return x - d > y; }
+static int lesser(int x, int y, int d) { return x - d < y; }
 
-static int (*compare)(int x, int y) = greater;
+static int (*compare)(int x, int y, int d) = greater;
 
 int
 marker_search(void)
@@ -1158,7 +1158,7 @@ marker_search(void)
   int value = CELL_Y(trace_index[TRACE_ACTUAL][0]);
   for (i = 0; i < sweep_points; i++) {
     int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(value, new_value)) {
+    if ((*compare)(value, new_value, 0)) {
       value = new_value;
       found = i;
     }
@@ -1179,30 +1179,32 @@ search_is_greater(void)
   return(compare == greater);
 }
 
+#define MINMAX_DELTA    10
+
 int
 marker_search_left(int from)
 {
   int i;
   int found = -1;
-#define MINMAX_DELTA    -5
   if (uistat.current_trace == -1)
     return -1;
 
   int value = CELL_Y(trace_index[TRACE_ACTUAL][from]);
   for (i = from - 1; i >= 0; i--) {
     int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(value + MINMAX_DELTA, new_value))
+    if ((*compare)(value, new_value, MINMAX_DELTA))
       break;
-    value = new_value;
   }
 
   for (; i >= 0; i--) {
     int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(new_value, value - MINMAX_DELTA)) {
+    if ((*compare)(new_value, value, -MINMAX_DELTA)) {
       break;
     }
-    found = i;
-    value = new_value;
+    if ((*compare)(value, new_value, 0)) {
+      found = i;
+      value = new_value;
+    }
   }
   return found;
 }
@@ -1218,18 +1220,19 @@ marker_search_right(int from)
   int value = CELL_Y(trace_index[TRACE_ACTUAL][from]);
   for (i = from + 1; i < sweep_points; i++) {
     int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(value+MINMAX_DELTA, new_value))
+    if ((*compare)(value, new_value, MINMAX_DELTA))
       break;
     value = new_value;
   }
-
   for (; i < sweep_points; i++) {
     int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(new_value, value-MINMAX_DELTA)) {
+    if ((*compare)(new_value, value, -MINMAX_DELTA)) {
       break;
     }
-    found = i;
-    value = new_value;
+    if ((*compare)(value, new_value, 0)) {
+      found = i;
+      value = new_value;
+    }
   }
   return found;
 }
@@ -1467,6 +1470,12 @@ draw_cell(int m, int n)
   ili9341_bulk(OFFSETX + x0, OFFSETY + y0, w, h);
 }
 
+extern float peakLevel;
+extern float min_level;
+int w_max = -130;
+int w_min = 0;
+
+
 static void
 draw_all_cells(bool flush_markmap)
 {
@@ -1512,6 +1521,35 @@ draw_all_cells(bool flush_markmap)
         b = (k-128)*4;
       }
 #else
+      if (w_min > (int)min_level)
+        w_min = (int)min_level;
+      if (w_max < (int)peakLevel)
+        w_max = (int)peakLevel;
+/*
+      def rgb(minimum, maximum, value):
+          minimum, maximum = float(minimum), float(maximum)
+          ratio = 2 * (value-minimum) / (maximum - minimum)
+          b = int(max(0, 255*(1 - ratio)))
+          r = int(max(0, 255*(ratio - 1)))
+          g = 255 - b - r
+          return r, g, b
+  */
+      int r,g,b;
+      float ratio = (int)(510.0 * (actual_t[i] - w_min) / (w_max - w_min));
+//      float ratio = (i*2);    // Uncomment for testing the waterfall colors
+      b = 255 - ratio;
+      if (b > 255) b = 255;
+      if (b < 0) b = 0;
+      r = ratio - 255;
+      if (r > 255) r = 255;
+      if (r < 0) r = 0;
+//      g = 255 - b;        // if red is too weak to be seen.....
+      g = 255 - b - r;
+#define gamma_correct(X,L)  X = (L + X * (255 - L)/255 )
+      gamma_correct(r,128);
+      gamma_correct(g,128);
+      gamma_correct(b,128);
+#if 0
       int k = (actual_t[i]+120)* 2 * 8;
       k &= 255;
       unsigned int r=0,g=0,b=0;
@@ -1529,6 +1567,7 @@ draw_all_cells(bool flush_markmap)
         g = 255 - (k-192)*2;
         r = 255;
       }
+#endif
 #endif
       spi_buffer[i] = RGB565(r,g,b);
     }
@@ -2079,6 +2118,7 @@ redraw_frame(void)
   draw_cal_status();
 }
 
+
 int get_waterfall(void)
 {
   return(waterfall);
@@ -2092,6 +2132,11 @@ toggle_waterfall(void)
     ili9341_fill(5*5, HEIGHT, 320 - 5*5, 236-HEIGHT, 0);
     waterfall = true;
     fullscreen = false;
+    w_min = (int)min_level;
+    w_max = (int)peakLevel;
+    if (w_max < w_min + 20)
+      w_max = w_min + 20;
+
   } else {
     _height = HEIGHT_NOSCROLL;
     waterfall = false;

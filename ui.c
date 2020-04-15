@@ -81,6 +81,7 @@ static uint8_t keypad_mode;
 static uint8_t keypads_last_index;
 static char    kp_buf[NUMINPUT_LEN+1];
 static int8_t  kp_index = 0;
+static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int8_t  selection = 0;
 
@@ -781,16 +782,24 @@ menu_marker_search_cb(int item, uint8_t data)
     return;
 
   switch (data) {
+  case 0: /* search Left */
+    i = marker_search_left_min(markers[active_marker].index);
+    break;
+  case 1: /* search right */
+    i = marker_search_right_min(markers[active_marker].index);
+    break;
+#if 0
   case 0: /* maximum */
   case 1: /* minimum */
     set_marker_search(data);
     i = marker_search();
     break;
+#endif
   case 2: /* search Left */
-    i = marker_search_left(markers[active_marker].index);
+    i = marker_search_left_max(markers[active_marker].index);
     break;
   case 3: /* search right */
-    i = marker_search_right(markers[active_marker].index);
+    i = marker_search_right_max(markers[active_marker].index);
     break;
   case 4: /* tracking */
     markers[active_marker].mtype ^= M_TRACKING;
@@ -1382,9 +1391,9 @@ draw_numeric_input(const char *buf)
   int focused = FALSE;
   uint16_t xsim = 0b0010010000000000;
 
+  uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
+  uint16_t bg = config.menu_normal_color;
   for (i = 0, x = 64; i < 10 && buf[i]; i++, xsim<<=1) {
-    uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
-    uint16_t bg = config.menu_normal_color;
     int c = buf[i];
     if (c == '.')
       c = KP_PERIOD;
@@ -1411,7 +1420,18 @@ draw_numeric_input(const char *buf)
     x += xsim&0x8000 ? NUM_FONT_GET_WIDTH+2+8 : NUM_FONT_GET_WIDTH+2;
   }
   // erase last
-  ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+//  ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+  ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, 320-64, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+  if (buf[0] == 0 && kp_help_text != NULL) {
+    ili9341_set_foreground(fg);
+    ili9341_set_background(bg);
+    const char *l1,*l2;
+    if (menu_is_multiline(kp_help_text, &l1, &l2)) {
+    ili9341_drawstring_7x13(l1, 64+NUM_FONT_GET_WIDTH+2, 240-NUM_INPUT_HEIGHT+1);
+    ili9341_drawstring_7x13(l2, 64+NUM_FONT_GET_WIDTH+2, 240-NUM_INPUT_HEIGHT/2 + 1);
+  } else
+    ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, 240-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+  }
 }
 
 static int
@@ -1651,7 +1671,10 @@ static void
 erase_menu_buttons(void)
 {
 //  ili9341_fill(area_width, 0, 320 - area_width, area_height, DEFAULT_BG_COLOR);
-  ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+  if (current_menu_is_form())
+    ili9341_fill(5*5, 0,320-5*5, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+  else
+    ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
   draw_frequencies();
 }
 
@@ -1843,15 +1866,15 @@ lever_move_marker(int status)
     if (active_marker >= 0 && markers[active_marker].enabled) {
       if ((status & EVT_DOWN) && markers[active_marker].index > 0) {
         markers[active_marker].index -= step;
-        if (markers[active_marker].index < 5)
-          markers[active_marker].index = 5 ;
+        if (markers[active_marker].index < 0)
+          markers[active_marker].index = 0 ;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
       }
       if ((status & EVT_UP) && markers[active_marker].index < sweep_points-1) {
         markers[active_marker].index += step;
-        if (markers[active_marker].index  > POINTS_COUNT-5)
-          markers[active_marker].index = POINTS_COUNT-5 ;
+        if (markers[active_marker].index  > POINTS_COUNT-1)
+          markers[active_marker].index = POINTS_COUNT-1 ;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
       }
