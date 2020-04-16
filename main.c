@@ -2613,7 +2613,7 @@ static UARTConfig uart_cfg_1 = {
 };
 #endif
 
-#if 1
+#if 0
 static const SerialConfig default_config =
 {
   9600,
@@ -2621,14 +2621,34 @@ static const SerialConfig default_config =
   USART_CR2_STOP2_BITS,
   0
 };
-#endif
 
-myWrite(char *buf)
+
+void myWrite(char *buf)
 {
   int len = strlen(buf);
-  while(len-- > 0)
+  while(len-- > 0) {
     sdPut(&SD1,*buf++);
+    osalThreadSleepMicroseconds(1000);
+  }
 }
+
+static int serial_count = 0;
+int mySerialReadline(unsigned char *buf, int len)
+{
+  int i;
+  do {
+    i =  sdReadTimeout(&SD1,&buf[serial_count], 20-serial_count,TIME_IMMEDIATE);
+    serial_count += i;
+    if (i > 0)
+      osalThreadSleepMicroseconds(1000);
+  } while (serial_count < len && i > 0);
+  if (buf[serial_count-1] == '\n') {
+    serial_count = 0;
+    return(i);
+  } else
+    return 0;
+}
+#endif
 
 // Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
 // Profile stack usage (enable threads command by def ENABLE_THREADS_COMMAND) show:
@@ -2673,22 +2693,27 @@ int main(void)
   uartStartReceive(&UARTD1, 1, buf);
 #endif
 
-#if 1
+#if 0
   palSetPadMode(GPIOA, 9, PAL_MODE_ALTERNATE(1));  // USART1 TX.
   palSetPadMode(GPIOA,10, PAL_MODE_ALTERNATE(1)); // USART1 RX.
 
   uint8_t buf[10];
   sdStart(&SD1,&default_config);
   osalThreadSleepMilliseconds(10);
-  myWrite("Hallo!?");
+  mySerialWrite("Hallo!?\n");
 
   osalThreadSleepMilliseconds(10);
+
+  mySerialReadline(buf, 10);
 
   sdReadTimeout(&SD1,buf,10, 10);
 
   sdWrite(&SD1,(const uint8_t *)"Test123",7);
-  osalThreadSleepMilliseconds(10);
+  osalThreadSleepMicroseconds(10);
+  sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
   sdReadTimeout(&SD1,buf,10, 10);
+  int i = sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
+
 #endif
 
   /*

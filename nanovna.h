@@ -29,6 +29,7 @@
 #define __ICONS__
 #define __MEASURE__
 #define __SELFTEST__
+#define __CALIBRATE__
 
 /*
  * main.c

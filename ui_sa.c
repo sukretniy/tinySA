@@ -1384,7 +1384,7 @@ static void menu_item_modify_attribute(
       mark = true;
     }
 
-  } else if (MT_MASK(menu[item].type) != MT_CALLBACK && (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2|| menu == menu_drive_wide3)) {
+  } else if (MT_MASK(menu[item].type) == MT_CALLBACK && (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2|| menu == menu_drive_wide3)) {
     if (data == setting_drive){
       mark = true;
     }

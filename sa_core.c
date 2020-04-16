@@ -513,7 +513,11 @@ switch(m) {
 case M_LOW:     // Mixed into 0
     SI4432_Sel = 0;
     SI4432_Receive();
-    SetSwitchReceive();
+    if (setting_step_atten) {
+      SetSwitchTransmit();
+    } else {
+      SetSwitchReceive();
+    }
     SetAGCLNA();
 
     SI4432_Sel = 1;
@@ -1424,17 +1428,16 @@ void draw_cal_status(void)
 }
 
 // -------------------- Self testing -------------------------------------------------
-#ifdef __SELFTEST__
 
 enum {
   TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END,
 };
 
 enum {
-  TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_30MHZ, TPH_30MHZ
+  TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ
 };
 
-#define TEST_COUNT  16
+#define TEST_COUNT  17
 
 static const struct {
   int kind;
@@ -1455,12 +1458,13 @@ static const struct {
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -13, 55,    -60 },      // 7 BPF loss and stop band
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18, 20,    -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       430,    60,     -65, 0,     -75},       // 9 LPF cutoff
+ {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -58, 30,    -90 },      // 10 Switch isolation
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5, 30,  -70 },      // 11 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -45, 30,    -75 },       // 12 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -45, 30,    -75 },       // 13 Calibrate power high mode
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5, 30,  -70 },      // 12 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       270,    4,      -45, 30,    -75 },       // 13 Measure powerlevel and noise
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -45, 30,    -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     1,      -20, 30,    -70 },      // 15 Measure RBW step time
+ {TC_MEASURE,   TP_30MHZ,       30,     1,      -20, 30,    -70 },      // 16 Measure RBW step time
  {TC_END,       0,              0,      0,      0,   0,     0},
 };
 
@@ -1539,20 +1543,29 @@ void cell_draw_test_info(int x0, int y0)
 
 #define fabs(X) ((X)<0?-(X):(X))
 
-int validate_peak_within(int i, float margin)
+int validate_signal_within(int i, float margin)
 {
-  if (fabs(peakLevel-test_case[i].pass) > margin)
-    return false;
-  return(test_case[i].center * 1000000 - 100000 < peakFreq && peakFreq < test_case[i].center * 1000000 + 100000 );
+  test_fail_cause[i] = "Signal level ";
+  if (fabs(peakLevel-test_case[i].pass) > 2*margin) {
+    return TS_FAIL;
+  }
+  if (fabs(peakLevel-test_case[i].pass) > margin) {
+    return TS_CRITICAL;
+  }
+  test_fail_cause[i] = "Frequency ";
+  if (peakFreq < test_case[i].center * 1000000 - 100000 || test_case[i].center * 1000000 + 100000 < peakFreq )
+    return TS_FAIL;
+  test_fail_cause[i] = "";
+  return TS_PASS;
 }
 
 int validate_peak_below(int i, float margin) {
   return(test_case[i].pass - peakLevel > margin);
 }
 
-int validate_below(void) {
+int validate_below(int tc, int from, int to) {
   int status = TS_PASS;
-  for (int j = 0; j < POINTS_COUNT; j++) {
+  for (int j = from; j < to; j++) {
     if (actual_t[j] > stored_t[j] - 5)
       status = TS_CRITICAL;
     else if (actual_t[j] > stored_t[j]) {
@@ -1560,11 +1573,14 @@ int validate_below(void) {
       break;
     }
   }
+  if (status != TS_PASS)
+    test_fail_cause[tc] = "Above ";
   return(status);
 }
 
 int validate_flatness(int i) {
   volatile int j;
+  test_fail_cause[i] = "Passband ";
   for (j = peakIndex; j < POINTS_COUNT; j++) {
     if (actual_t[j] < peakLevel - 3)    // Search right -3dB
       break;
@@ -1577,10 +1593,11 @@ int validate_flatness(int i) {
   }
   if (peakIndex - j < test_case[i].width)
     return(TS_FAIL);
+  test_fail_cause[i] = "";
   return(TS_PASS);
 }
 
-int validate_above(void) {
+int validate_above(int tc) {
   int status = TS_PASS;
   for (int j = 0; j < POINTS_COUNT; j++) {
     if (actual_t[j] < stored_t[j] + 5)
@@ -1590,6 +1607,8 @@ int validate_above(void) {
       break;
     }
   }
+  if (status != TS_PASS)
+    test_fail_cause[tc] = "Below ";
   return(status);
 }
 
@@ -1607,32 +1626,12 @@ int test_validate(int i)
       SetPowerLevel(test_case[i].pass);
     goto common;
   case TC_MEASURE:
-    case TC_SIGNAL:           // Validate signal
- common:
-    if (validate_peak_within(i, 5.0))                // Validate Peak
-      current_test_status = TS_PASS;
-    else if (validate_peak_within(i, 10.0))
-      current_test_status = TS_CRITICAL;
-    else
-      current_test_status = TS_FAIL;
-    if (current_test_status != TS_PASS)
-      test_fail_cause[i] = "Peak ";
+  case TC_SIGNAL:           // Validate signal
+  common: current_test_status = validate_signal_within(i, 5.0);
     if (current_test_status == TS_PASS) {            // Validate noise floor
-      for (int j = 0; j < POINTS_COUNT/2 - test_case[i].width; j++) {
-        if (actual_t[j] > test_case[i].stop - 5)
-          current_test_status = TS_CRITICAL;
-        else if (actual_t[j] > test_case[i].stop) {
-          current_test_status = TS_FAIL;
-          break;
-        }
-      }
-      for (int j = POINTS_COUNT/2 + test_case[i].width; j < POINTS_COUNT; j++) {
-        if (actual_t[j] > test_case[i].stop - 5)
-          current_test_status = TS_CRITICAL;
-        else if (actual_t[j] > test_case[i].stop) {
-          current_test_status = TS_FAIL;
-          break;
-        }
+      current_test_status = validate_below(i, 0, POINTS_COUNT/2 - test_case[i].width);
+      if (current_test_status == TS_PASS) {
+        current_test_status = validate_below(i, POINTS_COUNT/2 + test_case[i].width, POINTS_COUNT);
       }
       if (current_test_status != TS_PASS)
         test_fail_cause[i] = "Stopband ";
@@ -1641,28 +1640,15 @@ int test_validate(int i)
       test_value = peakLevel;
     else
       test_value = 0;           //   Not valid
-    break;
+  break;
   case TC_ABOVE:   // Validate signal above curve
-    for (int j = 0; j < POINTS_COUNT; j++) {
-      if (actual_t[j] < test_case[i].pass + 5)
-        current_test_status = TS_CRITICAL;
-      else if (actual_t[j] < test_case[i].pass) {
-        current_test_status = TS_FAIL;
-        break;
-      }
-    }
-    if (current_test_status != TS_PASS)
-      test_fail_cause[i] = "Above ";
+    current_test_status = validate_above(i);
     break;
   case TC_BELOW:   // Validate signal below curve
-      current_test_status = validate_below();
-      if (current_test_status != TS_PASS)
-        test_fail_cause[i] = "Above ";
-      break;
+    current_test_status = validate_below(i, 0, POINTS_COUNT);
+    break;
   case TC_FLAT:   // Validate passband flatness
     current_test_status = validate_flatness(i);
-    if (current_test_status != TS_PASS)
-      test_fail_cause[i] = "Passband ";
     break;
 
   }
@@ -1682,6 +1668,8 @@ int test_validate(int i)
 void test_prepare(int i)
 {
   setting_tracking = false; //Default test setup
+  setting_step_atten = false;
+  SetAttenuation(0);
   switch(test_case[i].setup) {                // Prepare test conditions
   case TPH_SILENT:                             // No input signal
     SetMode(M_HIGH);
@@ -1693,9 +1681,15 @@ common_silent:
     for (int j = 0; j < POINTS_COUNT; j++)
       stored_t[j] = test_case[i].pass;
     break;
+  case TP_10MHZ_SWITCH:
+    SetMode(M_LOW);
+    set_refer_output(2);
+    setting_step_atten = true;
+    goto common;
   case TP_10MHZEXTRA:                         // Swept receiver
     SetMode(M_LOW);
     setting_tracking = true; //Sweep BPF
+    frequency_IF = 434000000;                // Center on SAW filters
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input
@@ -1719,11 +1713,12 @@ common_silent:
     set_refer_output(0);
     goto common;
   }
+  setting_auto_attenuation = false;
+  setting_attenuate = 0;
   trace[TRACE_STORED].enabled = true;
   SetReflevel(test_case[i].pass+10);
   set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
   set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
-  SetAttenuation(0);
   draw_cal_status();
 }
 
@@ -1745,11 +1740,10 @@ int add_spur(int f)
   }
   return 1;
 }
-#endif
+
 
 void self_test(void)
 {
-#ifdef __SELFTEST__
 
   #if 0
   in_selftest = true;
@@ -1800,7 +1794,7 @@ void self_test(void)
   int local_test_status;
   in_selftest = true;
   reset_settings(M_LOW);
-  int i = 14;       // calibrate low mode power on 30 MHz;
+  int i = 15;       // calibrate low mode power on 30 MHz;
   test_prepare(i);
   for (int j= 0; j < 32; j++ ) {
     test_prepare(i);
@@ -1815,7 +1809,7 @@ void self_test(void)
   int local_test_status;
   in_selftest = true;
   reset_settings(M_LOW);
-  int i = 14;       // calibrate low mode power on 30 MHz;
+  int i = 15;       // calibrate low mode power on 30 MHz;
   test_prepare(i);
   setting_step_delay = 6000;
   for (int j= 0; j < 57; j++ ) {
@@ -1845,7 +1839,7 @@ void self_test(void)
   }
   return;
 #else
-
+  int old_IF = frequency_IF;
   in_selftest = true;
   menu_autosettings_cb(0);
   for (int i=0; i < TEST_COUNT; i++) {          // All test cases waiting
@@ -1857,6 +1851,7 @@ void self_test(void)
   show_test_info = TRUE;
   int i=0;
   while (test_case[i].kind != TC_END) {
+    frequency_IF = old_IF;
     test_prepare(i);
     test_acquire(i);                        // Acquire test
     test_status[i] = test_validate(i);                       // Validate test
@@ -1877,8 +1872,6 @@ void self_test(void)
   reset_settings(M_LOW);
   in_selftest = false;
 #endif
-
-#endif
 }
 
 void reset_calibration(void)
@@ -1897,7 +1890,7 @@ void calibrate(void)
   in_selftest = true;
   SetPowerLevel(100);
   reset_settings(M_LOW);
-  int i = 10;       // calibrate low mode power on 30 MHz;
+  int i = 11;       // calibrate low mode power on 30 MHz;
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
     SetRBW(power_rbw[j]);
     test_prepare(i);
@@ -1913,7 +1906,7 @@ void calibrate(void)
       chThdSleepMilliseconds(1000);
     }
   }
-  i = 11;           // Measure 270MHz in low mode
+  i = 12;           // Measure 270MHz in low mode
   SetRBW(100);
   test_prepare(i);
   test_acquire(i);                        // Acquire test
@@ -1923,7 +1916,7 @@ void calibrate(void)
 
   config.high_level_offset = 0;           /// Preliminary setting
 
-  i = 12;           // Calibrate 270MHz in high mode
+  i = 13;           // Calibrate 270MHz in high mode
   for (int j = 0; j < CALIBRATE_RBWS; j++) {
     SetRBW(power_rbw[j]);
     test_prepare(i);
