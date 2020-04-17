@@ -30,6 +30,7 @@
 #define __MEASURE__
 #define __SELFTEST__
 #define __CALIBRATE__
+#define __ULTRA__
 
 /*
  * main.c
@@ -124,12 +125,12 @@ int shell_printf(const char *fmt, ...);
 void toggle_sweep(void);
 void load_default_properties(void);
 
-extern float perform(bool b, int i, int32_t f, int e);
+extern float perform(bool b, int i, uint32_t f, int e);
 enum {
   AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16
 };
 enum {
-  M_LOW, M_HIGH, M_GENLOW, M_GENHIGH,
+  M_LOW, M_HIGH, M_GENLOW, M_GENHIGH, M_ULTRA
 };
 
 enum {
@@ -137,7 +138,11 @@ enum {
 };
 
 #define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
+#ifdef __ULTRA__
+#define MODE_INPUT(x)  ((x) == M_LOW || (x) == M_HIGH || (x) == M_ULTRA )
+#else
 #define MODE_INPUT(x)  ((x) == M_LOW || (x) == M_HIGH )
+#endif
 #define MODE_HIGH(x)  ((x) == M_HIGH || (x) == M_GENHIGH )
 #define MODE_LOW(x)  ((x) == M_LOW || (x) == M_GENLOW )
 #define MODE_SELECT(x) (MODE_HIGH(x) ? 1 : 0)
@@ -575,7 +580,7 @@ typedef struct uistat {
   int8_t digit; /* 0~5 */
   int8_t digit_mode;
   int8_t current_trace; /* 0..3 */
-  int32_t value; // for editing at numeric input area
+  float value; // for editing at numeric input area
 //  uint32_t previous_value;
   uint8_t lever_mode;
   uint8_t marker_delta;

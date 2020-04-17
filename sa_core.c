@@ -33,9 +33,9 @@ int setting_measurement;
 
 int vbwSteps = 1;
 
-//int setting_spur = 0;
-uint32_t minFreq = 0;
-uint32_t maxFreq = 520000000;
+int setting_spur = 0;
+float minFreq = 0;
+float maxFreq = 520000000;
 
 int setting_refer = -1;  // Off by default
 const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
@@ -69,15 +69,24 @@ void reset_settings(int m)
   trace[TRACE_TEMP].enabled = false;
 
   setting_measurement = M_OFF;
-//  setting_spur = 0;
+  setting_spur = 0;
   switch(m) {
   case M_LOW:
     minFreq = 0;
     maxFreq = 520000000;
-    set_sweep_frequency(ST_START, (int32_t) 0);
-    set_sweep_frequency(ST_STOP, (int32_t) 350000000);
+    set_sweep_frequency(ST_START, (uint32_t) 0);
+    set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
     setting_attenuate = 30;
     break;
+#ifdef __ULTRA__
+  case M_ULTRA:
+    minFreq = 770000000;
+    maxFreq = 4360000000;
+    set_sweep_frequency(ST_START, (uint32_t) 960000000);
+    set_sweep_frequency(ST_STOP, (uint32_t) 2100000000);
+    setting_attenuate = 30;
+    break;
+#endif
   case M_GENLOW:
     setting_drive=8;
     minFreq = 0;
@@ -290,6 +299,10 @@ void SetPowerLevel(int o)
       config.high_level_offset = new_offset;
     else if (setting_mode == M_LOW)
       config.low_level_offset = new_offset;
+#ifdef __ULTRA__
+    else if (setting_mode == M_ULTRA)
+      config.low_level_offset = new_offset;
+#endif
   }
   else {
     config.low_level_offset = 100;
@@ -338,13 +351,13 @@ int GetActualRBW(void)
 {
   return((int) actual_rbw);
 }
-#if 0
+
+
 void SetSpur(int v)
 {
-//  setting_spur = v;
+  setting_spur = v;
   dirty = true;
 }
-#endif
 
 void SetStepDelay(int d)
 {
@@ -422,6 +435,10 @@ void SetScale(int s) {
 //}
 void SetMode(int m)
 {
+#ifdef __ULTRA__
+  if (m == 6)
+    m = M_ULTRA;
+#endif
   if (setting_mode == m)
     return;
   reset_settings(m);
@@ -511,6 +528,9 @@ void SetRX(int m)
 {
 switch(m) {
 case M_LOW:     // Mixed into 0
+#ifdef __ULTRA__
+case M_ULTRA:
+#endif
     SI4432_Sel = 0;
     SI4432_Receive();
     if (setting_step_atten) {
@@ -821,14 +841,14 @@ static int modulation_counter = 0;
 
 char age[POINTS_COUNT];
 
-float perform(bool break_on_operation, int i, int32_t f, int tracking)
+float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 {
-  //  long local_IF = (MODE_LOW(setting_mode)?frequency_IF + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw :0):0);
   long local_IF;
   if (MODE_HIGH(setting_mode))
     local_IF = 0;
   else
-    local_IF = frequency_IF;
+    local_IF = frequency_IF + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw:0);
+//    local_IF = frequency_IF;
 
   if (i == 0 && dirty) {
     apply_settings();
@@ -865,7 +885,7 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
   float RSSI = -150.0;
   int t = 0;
   do {
-    int lf = (uint32_t)(f + (int)((t * 500  - vbwSteps * 250)  * actual_rbw));
+    uint32_t lf = (uint32_t)(f + (int)((t * 500  - vbwSteps * 250)  * actual_rbw));
     if (lf < 0) lf = 0;
     if (setting_mode == M_LOW && tracking) {
       setFreq (0, frequency_IF + lf - reffer_freq[setting_refer]);    // Offset so fundamental of reffer is visible
@@ -874,11 +894,15 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
       if (setting_mode == M_LOW && !in_selftest && avoid_spur(f)) {
         local_IF = spur_alternate_IF;
       } else {
-        local_IF = frequency_IF ;
+//        local_IF = frequency_IF ;
       }
       if (setting_mode == M_GENLOW && setting_modulation == MO_EXTERNAL)
         local_IF += lf;
       setFreq (0, local_IF);
+#ifdef __ULTRA__
+    } else if (setting_mode == M_ULTRA) {
+//      local_IF = frequency_IF;
+#endif
     } else
       local_IF= 0;
 #if 0
@@ -887,13 +911,32 @@ float perform(bool break_on_operation, int i, int32_t f, int tracking)
       break;
     }
 #endif
-    setFreq (1, local_IF + lf);
+#ifdef __ULTRA__
+    if (setting_mode == M_ULTRA) {
+//      if (lf > 3406000000 )
+//        setFreq (1, local_IF/5 + lf/5);
+//      else
+      if (lf > 2446000000 )
+        setFreq (1, local_IF/5 + lf/5);
+      else
+//        if (lf > 1486000000)
+        setFreq (1, local_IF/3 + lf/3);
+//      else
+//        setFreq (1, local_IF/2 + lf/2);
+    } else
+#endif
+      setFreq (1, local_IF + lf);
     if (MODE_OUTPUT(setting_mode))              // No substepping in output mode
       return(0);
     float signal_path_loss;
-    if (setting_mode == M_LOW)
-      signal_path_loss = -9.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+#ifdef __ULTRA__
+    if (setting_mode == M_ULTRA)
+      signal_path_loss = -15;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
     else
+#endif
+      if (setting_mode == M_LOW)
+        signal_path_loss = -9.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+      else
       signal_path_loss = 7;         // Loss in dB (+ is gain)
     float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+ setting_attenuate - signal_path_loss;
     if (RSSI < subRSSI)
@@ -918,7 +961,7 @@ static bool sweep(bool break_on_operation)
   temppeakLevel = -150;
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
-  //again:
+again:
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], setting_tracking);
 
@@ -930,12 +973,12 @@ static bool sweep(bool break_on_operation)
     }
 
     if (MODE_INPUT(setting_mode)) {
-      //    if (setting_spur == 1) {                           // First pass
-      //      temp_t[i] = RSSI;
-      //      continue;                                       // Skip all other processing
-      //    }
-      //    if (setting_spur == -1)                            // Second pass
-      //      RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
+          if (setting_spur == 1) {                           // First pass
+            temp_t[i] = RSSI;
+            continue;                                       // Skip all other processing
+          }
+          if (setting_spur == -1)                            // Second pass
+            RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
       temp_t[i] = RSSI;
       if (setting_subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
@@ -1023,11 +1066,11 @@ static bool sweep(bool break_on_operation)
       temp_min_level = actual_t[i];
 
   }
-  //  if (setting_spur == 1) {
-  //    setting_spur = -1;
-  //    goto again;
-  //  } else if (setting_spur == -1)
-  //    setting_spur = 1;
+    if (setting_spur == 1) {
+      setting_spur = -1;
+      goto again;
+    } else if (setting_spur == -1)
+      setting_spur = 1;
 
   if (scandirty) {
     scandirty = false;
@@ -1335,7 +1378,7 @@ void draw_cal_status(void)
     buf[5]=0;
     ili9341_drawstring(buf, x, y);
   }
-#if 0
+#if 1
   if (setting_spur) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
     y += YSTEP*2;
@@ -1383,7 +1426,7 @@ void draw_cal_status(void)
   ili9341_drawstring("Scan:", x, y);
 
   y += YSTEP;
-  int32_t t = (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10  /* * (setting_spur ? 2 : 1) */; // in mS
+  int32_t t = (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10  * (setting_spur ? 2 : 1); // in mS
   if (t>1000)
     plot_printf(buf, BLEN, "%dS",(t+500)/1000);
   else

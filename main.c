@@ -37,10 +37,10 @@
 #include <string.h>
 #include <math.h>
 
-extern uint32_t minFreq;
-extern uint32_t maxFreq;
-uint32_t frequencyStart;
-uint32_t frequencyStop;
+extern float minFreq;
+extern float maxFreq;
+float frequencyStart;
+float frequencyStop;
 int32_t frequencyExtra;
 #define START_MIN minFreq
 #define STOP_MAX maxFreq

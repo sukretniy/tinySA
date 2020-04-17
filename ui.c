@@ -2051,7 +2051,7 @@ keypad_click(int key)
     /* numeric input done */
     double value = my_atof(kp_buf) * scale;
 #if 1
-    uistat.value = (int)value;
+    uistat.value = value;
     set_numeric_value();
 #else
     switch (keypad_mode) {

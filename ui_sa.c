@@ -23,7 +23,7 @@ void SetDrive(int d);
 void SetIF(int f);
 void SetStepDelay(int t);
 extern int setting_rbw;
-void SetSpur(int);
+extern int setting_spur;
 int GetSpur(void);
 void SetAverage(int);
 int GetAverage(void);
@@ -473,6 +473,7 @@ extern const menuitem_t  menu_highoutputmode[];
 extern const menuitem_t  menu_modulation[];
 extern const menuitem_t  menu_top[];
 extern const menuitem_t  menu_tophigh[];
+extern const menuitem_t  menu_topultra[];
 
 static void menu_mode_cb(int item, uint8_t data)
 {
@@ -491,6 +492,9 @@ static void menu_mode_cb(int item, uint8_t data)
     break;
   case 4:
     menu_push_submenu(menu_highoutputmode);
+    break;
+  case 7:
+    menu_push_submenu(menu_topultra);
     break;
   }
 //  draw_cal_status();
@@ -614,13 +618,13 @@ static void menu_drive_cb(int item, uint8_t data)
 
 
 
-#if 0
+#if 1
 
 static void menu_spur_cb(int item, uint8_t data)
 {
   (void)data;
   (void)item;
-  if (GetSpur())
+  if (setting_spur)
     SetSpur(0);
   else
     SetSpur(1); // must be 0 or 1 !!!!
@@ -1250,6 +1254,7 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
   { MT_KEYPAD,  KM_CW,      "\2ZERO\0SPAN",          NULL},
   { MT_SUBMENU,0,           "RBW",              menu_rbw},
+  { MT_CALLBACK,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
   { MT_CANCEL,  0,          S_LARROW" BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
 };
@@ -1264,10 +1269,29 @@ static const menuitem_t menu_mode[] = {
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "HIGH OUTPUT",    menu_mode_cb},
   { MT_FORM | MT_SUBMENU  | MT_ICON,    I_CONNECT+I_GEN,        "CAL OUTPUT: %s", menu_reffer},
   { MT_FORM | MT_SUBMENU  | MT_ICON,    I_EMPTY+I_CONFIG,       "CONFIG",         menu_config},
-//  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+#ifdef __ULTRA__
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
+#endif
+  //  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 #if 1
+
+#ifdef __ULTRA__
+const menuitem_t menu_topultra[] = {
+  { MT_CALLBACK, 0, "RESET",        menu_autosettings_cb},
+  { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
+  { MT_SUBMENU,  0, "LEVEL",        menu_level},
+  { MT_SUBMENU,  0, "DISPLAY",      menu_display},
+  { MT_SUBMENU,  0, "MARKER",       menu_marker},
+  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
+  { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
+  { MT_CANCEL,   0, S_LARROW" MODE",NULL},
+  { MT_NONE,     0, NULL, NULL } // sentinel,
+ // MENUITEM_CLOSE,
+};
+#endif
+
 const menuitem_t menu_top[] = {
   { MT_CALLBACK, 0, "RESET",        menu_autosettings_cb},
   { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
@@ -1365,6 +1389,9 @@ static void menu_item_modify_attribute(
     }
   } else if (menu == menu_stimulus) {
     if (item == 5 /* PAUSE */ && !(sweep_mode&SWEEP_ENABLE)) {
+      mark = true;
+    }
+    if (item == 6 && setting_spur) {
       mark = true;
     }
   } else if (menu == menu_average) {
