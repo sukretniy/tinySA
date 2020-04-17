@@ -24,7 +24,7 @@ void SetIF(int f);
 void SetStepDelay(int t);
 extern int setting_rbw;
 extern int setting_spur;
-int GetSpur(void);
+void SetSpur(int v);
 void SetAverage(int);
 int GetAverage(void);
 extern int setting_average;
@@ -493,9 +493,11 @@ static void menu_mode_cb(int item, uint8_t data)
   case 4:
     menu_push_submenu(menu_highoutputmode);
     break;
+#ifdef __ULTRA__
   case 7:
     menu_push_submenu(menu_topultra);
     break;
+#endif
   }
 //  draw_cal_status();
 }
