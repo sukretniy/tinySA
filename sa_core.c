@@ -32,8 +32,9 @@ int  setting_tracking_output;
 int setting_measurement;
 
 int vbwSteps = 1;
-
+#ifdef __ULTRA__
 int setting_spur = 0;
+#endif
 float minFreq = 0;
 float maxFreq = 520000000;
 
@@ -69,7 +70,9 @@ void reset_settings(int m)
   trace[TRACE_TEMP].enabled = false;
 
   setting_measurement = M_OFF;
+#ifdef __ULTRA__
   setting_spur = 0;
+#endif
   switch(m) {
   case M_LOW:
     minFreq = 0;
@@ -352,12 +355,13 @@ int GetActualRBW(void)
   return((int) actual_rbw);
 }
 
-
+#ifdef __ULTRA
 void SetSpur(int v)
 {
   setting_spur = v;
   dirty = true;
 }
+#endif
 
 void SetStepDelay(int d)
 {
@@ -847,8 +851,11 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   if (MODE_HIGH(setting_mode))
     local_IF = 0;
   else
-    local_IF = frequency_IF + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw:0);
-//    local_IF = frequency_IF;
+    local_IF = frequency_IF
+#ifdef __ULTRA__
+                + (int)(actual_rbw < 300.0?setting_spur * 1000 * actual_rbw:0)
+#endif
+                ;
 
   if (i == 0 && dirty) {
     apply_settings();
@@ -961,7 +968,9 @@ static bool sweep(bool break_on_operation)
   temppeakLevel = -150;
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
+#ifdef __ULTRA__
 again:
+#endif
   for (int i = 0; i < sweep_points; i++) {
     RSSI = perform(break_on_operation, i, frequencies[i], setting_tracking);
 
@@ -973,12 +982,14 @@ again:
     }
 
     if (MODE_INPUT(setting_mode)) {
-          if (setting_spur == 1) {                           // First pass
+#ifdef __ULTRA__
+      if (setting_spur == 1) {                           // First pass
             temp_t[i] = RSSI;
             continue;                                       // Skip all other processing
           }
           if (setting_spur == -1)                            // Second pass
             RSSI = ( RSSI < temp_t[i] ? RSSI : temp_t[i]);  // Minimum of two passes
+#endif
       temp_t[i] = RSSI;
       if (setting_subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
@@ -1066,12 +1077,13 @@ again:
       temp_min_level = actual_t[i];
 
   }
+#ifdef __ULTRA__
     if (setting_spur == 1) {
       setting_spur = -1;
       goto again;
     } else if (setting_spur == -1)
       setting_spur = 1;
-
+#endif
   if (scandirty) {
     scandirty = false;
     draw_cal_status();
@@ -1378,7 +1390,7 @@ void draw_cal_status(void)
     buf[5]=0;
     ili9341_drawstring(buf, x, y);
   }
-#if 1
+#ifdef __ULTRA__
   if (setting_spur) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
     y += YSTEP*2;
@@ -1426,7 +1438,11 @@ void draw_cal_status(void)
   ili9341_drawstring("Scan:", x, y);
 
   y += YSTEP;
-  int32_t t = (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10  * (setting_spur ? 2 : 1); // in mS
+  int32_t t = (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10
+#ifdef __ULTRA__
+      * (setting_spur ? 2 : 1)
+#endif
+      ; // in mS
   if (t>1000)
     plot_printf(buf, BLEN, "%dS",(t+500)/1000);
   else

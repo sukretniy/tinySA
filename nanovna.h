@@ -31,6 +31,7 @@
 #define __SELFTEST__
 #define __CALIBRATE__
 //#define __ULTRA__
+#define __ULTRA_SA__
 
 /*
  * main.c
@@ -329,7 +330,7 @@ float groupdelay_from_array(int i, float array[POINTS_COUNT][2]);
 #endif
 // marker
 enum {
-  M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_TRACKING=8 // Tracking must be last.
+  M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_TRACKING=8, M_DELETE=16  // Tracking must be last.
 };
 
 enum {

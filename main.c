@@ -2716,6 +2716,8 @@ int main(void)
 
 #endif
 
+  ADF4351_Setup();
+
   /*
  * SPI LCD Initialize
  */

@@ -19,7 +19,7 @@
 #include "ch.h"
 #include "hal.h"
 #include "nanovna.h"
-
+#include <math.h>
 #include "si4432.h"
 
 #define CS_SI0_HIGH     palSetPad(GPIOA, GPIOA_RX_SEL)
@@ -501,5 +501,365 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
   }
   return(v);
 }
+
+#endif
+//------------------------------- ADF4351 -------------------------------------
+
+
+#ifdef __ULTRA_SA__
+
+
+#define bitClear(X,n) (X) ^= ((uint32_t)0xfffffffe) << (n)
+#define bitSet(X,n) (X) |= ((uint32_t)1) << (n)
+#define bitWrite(X,n,v) if (v) bitSet(X,n); else bitClear(X,n)
+
+
+
+#define CS_ADF0_HIGH     palSetPad(GPIOA, 9)
+#define CS_ADF1_HIGH     palSetPad(GPIOA, 10)
+
+#define CS_ADF0_LOW     palClearPad(GPIOA, 9)
+#define CS_ADF1_LOW     palClearPad(GPIOA, 10)
+
+#define SPI3_CLK_HIGH   palSetPad(GPIOA, 1)
+#define SPI3_CLK_LOW    palClearPad(GPIOA, 1)
+
+#define SPI3_SDI_HIGH   palSetPad(GPIOA, 2)
+#define SPI3_SDI_LOW    palClearPad(GPIOA, 2)
+
+
+void ADF_shiftOut(uint8_t val)
+{
+     uint8_t i;
+     for (i = 0; i < 8; i++)  {
+           if (val & (1 << (7 - i)))
+             SPI3_SDI_HIGH;
+           else
+             SPI3_SDI_LOW;
+           chThdSleepMicroseconds(1);
+           SPI3_CLK_HIGH;
+           SPI3_CLK_LOW;
+     }
+}
+
+//unsigned long registers[6] =  {0x4580A8, 0x80080C9, 0x4E42, 0x4B3, 0xBC803C, 0x580005} ;
+//unsigned long registers[6] =  {0x4C82C8, 0x80083E9, 0x6E42, 0x8004B3, 0x8C81FC, 0x580005} ;
+unsigned long registers[6] =  {0x320000, 0x8008011, 0x18004E42, 0x4B3,0x8C803C , 0x00580005} ;
+int debug = 0;
+int ADF4351_LE[2] = { 9, 10};
+int ADF4351_Mux = 7;
+
+
+//#define DEBUG(X) // Serial.print( X )
+//#define DEBUGLN(X) Serial.println( X )
+//#define DEBUGFLN(X,Y) Serial.println( X,Y )
+//#define DEBUGF(X,Y) Serial.print( X,Y )
+#define DEBUG(X)
+#define DEBUGLN(X)
+
+
+double RFout, //Output freq in MHz
+#if 1   //Black modules
+  PFDRFout[6] = {25.0,25.0,25.0,10.0,10.0,10.0}, //Reference freq in MHz
+  Chrystal[6] = {25.0,25.0,25.0,10.0,10.0,10.0},
+#else // Green modules
+  PFDRFout[6] = {10.0,10.0,10.0,10.0,10.0,10.0}, //Reference freq in MHz
+  Chrystal[6] = {10.0,10.0,10.0,10.0,10.0,10.0},
+#endif
+
+  OutputChannelSpacing = 0.010, // = 0.01
+  FRACF; // Temp
+
+unsigned int long RFint,  // Output freq/10Hz
+  INTA,         // Temp
+  RFcalc, //UI
+  MOD, //Temp
+  FRAC; //Temp
+
+byte OutputDivider; // Temp
+byte lock=2; //Not used
+
+// Lock = A4
+
+void ADF4351_Setup()
+{
+//  palSetPadMode(GPIOA, 1, PAL_MODE_OUTPUT_PUSHPULL );
+//  palSetPadMode(GPIOA, 2, PAL_MODE_OUTPUT_PUSHPULL );
+
+  SPI3_CLK_HIGH;
+  SPI3_SDI_HIGH;
+  CS_ADF0_HIGH;
+  CS_ADF1_HIGH;
+//  bitSet (registers[2], 17); // R set to 8
+//  bitClear (registers[2], 14); // R set to 8
+
+  ADF4351_R_counter(1);
+  ADF4351_level(3);
+  ADF4351_channel_spacing(10);
+
+  while(1) {
+//
+    ADF4351_set_frequency(1,100000000,0);
+//    ADF4351_set_frequency(1,150000000,0);
+//  ADF4351_Set(0);
+//  ADF4351_Set(1);
+  chThdSleepMilliseconds(1000);
+  }
+//  bitSet (registers[2], 17); // R set to 8
+//  bitClear (registers[2], 14); // R set to 8
+//  for (int i=0; i<6; i++) pinMode(ADF4351_LE[i], OUTPUT);          // Setup pins
+//  for (int i=0; i<6; i++) digitalWrite(ADF4351_LE[i], HIGH);
+//  pinMode(ADF4351_Mux, INPUT);
+//  SPI.begin();                          // Init SPI bus
+//  SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0));
+  //SPI.setDataMode(SPI_MODE0);           // CPHA = 0  Clock positive
+  //SPI.setBitOrder(MSBFIRST);
+}
+
+void ADF4351_WriteRegister32(int channel, const uint32_t value)
+{
+  palClearPad(GPIOA, ADF4351_LE[channel]);
+//  chThdSleepMicroseconds(SELECT_DELAY);
+  for (int i = 3; i >= 0; i--) ADF_shiftOut((value >> 8 * i) & 0xFF);
+  palSetPad(GPIOA, ADF4351_LE[channel]);
+//  chThdSleepMicroseconds(SELECT_DELAY);
+  palClearPad(GPIOA, ADF4351_LE[channel]);
+//  chThdSleepMicroseconds(SELECT_DELAY);
+}
+
+void ADF4351_disable_output()
+{
+    bitClear (registers[4], 5); // digital lock
+    ADF4351_Set(0);
+}
+
+void ADF4351_enable_output()
+{
+    bitSet (registers[4], 5); // digital lock
+    ADF4351_Set(0);
+}
+void ADF4351_Set(int channel)
+{ for (int i = 5; i >= 0; i--) {
+    ADF4351_WriteRegister32(channel, registers[i]);
+//    if (debug)  Serial.println(registers[i],HEX);
+}
+}
+
+void ADF4351_set_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
+{
+  ADF4351_prep_frequency(channel,freq, drive);
+  ADF4351_Set(channel);
+}
+
+void ADF4351_spur_mode(int S)
+{
+    if (S & 1)
+      bitSet (registers[2], 29); // R set to 8
+    else
+      bitClear (registers[2], 29); // R set to 8
+    if (S & 2)
+      bitSet (registers[2], 30); // R set to 8
+    else
+      bitClear (registers[2], 30); // R set to 8
+}
+
+void ADF4351_R_counter(int R)
+{
+      int dbl = false;
+      if (R < 0) {
+        dbl = true;
+        R = -R;
+      }
+      if (R<1)
+        return;
+      if (dbl) {
+        bitSet (registers[2], 25); // Reference doubler
+      } else {
+        bitClear (registers[2], 25); // Reference doubler
+      }
+      for (int channel=0; channel < 6; channel++) {
+        PFDRFout[channel] = Chrystal[channel] * (dbl?2:1) / R;
+      }
+      registers[2] &= ~ (((unsigned long)0x3FF) << 14);
+      registers[2] |= (((unsigned long)R) << 14);
+}
+
+void ADF4351_CP(int p)
+{
+      registers[2] &= ~ (((unsigned long)0xF) << 9);
+      registers[2] |= (((unsigned long)p) << 9);
+}
+
+void ADF4351_level(int p)
+{
+      registers[4] &= ~ (((unsigned long)0x3) << 3);
+      registers[4] |= (((unsigned long)p) << 3);
+}
+
+void ADF4351_channel_spacing(int spacing)
+{
+  OutputChannelSpacing = 0.001 * spacing;
+}
+
+static uint32_t gcd(uint32_t x, uint32_t y)
+{
+  uint32_t z;
+  while (y != 0) {
+    z = x % y;
+    x = y;
+    y = z;
+  }
+  return x;
+}
+
+void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
+{
+  (void)drive;
+//  if (channel == 0)
+    RFout=freq/1000000.0;  // To MHz
+//  else
+ //   RFout=freq/1000002.764;  // To MHz
+
+    if (RFout >= 2200) {
+      OutputDivider = 1;
+      bitWrite (registers[4], 22, 0);
+      bitWrite (registers[4], 21, 0);
+      bitWrite (registers[4], 20, 0);
+    } else if (RFout >= 1100) {
+      OutputDivider = 2;
+      bitWrite (registers[4], 22, 0);
+      bitWrite (registers[4], 21, 0);
+      bitWrite (registers[4], 20, 1);
+    } else if (RFout >= 550) {
+      OutputDivider = 4;
+      bitWrite (registers[4], 22, 0);
+      bitWrite (registers[4], 21, 1);
+      bitWrite (registers[4], 20, 0);
+    } else if (RFout >= 275)  {
+      OutputDivider = 8;
+      bitWrite (registers[4], 22, 0);
+      bitWrite (registers[4], 21, 1);
+      bitWrite (registers[4], 20, 1);
+    } else if (RFout >= 137.5)  {
+      OutputDivider = 16;
+      bitWrite (registers[4], 22, 1);
+      bitWrite (registers[4], 21, 0);
+      bitWrite (registers[4], 20, 0);
+    } else if (RFout >= 68.75) {
+      OutputDivider = 32;
+      bitWrite (registers[4], 22, 1);
+      bitWrite (registers[4], 21, 0);
+      bitWrite (registers[4], 20, 1);
+    } else {
+      OutputDivider = 64;
+      bitWrite (registers[4], 22, 1);
+      bitWrite (registers[4], 21, 1);
+      bitWrite (registers[4], 20, 0);
+    }
+
+    INTA = (RFout * OutputDivider) / PFDRFout[channel];
+    MOD = (PFDRFout[channel] / OutputChannelSpacing) + 0.01;
+//    MOD = 3125;
+    FRACF = (((RFout * OutputDivider) / PFDRFout[channel]) - INTA) * MOD;
+    FRAC = round(FRACF);
+
+  while (FRAC > 4095 || MOD > 4095) {
+    FRAC = FRAC >> 1;
+    MOD = MOD >> 1;
+ //   Serial.println( "MOD/FRAC reduced");
+  }
+
+    int32_t k = gcd(FRAC, MOD);
+    if (k > 1) {
+      FRAC /= k;
+      MOD /= k;
+//      Serial.print( "MOD/FRAC gcd reduced");
+    }
+//    while (denom >= (1<<20)) {
+//      num >>= 1;
+//      denom >>= 1;
+//    }
+
+
+//  if (INTA <= 75) Serial.println( "INTA <= 75");
+//  if (FRAC > 4095) Serial.println( "FRAC > 4095");
+//  if (MOD > 4095) Serial.println( "MOD > 4095");
+
+
+//  if (FRAC > 4095) Serial.println( "FRAC > 4095");
+//  if (MOD > 4095) Serial.println( "MOD > 4095");
+//  if (INTA > 4095) Serial.println( "INT > 4095");
+
+  if (debug) {
+    DEBUG("  ODIV=");
+    DEBUG(OutputDivider);
+    DEBUG("  INT=");
+    DEBUG(INTA);
+    DEBUG("  FRAC=");
+    DEBUG(FRAC);
+    DEBUG("  MOD=");
+    DEBUG(MOD);
+    DEBUG( " CalF=");
+//    DEBUGFLN(PFDRFout[channel] *(INTA + ((double)FRAC)/MOD)/OutputDivider,6);
+
+//  DEBUG("  FRACF=");
+//  DEBUGF(FRACF,6);
+  }
+    registers[0] = 0;
+    registers[0] = INTA << 15; // OK
+    FRAC = FRAC << 3;
+    registers[0] = registers[0] + FRAC;
+    //if (MOD == 1) MOD = 2;
+    registers[1] = 0;
+    registers[1] = MOD << 3;
+    registers[1] = registers[1] + 1 ; // restore address "001"
+    bitSet (registers[1], 27); // Prescaler at 8/9
+/*
+    drive = 1;
+    if (drive == 0) {
+      bitClear (registers[4], 3); // +5dBm + out
+      bitClear (registers[4], 4); // +5dBm
+      bitClear (registers[4], 6); // +5dBm - out
+      bitClear (registers[4], 7); // +5dBm
+    } else if (drive == 1) {
+      bitSet (registers[4], 6); // +5dBm
+      bitClear (registers[4], 7); // +5dBm - out
+      bitSet (registers[4], 3); // +5dBm
+      bitClear (registers[4], 4); // +5dBm + out
+    } else if (drive == 2) {
+      bitClear (registers[4], 6); // +5dBm - out
+      bitSet (registers[4], 7); // +5dBm
+      bitClear (registers[4], 3); // +5dBm + out
+      bitSet (registers[4], 4); // +5dBm
+    }
+    else {
+      bitSet (registers[4], 6); // +5dBm - out
+      bitSet (registers[4], 7); // +5dBm
+      bitSet (registers[4], 3); // +5dBm + out
+      bitSet (registers[4], 4); // +5dBm
+    }
+*/
+    bitSet (registers[4], 5); // enable + output
+    bitClear (registers[4], 8); // enable B output
+
+#if 0
+    if (FRAC == 0)
+      bitSet (registers[2], 8); // INT mode
+    else
+      bitClear (registers[2], 8); // INT mode
+    bitSet (registers[2], 13); // Double buffered
+
+    bitSet (registers[2], 28); // Digital lock == "110" sur b28 b27 b26
+    bitSet (registers[2], 27); // digital lock
+    bitClear (registers[2], 26); // digital lock
+
+    //bitSet (registers[4], 10); // Mute till lock
+    bitSet (registers[3], 23); // Fast lock
+ #endif
+    bitSet (registers[4], 10); // Mute till lock
+//    ADF4351_Set(channel);
+}
+
+
 
 #endif

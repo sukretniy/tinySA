@@ -56,6 +56,7 @@
 #define GPIOA_XP				6
 #define GPIOA_YP				7
 #define GPIOA_MCO				8
+#define GPIOA_TX                9
 #define GPIOA_USB_DISC			10
 #define GPIOA_USB_DM            11
 #define GPIOA_USB_DP            12
@@ -116,16 +117,23 @@
  * PA13 - SWDIO                     (alternate 0).
  * PA14 - SWCLK                     (alternate 0).
  */
+#define __ULTRA_SA__
+#ifdef __ULTRA_SA__
+#define PIN_MOD_ULTRA(X)   PIN_MODE_OUTPUT(X)
+#else
+#define PIN_MOD_ULTRA(X)   PIN_MODE_INPUT(X)
+#endif
+
 #define VAL_GPIOA_MODER             (PIN_MODE_OUTPUT(GPIOA_PE_SEL) | \
-                                     PIN_MODE_INPUT(1U) |           \
-                                     PIN_MODE_INPUT(2U) |  			\
-                                     PIN_MODE_INPUT(3U) |   		\
+                                     PIN_MOD_ULTRA(1U) |           \
+                                     PIN_MOD_ULTRA(2U) |  			\
+                                     PIN_MOD_ULTRA(3U) |   		\
                                      PIN_MODE_OUTPUT(GPIOA_RX_SEL) | \
                                      PIN_MODE_OUTPUT(GPIOA_LO_SEL) | \
                                      PIN_MODE_ANALOG(GPIOA_XP) |    \
                                      PIN_MODE_ANALOG(GPIOA_YP) |    \
                                      PIN_MODE_ALTERNATE(GPIOA_MCO) | \
-                                     PIN_MODE_INPUT(9U) |           \
+                                     PIN_MOD_ULTRA(9U) |           \
                                      PIN_MODE_OUTPUT(GPIOA_USB_DISC) | \
                                      PIN_MODE_INPUT(GPIOA_USB_DM) |  \
                                      PIN_MODE_INPUT(GPIOA_USB_DP) |  \
@@ -149,9 +157,9 @@
                                      PIN_OTYPE_PUSHPULL(GPIOA_JTCK) |      \
                                      PIN_OTYPE_PUSHPULL(GPIOA_LCD_RESET))
 #define VAL_GPIOA_OSPEEDR           (PIN_OSPEED_100M(GPIOA_PE_SEL) |          \
-                                     PIN_OSPEED_2M(1) |          \
-                                     PIN_OSPEED_2M(2) |       \
-                                     PIN_OSPEED_2M(3) |       \
+                                     PIN_OSPEED_100M(1) |          \
+                                     PIN_OSPEED_100M(2) |       \
+                                     PIN_OSPEED_100M(3) |       \
                                      PIN_OSPEED_100M(4) |          \
                                      PIN_OSPEED_100M(5) |           \
                                      PIN_OSPEED_2M(6) |          \

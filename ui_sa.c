@@ -1,6 +1,6 @@
 void markmap_all_markers(void);
-static void menu_marker_type_cb(int item, uint8_t data);
-
+static void menu_marker_modify_cb(int item, uint8_t data);
+extern const menuitem_t menu_marker_modify[];
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
 void clearDisplay(void);
@@ -23,8 +23,10 @@ void SetDrive(int d);
 void SetIF(int f);
 void SetStepDelay(int t);
 extern int setting_rbw;
+#ifdef __ULTRA__
 extern int setting_spur;
 void SetSpur(int v);
+#endif
 void SetAverage(int);
 int GetAverage(void);
 extern int setting_average;
@@ -620,8 +622,7 @@ static void menu_drive_cb(int item, uint8_t data)
 
 
 
-#if 1
-
+#ifdef __ULTRA__
 static void menu_spur_cb(int item, uint8_t data)
 {
   (void)data;
@@ -791,12 +792,31 @@ static void menu_average_cb(int item, uint8_t data)
   draw_cal_status();
 }
 
-static void menu_marker_type_cb(int item, uint8_t data)
+static void
+menu_marker_select_cb(int item, uint8_t data)
+{
+  (void)data;
+//  int t;
+  if (item >= 0 && item < MARKERS_MAX) {
+    markers[item].enabled = true;
+    active_marker_select(item);
+    menu_push_submenu(menu_marker_modify);
+    redraw_marker(active_marker);
+    draw_menu();
+  }
+}
+
+static void menu_marker_modify_cb(int item, uint8_t data)
 {
   (void)item;
   if (markers[active_marker].enabled == M_ENABLED)
   {
-    if (data == M_NORMAL) {
+    if (data == M_DELETE) {
+      markers[active_marker].enabled = false;
+      menu_move_back();
+//      ui_mode_normal();
+//      return;
+    } else if (data == M_NORMAL) {
       markers[active_marker].mtype = M_NORMAL;
     } else if (data == M_REFERENCE) {
       for (int i = 0; i<MARKER_COUNT; i++ ) {
@@ -821,7 +841,7 @@ static void menu_marker_type_cb(int item, uint8_t data)
 }
 
 
-const int rbwsel[]={0,3,10,30,100,300};
+const int rbwsel[]={0,3,10,30,100,300,600};
 
 static void menu_rbw_cb(int item, uint8_t data)
 {
@@ -999,6 +1019,7 @@ static const menuitem_t menu_rbw[] = {
   { MT_CALLBACK, 3, " 30kHz",   menu_rbw_cb},
   { MT_CALLBACK, 4, "100kHz",   menu_rbw_cb},
   { MT_CALLBACK, 5, "300kHz",   menu_rbw_cb},
+  { MT_CALLBACK, 6, "600kHz",   menu_rbw_cb},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
@@ -1051,12 +1072,13 @@ static const menuitem_t menu_reflevel[] = {
 
 
 
-static const menuitem_t menu_marker_type[] = {
-  { MT_CALLBACK, M_REFERENCE,   "REFERENCE",    menu_marker_type_cb},
-  { MT_CALLBACK, M_DELTA,       "DELTA",        menu_marker_type_cb},
-  { MT_CALLBACK, M_NOISE,       "NOISE",        menu_marker_type_cb},
-  { MT_CALLBACK, M_TRACKING,    "TRACKING",     menu_marker_type_cb},
-  { MT_CALLBACK, M_NORMAL,      "NORMAL",     menu_marker_type_cb},
+const menuitem_t menu_marker_modify[] = {
+  { MT_CALLBACK, M_REFERENCE,   "REFERENCE",    menu_marker_modify_cb},
+  { MT_CALLBACK, M_DELTA,       "DELTA",        menu_marker_modify_cb},
+  { MT_CALLBACK, M_NOISE,       "NOISE",        menu_marker_modify_cb},
+  { MT_CALLBACK, M_TRACKING,    "TRACKING",     menu_marker_modify_cb},
+  { MT_CALLBACK, M_NORMAL,      "NORMAL",       menu_marker_modify_cb},
+  { MT_CALLBACK, M_DELETE,      "DELETE",       menu_marker_modify_cb},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1085,6 +1107,14 @@ const menuitem_t menu_marker_sel[] = {
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
+const menuitem_t menu_marker_select[] = {
+  { MT_CALLBACK, 1, "MARKER 1", menu_marker_select_cb },
+  { MT_CALLBACK, 2, "MARKER 2", menu_marker_select_cb },
+  { MT_CALLBACK, 3, "MARKER 3", menu_marker_select_cb },
+  { MT_CALLBACK, 4, "MARKER 4", menu_marker_select_cb },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
 
 
 #if 0
@@ -1113,8 +1143,8 @@ const menuitem_t menu_marker_ops[] = {
 
 
 static const menuitem_t menu_marker[] = {
-  { MT_SUBMENU,  0, "\2SELECT\0MARKERS",    menu_marker_sel},
-  { MT_SUBMENU,  0, "\2CHANGE\0MARKER",       menu_marker_type},
+  { MT_SUBMENU,  0, "\2SELECT\0MARKER",     menu_marker_sel},
+  { MT_SUBMENU,  0, "\2MODIFY\0MARKERS",    menu_marker_select},
   { MT_SUBMENU,  0, "\2MARKER\0OPS",        menu_marker_ops},
   { MT_SUBMENU,  0, "\2SEARCH\0MARKER",     menu_marker_search},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
@@ -1256,7 +1286,9 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
   { MT_KEYPAD,  KM_CW,      "\2ZERO\0SPAN",          NULL},
   { MT_SUBMENU,0,           "RBW",              menu_rbw},
+#ifdef __ULTRA__
   { MT_CALLBACK,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
+#endif
   { MT_CANCEL,  0,          S_LARROW" BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
 };
@@ -1393,9 +1425,11 @@ static void menu_item_modify_attribute(
     if (item == 5 /* PAUSE */ && !(sweep_mode&SWEEP_ENABLE)) {
       mark = true;
     }
+#ifdef __ULTRA__
     if (item == 6 && setting_spur) {
       mark = true;
     }
+#endif
   } else if (menu == menu_average) {
     if (item == GetAverage()){
       mark = true;
@@ -1448,7 +1482,7 @@ static void menu_item_modify_attribute(
     if (item == 2 && setting_tracking){         // should not happen in high mode
       mark = true;
     }
-  } else if (menu == menu_marker_type && active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {
+  } else if (menu == menu_marker_modify && active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {
     if (data & markers[active_marker].mtype)
       mark = true;
     else if (item < 5 && data==markers[active_marker].mtype)    // This catches the M_NORMAL case
@@ -1460,8 +1494,8 @@ static void menu_item_modify_attribute(
       mark = true;
     if (item == 4 && markers[active_marker].mtype & M_TRACKING)
       mark = true;
-  } else if (menu == menu_marker_sel) {
-    if (item < MARKERS_MAX && markers[item].enabled)
+  } else if (menu == menu_marker_sel || menu == menu_marker_select) {
+    if (item < 4 && markers[item].enabled)
       mark = true;
     else if (item == 4 && uistat.marker_delta)
       mark = true;
@@ -1516,19 +1550,19 @@ static void fetch_numeric_target(void)
     break;
   case KM_SCALE:
     uistat.value = setting_scale;
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB/", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB/", ((int32_t)uistat.value));
     break;
   case KM_REFPOS:
     uistat.value = setting_reflevel;
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_ATTENUATION:
     uistat.value = GetAttenuation();
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
      break;
   case KM_ACTUALPOWER:
     uistat.value = settingLevelOffset();
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_IF:
     uistat.value = frequency_IF;
@@ -1536,23 +1570,23 @@ static void fetch_numeric_target(void)
     break;
   case KM_SAMPLETIME:
     uistat.value = setting_step_delay;
-    plot_printf(uistat.text, sizeof uistat.text, "%3duS", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%3duS", ((int32_t)uistat.value));
     break;
   case KM_DRIVE:
     uistat.value = setting_drive;
-    plot_printf(uistat.text, sizeof uistat.text, "%3ddB", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%3ddB", ((int32_t)uistat.value));
     break;
   case KM_LOWOUTLEVEL:
     uistat.value = GetAttenuation();           // compensation for dB offset during low output mode
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_DECAY:
     uistat.value = setting_decay;
-    plot_printf(uistat.text, sizeof uistat.text, "%3d", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
   case KM_NOISE:
     uistat.value = setting_noise;
-    plot_printf(uistat.text, sizeof uistat.text, "%3d", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
   case KM_10MHZ:
     uistat.value = setting_10mhz;

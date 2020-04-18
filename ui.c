@@ -53,7 +53,11 @@ uistat_t uistat = {
 #define BIT_DOWN1   1
 
 #define READ_PORT() palReadPort(GPIOA)
+#ifdef __ULTRA_SA__
+#define BUTTON_MASK 0
+#else
 #define BUTTON_MASK 0b1110
+#endif
 
 static uint16_t last_button = 0b0000;
 static uint32_t last_button_down_ticks;
@@ -128,7 +132,7 @@ static void choose_active_marker(void);
 
 static void menu_move_back(void);
 static void menu_push_submenu(const menuitem_t *submenu);
-static const menuitem_t menu_marker_type[];
+//static const menuitem_t menu_marker_type[];
 
 static int btn_check(void)
 {
@@ -1109,7 +1113,7 @@ const menuitem_t menu_top[] = {
 
 #include "ui_sa.c"
 
-#define MENU_STACK_DEPTH_MAX 4
+#define MENU_STACK_DEPTH_MAX 5
 const menuitem_t *menu_stack[MENU_STACK_DEPTH_MAX] = {
   menu_mode, NULL, NULL, NULL
 };
@@ -1784,7 +1788,7 @@ static void
 draw_numeric_area(void)
 {
   char buf[10];
-  plot_printf(buf, sizeof buf, "%9d", uistat.value);
+  plot_printf(buf, sizeof buf, "%9d", ((int32_t)uistat.value));
   draw_numeric_input(buf);
 }
 
@@ -2497,8 +2501,13 @@ static void extcb1(EXTDriver *extp, expchannel_t channel)
 static const EXTConfig extcfg = {
   {
     {EXT_CH_MODE_DISABLED, NULL},
+#ifdef __ULTRA_SA__
+    {EXT_CH_MODE_DISABLED, NULL},
+    {EXT_CH_MODE_DISABLED, NULL},
+#else
     {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOA, extcb1},
     {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOA, extcb1},
+#endif
     {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOA, extcb1},
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},
@@ -2556,8 +2565,8 @@ ui_init()
   /*
    * Activates the EXT driver 1.
    */
-  extStart(&EXTD1, &extcfg);
 
+  extStart(&EXTD1, &extcfg);
 #if 1
   gptStart(&GPTD3, &gpt3cfg);
   gptPolledDelay(&GPTD3, 10); /* Small delay.*/
