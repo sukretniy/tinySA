@@ -2255,7 +2255,9 @@ VNA_SHELL_FUNCTION(cmd_x)
    reg &= ~0xc00000;    // Force led to show lock
    reg |=  0x400000;
   }
+#ifdef __ULTRA_SA__
   ADF4351_WriteRegister32(VFO, reg);
+#endif
   shell_printf("x=%x\r\n", reg);
 }
 
@@ -2757,9 +2759,9 @@ int main(void)
   int i = sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
 
 #endif
-
+#ifdef __ULTRA_SA__
   ADF4351_Setup();
-
+#endif
   /*
  * SPI LCD Initialize
  */

@@ -105,8 +105,13 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     break;
   case M_HIGH:
+#ifdef __ULTRA_SA__
     minFreq = 00000000;
     maxFreq = 2000000000;
+#else
+    minFreq = 240000000;
+    maxFreq = 960000000;
+#endif
     set_sweep_frequency(ST_START, (int32_t) minFreq);
     set_sweep_frequency(ST_STOP, (int32_t) maxFreq);
     break;
@@ -526,8 +531,10 @@ void setFreq(int V, unsigned long freq)
     if (V <= 1) {
       SI4432_Sel = V;
       SI4432_Set_Frequency(freq);
+#ifdef __ULTRA_SA__
     } else {
       ADF4351_set_frequency(V-2,freq,3);
+#endif
     }
     old_freq[V] = freq;
   }
@@ -959,14 +966,17 @@ again:
     } else
 #endif
     {
+#ifdef __ULTRA_SA__
 //#define IF_1    2550000000
 #define IF_2    2025000000
 
-     setFreq (3, IF_2 - 433800000);
-      setFreq (2, IF_2 + lf);
-     setFreq (1, 433800000);
-//      setFreq (1, local_IF+lf);
-     }
+       setFreq (3, IF_2 - 433800000);
+       setFreq (2, IF_2 + lf);
+       setFreq (1, 433800000);
+#else
+       setFreq (1, local_IF+lf);
+#endif
+    }
     if (MODE_OUTPUT(setting_mode))              // No substepping in output mode
       return(0);
     float signal_path_loss;

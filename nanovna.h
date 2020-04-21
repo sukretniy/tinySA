@@ -30,8 +30,9 @@
 #define __MEASURE__
 #define __SELFTEST__
 #define __CALIBRATE__
-#define __ULTRA__
-#define __ULTRA_SA__
+//#define __ULTRA__             // Add harmonics mode on low input.
+//#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
+
 
 /*
  * main.c

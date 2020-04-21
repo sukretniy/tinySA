@@ -890,12 +890,14 @@ static void choose_active_marker(void)
   active_marker = -1;
 }
 
+#ifdef __ULTRA__
 static void menu_harmonic_cb(int item, uint8_t data)
 {
   (void)item;
   set_harmonic(data);
   draw_menu();
 }
+#endif
 
 static void menu_settings2_cb(int item, uint8_t data)
 {
@@ -1495,9 +1497,11 @@ static void menu_item_modify_attribute(
     if (item ==0 && setting_tracking_output){
       mark = true;
     }
+#ifdef __ULTRA__
   } else if (MT_MASK(menu[item].type) == MT_CALLBACK && menu == menu_harmonic) {
     if (data == setting_harmonic)
       mark = true;
+#endif
   } else if (menu == menu_settings2 || menu == menu_settingshigh2) {
     if (item ==0 && setting_agc){
       mark = true;

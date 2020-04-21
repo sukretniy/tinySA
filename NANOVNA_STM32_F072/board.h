@@ -117,7 +117,6 @@
  * PA13 - SWDIO                     (alternate 0).
  * PA14 - SWCLK                     (alternate 0).
  */
-#define __ULTRA_SA__
 #ifdef __ULTRA_SA__
 #define PIN_MOD_ULTRA(X)   PIN_MODE_OUTPUT(X)
 #else
