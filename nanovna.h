@@ -30,7 +30,7 @@
 #define __MEASURE__
 #define __SELFTEST__
 #define __CALIBRATE__
-//#define __ULTRA__
+#define __ULTRA__
 #define __ULTRA_SA__
 
 /*

@@ -536,15 +536,17 @@ void ADF_shiftOut(uint8_t val)
              SPI3_SDI_HIGH;
            else
              SPI3_SDI_LOW;
-           chThdSleepMicroseconds(1);
+           chThdSleepMicroseconds(10);
            SPI3_CLK_HIGH;
+           chThdSleepMicroseconds(10);
            SPI3_CLK_LOW;
+           chThdSleepMicroseconds(10);
      }
 }
 
 //unsigned long registers[6] =  {0x4580A8, 0x80080C9, 0x4E42, 0x4B3, 0xBC803C, 0x580005} ;
 //unsigned long registers[6] =  {0x4C82C8, 0x80083E9, 0x6E42, 0x8004B3, 0x8C81FC, 0x580005} ;
-unsigned long registers[6] =  {0x320000, 0x8008011, 0x18004E42, 0x4B3,0x8C803C , 0x00580005} ;
+unsigned long registers[6] =  {0x548018, 0x8008029, 0x4E42, 0x8407D3,0x932474 , 0x580005} ;
 int debug = 0;
 int ADF4351_LE[2] = { 9, 10};
 int ADF4351_Mux = 7;
@@ -593,18 +595,16 @@ void ADF4351_Setup()
 //  bitSet (registers[2], 17); // R set to 8
 //  bitClear (registers[2], 14); // R set to 8
 
-  ADF4351_R_counter(1);
-  ADF4351_level(3);
-  ADF4351_channel_spacing(10);
-
-  while(1) {
+//  while(1) {
 //
-    ADF4351_set_frequency(1,100000000,0);
-//    ADF4351_set_frequency(1,150000000,0);
+  ADF4351_set_frequency(0,100000000,0);
+  ADF4351_set_frequency(0,150000000,0);
+  ADF4351_set_frequency(1,100000000,0);
+  ADF4351_set_frequency(1,150000000,0);
 //  ADF4351_Set(0);
 //  ADF4351_Set(1);
   chThdSleepMilliseconds(1000);
-  }
+//  }
 //  bitSet (registers[2], 17); // R set to 8
 //  bitClear (registers[2], 14); // R set to 8
 //  for (int i=0; i<6; i++) pinMode(ADF4351_LE[i], OUTPUT);          // Setup pins
@@ -619,12 +619,13 @@ void ADF4351_Setup()
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
   palClearPad(GPIOA, ADF4351_LE[channel]);
-//  chThdSleepMicroseconds(SELECT_DELAY);
-  for (int i = 3; i >= 0; i--) ADF_shiftOut((value >> 8 * i) & 0xFF);
+  chThdSleepMicroseconds(10);
+  for (int i = 3; i >= 0; i--) ADF_shiftOut((value >> (8 * i)) & 0xFF);
+  chThdSleepMicroseconds(10);
   palSetPad(GPIOA, ADF4351_LE[channel]);
-//  chThdSleepMicroseconds(SELECT_DELAY);
+  chThdSleepMicroseconds(10);
   palClearPad(GPIOA, ADF4351_LE[channel]);
-//  chThdSleepMicroseconds(SELECT_DELAY);
+  chThdSleepMicroseconds(10);
 }
 
 void ADF4351_disable_output()
@@ -839,8 +840,8 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
       bitSet (registers[4], 4); // +5dBm
     }
 */
-    bitSet (registers[4], 5); // enable + output
-    bitClear (registers[4], 8); // enable B output
+//    bitSet (registers[4], 5); // enable + output
+//    bitClear (registers[4], 8); // enable B output
 
 #if 0
     if (FRAC == 0)
@@ -856,7 +857,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
     //bitSet (registers[4], 10); // Mute till lock
     bitSet (registers[3], 23); // Fast lock
  #endif
-    bitSet (registers[4], 10); // Mute till lock
+ //   bitSet (registers[4], 10); // Mute till lock
 //    ADF4351_Set(channel);
 }
 

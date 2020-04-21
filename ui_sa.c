@@ -12,6 +12,8 @@ void set_refer_output(int);
 int get_refer_output(void);
 void SetAttenuation(int);
 int GetAttenuation(void);
+void set_harmonic(int);
+extern int setting_harmonic;
 int search_is_greater(void);
 void set_auto_attenuation(void);
 void set_auto_reflevel(void);
@@ -888,6 +890,13 @@ static void choose_active_marker(void)
   active_marker = -1;
 }
 
+static void menu_harmonic_cb(int item, uint8_t data)
+{
+  (void)item;
+  set_harmonic(data);
+  draw_menu();
+}
+
 static void menu_settings2_cb(int item, uint8_t data)
 {
   (void)item;
@@ -1157,6 +1166,17 @@ static const menuitem_t menu_dfu[] = {
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+#ifdef __ULTRA__
+static const menuitem_t menu_harmonic[] =
+{
+  { MT_CALLBACK, 2,     "2",                  menu_harmonic_cb},
+  { MT_CALLBACK, 3,     "3",                  menu_harmonic_cb},
+  { MT_CALLBACK, 4,     "4",                  menu_harmonic_cb},
+  { MT_CALLBACK, 5,     "5",                  menu_harmonic_cb},
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+#endif
 static const menuitem_t menu_settings2[] =
 {
   { MT_CALLBACK, 0,     "AGC",                  menu_settings2_cb},
@@ -1176,6 +1196,9 @@ static const menuitem_t menu_settings[] =
   { MT_KEYPAD, KM_IF,           "\2IF\0FREQ",       NULL},
   { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0TIME",   NULL},
   { MT_SUBMENU,0,               "\2LO\0DRIVE",      menu_drive},
+#ifdef __ULTRA__
+  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
+#endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",    menu_settings2},
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -1472,6 +1495,9 @@ static void menu_item_modify_attribute(
     if (item ==0 && setting_tracking_output){
       mark = true;
     }
+  } else if (MT_MASK(menu[item].type) == MT_CALLBACK && menu == menu_harmonic) {
+    if (data == setting_harmonic)
+      mark = true;
   } else if (menu == menu_settings2 || menu == menu_settingshigh2) {
     if (item ==0 && setting_agc){
       mark = true;

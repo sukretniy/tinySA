@@ -2209,7 +2209,7 @@ int xtoi(char *t)
     else if ('a' <= *t && *t <= 'f')
       v = v*16 + *t - 'a' + 10;
     else if ('A' <= *t && *t <= 'F')
-      v = v*16 + *t - 'a' + 10;
+      v = v*16 + *t - 'A' + 10;
     else
       return v;
     t++;
@@ -2217,7 +2217,7 @@ int xtoi(char *t)
   return v;
 }
 
-VNA_SHELL_FUNCTION(cmd_x)
+VNA_SHELL_FUNCTION(cmd_y)
 {
   int rvalue;
   int lvalue = 0;
@@ -2236,9 +2236,34 @@ VNA_SHELL_FUNCTION(cmd_x)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_x)
+{
+  uint32_t reg;
+
+
+  if (argc != 1) {
+    shell_printf("usage: x value(0-FFFFFFFF)\r\n");
+    return;
+  }
+  reg = xtoi(argv[0]);
+
+  if ((reg & 7) == 5) {
+   if (reg & (1<<22))
+      VFO = 1;
+    else
+      VFO = 0;
+   reg &= ~0xc00000;    // Force led to show lock
+   reg |=  0x400000;
+  }
+  ADF4351_WriteRegister32(VFO, reg);
+  shell_printf("x=%x\r\n", reg);
+}
+
+
 VNA_SHELL_FUNCTION(cmd_i)
 {
   int rvalue;
+return;             // Don't use!!!!
   SI4432_Init();
   shell_printf("SI4432 init done\r\n");
   if (argc == 1) {
@@ -2251,9 +2276,10 @@ VNA_SHELL_FUNCTION(cmd_i)
 VNA_SHELL_FUNCTION(cmd_o)
 {
   (void) argc;
-  int32_t value = my_atoi(argv[0]);
-  if (VFO == 0)
-    frequency_IF = value;
+  return;
+  uint32_t value = my_atoi(argv[0]);
+//  if (VFO == 0)
+//    frequency_IF = value;
   setFreq(VFO, value);
 }
 
@@ -2308,13 +2334,25 @@ VNA_SHELL_FUNCTION(cmd_m)
 {
   (void)argc;
   (void)argv;
+
+  SetMode(0);
+  setting_tracking = false; //Default test setup
+  setting_step_atten = false;
+  SetAttenuation(0);
+  SetReflevel(-10);
+  set_sweep_frequency(ST_START,frequencyStart - frequency_IF );
+  set_sweep_frequency(ST_STOP, frequencyStop - frequency_IF);
+  draw_cal_status();
+
   pause_sweep();
   int32_t f_step = (frequencyStop-frequencyStart)/ points;
   palClearPad(GPIOC, GPIOC_LED);  // disable led and wait for voltage stabilization
+  int old_step = setting_frequency_step;
   setting_frequency_step = f_step;
   update_rbw();
   chThdSleepMilliseconds(10);
   streamPut(shell_stream, '{');
+  dirty = true;
   for (int i = 0; i<points; i++) {
       float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, setting_tracking);
       streamPut(shell_stream, 'x');
@@ -2324,19 +2362,22 @@ VNA_SHELL_FUNCTION(cmd_m)
     // enable led
   }
   streamPut(shell_stream, '}');
+  setting_frequency_step = old_step;
+  update_rbw();
+  resume_sweep();
   palSetPad(GPIOC, GPIOC_LED);
 }
 
 VNA_SHELL_FUNCTION(cmd_p)
 {
   (void)argc;
+return;
   int p = my_atoi(argv[0]);
   int a = my_atoi(argv[1]);
   if (p==5)
     SetAttenuation(-a);
   if (p==6)
-    if (a != GetMode())
-      SetMode(a);
+    SetMode(a);
   if (p==1)
     if (get_refer_output() != a)
       set_refer_output(a);
@@ -2346,6 +2387,7 @@ VNA_SHELL_FUNCTION(cmd_w)
 {
   (void)argc;
   int p = my_atoi(argv[0]);
+return;
   SetRBW(p);
 }
 //=============================================================================
