@@ -508,12 +508,10 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 
 #ifdef __ULTRA_SA__
 
-
-#define bitClear(X,n) (X) ^= ((uint32_t)0xfffffffe) << (n)
-#define bitSet(X,n) (X) |= ((uint32_t)1) << (n)
-#define bitWrite(X,n,v) if (v) bitSet(X,n); else bitClear(X,n)
-
-
+#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
+#define bitSet(value, bit) ((value) |= (1UL << (bit)))
+#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+#define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
 #define CS_ADF0_HIGH     palSetPad(GPIOA, 9)
 #define CS_ADF1_HIGH     palSetPad(GPIOA, 10)
@@ -536,17 +534,21 @@ void ADF_shiftOut(uint8_t val)
              SPI3_SDI_HIGH;
            else
              SPI3_SDI_LOW;
-           chThdSleepMicroseconds(10);
+//           chThdSleepMicroseconds(10);
            SPI3_CLK_HIGH;
-           chThdSleepMicroseconds(10);
+//           chThdSleepMicroseconds(10);
            SPI3_CLK_LOW;
-           chThdSleepMicroseconds(10);
+//           chThdSleepMicroseconds(10);
      }
 }
 
 //unsigned long registers[6] =  {0x4580A8, 0x80080C9, 0x4E42, 0x4B3, 0xBC803C, 0x580005} ;
 //unsigned long registers[6] =  {0x4C82C8, 0x80083E9, 0x6E42, 0x8004B3, 0x8C81FC, 0x580005} ;
-unsigned long registers[6] =  {0x548018, 0x8008029, 0x4E42, 0x8407D3,0x932474 , 0x580005} ;
+
+//uint32_t registers[6] =  {0x320000, 0x8008011, 0x4E42, 0x4B3,0x8C803C , 0x580005} ;         //25 MHz ref
+
+uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
+
 int debug = 0;
 int ADF4351_LE[2] = { 9, 10};
 int ADF4351_Mux = 7;
@@ -561,7 +563,7 @@ int ADF4351_Mux = 7;
 
 
 double RFout, //Output freq in MHz
-#if 1   //Black modules
+#if 0   //Black modules
   PFDRFout[6] = {25.0,25.0,25.0,10.0,10.0,10.0}, //Reference freq in MHz
   Chrystal[6] = {25.0,25.0,25.0,10.0,10.0,10.0},
 #else // Green modules
@@ -598,12 +600,10 @@ void ADF4351_Setup()
 //  while(1) {
 //
   ADF4351_set_frequency(0,100000000,0);
-  ADF4351_set_frequency(0,150000000,0);
-  ADF4351_set_frequency(1,100000000,0);
   ADF4351_set_frequency(1,150000000,0);
 //  ADF4351_Set(0);
 //  ADF4351_Set(1);
-  chThdSleepMilliseconds(1000);
+//  chThdSleepMilliseconds(1000);
 //  }
 //  bitSet (registers[2], 17); // R set to 8
 //  bitClear (registers[2], 14); // R set to 8
@@ -619,13 +619,13 @@ void ADF4351_Setup()
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
   palClearPad(GPIOA, ADF4351_LE[channel]);
-  chThdSleepMicroseconds(10);
+//  chThdSleepMicroseconds(10);
   for (int i = 3; i >= 0; i--) ADF_shiftOut((value >> (8 * i)) & 0xFF);
-  chThdSleepMicroseconds(10);
+//  chThdSleepMicroseconds(10);
   palSetPad(GPIOA, ADF4351_LE[channel]);
-  chThdSleepMicroseconds(10);
+//  chThdSleepMicroseconds(10);
   palClearPad(GPIOA, ADF4351_LE[channel]);
-  chThdSleepMicroseconds(10);
+//  chThdSleepMicroseconds(10);
 }
 
 void ADF4351_disable_output()
@@ -654,10 +654,11 @@ void ADF4351_set_frequency(int channel, unsigned long freq, int drive)  // freq 
 
 void ADF4351_spur_mode(int S)
 {
-    if (S & 1)
+    if (S & 1) {
       bitSet (registers[2], 29); // R set to 8
-    else
+    } else {
       bitClear (registers[2], 29); // R set to 8
+    }
     if (S & 2)
       bitSet (registers[2], 30); // R set to 8
     else
@@ -810,7 +811,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
     registers[0] = INTA << 15; // OK
     FRAC = FRAC << 3;
     registers[0] = registers[0] + FRAC;
-    //if (MOD == 1) MOD = 2;
+    if (MOD == 1) MOD = 2;
     registers[1] = 0;
     registers[1] = MOD << 3;
     registers[1] = registers[1] + 1 ; // restore address "001"
@@ -855,9 +856,9 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
     bitClear (registers[2], 26); // digital lock
 
     //bitSet (registers[4], 10); // Mute till lock
-    bitSet (registers[3], 23); // Fast lock
+//    bitSet (registers[3], 23); // Fast lock
  #endif
- //   bitSet (registers[4], 10); // Mute till lock
+//   bitSet (registers[4], 10); // Mute till lock
 //    ADF4351_Set(channel);
 }
 

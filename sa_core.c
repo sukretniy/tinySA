@@ -105,8 +105,8 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     break;
   case M_HIGH:
-    minFreq = 240000000;
-    maxFreq = 960000000;
+    minFreq = 00000000;
+    maxFreq = 2000000000;
     set_sweep_frequency(ST_START, (int32_t) minFreq);
     set_sweep_frequency(ST_STOP, (int32_t) maxFreq);
     break;
@@ -958,7 +958,15 @@ again:
 //        setFreq (1, local_IF/2 + lf/2);
     } else
 #endif
-      setFreq (1, local_IF + lf);
+    {
+//#define IF_1    2550000000
+#define IF_2    2025000000
+
+     setFreq (3, IF_2 - 433800000);
+      setFreq (2, IF_2 + lf);
+     setFreq (1, 433800000);
+//      setFreq (1, local_IF+lf);
+     }
     if (MODE_OUTPUT(setting_mode))              // No substepping in output mode
       return(0);
     float signal_path_loss;
