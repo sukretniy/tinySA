@@ -16,9 +16,14 @@
  * the Free Software Foundation, Inc., 51 Franklin Street,
  * Boston, MA 02110-1301, USA.
  */
+//#define HAL_USE_SERIAL 1
+//#define STM32_SERIAL_USE_USART1  1
 
 #include "ch.h"
 #include "hal.h"
+
+//#include "hal_serial.h"
+
 #include "usbcfg.h"
 #ifdef __VNA__
 #include "si5351.h"
@@ -32,10 +37,10 @@
 #include <string.h>
 #include <math.h>
 
-extern uint32_t minFreq;
-extern uint32_t maxFreq;
-uint32_t frequencyStart;
-uint32_t frequencyStop;
+extern float minFreq;
+extern float maxFreq;
+float frequencyStart;
+float frequencyStop;
 int32_t frequencyExtra;
 #define START_MIN minFreq
 #define STOP_MAX maxFreq
@@ -2204,7 +2209,7 @@ int xtoi(char *t)
     else if ('a' <= *t && *t <= 'f')
       v = v*16 + *t - 'a' + 10;
     else if ('A' <= *t && *t <= 'F')
-      v = v*16 + *t - 'a' + 10;
+      v = v*16 + *t - 'A' + 10;
     else
       return v;
     t++;
@@ -2212,7 +2217,7 @@ int xtoi(char *t)
   return v;
 }
 
-VNA_SHELL_FUNCTION(cmd_x)
+VNA_SHELL_FUNCTION(cmd_y)
 {
   int rvalue;
   int lvalue = 0;
@@ -2231,9 +2236,36 @@ VNA_SHELL_FUNCTION(cmd_x)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_x)
+{
+  uint32_t reg;
+
+
+  if (argc != 1) {
+    shell_printf("usage: x value(0-FFFFFFFF)\r\n");
+    return;
+  }
+  reg = xtoi(argv[0]);
+
+  if ((reg & 7) == 5) {
+   if (reg & (1<<22))
+      VFO = 1;
+    else
+      VFO = 0;
+   reg &= ~0xc00000;    // Force led to show lock
+   reg |=  0x400000;
+  }
+#ifdef __ULTRA_SA__
+  ADF4351_WriteRegister32(VFO, reg);
+#endif
+  shell_printf("x=%x\r\n", reg);
+}
+
+
 VNA_SHELL_FUNCTION(cmd_i)
 {
   int rvalue;
+return;             // Don't use!!!!
   SI4432_Init();
   shell_printf("SI4432 init done\r\n");
   if (argc == 1) {
@@ -2246,9 +2278,10 @@ VNA_SHELL_FUNCTION(cmd_i)
 VNA_SHELL_FUNCTION(cmd_o)
 {
   (void) argc;
-  int32_t value = my_atoi(argv[0]);
-  if (VFO == 0)
-    frequency_IF = value;
+  return;
+  uint32_t value = my_atoi(argv[0]);
+//  if (VFO == 0)
+//    frequency_IF = value;
   setFreq(VFO, value);
 }
 
@@ -2303,13 +2336,25 @@ VNA_SHELL_FUNCTION(cmd_m)
 {
   (void)argc;
   (void)argv;
+
+  SetMode(0);
+  setting_tracking = false; //Default test setup
+  setting_step_atten = false;
+  SetAttenuation(0);
+  SetReflevel(-10);
+  set_sweep_frequency(ST_START,frequencyStart - frequency_IF );
+  set_sweep_frequency(ST_STOP, frequencyStop - frequency_IF);
+  draw_cal_status();
+
   pause_sweep();
   int32_t f_step = (frequencyStop-frequencyStart)/ points;
-  palClearPad(GPIOB, GPIOB_LED);  // disable led and wait for voltage stabilization
+  palClearPad(GPIOC, GPIOC_LED);  // disable led and wait for voltage stabilization
+  int old_step = setting_frequency_step;
   setting_frequency_step = f_step;
   update_rbw();
   chThdSleepMilliseconds(10);
   streamPut(shell_stream, '{');
+  dirty = true;
   for (int i = 0; i<points; i++) {
       float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, setting_tracking);
       streamPut(shell_stream, 'x');
@@ -2319,19 +2364,22 @@ VNA_SHELL_FUNCTION(cmd_m)
     // enable led
   }
   streamPut(shell_stream, '}');
-  palSetPad(GPIOB, GPIOB_LED);
+  setting_frequency_step = old_step;
+  update_rbw();
+  resume_sweep();
+  palSetPad(GPIOC, GPIOC_LED);
 }
 
 VNA_SHELL_FUNCTION(cmd_p)
 {
   (void)argc;
+return;
   int p = my_atoi(argv[0]);
   int a = my_atoi(argv[1]);
   if (p==5)
     SetAttenuation(-a);
   if (p==6)
-    if (a != GetMode())
-      SetMode(a);
+    SetMode(a);
   if (p==1)
     if (get_refer_output() != a)
       set_refer_output(a);
@@ -2341,6 +2389,7 @@ VNA_SHELL_FUNCTION(cmd_w)
 {
   (void)argc;
   int p = my_atoi(argv[0]);
+return;
   SetRBW(p);
 }
 //=============================================================================
@@ -2591,6 +2640,59 @@ static DACConfig dac1cfg1 = {
 };
 #endif
 
+#if 0
+/*
+ * UART driver configuration structure.
+ */
+static UARTConfig uart_cfg_1 = {
+    NULL,   //txend1,
+    NULL,   //txend2,
+    NULL,   //rxend,
+    NULL,   //rxchar,
+    NULL,   //rxerr,
+    800000,
+    0,
+    0,      //USART_CR2_LINEN,
+    0
+};
+#endif
+
+#if 0
+static const SerialConfig default_config =
+{
+  9600,
+  0,
+  USART_CR2_STOP2_BITS,
+  0
+};
+
+
+void myWrite(char *buf)
+{
+  int len = strlen(buf);
+  while(len-- > 0) {
+    sdPut(&SD1,*buf++);
+    osalThreadSleepMicroseconds(1000);
+  }
+}
+
+static int serial_count = 0;
+int mySerialReadline(unsigned char *buf, int len)
+{
+  int i;
+  do {
+    i =  sdReadTimeout(&SD1,&buf[serial_count], 20-serial_count,TIME_IMMEDIATE);
+    serial_count += i;
+    if (i > 0)
+      osalThreadSleepMicroseconds(1000);
+  } while (serial_count < len && i > 0);
+  if (buf[serial_count-1] == '\n') {
+    serial_count = 0;
+    return(i);
+  } else
+    return 0;
+}
+#endif
 
 // Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
 // Profile stack usage (enable threads command by def ENABLE_THREADS_COMMAND) show:
@@ -2625,7 +2727,42 @@ int main(void)
   usbStart(serusbcfg.usbp, &usbcfg);
   usbConnectBus(serusbcfg.usbp);
 
-/*
+#if 0
+ /*
+  * UART initialize
+  */
+  uartStart(&UARTD1, &uart_cfg_1);
+
+  uartStartSend(&UARTD1, 1, "H");
+  uartStartReceive(&UARTD1, 1, buf);
+#endif
+
+#if 0
+  palSetPadMode(GPIOA, 9, PAL_MODE_ALTERNATE(1));  // USART1 TX.
+  palSetPadMode(GPIOA,10, PAL_MODE_ALTERNATE(1)); // USART1 RX.
+
+  uint8_t buf[10];
+  sdStart(&SD1,&default_config);
+  osalThreadSleepMilliseconds(10);
+  mySerialWrite("Hallo!?\n");
+
+  osalThreadSleepMilliseconds(10);
+
+  mySerialReadline(buf, 10);
+
+  sdReadTimeout(&SD1,buf,10, 10);
+
+  sdWrite(&SD1,(const uint8_t *)"Test123",7);
+  osalThreadSleepMicroseconds(10);
+  sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
+  sdReadTimeout(&SD1,buf,10, 10);
+  int i = sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
+
+#endif
+#ifdef __ULTRA_SA__
+  ADF4351_Setup();
+#endif
+  /*
  * SPI LCD Initialize
  */
   ili9341_init();

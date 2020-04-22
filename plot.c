@@ -1534,7 +1534,28 @@ draw_all_cells(bool flush_markmap)
           g = 255 - b - r
           return r, g, b
   */
+
       int r,g,b;
+#if 0
+      int ratio = (int)(1024 * (actual_t[i] - w_min) / (w_max - w_min));
+
+      r = ratio - 512;
+      if (r<0) r=0;
+      b = (1024 - ratio*4) - 512;
+      if (b<0) b=0;
+      g = 512-r-b;
+      if (r>255) r=255;
+      if (g>255) g=255;
+      if (b>255) b=255;
+
+#define gamma_correct(X,L)  X = (L + X * (255 - L)/255 )
+      gamma_correct(r,160);
+      gamma_correct(g,160);
+      gamma_correct(b,160);
+
+#endif
+
+#if 1
       float ratio = (int)(510.0 * (actual_t[i] - w_min) / (w_max - w_min));
 //      float ratio = (i*2);    // Uncomment for testing the waterfall colors
       b = 255 - ratio;
@@ -1549,6 +1570,7 @@ draw_all_cells(bool flush_markmap)
       gamma_correct(r,128);
       gamma_correct(g,128);
       gamma_correct(b,128);
+#endif
 #if 0
       int k = (actual_t[i]+120)* 2 * 8;
       k &= 255;

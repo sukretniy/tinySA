@@ -56,6 +56,7 @@
 #define GPIOA_XP				6
 #define GPIOA_YP				7
 #define GPIOA_MCO				8
+#define GPIOA_TX                9
 #define GPIOA_USB_DISC			10
 #define GPIOA_USB_DM            11
 #define GPIOA_USB_DP            12
@@ -130,7 +131,7 @@
                                      PIN_MODE_ANALOG(GPIOA_XP) |    \
                                      PIN_MODE_ANALOG(GPIOA_YP) |    \
                                      PIN_MODE_ALTERNATE(GPIOA_MCO) | \
-                                     PIN_MODE_INPUT(9U) |           \
+                                     PIN_MOD_ULTRA(9U) |           \
                                      PIN_MODE_OUTPUT(GPIOA_USB_DISC) | \
                                      PIN_MODE_INPUT(GPIOA_USB_DM) |  \
                                      PIN_MODE_INPUT(GPIOA_USB_DP) |  \
