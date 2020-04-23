@@ -2348,7 +2348,7 @@ VNA_SHELL_FUNCTION(cmd_m)
 
   pause_sweep();
   int32_t f_step = (frequencyStop-frequencyStart)/ points;
-  palClearPad(GPIOC, GPIOC_LED);  // disable led and wait for voltage stabilization
+  palClearPad(GPIOB, GPIOB_LED);  // disable led and wait for voltage stabilization
   int old_step = setting_frequency_step;
   setting_frequency_step = f_step;
   update_rbw();
@@ -2367,7 +2367,7 @@ VNA_SHELL_FUNCTION(cmd_m)
   setting_frequency_step = old_step;
   update_rbw();
   resume_sweep();
-  palSetPad(GPIOC, GPIOC_LED);
+  palSetPad(GPIOB, GPIOB_LED);
 }
 
 VNA_SHELL_FUNCTION(cmd_p)

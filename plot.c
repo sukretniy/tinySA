@@ -1912,15 +1912,19 @@ static void cell_draw_marker_info(int x0, int y0)
       float ir = logmag(&(actual_t[markers[3].index]));
       float sl = logmag(&(actual_t[markers[0].index]));
       float sr = logmag(&(actual_t[markers[1].index]));
-      sl = (sl + sr)/2;
-      il = (il + ir)/2;
 
-      il = sl+ (sl - il)/2;
-      plot_printf(buf, sizeof buf, "OIP3: %4.1fdB", il);
+      float ip = sl+ (sr - il)/2;
+      plot_printf(buf, sizeof buf, "OIP3: %4.1fdB", ip);
       j = 2;
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
       int ypos = 1 + (j/2)*(16) - y0;
+      cell_drawstring_7x13(buf, xpos, ypos);
 
+      ip = sr+ (sl - ir)/2;
+      plot_printf(buf, sizeof buf, "OIP3: %4.1fdB", ip);
+      j = 3;
+      xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
+      ypos = 1 + (j/2)*(16) - y0;
       cell_drawstring_7x13(buf, xpos, ypos);
       break;
     }

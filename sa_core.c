@@ -56,7 +56,7 @@ void reset_settings(int m)
   setting_show_stored = 0;
   setting_auto_attenuation = true;
   setting_subtract_stored = 0;
-  setting_drive=12;
+  setting_drive=15;
   setting_step_atten = 0;       // Only used in low output mode
   setting_agc = true;
   setting_lna = false;
@@ -974,7 +974,12 @@ again:
        setFreq (2, IF_2 + lf);
        setFreq (1, 433800000);
 #else
-       setFreq (1, local_IF+lf);
+#ifdef BELOW_IF_BELOW_50MHZ
+       if (setting_mode == M_LOW && lf < 50000000)
+         setFreq (1, local_IF-lf);
+       else
+#endif
+         setFreq (1, local_IF+lf);
 #endif
     }
     if (MODE_OUTPUT(setting_mode))              // No substepping in output mode
@@ -1186,7 +1191,13 @@ static bool sweep(bool break_on_operation)
       if (r < l) {
         l = markers[1].index;
         r = markers[0].index;
+        markers[0].index = l;
+        markers[1].index = r;
       }
+      uint32_t lf = frequencies[l];
+      uint32_t rf = frequencies[r];
+      markers[2].enabled = search_maximum(2, lf - (rf - lf), 12);
+      markers[3].enabled = search_maximum(3, rf + (rf - lf), 12);
     } else if (setting_measurement == M_PHASE_NOISE  && markers[0].index > 10) {
       markers[1].index =  markers[0].index + (setting_mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
     } else if (setting_measurement == M_STOP_BAND  && markers[0].index > 10) {

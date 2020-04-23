@@ -667,9 +667,10 @@ static void menu_measure_cb(int item, uint8_t data)
       reset_settings(GetMode());
       for (int i = 0; i< MARKERS_MAX; i++) {
         markers[i].enabled = M_ENABLED;
-        markers[i].mtype = M_DELTA | M_TRACKING;
+        markers[i].mtype = M_DELTA;
       }
       markers[0].mtype = M_REFERENCE | M_TRACKING;
+      markers[1].mtype = M_TRACKING;
       kp_help_text = "Frequency of left signal";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
@@ -679,7 +680,7 @@ static void menu_measure_cb(int item, uint8_t data)
       ui_process_keypad();
       int right =  uistat.value;
       set_sweep_frequency(ST_CENTER, (left+right)/2);
-      set_sweep_frequency(ST_SPAN, (right - left)*4);
+      set_sweep_frequency(ST_SPAN, (right - left)*5);
       set_measurement(M_OIP3);
       break;
     case M_PHASE_NOISE:                             // Phase noise
