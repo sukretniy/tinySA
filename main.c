@@ -135,7 +135,7 @@ static THD_FUNCTION(Thread1, arg)
       sweep_mode&=~SWEEP_ONCE;
     } else if (sweep_mode & SWEEP_SELFTEST) {
       // call from lowest level to save stack space
-      self_test();
+      self_test(setting_test);
       sweep_mode = SWEEP_ENABLE;
     } else if (sweep_mode & SWEEP_CALIBRATE) {
       // call from lowest level to save stack space
@@ -2236,6 +2236,17 @@ VNA_SHELL_FUNCTION(cmd_y)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_selftest)
+{
+  if (argc != 1) {
+    shell_printf("usage: selftest (1-3)\r\n");
+    return;
+  }
+  setting_test = my_atoi(argv[0]);
+  sweep_mode = SWEEP_SELFTEST;
+}
+
+
 VNA_SHELL_FUNCTION(cmd_x)
 {
   uint32_t reg;
@@ -2465,7 +2476,8 @@ static const VNAShellCommand commands[] =
 #ifdef ENABLE_COLOR_COMMAND
     {"color"       , cmd_color       , 0},
 #endif
-   { "x", cmd_x,	0 },
+    { "selftest", cmd_selftest,    0 },
+    { "x", cmd_x,    0 },
    { "i", cmd_i,	0 },
    { "v", cmd_v,	0 },
    { "a", cmd_a,	0 },

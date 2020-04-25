@@ -661,7 +661,8 @@ void SetScale(int);
 void SetRBW(int);
 void SetRX(int);
 extern int setting_measurement;
-void self_test(void);
+void self_test(int);
+extern int setting_test;
 void wait_user(void);
 void calibrate(void);
 

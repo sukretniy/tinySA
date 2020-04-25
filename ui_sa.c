@@ -46,7 +46,7 @@ void MenuDirty(void);
 void ToggleLNA(void);
 void ToggleAGC(void);
 void redrawHisto(void);
-void self_test(void);
+void self_test(int);
 void set_decay(int);
 void set_noise(int);
 void toggle_tracking_output(void);
@@ -567,6 +567,7 @@ static void menu_config_cb(int item, uint8_t data)
     sweep_mode = 0;         // Suspend sweep to save time
     menu_move_back();
     ui_mode_normal();
+    setting_test = 0;
     sweep_mode = SWEEP_SELFTEST;
     break;
   case 4:

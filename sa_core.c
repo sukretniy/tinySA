@@ -24,6 +24,7 @@ int setting_tracking = false;
 int setting_modulation = MO_NONE;
 int setting_step_delay = 0;
 int setting_frequency_step;
+int setting_test;
 int setting_harmonic;
 int setting_decay;
 int setting_noise;
@@ -1568,14 +1569,14 @@ static const struct {
  {TC_SIGNAL,    TP_10MHZ,       30,     7,      -32, 30,    -80 },      // 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -70, 0,     0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -65, 0,     0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -13, 55,    -60 },      // 7 BPF loss and stop band
+ {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20, 80,    -60 },      // 7 BPF loss and stop band
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18, 20,    -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       430,    60,     -65, 0,     -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -58, 30,    -90 },      // 10 Switch isolation
  {TC_END,       0,              0,      0,      0,   0,     0},
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5, 30,  -70 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -75 },       // 13 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -50, 30,    -65 },       // 14 Calibrate power high mode
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40, 30,    -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,   0,     0},
  {TC_MEASURE,   TP_30MHZ,       30,     1,      -20, 30,    -70 },      // 16 Measure RBW step time
  {TC_END,       0,              0,      0,      0,   0,     0},
@@ -1855,144 +1856,137 @@ int add_spur(int f)
 }
 
 
-void self_test(void)
+void self_test(int test)
 {
-
-  #if 0
-  in_selftest = true;               // Spur search
-  reset_settings(M_LOW);
-  test_prepare(4);
-  int f;           // Start search at 400kHz
-//  int i = 0;                     // Index in spur table (temp_t)
-  float p2, p1, p;
+  if (test ==1) {
+    in_selftest = true;               // Spur search
+    reset_settings(M_LOW);
+    test_prepare(4);
+    int f = 400000;           // Start search at 400kHz
+    //  int i = 0;                     // Index in spur table (temp_t)
+    float p2, p1, p;
 
 #define FREQ_STEP   3000
 
-  SetRBW(FREQ_STEP/1000);
-  last_spur = 0;
-  for (int j = 0; j < 10; j++) {
+    SetRBW(FREQ_STEP/1000);
+    last_spur = 0;
+    for (int j = 0; j < 10; j++) {
 
-    p2 = perform(false, 0, f, false);
-    vbwSteps = 1;
-    f += FREQ_STEP;
-    p1 = perform(false, 1, f, false);
-    f += FREQ_STEP;
-    shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d\n\r", p2, p1, frequency_IF);
-
-    f = 400000;
-    while (f < 100000000) {
-      p = perform(false, 1, f, false);
-#define SPUR_DELTA  6
-      if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
-//        temp_t[i++] = f - FREQ_STEP;
-        shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - FREQ_STEP)/1000, add_spur(f - FREQ_STEP));
-      }
-      //    else
-      //      shell_printf("%f at %d\n\r", p1,f - FREQ_STEP);
-      p2 = p1;
-      p1 = p;
+      p2 = perform(false, 0, f, false);
+      vbwSteps = 1;
       f += FREQ_STEP;
+      p1 = perform(false, 1, f, false);
+      f += FREQ_STEP;
+      shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d\n\r", p2, p1, frequency_IF);
+
+      f = 400000;
+      while (f < 100000000) {
+        p = perform(false, 1, f, false);
+#define SPUR_DELTA  6
+        if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
+          //        temp_t[i++] = f - FREQ_STEP;
+          shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - FREQ_STEP)/1000, add_spur(f - FREQ_STEP));
+        }
+        //    else
+        //      shell_printf("%f at %d\n\r", p1,f - FREQ_STEP);
+        p2 = p1;
+        p1 = p;
+        f += FREQ_STEP;
+      }
     }
-  }
-  shell_printf("\n\rTable for IF at %d\n\r", frequency_IF);
-  for (int j = 0; j < last_spur; j++) {
-    if ((int)stored_t[j] > 1)
-      shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
-  }
-  while(1) ;
-  return;
-
-
-#elif 0                 // Attenuator test
-  int local_test_status;
-  in_selftest = true;
-  reset_settings(M_LOW);
-  int i = 15;       // calibrate attenuator at 30 MHz;
-  float reference_peak_level;
-  test_prepare(i);
-  for (int j= 0; j < 32; j++ ) {
+    shell_printf("\n\rTable for IF at %d\n\r", frequency_IF);
+    for (int j = 0; j < last_spur; j++) {
+      if ((int)stored_t[j] > 1)
+        shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
+    }
+  } else if (test == 2) {
+    // Attenuator test
+    in_selftest = true;
+    reset_settings(M_LOW);
+    int i = 15;       // calibrate attenuator at 30 MHz;
+    float reference_peak_level = 0;
     test_prepare(i);
-    SetAttenuation(j);
-    float summed_peak_level = 0;
-    for (int k=0; k<10; k++) {
-      test_acquire(i);                        // Acquire test
-      local_test_status = test_validate(i);                       // Validate test
-      summed_peak_level += peakLevel;
-    }
-    peakLevel = summed_peak_level / 10;
-    if (j == 0)
-      reference_peak_level = peakLevel;
-    shell_printf("Target %d, actual %f, delta %f\n\r",j, peakLevel, peakLevel - reference_peak_level);
-  }
-  return;
-#elif 0
-                  // RBW step time search
-  int local_test_status;
-  in_selftest = true;
-  reset_settings(M_LOW);
-  int i = 15;       // calibrate low mode power on 30 MHz;
-  test_prepare(i);
-  setting_step_delay = 6000;
-  for (int j= 0; j < 57; j++ ) {
-    setting_step_delay = setting_step_delay * 4/3;
-    setting_rbw = SI4432_force_RBW(j);
-    shell_printf("RBW = %d, ",setting_rbw);
-    test_prepare(i);
-    test_acquire(i);                        // Acquire test
-    local_test_status = test_validate(i);                       // Validate test
-    float saved_peakLevel = peakLevel;
-    if (peakLevel < -30) {
-      shell_printf("Peak level too low, abort\n\r");
-      return;
-    }
-
-    shell_printf("Start level = %f, ",peakLevel);
-    while (setting_step_delay > 100 && peakLevel > saved_peakLevel - 1) {
-      setting_step_delay = setting_step_delay * 3 / 4;
+    for (int j= 0; j < 32; j++ ) {
       test_prepare(i);
-//      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
-      test_acquire(i);                        // Acquire test
-      local_test_status = test_validate(i);                       // Validate test
-//      shell_printf(" Step %f, %d",peakLevel, setting_step_delay);
+      SetAttenuation(j);
+      float summed_peak_level = 0;
+      for (int k=0; k<10; k++) {
+        test_acquire(i);                        // Acquire test
+        test_validate(i);                       // Validate test
+        summed_peak_level += peakLevel;
+      }
+      peakLevel = summed_peak_level / 10;
+      if (j == 0)
+        reference_peak_level = peakLevel;
+      shell_printf("Target %d, actual %f, delta %f\n\r",j, peakLevel, peakLevel - reference_peak_level);
     }
-    setting_step_delay = setting_step_delay * 4 / 3;
-    shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting_step_delay);
-  }
-  return;
-#else
-  int old_IF = frequency_IF;
-  in_selftest = true;
-  menu_autosettings_cb(0);
-  for (int i=0; i < TEST_COUNT; i++) {          // All test cases waiting
-    if (test_case[i].kind == TC_END)
-      break;
-    test_status[i] = TS_WAITING;
-    test_fail_cause[i] = "";
-  }
-  show_test_info = TRUE;
-  int i=0;
-  while (test_case[i].kind != TC_END) {
-    frequency_IF = old_IF;
+    return;
+  } else if (test == 3) {
+    // RBW step time search
+    in_selftest = true;
+    reset_settings(M_LOW);
+    int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
-    test_acquire(i);                        // Acquire test
-    test_status[i] = test_validate(i);                       // Validate test
-    if (test_status[i] != TS_PASS) {
-      wait_user();
-    }
-    i++;
-  }
-  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Self test complete", 50, 200);
-  ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
-  wait_user();
-  ili9341_clear_screen();
+    setting_step_delay = 6000;
+    for (int j= 0; j < 57; j++ ) {
+      setting_step_delay = setting_step_delay * 4/3;
+      setting_rbw = SI4432_force_RBW(j);
+      shell_printf("RBW = %d, ",setting_rbw);
+      test_prepare(i);
+      test_acquire(i);                        // Acquire test
+      test_validate(i);                       // Validate test
+      float saved_peakLevel = peakLevel;
+      if (peakLevel < -30) {
+        shell_printf("Peak level too low, abort\n\r");
+        return;
+      }
 
-  sweep_mode = SWEEP_ENABLE;
-  show_test_info = FALSE;
-  set_refer_output(0);
-  reset_settings(M_LOW);
-  in_selftest = false;
-#endif
+      shell_printf("Start level = %f, ",peakLevel);
+      while (setting_step_delay > 100 && peakLevel > saved_peakLevel - 1) {
+        setting_step_delay = setting_step_delay * 3 / 4;
+        test_prepare(i);
+        //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
+        test_acquire(i);                        // Acquire test
+        test_validate(i);                       // Validate test
+        //      shell_printf(" Step %f, %d",peakLevel, setting_step_delay);
+      }
+      setting_step_delay = setting_step_delay * 4 / 3;
+      shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting_step_delay);
+    }
+  } else if (test == 0) {
+    int old_IF = frequency_IF;
+    in_selftest = true;
+    menu_autosettings_cb(0);
+    for (int i=0; i < TEST_COUNT; i++) {          // All test cases waiting
+      if (test_case[i].kind == TC_END)
+        break;
+      test_status[i] = TS_WAITING;
+      test_fail_cause[i] = "";
+    }
+    show_test_info = TRUE;
+    int i=0;
+    while (test_case[i].kind != TC_END) {
+      frequency_IF = old_IF;
+      test_prepare(i);
+      test_acquire(i);                        // Acquire test
+      test_status[i] = test_validate(i);                       // Validate test
+      if (test_status[i] != TS_PASS) {
+        wait_user();
+      }
+      i++;
+    }
+    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_drawstring_7x13("Self test complete", 50, 200);
+    ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
+    wait_user();
+    ili9341_clear_screen();
+
+    sweep_mode = SWEEP_ENABLE;
+    show_test_info = FALSE;
+    set_refer_output(0);
+    reset_settings(M_LOW);
+    in_selftest = false;
+  }
 }
 
 void reset_calibration(void)
