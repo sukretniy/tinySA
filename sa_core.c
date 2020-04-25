@@ -10,6 +10,7 @@ int setting_attenuate = 0;
 int setting_auto_attenuation;
 int setting_step_atten;
 int setting_rbw = 0;
+int setting_below_IF;
 int setting_average = 0;
 int setting_show_stored = 0;
 int setting_subtract_stored = 0;
@@ -67,6 +68,7 @@ void reset_settings(int m)
   setting_auto_reflevel = true;     // Must be after SetReflevel
   setting_decay=20;
   setting_noise=5;
+  setting_below_IF = false;
   setting_tracking_output = false;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
@@ -180,6 +182,11 @@ void set_tracking_output(int t)
 void toggle_tracking_output(void)
 {
   setting_tracking_output = !setting_tracking_output;
+  dirty = true;
+}
+void toggle_below_IF(void)
+{
+  setting_below_IF = !setting_below_IF;
   dirty = true;
 }
 
@@ -494,10 +501,10 @@ void apply_settings(void)
   SI4432_SetReference(setting_refer);
   update_rbw();
   if (setting_step_delay == 0){
-      if      (actual_rbw >142.0)    actualStepDelay =  450;
+      if (actual_rbw > 90.0)         actualStepDelay =  400;
       else if (actual_rbw > 75.0)    actualStepDelay =  550;
       else if (actual_rbw > 56.0)    actualStepDelay =  650;
-      else if (actual_rbw > 37.0)    actualStepDelay =  800;
+      else if (actual_rbw > 37.0)    actualStepDelay =  700;
       else if (actual_rbw > 18.0)    actualStepDelay = 1100;
       else if (actual_rbw >  9.0)    actualStepDelay = 2000;
       else if (actual_rbw >  5.0)    actualStepDelay = 3500;
@@ -974,11 +981,9 @@ again:
        setFreq (2, IF_2 + lf);
        setFreq (1, 433800000);
 #else
-#ifdef BELOW_IF_BELOW_50MHZ
-       if (setting_mode == M_LOW && lf < 50000000)
+       if (setting_mode == M_LOW && !setting_tracking && setting_below_IF)
          setFreq (1, local_IF-lf);
        else
-#endif
          setFreq (1, local_IF+lf);
 #endif
     }
@@ -991,9 +996,9 @@ again:
     else
 #endif
       if (setting_mode == M_LOW)
-        signal_path_loss = -9.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+        signal_path_loss = -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
       else
-      signal_path_loss = 7;         // Loss in dB (+ is gain)
+      signal_path_loss = -3;         // Loss in dB (+ is gain)
     float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+ setting_attenuate - signal_path_loss;
 #ifdef __ULTRA__
     if (setting_spur == 1) {                           // First pass
@@ -1132,11 +1137,11 @@ static bool sweep(bool break_on_operation)
     draw_cal_status();
   }
   if (!in_selftest && setting_mode == M_LOW && setting_auto_attenuation && max_index[0] > 0) {
-    if (actual_t[max_index[0]] - setting_attenuate < -32 && setting_attenuate >= 10) {
+    if (actual_t[max_index[0]] - setting_attenuate < - 3*setting_scale && setting_attenuate >= setting_scale) {
       setting_attenuate -= setting_scale;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (actual_t[max_index[0]] - setting_attenuate > -18 && setting_attenuate <= 20) {
+    } else if (actual_t[max_index[0]] - setting_attenuate > - 1.5*setting_scale && setting_attenuate <= 30 - setting_scale) {
       setting_attenuate += setting_scale;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
@@ -1569,8 +1574,8 @@ static const struct {
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -58, 30,    -90 },      // 10 Switch isolation
  {TC_END,       0,              0,      0,      0,   0,     0},
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5, 30,  -70 },      // 12 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -45, 30,    -75 },       // 13 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -45, 30,    -65 },       // 14 Calibrate power high mode
+ {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -75 },       // 13 Measure powerlevel and noise
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -50, 30,    -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,   0,     0},
  {TC_MEASURE,   TP_30MHZ,       30,     1,      -20, 30,    -70 },      // 16 Measure RBW step time
  {TC_END,       0,              0,      0,      0,   0,     0},
@@ -1854,7 +1859,7 @@ void self_test(void)
 {
 
   #if 0
-  in_selftest = true;
+  in_selftest = true;               // Spur search
   reset_settings(M_LOW);
   test_prepare(4);
   int f;           // Start search at 400kHz
@@ -1898,18 +1903,26 @@ void self_test(void)
   return;
 
 
-#elif 0                 // RAttenuator test
+#elif 0                 // Attenuator test
   int local_test_status;
   in_selftest = true;
   reset_settings(M_LOW);
-  int i = 15;       // calibrate low mode power on 30 MHz;
+  int i = 15;       // calibrate attenuator at 30 MHz;
+  float reference_peak_level;
   test_prepare(i);
   for (int j= 0; j < 32; j++ ) {
     test_prepare(i);
     SetAttenuation(j);
-    test_acquire(i);                        // Acquire test
-    local_test_status = test_validate(i);                       // Validate test
-    shell_printf("Target %d, actual %f\n\r",j, peakLevel);
+    float summed_peak_level = 0;
+    for (int k=0; k<10; k++) {
+      test_acquire(i);                        // Acquire test
+      local_test_status = test_validate(i);                       // Validate test
+      summed_peak_level += peakLevel;
+    }
+    peakLevel = summed_peak_level / 10;
+    if (j == 0)
+      reference_peak_level = peakLevel;
+    shell_printf("Target %d, actual %f, delta %f\n\r",j, peakLevel, peakLevel - reference_peak_level);
   }
   return;
 #elif 0
@@ -1936,11 +1949,11 @@ void self_test(void)
     shell_printf("Start level = %f, ",peakLevel);
     while (setting_step_delay > 100 && peakLevel > saved_peakLevel - 1) {
       setting_step_delay = setting_step_delay * 3 / 4;
-//      test_prepare(i);
-//      shell_printf("RBW = %f\n\r",SI4432_force_RBW(j));
+      test_prepare(i);
+//      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
       test_acquire(i);                        // Acquire test
       local_test_status = test_validate(i);                       // Validate test
- //     shell_printf("Step %f, %d",peakLevel, setting_step_delay);
+//      shell_printf(" Step %f, %d",peakLevel, setting_step_delay);
     }
     setting_step_delay = setting_step_delay * 4 / 3;
     shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting_step_delay);

@@ -9,6 +9,7 @@ void reset_settings(int);
 void SetPowerGrid(int);
 void SetRefLevel(int);
 void set_refer_output(int);
+void toggle_below_IF(void);
 int get_refer_output(void);
 void SetAttenuation(int);
 int GetAttenuation(void);
@@ -916,6 +917,9 @@ static void menu_settings2_cb(int item, uint8_t data)
   case 3:
     toggle_tracking_output();
     break;
+  case 4:
+    toggle_below_IF();
+    break;
   }
   draw_menu();
 //  draw_cal_status();
@@ -1185,6 +1189,7 @@ static const menuitem_t menu_settings2[] =
   { MT_CALLBACK, 0,     "AGC",                  menu_settings2_cb},
   { MT_CALLBACK, 1,     "LNA",                  menu_settings2_cb},
   { MT_CALLBACK, 2,     "BPF",                  menu_settings2_cb},
+  { MT_CALLBACK, 4,     "\2BELOW\0IF",          menu_settings2_cb},
   { MT_KEYPAD, KM_DECAY,"\2HOLD\0TIME",         NULL},
   { MT_KEYPAD, KM_NOISE,"\2NOISE\0LEVEL",       NULL},
   { MT_KEYPAD, KM_10MHZ,"\00210MHZ\0ACTUAL",    NULL},
