@@ -2037,14 +2037,14 @@ void calibrate(void)
     test_prepare(i);
     test_acquire(i);                        // Acquire test
     local_test_status = test_validate(i);                       // Validate test
-    if (local_test_status != TS_PASS) {
-      ili9341_set_foreground(BRIGHT_COLOR_RED);
-      ili9341_drawstring_7x13("Calibration failed", 30, 120);
-      goto quit;
-    } else
+//    if (local_test_status != TS_PASS) {                       // Do not validate due to variations in SI4432
+//      ili9341_set_foreground(BRIGHT_COLOR_RED);
+//      ili9341_drawstring_7x13("Calibration failed", 30, 120);
+//      goto quit;
+//    } else
       SetPowerLevel(last_peak_level);
       chThdSleepMilliseconds(1000);
-    }
+  }
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 30, 120);
 quit:
