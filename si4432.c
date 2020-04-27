@@ -332,11 +332,11 @@ float SI4432_RBW_table(int i){
   return(RBW_choices[i*4-1]);
 }
 
-int setting_10mhz = 10000000;
+int setting_frequency_10mhz = 10000000;
 
 void set_10mhz(int f)
 {
-  setting_10mhz = f;
+  setting_frequency_10mhz = f;
 }
 
 void SI4432_Set_Frequency ( long Freq ) {
@@ -349,8 +349,8 @@ void SI4432_Set_Frequency ( long Freq ) {
     hbsel = 0;
   }
   int sbsel = 1;
-  int N = Freq / setting_10mhz;
-  Carrier = ( 4 * ( Freq - N * setting_10mhz )) / 625;
+  int N = Freq / setting_frequency_10mhz;
+  Carrier = ( 4 * ( Freq - N * setting_frequency_10mhz )) / 625;
   int Freq_Band = ( N - 24 ) | ( hbsel << 5 ) | ( sbsel << 6 );
 #if 0
   SI4432_Write_Byte ( 0x75, Freq_Band );
@@ -362,7 +362,7 @@ void SI4432_Set_Frequency ( long Freq ) {
 }
 
 int actualStepDelay = 1500;
-extern int setting_repeat;
+//extern int setting.repeat;
 
 float SI4432_RSSI(uint32_t i, int s)
 {
@@ -378,12 +378,12 @@ float SI4432_RSSI(uint32_t i, int s)
 //START_PROFILE
     SI4432_Sel = s;
     chThdSleepMicroseconds(actualStepDelay);
-    i = setting_repeat;
+    i = setting.repeat;
     RSSI_RAW  = 0;
     while (i-->0)
       RSSI_RAW += (unsigned char)SI4432_Read_Byte( 0x26 ) ;
-    RSSI_RAW = RSSI_RAW / setting_repeat;
- //   if (MODE_INPUT(setting_mode) && RSSI_RAW == 0)
+    RSSI_RAW = RSSI_RAW / setting.repeat;
+ //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();
   float dBm = (RSSI_RAW-240)/2.0 - SI4432_RSSI_correction;
 #ifdef __SIMULATION__

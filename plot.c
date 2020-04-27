@@ -1907,7 +1907,7 @@ static void cell_draw_marker_info(int x0, int y0)
     }
   }
   for (int i = 0; i < MARKER_COUNT; i++) {
-    if (i >= 2 && setting_measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
+    if (i >= 2 && setting.measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
       float il = logmag(&(actual_t[markers[2].index]));
       float ir = logmag(&(actual_t[markers[3].index]));
       float sl = logmag(&(actual_t[markers[0].index]));
@@ -2031,7 +2031,7 @@ draw_frequencies(void)
 {
   char buf1[32];
   char buf2[32]; buf2[0] = 0;
-  if (MODE_OUTPUT(setting_mode))     // No frequencies during output
+  if (MODE_OUTPUT(setting.mode))     // No frequencies during output
     return;
   if (current_menu_is_form() && !in_selftest)
     return;

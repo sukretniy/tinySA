@@ -119,7 +119,7 @@ static int16_t last_touch_y;
 #define KP_DONE 1
 #define KP_CANCEL 2
 
-static void ui_mode_normal(void);
+void ui_mode_normal(void);
 static void ui_mode_menu(void);
 static void ui_mode_numeric(int _keypad_mode);
 static void ui_mode_keypad(int _keypad_mode);
@@ -1149,6 +1149,7 @@ menu_move_back(void)
 static void
 menu_push_submenu(const menuitem_t *submenu)
 {
+  ui_mode = UI_MENU;        // Only needed for auto mode setting
   erase_menu_buttons();
   if (menu_current_level < MENU_STACK_DEPTH_MAX-1)
     menu_current_level++;
@@ -1849,7 +1850,7 @@ ui_mode_keypad(int _keypad_mode)
   draw_numeric_input("");
 }
 
-static void
+void
 ui_mode_normal(void)
 {
   if (ui_mode == UI_NORMAL)

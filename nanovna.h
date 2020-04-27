@@ -118,6 +118,7 @@ enum stimulus_type {
   ST_START=0, ST_STOP, ST_CENTER, ST_SPAN, ST_CW
 };
 
+void update_frequencies(void);
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
 
@@ -454,18 +455,73 @@ void show_logo(void);
  * flash.c
  */
 
+
+typedef struct setting
+{
+  uint32_t magic;
+//  uint32_t _frequency0;
+//  uint32_t _frequency1;
+  int mode;
+  uint16_t _sweep_points;
+  int attenuate;
+  int auto_attenuation;
+  int step_atten;
+  int rbw;
+  int below_IF;
+  int average;
+  int show_stored;
+  int subtract_stored;
+  int drive; // 0-7 , 7=+20dBm, 3dB steps
+  int agc;
+  int lna;
+  int auto_reflevel;
+  int reflevel;
+  int scale;
+  int tracking;
+  int modulation;
+  int step_delay;
+  int frequency_step;
+  int test;
+  int harmonic;
+  int decay;
+  int noise;
+  float vbw;
+  int  tracking_output;
+  int repeat;
+  uint32_t frequency0;
+  uint32_t frequency1;
+  uint32_t frequency_IF;
+  int freq_mode;
+  int measurement;
+  int refer;
+  trace_t _trace[TRACES_MAX];
+  marker_t _markers[MARKERS_MAX];
+  int8_t _active_marker;
+  uint32_t checksum;
+}setting_t;
+
+extern setting_t setting;
+extern int setting_frequency_10mhz;
+void reset_settings(int m);
+
+extern uint32_t frequencies[POINTS_COUNT];
+
 #if 1
-#define SAVEAREA_MAX 5
+#define SAVEAREA_MAX 9
 // Begin addr                   0x08018000
 #define SAVE_CONFIG_AREA_SIZE   0x00000800
 // config save area
-#define SAVE_CONFIG_ADDR        0x0801C000
+#define SAVE_CONFIG_ADDR        0x0801B000
 // properties_t save area
-#define SAVE_PROP_CONFIG_0_ADDR 0x0801C800
-#define SAVE_PROP_CONFIG_1_ADDR 0x0801D000
-#define SAVE_PROP_CONFIG_2_ADDR 0x0801D800
-#define SAVE_PROP_CONFIG_3_ADDR 0x0801E000
-#define SAVE_PROP_CONFIG_4_ADDR 0x0801E800
+#define SAVE_PROP_CONFIG_0_ADDR 0x0801B800
+#define SAVE_PROP_CONFIG_1_ADDR 0x0801C000
+#define SAVE_PROP_CONFIG_2_ADDR 0x0801C800
+#define SAVE_PROP_CONFIG_3_ADDR 0x0801D000
+#define SAVE_PROP_CONFIG_4_ADDR 0x0801D800
+#define SAVE_PROP_CONFIG_5_ADDR 0x0801E000
+#define SAVE_PROP_CONFIG_6_ADDR 0x0801E800
+#define SAVE_PROP_CONFIG_7_ADDR 0x0801F000
+#define SAVE_PROP_CONFIG_8_ADDR 0x0801F800
 #else
 #define SAVEAREA_MAX 4
 // Begin addr                   0x0801C000
@@ -479,28 +535,30 @@ void show_logo(void);
 #define SAVE_PROP_CONFIG_3_ADDR 0x0801E000
 #define SAVE_PROP_CONFIG_4_ADDR 0x0801e800
 #endif
+#if 0
 typedef struct properties {
   uint32_t magic;
-  uint32_t _frequency0;
-  uint32_t _frequency1;
+  preset_t setting;
+//  uint32_t _frequency0;
+//  uint32_t _frequency1;
   uint16_t _sweep_points;
 #ifdef __VNA__
   uint16_t _cal_status;
 
 #endif
 #ifdef __SA__
-  uint32_t _frequency_IF; //IF frequency
+//  uint32_t _frequency_IF; //IF frequency
 #endif
-  uint32_t _frequencies[POINTS_COUNT];
+//  uint32_t _frequencies[POINTS_COUNT];
 #ifdef __VNA__
   float _cal_data[5][POINTS_COUNT][2];
   float _electrical_delay; // picoseconds
 #endif
   trace_t _trace[TRACES_MAX];
   marker_t _markers[MARKERS_MAX];
-  float _velocity_factor; // %
   int8_t _active_marker;
 #ifdef __VNA__
+  float _velocity_factor; // %
   uint8_t _domain_mode; /* 0bxxxxxffm : where ff: TD_FUNC m: DOMAIN_MODE */
   uint8_t _marker_smith_format;
   uint8_t _bandwidth;
@@ -509,31 +567,34 @@ typedef struct properties {
   uint32_t checksum;
 } properties_t;
 
+#endif
+
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC 0x434f4e45 /* 'CONF' */
 
 extern int16_t lastsaveid;
-extern properties_t *active_props;
-extern properties_t current_props;
+//extern properties_t *active_props;
 
-#define frequency0 current_props._frequency0
-#define frequency1 current_props._frequency1
-#define sweep_points current_props._sweep_points
+//extern properties_t current_props;
+
+//#define frequency0 current_props._frequency0
+//#define frequency1 current_props._frequency1
+#define sweep_points setting._sweep_points
 #ifdef __VNA__
 #define cal_status current_props._cal_status
 #endif
 #ifdef __SA__
-#define frequency_IF current_props._frequency_IF
+//#define frequency_IF current_props._frequency_IF
 #endif
-#define frequencies current_props._frequencies
+//#define frequencies current_props._frequencies
 #ifdef __VNA__
 #define cal_data active_props->_cal_data
 #define electrical_delay current_props._electrical_delay
 #endif
-#define trace current_props._trace
-#define markers current_props._markers
-#define active_marker current_props._active_marker
+#define trace setting._trace
+#define markers setting._markers
+#define active_marker setting._active_marker
 #ifdef __VNA__
 #define domain_mode current_props._domain_mode
 #define velocity_factor current_props._velocity_factor
@@ -541,14 +602,12 @@ extern properties_t current_props;
 #define bandwidth current_props._bandwidth
 #endif
 
-#define FREQ_IS_STARTSTOP() (!(config.freq_mode&FREQ_MODE_CENTER_SPAN))
-#define FREQ_IS_CENTERSPAN() (config.freq_mode&FREQ_MODE_CENTER_SPAN)
-#define FREQ_IS_CW() (frequency0 == frequency1)
+#define FREQ_IS_STARTSTOP() (!(setting.freq_mode&FREQ_MODE_CENTER_SPAN))
+#define FREQ_IS_CENTERSPAN() (setting.freq_mode&FREQ_MODE_CENTER_SPAN)
+#define FREQ_IS_CW() (setting.frequency0 == setting.frequency1)
 int caldata_recall(int id);
-#ifdef __VNA__
 int caldata_save(int id);
-const properties_t *caldata_ref(int id);
-#endif
+//const properties_t *caldata_ref(int id);
 int config_save(void);
 int config_recall(void);
 
@@ -560,6 +619,9 @@ void clear_all_config_prop_data(void);
 extern void ui_init(void);
 extern void ui_process(void);
 int current_menu_is_form(void);
+
+void menu_mode_cb(int, uint8_t);
+void ui_mode_normal(void);
 
 // Irq operation process set
 #define OP_NONE       0x00
@@ -622,11 +684,11 @@ int16_t adc_vbat_read(void);
  */
 int plot_printf(char *str, int, const char *fmt, ...);
 #define PULSE do { palClearPad(GPIOC, GPIOC_LED); palSetPad(GPIOC, GPIOC_LED);} while(0)
-extern int setting_attenuate;
-extern int settingPowerCal;
-extern int setting_step_delay;
-extern int actualStepDelay;
-extern int setting_mode;
+//extern int setting_attenuate;
+//extern int settingPowerCal;
+//extern int setting_step_delay;
+//extern int actualStepDelay;
+//extern int setting_mode;
 void update_rbw(void);
 int GetActualRBW(void);
 
@@ -660,9 +722,9 @@ void SetReflevel(int);
 void SetScale(int);
 void SetRBW(int);
 void SetRX(int);
-extern int setting_measurement;
+//extern int setting_measurement;
 void self_test(int);
-extern int setting_test;
+//extern int setting_test;
 void wait_user(void);
 void calibrate(void);
 

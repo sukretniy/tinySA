@@ -89,7 +89,7 @@ static void apply_error_term_at(int i);
 static void apply_edelay_at(int i);
 static void cal_interpolate(int s);
 #endif
-static void update_frequencies(void);
+void update_frequencies(void);
 static void set_frequencies(uint32_t start, uint32_t stop, uint16_t points);
 static bool sweep(bool break_on_operation);
 #ifdef __VNA__
@@ -110,7 +110,7 @@ volatile uint8_t redraw_request = 0; // contains REDRAW_XXX flags
 const char *info_about[]={
   BOARD_NAME,
   "2016-2020 Copyright @Erik Kaashoek",
-  "Licensed under GPL. See: https://github.com/erikkaashoek/tinySA",
+  "SW licensed under GPL. See: https://github.com/erikkaashoek/tinySA",
   "Version: " VERSION,
   "Build Time: " __DATE__ " - " __TIME__,
   "Kernel: " CH_KERNEL_VERSION,
@@ -135,7 +135,7 @@ static THD_FUNCTION(Thread1, arg)
       sweep_mode&=~SWEEP_ONCE;
     } else if (sweep_mode & SWEEP_SELFTEST) {
       // call from lowest level to save stack space
-      self_test(setting_test);
+      self_test(setting.test);
       sweep_mode = SWEEP_ENABLE;
     } else if (sweep_mode & SWEEP_CALIBRATE) {
       // call from lowest level to save stack space
@@ -821,8 +821,8 @@ config_t config = {
   .high_level_offset =      100,    // Uncalibrated
 };
 
-properties_t current_props;
-properties_t *active_props = &current_props;
+//properties_t current_props;
+//properties_t *active_props = &current_props;
 
 // NanoVNA Default settings
 static const trace_t def_trace[TRACES_MAX] = {//enable, type, channel, reserved, scale, refpos
@@ -843,43 +843,44 @@ void load_default_properties(void)
 {
 //Magic add on caldata_save
 //current_props.magic = CONFIG_MAGIC;
-  current_props._frequency0   =         0;    // start =  0Hz
-  current_props._frequency1   = 350000000;    // end   = 350MHz
-  current_props._frequency_IF=  433800000,
+//  current_props._setting.frequency0   =         0;    // start =  0Hz
+//  current_props._setting.frequency1   = 350000000;    // end   = 350MHz
+//  current_props._setting.frequency_IF=  433800000,
 
-  current_props._sweep_points = POINTS_COUNT;
+  setting._sweep_points = POINTS_COUNT;
   #ifdef VNA__
-  current_props._cal_status   = 0;
+  setting._cal_status   = 0;
 //This data not loaded by default
-//current_props._frequencies[POINTS_COUNT];
-//current_props._cal_data[5][POINTS_COUNT][2];
+//setting._frequencies[POINTS_COUNT];
+//setting._cal_data[5][POINTS_COUNT][2];
 //=============================================
-  current_props._electrical_delay = 0.0;
+  setting._electrical_delay = 0.0;
 #endif
-  memcpy(current_props._trace, def_trace, sizeof(def_trace));
-  memcpy(current_props._markers, def_markers, sizeof(def_markers));
+  memcpy(setting._trace, def_trace, sizeof(def_trace));
+  memcpy(setting._markers, def_markers, sizeof(def_markers));
 #ifdef __VNA__
-  current_props._velocity_factor =  0.7;
+  setting._velocity_factor =  0.7;
 #endif
-  current_props._active_marker   = 0;
+  setting._active_marker   = 0;
 #ifdef __VNA__
-  current_props._domain_mode     = 0;
-  current_props._marker_smith_format = MS_RLC;
+  setting._domain_mode     = 0;
+  setting._marker_smith_format = MS_RLC;
 #endif
+  reset_settings(-1);
 //Checksum add on caldata_save
-//current_props.checksum = 0;
+//setting.checksum = 0;
 }
 
 void
 ensure_edit_config(void)
 {
+#ifdef __VNA__
   if (active_props == &current_props)
     return;
 
   //memcpy(&current_props, active_props, sizeof(config_t));
   active_props = &current_props;
   // move to uncal state
-#ifdef __VNA__
   cal_status = 0;
 #endif
 }
@@ -1029,11 +1030,11 @@ set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
   // disable at out of sweep range
   for (; i < POINTS_COUNT; i++)
     frequencies[i] = 0;
-  setting_frequency_step = delta;
+  setting.frequency_step = delta;
   update_rbw();
 }
 
-static void
+void
 update_frequencies(void)
 {
   uint32_t start, stop;
@@ -1065,55 +1066,55 @@ set_sweep_frequency(int type, uint32_t freq)
   ensure_edit_config();
   switch (type) {
     case ST_START:
-      config.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
-      if (frequency0 != freq) {
-        frequency0 = freq;
+      setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
+      if (setting.frequency0 != freq) {
+        setting.frequency0 = freq;
         // if start > stop then make start = stop
-        if (frequency1 < freq) frequency1 = freq;
+        if (setting.frequency1 < freq) setting.frequency1 = freq;
       }
       break;
     case ST_STOP:
-      config.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
-      if (frequency1 != freq) {
-        frequency1 = freq;
+      setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
+      if (setting.frequency1 != freq) {
+        setting.frequency1 = freq;
         // if start > stop then make start = stop
-        if (frequency0 > freq) frequency0 = freq;
+        if (setting.frequency0 > freq) setting.frequency0 = freq;
       }
       break;
     case ST_CENTER:
-      config.freq_mode |= FREQ_MODE_CENTER_SPAN;
-      uint32_t center = frequency0 / 2 + frequency1 / 2;
+      setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
+      uint32_t center = setting.frequency0 / 2 + setting.frequency1 / 2;
       if (center != freq) {
-        uint32_t span = frequency1 - frequency0;
+        uint32_t span = setting.frequency1 - setting.frequency0;
         if (freq < START_MIN + span / 2) {
           span = (freq - START_MIN) * 2;
         }
         if (freq > STOP_MAX - span / 2) {
           span = (STOP_MAX - freq) * 2;
         }
-        frequency0 = freq - span / 2;
-        frequency1 = freq + span / 2;
+        setting.frequency0 = freq - span / 2;
+        setting.frequency1 = freq + span / 2;
       }
       break;
     case ST_SPAN:
-      config.freq_mode |= FREQ_MODE_CENTER_SPAN;
-      if (frequency1 - frequency0 != freq) {
-        uint32_t center = frequency0 / 2 + frequency1 / 2;
+      setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
+      if (setting.frequency1 - setting.frequency0 != freq) {
+        uint32_t center = setting.frequency0 / 2 + setting.frequency1 / 2;
         if (center < START_MIN + freq / 2) {
           center = START_MIN + freq / 2;
         }
         if (center > STOP_MAX - freq / 2) {
           center = STOP_MAX - freq / 2;
         }
-        frequency0 = center - freq / 2;
-        frequency1 = center + freq / 2;
+        setting.frequency0 = center - freq / 2;
+        setting.frequency1 = center + freq / 2;
       }
       break;
     case ST_CW:
-      config.freq_mode |= FREQ_MODE_CENTER_SPAN;
-      if (frequency0 != freq || frequency1 != freq) {
-        frequency0 = freq;
-        frequency1 = freq;
+      setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
+      if (setting.frequency0 != freq || setting.frequency1 != freq) {
+        setting.frequency0 = freq;
+        setting.frequency1 = freq;
       }
       break;
   }
@@ -1128,17 +1129,17 @@ uint32_t
 get_sweep_frequency(int type)
 {
   // Obsolete, ensure correct start/stop, start always must be < stop
-  if (frequency0 > frequency1) {
-    uint32_t t = frequency0;
-    frequency0 = frequency1;
-    frequency1 = t;
+  if (setting.frequency0 > setting.frequency1) {
+    uint32_t t = setting.frequency0;
+    setting.frequency0 = setting.frequency1;
+    setting.frequency1 = t;
   }
   switch (type) {
-    case ST_START:  return frequency0;
-    case ST_STOP:   return frequency1;
-    case ST_CENTER: return frequency0/2 + frequency1/2;
-    case ST_SPAN:   return frequency1 - frequency0;
-    case ST_CW:     return frequency0;
+    case ST_START:  return setting.frequency0;
+    case ST_STOP:   return setting.frequency1;
+    case ST_CENTER: return setting.frequency0/2 + setting.frequency1/2;
+    case ST_SPAN:   return setting.frequency1 - setting.frequency0;
+    case ST_CW:     return setting.frequency0;
   }
   return 0;
 }
@@ -2242,7 +2243,7 @@ VNA_SHELL_FUNCTION(cmd_selftest)
     shell_printf("usage: selftest (1-3)\r\n");
     return;
   }
-  setting_test = my_atoi(argv[0]);
+  setting.test = my_atoi(argv[0]);
   sweep_mode = SWEEP_SELFTEST;
 }
 
@@ -2292,7 +2293,7 @@ VNA_SHELL_FUNCTION(cmd_o)
   return;
   uint32_t value = my_atoi(argv[0]);
 //  if (VFO == 0)
-//    frequency_IF = value;
+//    setting.frequency_IF = value;
   setFreq(VFO, value);
 }
 
@@ -2300,7 +2301,7 @@ VNA_SHELL_FUNCTION(cmd_d)
 {
   (void) argc;
   int32_t a = my_atoi(argv[0]);
-  setting_drive = a;
+  setting.drive = a;
 }
 
 
@@ -2327,11 +2328,11 @@ VNA_SHELL_FUNCTION(cmd_t)
 VNA_SHELL_FUNCTION(cmd_e)
 {
   (void)argc;
-  setting_tracking = my_atoi(argv[0]);
-  if (setting_tracking == -1)
-    setting_tracking = false;
+  setting.tracking = my_atoi(argv[0]);
+  if (setting.tracking == -1)
+    setting.tracking = false;
   else
-    setting_tracking = true;
+    setting.tracking = true;
 
   if (argc >1)
     frequencyExtra = my_atoi(argv[1]);
@@ -2349,25 +2350,25 @@ VNA_SHELL_FUNCTION(cmd_m)
   (void)argv;
 
   SetMode(0);
-  setting_tracking = false; //Default test setup
-  setting_step_atten = false;
+  setting.tracking = false; //Default test setup
+  setting.step_atten = false;
   SetAttenuation(0);
   SetReflevel(-10);
-  set_sweep_frequency(ST_START,frequencyStart - frequency_IF );
-  set_sweep_frequency(ST_STOP, frequencyStop - frequency_IF);
+  set_sweep_frequency(ST_START,frequencyStart - setting.frequency_IF );
+  set_sweep_frequency(ST_STOP, frequencyStop - setting.frequency_IF);
   draw_cal_status();
 
   pause_sweep();
   int32_t f_step = (frequencyStop-frequencyStart)/ points;
   palClearPad(GPIOB, GPIOB_LED);  // disable led and wait for voltage stabilization
-  int old_step = setting_frequency_step;
-  setting_frequency_step = f_step;
+  int old_step = setting.frequency_step;
+  setting.frequency_step = f_step;
   update_rbw();
   chThdSleepMilliseconds(10);
   streamPut(shell_stream, '{');
   dirty = true;
   for (int i = 0; i<points; i++) {
-      float val = perform(false, i, frequencyStart - frequency_IF + f_step * i, setting_tracking);
+      float val = perform(false, i, frequencyStart - setting.frequency_IF + f_step * i, setting.tracking);
       streamPut(shell_stream, 'x');
       int v = val*2 + 256;
       streamPut(shell_stream, (uint8_t)(v & 0xFF));
@@ -2375,7 +2376,7 @@ VNA_SHELL_FUNCTION(cmd_m)
     // enable led
   }
   streamPut(shell_stream, '}');
-  setting_frequency_step = old_step;
+  setting.frequency_step = old_step;
   update_rbw();
   resume_sweep();
   palSetPad(GPIOB, GPIOB_LED);
@@ -2781,8 +2782,10 @@ int main(void)
 
 /* restore config */
   config_recall();
-  caldata_recall(0); // must be done to setup the scanning stuff
-
+  if (caldata_recall(0) == -1 || setting.mode == -1) {
+    setting.mode = -1;       // must be done to setup the scanning stuff
+    setting.refer = -1;
+  }
 /* restore frequencies and calibration 0 slot properties from flash memory */
 #ifdef __VNA__
   dac1cfg1.init = config.dac_value;
@@ -2812,6 +2815,10 @@ int main(void)
   //Initialize graph plotting
   plot_init();
 
+  if (setting.mode != -1) {
+    menu_mode_cb(setting.mode+1,0);
+    ui_mode_normal();       // Do not show menu when autostarting mode
+  }
   redraw_frame();
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 

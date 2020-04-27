@@ -14,7 +14,7 @@ int get_refer_output(void);
 void SetAttenuation(int);
 int GetAttenuation(void);
 void set_harmonic(int);
-extern int setting_harmonic;
+//extern int setting.harmonic;
 int search_is_greater(void);
 void set_auto_attenuation(void);
 void set_auto_reflevel(void);
@@ -26,15 +26,15 @@ void SetDrive(int d);
 void SetIF(int f);
 void SetStepDelay(int t);
 void set_repeat(int);
-extern int setting_repeat;
-extern int setting_rbw;
+//extern int setting.repeat;
+//extern int setting.rbw;
 #ifdef __ULTRA__
-extern int setting_spur;
+//extern int setting.spur;
 void SetSpur(int v);
 #endif
 void SetAverage(int);
 int GetAverage(void);
-extern int setting_average;
+//extern int setting.average;
 void  SetStorage(void);
 void  SetClearStorage(void);
 void  SetSubtractStorage(void);
@@ -51,28 +51,28 @@ void redrawHisto(void);
 void self_test(int);
 void set_decay(int);
 void set_noise(int);
-void menu_load_preset_cb(int,int);
-void menu_store_preset_cb(int,int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
-extern int setting_tracking;
-extern int setting_tracking_output;
-extern int setting_drive;
-extern int setting_lna;
-extern int setting_agc;
-extern int setting_decay;
-extern int setting_noise;
-extern int setting_auto_reflevel;
-extern int setting_auto_attenuation;
-extern int setting_reflevel;
-extern int setting_scale;
-extern int setting_10mhz;
+#if 0
+extern int setting.tracking;
+extern int setting.tracking_output;
+extern int setting.drive;
+extern int setting.lna;
+extern int setting.agc;
+extern int setting.decay;
+extern int setting.noise;
+extern int setting.auto_reflevel;
+extern int setting.auto_attenuation;
+extern int setting.reflevel;
+extern int setting.scale;
+extern int setting.10mhz;
+#endif
 void set_10mhz(int);
 void SetModulation(int);
-extern int setting_modulation;
+//extern int setting.modulation;
 void set_measurement(int);
 // extern int settingSpeed;
-extern int setting_step_delay;
+//extern int setting.step_delay;
 
 void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
                                  const uint16_t *bitmap);
@@ -485,7 +485,7 @@ extern const menuitem_t  menu_top[];
 extern const menuitem_t  menu_tophigh[];
 extern const menuitem_t  menu_topultra[];
 
-static void menu_mode_cb(int item, uint8_t data)
+ void menu_mode_cb(int item, uint8_t data)
 {
   (void)data;
   SetMode(item-1);
@@ -511,6 +511,27 @@ static void menu_mode_cb(int item, uint8_t data)
   }
 //  draw_cal_status();
 }
+
+void menu_load_preset_cb(int item, uint8_t data)
+{
+  (void)item;
+  caldata_recall(data);
+  menu_move_back();
+  ui_mode_normal();
+}
+
+void menu_store_preset_cb(int item, uint8_t data)
+{
+  (void)item;
+  if (data == 100) {
+    setting.mode = -1;
+    data = 0;
+  }
+  caldata_save(data);
+  menu_move_back();
+  ui_mode_normal();
+}
+
 
 extern int dirty;
 void menu_autosettings_cb(int item, uint8_t data)
@@ -572,7 +593,7 @@ static void menu_config_cb(int item, uint8_t data)
     sweep_mode = 0;         // Suspend sweep to save time
     menu_move_back();
     ui_mode_normal();
-    setting_test = 0;
+    setting.test = 0;
     sweep_mode = SWEEP_SELFTEST;
     break;
   case 4:
@@ -636,7 +657,7 @@ static void menu_spur_cb(int item, uint8_t data)
 {
   (void)data;
   (void)item;
-  if (setting_spur)
+  if (setting.spur)
     SetSpur(0);
   else
     SetSpur(1); // must be 0 or 1 !!!!
@@ -949,19 +970,45 @@ const char *menu_drive_text[]={"-36dBm","-34dBm","-32dBm","-30dBm","-28dBm","-26
 
 // ===[MENU DEFINITION]=========================================================
 
+static const menuitem_t menu_store_preset_high[] =
+{
+  { MT_CALLBACK, 0,     "\2STORE\0STARTUP",menu_store_preset_cb},
+  { MT_CALLBACK, 5,     "STORE 5"  ,      menu_store_preset_cb},
+  { MT_CALLBACK, 6,     "STORE 6"  ,      menu_store_preset_cb},
+  { MT_CALLBACK, 7,     "STORE 7"  ,      menu_store_preset_cb},
+  { MT_CALLBACK, 8,     "STORE 8"  ,      menu_store_preset_cb},
+  { MT_CALLBACK, 100,   "\2ERASE\0STARTUP",menu_store_preset_cb},
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
+  { MT_NONE,     0,     NULL,            NULL } // sentinel
+};
+
+static const menuitem_t menu_load_preset_high[] =
+{
+  { MT_CALLBACK, 0,     "\2LOAD\0STARTUP",menu_load_preset_cb},
+  { MT_CALLBACK, 5,     "LOAD 5"  ,      menu_load_preset_cb},
+  { MT_CALLBACK, 6,     "LOAD 6"  ,      menu_load_preset_cb},
+  { MT_CALLBACK, 7,     "LOAD 7"  ,      menu_load_preset_cb},
+  { MT_CALLBACK, 8,     "LOAD 8"  ,      menu_load_preset_cb},
+  { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset_high},
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
+  { MT_NONE,     0,     NULL,            NULL } // sentinel
+};
+
 static const menuitem_t menu_store_preset[] =
 {
+ { MT_CALLBACK, 0,     "\2STORE\0STARTUP",menu_store_preset_cb},
   { MT_CALLBACK, 1,     "STORE 1"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 2,     "STORE 2"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 3,     "STORE 3"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 4,     "STORE 4"  ,      menu_store_preset_cb},
+  { MT_CALLBACK, 100,   "\2ERASE\0STARTUP",menu_store_preset_cb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
 static const menuitem_t menu_load_preset[] =
 {
-  { MT_CALLBACK, 0,     "DEFAULTS"  ,    menu_load_preset_cb},
+  { MT_CALLBACK, 0,     "\2LOAD\0STARTUP",menu_load_preset_cb},
   { MT_CALLBACK, 1,     "LOAD 1"  ,      menu_load_preset_cb},
   { MT_CALLBACK, 2,     "LOAD 2"  ,      menu_load_preset_cb},
   { MT_CALLBACK, 3,     "LOAD 3"  ,      menu_load_preset_cb},
@@ -1388,7 +1435,7 @@ const menuitem_t menu_topultra[] = {
 #endif
 
 const menuitem_t menu_top[] = {
-  { MT_CALLBACK, 0, "RESET",        menu_autosettings_cb},
+  { MT_SUBMENU, 0,  "PRESET",       menu_load_preset},
   { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
   { MT_SUBMENU,  0, "LEVEL",        menu_level},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
@@ -1401,7 +1448,7 @@ const menuitem_t menu_top[] = {
 };
 
 const menuitem_t menu_tophigh[] = {
-  { MT_CALLBACK, 0, "RESET",        menu_autosettings_cb},
+  { MT_SUBMENU,  0, "PRESET",       menu_load_preset_high},
   { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
   { MT_SUBMENU,  0, "LEVEL",        menu_levelhigh},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
@@ -1469,10 +1516,10 @@ static void menu_item_modify_attribute(
       plot_printf(uistat.text, sizeof uistat.text, menu_reffer_text[get_refer_output()+1]);
     }
   } else if (menu == menu_highoutputmode && item == 2) {
-      plot_printf(uistat.text, sizeof uistat.text, menu_drive_text[setting_drive]);
+      plot_printf(uistat.text, sizeof uistat.text, menu_drive_text[setting.drive]);
   } else if (menu == menu_lowoutputmode || menu == menu_highoutputmode) {
     if (item == 3) {
-      plot_printf(uistat.text, sizeof uistat.text, menu_modulation_text[setting_modulation]);
+      plot_printf(uistat.text, sizeof uistat.text, menu_modulation_text[setting.modulation]);
     }
   } else if (menu == menu_reffer) {
     if (item < 5 && item == get_refer_output() + 1){
@@ -1487,7 +1534,7 @@ static void menu_item_modify_attribute(
       mark = true;
     }
 #ifdef __ULTRA__
-    if (item == 6 && setting_spur) {
+    if (item == 6 && setting.spur) {
       mark = true;
     }
 #endif
@@ -1496,11 +1543,11 @@ static void menu_item_modify_attribute(
       mark = true;
     }
   } else if (menu == menu_dBper) {
-    if (data == setting_scale){
+    if (data == setting.scale){
       mark = true;
     }
   } else if (menu == menu_measure && MT_MASK(menu[item].type) == MT_CALLBACK) {
-    if (data == setting_measurement){
+    if (data == setting.measurement){
       mark = true;
     }
   } else if (menu == menu_rbw) {
@@ -1509,11 +1556,11 @@ static void menu_item_modify_attribute(
     }
 
   } else if (MT_MASK(menu[item].type) == MT_CALLBACK && (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2|| menu == menu_drive_wide3)) {
-    if (data == setting_drive){
+    if (data == setting.drive){
       mark = true;
     }
   } else if (menu == menu_modulation && MT_MASK(menu[item].type) == MT_CALLBACK) {
-    if (data == setting_modulation){
+    if (data == setting.modulation){
       mark = true;
     }
   } else if (menu == menu_display) {
@@ -1530,22 +1577,22 @@ static void menu_item_modify_attribute(
       mark = true;
     }
   } else if (menu == menu_settings) {
-    if (item ==0 && setting_tracking_output){
+    if (item ==0 && setting.tracking_output){
       mark = true;
     }
 #ifdef __ULTRA__
   } else if (MT_MASK(menu[item].type) == MT_CALLBACK && menu == menu_harmonic) {
-    if (data == setting_harmonic)
+    if (data == setting.harmonic)
       mark = true;
 #endif
   } else if (menu == menu_settings2 || menu == menu_settingshigh2) {
-    if (item ==0 && setting_agc){
+    if (item ==0 && setting.agc){
       mark = true;
     }
-    if (item == 1 && setting_lna){
+    if (item == 1 && setting.lna){
       mark = true;
     }
-    if (item == 2 && setting_tracking){         // should not happen in high mode
+    if (item == 2 && setting.tracking){         // should not happen in high mode
       mark = true;
     }
   } else if (menu == menu_marker_modify && active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {
@@ -1570,10 +1617,10 @@ static void menu_item_modify_attribute(
     else if (item == 6 && uistat.marker_tracking)
       mark = true;
   } else if (menu == menu_reflevel) {
-    if ((item  == 0 && setting_auto_reflevel) || (item == 1 && !setting_auto_reflevel))
+    if ((item  == 0 && setting.auto_reflevel) || (item == 1 && !setting.auto_reflevel))
       mark = true;
   } else if (menu == menu_atten) {
-    if ((item  == 0 && setting_auto_attenuation ) || (item  == 1 && !setting_auto_attenuation))
+    if ((item  == 0 && setting.auto_attenuation ) || (item  == 1 && !setting.auto_attenuation))
       mark = true;
   }
   if (mark) {
@@ -1615,11 +1662,11 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_SCALE:
-    uistat.value = setting_scale;
+    uistat.value = setting.scale;
     plot_printf(uistat.text, sizeof uistat.text, "%ddB/", ((int32_t)uistat.value));
     break;
   case KM_REFPOS:
-    uistat.value = setting_reflevel;
+    uistat.value = setting.reflevel;
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_ATTENUATION:
@@ -1631,19 +1678,19 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_IF:
-    uistat.value = frequency_IF;
+    uistat.value = setting.frequency_IF;
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_SAMPLETIME:
-    uistat.value = setting_step_delay;
+    uistat.value = setting.step_delay;
     plot_printf(uistat.text, sizeof uistat.text, "%3duS", ((int32_t)uistat.value));
     break;
   case KM_REPEAT:
-    uistat.value = setting_repeat;
+    uistat.value = setting.repeat;
     plot_printf(uistat.text, sizeof uistat.text, "%2d", ((int32_t)uistat.value));
     break;
   case KM_DRIVE:
-    uistat.value = setting_drive;
+    uistat.value = setting.drive;
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", ((int32_t)uistat.value));
     break;
   case KM_LOWOUTLEVEL:
@@ -1651,15 +1698,15 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_DECAY:
-    uistat.value = setting_decay;
+    uistat.value = setting.decay;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
   case KM_NOISE:
-    uistat.value = setting_noise;
+    uistat.value = setting.noise;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
   case KM_10MHZ:
-    uistat.value = setting_10mhz;
+    uistat.value = setting_frequency_10mhz;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
 
@@ -1700,11 +1747,11 @@ set_numeric_value(void)
     set_trace_scale(2, uistat.value / 1000.0);
     break;
   case KM_REFPOS:
-    setting_auto_reflevel = false;
+    setting.auto_reflevel = false;
     SetReflevel(uistat.value);
     break;
   case KM_ATTENUATION:
-    setting_auto_attenuation = false;
+    setting.auto_attenuation = false;
     SetAttenuation(uistat.value);
     break;
   case KM_ACTUALPOWER:
@@ -1735,7 +1782,7 @@ set_numeric_value(void)
     break;
   case KM_10MHZ:
     if (uistat.value < 9000000) {
-      set_10mhz(setting_10mhz + uistat.value);
+      set_10mhz(setting_frequency_10mhz + uistat.value);
     } else
       set_10mhz(uistat.value);
     dirty = true;
