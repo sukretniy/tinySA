@@ -362,7 +362,7 @@ void SI4432_Set_Frequency ( long Freq ) {
 }
 
 int actualStepDelay = 1500;
-
+extern int setting_repeat;
 
 float SI4432_RSSI(uint32_t i, int s)
 {
@@ -378,7 +378,11 @@ float SI4432_RSSI(uint32_t i, int s)
 //START_PROFILE
     SI4432_Sel = s;
     chThdSleepMicroseconds(actualStepDelay);
-    RSSI_RAW = (unsigned char)SI4432_Read_Byte( 0x26 ) ;
+    i = setting_repeat;
+    RSSI_RAW  = 0;
+    while (i-->0)
+      RSSI_RAW += (unsigned char)SI4432_Read_Byte( 0x26 ) ;
+    RSSI_RAW = RSSI_RAW / setting_repeat;
  //   if (MODE_INPUT(setting_mode) && RSSI_RAW == 0)
  //     SI4432_Init();
   float dBm = (RSSI_RAW-240)/2.0 - SI4432_RSSI_correction;

@@ -25,6 +25,8 @@ void SetRBW(int);
 void SetDrive(int d);
 void SetIF(int f);
 void SetStepDelay(int t);
+void set_repeat(int);
+extern int setting_repeat;
 extern int setting_rbw;
 #ifdef __ULTRA__
 extern int setting_spur;
@@ -49,6 +51,8 @@ void redrawHisto(void);
 void self_test(int);
 void set_decay(int);
 void set_noise(int);
+void menu_load_preset_cb(int,int);
+void menu_store_preset_cb(int,int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
 extern int setting_tracking;
@@ -344,7 +348,7 @@ const uint16_t right_icons [] =
 
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ, KM_REPEAT,
 };
 
 
@@ -453,6 +457,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_level,    // KM_DECAY
   keypads_level,    // KM_NOISE
   keypads_level,    // KM_10MHz
+  keypads_level,    // KM_REPEA
 };
 
 #ifdef __VNA__
@@ -463,7 +468,7 @@ static const char * const keypad_mode_label[] = {
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
-  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", "OFFSET" // 8-16
+  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", "OFFSET" , "REPEATS"// 8-17
 };
 #endif
 
@@ -944,6 +949,28 @@ const char *menu_drive_text[]={"-36dBm","-34dBm","-32dBm","-30dBm","-28dBm","-26
 
 // ===[MENU DEFINITION]=========================================================
 
+static const menuitem_t menu_store_preset[] =
+{
+  { MT_CALLBACK, 1,     "STORE 1"  ,      menu_store_preset_cb},
+  { MT_CALLBACK, 2,     "STORE 2"  ,      menu_store_preset_cb},
+  { MT_CALLBACK, 3,     "STORE 3"  ,      menu_store_preset_cb},
+  { MT_CALLBACK, 4,     "STORE 4"  ,      menu_store_preset_cb},
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
+  { MT_NONE,     0,     NULL,            NULL } // sentinel
+};
+
+static const menuitem_t menu_load_preset[] =
+{
+  { MT_CALLBACK, 0,     "DEFAULTS"  ,    menu_load_preset_cb},
+  { MT_CALLBACK, 1,     "LOAD 1"  ,      menu_load_preset_cb},
+  { MT_CALLBACK, 2,     "LOAD 2"  ,      menu_load_preset_cb},
+  { MT_CALLBACK, 3,     "LOAD 3"  ,      menu_load_preset_cb},
+  { MT_CALLBACK, 4,     "LOAD 4"  ,      menu_load_preset_cb},
+  { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset},
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
+  { MT_NONE,     0,     NULL,            NULL } // sentinel
+};
+
 static const menuitem_t menu_drive[] = {
   { MT_CALLBACK, 15, " 20dBm",   menu_drive_cb},
   { MT_CALLBACK, 14, " 16dBm",   menu_drive_cb},
@@ -1204,6 +1231,7 @@ static const menuitem_t menu_settings[] =
   { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
   { MT_KEYPAD, KM_IF,           "\2IF\0FREQ",       NULL},
   { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0TIME",   NULL},
+  { MT_KEYPAD, KM_REPEAT,       "REPEATS",          NULL},
   { MT_SUBMENU,0,               "\2LO\0DRIVE",      menu_drive},
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
@@ -1238,6 +1266,7 @@ static const menuitem_t menu_settingshigh[] =
 {
   { MT_KEYPAD, KM_ACTUALPOWER,    "\2ACTUAL\0POWER",  NULL},
   { MT_KEYPAD, KM_SAMPLETIME,     "\2SAMPLE\0TIME",   NULL},
+  { MT_KEYPAD, KM_REPEAT,         "REPEATS",   NULL},
   { MT_SUBMENU,  0,                 S_RARROW" MORE",    menu_settingshigh2},
   { MT_CANCEL,   0,                 S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -1609,6 +1638,10 @@ static void fetch_numeric_target(void)
     uistat.value = setting_step_delay;
     plot_printf(uistat.text, sizeof uistat.text, "%3duS", ((int32_t)uistat.value));
     break;
+  case KM_REPEAT:
+    uistat.value = setting_repeat;
+    plot_printf(uistat.text, sizeof uistat.text, "%2d", ((int32_t)uistat.value));
+    break;
   case KM_DRIVE:
     uistat.value = setting_drive;
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", ((int32_t)uistat.value));
@@ -1684,6 +1717,9 @@ set_numeric_value(void)
     break;
   case KM_SAMPLETIME:
     SetStepDelay(uistat.value);
+    break;
+  case KM_REPEAT:
+    set_repeat(uistat.value);
     break;
   case KM_DRIVE:
     SetDrive(uistat.value);

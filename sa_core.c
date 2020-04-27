@@ -31,7 +31,10 @@ int setting_noise;
 float actual_rbw = 0;
 float setting_vbw = 0;
 int  setting_tracking_output;
-
+int setting_repeat;
+uint32_t setting_frequency0;
+uint32_t setting_frequency1;
+uint32_t setting_frequency_IF;
 int setting_measurement;
 
 int vbwSteps = 1;
@@ -70,6 +73,7 @@ void reset_settings(int m)
   setting_decay=20;
   setting_noise=5;
   setting_below_IF = false;
+  setting_repeat = 1;
   setting_tracking_output = false;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
@@ -136,6 +140,17 @@ void reset_settings(int m)
   dirty = true;
 }
 
+void menu_load_preset_cb(int item, uint8_t data)
+{
+
+}
+
+void menu_store_preset_cb(int item, uint8_t data)
+{
+
+}
+
+
 void set_refer_output(int v)
 {
   setting_refer = v;
@@ -196,6 +211,15 @@ void SetModulation(int m)
   setting_modulation = m;
   dirty = true;
 }
+
+void set_repeat(int r)
+{
+  if (r > 0 && r < 50) {
+    setting_repeat = r;
+    dirty = true;
+  }
+}
+
 void SetIF(int f)
 {
   frequency_IF = f;
@@ -485,7 +509,10 @@ void SetMode(int m)
 
 void apply_settings(void)
 {
-  PE4302_Write_Byte(setting_attenuate * 2);
+  if (setting_mode == M_HIGH)
+    PE4302_Write_Byte(40);
+  else
+    PE4302_Write_Byte(setting_attenuate * 2);
 #if 0
   if (setting_modulation == MO_NFM ) {
     SI4432_Sel = 1;
@@ -558,6 +585,11 @@ void SetSwitchReceive(void) {
   SI4432_Write_Byte(0x0c, 0x1f);
 }
 
+void SetSwitchOff(void) {
+  SI4432_Write_Byte(0x0b, 0x1d);// Set both switch off
+  SI4432_Write_Byte(0x0c, 0x1f);
+}
+
 void SetAGCLNA(void) {
   unsigned char v = 0x40;
   if (setting_agc) v |= 0x20;
@@ -585,7 +617,7 @@ case M_ULTRA:
     if (setting_tracking_output)
       SetSwitchTransmit();
     else
-      SetSwitchReceive();
+      SetSwitchOff();
 //    SI4432_Receive(); For noise testing only
     SI4432_Transmit(setting_drive);
     // SI4432_SetReference(setting_refer);
@@ -605,7 +637,7 @@ case M_HIGH:    // Direct into 1
 case M_GENLOW:  // Mixed output from 0
     SI4432_Sel = 0;
     if (setting_step_atten) {
-      SetSwitchReceive();
+      SetSwitchOff();
     } else {
       SetSwitchTransmit();
     }
@@ -616,7 +648,7 @@ case M_GENLOW:  // Mixed output from 0
       SetSwitchTransmit();  // High input for external LO scuh as tracking output of other tinySA
       SI4432_Receive();
     } else {
-      SetSwitchReceive();
+      SetSwitchOff();
       SI4432_Transmit(12);                 // Fix LO drive a 10dBm
     }
     break;
@@ -627,7 +659,7 @@ case M_GENHIGH: // Direct output from 1
 
     SI4432_Sel = 1;
     if (setting_drive < 8) {
-      SetSwitchReceive();
+      SetSwitchOff();
     } else {
       SetSwitchTransmit();
     }
@@ -999,7 +1031,7 @@ again:
       if (setting_mode == M_LOW)
         signal_path_loss = -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
       else
-      signal_path_loss = -3;         // Loss in dB (+ is gain)
+      signal_path_loss = +7;         // Loss in dB (+ is gain)
     float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting_mode))+settingLevelOffset()+ setting_attenuate - signal_path_loss;
 #ifdef __ULTRA__
     if (setting_spur == 1) {                           // First pass
