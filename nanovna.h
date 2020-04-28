@@ -32,7 +32,7 @@
 #define __CALIBRATE__
 //#define __ULTRA__             // Add harmonics mode on low input.
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
-
+#define __SPUR__                // Does spur reduction by shifting IF
 
 /*
  * main.c
@@ -314,7 +314,7 @@ typedef struct config {
 
 extern config_t config;
 //#define settingLevelOffset config.level_offset
-int settingLevelOffset(void);
+int get_level_offset(void);
 
 void set_trace_type(int t, int type);
 void set_trace_channel(int t, int channel);
@@ -494,6 +494,7 @@ typedef struct setting
   int freq_mode;
   int measurement;
   int refer;
+  int spur;
   trace_t _trace[TRACES_MAX];
   marker_t _markers[MARKERS_MAX];
   int8_t _active_marker;
@@ -690,7 +691,7 @@ int plot_printf(char *str, int, const char *fmt, ...);
 //extern int actualStepDelay;
 //extern int setting_mode;
 void update_rbw(void);
-int GetActualRBW(void);
+int get_actual_RBW(void);
 
 #define byte uint8_t
 extern volatile int SI4432_Sel;         // currently selected SI4432
@@ -718,10 +719,10 @@ int get_waterfall(void);
 void toggle_tracking(void);
 void calibrate(void);
 void reset_calibration(void);
-void SetReflevel(int);
-void SetScale(int);
-void SetRBW(int);
-void SetRX(int);
+void set_reflevel(int);
+void set_scale(int);
+void set_RBW(int);
+void set_switches(int);
 //extern int setting_measurement;
 void self_test(int);
 //extern int setting_test;

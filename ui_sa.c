@@ -11,42 +11,42 @@ void SetRefLevel(int);
 void set_refer_output(int);
 void toggle_below_IF(void);
 int get_refer_output(void);
-void SetAttenuation(int);
-int GetAttenuation(void);
+void set_attenuation(int);
+int get_attenuation(void);
 void set_harmonic(int);
 //extern int setting.harmonic;
 int search_is_greater(void);
 void set_auto_attenuation(void);
 void set_auto_reflevel(void);
 int is_paused(void);
-void SetPowerLevel(int);
+void set_power_level(int);
 void SetGenerate(int);
-void SetRBW(int);
-void SetDrive(int d);
-void SetIF(int f);
-void SetStepDelay(int t);
+void set_RBW(int);
+void set_drive(int d);
+void set_IF(int f);
+void set_step_delay(int t);
 void set_repeat(int);
 //extern int setting.repeat;
 //extern int setting.rbw;
-#ifdef __ULTRA__
+#ifdef __SPUR__
 //extern int setting.spur;
 void SetSpur(int v);
 #endif
-void SetAverage(int);
+void set_average(int);
 int GetAverage(void);
 //extern int setting.average;
-void  SetStorage(void);
-void  SetClearStorage(void);
-void  SetSubtractStorage(void);
+void  set_storage(void);
+void  set_clear_storage(void);
+void  set_subtract_storage(void);
 void toggle_waterfall(void);
-void SetMode(int);
+void set_mode(int);
 int GetMode(void);
-void SetReflevel(int);
-void SetScale(int);
+void set_reflevel(int);
+void set_scale(int);
 void AllDirty(void);
 void MenuDirty(void);
-void ToggleLNA(void);
-void ToggleAGC(void);
+void toggle_LNA(void);
+void toggle_AGC(void);
 void redrawHisto(void);
 void self_test(int);
 void set_decay(int);
@@ -68,7 +68,7 @@ extern int setting.scale;
 extern int setting.10mhz;
 #endif
 void set_10mhz(int);
-void SetModulation(int);
+void set_modulation(int);
 //extern int setting.modulation;
 void set_measurement(int);
 // extern int settingSpeed;
@@ -488,7 +488,7 @@ extern const menuitem_t  menu_topultra[];
  void menu_mode_cb(int item, uint8_t data)
 {
   (void)data;
-  SetMode(item-1);
+  set_mode(item-1);
 //  draw_cal_status();
   switch (item) {
   case 1:
@@ -550,7 +550,7 @@ void menu_autosettings_cb(int item, uint8_t data)
   //  set_refer_output(1);
 
   //  SetPowerLevel(100); // Reset
-  SetClearStorage();
+  set_clear_storage();
   dirty = true;
   //  menu_move_back();   // stay in input menu
   ui_mode_normal();
@@ -621,7 +621,7 @@ static void menu_modulation_cb(int item, uint8_t data)
 {
   (void)item;
 //Serial.println(item);
-  SetModulation(menu_modulation_value[data]);
+  set_modulation(menu_modulation_value[data]);
   menu_move_back();
 //  ui_mode_normal();   // Stay in menu mode
 //  draw_cal_status();
@@ -644,7 +644,7 @@ static void menu_drive_cb(int item, uint8_t data)
 {
   (void)item;
 //Serial.println(item);
-  SetDrive(data);
+  set_drive(data);
   menu_move_back();
 //  ui_mode_normal();
 //  draw_cal_status();
@@ -652,7 +652,7 @@ static void menu_drive_cb(int item, uint8_t data)
 
 
 
-#ifdef __ULTRA__
+#ifdef __SPUR__
 static void menu_spur_cb(int item, uint8_t data)
 {
   (void)data;
@@ -729,7 +729,7 @@ static void menu_measure_cb(int item, uint8_t data)
       ui_process_keypad();
       set_sweep_frequency(ST_SPAN, uistat.value*4);
       set_measurement(M_PHASE_NOISE);
-      SetAverage(4);
+      set_average(4);
 
       break;
     case M_STOP_BAND:                             // STop band measurement
@@ -797,13 +797,13 @@ static void menu_storage_cb(int item, uint8_t data)
   (void)item;
   switch(data) {
     case 0:
-      SetStorage();
+      set_storage();
       break;
     case 1:
-      SetClearStorage();
+      set_clear_storage();
       break;
     case 2:
-      SetSubtractStorage();
+      set_subtract_storage();
       break;
     case 3:
       toggle_waterfall();
@@ -817,7 +817,7 @@ static void menu_storage_cb(int item, uint8_t data)
 static void menu_average_cb(int item, uint8_t data)
 {
   (void)data;
-  SetAverage(item);
+  set_average(item);
   menu_move_back();
   ui_mode_normal();
   draw_cal_status();
@@ -877,7 +877,7 @@ const int rbwsel[]={0,3,10,30,100,300,600};
 static void menu_rbw_cb(int item, uint8_t data)
 {
   (void)item;
-  SetRBW(rbwsel[data]);
+  set_RBW(rbwsel[data]);
   menu_move_back();
   ui_mode_normal();
 //  draw_cal_status();
@@ -888,7 +888,7 @@ int menu_dBper_value[]={1,2,5,10,20};
 static void menu_dBper_cb(int item, uint8_t data)
 {
   (void)item;
-  SetScale(data);
+  set_scale(data);
   menu_move_back();
   ui_mode_normal();
 //  draw_cal_status();
@@ -933,10 +933,10 @@ static void menu_settings2_cb(int item, uint8_t data)
   (void)item;
   switch(data) {
   case 0:
-    ToggleAGC();
+    toggle_AGC();
     break;
   case 1:
-    ToggleLNA();;
+    toggle_LNA();;
     break;
   case 2:
     toggle_tracking();
@@ -1366,6 +1366,21 @@ static const menuitem_t menu_display[] = {
   { MT_CALLBACK,1,          "CLEAR",            menu_storage_cb},
   { MT_CALLBACK,2,          "SUBTRACT",         menu_storage_cb},
   { MT_CALLBACK,3,          "WATERFALL",        menu_storage_cb},
+#ifdef __SPUR__
+  { MT_CALLBACK,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
+#endif
+  { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_displayhigh[] = {
+  { MT_CALLBACK,0,          "\2PAUSE\0SWEEP",   menu_pause_cb},
+//  { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
+//  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_dBper},
+  { MT_CALLBACK,0,          "STORE",            menu_storage_cb},
+  { MT_CALLBACK,1,          "CLEAR",            menu_storage_cb},
+  { MT_CALLBACK,2,          "SUBTRACT",         menu_storage_cb},
+  { MT_CALLBACK,3,          "WATERFALL",        menu_storage_cb},
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1394,9 +1409,6 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
   { MT_KEYPAD,  KM_CW,      "\2ZERO\0SPAN",          NULL},
   { MT_SUBMENU,0,           "RBW",              menu_rbw},
-#ifdef __ULTRA__
-  { MT_CALLBACK,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
-#endif
   { MT_CANCEL,  0,          S_LARROW" BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
 };
@@ -1451,7 +1463,7 @@ const menuitem_t menu_tophigh[] = {
   { MT_SUBMENU,  0, "PRESET",       menu_load_preset_high},
   { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
   { MT_SUBMENU,  0, "LEVEL",        menu_levelhigh},
-  { MT_SUBMENU,  0, "DISPLAY",      menu_display},
+  { MT_SUBMENU,  0, "DISPLAY",      menu_displayhigh},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "MEASURE",      menu_measure},
   { MT_SUBMENU,  0, "SETTINGS",     menu_settingshigh},
@@ -1533,11 +1545,6 @@ static void menu_item_modify_attribute(
     if (item == 5 /* PAUSE */ && !(sweep_mode&SWEEP_ENABLE)) {
       mark = true;
     }
-#ifdef __ULTRA__
-    if (item == 6 && setting.spur) {
-      mark = true;
-    }
-#endif
   } else if (menu == menu_average) {
     if (item == GetAverage()){
       mark = true;
@@ -1563,7 +1570,7 @@ static void menu_item_modify_attribute(
     if (data == setting.modulation){
       mark = true;
     }
-  } else if (menu == menu_display) {
+  } else if (menu == menu_display || menu == menu_displayhigh) {
     if (item ==0 && is_paused()){
       mark = true;
     }
@@ -1576,6 +1583,11 @@ static void menu_item_modify_attribute(
     if (item == 4 && get_waterfall()){
       mark = true;
     }
+#ifdef __SPUR__
+    if (item == 5 && setting.spur) {
+      mark = true;
+    }
+#endif
   } else if (menu == menu_settings) {
     if (item ==0 && setting.tracking_output){
       mark = true;
@@ -1670,11 +1682,11 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_ATTENUATION:
-    uistat.value = GetAttenuation();
+    uistat.value = get_attenuation();
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
      break;
   case KM_ACTUALPOWER:
-    uistat.value = settingLevelOffset();
+    uistat.value = get_level_offset();
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_IF:
@@ -1694,7 +1706,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", ((int32_t)uistat.value));
     break;
   case KM_LOWOUTLEVEL:
-    uistat.value = GetAttenuation();           // compensation for dB offset during low output mode
+    uistat.value = get_attenuation();           // compensation for dB offset during low output mode
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_DECAY:
@@ -1748,31 +1760,31 @@ set_numeric_value(void)
     break;
   case KM_REFPOS:
     setting.auto_reflevel = false;
-    SetReflevel(uistat.value);
+    set_reflevel(uistat.value);
     break;
   case KM_ATTENUATION:
     setting.auto_attenuation = false;
-    SetAttenuation(uistat.value);
+    set_attenuation(uistat.value);
     break;
   case KM_ACTUALPOWER:
-    SetPowerLevel(uistat.value);
+    set_power_level(uistat.value);
     config_save();
     break;
   case KM_IF:
-    SetIF(uistat.value);
+    set_IF(uistat.value);
     config_save();
     break;
   case KM_SAMPLETIME:
-    SetStepDelay(uistat.value);
+    set_step_delay(uistat.value);
     break;
   case KM_REPEAT:
     set_repeat(uistat.value);
     break;
   case KM_DRIVE:
-    SetDrive(uistat.value);
+    set_drive(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
-    SetAttenuation(uistat.value);
+    set_attenuation(uistat.value);
     break;
   case KM_DECAY:
     set_decay(uistat.value);

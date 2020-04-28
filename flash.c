@@ -197,8 +197,8 @@ caldata_recall(int id)
   /* duplicated saved data onto sram to be able to modify marker/trace */
   memcpy(dst, src, sizeof(setting_t));
   update_frequencies();
-  SetScale(setting.scale);
-  SetReflevel(setting.reflevel);
+  set_scale(setting.scale);
+  set_reflevel(setting.reflevel);
   return 0;
 load_default:
   load_default_properties();

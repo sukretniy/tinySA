@@ -2282,8 +2282,8 @@ return;             // Don't use!!!!
   shell_printf("SI4432 init done\r\n");
   if (argc == 1) {
     rvalue = xtoi(argv[0]);
-    SetRX(rvalue);
-    SetMode(rvalue);
+    set_switches(rvalue);
+    set_mode(rvalue);
     shell_printf("SI4432 mode %d set\r\n", rvalue);
   }
 }
@@ -2349,11 +2349,11 @@ VNA_SHELL_FUNCTION(cmd_m)
   (void)argc;
   (void)argv;
 
-  SetMode(0);
+  set_mode(0);
   setting.tracking = false; //Default test setup
   setting.step_atten = false;
-  SetAttenuation(0);
-  SetReflevel(-10);
+  set_attenuation(0);
+  set_reflevel(-10);
   set_sweep_frequency(ST_START,frequencyStart - setting.frequency_IF );
   set_sweep_frequency(ST_STOP, frequencyStop - setting.frequency_IF);
   draw_cal_status();
@@ -2389,9 +2389,9 @@ return;
   int p = my_atoi(argv[0]);
   int a = my_atoi(argv[1]);
   if (p==5)
-    SetAttenuation(-a);
+    set_attenuation(-a);
   if (p==6)
-    SetMode(a);
+    set_mode(a);
   if (p==1)
     if (get_refer_output() != a)
       set_refer_output(a);
@@ -2402,7 +2402,7 @@ VNA_SHELL_FUNCTION(cmd_w)
   (void)argc;
   int p = my_atoi(argv[0]);
 return;
-  SetRBW(p);
+  set_RBW(p);
 }
 //=============================================================================
 VNA_SHELL_FUNCTION(cmd_help);

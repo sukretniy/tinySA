@@ -804,9 +804,9 @@ static void trace_get_value_string(
   } else {
     dfreq = frequencies[i];
   }
-  if (GetActualRBW()  < 10)
+  if (get_actual_RBW()  < 10)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
-  else if (GetActualRBW()  < 100)
+  else if (get_actual_RBW()  < 100)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.2f" , (dfreq + 5000) / 1000000.0);
   else
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
@@ -814,7 +814,7 @@ static void trace_get_value_string(
 //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
     v = logmag(&coeff[i]);
     if (mtype & M_NOISE)
-      v = v - 10*log10(GetActualRBW()*1000.0);
+      v = v - 10*log10(get_actual_RBW()*1000.0);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else
