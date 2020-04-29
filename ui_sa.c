@@ -515,7 +515,14 @@ extern const menuitem_t  menu_topultra[];
 void menu_load_preset_cb(int item, uint8_t data)
 {
   (void)item;
-  caldata_recall(data);
+  if (caldata_recall(data) == -1) {
+    if (data == 0)
+      reset_settings(setting.mode);  // Restore all defaults
+     else {
+      draw_menu();
+      return;
+     }
+  }
   menu_move_back();
   ui_mode_normal();
 }
@@ -977,7 +984,7 @@ static const menuitem_t menu_store_preset_high[] =
   { MT_CALLBACK, 6,     "STORE 6"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 7,     "STORE 7"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 8,     "STORE 8"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 100,   "\2ERASE\0STARTUP",menu_store_preset_cb},
+  { MT_CALLBACK, 100,   "\2FACTORY\0DEFAULTS",menu_store_preset_cb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
@@ -1001,7 +1008,7 @@ static const menuitem_t menu_store_preset[] =
   { MT_CALLBACK, 2,     "STORE 2"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 3,     "STORE 3"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 4,     "STORE 4"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 100,   "\2ERASE\0STARTUP",menu_store_preset_cb},
+  { MT_CALLBACK, 100,   "\2FACTORY\0DEFAULTS",menu_store_preset_cb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };

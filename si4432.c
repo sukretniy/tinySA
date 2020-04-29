@@ -367,7 +367,7 @@ int actualStepDelay = 1500;
 float SI4432_RSSI(uint32_t i, int s)
 {
   (void) i;
-  int RSSI_RAW;
+  int32_t RSSI_RAW;
   (void) i;
   // SEE DATASHEET PAGE 61
 #ifdef USE_SI4463

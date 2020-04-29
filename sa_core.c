@@ -175,7 +175,7 @@ void set_modulation(int m)
 
 void set_repeat(int r)
 {
-  if (r > 0 && r < 50) {
+  if (r > 0 && r <= 1000) {
     setting.repeat = r;
     dirty = true;
   }
@@ -521,7 +521,7 @@ void setupSA(void)
 
 static unsigned long old_freq[4] = { 0, 0, 0, 0 };
 
-void setFreq(int V, unsigned long freq)
+void set_freq(int V, unsigned long freq)
 {
   if (old_freq[V] != freq) {
     if (V <= 1) {
@@ -746,7 +746,7 @@ static const unsigned int spur_IF =            433800000;
 static const unsigned int spur_alternate_IF =  434000000;
 static const int spur_table[] =
 {
- 580000,
+ 580000,            // 433.8 MHz table
  961000,
  1600000,
  1837000,           // Real signal
@@ -767,40 +767,8 @@ static const int spur_table[] =
  28960000,
  29800000,
  49500000,
- /*
-0.52
-6.96
-1.84
-2.77
-
-
-
- 4934
- 4960
- 8928
- 7371
-
-
-
- 870000,
-   970000,
-  1460000,
-  1610000,
-  1840000,
-  2840000,
-  2890000,
-  2970000,
-  4780000,
-  4810000,
-  4850000,
-  4880000,
-  8100000,
-  8140000,
-  10870000,
-  14880000,
-*/
 #ifdef IF_AT_4339
-  780000,
+  780000,           // 433.9MHz table
    830000,
    880000,
    949000,
@@ -892,10 +860,11 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {
     int p = setting.attenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
-    if (modulation_counter == 3)
+    if (modulation_counter == 10) {
       modulation_counter = 0;
-    else
+    } else {
       modulation_counter++;
+    }
     chThdSleepMicroseconds(250);
   } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) {
       SI4432_Sel = 1;
@@ -928,7 +897,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 again:
 #endif
     if (setting.mode == M_LOW && tracking) {
-      setFreq (0, setting.frequency_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
+      set_freq (0, setting.frequency_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
       local_IF = setting.frequency_IF ;
     } else if (MODE_LOW(setting.mode)) {
       if (setting.mode == M_LOW && !in_selftest && avoid_spur(f)) {
@@ -942,11 +911,11 @@ again:
       }
       if (setting.mode == M_GENLOW && setting.modulation == MO_EXTERNAL)
         local_IF += lf;
-      setFreq (0, local_IF);
+      set_freq (0, local_IF);
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {
       local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
-      setFreq (0, local_IF);
+      set_freq (0, local_IF);
  //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?setting.spur * 1000 * actual_rbw:0);
 #endif
     } else
@@ -963,10 +932,10 @@ again:
 //        setFreq (1, local_IF/5 + lf/5);
 //      else
       if (lf > 2446000000 )
-        setFreq (1, local_IF/5 + lf/5);
+        set_freq (1, local_IF/5 + lf/5);
       else
 //        if (lf > 1486000000)
-        setFreq (1, local_IF/3 + lf/3);
+        set_freq (1, local_IF/3 + lf/3);
 //      else
 //        setFreq (1, local_IF/2 + lf/2);
     } else
@@ -976,14 +945,14 @@ again:
 //#define IF_1    2550000000
 #define IF_2    2025000000
 
-       setFreq (3, IF_2 - 433800000);
-       setFreq (2, IF_2 + lf);
-       setFreq (1, 433800000);
+       set_freq (3, IF_2 - 433800000);
+       set_freq (2, IF_2 + lf);
+       set_freq (1, 433800000);
 #else
        if (setting.mode == M_LOW && !setting.tracking && setting.below_IF)
-         setFreq (1, local_IF-lf);
+         set_freq (1, local_IF-lf);
        else
-         setFreq (1, local_IF+lf);
+         set_freq (1, local_IF+lf);
 #endif
     }
     if (MODE_OUTPUT(setting.mode))              // No substepping in output mode

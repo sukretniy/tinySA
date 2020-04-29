@@ -1642,7 +1642,7 @@ request_to_draw_cells_behind_menu(void)
   if (current_menu_is_form())
     invalidate_rect(25, 0, 319, 239);
   else
-    invalidate_rect(320-60, 0, 319, 239);
+    invalidate_rect(320-60 - 25, 0, 319, 239);
   redraw_request |= REDRAW_CELLS;
 }
 

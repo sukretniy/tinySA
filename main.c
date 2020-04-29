@@ -2294,7 +2294,7 @@ VNA_SHELL_FUNCTION(cmd_o)
   uint32_t value = my_atoi(argv[0]);
 //  if (VFO == 0)
 //    setting.frequency_IF = value;
-  setFreq(VFO, value);
+  set_freq(VFO, value);
 }
 
 VNA_SHELL_FUNCTION(cmd_d)
@@ -2785,6 +2785,7 @@ int main(void)
   if (caldata_recall(0) == -1 || setting.mode == -1) {
     setting.mode = -1;       // must be done to setup the scanning stuff
     setting.refer = -1;
+    load_default_properties();
   }
 /* restore frequencies and calibration 0 slot properties from flash memory */
 #ifdef __VNA__

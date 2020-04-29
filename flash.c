@@ -180,15 +180,15 @@ caldata_recall(int id)
   void *dst = &setting;
 
   if (id < 0 || id >= SAVEAREA_MAX)
-    goto load_default;
+    return -1;
 
   // point to saved area on the flash memory
   src = (setting_t*)saveareas[id];
 
   if (src->magic != CONFIG_MAGIC)
-    goto load_default;
+    return -1;
   if (checksum(src, sizeof *src - sizeof src->checksum) != src->checksum)
-    goto load_default;
+    return -1;
 
   /* active configuration points to save data on flash memory */
 //  active_props = src;
@@ -200,9 +200,6 @@ caldata_recall(int id)
   set_scale(setting.scale);
   set_reflevel(setting.reflevel);
   return 0;
-load_default:
-  load_default_properties();
-  return -1;
 }
 #if 0
 const setting_t *
