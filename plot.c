@@ -1557,7 +1557,7 @@ draw_all_cells(bool flush_markmap)
 
 #if 1
       float ratio = (int)(510.0 * (actual_t[i] - w_min) / (w_max - w_min));
-//      float ratio = (i*2);    // Uncomment for testing the waterfall colors
+//      ratio = (i*2);    // Uncomment for testing the waterfall colors
       b = 255 - ratio;
       if (b > 255) b = 255;
       if (b < 0) b = 0;
@@ -1566,11 +1566,14 @@ draw_all_cells(bool flush_markmap)
       if (r < 0) r = 0;
 //      g = 255 - b;        // if red is too weak to be seen.....
       g = 255 - b - r;
-#define gamma_correct(X,L)  X = (L + X * (255 - L)/255 )
-      gamma_correct(r,128);
-      gamma_correct(g,128);
-      gamma_correct(b,128);
+#if 1
+#define gamma_correct(X) X = (X < 64 ? X * 2 : X < 128 ? 128 + (X-64) : X < 192 ? 192 + (X - 128)/2 : 225 + (X - 192) / 4)
+      gamma_correct(r);
+      gamma_correct(g);
+      gamma_correct(b);
 #endif
+#endif
+
 #if 0
       int k = (actual_t[i]+120)* 2 * 8;
       k &= 255;
