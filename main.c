@@ -109,7 +109,8 @@ volatile uint8_t redraw_request = 0; // contains REDRAW_XXX flags
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
   BOARD_NAME,
-  "2016-2020 Copyright @Erik Kaashoek",
+  "2019-2020 Copyright @Erik Kaashoek",
+  "2016-2020 Copyright @edy555",
   "SW licensed under GPL. See: https://github.com/erikkaashoek/tinySA",
   "Version: " VERSION,
   "Build Time: " __DATE__ " - " __TIME__,
@@ -713,7 +714,7 @@ VNA_SHELL_FUNCTION(cmd_data)
 
   if (sel >= 0 || sel <= MAX_DATA) {
     for (i = 0; i < sweep_points; i++)
-      shell_printf("%f %f\r\n", measured[sel][i], 0.0);
+      shell_printf("%f\r\n", measured[sel][i]);
     return;
   }
   shell_printf("usage: data [array]\r\n");
@@ -948,7 +949,7 @@ VNA_SHELL_FUNCTION(cmd_scan)
 
   start = my_atoui(argv[0]);
   stop = my_atoui(argv[1]);
-  if (start == 0 || stop == 0 || start > stop) {
+  if (start > stop) {
       shell_printf("frequency range is invalid\r\n");
       return;
   }
@@ -973,9 +974,9 @@ VNA_SHELL_FUNCTION(cmd_scan)
     if (mask) {
       for (i = 0; i < points; i++) {
         if (mask & 1) shell_printf("%u ", frequencies[i]);
-        if (mask & 2) shell_printf("%f %f ", measured[0][i]);
-        if (mask & 4) shell_printf("%f %f ", measured[1][i]);
-        if (mask & 8) shell_printf("%f %f ", measured[2][i]);
+        if (mask & 2) shell_printf("%f ", measured[0][i]);
+        if (mask & 4) shell_printf("%f ", measured[1][i]);
+        if (mask & 8) shell_printf("%f ", measured[2][i]);
         shell_printf("\r\n");
       }
     }
@@ -2181,229 +2182,8 @@ VNA_SHELL_FUNCTION(cmd_threads)
 }
 #endif
 
+#include "sa_cmd.c"
 
-extern volatile int SI4432_Sel;         // currently selected SI4432
-void SI4432_Write_Byte(byte ADR, byte DATA );
-byte SI4432_Read_Byte( byte ADR );
-int VFO = 0;
-int points = 101; // For 's' and 'm' commands
-
-VNA_SHELL_FUNCTION(cmd_v)
-
-
-{
-    if (argc != 1) {
-        shell_printf("%d\r\n", SI4432_Sel);
-        return;
-    }
-    VFO = my_atoi(argv[0]);
-    shell_printf("VFO %d\r\n", VFO);
-}
-
-int xtoi(char *t)
-{
-
-  int v=0;
-  while (*t) {
-    if ('0' <= *t && *t <= '9')
-      v = v*16 + *t - '0';
-    else if ('a' <= *t && *t <= 'f')
-      v = v*16 + *t - 'a' + 10;
-    else if ('A' <= *t && *t <= 'F')
-      v = v*16 + *t - 'A' + 10;
-    else
-      return v;
-    t++;
-  }
-  return v;
-}
-
-VNA_SHELL_FUNCTION(cmd_y)
-{
-  int rvalue;
-  int lvalue = 0;
-  if (argc != 1 && argc != 2) {
-    shell_printf("usage: x {addr(0-95)} [value(0-FF)]\r\n");
-    return;
-  }
-  rvalue = xtoi(argv[0]);
-  SI4432_Sel = VFO;
-  if (argc == 2){
-    lvalue = xtoi(argv[1]);
-    SI4432_Write_Byte(rvalue, lvalue);
-  } else {
-    lvalue = SI4432_Read_Byte(rvalue);
-    shell_printf("%x\r\n", lvalue);
-  }
-}
-
-VNA_SHELL_FUNCTION(cmd_selftest)
-{
-  if (argc != 1) {
-    shell_printf("usage: selftest (1-3)\r\n");
-    return;
-  }
-  setting.test = my_atoi(argv[0]);
-  sweep_mode = SWEEP_SELFTEST;
-}
-
-
-VNA_SHELL_FUNCTION(cmd_x)
-{
-  uint32_t reg;
-
-
-  if (argc != 1) {
-    shell_printf("usage: x value(0-FFFFFFFF)\r\n");
-    return;
-  }
-  reg = xtoi(argv[0]);
-
-  if ((reg & 7) == 5) {
-   if (reg & (1<<22))
-      VFO = 1;
-    else
-      VFO = 0;
-   reg &= ~0xc00000;    // Force led to show lock
-   reg |=  0x400000;
-  }
-#ifdef __ULTRA_SA__
-  ADF4351_WriteRegister32(VFO, reg);
-#endif
-  shell_printf("x=%x\r\n", reg);
-}
-
-
-VNA_SHELL_FUNCTION(cmd_i)
-{
-  int rvalue;
-return;             // Don't use!!!!
-  SI4432_Init();
-  shell_printf("SI4432 init done\r\n");
-  if (argc == 1) {
-    rvalue = xtoi(argv[0]);
-    set_switches(rvalue);
-    set_mode(rvalue);
-    shell_printf("SI4432 mode %d set\r\n", rvalue);
-  }
-}
-VNA_SHELL_FUNCTION(cmd_o)
-{
-  (void) argc;
-  return;
-  uint32_t value = my_atoi(argv[0]);
-//  if (VFO == 0)
-//    setting.frequency_IF = value;
-  set_freq(VFO, value);
-}
-
-VNA_SHELL_FUNCTION(cmd_d)
-{
-  (void) argc;
-  int32_t a = my_atoi(argv[0]);
-  setting.drive = a;
-}
-
-
-VNA_SHELL_FUNCTION(cmd_a)
-{
-  (void)argc;
-  int32_t value = my_atoi(argv[0]);
-  frequencyStart = value;
-}
-
-VNA_SHELL_FUNCTION(cmd_b)
-{
-  (void)argc;
-  int32_t value = my_atoi(argv[0]);
-  frequencyStop = value;
-}
-
-VNA_SHELL_FUNCTION(cmd_t)
-{
-  (void)argc;
-  (void)argv;
-}
-
-VNA_SHELL_FUNCTION(cmd_e)
-{
-  (void)argc;
-  setting.tracking = my_atoi(argv[0]);
-  if (setting.tracking == -1)
-    setting.tracking = false;
-  else
-    setting.tracking = true;
-
-  if (argc >1)
-    frequencyExtra = my_atoi(argv[1]);
-}
-
-VNA_SHELL_FUNCTION(cmd_s)
-{
-  (void)argc;
-  points = my_atoi(argv[0]);
-}
-
-VNA_SHELL_FUNCTION(cmd_m)
-{
-  (void)argc;
-  (void)argv;
-
-  set_mode(0);
-  setting.tracking = false; //Default test setup
-  setting.step_atten = false;
-  set_attenuation(0);
-  set_reflevel(-10);
-  set_sweep_frequency(ST_START,frequencyStart - setting.frequency_IF );
-  set_sweep_frequency(ST_STOP, frequencyStop - setting.frequency_IF);
-  draw_cal_status();
-
-  pause_sweep();
-  int32_t f_step = (frequencyStop-frequencyStart)/ points;
-  palClearPad(GPIOB, GPIOB_LED);  // disable led and wait for voltage stabilization
-  int old_step = setting.frequency_step;
-  setting.frequency_step = f_step;
-  update_rbw();
-  chThdSleepMilliseconds(10);
-  streamPut(shell_stream, '{');
-  dirty = true;
-  for (int i = 0; i<points; i++) {
-      float val = perform(false, i, frequencyStart - setting.frequency_IF + f_step * i, setting.tracking);
-      streamPut(shell_stream, 'x');
-      int v = val*2 + 256;
-      streamPut(shell_stream, (uint8_t)(v & 0xFF));
-      streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
-    // enable led
-  }
-  streamPut(shell_stream, '}');
-  setting.frequency_step = old_step;
-  update_rbw();
-  resume_sweep();
-  palSetPad(GPIOB, GPIOB_LED);
-}
-
-VNA_SHELL_FUNCTION(cmd_p)
-{
-  (void)argc;
-return;
-  int p = my_atoi(argv[0]);
-  int a = my_atoi(argv[1]);
-  if (p==5)
-    set_attenuation(-a);
-  if (p==6)
-    set_mode(a);
-  if (p==1)
-    if (get_refer_output() != a)
-      set_refer_output(a);
-}
-
-VNA_SHELL_FUNCTION(cmd_w)
-{
-  (void)argc;
-  int p = my_atoi(argv[0]);
-return;
-  set_RBW(p);
-}
 //=============================================================================
 VNA_SHELL_FUNCTION(cmd_help);
 
@@ -2477,6 +2257,10 @@ static const VNAShellCommand commands[] =
 #ifdef ENABLE_COLOR_COMMAND
     {"color"       , cmd_color       , 0},
 #endif
+    { "if", cmd_if,    0 },
+    { "attenuate", cmd_attenuate,    0 },
+    { "rbw", cmd_rbw,    0 },
+    { "mode", cmd_mode,    0 },
     { "selftest", cmd_selftest,    0 },
     { "x", cmd_x,    0 },
    { "i", cmd_i,	0 },

@@ -4,75 +4,6 @@ extern const menuitem_t menu_marker_modify[];
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
 void clearDisplay(void);
-void reset_settings(int);
-//void ui_process_touch(void);
-void SetPowerGrid(int);
-void SetRefLevel(int);
-void set_refer_output(int);
-void toggle_below_IF(void);
-int get_refer_output(void);
-void set_attenuation(int);
-int get_attenuation(void);
-void set_harmonic(int);
-//extern int setting.harmonic;
-int search_is_greater(void);
-void set_auto_attenuation(void);
-void set_auto_reflevel(void);
-int is_paused(void);
-void set_power_level(int);
-void SetGenerate(int);
-void set_RBW(int);
-void set_drive(int d);
-void set_IF(int f);
-void set_step_delay(int t);
-void set_repeat(int);
-//extern int setting.repeat;
-//extern int setting.rbw;
-#ifdef __SPUR__
-//extern int setting.spur;
-void SetSpur(int v);
-#endif
-void set_average(int);
-int GetAverage(void);
-//extern int setting.average;
-void  set_storage(void);
-void  set_clear_storage(void);
-void  set_subtract_storage(void);
-void toggle_waterfall(void);
-void set_mode(int);
-int GetMode(void);
-void set_reflevel(int);
-void set_scale(int);
-void AllDirty(void);
-void MenuDirty(void);
-void toggle_LNA(void);
-void toggle_AGC(void);
-void redrawHisto(void);
-void self_test(int);
-void set_decay(int);
-void set_noise(int);
-void toggle_tracking_output(void);
-extern int32_t frequencyExtra;
-#if 0
-extern int setting.tracking;
-extern int setting.tracking_output;
-extern int setting.drive;
-extern int setting.lna;
-extern int setting.agc;
-extern int setting.decay;
-extern int setting.noise;
-extern int setting.auto_reflevel;
-extern int setting.auto_attenuation;
-extern int setting.reflevel;
-extern int setting.scale;
-extern int setting.10mhz;
-#endif
-void set_10mhz(int);
-void set_modulation(int);
-//extern int setting.modulation;
-void set_measurement(int);
-// extern int settingSpeed;
-//extern int setting.step_delay;
 
 void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
                                  const uint16_t *bitmap);
@@ -578,6 +509,14 @@ static void menu_calibrate_cb(int item, uint8_t data)
     draw_menu();
     break;
   }
+}
+
+static void menu_scanning_speed_cb(int item, uint8_t data)
+{
+  (void)item;
+  set_step_delay(data);
+//    menu_move_back();
+  ui_mode_normal();
 }
 
 static void menu_config_cb(int item, uint8_t data)
@@ -1279,12 +1218,22 @@ static const menuitem_t menu_settings2[] =
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_scanning_speed[] =
+{
+ { MT_CALLBACK, 0,             "FAST",      menu_scanning_speed_cb},
+ { MT_CALLBACK, 1,             "PRECISE",   menu_scanning_speed_cb},
+ { MT_KEYPAD, KM_SAMPLETIME,   "\2POINT\0TIME",   NULL},
+ { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
+ { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+
 static const menuitem_t menu_settings[] =
 {
   { MT_CALLBACK, 3,             "\2TRACKING\0OUTPUT",menu_settings2_cb},
   { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
   { MT_KEYPAD, KM_IF,           "\2IF\0FREQ",       NULL},
-  { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0TIME",   NULL},
+  { MT_SUBMENU,0,               "\2SCAN\0SPEED",         menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "REPEATS",          NULL},
   { MT_SUBMENU,0,               "\2LO\0DRIVE",      menu_drive},
 #ifdef __ULTRA__
@@ -1416,6 +1365,9 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
   { MT_KEYPAD,  KM_CW,      "\2ZERO\0SPAN",          NULL},
   { MT_SUBMENU,0,           "RBW",              menu_rbw},
+#ifdef __SPUR__
+  { MT_CALLBACK,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
+#endif
   { MT_CANCEL,  0,          S_LARROW" BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
 };
@@ -1423,7 +1375,7 @@ static const menuitem_t menu_stimulus[] = {
 
 
 static const menuitem_t menu_mode[] = {
-  { MT_FORM | MT_TITLE,                 0,                      "MODE",           NULL},
+  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "LOW INPUT",      menu_mode_cb},
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "HIGH INPUT",     menu_mode_cb},
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "LOW OUTPUT",     menu_mode_cb},
@@ -1599,6 +1551,10 @@ static void menu_item_modify_attribute(
     if (item ==0 && setting.tracking_output){
       mark = true;
     }
+  } else if (menu == menu_scanning_speed) {
+    if (item == setting.step_delay){
+      mark = true;
+    }
 #ifdef __ULTRA__
   } else if (MT_MASK(menu[item].type) == MT_CALLBACK && menu == menu_harmonic) {
     if (data == setting.harmonic)
@@ -1612,6 +1568,9 @@ static void menu_item_modify_attribute(
       mark = true;
     }
     if (item == 2 && setting.tracking){         // should not happen in high mode
+      mark = true;
+    }
+    if (item == 3 && setting.below_IF){         // should not happen in high mode
       mark = true;
     }
   } else if (menu == menu_marker_modify && active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {

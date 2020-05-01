@@ -489,7 +489,7 @@ void apply_settings(void)
   set_switches(setting.mode);
   SI4432_SetReference(setting.refer);
   update_rbw();
-  if (setting.step_delay == 0){
+  if (setting.step_delay < 2){
       if (actual_rbw > 90.0)         actualStepDelay =  400;
       else if (actual_rbw > 75.0)    actualStepDelay =  550;
       else if (actual_rbw > 56.0)    actualStepDelay =  650;
@@ -498,6 +498,8 @@ void apply_settings(void)
       else if (actual_rbw >  9.0)    actualStepDelay = 2000;
       else if (actual_rbw >  5.0)    actualStepDelay = 3500;
       else                           actualStepDelay = 6000;
+      if (setting.step_delay == 1)
+        actualStepDelay *= 2;
   } else
     actualStepDelay = setting.step_delay;
 }
@@ -689,8 +691,8 @@ search_maximum(int m, int center, int span)
   int max_index[4];
   if (from<0)
     from = 0;
-  if (to > POINTS_COUNT-1)
-    to = POINTS_COUNT-1;
+  if (to > setting._sweep_points-1)
+    to = setting._sweep_points-1;
   temppeakIndex = 0;
   temppeakLevel = actual_t[from];
   max_index[cur_max] = from;
@@ -887,7 +889,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   }
   float RSSI = -150.0;
   int t = 0;
-  do {
+  do {                                                              // ------------- Acquisition loop ----------
     int offs = (int)((t * 500  - vbwSteps * 250)  * actual_rbw);
 //    if (-offs > (uint32_t)f)         // Ensure lf >0 0
 //      offs = -(uint32_t)(f + offs);
@@ -904,7 +906,15 @@ again:
         local_IF = spur_alternate_IF;
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur){
-        local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
+        if (lf > 150000000) // if above 150MHz use IF shift
+          local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
+        else {
+          local_IF = setting.frequency_IF;
+          if (setting.spur == 1)
+            setting.below_IF = true;
+          else
+            setting.below_IF = false;
+        }
 #endif
       } else {
 //        local_IF = setting.frequency_IF ;
@@ -1177,7 +1187,7 @@ static bool sweep(bool break_on_operation)
       markers[1].index =  marker_search_left_min(markers[0].index);
       if (markers[1].index < 0) markers[1].index = 0;
       markers[2].index =  marker_search_right_min(markers[0].index);
-      if (markers[2].index < 0) markers[1].index = POINTS_COUNT - 1;
+      if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
     } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {
       int t = markers[0].index;
       float v = actual_t[t];
@@ -1186,9 +1196,9 @@ static bool sweep(bool break_on_operation)
       if (t > 0)
         markers[1].index = t;
       t = markers[0].index;
-      while (t < POINTS_COUNT - 1 && actual_t[t] > v - 3.0)
+      while (t < setting._sweep_points - 1 && actual_t[t] > v - 3.0)
         t ++;
-      if (t < POINTS_COUNT - 1 )
+      if (t < setting._sweep_points - 1 )
         markers[2].index = t;
     }
 #endif
@@ -1662,16 +1672,18 @@ int validate_below(int tc, int from, int to) {
 int validate_flatness(int i) {
   volatile int j;
   test_fail_cause[i] = "Passband ";
-  for (j = peakIndex; j < POINTS_COUNT; j++) {
-    if (actual_t[j] < peakLevel - 3)    // Search right -3dB
+  for (j = peakIndex; j < setting._sweep_points; j++) {
+    if (actual_t[j] < peakLevel - 6)    // Search right -3dB
       break;
   }
+  shell_printf("\n\rRight width %d\n\r", j - peakIndex );
   if (j - peakIndex < test_case[i].width)
     return(TS_FAIL);
   for (j = peakIndex; j > 0; j--) {
-    if (actual_t[j] < peakLevel - 3)    // Search left -3dB
+    if (actual_t[j] < peakLevel - 6)    // Search left -3dB
       break;
   }
+  shell_printf("Left width %d\n\r", j - peakIndex );
   if (peakIndex - j < test_case[i].width)
     return(TS_FAIL);
   test_fail_cause[i] = "";
@@ -1680,7 +1692,7 @@ int validate_flatness(int i) {
 
 int validate_above(int tc) {
   int status = TS_PASS;
-  for (int j = 0; j < POINTS_COUNT; j++) {
+  for (int j = 0; j < setting._sweep_points; j++) {
     if (actual_t[j] < stored_t[j] + 5)
       status = TS_CRITICAL;
     else if (actual_t[j] < stored_t[j]) {
@@ -1710,9 +1722,9 @@ int test_validate(int i)
   case TC_SIGNAL:           // Validate signal
   common: current_test_status = validate_signal_within(i, 5.0);
     if (current_test_status == TS_PASS) {            // Validate noise floor
-      current_test_status = validate_below(i, 0, POINTS_COUNT/2 - test_case[i].width);
+      current_test_status = validate_below(i, 0, setting._sweep_points/2 - test_case[i].width);
       if (current_test_status == TS_PASS) {
-        current_test_status = validate_below(i, POINTS_COUNT/2 + test_case[i].width, POINTS_COUNT);
+        current_test_status = validate_below(i, setting._sweep_points/2 + test_case[i].width, setting._sweep_points);
       }
       if (current_test_status != TS_PASS)
         test_fail_cause[i] = "Stopband ";
@@ -1726,7 +1738,7 @@ int test_validate(int i)
     current_test_status = validate_above(i);
     break;
   case TC_BELOW:   // Validate signal below curve
-    current_test_status = validate_below(i, 0, POINTS_COUNT);
+    current_test_status = validate_below(i, 0, setting._sweep_points);
     break;
   case TC_FLAT:   // Validate passband flatness
     current_test_status = validate_flatness(i);
@@ -1759,7 +1771,7 @@ void test_prepare(int i)
     set_mode(M_LOW);
 common_silent:
     set_refer_output(-1);
-    for (int j = 0; j < POINTS_COUNT; j++)
+    for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = test_case[i].pass;
     break;
   case TP_10MHZ_SWITCH:
@@ -1778,11 +1790,11 @@ common_silent:
     set_refer_output(2);
  common:
 
-    for (int j = 0; j < POINTS_COUNT/2 - test_case[i].width; j++)
+    for (int j = 0; j < setting._sweep_points/2 - test_case[i].width; j++)
       stored_t[j] = test_case[i].stop;
-    for (int j = POINTS_COUNT/2 + test_case[i].width; j < POINTS_COUNT; j++)
+    for (int j = setting._sweep_points/2 + test_case[i].width; j < setting._sweep_points; j++)
       stored_t[j] = test_case[i].stop;
-    for (int j = POINTS_COUNT/2 - test_case[i].width; j < POINTS_COUNT/2 + test_case[i].width; j++)
+    for (int j = setting._sweep_points/2 - test_case[i].width; j < setting._sweep_points/2 + test_case[i].width; j++)
       stored_t[j] = test_case[i].pass;
     break;
   case TP_30MHZ:

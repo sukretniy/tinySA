@@ -158,6 +158,63 @@ enum {
 extern int8_t sweep_mode;
 extern const char *info_about[];
 
+// ------------------------------- sa_core.c ----------------------------------
+void reset_settings(int);
+//void ui_process_touch(void);
+void SetPowerGrid(int);
+void SetRefLevel(int);
+void set_refer_output(int);
+void toggle_below_IF(void);
+int get_refer_output(void);
+void set_attenuation(int);
+int get_attenuation(void);
+void set_harmonic(int);
+//extern int setting.harmonic;
+int search_is_greater(void);
+void set_auto_attenuation(void);
+void set_auto_reflevel(void);
+int is_paused(void);
+void set_power_level(int);
+void SetGenerate(int);
+void set_RBW(int);
+void set_drive(int d);
+void set_IF(int f);
+void set_step_delay(int t);
+void set_repeat(int);
+//extern int setting.repeat;
+//extern int setting.rbw;
+#ifdef __SPUR__
+//extern int setting.spur;
+void SetSpur(int v);
+#endif
+void set_average(int);
+int GetAverage(void);
+//extern int setting.average;
+void  set_storage(void);
+void  set_clear_storage(void);
+void  set_subtract_storage(void);
+void toggle_waterfall(void);
+void set_mode(int);
+int GetMode(void);
+void set_reflevel(int);
+void set_scale(int);
+void AllDirty(void);
+void MenuDirty(void);
+void toggle_LNA(void);
+void toggle_AGC(void);
+void redrawHisto(void);
+void self_test(int);
+void set_decay(int);
+void set_noise(int);
+void toggle_tracking_output(void);
+extern int32_t frequencyExtra;
+void set_10mhz(int);
+void set_modulation(int);
+//extern int setting.modulation;
+void set_measurement(int);
+// extern int settingSpeed;
+//extern int setting.step_delay;
+
 #ifdef __VNA__
 /*
  * dsp.c
