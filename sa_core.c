@@ -768,6 +768,7 @@ static const int spur_table[] =
  22960000,
  28960000,
  29800000,
+ 38105000,
  49500000,
 #ifdef IF_AT_4339
   780000,           // 433.9MHz table

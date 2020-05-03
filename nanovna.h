@@ -150,10 +150,11 @@ enum {
 #define MODE_LOW(x)  ((x) == M_LOW || (x) == M_GENLOW )
 #define MODE_SELECT(x) (MODE_HIGH(x) ? 1 : 0)
 
-#define SWEEP_ENABLE  0x01
-#define SWEEP_ONCE    0x02
+#define SWEEP_ENABLE    0x01
+#define SWEEP_ONCE      0x02
 #define SWEEP_CALIBRATE 0x04
 #define SWEEP_SELFTEST  0x08
+#define SWEEP_REMOTE    0x10
 
 extern int8_t sweep_mode;
 extern const char *info_about[];
@@ -214,7 +215,7 @@ void set_modulation(int);
 void set_measurement(int);
 // extern int settingSpeed;
 //extern int setting.step_delay;
-
+void sweep_remote(void);
 #ifdef __VNA__
 /*
  * dsp.c

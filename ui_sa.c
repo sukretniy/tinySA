@@ -1501,7 +1501,7 @@ static void menu_item_modify_attribute(
       mark = true;
     }
   } else if (menu == menu_stimulus) {
-    if (item == 5 /* PAUSE */ && !(sweep_mode&SWEEP_ENABLE)) {
+    if (item == 6 && setting.spur) {
       mark = true;
     }
   } else if (menu == menu_average) {

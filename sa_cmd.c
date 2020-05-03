@@ -31,6 +31,21 @@ VNA_SHELL_FUNCTION(cmd_mode)
     goto usage;
 }
 
+VNA_SHELL_FUNCTION(cmd_spur)
+{
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: spur on|off\r\n");
+    return;
+  }
+  if (strcmp(argv[0],"on") == 0) {
+    setting.spur = 1;
+  } else if (strcmp(argv[0],"off") == 0) {
+    setting.spur = 0;
+  } else
+    goto usage;
+}
+
 VNA_SHELL_FUNCTION(cmd_attenuate)
 {
   if (argc != 1) {
@@ -183,31 +198,39 @@ return;             // Don't use!!!!
 VNA_SHELL_FUNCTION(cmd_o)
 {
   (void) argc;
-  return;
   uint32_t value = my_atoi(argv[0]);
-//  if (VFO == 0)
-//    setting.frequency_IF = value;
-  set_freq(VFO, value);
+  if (VFO == 0)
+    setting.frequency_IF = value;
+//  set_freq(VFO, value);
 }
 
 VNA_SHELL_FUNCTION(cmd_d)
 {
   (void) argc;
   int32_t a = my_atoi(argv[0]);
-  setting.drive = a;
+//  setting.drive = a;
 }
 
 
 VNA_SHELL_FUNCTION(cmd_a)
 {
   (void)argc;
+  if (argc != 1) {
+    shell_printf("a=%d\r\n", frequencyStart);
+    return;
+  }
   int32_t value = my_atoi(argv[0]);
   frequencyStart = value;
 }
 
+
 VNA_SHELL_FUNCTION(cmd_b)
 {
   (void)argc;
+  if (argc != 1) {
+    shell_printf("b=%d\r\n", frequencyStop);
+    return;
+  }
   int32_t value = my_atoi(argv[0]);
   frequencyStop = value;
 }
@@ -221,6 +244,10 @@ VNA_SHELL_FUNCTION(cmd_t)
 VNA_SHELL_FUNCTION(cmd_e)
 {
   (void)argc;
+  if (argc != 1) {
+    shell_printf("e=%d\r\n", setting.tracking);
+    return;
+  }
   setting.tracking = my_atoi(argv[0]);
   if (setting.tracking == -1)
     setting.tracking = false;
@@ -234,7 +261,33 @@ VNA_SHELL_FUNCTION(cmd_e)
 VNA_SHELL_FUNCTION(cmd_s)
 {
   (void)argc;
+  if (argc != 1) {
+    shell_printf("s=%d\r\n", points);
+    return;
+  }
   points = my_atoi(argv[0]);
+}
+
+void sweep_remote(void)
+{
+  int old_step = setting.frequency_step;
+  uint32_t f_step = (frequencyStop-frequencyStart)/ points;
+  setting.frequency_step = f_step;
+  streamPut(shell_stream, '{');
+  dirty = true;
+  for (int i = 0; i<points; i++) {
+    if (operation_requested)
+      break;
+    float val = perform(false, i, frequencyStart - setting.frequency_IF + f_step * i, false);
+    streamPut(shell_stream, 'x');
+    int v = val*2 + 256;
+    streamPut(shell_stream, (uint8_t)(v & 0xFF));
+    streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
+  // enable led
+  }
+  streamPut(shell_stream, '}');
+  setting.frequency_step = old_step;
+  sweep_mode = 0;
 }
 
 VNA_SHELL_FUNCTION(cmd_m)
@@ -242,37 +295,20 @@ VNA_SHELL_FUNCTION(cmd_m)
   (void)argc;
   (void)argv;
 
-  set_mode(0);
-  setting.tracking = false; //Default test setup
-  setting.step_atten = false;
-  set_attenuation(0);
-  set_reflevel(-10);
-  set_sweep_frequency(ST_START,frequencyStart - setting.frequency_IF );
-  set_sweep_frequency(ST_STOP, frequencyStop - setting.frequency_IF);
-  draw_cal_status();
+//  set_mode(0);
+//  setting.tracking = false; //Default test setup
+//  setting.step_atten = false;
+//  set_attenuation(0);
+//  set_reflevel(-10);
+//  set_sweep_frequency(ST_START,frequencyStart - setting.frequency_IF );
+//  set_sweep_frequency(ST_STOP, frequencyStop - setting.frequency_IF);
+//  draw_cal_status();
 
   pause_sweep();
-  int32_t f_step = (frequencyStop-frequencyStart)/ points;
-  palClearPad(GPIOB, GPIOB_LED);  // disable led and wait for voltage stabilization
-  int old_step = setting.frequency_step;
-  setting.frequency_step = f_step;
-  update_rbw();
+//  update_rbw();
   chThdSleepMilliseconds(10);
-  streamPut(shell_stream, '{');
-  dirty = true;
-  for (int i = 0; i<points; i++) {
-      float val = perform(false, i, frequencyStart - setting.frequency_IF + f_step * i, setting.tracking);
-      streamPut(shell_stream, 'x');
-      int v = val*2 + 256;
-      streamPut(shell_stream, (uint8_t)(v & 0xFF));
-      streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
-    // enable led
-  }
-  streamPut(shell_stream, '}');
-  setting.frequency_step = old_step;
-  update_rbw();
-  resume_sweep();
-  palSetPad(GPIOB, GPIOB_LED);
+  sweep_mode = SWEEP_REMOTE;
+//  update_rbw();
 }
 
 VNA_SHELL_FUNCTION(cmd_p)

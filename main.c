@@ -138,6 +138,8 @@ static THD_FUNCTION(Thread1, arg)
       // call from lowest level to save stack space
       self_test(setting.test);
       sweep_mode = SWEEP_ENABLE;
+    } else if (sweep_mode & SWEEP_REMOTE) {
+      sweep_remote();
     } else if (sweep_mode & SWEEP_CALIBRATE) {
       // call from lowest level to save stack space
       calibrate();
@@ -2261,6 +2263,7 @@ static const VNAShellCommand commands[] =
     { "attenuate", cmd_attenuate,    0 },
     { "rbw", cmd_rbw,    0 },
     { "mode", cmd_mode,    0 },
+    { "spur", cmd_spur,    0 },
     { "selftest", cmd_selftest,    0 },
     { "x", cmd_x,    0 },
    { "i", cmd_i,	0 },
