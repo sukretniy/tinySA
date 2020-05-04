@@ -745,7 +745,7 @@ search_maximum(int m, int center, int span)
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433800000;
-static const unsigned int spur_alternate_IF =  434000000;
+static const unsigned int spur_alternate_IF =  433900000;
 static const int spur_table[] =
 {
  580000,            // 433.8 MHz table
