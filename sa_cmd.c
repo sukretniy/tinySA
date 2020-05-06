@@ -70,7 +70,7 @@ VNA_SHELL_FUNCTION(cmd_rbw)
     shell_printf("usage: rbw 2..600|auto\r\n");
     return;
   }
-  if (strcmp(argv[0],"auto") == 0) {
+  if (strcmp(argv[0],"auto") == 0 || strcmp(argv[0],"0") == 0) {
     set_RBW(0);
   } else {
     int a = my_atoi(argv[0]);
@@ -207,7 +207,7 @@ VNA_SHELL_FUNCTION(cmd_o)
 VNA_SHELL_FUNCTION(cmd_d)
 {
   (void) argc;
-  int32_t a = my_atoi(argv[0]);
+//  int32_t a = my_atoi(argv[0]);
 //  setting.drive = a;
 }
 

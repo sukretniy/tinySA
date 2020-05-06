@@ -451,11 +451,30 @@ draw_on_strut(int v0, int d, int color)
 /*
  * calculate log10(abs(gamma))
  */ 
-static float
-logmag(const float *v)
+float
+value(const float v)
 {
-  return v[0];  // raw data is in logmag*10 format
+  switch(setting.unit)
+  {
+  case U_DBMV:
+    return v+ 30.0 + 20.0*log10(sqrt(50));
+    break;
+  case U_DBUV:
+    return v+ 90.0 + 20.0*log10(sqrt(50.0));
+    break;
+  case U_VOLT:
+    return pow(10, (v - 30.0)/20.0) * sqrt(50.0);
+    break;
+  case U_MWATT:
+    return pow(10, v/10.0);
+    break;
+  }
+//  case U_DBM:
+    return v;  // raw data is in logmag*10 format
+
 }
+
+
 
 #ifdef __VNA_
 /*
@@ -566,14 +585,14 @@ static index_t
 trace_into_index(int t, int i, float array[POINTS_COUNT])
 {
   int y, x;
-
-  float *coeff = &array[i];
+  float coeff = array[i];
   float refpos = NGRIDY - get_trace_refpos(t);
   float v = refpos;
   float scale = 1 / get_trace_scale(t);
+
   switch (trace[t].type) {
   case TRC_LOGMAG:
-    v-= logmag(coeff) * scale;
+    v-= value(coeff) * scale;
     break;
 #ifdef __VNA__
 	case TRC_PHASE:
@@ -777,6 +796,15 @@ trace_get_value_string_delta(int t, char *buf, int len, float array[POINTS_COUNT
 }
 #endif
 
+static const char *unit_string[] =
+{
+ "",
+ "dBmV",
+ "dBuV",
+ "V",
+ "mW"
+};
+
 static void trace_get_value_string(
     int t, char *buf, int len,
     int i, float coeff[POINTS_COUNT],
@@ -812,14 +840,19 @@ static void trace_get_value_string(
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
 
 //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
-    v = logmag(&coeff[i]);
+    v = value(coeff[i]);
     if (mtype & M_NOISE)
       v = v - 10*log10(get_actual_RBW()*1000.0);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
-    else
-      plot_printf(buf, len, "%s %.1f%s", buf2, v - rlevel,(mtype & M_NOISE?"/Hz":""));
+    else {
+      if (setting.unit)
+        plot_printf(buf, len, "%s %.5f%s%s", buf2, v - rlevel,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
+      else
+        plot_printf(buf, len, "%s %.1f%s%s", buf2, v - rlevel,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
+    }
 }
+
 #ifdef __VNA__
 static int
 trace_get_info(int t, char *buf, int len)
@@ -1911,10 +1944,10 @@ static void cell_draw_marker_info(int x0, int y0)
   }
   for (int i = 0; i < MARKER_COUNT; i++) {
     if (i >= 2 && setting.measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
-      float il = logmag(&(actual_t[markers[2].index]));
-      float ir = logmag(&(actual_t[markers[3].index]));
-      float sl = logmag(&(actual_t[markers[0].index]));
-      float sr = logmag(&(actual_t[markers[1].index]));
+      float il = value((actual_t[markers[2].index]));
+      float ir = value((actual_t[markers[3].index]));
+      float sl = value((actual_t[markers[0].index]));
+      float sr = value((actual_t[markers[1].index]));
 
       float ip = sl+ (sr - il)/2;
       plot_printf(buf, sizeof buf, "OIP3: %4.1fdB", ip);
@@ -1978,13 +2011,19 @@ static void cell_draw_marker_info(int x0, int y0)
       buf[k++] = 0;
       ili9341_set_background(DEFAULT_BG_COLOR);
       ili9341_set_foreground(marker_color(markers[i].mtype));
-      cell_drawstring_7x13(buf, xpos, ypos);
+      if (setting.unit)
+        cell_drawstring(buf, xpos, ypos);
+      else
+        cell_drawstring_7x13(buf, xpos, ypos);
       xpos += strlen(buf)*7;
 //      cell_drawstring_size(buf, xpos, ypos, 2);
       trace_get_value_string(
           t, buf, sizeof buf,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
-      cell_drawstring_7x13(buf, xpos, ypos);
+      if (setting.unit)
+        cell_drawstring(buf, xpos, ypos);
+      else
+        cell_drawstring_7x13(buf, xpos, ypos);
 //      cell_drawstring_size(buf, xpos+3*7, ypos, 2);
       j++;
    }

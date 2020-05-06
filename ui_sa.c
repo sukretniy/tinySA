@@ -279,7 +279,7 @@ const uint16_t right_icons [] =
 
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ, KM_REPEAT,
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ, KM_REPEAT, KM_OFFSET,
 };
 
 
@@ -389,6 +389,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_level,    // KM_NOISE
   keypads_level,    // KM_10MHz
   keypads_level,    // KM_REPEA
+  keypads_level,    // KM_OFFSET
 };
 
 #ifdef __VNA__
@@ -399,7 +400,7 @@ static const char * const keypad_mode_label[] = {
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
-  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", "OFFSET" , "REPEATS"// 8-17
+  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", "OFFSET" , "REPEATS", "OFFSET"// 8-17
 };
 #endif
 
@@ -829,12 +830,23 @@ static void menu_rbw_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-int menu_dBper_value[]={1,2,5,10,20};
-
-static void menu_dBper_cb(int item, uint8_t data)
+static void menu_unit_cb (int item, uint8_t data)
 {
   (void)item;
-  set_scale(data);
+  set_unit(data);
+  menu_move_back();
+  ui_mode_normal();
+}
+
+enum {
+  S_20,S_10,S_5,S_2,S_1,S_P5,S_P2,S_P1,S_P05,S_P02,S_P01
+};
+static const float menu_scale_per_value[11]={20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01};
+
+static void menu_scale_per_cb(int item, uint8_t data)
+{
+  (void)item;
+  set_scale(menu_scale_per_value[data]);
   menu_move_back();
   ui_mode_normal();
 //  draw_cal_status();
@@ -910,7 +922,7 @@ static void menu_pause_cb(int item, uint8_t data)
 }
 
 //const int menu_drive_value[]={5,10,15,20};
-const char *menu_drive_text[]={"-36dBm","-34dBm","-32dBm","-30dBm","-28dBm","-26dBm","-24dBm","  -22dBm", " -10dBm"," -7dBm"," -4dBm"," -1dBm","  2dBm","  5dBm","  8dBm"," 11dBm"};
+const char *menu_drive_text[]={"-38dBm","-35dBm","-33dBm","-30dBm","-27dBm","-24dBm","-21dBm","  -19dBm", "  -7dBm"," -4dBm"," -2dBm","  1dBm","  4dBm","  7dBm"," 10dBm"," 13dBm"};
 
 
 
@@ -965,42 +977,42 @@ static const menuitem_t menu_load_preset[] =
 };
 
 static const menuitem_t menu_drive[] = {
-  { MT_CALLBACK, 15, " 20dBm",   menu_drive_cb},
-  { MT_CALLBACK, 14, " 16dBm",   menu_drive_cb},
-  { MT_CALLBACK, 13, " 12dBm",   menu_drive_cb},
-  { MT_CALLBACK, 12, "  8dBm",   menu_drive_cb},
+  { MT_CALLBACK, 15, " 15dBm",   menu_drive_cb},
+  { MT_CALLBACK, 14, " 12dBm",   menu_drive_cb},
+  { MT_CALLBACK, 13, "  9dBm",   menu_drive_cb},
+  { MT_CALLBACK, 12, "  6dBm",   menu_drive_cb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide3[] = {
- { MT_FORM | MT_CALLBACK, 5, "-26dBm",   menu_drive_cb  },
- { MT_FORM | MT_CALLBACK, 4, "-28dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 5, "-24dBm",   menu_drive_cb  },
+ { MT_FORM | MT_CALLBACK, 4, "-27dBm",   menu_drive_cb},
  { MT_FORM | MT_CALLBACK, 3, "-30dBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK, 2, "-32dBm",   menu_drive_cb  },
- { MT_FORM | MT_CALLBACK, 1, "-34dBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK, 0, "-36dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 2, "-33dBm",   menu_drive_cb  },
+ { MT_FORM | MT_CALLBACK, 1, "-35dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 0, "-38dBm",   menu_drive_cb},
   { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide2[] = {
- { MT_FORM | MT_CALLBACK, 10, " -4dBm",   menu_drive_cb  },
- { MT_FORM | MT_CALLBACK, 9, " -7dBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK, 8, "-10dBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK, 7, "-22dBm",   menu_drive_cb  },
- { MT_FORM | MT_CALLBACK, 6, "-24dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 10, " -2dBm",   menu_drive_cb  },
+ { MT_FORM | MT_CALLBACK, 9, " -4dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 8, " -7dBm",   menu_drive_cb},
+ { MT_FORM | MT_CALLBACK, 7, "-19dBm",   menu_drive_cb  },
+ { MT_FORM | MT_CALLBACK, 6, "-21dBm",   menu_drive_cb},
  { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide3},
  { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide[] = {
-  { MT_FORM | MT_CALLBACK, 15, " 11dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 14, "  8dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 13, "  5dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 12, "  2dBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 11, " -1dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 15, " 13dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 14, " 10dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 13, "  7dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 12, "  4dBm",   menu_drive_cb},
+  { MT_FORM | MT_CALLBACK, 11, "  1dBm",   menu_drive_cb},
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide2},
   { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
@@ -1062,12 +1074,27 @@ static const menuitem_t menu_rbw[] = {
 };
 
 
-static const menuitem_t menu_dBper[] = {
-  { MT_CALLBACK, 1, "  1dB/",   menu_dBper_cb},
-  { MT_CALLBACK, 2, "  2dB/",   menu_dBper_cb},
-  { MT_CALLBACK, 5, "  5dB/",   menu_dBper_cb},
-  { MT_CALLBACK, 10," 10dB/",   menu_dBper_cb},
-  { MT_CALLBACK, 20," 20dB/",   menu_dBper_cb},
+static const menuitem_t menu_scale_per2[] = {
+  { MT_CALLBACK, 6, "0.1 /",   menu_scale_per_cb},
+  { MT_CALLBACK, 7, "0.2 /",   menu_scale_per_cb},
+  { MT_CALLBACK, 8, "0.05/",   menu_scale_per_cb},
+  { MT_CALLBACK, 9, "0.02/",   menu_scale_per_cb},
+  { MT_CALLBACK,10, "0.01/",   menu_scale_per_cb},
+//  { MT_CALLBACK,11, "0.005/",   menu_scale_per_cb},
+//  { MT_SUBMENU,  0, S_RARROW" MORE",    menu_scale_per2},
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_scale_per[] = {
+  { MT_CALLBACK, 0, " 20/",   menu_scale_per_cb},
+  { MT_CALLBACK, 1, " 10/",   menu_scale_per_cb},
+  { MT_CALLBACK, 2, "  5/",   menu_scale_per_cb},
+  { MT_CALLBACK, 3, "  2/",   menu_scale_per_cb},
+  { MT_CALLBACK, 4, "  1/",   menu_scale_per_cb},
+  { MT_CALLBACK, 5, "0.5/",   menu_scale_per_cb},
+  { MT_SUBMENU,  0, S_RARROW" MORE",    menu_scale_per2},
+
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1235,7 +1262,7 @@ static const menuitem_t menu_settings[] =
   { MT_KEYPAD, KM_IF,           "\2IF\0FREQ",       NULL},
   { MT_SUBMENU,0,               "\2SCAN\0SPEED",         menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "REPEATS",          NULL},
-  { MT_SUBMENU,0,               "\2LO\0DRIVE",      menu_drive},
+  { MT_SUBMENU,0,               "\2MIXER\0DRIVE",      menu_drive},
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
@@ -1341,19 +1368,39 @@ static const menuitem_t menu_displayhigh[] = {
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
+
+static const menuitem_t menu_unit[] =
+{
+ { MT_CALLBACK,U_DBM,      "dBm",              menu_unit_cb},
+ { MT_CALLBACK,U_DBMV,     "dBmV",             menu_unit_cb},
+ { MT_CALLBACK,U_DBUV,     "dBuV",             menu_unit_cb},
+ { MT_CALLBACK,U_VOLT,     "Volt",             menu_unit_cb},
+ { MT_CALLBACK,U_MWATT,    "mWatt",             menu_unit_cb},
+  { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
+
+
 static const menuitem_t menu_levelhigh[] = {
   { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
-  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_dBper},
+//  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_scale_per},
+  { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",            NULL},
   { MT_SUBMENU,0,           "AVER",         menu_average},
   { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
+  { MT_SUBMENU, 0,          "UNIT",         menu_unit},
+  { MT_KEYPAD,  KM_OFFSET,   "\2EXTERN\0AMP",           NULL},
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
-  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_dBper},
+//  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_scale_per},
+  { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",            NULL},
   { MT_SUBMENU, 0,          "ATTEN",        menu_atten},
   { MT_SUBMENU,0,           "AVER",         menu_average},
+  { MT_SUBMENU, 0,          "UNIT",         menu_unit},
+  { MT_KEYPAD,  KM_OFFSET,   "\2EXTERN\0AMP",           NULL},
   { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1508,8 +1555,8 @@ static void menu_item_modify_attribute(
     if (item == GetAverage()){
       mark = true;
     }
-  } else if (menu == menu_dBper) {
-    if (data == setting.scale){
+  } else if (menu == menu_scale_per) {
+    if (menu_scale_per_value[data] == setting.scale){
       mark = true;
     }
   } else if (menu == menu_measure && MT_MASK(menu[item].type) == MT_CALLBACK) {
@@ -1641,11 +1688,11 @@ static void fetch_numeric_target(void)
     break;
   case KM_SCALE:
     uistat.value = setting.scale;
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB/", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%f/", uistat.value);
     break;
   case KM_REFPOS:
     uistat.value = setting.reflevel;
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%f", uistat.value);
     break;
   case KM_ATTENUATION:
     uistat.value = get_attenuation();
@@ -1687,6 +1734,10 @@ static void fetch_numeric_target(void)
     uistat.value = setting_frequency_10mhz;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
+  case KM_OFFSET:
+    uistat.value = setting.offset;
+    plot_printf(uistat.text, sizeof uistat.text, "%fdB", uistat.value);
+    break;
 
   }
   
@@ -1720,9 +1771,7 @@ set_numeric_value(void)
     set_sweep_frequency(ST_CW, uistat.value);
     break;
   case KM_SCALE:
-    set_trace_scale(0, uistat.value / 1000.0);
-    set_trace_scale(1, uistat.value / 1000.0);
-    set_trace_scale(2, uistat.value / 1000.0);
+    set_scale(uistat.value);
     break;
   case KM_REFPOS:
     setting.auto_reflevel = false;
@@ -1764,6 +1813,9 @@ set_numeric_value(void)
     } else
       set_10mhz(uistat.value);
     dirty = true;
+    break;
+  case KM_OFFSET:
+    set_offset(uistat.value);
     break;
   }
 }

@@ -163,7 +163,7 @@ extern const char *info_about[];
 void reset_settings(int);
 //void ui_process_touch(void);
 void SetPowerGrid(int);
-void SetRefLevel(int);
+void SetRefLevel(float);
 void set_refer_output(int);
 void toggle_below_IF(void);
 int get_refer_output(void);
@@ -197,8 +197,8 @@ void  set_subtract_storage(void);
 void toggle_waterfall(void);
 void set_mode(int);
 int GetMode(void);
-void set_reflevel(int);
-void set_scale(int);
+void set_reflevel(float);
+void set_scale(float);
 void AllDirty(void);
 void MenuDirty(void);
 void toggle_LNA(void);
@@ -337,6 +337,12 @@ enum trace_type {
 
 // Electrical Delay
 // Phase
+
+enum unit_type {
+  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_MWATT,
+};
+
+float value(float);
 
 typedef struct trace {
   uint8_t enabled;
@@ -533,8 +539,8 @@ typedef struct setting
   int agc;
   int lna;
   int auto_reflevel;
-  int reflevel;
-  int scale;
+  float reflevel;
+  float scale;
   int tracking;
   int modulation;
   int step_delay;
@@ -556,7 +562,9 @@ typedef struct setting
   trace_t _trace[TRACES_MAX];
   marker_t _markers[MARKERS_MAX];
   int8_t _active_marker;
+  int8_t unit;
   uint32_t checksum;
+  float offset;
 }setting_t;
 
 extern setting_t setting;
@@ -778,8 +786,9 @@ int get_waterfall(void);
 void toggle_tracking(void);
 void calibrate(void);
 void reset_calibration(void);
-void set_reflevel(int);
-void set_scale(int);
+void set_reflevel(float);
+void set_offset(float);
+void set_unit(int);
 void set_RBW(int);
 void set_switches(int);
 //extern int setting_measurement;

@@ -226,6 +226,7 @@ flash: build/ch.bin
 	dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/ch.bin
 
 dfu:
+	c:/work/dfu/HEX2DFU build/ch.hex build/ch.dfu
 	-@printf "reset dfu\r" >/dev/cu.usbmodem401
 
 

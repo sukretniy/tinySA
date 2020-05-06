@@ -46,6 +46,7 @@ void reset_settings(int m)
   setting.tracking_output = false;
   setting.measurement = M_OFF;
   setting.frequency_IF = 433800000;
+  setting.offset = 0.0;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
 #ifdef __SPUR__
@@ -187,6 +188,12 @@ void set_IF(int f)
   dirty = true;
 }
 
+void set_unit(int u)
+{
+  setting.unit = u;
+  dirty = true;
+}
+
 int GetMode(void)
 {
   return(setting.mode);
@@ -195,8 +202,8 @@ int GetMode(void)
 
 
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
-#define POWER_OFFSET    20
-#define SWITCH_ATTENUATION  29
+#define POWER_OFFSET    15
+#define SWITCH_ATTENUATION  30
 
 int get_attenuation(void)
 {
@@ -434,7 +441,7 @@ int GetAGC(void)
   return(setting.agc);
 }
 
-void set_reflevel(int level)
+void set_reflevel(float level)
 {
   setting.reflevel = (level / setting.scale) * setting.scale;
   set_trace_refpos(0, NGRIDY - level / get_trace_scale(0));
@@ -443,11 +450,17 @@ void set_reflevel(int level)
   dirty = true;
 }
 
+
+void set_offset(float offset)
+{
+  setting.offset = offset;
+  dirty = true;
+}
 //int GetRefpos(void) {
 //  return (NGRIDY - get_trace_refpos(2)) * get_trace_scale(2);
 //}
 
-void set_scale(int s) {
+void set_scale(float s) {
   setting.scale = s;
   set_trace_scale(0, s);
   set_trace_scale(1, s);
@@ -978,7 +991,7 @@ again:
         signal_path_loss = -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
       else
       signal_path_loss = +7;         // Loss in dB (+ is gain)
-    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode))+get_level_offset()+ setting.attenuate - signal_path_loss;
+    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode))+get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset;
 #ifdef __SPUR__
     if (setting.spur == 1) {                           // First pass
       spur_RSSI = subRSSI;
@@ -1115,27 +1128,28 @@ static bool sweep(bool break_on_operation)
     scandirty = false;
     draw_cal_status();
   }
+
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {
-    if (actual_t[max_index[0]] - setting.attenuate < - 3*setting.scale && setting.attenuate >= setting.scale) {
-      setting.attenuate -= setting.scale;
+    if (actual_t[max_index[0]] - setting.attenuate < - 30 && setting.attenuate >= 10) {
+      setting.attenuate -= 10;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (actual_t[max_index[0]] - setting.attenuate > - 1.5*setting.scale && setting.attenuate <= 30 - setting.scale) {
-      setting.attenuate += setting.scale;
+    } else if (actual_t[max_index[0]] - setting.attenuate > - 15 && setting.attenuate <= 20) {
+      setting.attenuate += 10;
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
   }
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && max_index[0] > 0) {
-    if (actual_t[max_index[0]] > setting.reflevel - setting.scale/2) {
+    if (value(actual_t[max_index[0]]) > setting.reflevel - setting.scale/2) {
       set_reflevel(setting.reflevel + setting.scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (temp_min_level < setting.reflevel - 9 * setting.scale - 2 && actual_t[max_index[0]] < setting.reflevel -  setting.scale * 3 / 2) {
+    } else if (temp_min_level < setting.reflevel - 9.2 * setting.scale && value(actual_t[max_index[0]]) < setting.reflevel -  setting.scale * 1.5) {
       set_reflevel(setting.reflevel - setting.scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (temp_min_level > setting.reflevel - 9 * setting.scale + setting.scale + 2) {
+    } else if (temp_min_level > setting.reflevel - 7.8 * setting.scale) {
       set_reflevel(setting.reflevel + setting.scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
@@ -1380,8 +1394,8 @@ void draw_cal_status(void)
 
   ili9341_set_background(DEFAULT_BG_COLOR);
 
-  int yMax = setting.reflevel;
-  plot_printf(buf, BLEN, "%ddB", yMax);
+  float yMax = setting.reflevel;
+  plot_printf(buf, BLEN, "%f", yMax);
   buf[5]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
@@ -1397,7 +1411,7 @@ void draw_cal_status(void)
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
   y += YSTEP*2;
-  plot_printf(buf, BLEN, "%ddB/",(int)setting.scale);
+  plot_printf(buf, BLEN, "%f/",setting.scale);
   ili9341_drawstring(buf, x, y);
 
   if (setting.auto_attenuation)
@@ -1496,6 +1510,17 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
+  if (setting.offset != 0.0) {
+    ili9341_set_foreground(BRIGHT_COLOR_RED);
+    y += YSTEP*2;
+    ili9341_drawstring("Amp:", x, y);
+
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%fdB",setting.offset);
+    buf[5]=0;
+    ili9341_drawstring(buf, x, y);
+  }
+
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
   y += YSTEP*2;
   if (MODE_LOW(setting.mode))
@@ -1505,7 +1530,7 @@ void draw_cal_status(void)
 
 
   y = HEIGHT-7 + OFFSETY;
-  plot_printf(buf, BLEN, "%ddB", (int)(yMax - setting.scale * NGRIDY));
+  plot_printf(buf, BLEN, "%f", (yMax - setting.scale * NGRIDY));
   buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
