@@ -484,7 +484,7 @@ void set_mode(int m)
 void apply_settings(void)
 {
   if (setting.mode == M_HIGH)
-    PE4302_Write_Byte(40);
+    PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
     PE4302_Write_Byte(setting.attenuate * 2);
 #if 0

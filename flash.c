@@ -166,6 +166,14 @@ caldata_save(int id)
     dst++;
   }
 
+  // Flash stored trace
+  count = sizeof(stored_t) /  sizeof(uint16_t);
+  src = (uint16_t*)&stored_t[0];
+  while (count-- > 0) {
+    flash_program_half_word((uint32_t)dst, *src++);
+    dst++;
+  }
+
   /* after saving data, make active configuration points to flash */
 //  active_props = (setting_t*)saveareas[id];
   lastsaveid = id;
@@ -187,7 +195,7 @@ caldata_recall(int id)
 
   if (src->magic != CONFIG_MAGIC)
     return -1;
-  if (checksum(src, sizeof *src - sizeof src->checksum) != src->checksum)
+  if (checksum(src, sizeof setting - sizeof src->checksum) != src->checksum)
     return -1;
 
   /* active configuration points to save data on flash memory */
@@ -196,6 +204,9 @@ caldata_recall(int id)
 
   /* duplicated saved data onto sram to be able to modify marker/trace */
   memcpy(dst, src, sizeof(setting_t));
+  // Restore stored trace
+  memcpy(stored_t, &src[1], sizeof(stored_t));
+
   update_frequencies();
   set_scale(setting.scale);
   set_reflevel(setting.reflevel);

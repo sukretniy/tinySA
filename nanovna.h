@@ -563,8 +563,8 @@ typedef struct setting
   marker_t _markers[MARKERS_MAX];
   int8_t _active_marker;
   int8_t unit;
-  uint32_t checksum;
   float offset;
+  uint32_t checksum;
 }setting_t;
 
 extern setting_t setting;
