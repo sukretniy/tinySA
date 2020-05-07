@@ -1505,9 +1505,6 @@ const menuitem_t menu_tophigh[] =
 #endif
 // ===[MENU DEFINITION END]======================================================
 
-#undef BOARD_NAME
-#define BOARD_NAME  "tinySA"
-
 #define ACTIVE_COLOR RGBHEX(0x007FFF)
 
 void frequency_string(char *buf, size_t len, int32_t freq);

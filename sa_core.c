@@ -503,16 +503,17 @@ void apply_settings(void)
   SI4432_SetReference(setting.refer);
   update_rbw();
   if (setting.step_delay < 2){
-      if (actual_rbw > 90.0)         actualStepDelay =  400;
-      else if (actual_rbw > 75.0)    actualStepDelay =  550;
-      else if (actual_rbw > 56.0)    actualStepDelay =  650;
-      else if (actual_rbw > 37.0)    actualStepDelay =  700;
-      else if (actual_rbw > 18.0)    actualStepDelay = 1100;
-      else if (actual_rbw >  9.0)    actualStepDelay = 2000;
-      else if (actual_rbw >  5.0)    actualStepDelay = 3500;
-      else                           actualStepDelay = 6000;
-      if (setting.step_delay == 1)
-        actualStepDelay *= 2;
+    if (actual_rbw > 200.0)        actualStepDelay =  400;
+    else if (actual_rbw > 90.0)    actualStepDelay =  500;
+    else if (actual_rbw > 75.0)    actualStepDelay =  550;
+    else if (actual_rbw > 56.0)    actualStepDelay =  650;
+    else if (actual_rbw > 37.0)    actualStepDelay =  700;
+    else if (actual_rbw > 18.0)    actualStepDelay = 1100;
+    else if (actual_rbw >  9.0)    actualStepDelay = 2000;
+    else if (actual_rbw >  5.0)    actualStepDelay = 3500;
+    else                           actualStepDelay = 6000;
+    if (setting.step_delay == 1)
+      actualStepDelay *= 2;
   } else
     actualStepDelay = setting.step_delay;
 }
