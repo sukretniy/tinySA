@@ -87,7 +87,7 @@ static char    kp_buf[NUMINPUT_LEN+1];
 static int8_t  kp_index = 0;
 static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
-static int8_t  selection = 0;
+static int  selection = 0;
 
 // Set structure align as WORD (save flash memory)
 #pragma pack(push, 2)
@@ -442,9 +442,10 @@ enum {
   MT_CANCEL,
   MT_TITLE,
   MT_CLOSE,
-  MT_KEYPAD
+  MT_KEYPAD,
+  MT_LOW = 0x40,                // Only applicable to low mode
+  MT_FORM = 0x80,               // Large button menu
 };
-#define MT_FORM     0x80        // Or with menu type to get large button with current value
 #define MT_BACK     0x40
 #define MT_LEAVE    0x20
 #define MT_ICON     0x10
@@ -1127,7 +1128,7 @@ ensure_selection(void)
     selection = 1;
     return;
   }
-  for (i = 0; MT_MASK(menu[i].type) != MT_NONE ; i++)
+  for (i = 0; MT_MASK(menu[i].type) != MT_NONE; i++)
     ;
   if (selection >= i)
     selection = i-1;
@@ -1537,13 +1538,15 @@ draw_menu_buttons(const menuitem_t *menu)
 {
   int i = 0;
   char text[30];
+  int y = 0;
   for (i = 0; i < 8; i++) {
     const char *l1, *l2;
+    if ((menu[i].type & MT_LOW) && !MODE_LOW(setting.mode))              //not applicable to mode
+      continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
     if (MT_MASK(menu[i].type) == MT_BLANK)
       continue;
-    int y = MENU_BUTTON_HEIGHT*i;
     uint16_t bg;
     uint16_t fg;
     if (MT_MASK(menu[i].type) == MT_TITLE) {
@@ -1622,6 +1625,7 @@ draw_menu_buttons(const menuitem_t *menu)
 #endif
       }
     }
+    y += MENU_BUTTON_HEIGHT;
   }
 }
 
@@ -1641,14 +1645,17 @@ menu_apply_touch(void)
   int touch_x, touch_y;
   const menuitem_t *menu = menu_stack[menu_current_level];
   int i;
-
+  int y = 0;
   touch_position(&touch_x, &touch_y);
   for (i = 0; i < 8; i++) {
+    if ((menu[i].type & MT_LOW) && !MODE_LOW(setting.mode))              //not applicable to mode
+      continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
-    if (MT_MASK(menu[i].type == MT_BLANK) || MT_MASK(menu[i].type) == MT_TITLE)
+    if (MT_MASK(menu[i].type == MT_BLANK) || MT_MASK(menu[i].type) == MT_TITLE) {
+      y += MENU_BUTTON_HEIGHT;
       continue;
-    int y = MENU_BUTTON_HEIGHT*i;
+    }
     int active_button_width;
     if (menu[i].type & MT_FORM)
       active_button_width = MENU_FORM_WIDTH;
@@ -1659,6 +1666,7 @@ menu_apply_touch(void)
       menu_select_touch(i);
       return;
     }
+    y += MENU_BUTTON_HEIGHT;
   }
   if (menu_is_form(menu))
     return;
@@ -2018,12 +2026,16 @@ ui_process_menu(void)
       do {
         if (status & EVT_UP) {
           // close menu if next item is sentinel
+          while ((menu_stack[menu_current_level][selection+1].type & MT_LOW) && !MODE_LOW(setting.mode))
+            selection++;
           if (menu_stack[menu_current_level][selection+1].type == MT_NONE)
             goto menuclose;
           if (!(menu_stack[menu_current_level][selection+1].type == (MT_FORM | MT_NONE)))
             selection++;
         }
         if (status & EVT_DOWN) {
+          while ((menu_stack[menu_current_level][selection+1].type & MT_LOW) && !MODE_LOW(setting.mode))
+            selection--;
           if (! ( selection == 0 && menu_stack[menu_current_level][0].type & MT_FORM))
             selection--;
         }

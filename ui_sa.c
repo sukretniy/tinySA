@@ -1387,9 +1387,9 @@ static const menuitem_t menu_levelhigh[] = {
 //  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_scale_per},
   { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",            NULL},
   { MT_SUBMENU,0,           "AVER",         menu_average},
-  { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,   "\2EXTERN\0AMP",           NULL},
+  { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
@@ -1413,7 +1413,7 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_CW,      "\2ZERO\0SPAN",          NULL},
   { MT_SUBMENU,0,           "RBW",              menu_rbw},
 #ifdef __SPUR__
-  { MT_CALLBACK,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
+  { MT_CALLBACK | MT_LOW,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
 #endif
   { MT_CANCEL,  0,          S_LARROW" BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
