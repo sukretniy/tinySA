@@ -175,7 +175,7 @@ int search_is_greater(void);
 void set_auto_attenuation(void);
 void set_auto_reflevel(void);
 int is_paused(void);
-void set_power_level(int);
+void set_actual_power(float);
 void SetGenerate(int);
 void set_RBW(int);
 void set_drive(int d);

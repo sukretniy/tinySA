@@ -1779,7 +1779,7 @@ set_numeric_value(void)
     set_attenuation(uistat.value);
     break;
   case KM_ACTUALPOWER:
-    set_power_level(uistat.value);
+    set_actual_power(uistat.value);
     config_save();
     break;
   case KM_IF:

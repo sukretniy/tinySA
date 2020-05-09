@@ -306,22 +306,18 @@ int GetSubtractStorage(void)
 }
 
 extern float peakLevel;
-void set_power_level(int o)
+void set_actual_power(float o)
 {
-  float new_offset = o - peakLevel - setting.attenuate + get_level_offset();
-  if (o != 100) {
-    if (setting.mode == M_HIGH)
-      config.high_level_offset = new_offset;
-    else if (setting.mode == M_LOW)
-      config.low_level_offset = new_offset;
+  float new_offset = o - peakLevel + get_level_offset();
+  if (o == 100) new_offset = 0;
+  if (setting.mode == M_HIGH) {
+    config.high_level_offset = new_offset;
+  } else if (setting.mode == M_LOW) {
+    config.low_level_offset = new_offset;
 #ifdef __ULTRA__
-    else if (setting.mode == M_ULTRA)
-      config.low_level_offset = new_offset;
+  } else if (setting.mode == M_ULTRA) {
+    config.low_level_offset = new_offset;
 #endif
-  }
-  else {
-    config.low_level_offset = 100;
-    config.high_level_offset = 100;
   }
   dirty = true;
 }
@@ -1009,7 +1005,7 @@ again:
     t++;
     if (operation_requested && break_on_operation) // output modes do not step.
       break;         // abort
-  } while (t < vbwSteps);
+  } while (t <= vbwSteps);
   return(RSSI);
 }
 
@@ -1741,9 +1737,9 @@ int test_validate(int i)
   case TC_SET:
     if (test_case[i].pass == 0) {
       if (test_value != 0)
-        set_power_level(test_value);
+        set_actual_power(test_value);
     } else
-      set_power_level(test_case[i].pass);
+      set_actual_power(test_case[i].pass);
     goto common;
   case TC_MEASURE:
   case TC_SIGNAL:           // Validate signal
@@ -1997,7 +1993,8 @@ void self_test(int test)
 
 void reset_calibration(void)
 {
-  set_power_level(100);
+  config.high_level_offset = 0;
+  config.low_level_offset = 0;
 }
 
 #define CALIBRATE_RBWS  1
@@ -2009,7 +2006,7 @@ void calibrate(void)
   int local_test_status;
   float last_peak_level;
   in_selftest = true;
-  set_power_level(100);
+  reset_calibration();
   reset_settings(M_LOW);
   int i = 11;       // calibrate low mode power on 30 MHz;
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
@@ -2023,7 +2020,7 @@ void calibrate(void)
       ili9341_drawstring_7x13("Calibration failed", 30, 120);
       goto quit;
     } else {
-      set_power_level(-22);           // Should be -22.5dBm
+      set_actual_power(-22.5);           // Should be -22.5dBm
       chThdSleepMilliseconds(1000);
     }
   }
@@ -2048,7 +2045,7 @@ void calibrate(void)
 //      ili9341_drawstring_7x13("Calibration failed", 30, 120);
 //      goto quit;
 //    } else
-      set_power_level(last_peak_level);
+      set_actual_power(last_peak_level);
       chThdSleepMilliseconds(1000);
   }
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
