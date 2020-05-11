@@ -458,6 +458,9 @@ void set_offset(float offset)
 
 void set_scale(float s) {
   setting.scale = s;
+  if (setting.unit == U_VOLT || setting.unit == U_MWATT) {
+    set_reflevel(9 * s);
+  }
   set_trace_scale(0, s);
   set_trace_scale(1, s);
   set_trace_scale(2, s);
