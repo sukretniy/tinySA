@@ -207,6 +207,7 @@ VNA_SHELL_FUNCTION(cmd_o)
 VNA_SHELL_FUNCTION(cmd_d)
 {
   (void) argc;
+  (void) argv;
 //  int32_t a = my_atoi(argv[0]);
 //  setting.drive = a;
 }

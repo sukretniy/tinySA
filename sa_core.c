@@ -47,6 +47,7 @@ void reset_settings(int m)
   setting.measurement = M_OFF;
   setting.frequency_IF = 433800000;
   setting.offset = 0.0;
+  setting.trigger = -150.0;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
 #ifdef __SPUR__
@@ -452,6 +453,21 @@ void set_offset(float offset)
   setting.offset = offset;
   dirty = true;
 }
+
+void set_trigger(float trigger)
+{
+  setting.trigger = trigger;
+  if (trigger != -150.0) {
+    for (int j = 0; j < setting._sweep_points; j++)
+      stored_t[j] = trigger;
+    trace[TRACE_STORED].enabled = true;
+  } else {
+    trace[TRACE_STORED].enabled = false;
+  }
+  dirty = true;
+}
+
+
 //int GetRefpos(void) {
 //  return (NGRIDY - get_trace_refpos(2)) * get_trace_scale(2);
 //}
@@ -988,7 +1004,22 @@ again:
         signal_path_loss = -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
       else
       signal_path_loss = +7;         // Loss in dB (+ is gain)
-    float subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode))+get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset;
+    int wait_for_trigger = false;
+    int old_actual_step_delay = actualStepDelay;
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger != -150.0) { // wait for trigger to happen
+      wait_for_trigger = true;
+      actualStepDelay = 0;      // fastest possible
+    }
+    float subRSSI;
+   wait:
+    subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset;
+    if (wait_for_trigger) { // wait for trigger to happen
+      if (operation_requested && break_on_operation)
+        break;         // abort
+      if (subRSSI < setting.trigger)
+        goto wait;
+      actualStepDelay = old_actual_step_delay; // Trigger happened, restore step delay
+    }
 #ifdef __SPUR__
     if (setting.spur == 1) {                           // First pass
       spur_RSSI = subRSSI;

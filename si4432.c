@@ -349,7 +349,7 @@ void SI4432_Set_Frequency ( long Freq ) {
     hbsel = 0;
   }
   int sbsel = 1;
-  int N = Freq / setting_frequency_10mhz;
+  long N = Freq / setting_frequency_10mhz;
   Carrier = ( 4 * ( Freq - N * setting_frequency_10mhz )) / 625;
   int Freq_Band = ( N - 24 ) | ( hbsel << 5 ) | ( sbsel << 6 );
 #if 0

@@ -564,6 +564,7 @@ typedef struct setting
   int8_t _active_marker;
   int8_t unit;
   float offset;
+  float trigger;
   uint32_t checksum;
 }setting_t;
 
@@ -791,6 +792,7 @@ void set_offset(float);
 void set_unit(int);
 void set_RBW(int);
 void set_switches(int);
+void set_trigger(float);
 //extern int setting_measurement;
 void self_test(int);
 //extern int setting_test;

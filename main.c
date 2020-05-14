@@ -2266,6 +2266,7 @@ static const VNAShellCommand commands[] =
     { "spur", cmd_spur,    0 },
     { "selftest", cmd_selftest,    0 },
     { "x", cmd_x,    0 },
+    { "y", cmd_y,    0 },
    { "i", cmd_i,	0 },
    { "v", cmd_v,	0 },
    { "a", cmd_a,	0 },

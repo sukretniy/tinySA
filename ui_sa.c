@@ -279,7 +279,7 @@ const uint16_t right_icons [] =
 
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ, KM_REPEAT, KM_OFFSET,
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER,
 };
 
 
@@ -390,6 +390,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_level,    // KM_10MHz
   keypads_level,    // KM_REPEA
   keypads_level,    // KM_OFFSET
+  keypads_level,    // KM_TRIGGER
 };
 
 #ifdef __VNA__
@@ -400,7 +401,8 @@ static const char * const keypad_mode_label[] = {
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
-  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", "OFFSET" , "REPEATS", "OFFSET"// 8-17
+  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
+  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER"// 16-
 };
 #endif
 
@@ -1181,25 +1183,11 @@ const menuitem_t menu_marker_select[] = {
 };
 
 
-#if 0
-static const menuitem_t menu_marker_sel[] = {
-  { MT_CALLBACK, 0, "MARKER 1",             menu_marker_sel_cb},
-  { MT_CALLBACK, 0, "MARKER 2",             menu_marker_sel_cb},
-  { MT_CALLBACK, 0, "MARKER 3",             menu_marker_sel_cb},
-  { MT_CALLBACK, 0, "MARKER 4",             menu_marker_sel_cb},
-  { MT_CALLBACK, 0, "ALL OFF",              menu_marker_sel_cb},
-  { MT_SUBMENU,  0, "\2SEARCH\0MARKER",     menu_marker_search},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
-};
-#endif
-
 const menuitem_t menu_marker_ops[] = {
   { MT_CALLBACK, ST_START, S_RARROW"START", menu_marker_op_cb },
   { MT_CALLBACK, ST_STOP, S_RARROW"STOP", menu_marker_op_cb },
   { MT_CALLBACK, ST_CENTER, S_RARROW"CENTER", menu_marker_op_cb },
   { MT_CALLBACK, ST_SPAN, S_RARROW"SPAN", menu_marker_op_cb },
- // { MT_CALLBACK, 0, S_RARROW"EDELAY", menu_marker_op_cb },
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1317,8 +1305,6 @@ static const menuitem_t menu_config[] = {
   { MT_FORM | MT_CALLBACK, 0, "SELF TEST",     menu_config_cb},
   { MT_FORM | MT_SUBMENU,  0, "CALIBRATE",     menu_calibrate},
   { MT_FORM | MT_CALLBACK, 0, "VERSION",       menu_config_cb},
-//  { MT_SUBMENU,  0, "SETTINGS",         menu_settings},
-//  { MT_SUBMENU,  0, "RBW", menu_rbw},
   { MT_FORM | MT_SUBMENU,  0, S_RARROW"DFU",  menu_dfu},
   { MT_FORM | MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
@@ -1343,8 +1329,6 @@ static const menuitem_t menu_acquirehigh[] = {
 
 static const menuitem_t menu_display[] = {
   { MT_CALLBACK,0,          "\2PAUSE\0SWEEP",   menu_pause_cb},
-//  { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
-//  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_dBper},
   { MT_CALLBACK,0,          "STORE",            menu_storage_cb},
   { MT_CALLBACK,1,          "CLEAR",            menu_storage_cb},
   { MT_CALLBACK,2,          "SUBTRACT",         menu_storage_cb},
@@ -1358,8 +1342,6 @@ static const menuitem_t menu_display[] = {
 
 static const menuitem_t menu_displayhigh[] = {
   { MT_CALLBACK,0,          "\2PAUSE\0SWEEP",   menu_pause_cb},
-//  { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
-//  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_dBper},
   { MT_CALLBACK,0,          "STORE",            menu_storage_cb},
   { MT_CALLBACK,1,          "CLEAR",            menu_storage_cb},
   { MT_CALLBACK,2,          "SUBTRACT",         menu_storage_cb},
@@ -1389,6 +1371,7 @@ static const menuitem_t menu_levelhigh[] = {
   { MT_SUBMENU,0,           "AVER",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,   "\2EXTERN\0AMP",           NULL},
+  { MT_KEYPAD,  KM_TRIGGER,   "\2TRIGGER\0LEVEL",           NULL},
   { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1401,6 +1384,7 @@ static const menuitem_t menu_level[] = {
   { MT_SUBMENU,0,           "AVER",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,   "\2EXTERN\0AMP",           NULL},
+  { MT_KEYPAD,  KM_TRIGGER,   "\2TRIGGER\0LEVEL",           NULL},
   { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1435,7 +1419,6 @@ static const menuitem_t menu_mode[] = {
   //  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
-#if 1
 
 #ifdef __ULTRA__
 const menuitem_t menu_topultra[] = {
@@ -1477,32 +1460,6 @@ const menuitem_t menu_tophigh[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel,
  // MENUITEM_CLOSE,
 };
-#else
-const menuitem_t menu_top[] = {
-  { MT_SUBMENU,  0, "ACQUIRE",      menu_acquire},
-  { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
-  { MT_SUBMENU,  0, "DISPLAY",      menu_display},
-  { MT_SUBMENU,  0, "MARKER",       menu_marker},
-  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
-  { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
-  { MT_CANCEL,   0, S_LARROW" MODE",NULL},
-  { MT_NONE,     0, NULL, NULL } // sentinel,
- // MENUITEM_CLOSE,
-};
-
-const menuitem_t menu_tophigh[] =
-{
- { MT_SUBMENU,  0, "ACQUIRE",      menu_acquirehigh},
- { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
- { MT_SUBMENU,  0, "DISPLAY",      menu_display},
- { MT_SUBMENU,  0, "MARKER",       menu_marker},
- { MT_SUBMENU,  0, "MEASURE",      menu_measure},
- { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
- { MT_CANCEL,   0, S_LARROW" MODE",NULL},
- { MT_NONE,     0, NULL, NULL } // sentinel,
- // MENUITEM_CLOSE,
-};
-#endif
 // ===[MENU DEFINITION END]======================================================
 
 #define ACTIVE_COLOR RGBHEX(0x007FFF)
@@ -1735,6 +1692,10 @@ static void fetch_numeric_target(void)
     uistat.value = setting.offset;
     plot_printf(uistat.text, sizeof uistat.text, "%fdB", uistat.value);
     break;
+  case KM_TRIGGER:
+    uistat.value = setting.trigger;
+    plot_printf(uistat.text, sizeof uistat.text, "%fdB", uistat.value);
+    break;
 
   }
   
@@ -1813,6 +1774,9 @@ set_numeric_value(void)
     break;
   case KM_OFFSET:
     set_offset(uistat.value);
+    break;
+  case KM_TRIGGER:
+    set_trigger(uistat.value);
     break;
   }
 }
