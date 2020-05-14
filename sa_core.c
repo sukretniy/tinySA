@@ -474,6 +474,9 @@ void set_trigger(float trigger)
 
 void set_scale(float s) {
   setting.scale = s;
+  if (setting.unit == U_VOLT || setting.unit == U_MWATT) {
+    set_reflevel(9 * s);
+  }
   set_trace_scale(0, s);
   set_trace_scale(1, s);
   set_trace_scale(2, s);
@@ -1169,6 +1172,18 @@ static bool sweep(bool break_on_operation)
     }
   }
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && max_index[0] > 0) {
+    if (setting.unit == U_VOLT || setting.unit == U_MWATT) {
+      float t = value(actual_t[max_index[0]]);
+      if (t < setting.reflevel / 2 || t> setting.reflevel) {
+        float m = 1;
+        t = t * 1.2;
+        while (t > 10) { m *= 10; t/=10; }
+        while (t < 1)  { m /= 10; t*=10; }
+        t = round(t);
+        set_scale(t*m / 9);
+        set_reflevel(t*m);
+      }
+    } else {
     if (value(actual_t[max_index[0]]) > setting.reflevel - setting.scale/2) {
       set_reflevel(setting.reflevel + setting.scale);
       redraw_request |= REDRAW_CAL_STATUS;
@@ -1181,6 +1196,7 @@ static bool sweep(bool break_on_operation)
       set_reflevel(setting.reflevel + setting.scale);
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
+    }
     }
   }
 #if 1
