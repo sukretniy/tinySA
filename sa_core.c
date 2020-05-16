@@ -878,18 +878,6 @@ int avoid_spur(int f)
   if (! setting.mode == M_LOW || setting.frequency_IF != spur_IF || actual_rbw > 300.0)
     return(false);
   return binary_search(f);
-#if 0
-  f = f + window/2;
-  for (unsigned int i = 0; i < (sizeof spur_table)/sizeof(int); i++) {
-    if (f/window == (spur_table[i] + window/2)/window) {
-//      spur_old_stepdelay = actualStepDelay;
-//      actualStepDelay += 4000;
-      binary_search(f);
-      return true;
-    }
-  }
-  return false;
-#endif
 }
 
 static int modulation_counter = 0;
@@ -904,12 +892,13 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   else
     local_IF = setting.frequency_IF;
 
-  if (i == 0 && dirty) {
+  if (i == 0 && dirty) {                                                        // SCan initiation
     apply_settings();
     scandirty = true;
     dirty = false;
   }
-  if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {
+
+  if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {               // AM modulation
     int p = setting.attenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
     if (modulation_counter == 4) {
@@ -919,7 +908,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     }
     chThdSleepMicroseconds(200);
 
-  } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) {
+  } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) { //FM modulation
       SI4432_Sel = 1;
       int offset;
       if (setting.modulation == MO_NFM ) {
@@ -938,18 +927,17 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
         modulation_counter++;
       chThdSleepMicroseconds(200);
   }
+
   float RSSI = -150.0;
   int t = 0;
   do {                                                              // ------------- Acquisition loop ----------
     int offs = (int)((t * 500  - vbwSteps * 250)  * actual_rbw);
-//    if (-offs > (uint32_t)f)         // Ensure lf >0 0
-//      offs = -(uint32_t)(f + offs);
     uint32_t lf = (uint32_t)(f + offs);
 #ifdef __SPUR__
     float spur_RSSI = 0;
 again:
 #endif
-    if (setting.mode == M_LOW && tracking) {
+    if (setting.mode == M_LOW && tracking) {                                // Measure BPF
       set_freq (0, setting.frequency_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
       local_IF = setting.frequency_IF ;
     } else if (MODE_LOW(setting.mode)) {
@@ -959,7 +947,7 @@ again:
       } else if (setting.mode== M_LOW && setting.spur){
         if (lf > 150000000) // if above 150MHz use IF shift
           local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
-        else {
+        else {              // else low/above IF
           local_IF = setting.frequency_IF;
           if (setting.spur == 1)
             setting.below_IF = true;
@@ -970,25 +958,19 @@ again:
       } else {
 //        local_IF = setting.frequency_IF ;
       }
-      if (setting.mode == M_GENLOW && setting.modulation == MO_EXTERNAL)
+      if (setting.mode == M_GENLOW && setting.modulation == MO_EXTERNAL)    // LO input via high port
         local_IF += lf;
       set_freq (0, local_IF);
 #ifdef __ULTRA__
-    } else if (setting.mode == M_ULTRA) {
+    } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
       local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
       set_freq (0, local_IF);
  //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?setting.spur * 1000 * actual_rbw:0);
 #endif
-    } else
+    } else          // This must be high mode
       local_IF= 0;
-#if 0
-    if (lf >11000000 || lf < 9000000) {
-      lf = lf;
-      break;
-    }
-#endif
 #ifdef __ULTRA__
-    if (setting.mode == M_ULTRA) {
+    if (setting.mode == M_ULTRA) {      // Set LO to correct harmonic in Ultra mode
 //      if (lf > 3406000000 )
 //        setFreq (1, local_IF/5 + lf/5);
 //      else
@@ -1001,14 +983,14 @@ again:
 //        setFreq (1, local_IF/2 + lf/2);
     } else
 #endif
-    {
+    {                                           // Else set LO ('s)
 #ifdef __ULTRA_SA__
 //#define IF_1    2550000000
-#define IF_2    2025000000
+#define IF_2    2025000000                      // First IF in Ultra SA mode
 
-       set_freq (3, IF_2 - 433800000);
-       set_freq (2, IF_2 + lf);
-       set_freq (1, 433800000);
+       set_freq (2, IF_2 + lf);                 // Scanning LO up to IF2
+       set_freq (3, IF_2 - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
+       set_freq (1, 433800000);                 // Second IF fixe in Ultra SA mode
 #else
        if (setting.mode == M_LOW && !setting.tracking && setting.below_IF)
          set_freq (1, local_IF-lf);
@@ -1016,7 +998,7 @@ again:
          set_freq (1, local_IF+lf);
 #endif
     }
-    if (MODE_OUTPUT(setting.mode))              // No substepping in output mode
+    if (MODE_OUTPUT(setting.mode))              // No substepping and no RSSI in output mode
       return(0);
     float signal_path_loss;
 #ifdef __ULTRA__
@@ -1024,46 +1006,48 @@ again:
       signal_path_loss = -15;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
     else
 #endif
-      if (setting.mode == M_LOW)
-        signal_path_loss = -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-      else
+    if (setting.mode == M_LOW)
+      signal_path_loss = -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+    else
       signal_path_loss = +7;         // Loss in dB (+ is gain)
+
     int wait_for_trigger = false;
     int old_actual_step_delay = actualStepDelay;
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger != -150.0) { // wait for trigger to happen
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger != -150.0) { // [repare for wait for trigger to happen
       wait_for_trigger = true;
-      actualStepDelay = 0;      // fastest possible
+      actualStepDelay = 0;      // fastest possible in trigger mode
     }
     float subRSSI;
+    float correct_RSSI = get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset;
    wait:
-    subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset;
+    subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;
     if (wait_for_trigger) { // wait for trigger to happen
       if (operation_requested && break_on_operation)
         break;         // abort
       if (subRSSI < setting.trigger)
         goto wait;
       actualStepDelay = old_actual_step_delay; // Trigger happened, restore step delay
-      pause_sweep();                    // Trigger once!!!!!!!
+      pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
     }
     if (setting.trigger != -150.0 && setting.frequency_step > 0 && subRSSI > setting.trigger) {
-      pause_sweep();                    // Stop scanning if above trigger
+      pause_sweep();                    // Stop scanning after completing this sweep if above trigger
     }
 
 #ifdef __SPUR__
-    if (setting.spur == 1) {                           // First pass
+    if (setting.spur == 1) {                                     // If first spur pass
       spur_RSSI = subRSSI;
       setting.spur = -1;
-      goto again;                     // Skip all other processing
-    } else if (setting.spur == -1) {                            // Second pass
-      subRSSI = ( subRSSI < spur_RSSI ? subRSSI : spur_RSSI);  // Minimum of two passes
+      goto again;                                                // Skip all other processing
+    } else if (setting.spur == -1) {                            // If second  spur pass
+      subRSSI = ( subRSSI < spur_RSSI ? subRSSI : spur_RSSI);  // Take minimum of two
       setting.spur = 1;
     }
 #endif
 
-    if (RSSI < subRSSI)
+    if (RSSI < subRSSI)                                     // Take max during subscanning
       RSSI = subRSSI;
     t++;
-    if (operation_requested && break_on_operation) // output modes do not step.
+    if (operation_requested && break_on_operation)       // break subscanning if requested
       break;         // abort
   } while (t <= vbwSteps);
   return(RSSI);
@@ -1078,7 +1062,7 @@ static bool sweep(bool break_on_operation)
 {
   float RSSI;
   int16_t downslope = true;
-  START_PROFILE;
+//  START_PROFILE;
   palClearPad(GPIOB, GPIOB_LED);
   temppeakLevel = -150;
   float temp_min_level = 100;
@@ -1091,7 +1075,7 @@ static bool sweep(bool break_on_operation)
     if (operation_requested && break_on_operation)
       return false;
     if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_NONE) {
-      osalThreadSleepMilliseconds(10);
+      osalThreadSleepMilliseconds(10);              // Slow down sweep in output mode
     }
 
     if (MODE_INPUT(setting.mode)) {
@@ -1101,7 +1085,7 @@ static bool sweep(bool break_on_operation)
         RSSI = RSSI - stored_t[i] ;
       }
       //   stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
-      if (scandirty || setting.average == AV_OFF) {
+      if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;
       } else {
@@ -1124,30 +1108,32 @@ static bool sweep(bool break_on_operation)
         }
       }
 #if 1
+
       // START_PROFILE
-      if (i == 0) {
+      if (i == 0) {                                          // Prepare peak finding
         cur_max = 0;          // Always at least one maximum
         temppeakIndex = 0;
         temppeakLevel = actual_t[i];
         max_index[0] = 0;
         downslope = true;
       }
-      if (downslope) {
-        if (temppeakLevel > actual_t[i]) {    // Follow down
-          temppeakIndex = i;                  // Latest minimum
+      if (downslope) {                               // If in down slope peak finding
+        if (temppeakLevel > actual_t[i]) {           // Follow down
+          temppeakIndex = i;                         // Latest minimum
           temppeakLevel = actual_t[i];
         } else if (temppeakLevel + setting.noise < actual_t[i] ) {    // Local minimum found
-          temppeakIndex = i;                          // This is now the latest maximum
+          temppeakIndex = i;                         // This is now the latest maximum
           temppeakLevel = actual_t[i];
           downslope = false;
         }
-      } else {
+      } else {                                      // up slope peak finding
         if (temppeakLevel < actual_t[i]) {    // Follow up
           temppeakIndex = i;
           temppeakLevel = actual_t[i];
         } else if (actual_t[i] < temppeakLevel - setting.noise) {    // Local max found
 
-          int j = 0;                                            // Insertion index
+
+          int j = 0;                                            // Insert max in sorted table
           while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
             j++;
           if (j < MAX_MAX) {                                    // Larger then one of the previous found
@@ -1164,13 +1150,14 @@ static bool sweep(bool break_on_operation)
             }
             //STOP_PROFILE
           }
+                                                              // Insert done
           temppeakIndex = i;            // Latest minimum
           temppeakLevel = actual_t[i];
 
           downslope = true;
         }
       }
-    }
+    }                   // end of peak finding
 #else
     if (frequencies[i] > 1000000) {
       if (temppeakLevel < actual_t[i]) {
@@ -1179,7 +1166,7 @@ static bool sweep(bool break_on_operation)
       }
     }
 #endif
-    if (temp_min_level > actual_t[i])
+    if (temp_min_level > actual_t[i])   // Remember minimum
       temp_min_level = actual_t[i];
 
   }
@@ -1188,7 +1175,7 @@ static bool sweep(bool break_on_operation)
     draw_cal_status();
   }
 
-  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {
+  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // Auto attenuate
     if (actual_t[max_index[0]] - setting.attenuate < - 30 && setting.attenuate >= 10) {
       setting.attenuate -= 10;
       redraw_request |= REDRAW_CAL_STATUS;
@@ -1199,8 +1186,8 @@ static bool sweep(bool break_on_operation)
       dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
   }
-  if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && max_index[0] > 0) {
-    if (setting.unit == U_VOLT || setting.unit == U_MWATT) {
+  if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && max_index[0] > 0) {  // Auto reflevel
+    if (setting.unit == U_VOLT || setting.unit == U_MWATT) {            // Linear scales can not have negative values
       float t = value(actual_t[max_index[0]]);
       if (t < setting.reflevel / 2 || t> setting.reflevel) {
         float m = 1;
@@ -1212,23 +1199,23 @@ static bool sweep(bool break_on_operation)
         set_reflevel(t*m);
       }
     } else {
-    if (value(actual_t[max_index[0]]) > setting.reflevel - setting.scale/2) {
-      set_reflevel(setting.reflevel + setting.scale);
-      redraw_request |= REDRAW_CAL_STATUS;
-      dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (temp_min_level < setting.reflevel - 9.2 * setting.scale && value(actual_t[max_index[0]]) < setting.reflevel -  setting.scale * 1.5) {
-      set_reflevel(setting.reflevel - setting.scale);
-      redraw_request |= REDRAW_CAL_STATUS;
-      dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (temp_min_level > setting.reflevel - 7.8 * setting.scale) {
-      set_reflevel(setting.reflevel + setting.scale);
-      redraw_request |= REDRAW_CAL_STATUS;
-      dirty = true;                               // Must be  above if(scandirty!!!!!)
-    }
+      if (value(actual_t[max_index[0]]) > setting.reflevel - setting.scale/2) {
+        set_reflevel(setting.reflevel + setting.scale);
+        redraw_request |= REDRAW_CAL_STATUS;
+        dirty = true;                               // Must be  above if(scandirty!!!!!)
+      } else if (temp_min_level < setting.reflevel - 10.1 * setting.scale && value(actual_t[max_index[0]]) < setting.reflevel -  setting.scale * 1.5) {
+        set_reflevel(setting.reflevel - setting.scale);
+        redraw_request |= REDRAW_CAL_STATUS;
+        dirty = true;                               // Must be  above if(scandirty!!!!!)
+      } else if (temp_min_level > setting.reflevel - 8.8 * setting.scale) {
+        set_reflevel(setting.reflevel + setting.scale);
+        redraw_request |= REDRAW_CAL_STATUS;
+        dirty = true;                               // Must be  above if(scandirty!!!!!)
+      }
     }
   }
 #if 1
-  if (MODE_INPUT(setting.mode)) {
+  if (MODE_INPUT(setting.mode)) {               // Assign maxima found to tracking markers
     int i = 0;
     int m = 0;
     while (i < cur_max) {                                 // For all maxima found
@@ -1243,19 +1230,19 @@ static bool sweep(bool break_on_operation)
       }
       i++;
     }
-    while (m < MARKERS_MAX) {
+    while (m < MARKERS_MAX) {                  // Insufficient maxima found
       if (markers[m].enabled && markers[m].mtype & M_TRACKING) {    // More available markers found
-        markers[m].index = 0;                             // Enabled but no max
+        markers[m].index = 0;                             // Enabled but no max so set to left most frequency
         markers[m].frequency = frequencies[markers[m].index];
       }
       m++;                              // Try next marker
     }
 #ifdef __MEASURE__
-    if (setting.measurement == M_IMD && markers[0].index > 10) {
+    if (setting.measurement == M_IMD && markers[0].index > 10) {                    // IMD measurement
       markers[1].enabled = search_maximum(1, frequencies[markers[0].index]*2, 8);
       markers[2].enabled = search_maximum(2, frequencies[markers[0].index]*3, 12);
       markers[3].enabled = search_maximum(3, frequencies[markers[0].index]*4, 16);
-    } else if (setting.measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) {
+    } else if (setting.measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) { // IOP measurement
       int l = markers[0].index;
       int r = markers[1].index;
       if (r < l) {
@@ -1268,22 +1255,22 @@ static bool sweep(bool break_on_operation)
       uint32_t rf = frequencies[r];
       markers[2].enabled = search_maximum(2, lf - (rf - lf), 12);
       markers[3].enabled = search_maximum(3, rf + (rf - lf), 12);
-    } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {
+    } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    // Phase noise measurement
       markers[1].index =  markers[0].index + (setting.mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
-    } else if (setting.measurement == M_STOP_BAND  && markers[0].index > 10) {
+    } else if (setting.measurement == M_STOP_BAND  && markers[0].index > 10) {      // Stop band measurement
       markers[1].index =  marker_search_left_min(markers[0].index);
       if (markers[1].index < 0) markers[1].index = 0;
       markers[2].index =  marker_search_right_min(markers[0].index);
       if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
-    } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {
+    } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {      // Pass band measurement
       int t = markers[0].index;
       float v = actual_t[t];
-      while (t > 0 && actual_t[t] > v - 3.0)
+      while (t > 0 && actual_t[t] > v - 3.0)                                        // Find left -3dB point
         t --;
       if (t > 0)
         markers[1].index = t;
       t = markers[0].index;
-      while (t < setting._sweep_points - 1 && actual_t[t] > v - 3.0)
+      while (t < setting._sweep_points - 1 && actual_t[t] > v - 3.0)                // find right -3dB point
         t ++;
       if (t < setting._sweep_points - 1 )
         markers[2].index = t;
@@ -1299,22 +1286,9 @@ static bool sweep(bool break_on_operation)
     markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
 #endif
     min_level = temp_min_level;
-#if 0                           // Auto ref level setting
-    int scale = setting.scale;
-    int rp = GetRepos();
-    if (scale > 0 && peakLevel > rp && peakLevel - min_level < (NGRIDY-1) * scale ) {
-      set_reflevel((((int)(peakLevel/scale)) + 1) * scale);
-    }
-    if (scale > 0 && min_level < rp - NGRIDY*scale && peakLevel - min_level < (NGRIDY-1) * scale ) {
-      int new_rp = (((int)((min_level + NGRIDY*scale)/scale)) - 1) * scale;
-      if (new_rp < rp)
-        set_reflevel(new_rp);
-    }
-
-#endif
   }
   //    redraw_marker(peak_marker, FALSE);
-  STOP_PROFILE;
+//  STOP_PROFILE;
   palSetPad(GPIOB, GPIOB_LED);
   return true;
 }
