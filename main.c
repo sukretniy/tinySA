@@ -158,7 +158,7 @@ static THD_FUNCTION(Thread1, arg)
     ui_process();
     // Process collected data, calculate trace coordinates and plot only if scan
     // completed
-    if (sweep_mode & SWEEP_ENABLE && completed) {
+    if (/* sweep_mode & SWEEP_ENABLE && */ completed) {
 #ifdef __VNA__
       if ((domain_mode & DOMAIN_MODE) == DOMAIN_TIME) transform_domain();
 #endif	  

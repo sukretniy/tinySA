@@ -475,7 +475,7 @@ void set_trigger(float trigger)
 void set_scale(float s) {
   setting.scale = s;
   if (setting.unit == U_VOLT || setting.unit == U_MWATT) {
-    set_reflevel(9 * s);
+    set_reflevel(NGRIDY * s);
   }
   set_trace_scale(0, s);
   set_trace_scale(1, s);
@@ -517,7 +517,12 @@ void apply_settings(void)
   set_switches(setting.mode);
   SI4432_SetReference(setting.refer);
   update_rbw();
-  if (setting.step_delay < 2){
+  if (setting.frequency_step == 0.0) {
+    if (setting.step_delay <= 1)
+      actualStepDelay = 0;
+    else
+      actualStepDelay = setting.step_delay;
+  } else if (setting.step_delay < 2){
     if (actual_rbw > 200.0)        actualStepDelay =  400;
     else if (actual_rbw > 90.0)    actualStepDelay =  500;
     else if (actual_rbw > 75.0)    actualStepDelay =  550;
@@ -667,23 +672,38 @@ case M_GENHIGH: // Direct output from 1
 
 void update_rbw(void)
 {
-  setting.vbw = (setting.frequency_step)/1000.0;
-  actual_rbw = setting.rbw;
-//  float old_rbw = actual_rbw;
-  if (actual_rbw == 0)
-    actual_rbw = 2*setting.vbw;
-  if (actual_rbw < 2.6)
-    actual_rbw = 2.6;
-  if (actual_rbw > 600)
-    actual_rbw = 600;
+  if (setting.frequency_step > 0) {
+    setting.vbw = (setting.frequency_step)/1000.0;
+    actual_rbw = setting.rbw;
+    //  float old_rbw = actual_rbw;
+    if (actual_rbw == 0)
+      actual_rbw = 2*setting.vbw;
+    if (actual_rbw < 2.6)
+      actual_rbw = 2.6;
+    if (actual_rbw > 600)
+      actual_rbw = 600;
 
-  SI4432_Sel =  MODE_SELECT(setting.mode);
-  actual_rbw = SI4432_SET_RBW(actual_rbw);
+    SI4432_Sel =  MODE_SELECT(setting.mode);
+    actual_rbw = SI4432_SET_RBW(actual_rbw);
 
-  vbwSteps = ((int)(2 * setting.vbw / actual_rbw));
+    vbwSteps = ((int)(2 * setting.vbw / actual_rbw));
 
-  if (vbwSteps < 1)
+    if (vbwSteps < 1)
+      vbwSteps = 1;
+  } else {
+    actual_rbw = setting.rbw;
+    if (actual_rbw == 0)
+      actual_rbw = 600;
+    if (actual_rbw < 2.6)
+      actual_rbw = 2.6;
+    if (actual_rbw > 600)
+      actual_rbw = 600;
+
+    SI4432_Sel =  MODE_SELECT(setting.mode);
+    actual_rbw = SI4432_SET_RBW(actual_rbw);
+    setting.vbw = actual_rbw;
     vbwSteps = 1;
+  }
   dirty = true;
 }
 
@@ -892,12 +912,13 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {
     int p = setting.attenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
-    if (modulation_counter == 10) {
+    if (modulation_counter == 4) {
       modulation_counter = 0;
     } else {
       modulation_counter++;
     }
-    chThdSleepMicroseconds(250);
+    chThdSleepMicroseconds(200);
+
   } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) {
       SI4432_Sel = 1;
       int offset;
@@ -915,7 +936,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
         modulation_counter = -2;
       else
         modulation_counter++;
-      chThdSleepMicroseconds(250);
+      chThdSleepMicroseconds(200);
   }
   float RSSI = -150.0;
   int t = 0;
@@ -1022,7 +1043,12 @@ again:
       if (subRSSI < setting.trigger)
         goto wait;
       actualStepDelay = old_actual_step_delay; // Trigger happened, restore step delay
+      pause_sweep();                    // Trigger once!!!!!!!
     }
+    if (setting.trigger != -150.0 && setting.frequency_step > 0 && subRSSI > setting.trigger) {
+      pause_sweep();                    // Stop scanning if above trigger
+    }
+
 #ifdef __SPUR__
     if (setting.spur == 1) {                           // First pass
       spur_RSSI = subRSSI;
@@ -1052,11 +1078,13 @@ static bool sweep(bool break_on_operation)
 {
   float RSSI;
   int16_t downslope = true;
+  START_PROFILE;
   palClearPad(GPIOB, GPIOB_LED);
   temppeakLevel = -150;
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
   for (int i = 0; i < sweep_points; i++) {
+
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);
 
     // back to toplevel to handle ui operation
@@ -1180,7 +1208,7 @@ static bool sweep(bool break_on_operation)
         while (t > 10) { m *= 10; t/=10; }
         while (t < 1)  { m /= 10; t*=10; }
         t = round(t);
-        set_scale(t*m / 9);
+        set_scale(t*m / NGRIDY);
         set_reflevel(t*m);
       }
     } else {
@@ -1274,11 +1302,11 @@ static bool sweep(bool break_on_operation)
 #if 0                           // Auto ref level setting
     int scale = setting.scale;
     int rp = GetRepos();
-    if (scale > 0 && peakLevel > rp && peakLevel - min_level < 8 * scale ) {
+    if (scale > 0 && peakLevel > rp && peakLevel - min_level < (NGRIDY-1) * scale ) {
       set_reflevel((((int)(peakLevel/scale)) + 1) * scale);
     }
-    if (scale > 0 && min_level < rp - 9*scale && peakLevel - min_level < 8 * scale ) {
-      int new_rp = (((int)((min_level + 9*scale)/scale)) - 1) * scale;
+    if (scale > 0 && min_level < rp - NGRIDY*scale && peakLevel - min_level < (NGRIDY-1) * scale ) {
+      int new_rp = (((int)((min_level + NGRIDY*scale)/scale)) - 1) * scale;
       if (new_rp < rp)
         set_reflevel(new_rp);
     }
@@ -1286,6 +1314,7 @@ static bool sweep(bool break_on_operation)
 #endif
   }
   //    redraw_marker(peak_marker, FALSE);
+  STOP_PROFILE;
   palSetPad(GPIOB, GPIOB_LED);
   return true;
 }
@@ -1454,7 +1483,7 @@ void draw_cal_status(void)
 
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
-  y += YSTEP*2;
+  y += YSTEP + YSTEP/2 ;
   plot_printf(buf, BLEN, "%f/",setting.scale);
   ili9341_drawstring(buf, x, y);
 
@@ -1463,7 +1492,7 @@ void draw_cal_status(void)
   else
     color = BRIGHT_COLOR_GREEN;
   ili9341_set_foreground(color);
-  y += YSTEP*2;
+  y += YSTEP + YSTEP/2 ;
   ili9341_drawstring("Attn:", x, y);
 
   y += YSTEP;
@@ -1473,7 +1502,7 @@ void draw_cal_status(void)
 
   if (setting.average>0) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
-    y += YSTEP*2;
+    y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Calc:", x, y);
 
     y += YSTEP;
@@ -1484,7 +1513,7 @@ void draw_cal_status(void)
 #ifdef __SPUR__
   if (setting.spur) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
-    y += YSTEP*2;
+    y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Spur:", x, y);
 
     y += YSTEP;
@@ -1499,7 +1528,7 @@ void draw_cal_status(void)
     color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
 
-  y += YSTEP*2;
+  y += YSTEP + YSTEP/2 ;
   ili9341_drawstring("RBW:", x, y);
 
   y += YSTEP;
@@ -1507,15 +1536,16 @@ void draw_cal_status(void)
   buf[5]=0;
   ili9341_drawstring(buf, x, y);
 
-  ili9341_set_foreground(DEFAULT_FG_COLOR);
-  y += YSTEP*2;
-  ili9341_drawstring("VBW:", x, y);
+  if (setting.frequency_step > 0) {
+    ili9341_set_foreground(DEFAULT_FG_COLOR);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("VBW:", x, y);
 
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%dkHz",(int)setting.vbw);
-  buf[5]=0;
-  ili9341_drawstring(buf, x, y);
-
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%dkHz",(int)setting.vbw);
+    buf[5]=0;
+    ili9341_drawstring(buf, x, y);
+  }
   if (dirty)
     color = BRIGHT_COLOR_RED;
   else if (setting.step_delay)
@@ -1523,9 +1553,9 @@ void draw_cal_status(void)
   else
     color = DEFAULT_FG_COLOR;
 
-    ili9341_set_foreground(color);
+  ili9341_set_foreground(color);
 
-  y += YSTEP*2;
+  y += YSTEP + YSTEP/2 ;
   ili9341_drawstring("Scan:", x, y);
 
   y += YSTEP;
@@ -1545,7 +1575,7 @@ void draw_cal_status(void)
 
   if (setting.refer >= 0) {
     ili9341_set_foreground(BRIGHT_COLOR_RED);
-    y += YSTEP*2;
+    y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Ref:", x, y);
 
     y += YSTEP;
@@ -1556,7 +1586,7 @@ void draw_cal_status(void)
 
   if (setting.offset != 0.0) {
     ili9341_set_foreground(BRIGHT_COLOR_RED);
-    y += YSTEP*2;
+    y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Amp:", x, y);
 
     y += YSTEP;
@@ -1565,8 +1595,23 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
+  if (setting.trigger != -150.0) {
+//    if (is_paused()) {
+      ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+//    } else {
+//      ili9341_set_foreground(BRIGHT_COLOR_RED);
+//    }
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("TRIG:", x, y);
+
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%ddBm",(int)setting.trigger);
+    buf[5]=0;
+    ili9341_drawstring(buf, x, y);
+  }
+
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
-  y += YSTEP*2;
+  y += YSTEP + YSTEP/2 ;
   if (MODE_LOW(setting.mode))
       ili9341_drawstring_7x13("M:L", x, y);
   else
