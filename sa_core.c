@@ -464,6 +464,7 @@ void set_trigger(float trigger)
   } else {
     trace[TRACE_STORED].enabled = false;
   }
+  sweep_mode = SWEEP_ENABLE;
   dirty = true;
 }
 
@@ -502,6 +503,11 @@ void apply_settings(void)
     PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
     PE4302_Write_Byte(setting.attenuate * 2);
+  if (setting.modulation == MO_NONE) {
+    SI4432_Write_Byte(0x73, 0);  // Back to nominal offset
+    SI4432_Write_Byte(0x74, 0);
+  }
+
 #if 0
   if (setting.modulation == MO_NFM ) {
     SI4432_Sel = 1;
@@ -1031,6 +1037,7 @@ again:
     }
     if (setting.trigger != -150.0 && setting.frequency_step > 0 && subRSSI > setting.trigger) {
       pause_sweep();                    // Stop scanning after completing this sweep if above trigger
+      draw_cal_status();                // To show trigger happened
     }
 
 #ifdef __SPUR__
@@ -1570,11 +1577,11 @@ void draw_cal_status(void)
   }
 
   if (setting.trigger != -150.0) {
-//    if (is_paused()) {
+    if (is_paused()) {
       ili9341_set_foreground(BRIGHT_COLOR_GREEN);
-//    } else {
-//      ili9341_set_foreground(BRIGHT_COLOR_RED);
-//    }
+    } else {
+      ili9341_set_foreground(BRIGHT_COLOR_RED);
+    }
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("TRIG:", x, y);
 
