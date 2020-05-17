@@ -47,7 +47,8 @@ void reset_settings(int m)
   setting.measurement = M_OFF;
   setting.frequency_IF = 433800000;
   setting.offset = 0.0;
-  setting.trigger = -150.0;
+  setting.trigger = T_AUTO;
+  setting.trigger_level = -150.0;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
 #ifdef __SPUR__
@@ -454,15 +455,25 @@ void set_offset(float offset)
   dirty = true;
 }
 
-void set_trigger(float trigger)
+void set_trigger_level(float trigger_level)
+{
+  setting.trigger_level = trigger_level;
+  if (setting.trigger != T_AUTO) {
+    for (int j = 0; j < setting._sweep_points; j++)
+      stored_t[j] = trigger_level;
+  }
+  dirty = true;
+}
+
+void set_trigger(int trigger)
 {
   setting.trigger = trigger;
-  if (trigger != -150.0) {
-    for (int j = 0; j < setting._sweep_points; j++)
-      stored_t[j] = trigger;
-    trace[TRACE_STORED].enabled = true;
-  } else {
+  if (trigger == T_AUTO) {
     trace[TRACE_STORED].enabled = false;
+  } else {
+    for (int j = 0; j < setting._sweep_points; j++)
+      stored_t[j] = setting.trigger_level;
+    trace[TRACE_STORED].enabled = true;
   }
   sweep_mode = SWEEP_ENABLE;
   dirty = true;
@@ -1019,7 +1030,7 @@ again:
 
     int wait_for_trigger = false;
     int old_actual_step_delay = actualStepDelay;
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger != -150.0) { // [repare for wait for trigger to happen
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // [repare for wait for trigger to happen
       wait_for_trigger = true;
       actualStepDelay = 0;      // fastest possible in trigger mode
     }
@@ -1030,14 +1041,11 @@ again:
     if (wait_for_trigger) { // wait for trigger to happen
       if (operation_requested && break_on_operation)
         break;         // abort
-      if (subRSSI < setting.trigger)
+      if (subRSSI < setting.trigger_level)
         goto wait;
       actualStepDelay = old_actual_step_delay; // Trigger happened, restore step delay
-      pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
-    }
-    if (setting.trigger != -150.0 && setting.frequency_step > 0 && subRSSI > setting.trigger) {
-      pause_sweep();                    // Stop scanning after completing this sweep if above trigger
-      draw_cal_status();                // To show trigger happened
+      if (setting.trigger == T_SINGLE)
+        pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
     }
 
 #ifdef __SPUR__
@@ -1068,8 +1076,10 @@ int16_t cur_max = 0;
 static bool sweep(bool break_on_operation)
 {
   float RSSI;
-  int16_t downslope = true;
+  int16_t downslope;
 //  START_PROFILE;
+again:
+  downslope = true;
   palClearPad(GPIOB, GPIOB_LED);
   temppeakLevel = -150;
   float temp_min_level = 100;
@@ -1177,6 +1187,17 @@ static bool sweep(bool break_on_operation)
       temp_min_level = actual_t[i];
 
   }
+
+  if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
+    if (actual_t[max_index[0]] < setting.trigger_level) {
+      goto again;
+    } else {
+      if (setting.trigger == T_SINGLE)
+        pause_sweep();                    // Stop scanning after completing this sweep if above trigger
+    }
+    scandirty = true;                // To show trigger happened
+  }
+
   if (scandirty) {
     scandirty = false;
     draw_cal_status();
@@ -1428,6 +1449,32 @@ const char *averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16"};
 const char *dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
 const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
 
+float my_round(float v)
+{
+  float m = 1;
+  int sign = 1;
+  if (v < 0) {
+    sign = -1;
+    v = -v;
+  }
+  while (v < 100) {
+    v = v * 10;
+    m = m / 10;
+  }
+  while (v > 1000) {
+    v = v / 10;
+    m = m * 10;
+  }
+  v = (int)(v+0.5);
+  v = v * m;
+  if (sign == -1) {
+    v = -v;
+  }
+  return v;
+}
+
+const char *unit_string[] = { "dBm", "dBmV", "dBuV", "V", "mW" };
+
 void draw_cal_status(void)
 {
 #define BLEN    10
@@ -1436,6 +1483,11 @@ void draw_cal_status(void)
   int x = 0;
   int y = OFFSETY;
   unsigned int color;
+  int rounding = false;
+  if (setting.unit != U_VOLT && setting.unit != U_MWATT)
+    rounding  = true;
+  const char *unit = unit_string[setting.unit];
+
 
 #define XSTEP   40
 
@@ -1449,7 +1501,10 @@ void draw_cal_status(void)
   ili9341_set_background(DEFAULT_BG_COLOR);
 
   float yMax = setting.reflevel;
-  plot_printf(buf, BLEN, "%f", yMax);
+  if (rounding)
+    plot_printf(buf, BLEN, "%d%s", (int)yMax, unit);
+  else
+    plot_printf(buf, BLEN, "%f%s", yMax, unit);
   buf[5]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
@@ -1465,7 +1520,10 @@ void draw_cal_status(void)
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2 ;
-  plot_printf(buf, BLEN, "%f/",setting.scale);
+  if (rounding)
+    plot_printf(buf, BLEN, "%d%s/",(int)setting.scale, unit);
+  else
+    plot_printf(buf, BLEN, "%f%s/",setting.scale, unit);
   ili9341_drawstring(buf, x, y);
 
   if (setting.auto_attenuation)
@@ -1571,12 +1629,12 @@ void draw_cal_status(void)
     ili9341_drawstring("Amp:", x, y);
 
     y += YSTEP;
-    plot_printf(buf, BLEN, "%fdB",setting.offset);
+    plot_printf(buf, BLEN, "%.1fdB",setting.offset);
     buf[5]=0;
     ili9341_drawstring(buf, x, y);
   }
 
-  if (setting.trigger != -150.0) {
+  if (setting.trigger != T_AUTO) {
     if (is_paused()) {
       ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     } else {
@@ -1586,7 +1644,7 @@ void draw_cal_status(void)
     ili9341_drawstring("TRIG:", x, y);
 
     y += YSTEP;
-    plot_printf(buf, BLEN, "%ddBm",(int)setting.trigger);
+    plot_printf(buf, BLEN, "%ddBm",(int)setting.trigger_level);
     buf[5]=0;
     ili9341_drawstring(buf, x, y);
   }
@@ -1600,7 +1658,10 @@ void draw_cal_status(void)
 
 
   y = HEIGHT-7 + OFFSETY;
-  plot_printf(buf, BLEN, "%f", (yMax - setting.scale * NGRIDY));
+  if (rounding)
+    plot_printf(buf, BLEN, "%d%s", (int)(yMax - setting.scale * NGRIDY), unit);
+  else
+    plot_printf(buf, BLEN, "%f%s", (yMax - setting.scale * NGRIDY), unit);
   buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)

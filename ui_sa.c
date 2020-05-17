@@ -854,6 +854,15 @@ static void menu_scale_per_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
+static void menu_trigger_cb(int item, uint8_t data)
+{
+  (void)item;
+  set_trigger(data);
+//  menu_move_back();
+  ui_mode_normal();
+  draw_cal_status();
+}
+
 #if 0
 static void choose_active_trace(void)
 {
@@ -922,6 +931,7 @@ static void menu_pause_cb(int item, uint8_t data)
   draw_menu();
 //  draw_cal_status();
 }
+
 
 //const int menu_drive_value[]={5,10,15,20};
 const char *menu_drive_text[]={"-38dBm","-35dBm","-33dBm","-30dBm","-27dBm","-24dBm","-21dBm","  -19dBm", "  -7dBm"," -4dBm"," -2dBm","  1dBm","  4dBm","  7dBm"," 10dBm"," 13dBm"};
@@ -1362,6 +1372,14 @@ static const menuitem_t menu_unit[] =
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_trigger[] = {
+  { MT_CALLBACK,T_AUTO,      "AUTO",              menu_trigger_cb},
+  { MT_CALLBACK,T_NORMAL,    "NORMAL",             menu_trigger_cb},
+  { MT_CALLBACK,T_SINGLE,    "SINGLE",             menu_trigger_cb},
+  { MT_KEYPAD,  KM_TRIGGER,   "LEVEL",            NULL},
+  { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
 
 
 static const menuitem_t menu_levelhigh[] = {
@@ -1370,8 +1388,8 @@ static const menuitem_t menu_levelhigh[] = {
   { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",            NULL},
   { MT_SUBMENU,0,           "AVER",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_OFFSET,   "\2EXTERN\0AMP",           NULL},
-  { MT_KEYPAD,  KM_TRIGGER,   "\2TRIGGER\0LEVEL",           NULL},
+  { MT_KEYPAD,  KM_OFFSET,  "\2EXTERN\0AMP",           NULL},
+  { MT_SUBMENU,  0,         "TRIGGER",           menu_trigger},
   { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1383,8 +1401,8 @@ static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,          "ATTEN",        menu_atten},
   { MT_SUBMENU,0,           "AVER",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_OFFSET,   "\2EXTERN\0AMP",           NULL},
-  { MT_KEYPAD,  KM_TRIGGER,   "\2TRIGGER\0LEVEL",           NULL},
+  { MT_KEYPAD,  KM_OFFSET,  "\2EXTERN\0AMP",           NULL},
+  { MT_SUBMENU,  0,         "TRIGGER",           menu_trigger},
   { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1528,6 +1546,10 @@ static void menu_item_modify_attribute(
     }
   } else if (menu == menu_modulation && MT_MASK(menu[item].type) == MT_CALLBACK) {
     if (data == setting.modulation){
+      mark = true;
+    }
+  } else if (menu == menu_trigger && MT_MASK(menu[item].type) == MT_CALLBACK) {
+    if (data == setting.trigger){
       mark = true;
     }
   } else if (menu == menu_display || menu == menu_displayhigh) {
@@ -1693,7 +1715,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%fdB", uistat.value);
     break;
   case KM_TRIGGER:
-    uistat.value = setting.trigger;
+    uistat.value = setting.trigger_level;
     plot_printf(uistat.text, sizeof uistat.text, "%fdB", uistat.value);
     break;
 
@@ -1776,7 +1798,7 @@ set_numeric_value(void)
     set_offset(uistat.value);
     break;
   case KM_TRIGGER:
-    set_trigger(uistat.value);
+    set_trigger_level(uistat.value);
     break;
   }
 }

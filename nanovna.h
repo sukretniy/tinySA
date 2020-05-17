@@ -564,7 +564,8 @@ typedef struct setting
   int8_t _active_marker;
   int8_t unit;
   float offset;
-  float trigger;
+  float trigger_level;
+  int trigger;
   uint32_t checksum;
 }setting_t;
 
@@ -792,7 +793,8 @@ void set_offset(float);
 void set_unit(int);
 void set_RBW(int);
 void set_switches(int);
-void set_trigger(float);
+void set_trigger_level(float);
+void set_trigger(int);
 //extern int setting_measurement;
 void self_test(int);
 //extern int setting_test;
@@ -803,4 +805,7 @@ enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND
 };
 
+enum {
+  T_AUTO, T_NORMAL, T_SINGLE, T_DONE
+};
 /*EOF*/
