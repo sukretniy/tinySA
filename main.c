@@ -2528,6 +2528,16 @@ int main(void)
   usbStart(serusbcfg.usbp, &usbcfg);
   usbConnectBus(serusbcfg.usbp);
 
+ /*
+  * Powercycle the RF part to reset SI4432
+  */
+
+  palClearPad(GPIOB, GPIO_RF_PWR);
+  chThdSleepMilliseconds(200);
+  palSetPad(GPIOB, GPIO_RF_PWR);
+  chThdSleepMilliseconds(500);
+
+
 #if 0
  /*
   * UART initialize
