@@ -916,9 +916,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   }
 
   if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {               // AM modulation
-    int p = setting.attenuate * 2 + modulation_counter;
+    int p = setting.attenuate * 2 + modulation_counter*2;
     PE4302_Write_Byte(p);
-    if (modulation_counter == 6) {  // 3dB modulation depth
+    if (modulation_counter == 4) {  // 3dB modulation depth
       modulation_counter = 0;
     } else {
       modulation_counter++;
@@ -1091,8 +1091,10 @@ again:
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
   int repeats = 1;
-  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE)
+  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE) {
     repeats = 1000; // to avoid interrupting the tone during UI processing
+    modulation_counter = 0;
+  }
   while (repeats--) {
   for (int i = 0; i < sweep_points; i++) {
 
