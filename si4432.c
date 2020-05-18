@@ -490,7 +490,7 @@ void SI4432_Init()
 //DebugLine("1 init done");
 
   SI4432_Sel = 0;
-  SI4432_Receive();// Enable receiver chain
+//  SI4432_Receive();// Enable receiver chain
 //  SI4432_Write_Byte(0x09, V0_XTAL_CAPACITANCE);// Tune the crystal
   SI4432_Set_Frequency(433700000);
   SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 output to ground
@@ -499,11 +499,13 @@ void SI4432_Init()
   SI4432_Sel = 1;
 //  SI4432_Write_Byte(0x09, V1_XTAL_CAPACITANCE);// Tune the crystal
   SI4432_Set_Frequency(443700000);
-  SI4432_Write_Byte(0x6D, 0x1C);//Set low power
-  SI4432_Transmit(0);
+  SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 output to ground
 
-  SI4432_Write_Byte(0x0D, 0xC0) ; // Set GPIO2 maximumdrive and clock output
-  SI4432_Write_Byte(0x0A, 0x02) ; // Set 10MHz output
+  //  SI4432_Write_Byte(0x6D, 0x1C);//Set low power
+//  SI4432_Transmit(0);
+
+//  SI4432_Write_Byte(0x0D, 0xC0) ; // Set GPIO2 maximumdrive and clock output
+//  SI4432_Write_Byte(0x0A, 0x02) ; // Set 10MHz output
 }
 
 void SI4432_SetReference(int freq)

@@ -918,7 +918,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {               // AM modulation
     int p = setting.attenuate * 2 + modulation_counter;
     PE4302_Write_Byte(p);
-    if (modulation_counter == 4) {
+    if (modulation_counter == 6) {  // 3dB modulation depth
       modulation_counter = 0;
     } else {
       modulation_counter++;
@@ -947,8 +947,14 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 
   float RSSI = -150.0;
   int t = 0;
-  do {                                                              // ------------- Acquisition loop ----------
-    int offs = (int)((t * 500  - vbwSteps * 250)  * actual_rbw);
+  do {           // ------------- Acquisition loop ----------
+    int offs;
+    if (vbwSteps & 1) { // Uneven steps, center
+      offs = (t - (vbwSteps >> 1)) * 500;
+    } else {            // Even, shift half step
+      offs = (t - (vbwSteps >> 1)) * 500 + 250;
+    }
+    offs = (int)(offs * actual_rbw);
     uint32_t lf = (uint32_t)(f + offs);
 #ifdef __SPUR__
     float spur_RSSI = 0;
@@ -1064,7 +1070,7 @@ again:
     t++;
     if (operation_requested && break_on_operation)       // break subscanning if requested
       break;         // abort
-  } while (t <= vbwSteps);
+  } while (t < vbwSteps);
   return(RSSI);
 }
 
@@ -1084,6 +1090,10 @@ again:
   temppeakLevel = -150;
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
+  int repeats = 1;
+  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE)
+    repeats = 1000; // to avoid interrupting the tone during UI processing
+  while (repeats--) {
   for (int i = 0; i < sweep_points; i++) {
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);
@@ -1091,10 +1101,12 @@ again:
     // back to toplevel to handle ui operation
     if (operation_requested && break_on_operation)
       return false;
-    if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_NONE) {
-      osalThreadSleepMilliseconds(10);              // Slow down sweep in output mode
+    if (MODE_OUTPUT(setting.mode)) {
+      if (setting.modulation == MO_NONE) {
+        osalThreadSleepMilliseconds(10);              // Slow down sweep in output mode
+      }
+      continue;             // Skip all other processing
     }
-
     if (MODE_INPUT(setting.mode)) {
 
       temp_t[i] = RSSI;
@@ -1314,6 +1326,7 @@ again:
     markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
 #endif
     min_level = temp_min_level;
+  }
   }
   //    redraw_marker(peak_marker, FALSE);
 //  STOP_PROFILE;
