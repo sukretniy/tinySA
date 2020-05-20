@@ -30,7 +30,7 @@
 #define __MEASURE__
 #define __SELFTEST__
 #define __CALIBRATE__
-#define __ULTRA__             // Add harmonics mode on low input.
+//#define __ULTRA__             // Add harmonics mode on low input.
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
 
@@ -121,7 +121,7 @@ enum stimulus_type {
 void update_frequencies(void);
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
-
+void my_microsecond_delay(int t);
 double my_atof(const char *p);
 int shell_printf(const char *fmt, ...);
 

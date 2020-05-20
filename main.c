@@ -2441,6 +2441,17 @@ static DACConfig dac1cfg1 = {
 };
 #endif
 
+
+static const GPTConfig gpt4cfg = {
+  1000000, // 1 MHz timer clock.
+  NULL, // No callback
+  0, 0
+};
+
+void my_microsecond_delay(int t)
+{
+  gptPolledDelay(&GPTD14, t); // t us delay
+}
 #if 0
 /*
  * UART driver configuration structure.
@@ -2577,6 +2588,12 @@ int main(void)
  * SPI LCD Initialize
  */
   ili9341_init();
+
+/*
+ *  Initiate 1 micro second timer
+ */
+  gptStart(&GPTD14, &gpt4cfg);
+  gptPolledDelay(&GPTD14, 10); // 10 us delay
 
 /* restore config */
   config_recall();

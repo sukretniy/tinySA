@@ -914,7 +914,8 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     } else {
       modulation_counter++;
     }
-    chThdSleepMicroseconds(200);
+    my_microsecond_delay(200);
+//    chThdSleepMicroseconds(200);
 
   } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) { //FM modulation
       SI4432_Sel = 1;
@@ -933,6 +934,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
         modulation_counter = 0;
       else
         modulation_counter++;
+      my_microsecond_delay(200);
 //      chThdSleepMicroseconds(200);
   }
 
@@ -2068,7 +2070,7 @@ void self_test(int test)
     reset_settings(M_LOW);
     int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
-    setting.step_delay = 6000;
+    setting.step_delay = 8000;
     for (int j= 0; j < 57; j++ ) {
       setting.step_delay = setting.step_delay * 4/3;
       setting.rbw = SI4432_force_RBW(j);
@@ -2083,7 +2085,7 @@ void self_test(int test)
       }
 
       shell_printf("Start level = %f, ",peakLevel);
-      while (setting.step_delay > 100 && peakLevel > saved_peakLevel - 1) {
+      while (setting.step_delay > 10 && peakLevel > saved_peakLevel - 1) {
         setting.step_delay = setting.step_delay * 3 / 4;
         test_prepare(i);
         //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));

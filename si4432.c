@@ -377,7 +377,8 @@ float SI4432_RSSI(uint32_t i, int s)
 #endif
 //START_PROFILE
     SI4432_Sel = s;
-    chThdSleepMicroseconds(actualStepDelay);
+    my_microsecond_delay(actualStepDelay);
+    // chThdSleepMicroseconds(actualStepDelay);
     i = setting.repeat;
     RSSI_RAW  = 0;
     while (i-->0)
