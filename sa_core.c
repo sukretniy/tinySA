@@ -67,7 +67,7 @@ void reset_settings(int m)
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
-    minFreq = 870000000;
+    minFreq = 684000000;
     if (setting.harmonic * 240000000 >  870000000)
       minFreq = setting.harmonic * 240000000;
     if (setting.harmonic == 0)
@@ -378,12 +378,12 @@ void SetSpur(int v)
 void set_harmonic(int h)
 {
   setting.harmonic = h;
-  minFreq = 870000000;
-  if (setting.harmonic * 240000000 >  870000000)
-    minFreq = setting.harmonic * 240000000;
+  minFreq = 684000000.0;
+  if (setting.harmonic * 240000000+434000000 >  minFreq)
+    minFreq = setting.harmonic * 240000000.0+434000000.0;
   maxFreq = 4360000000;
-  if (setting.harmonic != 0 && 960000000.0 * setting.harmonic < 4360000000.0)
-    maxFreq = ((uint32_t)960000000) * (uint32_t)setting.harmonic;
+  if (setting.harmonic != 0 && (960000000.0 * setting.harmonic + 434000000.0 )< 4360000000.0)
+    maxFreq = (960000000.0 * setting.harmonic + 434000000.0 );
   set_sweep_frequency(ST_START, (uint32_t) minFreq);
   set_sweep_frequency(ST_STOP, (uint32_t) maxFreq);
 }
@@ -933,7 +933,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
         modulation_counter = 0;
       else
         modulation_counter++;
-      chThdSleepMicroseconds(200);
+//      chThdSleepMicroseconds(200);
   }
 
   float RSSI = -150.0;
@@ -990,11 +990,10 @@ again:
 //      else
       if (lf > 2446000000 )
         set_freq (1, local_IF/5 + lf/5);
-      else
-//        if (lf > 1486000000)
+      else if (lf >= 1394000000)
         set_freq (1, local_IF/3 + lf/3);
-//      else
-//        setFreq (1, local_IF/2 + lf/2);
+      else
+        set_freq (1, local_IF + lf);
     } else
 #endif
     {                                           // Else set LO ('s)

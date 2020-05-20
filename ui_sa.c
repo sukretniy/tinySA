@@ -1238,7 +1238,10 @@ static const menuitem_t menu_settings2[] =
   { MT_CALLBACK, 4,     "\2BELOW\0IF",          menu_settings2_cb},
   { MT_KEYPAD, KM_DECAY,"\2HOLD\0TIME",         NULL},
   { MT_KEYPAD, KM_NOISE,"\2NOISE\0LEVEL",       NULL},
-  { MT_KEYPAD, KM_10MHZ,"\00210MHZ\0ACTUAL",    NULL},
+#ifdef __ULTRA__
+  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
+#endif
+//  { MT_KEYPAD, KM_10MHZ,"\00210MHZ\0ACTUAL",    NULL},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1261,9 +1264,6 @@ static const menuitem_t menu_settings[] =
   { MT_SUBMENU,0,               "\2SCAN\0SPEED",         menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "REPEATS",          NULL},
   { MT_SUBMENU,0,               "\2MIXER\0DRIVE",      menu_drive},
-#ifdef __ULTRA__
-  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
-#endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",    menu_settings2},
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
