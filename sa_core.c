@@ -67,13 +67,8 @@ void reset_settings(int m)
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
-    minFreq = 684000000;
-    if (setting.harmonic * 240000000 >  870000000)
-      minFreq = setting.harmonic * 240000000;
-    if (setting.harmonic == 0)
-      maxFreq = 4360000000;
-    else
-      maxFreq = 960000000 * setting.harmonic;
+    minFreq = 674000000;
+    maxFreq = 4300000000;
     set_sweep_frequency(ST_START, (uint32_t) minFreq);
     set_sweep_frequency(ST_STOP, (uint32_t) maxFreq);
     setting.attenuate = 0;
@@ -990,12 +985,20 @@ again:
 //      if (lf > 3406000000 )
 //        setFreq (1, local_IF/5 + lf/5);
 //      else
-      if (lf > 2446000000 )
-        set_freq (1, local_IF/5 + lf/5);
-      else if (lf >= 1394000000)
-        set_freq (1, local_IF/3 + lf/3);
-      else
-        set_freq (1, local_IF + lf);
+      if (setting.spur != 1) {  // Left of tables
+        if (lf > 3250000000 )
+          set_freq (1, lf/5 - local_IF/5);
+        if (lf > 1250000000 )
+          set_freq (1, lf/3 - local_IF/3);
+        else
+          set_freq (1,  lf - local_IF);
+
+      } else {              // Right of tables
+        if (lf >= 2350000000)
+          set_freq (1,  lf/5 + local_IF/5);
+        else
+          set_freq (1, lf/3 + local_IF/3);
+      }
     } else
 #endif
     {                                           // Else set LO ('s)
