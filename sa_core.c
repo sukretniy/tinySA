@@ -1561,7 +1561,7 @@ void draw_cal_status(void)
   }
 #ifdef __SPUR__
   if (setting.spur) {
-    ili9341_set_foreground(BRIGHT_COLOR_BLUE);
+    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Spur:", x, y);
 
@@ -1659,7 +1659,11 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
-  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+  if (level_is_calibrated())
+    color = BRIGHT_COLOR_GREEN;
+  else
+    color = BRIGHT_COLOR_RED;
+  ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2 ;
   if (MODE_LOW(setting.mode))
       ili9341_drawstring_7x13("M:L", x, y);
@@ -2137,8 +2141,8 @@ void self_test(int test)
 
 void reset_calibration(void)
 {
-  config.high_level_offset = 0;
-  config.low_level_offset = 0;
+  config.high_level_offset = 100;
+  config.low_level_offset = 100;
 }
 
 #define CALIBRATE_RBWS  1
