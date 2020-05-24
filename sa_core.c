@@ -49,6 +49,7 @@ void reset_settings(int m)
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
   setting.trigger_level = -150.0;
+  setting.linearity_step = 0;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
 #ifdef __SPUR__
@@ -140,6 +141,14 @@ void set_noise(int d)
 void set_measurement(int m)
 {
   setting.measurement = m;
+  if (m == M_LINEARITY) {
+    trace[TRACE_STORED].enabled = true;
+    for (int j = 0; j < setting._sweep_points; j++)
+      stored_t[j] = -150;
+    setting.linearity_step = 0;
+    setting.attenuate = 29;
+    setting.auto_attenuation = false;
+  }
   dirty = true;
 }
 void set_drive(int d)
@@ -498,6 +507,7 @@ void set_mode(int m)
   if (m == 6)
     m = M_ULTRA;
 #endif
+  dirty = true;
   if (setting.mode == m)
     return;
   reset_settings(m);
@@ -561,6 +571,10 @@ void set_freq(int V, unsigned long freq)
   if (old_freq[V] != freq) {
     if (V <= 1) {
       SI4432_Sel = V;
+      if (freq < 240000000 || freq > 960000000) {
+        old_freq[V] = freq + 1;
+        return;
+      }
       SI4432_Set_Frequency(freq);
 #ifdef __ULTRA_SA__
     } else {
@@ -1078,6 +1092,8 @@ static bool sweep(bool break_on_operation)
 {
   float RSSI;
   int16_t downslope;
+//  if (setting.mode== -1)
+//    return;
 //  START_PROFILE;
 again:
   downslope = true;
@@ -1325,6 +1341,13 @@ again:
     min_level = temp_min_level;
   }
   }
+  if (setting.measurement == M_LINEARITY && setting.linearity_step < setting._sweep_points) {
+    setting.attenuate = 29 - setting.linearity_step * 30 / 290;
+    dirty = true;
+    stored_t[setting.linearity_step] = peakLevel;
+    setting.linearity_step++;
+  }
+
   //    redraw_marker(peak_marker, FALSE);
 //  STOP_PROFILE;
   palSetPad(GPIOB, GPIOB_LED);

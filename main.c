@@ -128,8 +128,10 @@ static THD_FUNCTION(Thread1, arg)
   (void)arg;
   chRegSetThreadName("sweep");
 
+  bool completed = false;
+  ui_process();
+
   while (1) {
-    bool completed = false;
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
 //      if (dirty)
         completed = sweep(true);
@@ -145,7 +147,8 @@ static THD_FUNCTION(Thread1, arg)
       calibrate();
       sweep_mode = SWEEP_ENABLE;
     } else {
-      __WFI();
+//      if (setting.mode != -1)
+        __WFI();
     }
     // Run Shell command in sweep thread
     if (shell_function) {

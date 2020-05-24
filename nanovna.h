@@ -566,6 +566,7 @@ typedef struct setting
   float offset;
   float trigger_level;
   int trigger;
+  int linearity_step;
   uint32_t checksum;
 }setting_t;
 
@@ -802,7 +803,7 @@ void wait_user(void);
 void calibrate(void);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY
 };
 
 enum {

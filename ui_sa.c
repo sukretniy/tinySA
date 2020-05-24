@@ -715,6 +715,10 @@ static void menu_measure_cb(int item, uint8_t data)
 //      SetAverage(4);
 
       break;
+    case M_LINEARITY:
+      set_measurement(M_LINEARITY);
+      ui_mode_normal();
+      break;
   }
   kp_help_text = NULL;
 #endif
@@ -1270,12 +1274,13 @@ static const menuitem_t menu_settings[] =
 };
 
 static const menuitem_t menu_measure[] = {
-  { MT_CALLBACK, M_OFF,         "OFF",      menu_measure_cb},
-  { MT_CALLBACK, M_IMD,         "MARMONICS",menu_measure_cb},
-  { MT_CALLBACK, M_OIP3,        "OIP3",     menu_measure_cb},
-  { MT_CALLBACK, M_PHASE_NOISE, "\2PHASE\0NOISE",menu_measure_cb},
-  { MT_CALLBACK, M_STOP_BAND, "\2STOP\0BAND",menu_measure_cb},
-  { MT_CALLBACK, M_PASS_BAND, "\2PASS\0BAND",menu_measure_cb},
+  { MT_CALLBACK, M_OFF,         "OFF",              menu_measure_cb},
+  { MT_CALLBACK, M_IMD,         "MARMONICS",        menu_measure_cb},
+  { MT_CALLBACK, M_OIP3,        "OIP3",             menu_measure_cb},
+  { MT_CALLBACK, M_PHASE_NOISE, "\2PHASE\0NOISE",   menu_measure_cb},
+  { MT_CALLBACK, M_STOP_BAND,   "\2STOP\0BAND",     menu_measure_cb},
+  { MT_CALLBACK, M_PASS_BAND,   "\2PASS\0BAND",     menu_measure_cb},
+  { MT_CALLBACK, M_LINEARITY,   "LINEARITY",        menu_measure_cb},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
