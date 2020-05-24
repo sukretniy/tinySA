@@ -2075,6 +2075,7 @@ void self_test(int test)
     // RBW step time search
     in_selftest = true;
     reset_settings(M_LOW);
+    ui_mode_normal();
     int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
     setting.step_delay = 8000;
@@ -2083,10 +2084,12 @@ void self_test(int test)
       setting.rbw = SI4432_force_RBW(j);
       shell_printf("RBW = %d, ",setting.rbw);
       test_prepare(i);
+      set_sweep_frequency(ST_SPAN, (int32_t)(setting.rbw * 10000));
+
       test_acquire(i);                        // Acquire test
       test_validate(i);                       // Validate test
       float saved_peakLevel = peakLevel;
-      if (peakLevel < -30) {
+      if (peakLevel < -35) {
         shell_printf("Peak level too low, abort\n\r");
         return;
       }
@@ -2096,6 +2099,7 @@ void self_test(int test)
         setting.step_delay = setting.step_delay * 3 / 4;
         test_prepare(i);
         //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
+        set_sweep_frequency(ST_SPAN, (int32_t)(setting.rbw * 10000));
         test_acquire(i);                        // Acquire test
         test_validate(i);                       // Validate test
         //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
