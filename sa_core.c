@@ -1850,14 +1850,19 @@ int validate_peak_below(int i, float margin) {
 
 int validate_below(int tc, int from, int to) {
   int status = TS_PASS;
+  float sum = 0;
+  int sum_count = 0;
   for (int j = from; j < to; j++) {
-    if (actual_t[j] > stored_t[j] - 5)
-      status = TS_CRITICAL;
-    else if (actual_t[j] > stored_t[j]) {
+    sum += actual_t[j];
+    sum_count++;
+    if (actual_t[j] > stored_t[j]) {
       status = TS_FAIL;
       break;
     }
   }
+  sum = sum / sum_count;
+  if (sum > stored_t[from] - 5)
+    status = TS_CRITICAL;
   if (status != TS_PASS)
     test_fail_cause[tc] = "Above ";
   return(status);
@@ -2142,7 +2147,9 @@ void self_test(int test)
     }
     show_test_info = TRUE;
     int i=0;
-    while (test_case[i].kind != TC_END) {
+    if (setting.test_argument > 0)
+      i=setting.test_argument-1;
+    do {
       setting.frequency_IF = old_IF;
       test_prepare(i);
       test_acquire(i);                        // Acquire test
@@ -2151,7 +2158,7 @@ void self_test(int test)
         wait_user();
       }
       i++;
-    }
+    } while (test_case[i].kind != TC_END && setting.test_argument == 0 );
     ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     ili9341_drawstring_7x13("Self test complete", 50, 200);
     ili9341_drawstring_7x13("Touch screen to continue", 50, 215);

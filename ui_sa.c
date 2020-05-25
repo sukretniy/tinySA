@@ -543,6 +543,7 @@ static void menu_config_cb(int item, uint8_t data)
     menu_move_back();
     ui_mode_normal();
     setting.test = 0;
+    setting.test_argument = 0;
     sweep_mode = SWEEP_SELFTEST;
     break;
   case 4:

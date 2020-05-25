@@ -567,6 +567,7 @@ typedef struct setting
   float trigger_level;
   int trigger;
   int linearity_step;
+  int test_argument;
   uint32_t checksum;
 }setting_t;
 

@@ -146,11 +146,15 @@ VNA_SHELL_FUNCTION(cmd_y)
 
 VNA_SHELL_FUNCTION(cmd_selftest)
 {
-  if (argc != 1) {
-    shell_printf("usage: selftest (1-3)\r\n");
+  if (argc < 1 || argc > 2) {
+    shell_printf("usage: selftest (1-3) [arg]\r\n");
     return;
   }
   setting.test = my_atoi(argv[0]);
+  if (argc == 1)
+    setting.test_argument = 0;
+  else
+    setting.test_argument = my_atoi(argv[1]);
   sweep_mode = SWEEP_SELFTEST;
 }
 
