@@ -579,11 +579,9 @@ extern uint32_t frequencies[POINTS_COUNT];
 
 #if 1
 #define SAVEAREA_MAX 9
-// Begin addr                   0x08018000
-#define SAVE_CONFIG_AREA_SIZE   0x00000800
 // config save area
 #define SAVE_CONFIG_ADDR        0x0801B000
-// properties_t save area
+// setting_t save area
 #define SAVE_PROP_CONFIG_0_ADDR 0x0801B800
 #define SAVE_PROP_CONFIG_1_ADDR 0x0801C000
 #define SAVE_PROP_CONFIG_2_ADDR 0x0801C800
@@ -593,6 +591,9 @@ extern uint32_t frequencies[POINTS_COUNT];
 #define SAVE_PROP_CONFIG_6_ADDR 0x0801E800
 #define SAVE_PROP_CONFIG_7_ADDR 0x0801F000
 #define SAVE_PROP_CONFIG_8_ADDR 0x0801F800
+
+#define SAVE_CONFIG_AREA_SIZE   (0x0801F800 -  SAVE_CONFIG_ADDR)     // Should include all save slots
+
 #else
 #define SAVEAREA_MAX 4
 // Begin addr                   0x0801C000

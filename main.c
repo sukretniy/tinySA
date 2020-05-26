@@ -872,7 +872,7 @@ void load_default_properties(void)
   setting._domain_mode     = 0;
   setting._marker_smith_format = MS_RLC;
 #endif
-  reset_settings(-1);
+  reset_settings(M_LOW);
 //Checksum add on caldata_save
 //setting.checksum = 0;
 }
@@ -2600,8 +2600,7 @@ int main(void)
 
 /* restore config */
   config_recall();
-  if (caldata_recall(0) == -1 || setting.mode == -1) {
-    setting.mode = -1;       // must be done to setup the scanning stuff
+  if (caldata_recall(0) == -1) {
     setting.refer = -1;
     load_default_properties();
   }
@@ -2619,6 +2618,7 @@ int main(void)
 /* initial frequencies */
   update_frequencies();
 
+
 #ifdef __VNA__
 /*
  * I2S Initialize
@@ -2635,10 +2635,20 @@ int main(void)
   plot_init();
 
   if (setting.mode != -1) {
-    menu_mode_cb(setting.mode+1,0);
+    menu_mode_cb(setting.mode,0);
     ui_mode_normal();       // Do not show menu when autostarting mode
   }
   redraw_frame();
+
+  set_mode(M_HIGH);
+  sweep(true);
+  osalThreadSleepMilliseconds(100);
+
+  set_mode(M_LOW);
+  sweep(true);
+
+
+
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
   while (1) {

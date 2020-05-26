@@ -443,12 +443,12 @@ enum {
   MT_TITLE,
   MT_CLOSE,
   MT_KEYPAD,
+  MT_ICON = 0x10,
   MT_LOW = 0x40,                // Only applicable to low mode
   MT_FORM = 0x80,               // Large button menu
 };
 #define MT_BACK     0x40
 #define MT_LEAVE    0x20
-#define MT_ICON     0x10
 #define MT_MASK(x) (0xF & (x))
 
 typedef void (*menuaction_cb_t)(int item, uint8_t data);
@@ -1116,7 +1116,7 @@ const menuitem_t menu_top[] = {
 
 #define MENU_STACK_DEPTH_MAX 5
 const menuitem_t *menu_stack[MENU_STACK_DEPTH_MAX] = {
-  menu_mode, NULL, NULL, NULL
+  menu_top, NULL, NULL, NULL
 };
 
 static void
@@ -1210,7 +1210,7 @@ menu_invoke(int item)
     if (cb == NULL)
       return;
     (*cb)(item, menu->data);
-    if (!(menu->type & MT_FORM))
+//    if (!(menu->type & MT_FORM))
       draw_cal_status();
     break;
   }

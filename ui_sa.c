@@ -422,19 +422,25 @@ extern const menuitem_t  menu_topultra[];
  void menu_mode_cb(int item, uint8_t data)
 {
   (void)data;
-  set_mode(item-1);
+  set_mode(item);
 //  draw_cal_status();
   switch (item) {
+  case 0:
+//    if (setting.mode != M_LOW)
+//      set_mode(M_LOW);
+    menu_move_back();
+    ui_mode_normal();
+    break;
   case 1:
-    menu_push_submenu(menu_top);
+//    if (setting.mode != M_HIGH)
+//      set_mode(M_HIGH);
+    menu_move_back();
+    ui_mode_normal();
     break;
   case 2:
-    menu_push_submenu(menu_tophigh);
-    break;
-  case 3:
     menu_push_submenu(menu_lowoutputmode);
     break;
-  case 4:
+  case 3:
     menu_push_submenu(menu_highoutputmode);
     break;
 #ifdef __ULTRA__
@@ -443,7 +449,7 @@ extern const menuitem_t  menu_topultra[];
     break;
 #endif
   }
-//  draw_cal_status();
+  draw_cal_status();
 }
 
 void menu_load_preset_cb(int item, uint8_t data)
@@ -465,7 +471,8 @@ void menu_store_preset_cb(int item, uint8_t data)
 {
   (void)item;
   if (data == 100) {
-    setting.mode = -1;
+    reset_settings(M_LOW);  // Restore all defaults in Low mode
+ //   setting.mode = -1;
     data = 0;
   }
   caldata_save(data);
@@ -971,7 +978,7 @@ static const menuitem_t menu_load_preset_high[] =
 
 static const menuitem_t menu_store_preset[] =
 {
- { MT_CALLBACK, 0,     "\2STORE\0STARTUP",menu_store_preset_cb},
+  { MT_CALLBACK, 0,     "\2STORE\0STARTUP",menu_store_preset_cb},
   { MT_CALLBACK, 1,     "STORE 1"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 2,     "STORE 2"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 3,     "STORE 3"  ,      menu_store_preset_cb},
@@ -1052,7 +1059,7 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,  "LEVEL: %s",        NULL},
   { MT_FORM | MT_SUBMENU,  0,               "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,         "SPAN: %s",         NULL},
-  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
+//  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
   { MT_FORM | MT_CANCEL,   0,           S_LARROW" BACK",    NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1235,21 +1242,7 @@ static const menuitem_t menu_harmonic[] =
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 #endif
-static const menuitem_t menu_settings2[] =
-{
-  { MT_CALLBACK, 0,     "AGC",                  menu_settings2_cb},
-  { MT_CALLBACK, 1,     "LNA",                  menu_settings2_cb},
-  { MT_CALLBACK, 2,     "BPF",                  menu_settings2_cb},
-  { MT_CALLBACK, 4,     "\2BELOW\0IF",          menu_settings2_cb},
-  { MT_KEYPAD, KM_DECAY,"\2HOLD\0TIME",         NULL},
-  { MT_KEYPAD, KM_NOISE,"\2NOISE\0LEVEL",       NULL},
-#ifdef __ULTRA__
-  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
-#endif
-//  { MT_KEYPAD, KM_10MHZ,"\00210MHZ\0ACTUAL",    NULL},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
-};
+
 
 static const menuitem_t menu_scanning_speed[] =
 {
@@ -1261,15 +1254,51 @@ static const menuitem_t menu_scanning_speed[] =
 };
 
 
+static const menuitem_t menu_settings2[] =
+{
+  { MT_CALLBACK, 0,     "AGC",                  menu_settings2_cb},
+  { MT_CALLBACK, 1,     "LNA",                  menu_settings2_cb},
+  { MT_CALLBACK | MT_LOW, 2,     "BPF",                  menu_settings2_cb},
+  { MT_CALLBACK | MT_LOW, 4,     "\2BELOW\0IF",          menu_settings2_cb},
+  { MT_KEYPAD,   KM_DECAY,"\2HOLD\0TIME",         NULL},
+  { MT_KEYPAD,   KM_NOISE,"\2NOISE\0LEVEL",       NULL},
+#ifdef __ULTRA__
+  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
+#endif
+//  { MT_KEYPAD, KM_10MHZ,"\00210MHZ\0ACTUAL",    NULL},
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_settingshigh2[] =
+{
+  { MT_CALLBACK, 0, "AGC",              menu_settings2_cb},
+  { MT_CALLBACK, 1, "LNA",              menu_settings2_cb},
+  { MT_KEYPAD, KM_DECAY,                "\2HOLD\0TIME",   NULL},
+  { MT_KEYPAD, KM_NOISE,                "\2NOISE\0LEVEL",   NULL},
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_settings[] =
 {
-  { MT_CALLBACK, 3,             "\2TRACKING\0OUTPUT",menu_settings2_cb},
+  { MT_CALLBACK | MT_LOW, 3,    "\2LO\0OUTPUT",menu_settings2_cb},
   { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
-  { MT_KEYPAD, KM_IF,           "\2IF\0FREQ",       NULL},
+  { MT_KEYPAD | MT_LOW, KM_IF,  "\2IF\0FREQ",       NULL},
   { MT_SUBMENU,0,               "\2SCAN\0SPEED",         menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "REPEATS",          NULL},
-  { MT_SUBMENU,0,               "\2MIXER\0DRIVE",      menu_drive},
+  { MT_SUBMENU | MT_LOW,0,      "\2MIXER\0DRIVE",      menu_drive},
   { MT_SUBMENU,  0,             S_RARROW" MORE",    menu_settings2},
+  { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_settingshigh[] =
+{
+  { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
+  { MT_SUBMENU,0,               "\2SCAN\0SPEED",   menu_scanning_speed},
+  { MT_KEYPAD, KM_REPEAT,       "REPEATS",   NULL},
+  { MT_SUBMENU,  0,             S_RARROW" MORE",    menu_settingshigh2},
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1286,26 +1315,6 @@ static const menuitem_t menu_measure[] = {
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_settingshigh2[] =
-{
-  { MT_CALLBACK, 0, "AGC",              menu_settings2_cb},
-  { MT_CALLBACK, 1, "LNA",              menu_settings2_cb},
-  { MT_KEYPAD, KM_DECAY,                "\2HOLD\0TIME",   NULL},
-  { MT_KEYPAD, KM_NOISE,                "\2NOISE\0LEVEL",   NULL},
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
-};
-
-static const menuitem_t menu_settingshigh[] =
-{
-  { MT_KEYPAD, KM_ACTUALPOWER,    "\2ACTUAL\0POWER",  NULL},
-  { MT_KEYPAD, KM_SAMPLETIME,     "\2SAMPLE\0TIME",   NULL},
-  { MT_KEYPAD, KM_REPEAT,         "REPEATS",   NULL},
-  { MT_SUBMENU,  0,                 S_RARROW" MORE",    menu_settingshigh2},
-  { MT_CANCEL,   0,                 S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
-};
-
 static const menuitem_t menu_calibrate[] =
 {
  { MT_FORM | MT_TITLE,      0, "CONNECT INPUT AND OUTPUT",  NULL},
@@ -1316,31 +1325,15 @@ static const menuitem_t menu_calibrate[] =
 };
 
 static const menuitem_t menu_config[] = {
-  { MT_FORM | MT_CALLBACK, 0, "TOUCH CAL",     menu_config_cb},
-  { MT_FORM | MT_CALLBACK, 0, "TOUCH TEST",    menu_config_cb},
-  { MT_FORM | MT_CALLBACK, 0, "SELF TEST",     menu_config_cb},
-  { MT_FORM | MT_SUBMENU,  0, "CALIBRATE",     menu_calibrate},
-  { MT_FORM | MT_CALLBACK, 0, "VERSION",       menu_config_cb},
-  { MT_FORM | MT_SUBMENU,  0, S_RARROW"DFU",  menu_dfu},
-  { MT_FORM | MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
-};
-
-static const menuitem_t menu_acquire[] = {
-  { MT_CALLBACK, 0, "RESET",            menu_autosettings_cb},
-  { MT_SUBMENU, 0,  "ATTEN",            menu_atten},
-  { MT_SUBMENU,0,   "RBW",              menu_rbw},
-  { MT_SUBMENU,0,   "CALC",             menu_average},
-  { MT_CANCEL, 0,   S_LARROW" BACK",    NULL },
-  { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
-};
-
-static const menuitem_t menu_acquirehigh[] = {
-  { MT_CALLBACK, 0,             "RESET",     menu_autosettings_cb},
-  { MT_SUBMENU,0,               "RBW",       menu_rbw},
-  { MT_SUBMENU,0,               "CALC",      menu_average},
-  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
-  { MT_NONE,   0, NULL, NULL } // sentinel
+  { MT_CALLBACK, 0, "\2TOUCH\0CAL",     menu_config_cb},
+  { MT_CALLBACK, 0, "\2TOUCH\0TEST",    menu_config_cb},
+  { MT_CALLBACK, 0, "\2SELF\0TEST",     menu_config_cb},
+  { MT_SUBMENU,  0, "\2LEVEL\0CAL",     menu_calibrate},
+  { MT_CALLBACK, 0, "VERSION",       menu_config_cb},
+  { MT_SUBMENU,  0, "\2EXPERT\0CONF",menu_settings},
+  { MT_SUBMENU,  0, S_RARROW"DFU",  menu_dfu},
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_display[] = {
@@ -1350,7 +1343,7 @@ static const menuitem_t menu_display[] = {
   { MT_CALLBACK,2,          "SUBTRACT",         menu_storage_cb},
   { MT_CALLBACK,3,          "WATERFALL",        menu_storage_cb},
 #ifdef __SPUR__
-  { MT_CALLBACK,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
+  { MT_CALLBACK | MT_LOW,0, "\2SPUR\0REMOVAL", menu_spur_cb},
 #endif
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
@@ -1404,7 +1397,7 @@ static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
 //  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_scale_per},
   { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",            NULL},
-  { MT_SUBMENU, 0,          "ATTEN",        menu_atten},
+  { MT_SUBMENU | MT_LOW, 0,          "ATTEN",        menu_atten},
   { MT_SUBMENU,0,           "AVER",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,  "\2EXTERN\0AMP",           NULL},
@@ -1430,17 +1423,16 @@ static const menuitem_t menu_stimulus[] = {
 
 
 static const menuitem_t menu_mode[] = {
-  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
+//  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "LOW INPUT",      menu_mode_cb},
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "HIGH INPUT",     menu_mode_cb},
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "LOW OUTPUT",     menu_mode_cb},
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "HIGH OUTPUT",    menu_mode_cb},
   { MT_FORM | MT_SUBMENU  | MT_ICON,    I_CONNECT+I_GEN,        "CAL OUTPUT: %s", menu_reffer},
-  { MT_FORM | MT_SUBMENU  | MT_ICON,    I_EMPTY+I_CONFIG,       "CONFIG",         menu_config},
 #ifdef __ULTRA__
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
 #endif
-  //  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1466,8 +1458,8 @@ const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "MEASURE",      menu_measure},
-  { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
-  { MT_CANCEL,   0, S_LARROW" MODE",NULL},
+  { MT_SUBMENU,  0, "CONFIG",       menu_config},
+  { MT_SUBMENU,  0, "MODE",         menu_mode},
   { MT_NONE,     0, NULL, NULL } // sentinel,
  // MENUITEM_CLOSE,
 };
@@ -1506,9 +1498,9 @@ static void menu_item_modify_attribute(
   int mark = false;
   int data = menu[item].data;
   if (menu == menu_mode) {
-    if (item == GetMode()+1)  {
+    if (item == GetMode())  {
       mark = true;
-    } else if (item == 5) {
+    } else if (item == 4) {
       plot_printf(uistat.text, sizeof uistat.text, menu_reffer_text[get_refer_output()+1]);
     }
   } else if (menu == menu_highoutputmode && item == 2) {

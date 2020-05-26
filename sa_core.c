@@ -560,6 +560,10 @@ int temppeakIndex;
 void setupSA(void)
 {
   SI4432_Init();
+  SI4432_Sel = 1;
+  SI4432_Receive();
+
+  SI4432_Transmit(0);
   PE4302_init();
   PE4302_Write_Byte(0);
 }
@@ -1528,8 +1532,8 @@ void draw_cal_status(void)
 
   if (MODE_OUTPUT(setting.mode))     // No cal status during output
     return;
-  if (current_menu_is_form() && !in_selftest)
-    return;
+//  if (current_menu_is_form() && !in_selftest)
+//    return;
 
   ili9341_set_background(DEFAULT_BG_COLOR);
 

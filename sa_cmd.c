@@ -130,7 +130,7 @@ VNA_SHELL_FUNCTION(cmd_y)
   int rvalue;
   int lvalue = 0;
   if (argc != 1 && argc != 2) {
-    shell_printf("usage: x {addr(0-95)} [value(0-FF)]\r\n");
+    shell_printf("usage: y {addr(0-95)} [value(0-FF)]\r\n");
     return;
   }
   rvalue = xtoi(argv[0]);
@@ -205,7 +205,7 @@ VNA_SHELL_FUNCTION(cmd_o)
   uint32_t value = my_atoi(argv[0]);
   if (VFO == 0)
     setting.frequency_IF = value;
-//  set_freq(VFO, value);
+  set_freq(VFO, value);
 }
 
 VNA_SHELL_FUNCTION(cmd_d)
