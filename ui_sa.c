@@ -1369,7 +1369,7 @@ static const menuitem_t menu_displayhigh[] = {
 
 static const menuitem_t menu_unit[] =
 {
- { MT_CALLBACK,U_DBM,      "dBm",              menu_unit_cb},
+ { MT_CALLBACK,U_DBM,      "dBmW",              menu_unit_cb},
  { MT_CALLBACK,U_DBMV,     "dBmV",             menu_unit_cb},
  { MT_CALLBACK,U_DBUV,     "dBuV",             menu_unit_cb},
  { MT_CALLBACK,U_VOLT,     "Volt",             menu_unit_cb},
@@ -1608,10 +1608,6 @@ static void menu_item_modify_attribute(
     else if (item < 5 && data==markers[active_marker].mtype)    // This catches the M_NORMAL case
       mark = true;
   } else if (menu == menu_marker_search) {
-    if (item == 0 && search_is_greater())
-      mark = true;
-    if (item == 1 && !search_is_greater())
-      mark = true;
     if (item == 4 && markers[active_marker].mtype & M_TRACKING)
       mark = true;
   } else if (menu == menu_marker_sel || menu == menu_marker_select) {

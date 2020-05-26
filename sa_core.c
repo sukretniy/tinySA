@@ -1506,7 +1506,7 @@ float my_round(float v)
   return v;
 }
 
-const char *unit_string[] = { "dBm", "dBmV", "dBuV", "V", "mW" };
+const char *unit_string[] = { "dBmW", "dBmV", "dBuV", "V", "mW" };
 
 void draw_cal_status(void)
 {
@@ -1535,9 +1535,9 @@ void draw_cal_status(void)
 
   float yMax = setting.reflevel;
   if (rounding)
-    plot_printf(buf, BLEN, "%d%s", (int)yMax, unit);
+    plot_printf(buf, BLEN, "%d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%f%s", yMax, unit);
+    plot_printf(buf, BLEN, "%f", yMax);
   buf[5]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
@@ -1553,10 +1553,16 @@ void draw_cal_status(void)
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2 ;
+  plot_printf(buf, BLEN, "%s",unit);
+  ili9341_drawstring(buf, x, y);
+
+  color = DEFAULT_FG_COLOR;
+  ili9341_set_foreground(color);
+  y += YSTEP + YSTEP/2 ;
   if (rounding)
-    plot_printf(buf, BLEN, "%d%s/",(int)setting.scale, unit);
+    plot_printf(buf, BLEN, "%d/",(int)setting.scale);
   else
-    plot_printf(buf, BLEN, "%f%s/",setting.scale, unit);
+    plot_printf(buf, BLEN, "%f/",setting.scale);
   ili9341_drawstring(buf, x, y);
 
   if (setting.auto_attenuation)
@@ -1696,9 +1702,9 @@ void draw_cal_status(void)
 
   y = HEIGHT-7 + OFFSETY;
   if (rounding)
-    plot_printf(buf, BLEN, "%d%s", (int)(yMax - setting.scale * NGRIDY), unit);
+    plot_printf(buf, BLEN, "%d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%f%s", (yMax - setting.scale * NGRIDY), unit);
+    plot_printf(buf, BLEN, "%f", (yMax - setting.scale * NGRIDY));
   buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
@@ -1850,18 +1856,19 @@ int validate_peak_below(int i, float margin) {
 
 int validate_below(int tc, int from, int to) {
   int status = TS_PASS;
+  float threshold=stored_t[from];
   float sum = 0;
   int sum_count = 0;
   for (int j = from; j < to; j++) {
     sum += actual_t[j];
     sum_count++;
-    if (actual_t[j] > stored_t[j]) {
+    if (actual_t[j] > threshold) {
       status = TS_FAIL;
       break;
     }
   }
   sum = sum / sum_count;
-  if (sum > stored_t[from] - 5)
+  if (sum > threshold - 5)
     status = TS_CRITICAL;
   if (status != TS_PASS)
     test_fail_cause[tc] = "Above ";

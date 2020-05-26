@@ -2004,6 +2004,8 @@ static void cell_draw_marker_info(int x0, int y0)
       buf[k++] = i+'1';
       if (markers[i].mtype & M_REFERENCE)
         buf[k++] = 'R';
+      if (markers[i].mtype & M_TRACKING)
+        buf[k++] = 'T';
       if (markers[i].mtype & M_DELTA)
         buf[k++] = 'D';
       if (markers[i].mtype & M_NOISE)
