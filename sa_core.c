@@ -52,13 +52,11 @@ void reset_settings(int m)
   setting.linearity_step = 0;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
+  setting.refer = -1;
 #ifdef __SPUR__
   setting.spur = 0;
 #endif
   switch(m) {
-  case -1:
-    setting.refer = -1; // Clear cal signal when no autostart
-    break;
   case M_LOW:
     minFreq = 0;
     maxFreq = 520000000;

@@ -1342,9 +1342,6 @@ static const menuitem_t menu_display[] = {
   { MT_CALLBACK,1,          "CLEAR",            menu_storage_cb},
   { MT_CALLBACK,2,          "SUBTRACT",         menu_storage_cb},
   { MT_CALLBACK,3,          "WATERFALL",        menu_storage_cb},
-#ifdef __SPUR__
-  { MT_CALLBACK | MT_LOW,0, "\2SPUR\0REMOVAL", menu_spur_cb},
-#endif
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };

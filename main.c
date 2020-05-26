@@ -2601,7 +2601,6 @@ int main(void)
 /* restore config */
   config_recall();
   if (caldata_recall(0) == -1) {
-    setting.refer = -1;
     load_default_properties();
   }
 /* restore frequencies and calibration 0 slot properties from flash memory */
