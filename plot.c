@@ -846,7 +846,7 @@ static void trace_get_value_string(
       plot_printf(buf, len, "-INF");
     else {
       if (setting.unit)
-        plot_printf(buf, len, "%s %.5f%s%s", buf2, v - rlevel,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
+        plot_printf(buf, len, "%s %.2f%s%s", buf2, v - rlevel,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
       else
         plot_printf(buf, len, "%s %.1f%s%s", buf2, v - rlevel,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
     }

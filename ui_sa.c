@@ -1384,7 +1384,7 @@ static const menuitem_t menu_levelhigh[] = {
   { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
 //  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_scale_per},
   { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",            NULL},
-  { MT_SUBMENU,0,           "AVER",         menu_average},
+  { MT_SUBMENU,0,           "CALC",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,  "\2EXTERN\0AMP",           NULL},
   { MT_SUBMENU,  0,         "TRIGGER",           menu_trigger},
@@ -1396,12 +1396,12 @@ static const menuitem_t menu_levelhigh[] = {
 static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
 //  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_scale_per},
-  { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",            NULL},
-  { MT_SUBMENU | MT_LOW, 0,          "ATTEN",        menu_atten},
-  { MT_SUBMENU,0,           "AVER",         menu_average},
+  { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",NULL},
+  { MT_SUBMENU | MT_LOW, 0, "ATTEN",        menu_atten},
+  { MT_SUBMENU,0,           "CALC",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_OFFSET,  "\2EXTERN\0AMP",           NULL},
-  { MT_SUBMENU,  0,         "TRIGGER",           menu_trigger},
+  { MT_KEYPAD,  KM_OFFSET,  "\2EXTERN\0AMP",NULL},
+  { MT_SUBMENU,  0,         "TRIGGER",      menu_trigger},
   { MT_CANCEL, 0,           S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };

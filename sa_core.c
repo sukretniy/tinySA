@@ -194,6 +194,9 @@ void set_IF(int f)
 
 void set_unit(int u)
 {
+  if (UNIT_IS_LINEAR(setting.unit) && !UNIT_IS_LINEAR(u)) {
+    set_scale(10);
+  }
   setting.unit = u;
   dirty = true;
 }
@@ -1175,7 +1178,7 @@ again:
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
       }
-      //   stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
+         stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;
@@ -1586,7 +1589,7 @@ void draw_cal_status(void)
   if (rounding)
     plot_printf(buf, BLEN, "%d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%f", yMax);
+    plot_printf(buf, BLEN, "%.2f", yMax);
   buf[5]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
@@ -1611,7 +1614,7 @@ void draw_cal_status(void)
   if (rounding)
     plot_printf(buf, BLEN, "%d/",(int)setting.scale);
   else
-    plot_printf(buf, BLEN, "%f/",setting.scale);
+    plot_printf(buf, BLEN, "%.2f/",setting.scale);
   ili9341_drawstring(buf, x, y);
 
   if (setting.auto_attenuation)
@@ -1753,7 +1756,7 @@ void draw_cal_status(void)
   if (rounding)
     plot_printf(buf, BLEN, "%d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%f", (yMax - setting.scale * NGRIDY));
+    plot_printf(buf, BLEN, "%.2f", (yMax - setting.scale * NGRIDY));
   buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
