@@ -488,7 +488,7 @@ void set_trigger(int trigger)
 
 void set_scale(float s) {
   setting.scale = s;
-  if (setting.unit == U_VOLT || setting.unit == U_MWATT) {
+  if (UNIT_IS_LINEAR(setting.unit)) {   // Bottom always at zero
     set_reflevel(NGRIDY * s);
   }
   set_trace_scale(0, s);
@@ -1242,7 +1242,7 @@ again:
     }
   }
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && max_index[0] > 0) {  // Auto reflevel
-    if (setting.unit == U_VOLT || setting.unit == U_MWATT) {            // Linear scales can not have negative values
+    if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
       float t = value(actual_t[max_index[0]]);
       if (t < setting.reflevel / 2 || t> setting.reflevel) {
         float m = 1;
@@ -1508,7 +1508,7 @@ float my_round(float v)
   return v;
 }
 
-const char *unit_string[] = { "dBmW", "dBmV", "dBuV", "V", "mW" };
+const char *unit_string[] = { "dBm", "dBmV", "dBuV", "mV", "uV", "mW", "uW" };
 
 void draw_cal_status(void)
 {
@@ -1519,7 +1519,7 @@ void draw_cal_status(void)
   int y = OFFSETY;
   unsigned int color;
   int rounding = false;
-  if (setting.unit != U_VOLT && setting.unit != U_MWATT)
+  if (!UNIT_IS_LINEAR(setting.unit))
     rounding  = true;
   const char *unit = unit_string[setting.unit];
 

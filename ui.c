@@ -301,7 +301,7 @@ void
 touch_wait_release(void)
 {
   while (touch_check() != EVT_TOUCH_RELEASED)
-    ;
+    chThdSleepMilliseconds(20);
 }
 
 static inline void
@@ -785,7 +785,8 @@ menu_marker_search_cb(int item, uint8_t data)
   int i = -1;
   if (active_marker == -1)
     return;
-
+  if (data < 4)
+    markers[active_marker].mtype &= ~M_TRACKING;
   switch (data) {
   case 0: /* search Left */
     i = marker_search_left_min(markers[active_marker].index);

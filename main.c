@@ -717,12 +717,13 @@ VNA_SHELL_FUNCTION(cmd_data)
   if (argc == 1)
     sel = my_atoi(argv[0]);
 
-  if (sel >= 0 || sel <= MAX_DATA) {
+
+  if (sel >= 0 && sel <= MAX_DATA) {
     for (i = 0; i < sweep_points; i++)
       shell_printf("%f\r\n", measured[sel][i]);
     return;
   }
-  shell_printf("usage: data [array]\r\n");
+  shell_printf("usage: data [0-2]\r\n");
 }
 
 #ifdef ENABLED_DUMP

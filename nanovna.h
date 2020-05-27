@@ -339,8 +339,9 @@ enum trace_type {
 // Phase
 
 enum unit_type {
-  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_MWATT,
+  U_DBM=0, U_DBMV, U_DBUV, U_MVOLT, U_UVOLT, U_MWATT, U_UWATT
 };
+#define UNIT_IS_LINEAR(T) ( T >= U_MVOLT ? true : false)
 
 float value(float);
 

@@ -462,11 +462,17 @@ value(const float v)
   case U_DBUV:
     return v+ 90.0 + 20.0*log10(sqrt(50.0));
     break;
-  case U_VOLT:
-    return pow(10, (v - 30.0)/20.0) * sqrt(50.0);
+  case U_MVOLT:
+    return pow(10, (v-30.0)/20.0) * sqrt(50.0) * 1000.0;
+    break;
+  case U_UVOLT:
+    return pow(10, (v-30.0)/20.0) * sqrt(50.0) * 1000000.0;
     break;
   case U_MWATT:
     return pow(10, v/10.0);
+    break;
+  case U_UWATT:
+    return pow(10, (v)/10.0) * 1000.0;
     break;
   }
 //  case U_DBM:
@@ -796,14 +802,7 @@ trace_get_value_string_delta(int t, char *buf, int len, float array[POINTS_COUNT
 }
 #endif
 
-static const char *unit_string[] =
-{
- "",
- "dBmV",
- "dBuV",
- "V",
- "mW"
-};
+extern const char *unit_string[];
 
 static void trace_get_value_string(
     int t, char *buf, int len,
