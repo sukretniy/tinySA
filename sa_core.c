@@ -547,6 +547,53 @@ void apply_settings(void)
 
 //------------------------------------------
 
+#define CORRECTION_POINTS  10
+
+static const uint32_t correction_frequency[CORRECTION_POINTS] =
+{
+   100000,
+   200000,
+   400000,
+   1000000,
+   2000000,
+   50000000,
+   100000000,
+   200000000,
+   300000000,
+   350000000
+};
+
+static const float correction_value[CORRECTION_POINTS] =
+{
+   +4.0,
+   +2.0,
+   +1.5,
+   +0.5,
+   0.0,
+   0.0,
+   +1.0,
+   +1.0,
+   +2.5,
+   +5.0
+};
+
+float get_frequency_correction(uint32_t f)
+{
+  if (!(setting.mode == M_LOW))
+    return(0.0);
+  int i = 0;
+  while (f > correction_frequency[i] && i < CORRECTION_POINTS)
+    i++;
+  if (i >= CORRECTION_POINTS)
+    return(correction_value[CORRECTION_POINTS-1]);
+  if (i == 0)
+    return(correction_value[0]);
+  f = f - correction_frequency[i-1];
+  uint32_t m = correction_frequency[i] - correction_frequency[i-1] ;
+  float cv = correction_value[i-1] + (correction_value[i] - correction_value[i-1]) * (float)f / (float)m;
+  return(cv);
+}
+
 
 float peakLevel;
 float min_level;
@@ -1047,12 +1094,12 @@ again:
 
     int wait_for_trigger = false;
     int old_actual_step_delay = actualStepDelay;
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // [repare for wait for trigger to happen
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // prepare for wait for trigger to happen
       wait_for_trigger = true;
-      actualStepDelay = 0;      // fastest possible in trigger mode
+      actualStepDelay = 0;      // fastest possible in zero span trigger mode
     }
     float subRSSI;
-    float correct_RSSI = get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset;
+    float correct_RSSI = get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset + get_frequency_correction(f);
    wait:
     subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;
     if (wait_for_trigger) { // wait for trigger to happen
