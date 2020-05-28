@@ -1178,7 +1178,7 @@ again:
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
       }
-         stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in thestored trace
+//         stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in the stored trace
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;
@@ -2046,6 +2046,9 @@ common_silent:
   case TP_10MHZ:                              // 10MHz input
     set_mode(M_LOW);
     set_refer_output(2);
+#ifdef __SPUR__
+    setting.spur = 1;
+#endif
  common:
 
     for (int j = 0; j < setting._sweep_points/2 - test_case[i].width; j++)
@@ -2058,6 +2061,9 @@ common_silent:
   case TP_30MHZ:
     set_mode(M_LOW);
     set_refer_output(0);
+#ifdef __SPUR__
+    setting.spur = 1;
+#endif
     goto common;
   case TPH_30MHZ:
     set_mode(M_HIGH);
