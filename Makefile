@@ -55,7 +55,7 @@ endif
 ##############################################################################
 
 ifeq ($(VERSION),)
-  VERSION="tinySA$(shell git describe --tags)"
+  VERSION="tinySA_$(shell git describe --tags)"
 endif
 
 ##############################################################################
@@ -83,7 +83,7 @@ endif
 #
 
 # Define project name here
-PROJECT = ch
+PROJECT = tinySA
 
 # Imported source files and paths
 #CHIBIOS = ../ChibiOS-RT
