@@ -51,6 +51,7 @@
 #define actual_t  measured[TRACE_ACTUAL]
 #define temp_t    measured[TRACE_TEMP]
 
+#define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
 
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
@@ -373,7 +374,9 @@ typedef struct config {
   uint16_t vbat_offset;
   int16_t low_level_offset;
   int16_t high_level_offset;
-  uint8_t _reserved[22];
+  uint32_t correction_frequency[CORRECTION_POINTS];
+  float    correction_value[CORRECTION_POINTS];
+//  uint8_t _reserved[22];
   uint32_t checksum;
 } config_t;
 

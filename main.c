@@ -826,6 +826,8 @@ config_t config = {
   .vbat_offset = 500,
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
+  .correction_frequency = { 100000, 200000, 400000, 1000000, 2000000, 50000000, 100000000, 200000000, 300000000, 350000000 },
+  .correction_value = { +4.0, +2.0, +1.5, +0.5, 0.0, 0.0, +1.0, +1.0, +2.5, +5.0 },
 };
 
 //properties_t current_props;
@@ -2283,6 +2285,7 @@ static const VNAShellCommand commands[] =
    { "w", cmd_w,	0 },
    { "o", cmd_o,    0 },
    { "d", cmd_d,    0 },
+   { "correction", cmd_correction,    0 },
 #ifdef ENABLE_THREADS_COMMAND
     {"threads"     , cmd_threads     , 0},
 #endif

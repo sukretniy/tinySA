@@ -338,3 +338,26 @@ VNA_SHELL_FUNCTION(cmd_w)
 return;
   set_RBW(p);
 }
+
+VNA_SHELL_FUNCTION(cmd_correction)
+{
+  (void)argc;
+  if (argc == 0) {
+    shell_printf("correction table\r\n");
+    shell_printf("index frequency value\r\n");
+    for (int i=0; i<CORRECTION_POINTS; i++) {
+      shell_printf("%d %d %.1f\r\n", i, config.correction_frequency[i], config.correction_value[i]);
+    }
+    return;
+  }
+  if (argc != 3) {
+    shell_printf("usage: correction index frequency value\r\n");
+    return;
+  }
+  int i = my_atoi(argv[0]);
+  uint32_t f = my_atoui(argv[1]);
+  float v = my_atof(argv[2]);
+  config.correction_frequency[i] = f;
+  config.correction_value[i] = v;
+  shell_printf("updated %d to %d %.1f\r\n", i, config.correction_frequency[i], config.correction_value[i]);
+}
