@@ -351,7 +351,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
     return;
   }
   if (argc != 3) {
-    shell_printf("usage: correction index frequency value\r\n");
+    shell_printf("usage: correction 0-9 frequency(Hz) value(dB)\r\n");
     return;
   }
   int i = my_atoi(argv[0]);
