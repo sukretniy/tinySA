@@ -2403,7 +2403,7 @@ THD_FUNCTION(myshellThread, p)
 {
   (void)p;
   chRegSetThreadName("shell");
-  shell_printf(VNA_SHELL_NEWLINE_STR"NanoVNA Shell"VNA_SHELL_NEWLINE_STR);
+  shell_printf(VNA_SHELL_NEWLINE_STR"tinySA Shell"VNA_SHELL_NEWLINE_STR);
   while (true) {
     shell_printf(VNA_SHELL_PROMPT_STR);
     if (VNAShell_readLine(shell_line, VNA_SHELL_MAX_LENGTH))
@@ -2666,7 +2666,7 @@ int main(void)
                                             myshellThread, NULL);
       chThdWait(shelltp);
 #else
-      shell_printf(VNA_SHELL_NEWLINE_STR"NanoVNA Shell"VNA_SHELL_NEWLINE_STR);
+      shell_printf(VNA_SHELL_NEWLINE_STR"tinySA Shell"VNA_SHELL_NEWLINE_STR);
       do {
         shell_printf(VNA_SHELL_PROMPT_STR);
         if (VNAShell_readLine(shell_line, VNA_SHELL_MAX_LENGTH))

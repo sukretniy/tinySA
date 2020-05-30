@@ -212,16 +212,6 @@ int GetMode(void)
 #define POWER_OFFSET    15
 #define SWITCH_ATTENUATION  30
 
-int get_attenuation(void)
-{
-  if (setting.mode == M_GENLOW) {
-    if (setting.step_atten)
-      return ( -(POWER_OFFSET + setting.attenuate - (setting.step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
-    else
-      return ( -POWER_OFFSET - setting.attenuate + (setting.drive & 7) * 3);
-  }
-  return(setting.attenuate);
-}
 
 void set_auto_attenuation(void)
 {
@@ -232,6 +222,17 @@ void set_auto_attenuation(void)
 void set_auto_reflevel(int v)
 {
   setting.auto_reflevel = v;
+}
+
+int get_attenuation(void)
+{
+  if (setting.mode == M_GENLOW) {
+    if (setting.step_atten)
+      return ( -(POWER_OFFSET + setting.attenuate - (setting.step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
+    else
+      return ( -POWER_OFFSET - setting.attenuate + (setting.drive & 7) * 3);
+  }
+  return(setting.attenuate);
 }
 
 void set_attenuation(int a)
@@ -262,6 +263,7 @@ void set_attenuation(int a)
     a = -a;
   } else {
     setting.step_atten = 0;
+    setting.auto_attenuation = false;
   }
   if (a<0)
       a = 0;
@@ -269,7 +271,6 @@ void set_attenuation(int a)
     a=31;
 //  if (setting.attenuate == a)
 //    return;
-  setting.auto_attenuation = false;
   setting.attenuate = a;
   dirty = true;
 }
