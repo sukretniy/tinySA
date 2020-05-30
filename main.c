@@ -2267,6 +2267,7 @@ static const VNAShellCommand commands[] =
 #endif
     { "if", cmd_if,    0 },
     { "attenuate", cmd_attenuate,    0 },
+    { "reflevel", cmd_reflevel,    0 },
     { "rbw", cmd_rbw,    0 },
     { "mode", cmd_mode,    0 },
     { "spur", cmd_spur,    0 },
@@ -2637,10 +2638,9 @@ int main(void)
   //Initialize graph plotting
   plot_init();
 
-  if (setting.mode != -1) {
-    menu_mode_cb(setting.mode,0);
-    ui_mode_normal();       // Do not show menu when autostarting mode
-  }
+//  if (setting.mode != -1) {
+//    menu_mode_cb(setting.mode,0);
+//  }
   redraw_frame();
 
   set_mode(M_HIGH);
@@ -2650,6 +2650,7 @@ int main(void)
   set_mode(M_LOW);
   sweep(true);
 
+  ui_mode_menu();       // Show menu when autostarting mode
 
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);

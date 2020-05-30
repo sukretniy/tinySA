@@ -229,9 +229,9 @@ void set_auto_attenuation(void)
   setting.attenuate = 30;
 }
 
-void set_auto_reflevel(void)
+void set_auto_reflevel(int v)
 {
-  setting.auto_reflevel = true;
+  setting.auto_reflevel = v;
 }
 
 void set_attenuation(int a)
@@ -269,6 +269,7 @@ void set_attenuation(int a)
     a=31;
 //  if (setting.attenuate == a)
 //    return;
+  setting.auto_attenuation = false;
   setting.attenuate = a;
   dirty = true;
 }

@@ -748,7 +748,7 @@ static void menu_reflevel_cb(int item, uint8_t data)
 {
   (void)item;
   (void)data;
-  set_auto_reflevel();
+  set_auto_reflevel(true);
   menu_move_back();
   ui_mode_normal();
 }
@@ -978,7 +978,7 @@ static const menuitem_t menu_load_preset_high[] =
 
 static const menuitem_t menu_store_preset[] =
 {
-  { MT_CALLBACK, 0,     "\2STORE\0STARTUP",menu_store_preset_cb},
+  { MT_CALLBACK, 0,     "\2STORE AS\0STARTUP",menu_store_preset_cb},
   { MT_CALLBACK, 1,     "STORE 1"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 2,     "STORE 2"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 3,     "STORE 3"  ,      menu_store_preset_cb},
@@ -1138,7 +1138,9 @@ static const menuitem_t menu_reffer[] = {
   { MT_FORM | MT_CALLBACK, 2, "15MHz",   menu_reffer_cb},
   { MT_FORM | MT_CALLBACK, 3, "10MHz",   menu_reffer_cb},
   { MT_FORM | MT_CALLBACK, 4, "4MHz" ,   menu_reffer_cb},
-  { MT_FORM | MT_SUBMENU,  0, S_RARROW" MORE", menu_reffer2},
+  { MT_FORM | MT_CALLBACK, 6, "2MHz" ,   menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK, 7, "1MHz" ,   menu_reffer_cb},
+//  { MT_FORM | MT_SUBMENU,  0, S_RARROW" MORE", menu_reffer2},
   { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1170,7 +1172,7 @@ const menuitem_t menu_marker_search[] = {
 };
 
 const menuitem_t menu_marker_modify[] = {
-  { MT_CALLBACK, M_REFERENCE,   "REFERENCE",    menu_marker_modify_cb},
+  { MT_CALLBACK, M_REFERENCE,   "REFER",        menu_marker_modify_cb},
   { MT_CALLBACK, M_DELTA,       "DELTA",        menu_marker_modify_cb},
   { MT_CALLBACK, M_NOISE,       "NOISE",        menu_marker_modify_cb},
   { MT_CALLBACK, M_TRACKING,    "TRACKING",     menu_marker_modify_cb},
@@ -1304,12 +1306,12 @@ static const menuitem_t menu_settingshigh[] =
 
 static const menuitem_t menu_measure[] = {
   { MT_CALLBACK,            M_OFF,        "OFF",              menu_measure_cb},
-  { MT_CALLBACK,            M_IMD,        "MARMONICS",        menu_measure_cb},
+  { MT_CALLBACK,            M_IMD,        "HARMONIC",         menu_measure_cb},
   { MT_CALLBACK,            M_OIP3,       "OIP3",             menu_measure_cb},
   { MT_CALLBACK,            M_PHASE_NOISE,"\2PHASE\0NOISE",   menu_measure_cb},
   { MT_CALLBACK,            M_STOP_BAND,  "\2STOP\0BAND",     menu_measure_cb},
   { MT_CALLBACK,            M_PASS_BAND,  "\2PASS\0BAND",     menu_measure_cb},
-  { MT_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEARITY",        menu_measure_cb},
+  { MT_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",           menu_measure_cb},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1337,9 +1339,9 @@ static const menuitem_t menu_config[] = {
 
 static const menuitem_t menu_display[] = {
   { MT_CALLBACK,0,          "\2PAUSE\0SWEEP",   menu_pause_cb},
-  { MT_CALLBACK,0,          "STORE",            menu_storage_cb},
-  { MT_CALLBACK,1,          "CLEAR",            menu_storage_cb},
-  { MT_CALLBACK,2,          "SUBTRACT",         menu_storage_cb},
+  { MT_CALLBACK,0,          "\2STORE\0TRACE",   menu_storage_cb},
+  { MT_CALLBACK,1,          "\2CLEAR\0STORED",  menu_storage_cb},
+  { MT_CALLBACK,2,          "\2SUBTRACT\0STORED",menu_storage_cb},
   { MT_CALLBACK,3,          "WATERFALL",        menu_storage_cb},
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
@@ -1424,10 +1426,10 @@ static const menuitem_t menu_stimulus[] = {
 
 static const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "LOW INPUT",      menu_mode_cb},
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "HIGH INPUT",     menu_mode_cb},
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "LOW OUTPUT",     menu_mode_cb},
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "HIGH OUTPUT",    menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "%s TO LOW INPUT",      menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "%s TO HIGH INPUT",     menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "%s TO LOW OUTPUT",     menu_mode_cb},
+  { MT_FORM | MT_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s TO HIGH OUTPUT",    menu_mode_cb},
   { MT_FORM | MT_SUBMENU  | MT_ICON,    I_CONNECT+I_GEN,        "CAL OUTPUT: %s", menu_reffer},
 #ifdef __ULTRA__
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
@@ -1502,8 +1504,11 @@ static void menu_item_modify_attribute(
   int data = menu[item].data;
   if (menu == menu_mode) {
     if (item == GetMode())  {
+      plot_printf(uistat.text, sizeof uistat.text, "RETURN");
       mark = true;
-    } else if (item == 4) {
+    } else if (item < 4){
+      plot_printf(uistat.text, sizeof uistat.text, "SWITCH");
+    }  else if (item == 4) {
       plot_printf(uistat.text, sizeof uistat.text, menu_reffer_text[get_refer_output()+1]);
     }
   } else if (menu == menu_highoutputmode && item == 2) {
@@ -1755,7 +1760,7 @@ set_numeric_value(void)
     set_scale(uistat.value);
     break;
   case KM_REFPOS:
-    setting.auto_reflevel = false;
+    set_auto_reflevel(false);
     set_reflevel(uistat.value);
     break;
   case KM_ATTENUATION:

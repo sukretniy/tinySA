@@ -120,7 +120,7 @@ static int16_t last_touch_y;
 #define KP_CANCEL 2
 
 void ui_mode_normal(void);
-static void ui_mode_menu(void);
+//static void ui_mode_menu(void);
 static void ui_mode_numeric(int _keypad_mode);
 static void ui_mode_keypad(int _keypad_mode);
 static void draw_menu(void);
@@ -1145,6 +1145,16 @@ menu_move_back(void)
   if (selection >= 0)
     selection = 0;
   ensure_selection();
+
+  if (current_menu_is_form()) {
+    redraw_frame();
+    area_width = 0;
+  } else {
+    redraw_frame();
+    request_to_redraw_grid();
+    area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
+  }
+
   draw_menu();
 }
 
@@ -1802,7 +1812,7 @@ draw_numeric_area(void)
   draw_numeric_input(buf);
 }
 
-static void
+void
 ui_mode_menu(void)
 {
   if (ui_mode == UI_MENU)

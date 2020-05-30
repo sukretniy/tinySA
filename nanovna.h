@@ -174,7 +174,7 @@ void set_harmonic(int);
 //extern int setting.harmonic;
 int search_is_greater(void);
 void set_auto_attenuation(void);
-void set_auto_reflevel(void);
+void set_auto_reflevel(int);
 int is_paused(void);
 void set_actual_power(float);
 void SetGenerate(int);
@@ -698,6 +698,7 @@ int current_menu_is_form(void);
 
 void menu_mode_cb(int, uint8_t);
 void ui_mode_normal(void);
+void ui_mode_menu(void);
 
 // Irq operation process set
 #define OP_NONE       0x00
