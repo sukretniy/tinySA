@@ -1805,7 +1805,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
-        shell_printf("%d %d %d\r\n", t+1, markers[t].index, markers[t].frequency);
+        shell_printf("%d %d %d %.2f\r\n", t+1, markers[t].index, markers[t].frequency, actual_t[markers[t].index]);
       }
     }
     return;
@@ -1821,7 +1821,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (t < 0 || t >= MARKERS_MAX)
     goto usage;
   if (argc == 1) {
-    shell_printf("%d %d %d\r\n", t+1, markers[t].index, markers[t].frequency);
+    shell_printf("%d %d %d %.2f\r\n", t+1, markers[t].index, markers[t].frequency, actual_t[markers[t].index]);
     active_marker = t;
     // select active marker
     markers[t].enabled = TRUE;
