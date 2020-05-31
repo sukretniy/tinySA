@@ -442,7 +442,7 @@ float SI4432_RSSI(uint32_t i, int s)
     i = setting.repeat;
     RSSI_RAW  = 0;
     while (i-->0)
-      RSSI_RAW += (unsigned int)SI4432_Read_Byte( 0x26 ) << 4 ;
+      RSSI_RAW += ((unsigned int)SI4432_Read_Byte( 0x26 )) << 4 ;
     RSSI_RAW = RSSI_RAW / setting.repeat;
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();

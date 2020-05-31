@@ -2151,6 +2151,7 @@ void self_test(int test)
     // RBW step time search
     in_selftest = true;
     reset_settings(M_LOW);
+    setting.frequency_IF=433900000;
     ui_mode_normal();
     int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
