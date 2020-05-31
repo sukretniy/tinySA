@@ -535,15 +535,15 @@ void apply_settings(void)
     else
       actualStepDelay = setting.step_delay;
   } else if (setting.step_delay < 2){
-    if (actual_rbw > 200.0)        actualStepDelay =  400;
-    else if (actual_rbw > 90.0)    actualStepDelay =  500;
-    else if (actual_rbw > 75.0)    actualStepDelay =  550;
-    else if (actual_rbw > 56.0)    actualStepDelay =  650;
-    else if (actual_rbw > 37.0)    actualStepDelay =  700;
-    else if (actual_rbw > 18.0)    actualStepDelay = 1100;
-    else if (actual_rbw >  9.0)    actualStepDelay = 2000;
-    else if (actual_rbw >  5.0)    actualStepDelay = 3500;
-    else                           actualStepDelay = 6000;
+    if (actual_rbw >= 191.0)        actualStepDelay =  280;
+    else if (actual_rbw >= 142.0)   actualStepDelay =  350;
+    else if (actual_rbw >= 75.0)    actualStepDelay =  450;
+    else if (actual_rbw >= 56.0)    actualStepDelay =  650;
+    else if (actual_rbw >= 37.0)    actualStepDelay =  700;
+    else if (actual_rbw >= 18.0)    actualStepDelay = 1100;
+    else if (actual_rbw >=  9.0)    actualStepDelay = 1700;
+    else if (actual_rbw >=  5.0)    actualStepDelay = 3300;
+    else                           actualStepDelay = 6400;
     if (setting.step_delay == 1)
       actualStepDelay *= 2;
   } else
@@ -2027,6 +2027,7 @@ common_silent:
   case TP_10MHZ:                              // 10MHz input
     set_mode(M_LOW);
     set_refer_output(2);
+    set_step_delay(1);                      // Precise scanning speed
 #ifdef __SPUR__
     setting.spur = 1;
 #endif
@@ -2042,6 +2043,7 @@ common_silent:
   case TP_30MHZ:
     set_mode(M_LOW);
     set_refer_output(0);
+ //   set_step_delay(1);                      // Do not set !!!!!
 #ifdef __SPUR__
     setting.spur = 1;
 #endif
@@ -2154,12 +2156,12 @@ void self_test(int test)
     test_prepare(i);
     setting.step_delay = 8000;
     for (int j= 0; j < 57; j++ ) {
-      setting.step_delay = setting.step_delay * 4/3;
+      test_prepare(i);
+      setting.step_delay = setting.step_delay * 5 / 4;
       setting.rbw = SI4432_force_RBW(j);
       shell_printf("RBW = %d, ",setting.rbw);
-      test_prepare(i);
       set_sweep_frequency(ST_SPAN, (int32_t)(setting.rbw * 10000));
-
+      setting.repeat = 10;
       test_acquire(i);                        // Acquire test
       test_validate(i);                       // Validate test
       float saved_peakLevel = peakLevel;
@@ -2170,15 +2172,16 @@ void self_test(int test)
 
       shell_printf("Start level = %f, ",peakLevel);
       while (setting.step_delay > 10 && peakLevel > saved_peakLevel - 1) {
-        setting.step_delay = setting.step_delay * 3 / 4;
         test_prepare(i);
+        setting.step_delay = setting.step_delay * 4 / 5;
         //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
         set_sweep_frequency(ST_SPAN, (int32_t)(setting.rbw * 10000));
+        setting.repeat = 10;
         test_acquire(i);                        // Acquire test
         test_validate(i);                       // Validate test
         //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
       }
-      setting.step_delay = setting.step_delay * 4 / 3;
+      setting.step_delay = setting.step_delay * 5 / 4;
       shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting.step_delay);
     }
   } else if (test == 0) {

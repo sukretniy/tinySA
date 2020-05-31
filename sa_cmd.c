@@ -361,11 +361,17 @@ VNA_SHELL_FUNCTION(cmd_correction)
 {
   (void)argc;
   if (argc == 0) {
-    shell_printf("correction table\r\n");
     shell_printf("index frequency value\r\n");
     for (int i=0; i<CORRECTION_POINTS; i++) {
       shell_printf("%d %d %.1f\r\n", i, config.correction_frequency[i], config.correction_value[i]);
     }
+    return;
+  }
+  if (argc == 1 && (strcmp(argv[0],"reset") == 0)) {
+    for (int i=0; i<CORRECTION_POINTS; i++) {
+      config.correction_value[i] = 0.0;
+    }
+    shell_printf("correction table reset\r\n");
     return;
   }
   if (argc != 3) {
