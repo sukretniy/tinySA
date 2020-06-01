@@ -52,6 +52,7 @@ void reset_settings(int m)
   setting.level = -15.0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
+  setting.sweep_time = 1000;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
   setting.refer = -1;
@@ -160,8 +161,14 @@ void set_drive(int d)
 void set_level_sweep(float l)
 {
   setting.level_sweep = l;
+  dirty = true;
 }
 
+void set_sweep_time(int32_t t)
+{
+  setting.sweep_time = t;
+  dirty = true;
+}
 
 void set_tracking_output(int t)
 {
@@ -1209,7 +1216,8 @@ again:
       return false;
     if (MODE_OUTPUT(setting.mode)) {
       if (setting.modulation == MO_NONE) {
-        osalThreadSleepMilliseconds(10);              // Slow down sweep in output mode
+//        osalThreadSleepMilliseconds(10);              // Slow down sweep in output mode
+        my_microsecond_delay(setting.sweep_time * 1000 / 290);
       }
       continue;             // Skip all other processing
     }

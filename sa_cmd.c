@@ -88,18 +88,18 @@ VNA_SHELL_FUNCTION(cmd_attenuate)
 VNA_SHELL_FUNCTION(cmd_level)
 {
   if (argc != 1) {
-  usage:
-    shell_printf("usage: level -76..20\r\n");
+    shell_printf("usage: level -76..-6\r\n");
     return;
   }
   float f = my_atof(argv[0]);
   set_level(f);
 }
 
+
+
 VNA_SHELL_FUNCTION(cmd_levelsweep)
 {
   if (argc != 1) {
-  usage:
     shell_printf("usage: levelsweep -76..+76\r\n");
     return;
   }
@@ -126,6 +126,27 @@ VNA_SHELL_FUNCTION(cmd_reflevel)
     set_reflevel(r);
   }
 }
+
+VNA_SHELL_FUNCTION(cmd_leveloffset)
+{
+  if (argc == 0) {
+    shell_printf("leveloffset low %.1f\r\n", (float) config.low_level_offset);
+    shell_printf("leveloffset high %.1f\r\n", (float)config.high_level_offset);
+    return;
+  } else if (argc == 2) {
+    float v = my_atof(argv[1]);
+    if (strcmp(argv[0],"low") == 0)
+      config.low_level_offset = v;
+    else if (strcmp(argv[0],"high") == 0)
+      config.low_level_offset = v;
+    else
+      goto usage;
+  } else {
+  usage:
+    shell_printf("leveloffset [low|high <offset>]\r\n");
+  }
+}
+
 
 VNA_SHELL_FUNCTION(cmd_rbw)
 {

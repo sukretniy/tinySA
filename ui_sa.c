@@ -279,7 +279,8 @@ const uint16_t right_icons [] =
 
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP,
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
+  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME,
 };
 
 
@@ -369,6 +370,24 @@ static const keypads_t keypads_level[] = {
   { 0, 0, -1 }
 };
 
+static const keypads_t keypads_time[] = {
+  { 1, 3, KP_PERIOD },
+  { 0, 3, 0 },
+  { 0, 2, 1 },
+  { 1, 2, 2 },
+  { 2, 2, 3 },
+  { 0, 1, 4 },
+  { 1, 1, 5 },
+  { 2, 1, 6 },
+  { 0, 0, 7 },
+  { 1, 0, 8 },
+  { 2, 0, 9 },
+  { 3, 1, KP_N },
+  { 3, 2, KP_P },
+  { 3, 3, KP_MINUS },
+  { 2, 3, KP_BS },
+  { 0, 0, -1 }
+};
 
 static const keypads_t * const keypads_mode_tbl[] = {
   NULL,         // never used
@@ -392,6 +411,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_level,    // KM_OFFSET
   keypads_level,    // KM_TRIGGER
   keypads_level,    // KM_LEVELSWEEP
+  keypads_time,     // KM_SWEEP_TIME
 };
 
 #ifdef __VNA__
@@ -403,7 +423,7 @@ static const char * const keypad_mode_label[] = {
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
   "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
-  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER", "LEVELSWEEP"// 16-
+  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER", "LEVEL SWEEP", "SWEEP TIME"// 16-
 };
 #endif
 
@@ -1061,7 +1081,8 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_SUBMENU,  0,               "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,         "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,   KM_LEVELSWEEP,   "LEVELSWEEP: %s",   NULL},
-//  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
+  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,   "SWEEP TIME: %s",   NULL},
+  //  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
   { MT_FORM | MT_CANCEL,   0,           S_LARROW" BACK",    NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1726,6 +1747,10 @@ static void fetch_numeric_target(void)
     uistat.value = setting.level_sweep;
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
+  case KM_SWEEP_TIME:
+    uistat.value = setting.sweep_time;
+    plot_printf(uistat.text, sizeof uistat.text, "%.0fmS", uistat.value);
+    break;
   case KM_TRIGGER:
     uistat.value = setting.trigger_level;
     plot_printf(uistat.text, sizeof uistat.text, "%fdB", uistat.value);
@@ -1811,6 +1836,9 @@ set_numeric_value(void)
     break;
   case KM_LEVELSWEEP:
     set_level_sweep(uistat.value);
+    break;
+  case KM_SWEEP_TIME:
+    set_sweep_time(uistat.value);
     break;
   case KM_TRIGGER:
     set_trigger_level(uistat.value);
