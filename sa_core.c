@@ -732,7 +732,10 @@ void update_rbw(void)
     SI4432_Sel =  MODE_SELECT(setting.mode);
     actual_rbw = SI4432_SET_RBW(actual_rbw);
 
-    vbwSteps = ((int)(2 * setting.vbw / actual_rbw));
+    if (setting.step_delay==1) // Precise
+      vbwSteps = ((int)(2 * (setting.vbw + (actual_rbw/2)) / (actual_rbw / 2)));
+    else
+      vbwSteps = ((int)(2 * (setting.vbw + (actual_rbw/2)) / actual_rbw));
 
     if (vbwSteps < 1)
       vbwSteps = 1;
@@ -983,11 +986,15 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   float RSSI = -150.0;
   int t = 0;
   do {           // ------------- Acquisition loop ----------
-    int offs;
+    int offs,sm;
+    if (setting.step_delay == 1)
+      sm = 250; // steps of a quarter rbw
+    else
+      sm = 500; // steps of half the rbw
     if (vbwSteps & 1) { // Uneven steps, center
-      offs = (t - (vbwSteps >> 1)) * 500;
+      offs = (t - (vbwSteps >> 1)) * sm;
     } else {            // Even, shift half step
-      offs = (t - (vbwSteps >> 1)) * 500 + 250;
+      offs = (t - (vbwSteps >> 1)) * sm + sm/2;
     }
     offs = (int)(offs * actual_rbw);
     uint32_t lf = (uint32_t)(f + offs);
@@ -1086,6 +1093,9 @@ again:
     float correct_RSSI = get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset + get_frequency_correction(f);
    wait:
     subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;
+//    if ( i < 3)
+//      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
+
     if (wait_for_trigger) { // wait for trigger to happen
       if (operation_requested && break_on_operation)
         break;         // abort
@@ -1135,6 +1145,7 @@ again:
   float temp_min_level = 100;
   //  spur_old_stepdelay = 0;
   int repeats = 1;
+//  shell_printf("\r\n");
   if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE) {
     repeats = 1000; // to avoid interrupting the tone during UI processing
     modulation_counter = 0;

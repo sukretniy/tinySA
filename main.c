@@ -2267,6 +2267,8 @@ static const VNAShellCommand commands[] =
 #endif
     { "if", cmd_if,    0 },
     { "attenuate", cmd_attenuate,    0 },
+    { "level", cmd_level,    0 },
+    { "modulation", cmd_modulation,    0 },
     { "reflevel", cmd_reflevel,    0 },
     { "rbw", cmd_rbw,    0 },
     { "mode", cmd_mode,    0 },

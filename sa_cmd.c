@@ -31,6 +31,28 @@ VNA_SHELL_FUNCTION(cmd_mode)
     goto usage;
 }
 
+VNA_SHELL_FUNCTION(cmd_modulation )
+{
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: modulation off|AM|NFM|WFM|extern\r\n");
+    return;
+  }
+  int m = MO_NONE;
+  if (strcmp(argv[0],"off") == 0) {
+  } else if (strcmp(argv[0],"AM") == 0) {
+    m = MO_AM;
+  } else if (strcmp(argv[0],"NFM") == 0) {
+    m = MO_NFM;
+  } else if (strcmp(argv[0],"WFM") == 0) {
+    m = MO_WFM;
+  } else if (strcmp(argv[0],"extern") == 0) {
+    m = MO_EXTERNAL;
+  } else
+    goto usage;
+  set_modulation(m);
+}
+
 VNA_SHELL_FUNCTION(cmd_spur)
 {
   if (argc != 1) {
@@ -61,6 +83,17 @@ VNA_SHELL_FUNCTION(cmd_attenuate)
       goto usage;
     set_attenuation(a);
   }
+}
+
+VNA_SHELL_FUNCTION(cmd_level)
+{
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: level -76..20\r\n");
+    return;
+  }
+  int a = my_atoi(argv[0]);
+  set_attenuation(a);
 }
 
 VNA_SHELL_FUNCTION(cmd_reflevel)
