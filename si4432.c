@@ -145,6 +145,11 @@ void SI4432_Reset(void)
   }
 }
 
+void SI4432_Drive(int d)
+{
+  SI4432_Write_Byte(0x6D, (byte) (0x18+(d & 7)));
+}
+
 void SI4432_Transmit(int d)
 {
   int count = 0;

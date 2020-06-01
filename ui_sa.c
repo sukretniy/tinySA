@@ -279,7 +279,7 @@ const uint16_t right_icons [] =
 
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER,
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE, KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP,
 };
 
 
@@ -391,6 +391,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_level,    // KM_REPEA
   keypads_level,    // KM_OFFSET
   keypads_level,    // KM_TRIGGER
+  keypads_level,    // KM_LEVELSWEEP
 };
 
 #ifdef __VNA__
@@ -402,7 +403,7 @@ static const char * const keypad_mode_label[] = {
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
   "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
-  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER"// 16-
+  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER", "LEVELSWEEP"// 16-
 };
 #endif
 
@@ -1059,6 +1060,7 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,  "LEVEL: %s",        NULL},
   { MT_FORM | MT_SUBMENU,  0,               "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,         "SPAN: %s",         NULL},
+  { MT_FORM | MT_KEYPAD,   KM_LEVELSWEEP,   "LEVELSWEEP: %s",   NULL},
 //  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
   { MT_FORM | MT_CANCEL,   0,           S_LARROW" BACK",    NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
@@ -1718,7 +1720,11 @@ static void fetch_numeric_target(void)
     break;
   case KM_OFFSET:
     uistat.value = setting.offset;
-    plot_printf(uistat.text, sizeof uistat.text, "%fdB", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
+    break;
+  case KM_LEVELSWEEP:
+    uistat.value = setting.level_sweep;
+    plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
   case KM_TRIGGER:
     uistat.value = setting.trigger_level;
@@ -1785,7 +1791,7 @@ set_numeric_value(void)
     set_drive(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
-    set_attenuation(uistat.value);
+    set_level(uistat.value);
     break;
   case KM_DECAY:
     set_decay(uistat.value);
@@ -1802,6 +1808,9 @@ set_numeric_value(void)
     break;
   case KM_OFFSET:
     set_offset(uistat.value);
+    break;
+  case KM_LEVELSWEEP:
+    set_level_sweep(uistat.value);
     break;
   case KM_TRIGGER:
     set_trigger_level(uistat.value);

@@ -183,6 +183,8 @@ void set_drive(int d);
 void set_IF(int f);
 void set_step_delay(int t);
 void set_repeat(int);
+void set_level_sweep(float);
+void set_level(float);
 //extern int setting.repeat;
 //extern int setting.rbw;
 #ifdef __SPUR__
@@ -571,6 +573,8 @@ typedef struct setting
   float trigger_level;
   int trigger;
   int linearity_step;
+  float level;
+  float level_sweep;
   int test_argument;
   uint32_t checksum;
 }setting_t;
@@ -775,6 +779,7 @@ void SI4432_Write_Byte(byte ADR, byte DATA );
 byte SI4432_Read_Byte( byte ADR );
 
 void SI4432_Init(void);
+void SI4432_Drive(int);
 float SI4432_RSSI(uint32_t i, int s);
 void SI4432_Set_Frequency ( long Freq );
 float SI4432_SET_RBW(float WISH);

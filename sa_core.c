@@ -48,6 +48,8 @@ void reset_settings(int m)
   setting.frequency_IF = 433800000;
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
+  setting.level_sweep = 0.0;
+  setting.level = -15.0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
   trace[TRACE_STORED].enabled = false;
@@ -155,6 +157,12 @@ void set_drive(int d)
   dirty = true;
 }
 
+void set_level_sweep(float l)
+{
+  setting.level_sweep = l;
+}
+
+
 void set_tracking_output(int t)
 {
   setting.tracking_output = t;
@@ -233,6 +241,13 @@ int get_attenuation(void)
       return ( -POWER_OFFSET - setting.attenuate + (setting.drive & 7) * 3);
   }
   return(setting.attenuate);
+}
+
+void set_level(float v)
+{
+  setting.level = v;
+  set_attenuation((int)v);
+  dirty = true;
 }
 
 void set_attenuation(int a)
@@ -949,6 +964,40 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     apply_settings();
     scandirty = true;
     dirty = false;
+  }
+
+  if (setting.level_sweep != 0.0) {
+    static int old_a = -150;
+    int a = setting.level + (i / 290.0) * setting.level_sweep;
+    if (a != old_a) {
+      old_a = a;
+      int d = 0;              // Start at lowest drive level;
+      a = a + POWER_OFFSET;
+      if (a > 0) {
+        d++;
+        a = a - 3;
+      }
+      if (a > 0) {
+        d++;
+        a = a - 3;
+      }
+      if (a > 0) {
+        d++;
+        a = a - 3;
+      }
+      SI4432_Sel = 0;
+      SI4432_Drive(d);
+      if (a > 0)
+        a = 0;
+      if( a >  - SWITCH_ATTENUATION) {
+        set_switch_transmit();
+      } else {
+        a = a + SWITCH_ATTENUATION;
+        set_switch_receive();
+      }
+      a = -a;
+      PE4302_Write_Byte(a * 2 );
+    }
   }
 
   if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {               // AM modulation

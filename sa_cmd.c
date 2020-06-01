@@ -92,9 +92,22 @@ VNA_SHELL_FUNCTION(cmd_level)
     shell_printf("usage: level -76..20\r\n");
     return;
   }
-  int a = my_atoi(argv[0]);
-  set_attenuation(a);
+  float f = my_atof(argv[0]);
+  set_level(f);
 }
+
+VNA_SHELL_FUNCTION(cmd_levelsweep)
+{
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: levelsweep -76..+76\r\n");
+    return;
+  }
+  float f = my_atof(argv[0]);
+  set_level_sweep(f);
+}
+
+
 
 VNA_SHELL_FUNCTION(cmd_reflevel)
 {
