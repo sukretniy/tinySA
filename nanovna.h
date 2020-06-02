@@ -710,6 +710,7 @@ void ui_mode_menu(void);
 #define OP_NONE       0x00
 #define OP_LEVER      0x01
 #define OP_TOUCH      0x02
+#define OP_CONSOLE    0x04
 //#define OP_FREQCHANGE 0x04
 extern volatile uint8_t operation_requested;
 

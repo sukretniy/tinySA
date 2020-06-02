@@ -1361,11 +1361,13 @@ static const menuitem_t menu_config[] = {
 };
 
 static const menuitem_t menu_display[] = {
-  { MT_CALLBACK,0,          "\2PAUSE\0SWEEP",   menu_pause_cb},
-  { MT_CALLBACK,0,          "\2STORE\0TRACE",   menu_storage_cb},
-  { MT_CALLBACK,1,          "\2CLEAR\0STORED",  menu_storage_cb},
-  { MT_CALLBACK,2,          "\2SUBTRACT\0STORED",menu_storage_cb},
-  { MT_CALLBACK,3,          "WATERFALL",        menu_storage_cb},
+  { MT_CALLBACK,0,              "\2PAUSE\0SWEEP",   menu_pause_cb},
+  { MT_CALLBACK,0,              "\2STORE\0TRACE",   menu_storage_cb},
+  { MT_CALLBACK,1,              "\2CLEAR\0STORED",  menu_storage_cb},
+  { MT_CALLBACK,2,              "\2SUBTRACT\0STORED",menu_storage_cb},
+  { MT_CALLBACK,3,              "WATERFALL",        menu_storage_cb},
+  { MT_KEYPAD,  KM_SWEEP_TIME,  "\2SWEEP\0TIME",    NULL},
+
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };

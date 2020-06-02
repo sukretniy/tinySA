@@ -52,7 +52,6 @@ void reset_settings(int m)
   setting.level = -15.0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
-  setting.sweep_time = 100;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
   setting.refer = -1;
@@ -66,6 +65,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_START, (uint32_t) 0);
     set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
     setting.attenuate = 30;
+    setting.sweep_time = 0;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -74,6 +74,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_START, (uint32_t) minFreq);
     set_sweep_frequency(ST_STOP, (uint32_t) maxFreq);
     setting.attenuate = 0;
+    setting.sweep_time = 0;
     break;
 #endif
   case M_GENLOW:
@@ -82,6 +83,7 @@ void reset_settings(int m)
     maxFreq = 520000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
     set_sweep_frequency(ST_SPAN, 0);
+    setting.sweep_time = 100;
     break;
   case M_HIGH:
 #ifdef __ULTRA_SA__
@@ -93,6 +95,7 @@ void reset_settings(int m)
 #endif
     set_sweep_frequency(ST_START, (int32_t) minFreq);
     set_sweep_frequency(ST_STOP, (int32_t) maxFreq);
+    setting.sweep_time = 0;
     break;
   case M_GENHIGH:
     setting.drive=8;
@@ -100,6 +103,7 @@ void reset_settings(int m)
     maxFreq = 960000000;
     set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
     set_sweep_frequency(ST_SPAN, 0);
+    setting.sweep_time = 100;
     break;
   }
   for (int i = 0; i< MARKERS_MAX; i++) {
@@ -744,7 +748,7 @@ case M_GENHIGH: // Direct output from 1
 
 void update_rbw(void)
 {
-  if (setting.frequency_step > 0) {
+  if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
     setting.vbw = (setting.frequency_step)/1000.0;
     actual_rbw = setting.rbw;
     //  float old_rbw = actual_rbw;
@@ -1169,7 +1173,7 @@ again:
 //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
 
     if (wait_for_trigger) { // wait for trigger to happen
-      if (operation_requested && break_on_operation)
+      if ((operation_requested || shell_function) && break_on_operation)
         break;         // abort
       if (subRSSI < setting.trigger_level)
         goto wait;
@@ -1192,7 +1196,7 @@ again:
     if (RSSI < subRSSI)                                     // Take max during subscanning
       RSSI = subRSSI;
     t++;
-    if (operation_requested && break_on_operation)       // break subscanning if requested
+    if ((operation_requested || shell_function ) && break_on_operation)       // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);
   return(RSSI);
@@ -1227,19 +1231,21 @@ again:
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);
 
+    if ( setting.sweep_time > 0 && !(MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE)) {
+      int32_t s = setting.sweep_time * (100000 / 290);
+      if (s < 30000)
+        my_microsecond_delay(s);
+      else
+        osalThreadSleepMilliseconds(s/1000);
+    }
+
     // back to toplevel to handle ui operation
-    if (operation_requested && break_on_operation)
+    if ((operation_requested || shell_function) && break_on_operation)
       return false;
     if (MODE_OUTPUT(setting.mode)) {
-      if (setting.modulation == MO_NONE) {
-        int32_t s = setting.sweep_time * (100000 / 290);
-        if (s < 30000)
-          my_microsecond_delay(s);
-        else
-          osalThreadSleepMilliseconds(s/1000);
-      }
       continue;             // Skip all other processing
     }
+
     if (MODE_INPUT(setting.mode)) {
 
       temp_t[i] = RSSI;
@@ -1761,7 +1767,7 @@ void draw_cal_status(void)
   ili9341_drawstring("Scan:", x, y);
 
   y += YSTEP;
-  int32_t t = (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10
+  int32_t t = ((int32_t)setting.sweep_time)*100 + (int)((2* vbwSteps * sweep_points * ( actualStepDelay / 100) )) /10
 #ifdef __SPUR__
       * (setting.spur ? 2 : 1)
 #endif
