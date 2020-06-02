@@ -52,7 +52,7 @@ void reset_settings(int m)
   setting.level = -15.0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
-  setting.sweep_time = 1000;
+  setting.sweep_time = 100;
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
   setting.refer = -1;
@@ -166,6 +166,10 @@ void set_level_sweep(float l)
 
 void set_sweep_time(int32_t t)
 {
+  if (t < 5)
+    t = 5;
+  if (t > 6000)
+    t = 6000;
   setting.sweep_time = t;
   dirty = true;
 }
@@ -973,7 +977,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     dirty = false;
   }
 
-  if (setting.level_sweep != 0.0) {
+  if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {
     static int old_a = -150;
     int a = setting.level + (i / 290.0) * setting.level_sweep;
     if (a != old_a) {
@@ -1007,6 +1011,18 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     }
   }
 
+  if (setting.mode == M_LOW && setting.auto_attenuation) {
+    unsigned char v;
+    static unsigned char old_v;
+    if (f < 1500000)
+      v = 0x50; // Disable AGC and enable LNA
+    else
+      v = 0x60; // Disable AGC and enable LNA
+    if (old_v != v) {
+      SI4432_Write_Byte(0x69, v);
+      old_v = v;
+    }
+  }
   if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {               // AM modulation
     int p = setting.attenuate * 2 + am_modulation[modulation_counter];
     PE4302_Write_Byte(p);
@@ -1216,8 +1232,11 @@ again:
       return false;
     if (MODE_OUTPUT(setting.mode)) {
       if (setting.modulation == MO_NONE) {
-//        osalThreadSleepMilliseconds(10);              // Slow down sweep in output mode
-        my_microsecond_delay(setting.sweep_time * 1000 / 290);
+        int32_t s = setting.sweep_time * (100000 / 290);
+        if (s < 30000)
+          my_microsecond_delay(s);
+        else
+          osalThreadSleepMilliseconds(s/1000);
       }
       continue;             // Skip all other processing
     }
@@ -1330,12 +1349,16 @@ again:
   }
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // Auto attenuate
-    if (actual_t[max_index[0]] - setting.attenuate < - 30 && setting.attenuate >= 10) {
+    int old_attenuate = setting.attenuate;
+    float actual_max_level = actual_t[max_index[0]] - setting.attenuate;
+    if (actual_max_level < - 31 && setting.attenuate >= 10) {
       setting.attenuate -= 10;
-      redraw_request |= REDRAW_CAL_STATUS;
-      dirty = true;                               // Must be  above if(scandirty!!!!!)
-    } else if (actual_t[max_index[0]] - setting.attenuate > - 15 && setting.attenuate <= 20) {
+    } else if (actual_max_level < - 26 && setting.attenuate >= 5) {
+        setting.attenuate -= 5;
+    } else if (actual_max_level > - 19 && setting.attenuate <= 20) {
       setting.attenuate += 10;
+    }
+    if (old_attenuate != setting.attenuate) {
       redraw_request |= REDRAW_CAL_STATUS;
       dirty = true;                               // Must be  above if(scandirty!!!!!)
     }

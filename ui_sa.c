@@ -411,7 +411,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_level,    // KM_OFFSET
   keypads_level,    // KM_TRIGGER
   keypads_level,    // KM_LEVELSWEEP
-  keypads_time,     // KM_SWEEP_TIME
+  keypads_level,     // KM_SWEEP_TIME
 };
 
 #ifdef __VNA__
@@ -422,8 +422,8 @@ static const char * const keypad_mode_label[] = {
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
-  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "SAMPLE TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
-  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER", "LEVEL SWEEP", "SWEEP TIME"// 16-
+  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "\2SAMPLE\0TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
+  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER", "\2LEVEL\0SWEEP", "SWEEP mS"// 16-
 };
 #endif
 
@@ -1080,7 +1080,7 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,  "LEVEL: %s",        NULL},
   { MT_FORM | MT_SUBMENU,  0,               "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,         "SPAN: %s",         NULL},
-  { MT_FORM | MT_KEYPAD,   KM_LEVELSWEEP,   "LEVELSWEEP: %s",   NULL},
+  { MT_FORM | MT_KEYPAD | MT_LOW,   KM_LEVELSWEEP,   "LEVELSWEEP: %s",   NULL},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,   "SWEEP TIME: %s",   NULL},
   //  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
   { MT_FORM | MT_CANCEL,   0,           S_LARROW" BACK",    NULL },
@@ -1748,12 +1748,12 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
   case KM_SWEEP_TIME:
-    uistat.value = setting.sweep_time;
-    plot_printf(uistat.text, sizeof uistat.text, "%.0fmS", uistat.value);
+    uistat.value = ((float)setting.sweep_time)/10.0;
+    plot_printf(uistat.text, sizeof uistat.text, "%.1fS", uistat.value);
     break;
   case KM_TRIGGER:
     uistat.value = setting.trigger_level;
-    plot_printf(uistat.text, sizeof uistat.text, "%fdB", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
 
   }
@@ -1838,7 +1838,7 @@ set_numeric_value(void)
     set_level_sweep(uistat.value);
     break;
   case KM_SWEEP_TIME:
-    set_sweep_time(uistat.value);
+    set_sweep_time(uistat.value*10.0);
     break;
   case KM_TRIGGER:
     set_trigger_level(uistat.value);
