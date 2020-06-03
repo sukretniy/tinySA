@@ -529,6 +529,7 @@ void set_scale(float s) {
   set_trace_scale(0, s);
   set_trace_scale(1, s);
   set_trace_scale(2, s);
+  set_reflevel(setting.reflevel);
 }
 
 //int GetScale(void) {
@@ -1084,7 +1085,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 again:
 #endif
 
-    if (i > 0 && FREQ_IS_CW())
+    if (MODE_INPUT(setting.mode) && i > 0 && FREQ_IS_CW())
       goto skip_LO_setting;
 
     if (setting.mode == M_LOW && tracking) {                                // Measure BPF
