@@ -2370,6 +2370,8 @@ void calibrate(void)
       chThdSleepMilliseconds(1000);
     }
   }
+#if 0               // No high input calibration as CAL OUTPUT is unreliable
+
   i = 12;           // Measure 270MHz in low mode
   set_RBW(100);
   test_prepare(i);
@@ -2394,6 +2396,10 @@ void calibrate(void)
       set_actual_power(last_peak_level);
       chThdSleepMilliseconds(1000);
   }
+
+#endif
+
+  config_save();
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 30, 120);
 quit:
