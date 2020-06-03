@@ -442,16 +442,18 @@ float SI4432_RSSI(uint32_t i, int s)
 #endif
 //START_PROFILE
     SI4432_Sel = s;
-    my_microsecond_delay(actualStepDelay);
+    if (actualStepDelay)
+      my_microsecond_delay(actualStepDelay);
     // chThdSleepMicroseconds(actualStepDelay);
     i = setting.repeat;
     RSSI_RAW  = 0;
     while (i-->0)
       RSSI_RAW += ((unsigned int)SI4432_Read_Byte( 0x26 )) << 4 ;
-    RSSI_RAW = RSSI_RAW / setting.repeat;
+    if (setting.repeat > 1)
+      RSSI_RAW = RSSI_RAW / setting.repeat;
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();
-  float dBm = (((float)RSSI_RAW)/16.0 - 240.0)/2.0 + SI4432_RSSI_correction;
+  float dBm = ((float)RSSI_RAW)/32.0 - 120.0 + SI4432_RSSI_correction;
 #ifdef __SIMULATION__
   dBm = Simulated_SI4432_RSSI(i,s);
 #endif

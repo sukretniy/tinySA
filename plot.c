@@ -2068,7 +2068,6 @@ void frequency_string(char *buf, size_t len, int32_t freq)
 #endif
 }
 
-
 void
 draw_frequencies(void)
 {
@@ -2084,6 +2083,13 @@ draw_frequencies(void)
 #endif
     if (FREQ_IS_CW()) {
       plot_printf(buf1, sizeof(buf1), " CW %qHz", get_sweep_frequency(ST_CW));
+      float t = setting.sweep_time*1000.0 + 25.0; // in mS
+          ; // in mS
+      if (t>=1000)
+          plot_printf(buf2, sizeof(buf2), "%.2fS",t/1000.0);
+      else
+        plot_printf(buf2, sizeof(buf2), "%.2fmS", t);
+
     } else if (FREQ_IS_STARTSTOP()) {
       plot_printf(buf1, sizeof(buf1), " START %qHz", get_sweep_frequency(ST_START));
       plot_printf(buf2, sizeof(buf2), " STOP %qHz", get_sweep_frequency(ST_STOP));

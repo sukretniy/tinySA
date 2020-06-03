@@ -185,7 +185,7 @@ void set_step_delay(int t);
 void set_repeat(int);
 void set_level_sweep(float);
 void set_level(float);
-void set_sweep_time(int32_t);
+void set_sweep_time(float);
 //extern int setting.repeat;
 //extern int setting.rbw;
 #ifdef __SPUR__
@@ -576,7 +576,7 @@ typedef struct setting
   int linearity_step;
   float level;
   float level_sweep;
-  int32_t sweep_time;
+  float sweep_time;
   int test_argument;
   uint32_t checksum;
 }setting_t;

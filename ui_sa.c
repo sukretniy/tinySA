@@ -422,8 +422,8 @@ static const char * const keypad_mode_label[] = {
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
-  "\2ATTENUATE\0 0-31dB", "ACTUALPOWER", "IF", "\2SAMPLE\0TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
-  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER", "\2LEVEL\0SWEEP", "SWEEP mS"// 16-
+  "\2ATTENUATE\0 0-31dB", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
+  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
 };
 #endif
 
