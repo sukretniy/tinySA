@@ -1750,7 +1750,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
   case KM_SWEEP_TIME:
-    uistat.value = ((float)setting.sweep_time)/10.0;
+    uistat.value = setting.sweep_time;
     plot_printf(uistat.text, sizeof uistat.text, "%.1fS", uistat.value);
     break;
   case KM_TRIGGER:
@@ -1840,7 +1840,7 @@ set_numeric_value(void)
     set_level_sweep(uistat.value);
     break;
   case KM_SWEEP_TIME:
-    set_sweep_time(uistat.value*10.0);
+    set_sweep_time(uistat.value);
     break;
   case KM_TRIGGER:
     set_trigger_level(uistat.value);
