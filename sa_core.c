@@ -1062,22 +1062,31 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   float RSSI = -150.0;
   int t = 0;
   do {           // ------------- Acquisition loop ----------
-    int offs,sm;
-    if (setting.step_delay == 1)
-      sm = 250; // steps of a quarter rbw
-    else
-      sm = 500; // steps of half the rbw
-    if (vbwSteps & 1) { // Uneven steps, center
-      offs = (t - (vbwSteps >> 1)) * sm;
-    } else {            // Even, shift half step
-      offs = (t - (vbwSteps >> 1)) * sm + sm/2;
+    int offs = 0,sm;
+    uint32_t lf = (uint32_t)f;
+    if (vbwSteps > 1) {         // Calculate sub steps
+      if (setting.step_delay == 1)
+        sm = 250; // steps of a quarter rbw
+      else
+        sm = 500; // steps of half the rbw
+      if (vbwSteps & 1) { // Uneven steps, center
+        offs = (t - (vbwSteps >> 1)) * sm;
+      } else {            // Even, shift half step
+        offs = (t - (vbwSteps >> 1)) * sm + sm/2;
+      }
+      offs = (int)(offs * actual_rbw);
+      lf = (uint32_t)(f + offs);
     }
-    offs = (int)(offs * actual_rbw);
-    uint32_t lf = (uint32_t)(f + offs);
+
+    // --------------- Set all the LO's ------------------------
 #ifdef __SPUR__
     float spur_RSSI = 0;
 again:
 #endif
+
+    if (i > 0 && FREQ_IS_CW())
+      goto skip_LO_setting;
+
     if (setting.mode == M_LOW && tracking) {                                // Measure BPF
       set_freq (0, setting.frequency_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
       local_IF = setting.frequency_IF ;
@@ -1148,7 +1157,13 @@ again:
     }
     if (MODE_OUTPUT(setting.mode))              // No substepping and no RSSI in output mode
       return(0);
+
+    // ---------------- Prepare RSSI ----------------------
+
     float signal_path_loss;
+
+ skip_LO_setting:
+
 #ifdef __ULTRA__
     if (setting.mode == M_ULTRA)
       signal_path_loss = -15;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
