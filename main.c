@@ -1704,7 +1704,7 @@ VNA_SHELL_FUNCTION(cmd_trace)
   if (argc == 0) {
     for (t = 0; t < TRACES_MAX; t++) {
       if (trace[t].enabled) {
-        const char *type = get_trace_typename(t);
+        const char *type = unit_string[setting.unit]; // get_trace_typename(t);
         const char *channel = trc_channel_name[trace[t].channel];
         float scale = get_trace_scale(t);
         float refpos = get_trace_refpos(t);

@@ -478,11 +478,42 @@ int GetAGC(void)
 
 void set_reflevel(float level)
 {
-  setting.reflevel = (level / setting.scale) * setting.scale;
-  set_trace_refpos(0, NGRIDY - level / get_trace_scale(0));
-  set_trace_refpos(1, NGRIDY - level / get_trace_scale(0));
-  set_trace_refpos(2, NGRIDY - level / get_trace_scale(0));
+  setting.reflevel = level;
+  set_trace_refpos(0, /* NGRIDY - */ level /* / get_trace_scale(0) */);
+  set_trace_refpos(1, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
+  set_trace_refpos(2, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
+
+  if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
+    float s = setting.scale;
+    if (level - NGRIDY * s < 0) {
+      level = level / NGRIDY;
+      setting.scale = level;
+      set_trace_scale(0, level);
+      set_trace_scale(1, level);
+      set_trace_scale(2, level);
+    }
+  }
   dirty = true;
+}
+
+void set_scale(float s) {
+  setting.scale = s;
+  set_trace_scale(0, s);
+  set_trace_scale(1, s);
+  set_trace_scale(2, s);
+
+  if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
+    float r = setting.reflevel;
+    s = NGRIDY * s;
+    if (s > r) {
+      setting.reflevel = s;
+      set_trace_refpos(0, s);
+      set_trace_refpos(1, s);
+      set_trace_refpos(2, s);
+    }
+  }
+
+  //  set_reflevel(setting.reflevel);
 }
 
 
@@ -520,17 +551,6 @@ void set_trigger(int trigger)
 //int GetRefpos(void) {
 //  return (NGRIDY - get_trace_refpos(2)) * get_trace_scale(2);
 //}
-
-void set_scale(float s) {
-  setting.scale = s;
-  if (UNIT_IS_LINEAR(setting.unit)) {   // Bottom always at zero
-    set_reflevel(NGRIDY * s);
-  }
-  set_trace_scale(0, s);
-  set_trace_scale(1, s);
-  set_trace_scale(2, s);
-  set_reflevel(setting.reflevel);
-}
 
 //int GetScale(void) {
 //  return get_trace_refpos(2);

@@ -592,13 +592,13 @@ trace_into_index(int t, int i, float array[POINTS_COUNT])
 {
   int y, x;
   float coeff = array[i];
-  float refpos = NGRIDY - get_trace_refpos(t);
-  float v = refpos;
-  float scale = 1 / get_trace_scale(t);
+  float refpos = get_trace_refpos(t);
+  float v;
+  float scale = get_trace_scale(t);
 
   switch (trace[t].type) {
   case TRC_LOGMAG:
-    v-= value(coeff) * scale;
+    v = ( refpos - value(coeff) ) / scale;
     break;
 #ifdef __VNA__
 	case TRC_PHASE:
