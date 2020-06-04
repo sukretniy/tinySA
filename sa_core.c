@@ -217,10 +217,22 @@ void set_IF(int f)
 
 void set_unit(int u)
 {
-  if (UNIT_IS_LINEAR(setting.unit) && !UNIT_IS_LINEAR(u)) {
+  float r = to_dBm(setting.reflevel);   // Get neutral unit
+  float s = to_dBm(setting.scale);
+//  float t = setting.trigger;            // Is always in dBm
+  // float m = r - NGRIDSY*s;
+
+  setting.unit = u;                     // Switch unit
+
+  r = value(r);                         // Convert to target unit
+  s = value(s);
+  if (UNIT_IS_LINEAR(setting.unit)) {
+    set_reflevel(r);
+    set_scale(r/10.0);
+  } else {
+    r = 10 * round((r*1.2)/10.0);
     set_scale(10);
   }
-  setting.unit = u;
   dirty = true;
 }
 

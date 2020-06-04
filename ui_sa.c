@@ -423,7 +423,7 @@ static const char * const keypad_mode_label[] = {
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
   "\2ATTENUATE\0 0-31dB", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
-  "OFFSET" , "REPEATS", "OFFSET", "TRIGGER", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
+  "OFFSET" , "REPEATS", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
 };
 #endif
 
@@ -1843,7 +1843,7 @@ set_numeric_value(void)
     set_sweep_time(uistat.value);
     break;
   case KM_TRIGGER:
-    set_trigger_level(uistat.value);
+    set_trigger_level(to_dBm(uistat.value));
     break;
   }
 }

@@ -816,6 +816,7 @@ void self_test(int);
 //extern int setting_test;
 void wait_user(void);
 void calibrate(void);
+float to_dBm(float);
 
 enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY

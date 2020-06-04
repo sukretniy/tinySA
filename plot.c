@@ -457,10 +457,10 @@ value(const float v)
   switch(setting.unit)
   {
   case U_DBMV:
-    return v+ 30.0 + 20.0*log10(sqrt(50));
+    return v + 30.0 + 20.0*log10(sqrt(50));
     break;
   case U_DBUV:
-    return v+ 90.0 + 20.0*log10(sqrt(50.0));
+    return v + 90.0 + 20.0*log10(sqrt(50.0));
     break;
   case U_MVOLT:
     return pow(10, (v-30.0)/20.0) * sqrt(50.0) * 1000.0;
@@ -480,6 +480,34 @@ value(const float v)
 
 }
 
+float
+to_dBm(const float v)
+{
+  switch(setting.unit)
+  {
+  case U_DBMV:
+    return v - 30.0 - 20.0*log10(sqrt(50));
+    break;
+  case U_DBUV:
+    return v - 90.0 - 20.0*log10(sqrt(50.0));
+    break;
+  case U_MVOLT:
+    return log10( v / (sqrt(50.0) * 1000.0)) * 20.0 + 30.0 ;
+    break;
+  case U_UVOLT:
+    return log10(v / (sqrt(50.0) * 1000000.0))*20.0 + 30.0;
+    break;
+  case U_MWATT:
+    return log10(v)*10.0;
+    break;
+  case U_UWATT:
+    return log10(v/1000.0)*10.0;
+    break;
+  }
+//  case U_DBM:
+    return v;  // raw data is in logmag*10 format
+
+}
 
 
 #ifdef __VNA_
