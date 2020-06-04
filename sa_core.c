@@ -2351,7 +2351,6 @@ void calibrate(void)
 {
 #ifdef __CALIBRATE__
   int local_test_status;
-  float last_peak_level;
   in_selftest = true;
   reset_calibration();
   reset_settings(M_LOW);
@@ -2377,7 +2376,7 @@ void calibrate(void)
   set_RBW(100);
   test_prepare(i);
   test_acquire(i);                        // Acquire test
-  last_peak_level = peakLevel;
+  float last_peak_level = peakLevel;
   local_test_status = test_validate(i);                       // Validate test
   chThdSleepMilliseconds(1000);
 
@@ -2411,7 +2410,7 @@ quit:
   in_selftest = false;
   sweep_mode = SWEEP_ENABLE;
   set_refer_output(0);
-  set_mode(M_LOW);
+  reset_settings(M_LOW);
 #endif
 }
 
