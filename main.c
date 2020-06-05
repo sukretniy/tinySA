@@ -2275,6 +2275,7 @@ static const VNAShellCommand commands[] =
     { "rbw", cmd_rbw,    0 },
     { "mode", cmd_mode,    0 },
     { "spur", cmd_spur,    0 },
+    { "load", cmd_load,    0 },
     { "selftest", cmd_selftest,    0 },
     { "x", cmd_x,    0 },
     { "y", cmd_y,    0 },

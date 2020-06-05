@@ -68,6 +68,21 @@ VNA_SHELL_FUNCTION(cmd_spur)
     goto usage;
 }
 
+VNA_SHELL_FUNCTION(cmd_load)
+{
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: load 0..4\r\n");
+    return;
+  }
+  int a = my_atoi(argv[0]);
+  if (0 <= a && a <= 4) {
+    caldata_recall(a);
+  } else
+    goto usage;
+}
+
+
 VNA_SHELL_FUNCTION(cmd_attenuate)
 {
   if (argc != 1) {

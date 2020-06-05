@@ -215,27 +215,6 @@ void set_IF(int f)
   dirty = true;
 }
 
-void set_unit(int u)
-{
-  float r = to_dBm(setting.reflevel);   // Get neutral unit
-  float s = to_dBm(setting.scale);
-//  float t = setting.trigger;            // Is always in dBm
-  // float m = r - NGRIDSY*s;
-
-  setting.unit = u;                     // Switch unit
-
-  r = value(r);                         // Convert to target unit
-  s = value(s);
-  if (UNIT_IS_LINEAR(setting.unit)) {
-    set_reflevel(r);
-    set_scale(r/10.0);
-  } else {
-    r = 10 * round((r*1.2)/10.0);
-    set_scale(10);
-  }
-  dirty = true;
-}
-
 int GetMode(void)
 {
   return(setting.mode);
@@ -488,40 +467,81 @@ int GetAGC(void)
   return(setting.agc);
 }
 
+void set_unit(int u)
+{
+  float r = to_dBm(setting.reflevel);   // Get neutral unit
+  float s = to_dBm(setting.scale);
+//  float t = setting.trigger;            // Is always in dBm
+  // float m = r - NGRIDSY*s;
+
+  setting.unit = u;                     // Switch unit
+
+  r = value(r);                         // Convert to target unit
+  s = value(s);
+  if (UNIT_IS_LINEAR(setting.unit)) {
+    if (r < 0.1)
+      r = 0.1;                          // Minimum value to ensure display
+    if (r >500)
+      r = 500;                          // Maximum value
+    set_reflevel(r);
+    set_scale(r/10.0);
+  } else {
+    r = 10 * round((r*1.2)/10.0);
+    set_scale(10);
+  }
+  dirty = true;
+}
+
 void set_reflevel(float level)
 {
+
+  if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
+    if (level < 0.1)
+      level = 0.1;
+    float s = setting.scale;
+    if (level - NGRIDY * s < 0) {
+      set_scale(level/NGRIDY);
+      level = setting.scale * NGRIDY;
+    }
+  }
+
   setting.reflevel = level;
   set_trace_refpos(0, /* NGRIDY - */ level /* / get_trace_scale(0) */);
   set_trace_refpos(1, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
   set_trace_refpos(2, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
 
-  if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
-    float s = setting.scale;
-    if (level - NGRIDY * s < 0) {
-      level = level / NGRIDY;
-      setting.scale = level;
-      set_trace_scale(0, level);
-      set_trace_scale(1, level);
-      set_trace_scale(2, level);
-    }
-  }
   dirty = true;
 }
 
-void set_scale(float s) {
-  setting.scale = s;
-  set_trace_scale(0, s);
-  set_trace_scale(1, s);
-  set_trace_scale(2, s);
+void set_scale(float t) {
+  if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
+    if (t < 0.01)
+      t = 0.01;
+  }
+  float m = 1;
+//        t = t * 1.2;
+  while (t > 10) { m *= 10; t/=10; }
+  while (t < 1.0)  { m /= 10; t*=10; }
+  if (t>5)
+    t = 10.0;
+  else if (t>2)
+    t = 5.0;
+  else
+    t = 2.0;
+  t = t*m;
+  setting.scale = t;
+  set_trace_scale(0, t);
+  set_trace_scale(1, t);
+  set_trace_scale(2, t);
 
   if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
     float r = setting.reflevel;
-    s = NGRIDY * s;
-    if (s > r) {
-      setting.reflevel = s;
-      set_trace_refpos(0, s);
-      set_trace_refpos(1, s);
-      set_trace_refpos(2, s);
+    t = NGRIDY * t;
+    if (t > r) {
+      setting.reflevel = t;
+      set_trace_refpos(0, t);
+      set_trace_refpos(1, t);
+      set_trace_refpos(2, t);
     }
   }
 
@@ -1419,15 +1439,25 @@ again:
   }
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && max_index[0] > 0) {  // Auto reflevel
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
-      float t = value(actual_t[max_index[0]]);
-      if (t < setting.reflevel / 2 || t> setting.reflevel) {
+      float r = value(actual_t[max_index[0]]);
+      if ((setting.reflevel > 0.1  && r < setting.reflevel / 2 ) || (setting.reflevel < 500.0 && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
         float m = 1;
-        t = t * 1.2;
-        while (t > 10) { m *= 10; t/=10; }
-        while (t < 1)  { m /= 10; t*=10; }
-        t = round(t);
-        set_scale(t*m / NGRIDY);
-        set_reflevel(t*m);
+//        t = t * 1.2;
+        while (r > 10) { m *= 10; r/=10; }
+        while (r < 1.0)  { m /= 10; r*=10; }
+        if (r>5)
+          r = 10.0;
+        else if (r>2)
+          r = 5.0;
+        else
+          r = 2.0;
+        r = r*m;
+        if (r < 0.1)
+          r = 0.1;
+        if (r > 500.0)
+          r = 500.0;
+        set_scale(r / NGRIDY);
+        set_reflevel(r);
       }
     } else {
       if (value(actual_t[max_index[0]]) > setting.reflevel - setting.scale/2) {
@@ -1686,6 +1716,9 @@ float my_round(float v)
 
 const char *unit_string[] = { "dBm", "dBmV", "dBuV", "mV", "uV", "mW", "uW" };
 
+static const float scale_value[12]={50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01};
+static const char *scale_vtext[12]= {"50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01"};
+
 void draw_cal_status(void)
 {
 #define BLEN    10
@@ -1713,9 +1746,9 @@ void draw_cal_status(void)
 
   float yMax = setting.reflevel;
   if (rounding)
-    plot_printf(buf, BLEN, "%d", (int)yMax);
+    plot_printf(buf, BLEN, "%5d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%.2f", yMax);
+    plot_printf(buf, BLEN, "%5f", yMax);
   buf[5]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
@@ -1736,11 +1769,22 @@ void draw_cal_status(void)
 
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
-  y += YSTEP + YSTEP/2 ;
+  y += YSTEP + YSTEP/2;
+  unsigned int i = 0;
+  while (i < sizeof(scale_value)/sizeof(float)) {
+    float t = setting.scale / scale_value[i];;
+    if (t > 0.9 && t < 1.1){
+      plot_printf(buf, BLEN, "%s/",scale_vtext[i]);
+      break;
+    }
+    i++;
+  }
+#if 0
   if (rounding)
-    plot_printf(buf, BLEN, "%d/",(int)setting.scale);
+    plot_printf(buf, BLEN, "%4d/",(int)setting.scale);
   else
-    plot_printf(buf, BLEN, "%.2f/",setting.scale);
+    plot_printf(buf, BLEN, "%4f/",setting.scale);
+#endif
   ili9341_drawstring(buf, x, y);
 
   if (setting.auto_attenuation)
@@ -1863,7 +1907,10 @@ void draw_cal_status(void)
     ili9341_drawstring("TRIG:", x, y);
 
     y += YSTEP;
-    plot_printf(buf, BLEN, "%ddBm",(int)setting.trigger_level);
+    if (rounding)
+      plot_printf(buf, BLEN, "%d", (int)value(setting.trigger_level));
+    else
+      plot_printf(buf, BLEN, "%.2f", value(setting.trigger_level));
     buf[5]=0;
     ili9341_drawstring(buf, x, y);
   }
@@ -1882,9 +1929,9 @@ void draw_cal_status(void)
 
   y = HEIGHT-7 + OFFSETY;
   if (rounding)
-    plot_printf(buf, BLEN, "%d", (int)(yMax - setting.scale * NGRIDY));
+    plot_printf(buf, BLEN, "%5d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%.2f", (yMax - setting.scale * NGRIDY));
+    plot_printf(buf, BLEN, "%5f", (yMax - setting.scale * NGRIDY));
   buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
