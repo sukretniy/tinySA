@@ -1790,6 +1790,8 @@ set_numeric_value(void)
     set_sweep_frequency(ST_CW, uistat.value);
     break;
   case KM_SCALE:
+    if (UNIT_IS_LINEAR(setting.unit))
+      set_auto_reflevel(false);
     set_scale(uistat.value);
     break;
   case KM_REFPOS:

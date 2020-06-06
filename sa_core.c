@@ -1952,9 +1952,9 @@ void draw_cal_status(void)
   ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2 ;
   if (MODE_LOW(setting.mode))
-      ili9341_drawstring_7x13("M:L", x, y);
+      ili9341_drawstring_7x13("LOW", x, y);
   else
-    ili9341_drawstring_7x13("M:H", x, y);
+    ili9341_drawstring_7x13("HIGH", x, y);
 
 
   y = HEIGHT-7 + OFFSETY;
