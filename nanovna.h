@@ -259,9 +259,9 @@ extern void tlv320aic3204_select(int channel);
  */
 
 // Offset of plot area
-#define OFFSETX 25
+#define OFFSETX 30
 #define OFFSETY 0
-#define BUTTON_WIDTH    66
+#define BUTTON_WIDTH    60
 #ifdef __SCROLL__
 #define HEIGHT _height
 extern int _height;
@@ -290,7 +290,7 @@ extern int _height;
 
 //
 #define CELLOFFSETX 0
-#define AREA_WIDTH_NORMAL  (CELLOFFSETX + WIDTH  + 1 + 4)
+#define AREA_WIDTH_NORMAL  (CELLOFFSETX + WIDTH)
 #define AREA_HEIGHT_NORMAL (              HEIGHT + 1)
 
 // Smith/polar chart

@@ -621,7 +621,7 @@ trace_into_index(int t, int i, float array[POINTS_COUNT])
   int y, x;
   float coeff = array[i];
   float refpos = get_trace_refpos(t);
-  float v;
+  float v=0;
   float scale = get_trace_scale(t);
 
   switch (trace[t].type) {
@@ -859,9 +859,10 @@ static void trace_get_value_string(
   } else {
     dfreq = frequencies[i];
   }
-  if (get_actual_RBW()  < 10)
+  uint32_t resolution = get_sweep_frequency(ST_SPAN)/290;
+  if (resolution  <= 2000)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
-  else if (get_actual_RBW()  < 100)
+  else if (resolution  <= 20000)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.2f" , (dfreq + 5000) / 1000000.0);
   else
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);

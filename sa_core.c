@@ -1746,10 +1746,10 @@ void draw_cal_status(void)
 
   float yMax = setting.reflevel;
   if (rounding)
-    plot_printf(buf, BLEN, "%5d", (int)yMax);
+    plot_printf(buf, BLEN, "%6d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%5f", yMax);
-  buf[5]=0;
+    plot_printf(buf, BLEN, "%6f", yMax);
+  buf[6]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
       color = DEFAULT_FG_COLOR;
@@ -1781,9 +1781,9 @@ void draw_cal_status(void)
   }
 #if 0
   if (rounding)
-    plot_printf(buf, BLEN, "%4d/",(int)setting.scale);
+    plot_printf(buf, BLEN, "%5d/",(int)setting.scale);
   else
-    plot_printf(buf, BLEN, "%4f/",setting.scale);
+    plot_printf(buf, BLEN, "%5f/",setting.scale);
 #endif
   ili9341_drawstring(buf, x, y);
 
@@ -1797,7 +1797,7 @@ void draw_cal_status(void)
 
   y += YSTEP;
   plot_printf(buf, BLEN, "%ddB", setting.attenuate);
-  buf[5]=0;
+  buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
   if (setting.average>0) {
@@ -1807,7 +1807,7 @@ void draw_cal_status(void)
 
     y += YSTEP;
     plot_printf(buf, BLEN, "%s",averageText[setting.average]);
-    buf[5]=0;
+    buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
 #ifdef __SPUR__
@@ -1833,7 +1833,7 @@ void draw_cal_status(void)
 
   y += YSTEP;
   plot_printf(buf, BLEN, "%dkHz", (int)actual_rbw);
-  buf[5]=0;
+  buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
   if (setting.frequency_step > 0) {
@@ -1843,7 +1843,7 @@ void draw_cal_status(void)
 
     y += YSTEP;
     plot_printf(buf, BLEN, "%dkHz",(int)setting.vbw);
-    buf[5]=0;
+    buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
   if (dirty)
@@ -1865,13 +1865,13 @@ void draw_cal_status(void)
 #endif
       ; // in mS
   if (t>=10000.0)
-    plot_printf(buf, BLEN, "%dS",(int)t);
+    plot_printf(buf, BLEN, "%5dS",(int)t);
   else if (t>=1000)
-    plot_printf(buf, BLEN, "%.0fS",t);
+    plot_printf(buf, BLEN, "%5fS",t);
   else
     plot_printf(buf, BLEN, "%dmS",(int)t);
 
-  buf[5]=0;
+  buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
 
@@ -1882,7 +1882,7 @@ void draw_cal_status(void)
 
     y += YSTEP;
     plot_printf(buf, BLEN, "%dMHz",reffer_freq[setting.refer]/1000000);
-    buf[5]=0;
+    buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
 
@@ -1893,7 +1893,7 @@ void draw_cal_status(void)
 
     y += YSTEP;
     plot_printf(buf, BLEN, "%.1fdB",setting.offset);
-    buf[5]=0;
+    buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
 
@@ -1908,10 +1908,10 @@ void draw_cal_status(void)
 
     y += YSTEP;
     if (rounding)
-      plot_printf(buf, BLEN, "%d", (int)value(setting.trigger_level));
+      plot_printf(buf, BLEN, "%6d", (int)value(setting.trigger_level));
     else
-      plot_printf(buf, BLEN, "%.2f", value(setting.trigger_level));
-    buf[5]=0;
+      plot_printf(buf, BLEN, "%6f", value(setting.trigger_level));
+    buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
 
@@ -1929,10 +1929,10 @@ void draw_cal_status(void)
 
   y = HEIGHT-7 + OFFSETY;
   if (rounding)
-    plot_printf(buf, BLEN, "%5d", (int)(yMax - setting.scale * NGRIDY));
+    plot_printf(buf, BLEN, "%6d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%5f", (yMax - setting.scale * NGRIDY));
-  buf[5]=0;
+    plot_printf(buf, BLEN, "%6f", (yMax - setting.scale * NGRIDY));
+  buf[6]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
       color = DEFAULT_FG_COLOR;
