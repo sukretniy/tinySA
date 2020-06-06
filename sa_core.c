@@ -479,14 +479,15 @@ void set_unit(int u)
   r = value(r);                         // Convert to target unit
   s = value(s);
   if (UNIT_IS_LINEAR(setting.unit)) {
-    if (r < 0.1)
-      r = 0.1;                          // Minimum value to ensure display
-    if (r >500)
-      r = 500;                          // Maximum value
-    set_reflevel(r);
-    set_scale(r/10.0);
+    if (r < REFLEVEL_MIN)
+      r = REFLEVEL_MIN;                          // Minimum value to ensure display
+    if (r >REFLEVEL_MAX)
+      r = REFLEVEL_MAX;                          // Maximum value
+    set_scale(r/NGRIDY);
+    set_reflevel(setting.scale*NGRIDY);
   } else {
     r = 10 * round((r*1.2)/10.0);
+    set_reflevel(r);
     set_scale(10);
   }
   dirty = true;
@@ -495,14 +496,18 @@ void set_unit(int u)
 void set_reflevel(float level)
 {
 
-  if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
-    if (level < 0.1)
-      level = 0.1;
+  if (UNIT_IS_LINEAR(setting.unit)) {
+    if (level < REFLEVEL_MIN)
+      level = REFLEVEL_MIN;
+    if (level > REFLEVEL_MAX)
+      level = REFLEVEL_MAX;
+#if 0
     float s = setting.scale;
-    if (level - NGRIDY * s < 0) {
+    if (level < NGRIDY * s) {            // Never negative bottom
       set_scale(level/NGRIDY);
       level = setting.scale * NGRIDY;
     }
+#endif
   }
 
   setting.reflevel = level;
@@ -514,26 +519,43 @@ void set_reflevel(float level)
 }
 
 void set_scale(float t) {
-  if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
-    if (t < 0.01)
-      t = 0.01;
+  if (UNIT_IS_LINEAR(setting.unit)) {
+    if (t < REFLEVEL_MIN/10)
+      t = REFLEVEL_MIN/10;
+    if (t > REFLEVEL_MAX/10)
+      t = REFLEVEL_MAX/10;
+  } else {
+    if (t > 20.0)
+      t = 20.0;
+    else if (t < 1)
+      t = 1.0;
   }
+
   float m = 1;
 //        t = t * 1.2;
   while (t > 10) { m *= 10; t/=10; }
   while (t < 1.0)  { m /= 10; t*=10; }
-  if (t>5)
+  if (t>5.0001)
     t = 10.0;
-  else if (t>2)
+  else if (t>2.0001)
     t = 5.0;
-  else
+  else if (t > 1.0001)
     t = 2.0;
+  else
+    t = 1.0;
   t = t*m;
   setting.scale = t;
   set_trace_scale(0, t);
   set_trace_scale(1, t);
   set_trace_scale(2, t);
+//  if (!UNIT_IS_LINEAR(setting.unit)) {
+    setting.reflevel = t * floor(setting.reflevel/t);
+    set_trace_refpos(0,setting.reflevel);
+    set_trace_refpos(1,setting.reflevel);
+    set_trace_refpos(2,setting.reflevel);
+//  }
 
+#if 0
   if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
     float r = setting.reflevel;
     t = NGRIDY * t;
@@ -544,7 +566,7 @@ void set_scale(float t) {
       set_trace_refpos(2, t);
     }
   }
-
+#endif
   //  set_reflevel(setting.reflevel);
 }
 
@@ -1440,7 +1462,9 @@ again:
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && max_index[0] > 0) {  // Auto reflevel
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
       float r = value(actual_t[max_index[0]]);
-      if ((setting.reflevel > 0.1  && r < setting.reflevel / 2 ) || (setting.reflevel < 500.0 && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
+      if ((setting.reflevel > REFLEVEL_MIN  && r < setting.reflevel / 2 ) || (setting.reflevel < REFLEVEL_MAX && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
+        // r = setting.scale * (floor(r / setting.scale) + 1);
+#if 0
         float m = 1;
 //        t = t * 1.2;
         while (r > 10) { m *= 10; r/=10; }
@@ -1452,18 +1476,24 @@ again:
         else
           r = 2.0;
         r = r*m;
-        if (r < 0.1)
-          r = 0.1;
-        if (r > 500.0)
-          r = 500.0;
-        set_scale(r / NGRIDY);
-        set_reflevel(r);
+#endif
+        if (r < REFLEVEL_MIN)
+          r = REFLEVEL_MIN;
+        if (r > REFLEVEL_MAX)
+          r = REFLEVEL_MAX;
+        //if (setting.scale * NGRIDY > r)
+          set_scale(r / NGRIDY);
+        set_reflevel(setting.scale*NGRIDY);
       }
     } else {
-      if (value(actual_t[max_index[0]]) > setting.reflevel - setting.scale/2) {
-        set_reflevel(setting.reflevel + setting.scale);
+      if (value(actual_t[max_index[0]]) < setting.reflevel - setting.scale*NGRIDY || temp_min_level > setting.reflevel) {
+        set_reflevel(setting.scale*(floor(value(actual_t[max_index[0]])/setting.scale)+1));
         redraw_request |= REDRAW_CAL_STATUS;
         dirty = true;                               // Must be  above if(scandirty!!!!!)
+      }else if (value(actual_t[max_index[0]]) > setting.reflevel - setting.scale/2) {
+          set_reflevel(setting.reflevel + setting.scale);
+          redraw_request |= REDRAW_CAL_STATUS;
+          dirty = true;                               // Must be  above if(scandirty!!!!!)
       } else if (temp_min_level < setting.reflevel - 10.1 * setting.scale && value(actual_t[max_index[0]]) < setting.reflevel -  setting.scale * 1.5) {
         set_reflevel(setting.reflevel - setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
@@ -1716,8 +1746,8 @@ float my_round(float v)
 
 const char *unit_string[] = { "dBm", "dBmV", "dBuV", "mV", "uV", "mW", "uW" };
 
-static const float scale_value[12]={50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01};
-static const char *scale_vtext[12]= {"50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01"};
+static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
+static const char *scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
 
 void draw_cal_status(void)
 {
