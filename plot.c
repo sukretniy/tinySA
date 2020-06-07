@@ -116,6 +116,11 @@ void update_grid(void)
   uint32_t fspan  = get_sweep_frequency(ST_SPAN);
   uint32_t grid;
 
+  if (fspan == 0) {
+    fspan = setting.sweep_time*1000000 + 25000; // Time in uS
+    fstart = 0;
+  }
+
   while (gdigit > 100) {
     grid = 5 * gdigit;
     if (fspan / grid >= 4)
@@ -865,21 +870,21 @@ static void trace_get_value_string(
   if (FREQ_IS_CW()) {
     float t = ii*(setting.sweep_time*1000000 + 25000)/290;
     if (t>1000000.0){
-      plot_printf(&buf2[1], sizeof(buf2) -1, "%5f" , t/1000000.0);
-      buf2[6] = 'S';
-      buf2[7]=0;
+      plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/1000000.0);
+      buf2[5] = 'S';
+      buf2[6]=0;
     }
     else if (t>1000.0) {
-        plot_printf(&buf2[1], sizeof(buf2) -1, "%5f" , t/1000.0);
-        buf2[6] = 'm';
-        buf2[7] = 'S';
-        buf2[8]=0;
+        plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/1000.0);
+        buf2[5] = 'm';
+        buf2[6] = 'S';
+        buf2[7]=0;
     }
     else {
-        plot_printf(&buf2[1], sizeof(buf2) -1, "%5f" , t);
-        buf2[6] = 'u';
-        buf2[7] = 'S';
-        buf2[8]=0;
+        plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t);
+        buf2[5] = 'u';
+        buf2[6] = 'S';
+        buf2[7]=0;
     }
   } else {
   uint32_t resolution = get_sweep_frequency(ST_SPAN)/290;

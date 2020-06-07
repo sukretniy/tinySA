@@ -1850,6 +1850,7 @@ set_numeric_value(void)
     break;
   case KM_SWEEP_TIME:
     set_sweep_time(uistat.value);
+    update_grid();
     break;
   case KM_TRIGGER:
     set_trigger_level(to_dBm(uistat.value));

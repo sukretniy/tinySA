@@ -1934,12 +1934,14 @@ void draw_cal_status(void)
 #endif
       ; // in mS
   if (t>=10000.0)
-    plot_printf(buf, BLEN, "%5dS",(int)t);
+    plot_printf(buf, BLEN, "%5d",(int)(t/1000));
   else if (t>=1000)
-    plot_printf(buf, BLEN, "%5fS",t);
-  else
-    plot_printf(buf, BLEN, "%dmS",(int)t);
-
+    plot_printf(buf, BLEN, "%5f",t/1000.0);
+  else {
+    plot_printf(buf, BLEN, "%4dm",(int)t);
+    buf[4] = 'm';
+  }
+  buf[5]='S';
   buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
