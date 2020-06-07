@@ -2013,18 +2013,24 @@ void draw_cal_status(void)
   strncpy(buf,"      ",BLEN);
   if (setting.auto_attenuation)
     buf[0] = 'a';
+  else
+    buf[0] = 'A';
   if (setting.auto_IF)
-    buf[1] = 'i';
+    buf[1] = 'f';
+  else
+    buf[1] = 'F';
   if (setting.auto_reflevel)
     buf[2] = 'r';
+  else
+    buf[2] = 'R';
   if (S_IS_AUTO(setting.agc))
     buf[3] = 'g';
   else if (S_STATE(setting.agc))
     buf[3] = 'G';
   if (S_IS_AUTO(setting.lna))
-    buf[4] = 'l';
+    buf[4] = 'n';
   else if (S_STATE(setting.lna))
-    buf[4] = 'L';
+    buf[4] = 'N';
   if (S_IS_AUTO(setting.below_IF))
     buf[5] = 'b';
   else if (S_STATE(setting.below_IF))
