@@ -592,14 +592,14 @@ static void menu_dfu_cb(int item, uint8_t data)
 }
 
 
-const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
-const char *menu_modulation_text[]={"NONE","AM","NARROW FM","WIDE FM", "EXTERNAL"};
+// const int menu_modulation_value[]={MO_NONE,MO_AM_1, MO_NFM, MO_WFM, MO_EXTERNAL};
+const char *menu_modulation_text[]={"NONE","AM 1kHz","AM 10Hz","NARROW FM","WIDE FM", "EXTERNAL"};
 
 static void menu_modulation_cb(int item, uint8_t data)
 {
   (void)item;
 //Serial.println(item);
-  set_modulation(menu_modulation_value[data]);
+  set_modulation(data);
   menu_move_back();
 //  ui_mode_normal();   // Stay in menu mode
 //  draw_cal_status();
@@ -934,20 +934,20 @@ static void menu_settings2_cb(int item, uint8_t data)
 {
   (void)item;
   switch(data) {
-  case 0:
+  case 1:
     toggle_AGC();
     break;
-  case 1:
+  case 2:
     toggle_LNA();;
     break;
-  case 2:
-    toggle_tracking();
-    break;
   case 3:
-    toggle_tracking_output();
+    toggle_tracking();
     break;
   case 4:
     toggle_below_IF();
+    break;
+  case 5:
+    toggle_tracking_output();
     break;
   }
   draw_menu();
@@ -1065,11 +1065,12 @@ static const menuitem_t menu_drive_wide[] = {
 
 const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
-  { MT_FORM | MT_CALLBACK, 0,  "NONE",      menu_modulation_cb},
-  { MT_FORM | MT_CALLBACK, 1,  "AM",        menu_modulation_cb},
-  { MT_FORM | MT_CALLBACK, 2,  "NARROW FM", menu_modulation_cb},
-  { MT_FORM | MT_CALLBACK, 3,  "WIDE FM",   menu_modulation_cb},
-  { MT_FORM | MT_CALLBACK, 4,  "EXTERNAL",  menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, MO_NONE,     "NONE",      menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, MO_AM_1kHz,  "AM 1kHz",        menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, MO_AM_10Hz, "AM 10Hz",        menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, MO_NFM,      "NARROW FM", menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, MO_WFM,      "WIDE FM",   menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK, MO_EXTERNAL, "EXTERNAL",  menu_modulation_cb},
   { MT_FORM | MT_CANCEL,   0,             S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1280,9 +1281,9 @@ static const menuitem_t menu_scanning_speed[] =
 
 static const menuitem_t menu_settings2[] =
 {
-  { MT_CALLBACK, 0,     "AGC",                  menu_settings2_cb},
-  { MT_CALLBACK, 1,     "LNA",                  menu_settings2_cb},
-  { MT_CALLBACK | MT_LOW, 2,     "BPF",                  menu_settings2_cb},
+  { MT_CALLBACK, 1,     "AGC",                  menu_settings2_cb},
+  { MT_CALLBACK, 2,     "LNA",                  menu_settings2_cb},
+  { MT_CALLBACK | MT_LOW, 3,     "BPF",                  menu_settings2_cb},
   { MT_CALLBACK | MT_LOW, 4,     "\2BELOW\0IF",          menu_settings2_cb},
   { MT_KEYPAD,   KM_DECAY,"\2HOLD\0TIME",         NULL},
   { MT_KEYPAD,   KM_NOISE,"\2NOISE\0LEVEL",       NULL},
@@ -1293,7 +1294,7 @@ static const menuitem_t menu_settings2[] =
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
-
+#if 0
 static const menuitem_t menu_settingshigh2[] =
 {
   { MT_CALLBACK, 0, "AGC",              menu_settings2_cb},
@@ -1303,10 +1304,11 @@ static const menuitem_t menu_settingshigh2[] =
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
+#endif
 
 static const menuitem_t menu_settings[] =
 {
-  { MT_CALLBACK | MT_LOW, 3,    "\2LO\0OUTPUT",menu_settings2_cb},
+  { MT_CALLBACK | MT_LOW, 5,    "\2LO\0OUTPUT",menu_settings2_cb},
   { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
   { MT_KEYPAD | MT_LOW, KM_IF,  "\2IF\0FREQ",       NULL},
   { MT_SUBMENU,0,               "\2SCAN\0SPEED",         menu_scanning_speed},
@@ -1316,7 +1318,7 @@ static const menuitem_t menu_settings[] =
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
-
+#if 0
 static const menuitem_t menu_settingshigh[] =
 {
   { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
@@ -1326,7 +1328,7 @@ static const menuitem_t menu_settingshigh[] =
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
-
+#endif
 static const menuitem_t menu_measure[] = {
   { MT_CALLBACK,            M_OFF,        "OFF",              menu_measure_cb},
   { MT_CALLBACK,            M_IMD,        "HARMONIC",         menu_measure_cb},
@@ -1526,6 +1528,7 @@ static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, uint16_t *fg, uint16_t *bg)
 {
   int mark = false;
+  int m_auto = false;
   int data = menu[item].data;
   if (menu == menu_mode) {
     if (item == GetMode())  {
@@ -1608,7 +1611,8 @@ static void menu_item_modify_attribute(
   } else if (menu == menu_settings) {
     if (item ==0 && setting.tracking_output){
       mark = true;
-    }
+    } else if (item == 2 && setting.auto_IF)
+      m_auto = true;
   } else if (menu == menu_scanning_speed) {
     if (item == setting.step_delay){
       mark = true;
@@ -1618,19 +1622,18 @@ static void menu_item_modify_attribute(
     if (data == setting.harmonic)
       mark = true;
 #endif
-  } else if (menu == menu_settings2 || menu == menu_settingshigh2) {
-    if (item ==0 && setting.agc){
-      mark = true;
+  } else if (MT_MASK(menu[item].type) == MT_CALLBACK && menu == menu_settings2) {
+    int v=0;
+    switch(data) {
+    case 1: v = setting.agc; break;
+    case 2: v = setting.lna; break;
+    case 3: v = setting.tracking; break;
+    case 4: v = setting.below_IF; break;
     }
-    if (item == 1 && setting.lna){
+    if (S_IS_AUTO(v))
+      m_auto = true;
+    else if (v == S_ON)
       mark = true;
-    }
-    if (item == 2 && setting.tracking){         // should not happen in high mode
-      mark = true;
-    }
-    if (item == 3 && setting.below_IF){         // should not happen in high mode
-      mark = true;
-    }
   } else if (menu == menu_marker_modify && active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {
     if (data & markers[active_marker].mtype)
       mark = true;
@@ -1655,7 +1658,10 @@ static void menu_item_modify_attribute(
     if ((item  == 0 && setting.auto_attenuation ) || (item  == 1 && !setting.auto_attenuation))
       mark = true;
   }
-  if (mark) {
+  if (m_auto) {
+    *bg = LIGHT_GREY;
+    *fg = config.menu_normal_color;
+  } else if (mark) {
     *bg = DEFAULT_MENU_TEXT_COLOR;
     *fg = config.menu_normal_color;
   }
@@ -1808,7 +1814,8 @@ set_numeric_value(void)
     break;
   case KM_IF:
     set_IF(uistat.value);
-    config_save();
+//    config_save();
+    setting.auto_IF = false;
     break;
   case KM_SAMPLETIME:
     set_step_delay(uistat.value);

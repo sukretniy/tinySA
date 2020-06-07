@@ -35,13 +35,15 @@ VNA_SHELL_FUNCTION(cmd_modulation )
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: modulation off|AM|NFM|WFM|extern\r\n");
+    shell_printf("usage: modulation off|AM_1kHz|AM_10Hz|NFM|WFM|extern\r\n");
     return;
   }
   int m = MO_NONE;
   if (strcmp(argv[0],"off") == 0) {
-  } else if (strcmp(argv[0],"AM") == 0) {
-    m = MO_AM;
+  } else if (strcmp(argv[0],"AM_1kHz") == 0) {
+    m = MO_AM_1kHz;
+  } else if (strcmp(argv[0],"AM_10Hz") == 0) {
+    m = MO_AM_10Hz;
   } else if (strcmp(argv[0],"NFM") == 0) {
     m = MO_NFM;
   } else if (strcmp(argv[0],"WFM") == 0) {

@@ -138,7 +138,7 @@ enum {
 };
 
 enum {
-  MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL,
+  MO_NONE, MO_AM_1kHz, MO_AM_10Hz, MO_NFM, MO_WFM, MO_EXTERNAL,
 };
 
 #define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
@@ -348,6 +348,7 @@ enum unit_type {
   U_DBM=0, U_DBMV, U_DBUV, U_MVOLT, U_UVOLT, U_MWATT, U_UWATT
 };
 #define UNIT_IS_LINEAR(T) ( T >= U_MVOLT ? true : false)
+#define UNIT_IS_LOG(T) ( T >= U_MVOLT ? false : true)
 
 float value(float);
 
@@ -580,12 +581,19 @@ typedef struct setting
   float level_sweep;
   float sweep_time;
   int test_argument;
+  int auto_IF;
   uint32_t checksum;
 }setting_t;
 
 extern setting_t setting;
+
 extern int setting_frequency_10mhz;
 void reset_settings(int m);
+
+
+#define S_IS_AUTO(x) ((x)&2)
+#define S_STATE(X) ((X)&1)
+enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 
 extern uint32_t frequencies[POINTS_COUNT];
 

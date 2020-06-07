@@ -32,8 +32,8 @@ void reset_settings(int m)
   setting.subtract_stored = 0;
   setting.drive=13;
   setting.step_atten = 0;       // Only used in low output mode
-  setting.agc = true;
-  setting.lna = false;
+  setting.agc = S_AUTO_ON;
+  setting.lna = S_AUTO_OFF;
   setting.tracking = false;
   setting.modulation = MO_NONE;
   setting.step_delay = 0;
@@ -41,11 +41,12 @@ void reset_settings(int m)
   setting.auto_reflevel = true;     // Must be after SetReflevel
   setting.decay=20;
   setting.noise=5;
-  setting.below_IF = false;
+  setting.below_IF = S_AUTO_OFF;
   setting.repeat = 1;
   setting.tracking_output = false;
   setting.measurement = M_OFF;
   setting.frequency_IF = 433800000;
+  setting.auto_IF = true;
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
   setting.level_sweep = 0.0;
@@ -189,9 +190,15 @@ void toggle_tracking_output(void)
   setting.tracking_output = !setting.tracking_output;
   dirty = true;
 }
+
 void toggle_below_IF(void)
 {
-  setting.below_IF = !setting.below_IF;
+  if (S_IS_AUTO(setting.below_IF ))
+    setting.below_IF = false;
+  else if (setting.below_IF)
+    setting.below_IF = S_AUTO_OFF;
+  else
+    setting.below_IF = true;
   dirty = true;
 }
 
@@ -436,7 +443,12 @@ int GetAverage(void)
 
 void toggle_LNA(void)
 {
-  setting.lna = !setting.lna;
+  if (S_IS_AUTO(setting.lna ))
+    setting.lna = false;
+  else if (setting.lna)
+    setting.lna = S_AUTO_OFF;
+  else
+    setting.lna = true;
   dirty = true;
 }
 
@@ -458,7 +470,12 @@ int GetLNA(void)
 
 void toggle_AGC(void)
 {
-  setting.agc = !setting.agc;
+  if (S_IS_AUTO(setting.agc ))
+    setting.agc = false;
+  else if (setting.agc)
+    setting.agc = S_AUTO_OFF;
+  else
+    setting.agc = true;
   dirty = true;
 }
 
@@ -485,10 +502,18 @@ void set_unit(int u)
       r = REFLEVEL_MAX;                          // Maximum value
     set_scale(r/NGRIDY);
     set_reflevel(setting.scale*NGRIDY);
+    if (S_IS_AUTO(setting.agc))
+      setting.agc = S_AUTO_OFF;
+    if (S_IS_AUTO(setting.lna))
+      setting.agc = S_AUTO_OFF;
   } else {
     r = 10 * round((r*1.2)/10.0);
     set_reflevel(r);
     set_scale(10);
+    if (S_IS_AUTO(setting.agc))
+      setting.agc = S_AUTO_ON;
+    if (S_IS_AUTO(setting.lna))
+      setting.agc = S_AUTO_OFF;
   }
   dirty = true;
 }
@@ -740,8 +765,8 @@ void set_switch_off(void) {
 
 void set_AGC_LNA(void) {
   unsigned char v = 0x40;
-  if (setting.agc) v |= 0x20;
-  if (setting.lna) v |= 0x10;
+  if (S_STATE(setting.agc)) v |= 0x20;
+  if (S_STATE(setting.lna)) v |= 0x10;
   SI4432_Write_Byte(0x69, v);
 }
 
@@ -1090,19 +1115,19 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     }
   }
 
-  if (setting.mode == M_LOW && setting.auto_attenuation) {
+  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {
     unsigned char v;
     static unsigned char old_v;
     if (f < 1500000)
       v = 0x50; // Disable AGC and enable LNA
     else
-      v = 0x60; // Disable AGC and enable LNA
+      v = 0x60; // Enable AGC and disable LNA
     if (old_v != v) {
       SI4432_Write_Byte(0x69, v);
       old_v = v;
     }
   }
-  if (MODE_OUTPUT(setting.mode) && setting.modulation == MO_AM) {               // AM modulation
+  if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_AM_1kHz||setting.modulation == MO_AM_10Hz)) {               // AM modulation
     int p = setting.attenuate * 2 + am_modulation[modulation_counter];
     PE4302_Write_Byte(p);
     if (modulation_counter == 4) {  // 3dB modulation depth
@@ -1110,7 +1135,10 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     } else {
       modulation_counter++;
     }
-    my_microsecond_delay(200);
+    if (setting.modulation == MO_AM_10Hz)
+      my_microsecond_delay(20000);
+    else
+      my_microsecond_delay(200);
 //    chThdSleepMicroseconds(200);
 
   } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) { //FM modulation
@@ -1170,15 +1198,19 @@ again:
         local_IF = spur_alternate_IF;
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur){
-        if (lf > 150000000) // if above 150MHz use IF shift
-          local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
-        else {              // else low/above IF
-          local_IF = setting.frequency_IF;
-          if (setting.spur == 1)
-            setting.below_IF = true;
+        if (S_IS_AUTO(setting.below_IF) && lf < 150000000) // if below 150MHz and auto_below_IF swap IF
+        {              // else low/above IF
+          if (setting.auto_IF)
+            local_IF = 433900000;
           else
-            setting.below_IF = false;
+            local_IF = setting.frequency_IF;
+          if (setting.spur == 1)
+            setting.below_IF = S_AUTO_ON;
+          else
+            setting.below_IF = S_AUTO_OFF;
         }
+        else
+          local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
 #endif
       } else {
 //        local_IF = setting.frequency_IF ;
@@ -1224,7 +1256,7 @@ again:
        set_freq (3, IF_2 - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
        set_freq (1, 433800000);                 // Second IF fixe in Ultra SA mode
 #else
-       if (setting.mode == M_LOW && !setting.tracking && setting.below_IF)
+       if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF))
          set_freq (1, local_IF-lf);
        else
          set_freq (1, local_IF+lf);
@@ -1459,7 +1491,7 @@ again:
       dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
   }
-  if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && max_index[0] > 0) {  // Auto reflevel
+  if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && (max_index[0] > 0 || FREQ_IS_CW())) {  // Auto reflevel
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
       float r = value(actual_t[max_index[0]]);
       if ((setting.reflevel > REFLEVEL_MIN  && r < setting.reflevel / 2 ) || (setting.reflevel < REFLEVEL_MAX && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
@@ -1765,11 +1797,13 @@ void draw_cal_status(void)
 
 #define XSTEP   40
 
+  if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
+    ili9341_fill(x, y, OFFSETX-5, HEIGHT, 0x0000);
+    return;
+  }
   ili9341_fill(x, y, OFFSETX, HEIGHT, 0x0000);
 
-  if (MODE_OUTPUT(setting.mode))     // No cal status during output
-    return;
-//  if (current_menu_is_form() && !in_selftest)
+    //  if (current_menu_is_form() && !in_selftest)
 //    return;
 
   ili9341_set_background(DEFAULT_BG_COLOR);
@@ -1791,8 +1825,13 @@ void draw_cal_status(void)
   ili9341_set_foreground(color);
   ili9341_drawstring(buf, x, y);
 
+
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
+  if (setting.auto_reflevel){
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("AUTO", x, y);
+  }
   y += YSTEP + YSTEP/2 ;
   plot_printf(buf, BLEN, "%s",unit);
   ili9341_drawstring(buf, x, y);
@@ -1927,6 +1966,17 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
+  if (setting.repeat != 1) {
+    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("Repeat:", x, y);
+
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%d",setting.repeat);
+    buf[6]=0;
+    ili9341_drawstring(buf, x, y);
+  }
+
   if (setting.trigger != T_AUTO) {
     if (is_paused()) {
       ili9341_set_foreground(BRIGHT_COLOR_GREEN);
@@ -1945,6 +1995,7 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
+
   if (level_is_calibrated())
     color = BRIGHT_COLOR_GREEN;
   else
@@ -1956,6 +2007,31 @@ void draw_cal_status(void)
   else
     ili9341_drawstring_7x13("HIGH", x, y);
 
+//  ili9341_set_background(DEFAULT_FG_COLOR);
+  ili9341_set_foreground(DEFAULT_FG_COLOR);
+  y += YSTEP + YSTEP/2 ;
+  strncpy(buf,"      ",BLEN);
+  if (setting.auto_attenuation)
+    buf[0] = 'a';
+  if (setting.auto_IF)
+    buf[1] = 'i';
+  if (setting.auto_reflevel)
+    buf[2] = 'r';
+  if (S_IS_AUTO(setting.agc))
+    buf[3] = 'g';
+  else if (S_STATE(setting.agc))
+    buf[3] = 'G';
+  if (S_IS_AUTO(setting.lna))
+    buf[4] = 'l';
+  else if (S_STATE(setting.lna))
+    buf[4] = 'L';
+  if (S_IS_AUTO(setting.below_IF))
+    buf[5] = 'b';
+  else if (S_STATE(setting.below_IF))
+    buf[5] = 'B';
+  ili9341_drawstring(buf, x, y);
+
+//  ili9341_set_background(DEFAULT_BG_COLOR);
 
   y = HEIGHT-7 + OFFSETY;
   if (rounding)
