@@ -1816,7 +1816,7 @@ void draw_cal_status(void)
   if (rounding)
     plot_printf(buf, BLEN, "%6d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%6f", yMax);
+    plot_printf(buf, BLEN, "%6f", yMax+0.00005);
   buf[6]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
@@ -2054,7 +2054,7 @@ void draw_cal_status(void)
   if (rounding)
     plot_printf(buf, BLEN, "%6d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%6f", (yMax - setting.scale * NGRIDY));
+    plot_printf(buf, BLEN, "%6f", (yMax - setting.scale * NGRIDY)+0.00005);
   buf[6]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)

@@ -849,7 +849,7 @@ static void trace_get_value_string(
   (void) point_count;
   float v;
   char buf2[11];
-  char buf3[6];
+  char buf3[8];
   buf2[0]=' ';
   uint32_t dfreq = 0;
   float rlevel = 0;
@@ -905,14 +905,15 @@ static void trace_get_value_string(
     else {
       v = v - rlevel;
       if (UNIT_IS_LINEAR(setting.unit)) {
-        if (v < 100000)
-          plot_printf(buf3, sizeof(buf3), "%5f", v);
+        if (v < 1000000)
+          plot_printf(buf3, sizeof(buf3), "%6f", v);
         else
-          strcpy(buf3,"*****");
-      }
-      else
+          strcpy(buf3,"******");
+        buf3[6] = 0;
+      } else {
         plot_printf(buf3, sizeof(buf3), "%5.1f", v);
-      buf3[5] = 0;
+        buf3[5] = 0;
+      }
       plot_printf(buf, len, "%s %s%s%s", buf2, buf3,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
     }
 }
