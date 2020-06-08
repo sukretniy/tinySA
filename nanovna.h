@@ -594,6 +594,9 @@ void reset_settings(int m);
 #define S_IS_AUTO(x) ((x)&2)
 #define S_STATE(X) ((X)&1)
 enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
+#define MINIMUM_SWEEP_TIME  15     // Minimum sweep time on zero span in miliseconds
+#define REPEAT_TIME        34.0         // Time per extra repeat in uS
+#define MEASURE_TIME       175.0        // Time per vbwstep without stepdelay in uS
 
 extern uint32_t frequencies[POINTS_COUNT];
 
@@ -827,6 +830,7 @@ void self_test(int);
 void wait_user(void);
 void calibrate(void);
 float to_dBm(float);
+float calc_min_sweep_time(void);
 
 enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY

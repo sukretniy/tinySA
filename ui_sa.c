@@ -278,7 +278,7 @@ const uint16_t right_icons [] =
 };
 
 enum {
-  KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFPOS, KM_SCALE, KM_ATTENUATION,
+  KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME,
 };
@@ -422,7 +422,7 @@ static const char * const keypad_mode_label[] = {
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "\2SCALE\0 5/2/1", // 0-7
-  "\2ATTENUATE\0 0-31dB", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0TIME", "DRIVE", "LEVEL", "LEVEL", "LEVEL", // 8-15
+  "\2ATTENUATE\0 0-31dB", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0TIME", "DRIVE", "LEVEL", "SCANS", "LEVEL", // 8-15
   "OFFSET" , "REPEATS", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
 };
 #endif
@@ -1179,7 +1179,7 @@ static const menuitem_t menu_atten[] = {
 
 static const menuitem_t menu_reflevel[] = {
   { MT_CALLBACK,0,          "AUTO",    menu_reflevel_cb},
-  { MT_KEYPAD,  KM_REFPOS,  "MANUAL",     NULL},
+  { MT_KEYPAD,  KM_REFLEVEL,  "MANUAL",     NULL},
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1461,7 +1461,7 @@ static const menuitem_t menu_mode[] = {
 #ifdef __ULTRA__
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
 #endif
-  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
+//  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1703,7 +1703,7 @@ static void fetch_numeric_target(void)
     uistat.value = setting.scale;
     plot_printf(uistat.text, sizeof uistat.text, "%f/", uistat.value);
     break;
-  case KM_REFPOS:
+  case KM_REFLEVEL:
     uistat.value = setting.reflevel;
     plot_printf(uistat.text, sizeof uistat.text, "%f", uistat.value);
     break;
@@ -1756,7 +1756,11 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
   case KM_SWEEP_TIME:
-    uistat.value = setting.sweep_time;
+    if (setting.sweep_time < calc_min_sweep_time())
+      uistat.value = calc_min_sweep_time();
+    else
+      uistat.value = setting.sweep_time;
+    uistat.value /= 1000.0;
     plot_printf(uistat.text, sizeof uistat.text, "%.1fS", uistat.value);
     break;
   case KM_TRIGGER:
@@ -1800,7 +1804,7 @@ set_numeric_value(void)
       set_auto_reflevel(false);
     set_scale(uistat.value);
     break;
-  case KM_REFPOS:
+  case KM_REFLEVEL:
     set_auto_reflevel(false);
     set_reflevel(uistat.value);
     break;
@@ -1849,10 +1853,12 @@ set_numeric_value(void)
     set_level_sweep(uistat.value);
     break;
   case KM_SWEEP_TIME:
-    set_sweep_time(uistat.value);
+    set_sweep_time(uistat.value*1000.0);
     update_grid();
     break;
   case KM_TRIGGER:
+    if (setting.trigger == T_AUTO )
+      set_trigger(T_NORMAL);
     set_trigger_level(to_dBm(uistat.value));
     break;
   }

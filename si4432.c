@@ -365,7 +365,7 @@ static const short RBW_choices[] =
 #endif
 };
 
-static float SI4432_RSSI_correction = 0;
+static float SI4432_RSSI_correction = -120.0;
 
 float SI4432_SET_RBW(float w)  {
   uint8_t dwn3=0;
@@ -378,7 +378,7 @@ float SI4432_SET_RBW(float w)  {
   ndec = RBW_choices[i-3];
   fils = RBW_choices[i-2];
   WISH = RBW_choices[i-1];        // RBW achieved by Si4432 in Hz
-  SI4432_RSSI_correction = RBW_choices[i]/10.0;
+  SI4432_RSSI_correction = RBW_choices[i]/10.0 - 120.0;
   uint8_t BW = (dwn3 << 7) | (ndec << 4) | fils ;
   SI4432_Write_Byte(0x1C , BW ) ;
   return (((float)WISH) / 10.0) ;
@@ -453,7 +453,7 @@ float SI4432_RSSI(uint32_t i, int s)
       RSSI_RAW = RSSI_RAW / setting.repeat;
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();
-  float dBm = ((float)RSSI_RAW)/32.0 - 120.0 + SI4432_RSSI_correction;
+  float dBm = ((float)RSSI_RAW)/32.0 + SI4432_RSSI_correction;
 #ifdef __SIMULATION__
   dBm = Simulated_SI4432_RSSI(i,s);
 #endif
