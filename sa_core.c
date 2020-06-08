@@ -123,8 +123,8 @@ float calc_min_sweep_time(void)         // Calculate minimum sweep time in mS
   float a = actualStepDelay + MEASURE_TIME;
 
   if (FREQ_IS_CW())
-    a = MINIMUM_SWEEP_TIME / 290;       // time per step in CW mode
-  t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME) / 1000.0);
+    a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
+  t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME));
   return t;
 }
 
@@ -1522,7 +1522,16 @@ again:
   float r = value(temppeakLevel);
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel) {  // Auto reflevel
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
-      if ((setting.reflevel > REFLEVEL_MIN  && r < setting.reflevel / 2.5 ) || (setting.reflevel < REFLEVEL_MAX && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
+      static int low_count = 0;
+      if (setting.reflevel > REFLEVEL_MIN)  {
+        if (r < setting.reflevel / 5)
+            low_count = 5;
+        else if (r < setting.reflevel / 2.5)
+            low_count++;
+          else
+            low_count = 0;
+      }
+      if ((low_count > 4) || (setting.reflevel < REFLEVEL_MAX && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
         // r = setting.scale * (floor(r / setting.scale) + 1);
 #if 0
         float m = 1;
@@ -1855,13 +1864,14 @@ void draw_cal_status(void)
   ili9341_set_foreground(color);
   ili9341_drawstring(buf, x, y);
 
-
+#if 0
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
   if (setting.auto_reflevel){
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("AUTO", x, y);
   }
+#endif
   y += YSTEP + YSTEP/2 ;
   plot_printf(buf, BLEN, "%s",unit);
   ili9341_drawstring(buf, x, y);
@@ -1961,6 +1971,7 @@ void draw_cal_status(void)
   float t = calc_min_sweep_time();
   if (t < setting.sweep_time)
     t = setting.sweep_time;
+  setting.actual_sweep_time = t;
   if (t>=10000.0)
     plot_printf(buf, BLEN, "%5d",(int)(t/1000));
   else if (t>=1000)

@@ -1806,7 +1806,11 @@ set_numeric_value(void)
     break;
   case KM_REFLEVEL:
     set_auto_reflevel(false);
-    set_reflevel(uistat.value);
+    if (uistat.value < setting.scale*NGRIDY) {
+      set_scale(uistat.value/NGRIDY);
+      set_reflevel(setting.scale*NGRIDY);
+    } else
+      set_reflevel(uistat.value);
     break;
   case KM_ATTENUATION:
     setting.auto_attenuation = false;

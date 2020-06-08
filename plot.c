@@ -117,7 +117,8 @@ void update_grid(void)
   uint32_t grid;
 
   if (fspan == 0) {
-    fspan = setting.sweep_time*1000000 + 25000; // Time in uS
+    fspan = setting.actual_sweep_time; // Time in uS
+    fspan *= 1000;
     fstart = 0;
   }
 
@@ -869,7 +870,7 @@ static void trace_get_value_string(
     dfreq = frequencies[i];
   }
   if (FREQ_IS_CW()) {
-    float t = ii*(setting.sweep_time*1000000 + 25000)/290;
+    float t = ii*(setting.actual_sweep_time)*1000.0/290.0;
     if (t>1000000.0){
       plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/1000000.0);
       buf2[5] = 'S';
@@ -2147,7 +2148,7 @@ draw_frequencies(void)
 #endif
     if (FREQ_IS_CW()) {
       plot_printf(buf1, sizeof(buf1), " CW %qHz", get_sweep_frequency(ST_CW));
-      float t = setting.sweep_time*1000.0 + 25.0; // in mS
+      float t = setting.actual_sweep_time; // in mS
           ; // in mS
       if (t>=1000)
           plot_printf(buf2, sizeof(buf2), "%.2fS",t/1000.0);
@@ -2174,8 +2175,12 @@ draw_frequencies(void)
     buf1[0] = S_SARROW[0];
   if (uistat.lever_mode == LM_SPAN)
     buf2[0] = S_SARROW[0];
+  int p2 = FREQUENCIES_XPOS2;
+  if (FREQ_IS_CW()) {
+    p2 = 320 - 7*strlen(buf2);
+  }
   ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
-  ili9341_drawstring(buf2, FREQUENCIES_XPOS2, FREQUENCIES_YPOS);
+  ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);
 }
 #ifdef __VNA__
 void

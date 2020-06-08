@@ -580,6 +580,7 @@ typedef struct setting
   float level;
   float level_sweep;
   float sweep_time;
+  float actual_sweep_time;
   int test_argument;
   int auto_IF;
   uint32_t checksum;
