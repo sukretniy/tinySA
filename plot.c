@@ -849,6 +849,7 @@ static void trace_get_value_string(
   (void) point_count;
   float v;
   char buf2[11];
+  char buf3[6];
   buf2[0]=' ';
   uint32_t dfreq = 0;
   float rlevel = 0;
@@ -902,10 +903,17 @@ static void trace_get_value_string(
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else {
-      if (setting.unit)
-        plot_printf(buf, len, "%s %.4f%s%s", buf2, v - rlevel,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
+      v = v - rlevel;
+      if (UNIT_IS_LINEAR(setting.unit)) {
+        if (v < 100000)
+          plot_printf(buf3, sizeof(buf3), "%5f", v);
+        else
+          strcpy(buf3,"*****");
+      }
       else
-        plot_printf(buf, len, "%s %.1f%s%s", buf2, v - rlevel,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
+        plot_printf(buf3, sizeof(buf3), "%5.1f", v);
+      buf3[5] = 0;
+      plot_printf(buf, len, "%s %s%s%s", buf2, buf3,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
     }
 }
 
@@ -2069,20 +2077,18 @@ static void cell_draw_marker_info(int x0, int y0)
       buf[k++] = 0;
       ili9341_set_background(DEFAULT_BG_COLOR);
       ili9341_set_foreground(marker_color(markers[i].mtype));
-      if (setting.unit)
-        cell_drawstring(buf, xpos, ypos);
-      else
+//      if (setting.unit)
+//        cell_drawstring(buf, xpos, ypos);
+//      else
         cell_drawstring_7x13(buf, xpos, ypos);
       xpos += strlen(buf)*7;
-//      cell_drawstring_size(buf, xpos, ypos, 2);
       trace_get_value_string(
           t, buf, sizeof buf,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
-      if (setting.unit)
-        cell_drawstring(buf, xpos, ypos);
-      else
+//      if (setting.unit)
+//        cell_drawstring(buf, xpos, ypos);
+//      else
         cell_drawstring_7x13(buf, xpos, ypos);
-//      cell_drawstring_size(buf, xpos+3*7, ypos, 2);
       j++;
    }
   }

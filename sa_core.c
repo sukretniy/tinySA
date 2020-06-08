@@ -473,7 +473,7 @@ void toggle_AGC(void)
   if (S_IS_AUTO(setting.agc ))
     setting.agc = false;
   else if (setting.agc)
-    setting.agc = S_AUTO_OFF;
+    setting.agc = S_AUTO_ON;
   else
     setting.agc = true;
   dirty = true;
@@ -503,9 +503,9 @@ void set_unit(int u)
     set_scale(r/NGRIDY);
     set_reflevel(setting.scale*NGRIDY);
     if (S_IS_AUTO(setting.agc))
-      setting.agc = S_AUTO_OFF;
+      setting.agc = S_AUTO_ON;
     if (S_IS_AUTO(setting.lna))
-      setting.agc = S_AUTO_OFF;
+      setting.lna = S_AUTO_OFF;
   } else {
     r = 10 * round((r*1.2)/10.0);
     set_reflevel(r);
@@ -513,7 +513,7 @@ void set_unit(int u)
     if (S_IS_AUTO(setting.agc))
       setting.agc = S_AUTO_ON;
     if (S_IS_AUTO(setting.lna))
-      setting.agc = S_AUTO_OFF;
+      setting.lna = S_AUTO_OFF;
   }
   dirty = true;
 }
@@ -1491,10 +1491,12 @@ again:
       dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
   }
-  if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel && (max_index[0] > 0 || FREQ_IS_CW())) {  // Auto reflevel
+  if (max_index[0] > 0)
+    temppeakLevel = actual_t[max_index[0]];
+  float r = value(temppeakLevel);
+  if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel) {  // Auto reflevel
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
-      float r = value(actual_t[max_index[0]]);
-      if ((setting.reflevel > REFLEVEL_MIN  && r < setting.reflevel / 2 ) || (setting.reflevel < REFLEVEL_MAX && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
+      if ((setting.reflevel > REFLEVEL_MIN  && r < setting.reflevel / 2.5 ) || (setting.reflevel < REFLEVEL_MAX && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
         // r = setting.scale * (floor(r / setting.scale) + 1);
 #if 0
         float m = 1;
@@ -1513,20 +1515,22 @@ again:
           r = REFLEVEL_MIN;
         if (r > REFLEVEL_MAX)
           r = REFLEVEL_MAX;
+        if (r != setting.reflevel) {
         //if (setting.scale * NGRIDY > r)
           set_scale(r / NGRIDY);
-        set_reflevel(setting.scale*NGRIDY);
+          set_reflevel(setting.scale*NGRIDY);
+        }
       }
     } else {
-      if (value(actual_t[max_index[0]]) < setting.reflevel - setting.scale*NGRIDY || temp_min_level > setting.reflevel) {
-        set_reflevel(setting.scale*(floor(value(actual_t[max_index[0]])/setting.scale)+1));
+      if (r < setting.reflevel - setting.scale*NGRIDY || temp_min_level > setting.reflevel) {
+        set_reflevel(setting.scale*(floor(r/setting.scale)+1));
         redraw_request |= REDRAW_CAL_STATUS;
         dirty = true;                               // Must be  above if(scandirty!!!!!)
-      }else if (value(actual_t[max_index[0]]) > setting.reflevel - setting.scale/2) {
+      }else if (r > setting.reflevel - setting.scale/2) {
           set_reflevel(setting.reflevel + setting.scale);
           redraw_request |= REDRAW_CAL_STATUS;
           dirty = true;                               // Must be  above if(scandirty!!!!!)
-      } else if (temp_min_level < setting.reflevel - 10.1 * setting.scale && value(actual_t[max_index[0]]) < setting.reflevel -  setting.scale * 1.5) {
+      } else if (temp_min_level < setting.reflevel - 10.1 * setting.scale && r < setting.reflevel -  setting.scale * 1.5) {
         set_reflevel(setting.reflevel - setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
         dirty = true;                               // Must be  above if(scandirty!!!!!)
@@ -2037,6 +2041,11 @@ void draw_cal_status(void)
     buf[5] = 'b';
   else if (S_STATE(setting.below_IF))
     buf[5] = 'B';
+  ili9341_drawstring(buf, x, y);
+
+  y += YSTEP + YSTEP/2 ;
+  strncpy(buf,&VERSION[8],6);
+  buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
 //  ili9341_set_background(DEFAULT_BG_COLOR);
