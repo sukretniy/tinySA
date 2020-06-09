@@ -605,10 +605,10 @@ void set_scale(float t) {
   set_trace_scale(1, t);
   set_trace_scale(2, t);
 //  if (!UNIT_IS_LINEAR(setting.unit)) {
-    setting.reflevel = t * floor(setting.reflevel/t);
-    set_trace_refpos(0,setting.reflevel);
-    set_trace_refpos(1,setting.reflevel);
-    set_trace_refpos(2,setting.reflevel);
+//    setting.reflevel = t * floor(setting.reflevel/t);
+//    set_trace_refpos(0,setting.reflevel);
+//    set_trace_refpos(1,setting.reflevel);
+//    set_trace_refpos(2,setting.reflevel);
 //  }
 
 #if 0
