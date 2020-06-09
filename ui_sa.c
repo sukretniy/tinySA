@@ -605,6 +605,10 @@ static void menu_modulation_cb(int item, uint8_t data)
 {
   (void)item;
 //Serial.println(item);
+  if (data) {
+    set_sweep_frequency(ST_SPAN, 0);      // No other scanning allowed when modulation is on!!!!!
+    set_level_sweep(0);
+  }
   set_modulation(data);
   menu_move_back();
 //  ui_mode_normal();   // Stay in menu mode
@@ -971,6 +975,13 @@ static void menu_pause_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
+static void menu_outputmode_cb(int item, uint8_t data)
+{
+  (void) data;
+  (void) item;
+  toggle_mute();
+  draw_menu();
+}
 
 //const int menu_drive_value[]={5,10,15,20};
 const char *menu_drive_text[]={"-38dBm","-35dBm","-33dBm","-30dBm","-27dBm","-24dBm","-21dBm","  -19dBm", "  -7dBm"," -4dBm"," -2dBm","  1dBm","  4dBm","  7dBm"," 10dBm"," 13dBm"};
@@ -1082,7 +1093,7 @@ const menuitem_t  menu_modulation[] = {
 };
 
 const menuitem_t  menu_lowoutputmode[] = {
-  { MT_FORM | MT_TITLE,    0,               "LOW OUTPUT",       NULL},
+  { MT_FORM | MT_CALLBACK,    0,            "LOW OUTPUT             %s",       menu_outputmode_cb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,       "FREQ: %s",         NULL},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,  "LEVEL: %s",        NULL},
   { MT_FORM | MT_SUBMENU,  0,               "MODULATION: %s",   menu_modulation},
@@ -1095,7 +1106,7 @@ const menuitem_t  menu_lowoutputmode[] = {
 };
 
 const menuitem_t  menu_highoutputmode[] = {
-  { MT_FORM | MT_TITLE,     0,          "HIGH OUTPUT",      NULL},
+  { MT_FORM | MT_CALLBACK,     0,       "HIGH OUTPUT             %s",      menu_outputmode_cb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  "FREQ: %s",         NULL},
   { MT_FORM | MT_SUBMENU,   0,          "LEVEL: %s",        menu_drive_wide},
   { MT_FORM | MT_SUBMENU,   0,          "MODULATION: %s",   menu_modulation},
@@ -1548,6 +1559,13 @@ static void menu_item_modify_attribute(
   } else if (menu == menu_highoutputmode && item == 2) {
       plot_printf(uistat.text, sizeof uistat.text, menu_drive_text[setting.drive]);
   } else if (menu == menu_lowoutputmode || menu == menu_highoutputmode) {
+    if (item == 0) {
+      if (setting.mute)
+        strcpy(uistat.text, "OFF");
+      else
+        strcpy(uistat.text, "ON");
+      mark = true;
+    }
     if (item == 3) {
       plot_printf(uistat.text, sizeof uistat.text, menu_modulation_text[setting.modulation]);
     }
@@ -1800,6 +1818,7 @@ set_numeric_value(void)
     set_sweep_frequency(ST_CENTER, uistat.value);
     break;
   case KM_SPAN:
+    setting.modulation = MO_NONE;
     set_sweep_frequency(ST_SPAN, uistat.value);
     break;
   case KM_CW:
@@ -1862,6 +1881,7 @@ set_numeric_value(void)
     set_offset(uistat.value);
     break;
   case KM_LEVELSWEEP:
+    setting.modulation = MO_NONE;
     set_level_sweep(uistat.value);
     break;
   case KM_SWEEP_TIME:

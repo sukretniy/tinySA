@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
+/* Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
  * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
@@ -127,6 +126,7 @@ double my_atof(const char *p);
 int shell_printf(const char *fmt, ...);
 
 void toggle_sweep(void);
+void toggle_mute(void);
 void load_default_properties(void);
 
 extern float perform(bool b, int i, uint32_t f, int e);
@@ -585,6 +585,7 @@ typedef struct setting
   int auto_IF;
   unsigned int unit_scale_index;
   float unit_scale;
+  int mute;
   uint32_t checksum;
 }setting_t;
 

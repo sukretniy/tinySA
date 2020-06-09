@@ -58,6 +58,7 @@ void reset_settings(int m)
   setting.refer = -1;
   setting.unit_scale_index = 0;
   setting.unit_scale = 0;
+  setting.mute = false;
 #ifdef __SPUR__
   setting.spur = 0;
 #endif
@@ -122,11 +123,14 @@ void reset_settings(int m)
 float calc_min_sweep_time(void)         // Calculate minimum sweep time in mS
 {
   float t;
-  float a = actualStepDelay + MEASURE_TIME;
-
-  if (FREQ_IS_CW())
-    a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
-  t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME));
+  float a = (actualStepDelay + MEASURE_TIME)/1000.0;
+  if (MODE_OUTPUT(setting.mode))
+    t = 1000;
+  else {
+    if (FREQ_IS_CW())
+      a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
+    t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME));
+  }
   return t;
 }
 
@@ -202,6 +206,12 @@ void set_tracking_output(int t)
 void toggle_tracking_output(void)
 {
   setting.tracking_output = !setting.tracking_output;
+  dirty = true;
+}
+
+void toggle_mute(void)
+{
+  setting.mute = !setting.mute;
   dirty = true;
 }
 
@@ -821,6 +831,7 @@ case M_ULTRA:
     // SI4432_SetReference(setting.refer);
     break;
 case M_HIGH:    // Direct into 1
+mute:
     // SI4432_SetReference(-1); // Stop reference output
     SI4432_Sel = 0; // both as receiver to avoid spurs
     set_switch_receive();
@@ -833,6 +844,8 @@ case M_HIGH:    // Direct into 1
 
     break;
 case M_GENLOW:  // Mixed output from 0
+    if (setting.mute)
+      goto mute;
     SI4432_Sel = 0;
     if (setting.step_atten) {
       set_switch_off();
@@ -851,6 +864,8 @@ case M_GENLOW:  // Mixed output from 0
     }
     break;
 case M_GENHIGH: // Direct output from 1
+    if (setting.mute)
+      goto mute;
     SI4432_Sel = 0;
     SI4432_Receive();
     set_switch_receive();
@@ -1376,17 +1391,21 @@ again:
     repeats = 1000; // to avoid interrupting the tone during UI processing
     modulation_counter = 0;
   }
-  float t = calc_min_sweep_time();
+  float t = setting.sweep_time - calc_min_sweep_time(); // Time to delay in mS
+  if (t < 0)
+    t = 0;
+  t = t * 1000 / 290.0;
+  if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup
+    t = 500;
   while (repeats--) {
   for (int i = 0; i < sweep_points; i++) {
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);
-    if ( setting.sweep_time > t && !(MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE)) {
-      float s = (setting.sweep_time - t) * (1000.0 / 290.0);
-      if (s < 30000)
-          my_microsecond_delay((int)s);
+    if (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE) {
+      if (t < 30000)
+          my_microsecond_delay((int)t);
       else
-        osalThreadSleepMilliseconds(((int)s)/1000);
+        osalThreadSleepMilliseconds(((int)t)/1000);
     }
 
     // back to toplevel to handle ui operation
@@ -1559,7 +1578,8 @@ again:
         }
       }
     } else {
-      if (r < setting.reflevel - setting.scale*NGRIDY || temp_min_level > setting.reflevel) {
+      float u_minlevel = value(temp_min_level);
+      if (r < setting.reflevel - setting.scale*NGRIDY || u_minlevel > setting.reflevel) {
         set_reflevel(setting.scale*(floor(r/setting.scale)+1));
         redraw_request |= REDRAW_CAL_STATUS;
         dirty = true;                               // Must be  above if(scandirty!!!!!)
@@ -1567,11 +1587,11 @@ again:
           set_reflevel(setting.reflevel + setting.scale);
           redraw_request |= REDRAW_CAL_STATUS;
           dirty = true;                               // Must be  above if(scandirty!!!!!)
-      } else if (temp_min_level < setting.reflevel - 10.1 * setting.scale && r < setting.reflevel -  setting.scale * 1.5) {
+      } else if (u_minlevel < setting.reflevel - 10.1 * setting.scale && r < setting.reflevel -  setting.scale * 1.5) {
         set_reflevel(setting.reflevel - setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
         dirty = true;                               // Must be  above if(scandirty!!!!!)
-      } else if (temp_min_level > setting.reflevel - 8.8 * setting.scale) {
+      } else if (u_minlevel > setting.reflevel - 8.8 * setting.scale) {
         set_reflevel(setting.reflevel + setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
         dirty = true;                               // Must be  above if(scandirty!!!!!)
