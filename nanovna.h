@@ -202,8 +202,8 @@ void toggle_waterfall(void);
 void set_mode(int);
 int GetMode(void);
 void set_reflevel(float);
-#define REFLEVEL_MAX 999999.0
-#define REFLEVEL_MIN    0.0010
+#define REFLEVEL_MAX 9999.0
+#define REFLEVEL_MIN    0.00000000001
 void set_scale(float);
 void AllDirty(void);
 void MenuDirty(void);
@@ -345,10 +345,10 @@ enum trace_type {
 // Phase
 
 enum unit_type {
-  U_DBM=0, U_DBMV, U_DBUV, U_MVOLT, U_UVOLT, U_MWATT, U_UWATT
+  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_MVOLT, U_UVOLT, U_WATT, U_MWATT, U_UWATT
 };
-#define UNIT_IS_LINEAR(T) ( T >= U_MVOLT ? true : false)
-#define UNIT_IS_LOG(T) ( T >= U_MVOLT ? false : true)
+#define UNIT_IS_LINEAR(T) ( T >= U_VOLT ? true : false)
+#define UNIT_IS_LOG(T) ( T >= U_VOLT ? false : true)
 
 float value(float);
 
@@ -583,6 +583,8 @@ typedef struct setting
   float actual_sweep_time;
   int test_argument;
   int auto_IF;
+  unsigned int unit_scale_index;
+  float unit_scale;
   uint32_t checksum;
 }setting_t;
 
@@ -600,6 +602,8 @@ enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 #define MEASURE_TIME       175.0        // Time per vbwstep without stepdelay in uS
 
 extern uint32_t frequencies[POINTS_COUNT];
+extern const float unit_scale_value[];
+extern const char *unit_scale_text[];
 
 #if 1
 #define SAVEAREA_MAX 9

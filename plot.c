@@ -117,7 +117,7 @@ void update_grid(void)
   uint32_t grid;
 
   if (fspan == 0) {
-    fspan = setting.actual_sweep_time; // Time in uS
+    fspan = setting.actual_sweep_time; // Time in mS
     fspan *= 1000;
     fstart = 0;
   }
@@ -468,11 +468,18 @@ value(const float v)
   case U_DBUV:
     return v + 90.0 + 20.0*log10(sqrt(50.0));
     break;
+
   case U_MVOLT:
     return pow(10, (v-30.0)/20.0) * sqrt(50.0) * 1000.0;
     break;
+  case U_VOLT:
+    return pow(10, (v-30.0)/20.0) * sqrt(50.0);
+    break;
   case U_UVOLT:
     return pow(10, (v-30.0)/20.0) * sqrt(50.0) * 1000000.0;
+    break;
+  case U_WATT:
+    return pow(10, v/10.0)/1000.0;
     break;
   case U_MWATT:
     return pow(10, v/10.0);
@@ -497,11 +504,17 @@ to_dBm(const float v)
   case U_DBUV:
     return v - 90.0 - 20.0*log10(sqrt(50.0));
     break;
+  case U_VOLT:
+    return log10( v / (sqrt(50.0))) * 20.0 + 30.0 ;
+    break;
   case U_MVOLT:
     return log10( v / (sqrt(50.0) * 1000.0)) * 20.0 + 30.0 ;
     break;
   case U_UVOLT:
     return log10(v / (sqrt(50.0) * 1000000.0))*20.0 + 30.0;
+    break;
+  case U_WATT:
+    return log10(v*1000.0)*10.0;
     break;
   case U_MWATT:
     return log10(v)*10.0;
@@ -906,16 +919,13 @@ static void trace_get_value_string(
     else {
       v = v - rlevel;
       if (UNIT_IS_LINEAR(setting.unit)) {
-        if (v < 1000000)
-          plot_printf(buf3, sizeof(buf3), "%6f", v);
-        else
-          strcpy(buf3,"******");
-        buf3[6] = 0;
+        plot_printf(buf3, sizeof(buf3), "%4f", v/setting.unit_scale);
+        buf3[5] = 0;
       } else {
-        plot_printf(buf3, sizeof(buf3), "%5.1f", v);
+        plot_printf(buf3, sizeof(buf3), "%.1f", v);
         buf3[5] = 0;
       }
-      plot_printf(buf, len, "%s %s%s%s", buf2, buf3,unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
+      plot_printf(buf, len, "%s %s%s%s%s", buf2, buf3, unit_scale_text[setting.unit_scale_index], unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
     }
 }
 

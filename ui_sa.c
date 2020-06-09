@@ -300,8 +300,9 @@ enum {
 #define KP_DB 18
 #define KP_PLUSMINUS 19
 #define KP_KEYPAD 20
-#define KP_N 21
-#define KP_P 22
+#define KP_m 21
+#define KP_u 22
+#define KP_n 23
 
 
 typedef struct {
@@ -347,6 +348,9 @@ static const keypads_t keypads_scale[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
+  { 3, 0, KP_m },
+  { 3, 1, KP_u },
+  { 3, 2, KP_n },
   { 3, 3, KP_X1 },
   { 2, 3, KP_BS },
   { 0, 0, -1 }
@@ -364,6 +368,8 @@ static const keypads_t keypads_level[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
+  { 3, 0, KP_m },
+  { 3, 1, KP_u },
   { 3, 2, KP_MINUS },
   { 3, 3, KP_X1 },
   { 2, 3, KP_BS },
@@ -382,8 +388,8 @@ static const keypads_t keypads_time[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
-  { 3, 1, KP_N },
-  { 3, 2, KP_P },
+  { 3, 1, KP_m },
+  { 3, 2, KP_u },
   { 3, 3, KP_MINUS },
   { 2, 3, KP_BS },
   { 0, 0, -1 }
@@ -1388,13 +1394,13 @@ static const menuitem_t menu_displayhigh[] = {
 
 static const menuitem_t menu_unit[] =
 {
- { MT_CALLBACK,U_DBM,      "dBm",              menu_unit_cb},
- { MT_CALLBACK,U_DBMV,     "dBmV",             menu_unit_cb},
- { MT_CALLBACK,U_DBUV,     "dBuV",             menu_unit_cb},
- { MT_CALLBACK,U_MVOLT,     "mVolt",             menu_unit_cb},
- { MT_CALLBACK,U_UVOLT,     "uVolt",             menu_unit_cb},
- { MT_CALLBACK,U_MWATT,    "mWatt",             menu_unit_cb},
- { MT_CALLBACK,U_UWATT,    "uWatt",             menu_unit_cb},
+ { MT_CALLBACK,U_DBM,       "dBm",              menu_unit_cb},
+ { MT_CALLBACK,U_DBMV,      "dBmV",             menu_unit_cb},
+ { MT_CALLBACK,U_DBUV,      "dBuV",             menu_unit_cb},
+ { MT_CALLBACK,U_VOLT,      "Volt",             menu_unit_cb},
+// { MT_CALLBACK,U_UVOLT,     "uVolt",             menu_unit_cb},
+ { MT_CALLBACK,U_WATT,      "Watt",             menu_unit_cb},
+// { MT_CALLBACK,U_UWATT,    "uWatt",             menu_unit_cb},
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1803,10 +1809,12 @@ set_numeric_value(void)
     if (UNIT_IS_LINEAR(setting.unit))
       set_auto_reflevel(false);
     set_scale(uistat.value);
+    if (UNIT_IS_LINEAR(setting.unit) && setting.reflevel < setting.scale*NGRIDY)
+      set_reflevel(setting.scale*NGRIDY);
     break;
   case KM_REFLEVEL:
     set_auto_reflevel(false);
-    if (uistat.value < setting.scale*NGRIDY) {
+    if (UNIT_IS_LINEAR(setting.unit) && uistat.value < setting.scale*NGRIDY) {
       set_scale(uistat.value/NGRIDY);
       set_reflevel(setting.scale*NGRIDY);
     } else

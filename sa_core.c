@@ -56,6 +56,8 @@ void reset_settings(int m)
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
   setting.refer = -1;
+  setting.unit_scale_index = 0;
+  setting.unit_scale = 0;
 #ifdef __SPUR__
   setting.spur = 0;
 #endif
@@ -564,10 +566,10 @@ void set_reflevel(float level)
 
 void set_scale(float t) {
   if (UNIT_IS_LINEAR(setting.unit)) {
-    if (t < REFLEVEL_MIN/10)
-      t = REFLEVEL_MIN/10;
-    if (t > REFLEVEL_MAX/10)
-      t = REFLEVEL_MAX/10;
+    if (t < REFLEVEL_MIN/10.0)
+      t = REFLEVEL_MIN/10.0;
+    if (t > REFLEVEL_MAX/10.0)
+      t = REFLEVEL_MAX/10.0;
   } else {
     if (t > 20.0)
       t = 20.0;
@@ -1141,7 +1143,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {
     unsigned char v;
     static unsigned char old_v;
-    if (f < 1500000)
+    if (f < 500000)
       v = 0x50; // Disable AGC and enable LNA
     else
       v = 0x60; // Enable AGC and disable LNA
@@ -1815,10 +1817,14 @@ float my_round(float v)
   return v;
 }
 
-const char *unit_string[] = { "dBm", "dBmV", "dBuV", "mV", "uV", "mW", "uW" };
+const char *unit_string[] = { "dBm", "dBmV", "dBuV", "V", "mV", "uV", "W", "mW", "uW" };
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char *scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
+
+const float unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
+const char *unit_scale_text[]= {"","m", "u",     "n",        "p"};
+
 
 void draw_cal_status(void)
 {
@@ -1829,6 +1835,8 @@ void draw_cal_status(void)
   int y = OFFSETY;
   unsigned int color;
   int rounding = false;
+  setting.unit_scale_index = 0;
+  setting.unit_scale = 1.0;
   if (!UNIT_IS_LINEAR(setting.unit))
     rounding  = true;
   const char *unit = unit_string[setting.unit];
@@ -1848,11 +1856,17 @@ void draw_cal_status(void)
   ili9341_set_background(DEFAULT_BG_COLOR);
 
   float yMax = setting.reflevel;
+  while (UNIT_IS_LINEAR(setting.unit) && setting.unit_scale_index < sizeof(unit_scale_value)/sizeof(float) - 1) {
+    if (yMax > unit_scale_value[setting.unit_scale_index])
+      break;
+    setting.unit_scale_index++;
+  }
+  setting.unit_scale = unit_scale_value[setting.unit_scale_index];
   if (rounding)
-    plot_printf(buf, BLEN, "%6d", (int)yMax);
+    plot_printf(buf, BLEN, "%4d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%6f", yMax+0.00005);
-  buf[6]=0;
+    plot_printf(buf, BLEN, "%4f", (yMax/setting.unit_scale)+0.00005);
+  buf[5]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
       color = DEFAULT_FG_COLOR;
@@ -1873,7 +1887,7 @@ void draw_cal_status(void)
   }
 #endif
   y += YSTEP + YSTEP/2 ;
-  plot_printf(buf, BLEN, "%s",unit);
+  plot_printf(buf, BLEN, "%s%s",unit_scale_text[setting.unit_scale_index], unit);
   ili9341_drawstring(buf, x, y);
 
   color = DEFAULT_FG_COLOR;
@@ -1881,7 +1895,7 @@ void draw_cal_status(void)
   y += YSTEP + YSTEP/2;
   unsigned int i = 0;
   while (i < sizeof(scale_value)/sizeof(float)) {
-    float t = setting.scale / scale_value[i];;
+    float t = (setting.scale/setting.unit_scale) / scale_value[i];;
     if (t > 0.9 && t < 1.1){
       plot_printf(buf, BLEN, "%s/",scale_vtext[i]);
       break;
@@ -2029,9 +2043,9 @@ void draw_cal_status(void)
 
     y += YSTEP;
     if (rounding)
-      plot_printf(buf, BLEN, "%6d", (int)value(setting.trigger_level));
+      plot_printf(buf, BLEN, "%4f", value(setting.trigger_level));
     else
-      plot_printf(buf, BLEN, "%6f", value(setting.trigger_level));
+      plot_printf(buf, BLEN, "%4f", value(setting.trigger_level)/setting.unit_scale);
     buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
@@ -2087,10 +2101,10 @@ void draw_cal_status(void)
 
   y = HEIGHT-7 + OFFSETY;
   if (rounding)
-    plot_printf(buf, BLEN, "%6d", (int)(yMax - setting.scale * NGRIDY));
+    plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%6f", (yMax - setting.scale * NGRIDY)+0.00005);
-  buf[6]=0;
+    plot_printf(buf, BLEN, "%4f", ((yMax - setting.scale * NGRIDY)/setting.unit_scale)+0.0005);
+  buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
       color = DEFAULT_FG_COLOR;

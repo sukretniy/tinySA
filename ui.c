@@ -2067,14 +2067,18 @@ static int
 keypad_click(int key)
 {
   int c = keypads[key].c;
-  if ((c >= KP_X1 && c <= KP_G) || c == KP_N || c == KP_P) {
-    int32_t scale = 1;
+  if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u) {
+    float scale = 1.0;
     if (c >= KP_X1 && c <= KP_G) {
       int n = c - KP_X1;
       while (n-- > 0)
-        scale *= 1000;
-    } else if (c == KP_N) {
-      scale *= 1000;
+        scale *= 1000.0;
+    } else if (c == KP_m) {
+      scale /= 1000.0;
+    } else if (c == KP_u) {
+      scale /= 1000000.0;
+    } else if (c == KP_n) {
+      scale /= 1000000000.0;
     }
     /* numeric input done */
     double value = my_atof(kp_buf) * scale;
