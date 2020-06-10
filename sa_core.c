@@ -21,6 +21,9 @@ int in_selftest = false;
 void reset_settings(int m)
 {
   setting.mode = m;
+  setting.unit_scale_index = 0;
+  setting.unit_scale = 1;
+  setting.unit = U_DBM;
   set_scale(10);
   set_reflevel(-10);
   setting.attenuate = 0;
@@ -56,8 +59,6 @@ void reset_settings(int m)
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
   setting.refer = -1;
-  setting.unit_scale_index = 0;
-  setting.unit_scale = 0;
   setting.mute = false;
 #ifdef __SPUR__
   setting.spur = 0;
@@ -449,6 +450,8 @@ void set_harmonic(int h)
 
 void set_step_delay(int d)
 {
+  if (d < 300 || d > 30000)
+    return;
   setting.step_delay = d;
   dirty = true;
 }
@@ -517,6 +520,8 @@ int GetAGC(void)
 
 void set_unit(int u)
 {
+  if (setting.unit == u)
+    return;
   float r = to_dBm(setting.reflevel);   // Get neutral unit
   float s = to_dBm(setting.scale);
 //  float t = setting.trigger;            // Is always in dBm
@@ -546,8 +551,12 @@ void set_unit(int u)
     if (S_IS_AUTO(setting.lna))
       setting.lna = S_AUTO_OFF;
   }
+  plot_into_index(measured);
+  force_set_markmap();
   dirty = true;
 }
+const float unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
+const char * const unit_scale_text[]= {"","m", "u",     "n",        "p"};
 
 void set_reflevel(float level)
 {
@@ -565,6 +574,15 @@ void set_reflevel(float level)
     }
 #endif
   }
+
+  setting.unit_scale_index = 0;
+  setting.unit_scale = 1.0;
+  while (UNIT_IS_LINEAR(setting.unit) && setting.unit_scale_index < sizeof(unit_scale_value)/sizeof(float) - 1) {
+    if (level > unit_scale_value[setting.unit_scale_index])
+      break;
+    setting.unit_scale_index++;
+  }
+  setting.unit_scale = unit_scale_value[setting.unit_scale_index];
 
   setting.reflevel = level;
   set_trace_refpos(0, /* NGRIDY - */ level /* / get_trace_scale(0) */);
@@ -1837,13 +1855,11 @@ float my_round(float v)
   return v;
 }
 
-const char *unit_string[] = { "dBm", "dBmV", "dBuV", "V", "mV", "uV", "W", "mW", "uW" };
+const char *unit_string[] = { "dBm", "dBmV", "dBuV", "V", "W" };
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
-static const char *scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
+static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
 
-const float unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
-const char *unit_scale_text[]= {"","m", "u",     "n",        "p"};
 
 
 void draw_cal_status(void)
@@ -1855,8 +1871,6 @@ void draw_cal_status(void)
   int y = OFFSETY;
   unsigned int color;
   int rounding = false;
-  setting.unit_scale_index = 0;
-  setting.unit_scale = 1.0;
   if (!UNIT_IS_LINEAR(setting.unit))
     rounding  = true;
   const char *unit = unit_string[setting.unit];
@@ -1875,13 +1889,19 @@ void draw_cal_status(void)
 
   ili9341_set_background(DEFAULT_BG_COLOR);
 
-  float yMax = setting.reflevel;
+  float yMax = setting.reflevel;                    // Determine unit scale letter ( ,m,u,n,p)
+#if 0 // moved to set_reflevel
+  setting.unit_scale_index = 0;
+  setting.unit_scale = 1.0;
   while (UNIT_IS_LINEAR(setting.unit) && setting.unit_scale_index < sizeof(unit_scale_value)/sizeof(float) - 1) {
     if (yMax > unit_scale_value[setting.unit_scale_index])
       break;
     setting.unit_scale_index++;
   }
   setting.unit_scale = unit_scale_value[setting.unit_scale_index];
+#endif
+
+  // Top level
   if (rounding)
     plot_printf(buf, BLEN, "%4d", (int)yMax);
   else
@@ -1898,6 +1918,7 @@ void draw_cal_status(void)
   ili9341_set_foreground(color);
   ili9341_drawstring(buf, x, y);
 
+  // Unit
 #if 0
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
@@ -1910,6 +1931,7 @@ void draw_cal_status(void)
   plot_printf(buf, BLEN, "%s%s",unit_scale_text[setting.unit_scale_index], unit);
   ili9341_drawstring(buf, x, y);
 
+  // Scale
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2;
@@ -1930,6 +1952,7 @@ void draw_cal_status(void)
 #endif
   ili9341_drawstring(buf, x, y);
 
+  // Attenuation
   if (setting.auto_attenuation)
     color = DEFAULT_FG_COLOR;
   else
@@ -1943,6 +1966,7 @@ void draw_cal_status(void)
   buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
+  // Average
   if (setting.average>0) {
     ili9341_set_foreground(BRIGHT_COLOR_BLUE);
     y += YSTEP + YSTEP/2 ;
@@ -1953,6 +1977,7 @@ void draw_cal_status(void)
     buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
+  // Spur
 #ifdef __SPUR__
   if (setting.spur) {
     ili9341_set_foreground(BRIGHT_COLOR_GREEN);
@@ -1965,6 +1990,7 @@ void draw_cal_status(void)
   }
 #endif
 
+  // RBW
   if (setting.rbw)
     color = BRIGHT_COLOR_GREEN;
   else
@@ -1979,6 +2005,7 @@ void draw_cal_status(void)
   buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
+  // VBW
   if (setting.frequency_step > 0) {
     ili9341_set_foreground(DEFAULT_FG_COLOR);
     y += YSTEP + YSTEP/2 ;
@@ -1989,6 +2016,8 @@ void draw_cal_status(void)
     buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
+
+  // Sweep time
   if (dirty)
     color = BRIGHT_COLOR_RED;
   else if (setting.step_delay)
@@ -2018,7 +2047,7 @@ void draw_cal_status(void)
   buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
-
+   // Cal output
   if (setting.refer >= 0) {
     ili9341_set_foreground(BRIGHT_COLOR_RED);
     y += YSTEP + YSTEP/2 ;
@@ -2030,6 +2059,7 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
+  // Offset
   if (setting.offset != 0.0) {
     ili9341_set_foreground(BRIGHT_COLOR_RED);
     y += YSTEP + YSTEP/2 ;
@@ -2041,6 +2071,7 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
+  // Repeat
   if (setting.repeat != 1) {
     ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
@@ -2052,6 +2083,7 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
+  // Trigger
   if (setting.trigger != T_AUTO) {
     if (is_paused()) {
       ili9341_set_foreground(BRIGHT_COLOR_GREEN);
@@ -2070,7 +2102,7 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 
-
+  // Mode
   if (level_is_calibrated())
     color = BRIGHT_COLOR_GREEN;
   else
@@ -2082,6 +2114,7 @@ void draw_cal_status(void)
   else
     ili9341_drawstring_7x13("HIGH", x, y);
 
+  // Compact status string
 //  ili9341_set_background(DEFAULT_FG_COLOR);
   ili9341_set_foreground(DEFAULT_FG_COLOR);
   y += YSTEP + YSTEP/2 ;
@@ -2112,6 +2145,7 @@ void draw_cal_status(void)
     buf[5] = 'B';
   ili9341_drawstring(buf, x, y);
 
+  // Version
   y += YSTEP + YSTEP/2 ;
   strncpy(buf,&VERSION[8],6);
   buf[6]=0;
@@ -2119,6 +2153,7 @@ void draw_cal_status(void)
 
 //  ili9341_set_background(DEFAULT_BG_COLOR);
 
+  // Bottom level
   y = HEIGHT-7 + OFFSETY;
   if (rounding)
     plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));

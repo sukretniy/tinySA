@@ -468,24 +468,11 @@ value(const float v)
   case U_DBUV:
     return v + 90.0 + 20.0*log10(sqrt(50.0));
     break;
-
-  case U_MVOLT:
-    return pow(10, (v-30.0)/20.0) * sqrt(50.0) * 1000.0;
-    break;
   case U_VOLT:
     return pow(10, (v-30.0)/20.0) * sqrt(50.0);
     break;
-  case U_UVOLT:
-    return pow(10, (v-30.0)/20.0) * sqrt(50.0) * 1000000.0;
-    break;
   case U_WATT:
     return pow(10, v/10.0)/1000.0;
-    break;
-  case U_MWATT:
-    return pow(10, v/10.0);
-    break;
-  case U_UWATT:
-    return pow(10, (v)/10.0) * 1000.0;
     break;
   }
 //  case U_DBM:
@@ -507,20 +494,8 @@ to_dBm(const float v)
   case U_VOLT:
     return log10( v / (sqrt(50.0))) * 20.0 + 30.0 ;
     break;
-  case U_MVOLT:
-    return log10( v / (sqrt(50.0) * 1000.0)) * 20.0 + 30.0 ;
-    break;
-  case U_UVOLT:
-    return log10(v / (sqrt(50.0) * 1000000.0))*20.0 + 30.0;
-    break;
   case U_WATT:
     return log10(v*1000.0)*10.0;
-    break;
-  case U_MWATT:
-    return log10(v)*10.0;
-    break;
-  case U_UWATT:
-    return log10(v/1000.0)*10.0;
     break;
   }
 //  case U_DBM:
@@ -878,7 +853,7 @@ static void trace_get_value_string(
       ii = i - ri;
       buf2[0] = '+';
     }
-    rlevel = coeff[ri];
+    rlevel = value(coeff[ri]);
   } else {
     dfreq = frequencies[i];
   }
@@ -920,11 +895,10 @@ static void trace_get_value_string(
       v = v - rlevel;
       if (UNIT_IS_LINEAR(setting.unit)) {
         plot_printf(buf3, sizeof(buf3), "%4f", v/setting.unit_scale);
-        buf3[5] = 0;
       } else {
         plot_printf(buf3, sizeof(buf3), "%.1f", v);
-        buf3[5] = 0;
       }
+      buf3[5] = 0;
       plot_printf(buf, len, "%s %s%s%s%s", buf2, buf3, unit_scale_text[setting.unit_scale_index], unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
     }
 }

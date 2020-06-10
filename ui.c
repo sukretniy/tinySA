@@ -1361,6 +1361,10 @@ static const char * const keypad_mode_label[] = {
 };
 #endif
 
+static const char * const keypad_scale_text[] = { "1", "2", "5", "10", "20" , "50", "100", "200", "500"};
+static const int  keypad_scale_value[] = { 1, 2, 5, 10, 20 , 50, 100, 200, 500};
+
+
 static void
 draw_keypad(void)
 {
@@ -1375,9 +1379,16 @@ draw_keypad(void)
     int y = KP_GET_Y(keypads[i].y);
 //     ili9341_fill(x, y, KP_WIDTH, KP_HEIGHT, DEFAULT_MENU_TEXT_COLOR); // black area around button, causes flicker....
     ili9341_fill(x+2, y+2, KP_WIDTH-4, KP_HEIGHT-4, bg);
-    ili9341_drawfont(keypads[i].c,
+    if (keypads[i].c < 32) { // KP_1
+      ili9341_drawfont(keypads[i].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
                      y + (KP_HEIGHT - NUM_FONT_GET_HEIGHT) / 2);
+    } else {
+      const char *t = keypad_scale_text[keypads[i].c - KP_1];
+      ili9341_drawstring_size(t,
+                     x + (KP_WIDTH - 5*strlen(t)*2) / 2,
+                     y + (KP_HEIGHT - 13) / 2,2);
+    }
     i++;
   }
 }
@@ -2067,7 +2078,7 @@ static int
 keypad_click(int key)
 {
   int c = keypads[key].c;
-  if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u) {
+  if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u || c == KP_n) {
     float scale = 1.0;
     if (c >= KP_X1 && c <= KP_G) {
       int n = c - KP_X1;
@@ -2122,6 +2133,12 @@ keypad_click(int key)
     return KP_DONE;
   } else if (c <= 9 && kp_index < NUMINPUT_LEN) {
     kp_buf[kp_index++] = '0' + c;
+  } else if (c>=KP_1) {
+    kp_buf[kp_index++] = keypad_scale_text[c-KP_1][0];
+    if (c >=KP_10)
+      kp_buf[kp_index++] = '0';
+    if (c >=KP_100)
+      kp_buf[kp_index++] = '0';
   } else if (c == KP_PERIOD && kp_index < NUMINPUT_LEN) {
     // check period in former input
     int j;

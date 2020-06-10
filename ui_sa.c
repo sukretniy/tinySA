@@ -304,6 +304,16 @@ enum {
 #define KP_u 22
 #define KP_n 23
 
+#define KP_1    32
+#define KP_2    33
+#define KP_5    34
+#define KP_10   35
+#define KP_20   36
+#define KP_50   37
+#define KP_100  38
+#define KP_200  39
+#define KP_500  40
+
 
 typedef struct {
   uint8_t x:4;
@@ -315,6 +325,10 @@ static const keypads_t *keypads;
 
 static uint8_t keypads_last_index;
 
+// 7 8 9 G
+// 4 5 6 M
+// 1 2 3 k
+// 0 . < x
 
 static const keypads_t keypads_freq[] = {
   { 1, 3, KP_PERIOD },
@@ -336,6 +350,11 @@ static const keypads_t keypads_freq[] = {
   { 0, 0, -1 }
 };
 
+// 7 8 9 n
+// 4 5 6 u
+// 1 2 3 m
+// 0 . < x
+
 static const keypads_t keypads_scale[] = {
   { 1, 3, KP_PERIOD },
   { 0, 3, 0 },
@@ -348,13 +367,38 @@ static const keypads_t keypads_scale[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
-  { 3, 0, KP_m },
+  { 3, 0, KP_n },
   { 3, 1, KP_u },
-  { 3, 2, KP_n },
+  { 3, 2, KP_m },
   { 3, 3, KP_X1 },
   { 2, 3, KP_BS },
   { 0, 0, -1 }
 };
+
+static const keypads_t keypads_newscale[] = {
+  { 1, 3, KP_PERIOD },
+  { 0, 3, 0 },
+  { 0, 2, KP_1 },
+  { 1, 2, KP_2 },
+  { 2, 2, KP_5 },
+  { 0, 1, KP_10 },
+  { 1, 1, KP_20 },
+  { 2, 1, KP_50 },
+  { 0, 0, KP_100 },
+  { 1, 0, KP_200 },
+  { 2, 0, KP_500 },
+  { 3, 0, KP_n },
+  { 3, 1, KP_u },
+  { 3, 2, KP_m },
+  { 3, 3, KP_X1 },
+  { 2, 3, KP_BS },
+  { 0, 0, -1 }
+};
+
+// 7 8 9 m
+// 4 5 6 u
+// 1 2 3 -
+// 0 . < x
 
 static const keypads_t keypads_level[] = {
   { 1, 3, KP_PERIOD },
@@ -368,8 +412,8 @@ static const keypads_t keypads_level[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
-  { 3, 0, KP_m },
-  { 3, 1, KP_u },
+  { 3, 0, KP_u},
+  { 3, 1, KP_m},
   { 3, 2, KP_MINUS },
   { 3, 3, KP_X1 },
   { 2, 3, KP_BS },
@@ -388,8 +432,8 @@ static const keypads_t keypads_time[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
-  { 3, 1, KP_m },
-  { 3, 2, KP_u },
+  { 3, 1, KP_u},
+  { 3, 2, KP_m},
   { 3, 3, KP_MINUS },
   { 2, 3, KP_BS },
   { 0, 0, -1 }
@@ -403,7 +447,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_freq, // span
   keypads_freq, // cw freq
   keypads_level, // refpos
-  keypads_scale, // scale
+  keypads_newscale, // scale
   keypads_scale, // attenuation
   keypads_level, // actual power
   keypads_freq, // IF
@@ -427,9 +471,9 @@ static const char * const keypad_mode_label[] = {
 #endif
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
-  "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "\2SCALE\0 5/2/1", // 0-7
-  "\2ATTENUATE\0 0-31dB", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0TIME", "DRIVE", "LEVEL", "SCANS", "LEVEL", // 8-15
-  "OFFSET" , "REPEATS", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
+  "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
+  "\2ATTENUATE\0 0-31dB", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0DELAY", "DRIVE", "LEVEL", "SCANS", "LEVEL", // 8-15
+  "OFFSET" , "\2SAMPLE\0REPEAT", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
 };
 #endif
 
@@ -1290,7 +1334,7 @@ static const menuitem_t menu_scanning_speed[] =
 {
  { MT_CALLBACK, 0,             "FAST",      menu_scanning_speed_cb},
  { MT_CALLBACK, 1,             "PRECISE",   menu_scanning_speed_cb},
- { MT_KEYPAD, KM_SAMPLETIME,   "\2POINT\0TIME",   NULL},
+ { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0DELAY",   NULL},
  { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1329,7 +1373,7 @@ static const menuitem_t menu_settings[] =
   { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
   { MT_KEYPAD | MT_LOW, KM_IF,  "\2IF\0FREQ",       NULL},
   { MT_SUBMENU,0,               "\2SCAN\0SPEED",         menu_scanning_speed},
-  { MT_KEYPAD, KM_REPEAT,       "REPEATS",          NULL},
+  { MT_KEYPAD, KM_REPEAT,       "\2SAMPLE\0REPEAT",          NULL},
   { MT_SUBMENU | MT_LOW,0,      "\2MIXER\0DRIVE",      menu_drive},
   { MT_SUBMENU,  0,             S_RARROW" MORE",    menu_settings2},
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },

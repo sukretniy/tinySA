@@ -203,7 +203,7 @@ void set_mode(int);
 int GetMode(void);
 void set_reflevel(float);
 #define REFLEVEL_MAX 9999.0
-#define REFLEVEL_MIN    0.00000000001
+#define REFLEVEL_MIN    1.0e-12
 void set_scale(float);
 void AllDirty(void);
 void MenuDirty(void);
@@ -344,8 +344,9 @@ enum trace_type {
 // Electrical Delay
 // Phase
 
+#define MAX_UNIT_TYPE 4
 enum unit_type {
-  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_MVOLT, U_UVOLT, U_WATT, U_MWATT, U_UWATT
+  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_WATT
 };
 #define UNIT_IS_LINEAR(T) ( T >= U_VOLT ? true : false)
 #define UNIT_IS_LOG(T) ( T >= U_VOLT ? false : true)
@@ -604,7 +605,7 @@ enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 
 extern uint32_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
-extern const char *unit_scale_text[];
+extern const char * const unit_scale_text[];
 
 #if 1
 #define SAVEAREA_MAX 9

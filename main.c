@@ -1,5 +1,4 @@
 /*
- * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -418,6 +417,11 @@ static int32_t my_atoi(const char *p)
   if (*p == '+') p++;
   while ((c = *p++ - '0') < 10)
     value = value * 10 + c;
+  switch (*(--p)) {
+  case 'k': value *= 1000; break;
+  case 'M': value *= 1000000; break;
+  case 'G': value *= 1000000000; break;
+  }
   return neg ? -value : value;
 }
 
@@ -481,6 +485,16 @@ my_atof(const char *p)
       exp++;
     }
   }
+  switch (*p) {
+  case 'k': x *= 1e+3; break;
+  case 'M': x *= 1e+6; break;
+  case 'G': x *= 1e+9; break;
+  case 'm': x /= 1e+3; break;
+  case 'u': x /= 1e+6; break;
+  case 'n': x /= 1e+9; break;
+  case 'p': x /= 1e+12; break;
+  }
+
   if (neg)
     x = -x;
   return x;
@@ -1716,58 +1730,59 @@ VNA_SHELL_FUNCTION(cmd_trace)
 
   if (strcmp(argv[0], "all") == 0 &&
       argc > 1 && strcmp(argv[1], "off") == 0) {
-  for (t = 0; t < TRACES_MAX; t++)
+    for (t = 0; t < TRACES_MAX; t++)
       set_trace_type(t, TRC_OFF);
     goto exit;
   }
-
-  t = my_atoi(argv[0]);
-  if (t < 0 || t >= TRACES_MAX)
-    goto usage;
-  if (argc == 1) {
-    const char *type = get_trace_typename(t);
-    const char *channel = trc_channel_name[trace[t].channel];
-    shell_printf("%d %s %s\r\n", t, type, channel);
-    return;
+  if ('0' <= argv[0][0] && argv[0][0] <= '9') {
+    t = my_atoi(argv[0]);
+    if (t < 0 || t >= TRACES_MAX)
+      goto usage;
+    if (argc == 1) {
+      const char *type = get_trace_typename(t);
+      const char *channel = trc_channel_name[trace[t].channel];
+      shell_printf("%d %s %s\r\n", t, type, channel);
+      return;
+    }
+    if (argc > 1 && strcmp(argv[1], "off") == 0)
+      set_trace_type(t, TRC_OFF);
+    if (argc > 1 && strcmp(argv[1], "on") == 0)
+      set_trace_type(t, TRC_LOGMAG);
+    goto exit;
   }
-#if MAX_TRACE_TYPE != 12
-#error "Trace type enum possibly changed, check cmd_trace function"
+#if MAX_UNIT_TYPE != 4
+#error "Unit type enum possibly changed, check cmd_trace function"
 #endif
-  // enum TRC_LOGMAG, TRC_PHASE, TRC_DELAY, TRC_SMITH, TRC_POLAR, TRC_LINEAR, TRC_SWR, TRC_REAL, TRC_IMAG, TRC_R, TRC_X, TRC_OFF
-  static const char cmd_type_list[] = "logmag|phase|delay|smith|polar|linear|swr|real|imag|r|x|off";
-  int type = get_str_index(argv[1], cmd_type_list);
-  if (type >= 0) {
-    set_trace_type(t, type);
-    goto check_ch_num;
-  }
-  //                                            0      1
-  static const char cmd_scale_ref_list[] = "scale|refpos";
-  if (argc >= 3) {
-    switch (get_str_index(argv[1], cmd_scale_ref_list)) {
-      case 0:
-        //trace[t].scale = my_atof(argv[2]);
-        set_trace_scale(t, my_atof(argv[2]));
-        goto exit;
-      case 1:
-        //trace[t].refpos = my_atof(argv[2]);
-        set_trace_refpos(t, my_atof(argv[2]));
-        goto exit;
-      default:
-        goto usage;
+  static const char cmd_type_list[] = "dBm|dBmV|dBuV|V|W";
+  if (argc == 1) {
+    int type = get_str_index(argv[0], cmd_type_list);
+    if (type >= 0) {
+      set_unit(type);
+      return;
     }
   }
-check_ch_num:
-  if (argc > 2) {
-    int src = my_atoi(argv[2]);
-    if (src != 0 && src != 1)
+  //                                            0      1
+  static const char cmd_scale_ref_list[] = "scale|reflevel";
+  if (argc == 2) {
+    switch (get_str_index(argv[0], cmd_scale_ref_list)) {
+    case 0:
+      //trace[t].scale = my_atof(argv[2]);
+      set_scale(my_atof(argv[1]));
+      goto exit;
+    case 1:
+      //trace[t].refpos = my_atof(argv[2]);
+      set_reflevel(my_atof(argv[1]));
+      goto exit;
+    default:
       goto usage;
-    trace[t].channel = src;
+    }
   }
-exit:
+  exit:
   return;
 usage:
-  shell_printf("trace {0|1|2|3|all} [%s] [src]\r\n"\
-               "trace {0|1|2|3} {%s} {value}\r\n", cmd_type_list, cmd_scale_ref_list);
+  shell_printf("trace {0|1|2|all} [{on|off]\r\n"\
+               "trace {%s}\r\n"\
+               "trace {%s} {value}\r\n", cmd_type_list, cmd_scale_ref_list);
 }
 
 
