@@ -64,6 +64,8 @@ void shiftOut(uint8_t val)
      }
 }
 
+
+
 uint8_t shiftIn(void) {
     uint8_t value = 0;
     uint8_t i;
@@ -187,7 +189,6 @@ void SI4432_Receive(void)
 // Return the first entry of the following triple for the RBW actually achieved
 static const short RBW_choices[] =
 {     // Each quadrupple is:  ndec, fils, WISH*10, corr*10
-#if 1
       5,1,26,-5,
       5,2,28,-5,
       5,3,31,0,
@@ -245,124 +246,6 @@ static const short RBW_choices[] =
       0,12,5188,-20,
       0,13,5770,-15,
       0,14,6207,-10,
-#else
-5,1,26,0,
-5,2,28,0,
-5,3,31,0,
-5,4,32,0,
-5,5,37,0,
-5,6,42,0,
-5,7,45,-5,
-4,1,49,-5,
-4,2,54,-10,
-4,3,59,-10,
-4,4,61,-10,
-4,5,72,-10,
-4,6,82,-5,
-4,7,88,0,
-3,1,95,0,
-3,2,106,0,
-3,3,115,-5,
-3,4,121,-5,
-3,5,142,-10,
-3,6,162,0,
-3,7,175,0,
-2,1,189,0,
-2,2,210,0,
-2,3,227,0,
-2,4,240,5,
-2,5,282,-5,
-2,6,322,0,
-2,7,347,0,
-1,1,377,0,
-1,2,417,0,
-1,3,452,0,
-1,4,479,5,
-1,5,562,0,
-1,6,641,0,
-1,7,692,0,
-0,1,752,5,
-0,2,832,5,
-0,3,900,0,
-0,4,953,5,
-0,5,1121,0,
-0,6,1279,0,
-0,7,1379,0,
-1,4,1428,-15,
-1,5,1678,-25,
-1,9,1811,50,
-0,15,1915,105,
-0,1,2251,-20,
-0,2,2488,0,
-0,3,2693,-15,
-0,4,2849,-10,
-0,8,3355,20,
-0,9,3618,55,
-0,10,4202,20,
-0,11,4684,20,
-0,12,5188,25,
-0,13,5770,15,
-0,14,6207,15,
-#endif
-#if 0
-     5,1,26,0,
-     5,2,28,0,
-     5,3,31,0,
-     5,4,32,0,
-     5,5,37,0,
-     5,6,42,10,
-     5,7,45,10,
-     4,1,49,10,
-     4,2,54,10,
-     4,3,59,10,
-     4,4,61,10,
-     4,5,72,10,
-     4,6,82,10,
-     4,7,88,10,
-     3,1,95,10,
-     3,2,106,5,
-     3,3,115,0,
-     3,4,121,0,
-     3,5,142,0,
-     3,6,162,10,
-     3,7,175,10,
-     2,1,189,10,
-     2,2,210,10,
-     2,3,227,10,
-     2,4,240,10,
-     2,5,282,5,
-     2,6,322,10,
-     2,7,347,10,
-     1,1,377,10,
-     1,2,417,10,
-     1,3,452,10,
-     1,4,479,5,
-     1,5,562,10,
-     1,6,641,10,
-     1,7,692,10,
-     0,1,752,10,
-     0,2,832,10,
-     0,3,900,5,
-     0,4,953,10,
-     0,5,1121,10,
-     0,6,1279,10,
-     0,7,1379,5,
-     1,4,1428,0,
-     1,5,1678,-10,
-     1,9,1811,65,
-     0,15,1915,120,
-     0,1,2251,-5,
-     0,2,2488,0,
-     0,3,2693,-5,
-     0,4,2849,0,
-     0,8,3355,30,
-     0,9,3618,60,
-     0,10,4202,25,
-     0,11,4684,25,
-     0,12,5188,35,
-     0,13,5770,35,
-     0,14,6207,35
-#endif
 };
 
 static float SI4432_RSSI_correction = -120.0;
@@ -513,20 +396,24 @@ void SI4432_Sub_Init(void)
   // Register 0x77 Nominal Carrier Frequency
   SI4432_Write_Byte(0x77, 0x00) ;
   // RX MODEM SETTINGS
-  SI4432_Write_Byte(0x1C, 0x81) ;
-  SI4432_Write_Byte(0x1D, 0x3C) ;
-  SI4432_Write_Byte(0x1E, 0x02) ;
+  SI4432_Write_3_Byte(0x1C, 0x81, 0x3C, 0x02) ;
+//  SI4432_Write_Byte(0x1C, 0x81) ;
+//  SI4432_Write_Byte(0x1D, 0x3C) ;
+//  SI4432_Write_Byte(0x1E, 0x02) ;
   SI4432_Write_Byte(0x1F, 0x03) ;
   // SI4432_Write_Byte(0x20, 0x78) ;
-  SI4432_Write_Byte(0x21, 0x01) ;
-  SI4432_Write_Byte(0x22, 0x11) ;
-  SI4432_Write_Byte(0x23, 0x11) ;
+  SI4432_Write_3_Byte(0x21, 0x01, 0x11, 0x11) ;
+//  SI4432_Write_Byte(0x21, 0x01) ;
+//  SI4432_Write_Byte(0x22, 0x11) ;
+//  SI4432_Write_Byte(0x23, 0x11) ;
   SI4432_Write_Byte(0x24, 0x01) ;
   SI4432_Write_Byte(0x25, 0x13) ;
   SI4432_Write_Byte(0x2A, 0xFF) ;
-  SI4432_Write_Byte(0x2C, 0x28) ;
-  SI4432_Write_Byte(0x2D, 0x0C) ;
-  SI4432_Write_Byte(0x2E, 0x28) ;
+
+  SI4432_Write_3_Byte(0x2C, 0x28, 0x0c, 0x28) ;
+//  SI4432_Write_Byte(0x2C, 0x28) ;
+//  SI4432_Write_Byte(0x2D, 0x0C) ;
+//  SI4432_Write_Byte(0x2E, 0x28) ;
 
 
   SI4432_Write_Byte(0x69, 0x60); // AGC, no LNA, fast gain increment
@@ -598,7 +485,7 @@ void PE4302_init(void) {
 }
 
 #define PE4302_DELAY 100
-
+#if 0
 void PE4302_shiftOut(uint8_t val)
 {
      uint8_t i;
@@ -616,13 +503,15 @@ void PE4302_shiftOut(uint8_t val)
 //           chThdSleepMicroseconds(PE4302_DELAY);
      }
 }
-
+#endif
 void PE4302_Write_Byte(unsigned char DATA )
 {
 //  chThdSleepMicroseconds(PE4302_DELAY);
   SPI2_CLK_LOW;
 //  chThdSleepMicroseconds(PE4302_DELAY);
-  PE4302_shiftOut(DATA);
+//  PE4302_shiftOut(DATA);
+
+  shiftOut(DATA);
 //  chThdSleepMicroseconds(PE4302_DELAY);
   CS_PE_HIGH;
 //  chThdSleepMicroseconds(PE4302_DELAY);

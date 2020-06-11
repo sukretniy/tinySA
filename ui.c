@@ -2325,7 +2325,7 @@ ui_process_keypad(void)
         break;
     }
   }
-
+  kp_help_text = NULL;
   redraw_frame();
   if (current_menu_is_form()) {
     ui_mode_menu(); //Reactivate menu after keypad

@@ -5,54 +5,49 @@ byte SI4432_Read_Byte( byte ADR );
 int VFO = 0;
 int points = 101; // For 's' and 'm' commands
 
-
 VNA_SHELL_FUNCTION(cmd_mode)
 {
+  static const char cmd_low_high[] = "low|high";
+  static const char cmd_in_out[] = "input|output";
   if (argc != 2) {
   usage:
-    shell_printf("usage: mode low|high input|output\r\n");
+    shell_printf("usage: mode %s %s\r\n", cmd_low_high,cmd_in_out);
     return;
   }
-  if (strcmp(argv[0],"low") == 0) {
-    if (strcmp(argv[1],"input") == 0)
-      set_mode(M_LOW);
-    else if(strcmp(argv[1],"output") == 0)
-      set_mode(M_GENLOW);
-    else
-      goto usage;
-  } else if (strcmp(argv[0],"high") == 0) {
-    if (strcmp(argv[1],"input") == 0)
-      set_mode(M_HIGH);
-    else if(strcmp(argv[1],"output") == 0)
-      set_mode(M_GENHIGH);
-    else
-      goto usage;
-  } else
+  int lh = get_str_index(argv[0], cmd_low_high);
+  int io = get_str_index(argv[1], cmd_in_out);
+  if (lh<0 || io<0)
     goto usage;
+  switch(lh+io*2)
+  {
+  case 0:
+    set_mode(M_LOW);
+    break;
+  case 1:
+    set_mode(M_HIGH);
+    break;
+  case 2:
+    set_mode(M_GENLOW);
+    break;
+  case 3:
+    set_mode(M_GENHIGH);
+    break;
+  }
 }
 
 VNA_SHELL_FUNCTION(cmd_modulation )
 {
+  static const char cmd_mod[] = "off|AM_1kHz|AM_10Hz|NFM|WFM|extern";
   if (argc != 1) {
   usage:
-    shell_printf("usage: modulation off|AM_1kHz|AM_10Hz|NFM|WFM|extern\r\n");
+    shell_printf("usage: modulation %s\r\n", cmd_mod);
     return;
   }
-  int m = MO_NONE;
-  if (strcmp(argv[0],"off") == 0) {
-  } else if (strcmp(argv[0],"AM_1kHz") == 0) {
-    m = MO_AM_1kHz;
-  } else if (strcmp(argv[0],"AM_10Hz") == 0) {
-    m = MO_AM_10Hz;
-  } else if (strcmp(argv[0],"NFM") == 0) {
-    m = MO_NFM;
-  } else if (strcmp(argv[0],"WFM") == 0) {
-    m = MO_WFM;
-  } else if (strcmp(argv[0],"extern") == 0) {
-    m = MO_EXTERNAL;
-  } else
-    goto usage;
-  set_modulation(m);
+  static const int cmd_mod_val[] = { MO_NONE, MO_AM_1kHz, MO_AM_10Hz, MO_NFM, MO_WFM, MO_EXTERNAL};
+  int m = get_str_index(argv[1], cmd_mod);
+  if (m<0)
+     goto usage;
+  set_modulation(cmd_mod_val[m]);
 }
 
 VNA_SHELL_FUNCTION(cmd_spur)
@@ -140,7 +135,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       goto usage;
   } else {
   usage:
-    shell_printf("leveloffset [low|high <offset>]\r\n");
+    shell_printf("leveloffset [low|high] [<offset>]\r\n");
   }
 }
 
@@ -166,7 +161,7 @@ VNA_SHELL_FUNCTION(cmd_if)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: if {freq}\r\n");
+    shell_printf("usage: if {433M..435M}\r\n");
     return;
   } else {
     int a = my_atoi(argv[0]);
@@ -240,7 +235,7 @@ VNA_SHELL_FUNCTION(cmd_selftest)
   sweep_mode = SWEEP_SELFTEST;
 }
 
-
+#ifdef __ULTRA_SA__
 VNA_SHELL_FUNCTION(cmd_x)
 {
   uint32_t reg;
@@ -260,11 +255,11 @@ VNA_SHELL_FUNCTION(cmd_x)
    reg &= ~0xc00000;    // Force led to show lock
    reg |=  0x400000;
   }
-#ifdef __ULTRA_SA__
+
   ADF4351_WriteRegister32(VFO, reg);
-#endif
   shell_printf("x=%x\r\n", reg);
 }
+#endif
 
 
 VNA_SHELL_FUNCTION(cmd_i)

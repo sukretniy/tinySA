@@ -14,7 +14,7 @@ float minFreq = 0;
 float maxFreq = 520000000;
 
 //int setting.refer = -1;  // Off by default
-const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
+int const reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
 int in_selftest = false;
 
@@ -124,13 +124,13 @@ void reset_settings(int m)
 float calc_min_sweep_time(void)         // Calculate minimum sweep time in mS
 {
   float t;
-  float a = (actualStepDelay + MEASURE_TIME)/1000.0;
+  float a = (actualStepDelay + MEASURE_TIME)/1000.0; // in mS
   if (MODE_OUTPUT(setting.mode))
     t = 1000;
   else {
     if (FREQ_IS_CW())
       a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
-    t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME));
+    t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME/1000.0));
   }
   return t;
 }
@@ -235,7 +235,7 @@ void set_modulation(int m)
 
 void set_repeat(int r)
 {
-  if (r > 0 && r <= 1000) {
+  if (r > 0 && r <= 100) {
     setting.repeat = r;
     dirty = true;
   }
@@ -556,7 +556,7 @@ void set_unit(int u)
   force_set_markmap();
   dirty = true;
 }
-const float unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
+float const unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
 const char * const unit_scale_text[]= {"","m", "u",     "n",        "p"};
 
 void user_set_reflevel(float level)
@@ -1378,7 +1378,7 @@ again:
     float subRSSI;
 
     static float correct_RSSI = 0;
-    if (i == 0 || setting.frequency_step != 0 )
+    if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
       correct_RSSI = get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset + get_frequency_correction(f);
    wait:
     subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;
@@ -1843,8 +1843,8 @@ marker_search_right_min(int from)
 
 
 // -------------------------- CAL STATUS ---------------------------------------------
-const char *averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16"};
-const char *dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
+const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16"};
+const char * const dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
 const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
 
 float my_round(float v)
@@ -1871,7 +1871,7 @@ float my_round(float v)
   return v;
 }
 
-const char *unit_string[] = { "dBm", "dBmV", "dBuV", "V", "W" };
+const char * const unit_string[] = { "dBm", "dBmV", "dBuV", "V", "W" };
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
@@ -1889,7 +1889,7 @@ void draw_cal_status(void)
   int rounding = false;
   if (!UNIT_IS_LINEAR(setting.unit))
     rounding  = true;
-  const char *unit = unit_string[setting.unit];
+  const char * const unit = unit_string[setting.unit];
 
 
 #define XSTEP   40

@@ -446,6 +446,10 @@ static const keypads_t keypads_plusmin[] = {
   { 0, 0, -1 }
 };
 
+// 7 8 9 n
+// 4 5 6 u
+// 1 2 3 m
+// 0 . < x
 static const keypads_t keypads_time[] = {
   { 1, 3, KP_PERIOD },
   { 0, 3, 0 },
@@ -458,9 +462,9 @@ static const keypads_t keypads_time[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
-  { 3, 1, KP_u},
-  { 3, 2, KP_m},
-  { 3, 3, KP_MINUS },
+  { 3, 1, KP_n},
+  { 3, 2, KP_u},
+  { 3, 3, KP_m },
   { 2, 3, KP_BS },
   { 0, 0, -1 }
 };
@@ -487,7 +491,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_plusmin,    // KM_OFFSET
   keypads_plusmin_unit,    // KM_TRIGGER
   keypads_plusmin,    // KM_LEVELSWEEP
-  keypads_positive,     // KM_SWEEP_TIME
+  keypads_time,     // KM_SWEEP_TIME
 };
 
 #ifdef __VNA__
