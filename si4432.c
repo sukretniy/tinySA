@@ -26,7 +26,7 @@
 #define CS_SI1_HIGH     palSetPad(GPIOC, GPIO_LO_SEL)
 #define CS_PE_HIGH      palSetPad(GPIOC, GPIO_PE_SEL)
 
-#define RF_POWER_HIGH   palSetPad(GPIOC, GPIO_RF_PWR)
+#define RF_POWER_HIGH   palSetPad(GPIOB, GPIO_RF_PWR)
 
 
 #define CS_SI0_LOW     palClearPad(GPIOC, GPIO_RX_SEL)
@@ -433,8 +433,11 @@ void SI4432_Sub_Init(void)
 void SI4432_Init()
 {
 
-  RF_POWER_HIGH;                // Power the RF part
-  chThdSleepMilliseconds(25);
+  palClearPad(GPIOB, GPIO_RF_PWR);
+  chThdSleepMilliseconds(100);
+  palSetPad(GPIOB, GPIO_RF_PWR);
+  chThdSleepMilliseconds(100);
+
 
   //DebugLine("IO set");
   SI4432_Sel = 0;

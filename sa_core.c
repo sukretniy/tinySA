@@ -731,15 +731,17 @@ void set_mode(int m)
 
 void apply_settings(void)
 {
+  set_switches(setting.mode);
   if (setting.mode == M_HIGH)
     PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
     PE4302_Write_Byte(setting.attenuate * 2);
+#if 0
   if (setting.modulation == MO_NONE) {
     SI4432_Write_Byte(0x73, 0);  // Back to nominal offset
     SI4432_Write_Byte(0x74, 0);
   }
-  set_switches(setting.mode);
+#endif
   SI4432_SetReference(setting.refer);
   update_rbw();
   if (setting.frequency_step == 0.0) {
@@ -802,9 +804,10 @@ int temppeakIndex;
 void setupSA(void)
 {
   SI4432_Init();
-  SI4432_Sel = 1;
+  SI4432_Sel = 0;
   SI4432_Receive();
 
+  SI4432_Sel = 1;
   SI4432_Transmit(0);
   PE4302_init();
   PE4302_Write_Byte(0);
@@ -855,6 +858,7 @@ void set_AGC_LNA(void) {
 
 void set_switches(int m)
 {
+  SI4432_Init();
 switch(m) {
 case M_LOW:     // Mixed into 0
 #ifdef __ULTRA__
