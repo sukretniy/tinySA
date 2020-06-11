@@ -1588,33 +1588,22 @@ again:
   }
   if (max_index[0] > 0)
     temppeakLevel = actual_t[max_index[0]];
+
   float r = value(temppeakLevel);
+  float s_r = r / setting.scale;
+
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel) {  // Auto reflevel
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
       static int low_count = 0;
       if (setting.reflevel > REFLEVEL_MIN)  {
-        if (r < setting.reflevel / 5)
+        if (s_r <  2)
             low_count = 5;
-        else if (r < setting.reflevel / 2.5)
+        else if (s_r < 4)
             low_count++;
           else
             low_count = 0;
       }
-      if ((low_count > 4) || (setting.reflevel < REFLEVEL_MAX && r > setting.reflevel) ) { // ensure minimum and maximum reflevel
-        // r = setting.scale * (floor(r / setting.scale) + 1);
-#if 0
-        float m = 1;
-//        t = t * 1.2;
-        while (r > 10) { m *= 10; r/=10; }
-        while (r < 1.0)  { m /= 10; r*=10; }
-        if (r>5)
-          r = 10.0;
-        else if (r>2)
-          r = 5.0;
-        else
-          r = 2.0;
-        r = r*m;
-#endif
+      if ((low_count > 4) || (setting.reflevel < REFLEVEL_MAX && s_r > NGRIDY) ) { // ensure minimum and maximum reflevel
         if (r < REFLEVEL_MIN)
           r = REFLEVEL_MIN;
         if (r > REFLEVEL_MAX)
@@ -1626,21 +1615,18 @@ again:
         }
       }
     } else {
-      float u_minlevel = value(temp_min_level);
-      if (r < setting.reflevel - setting.scale*NGRIDY || u_minlevel > setting.reflevel) {
-        set_reflevel(setting.scale*(floor(r/setting.scale)+1));
+      float s_min = value(temp_min_level)/setting.scale;
+      float s_ref = setting.reflevel/setting.scale;
+      if (s_r < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
+        set_reflevel(setting.scale*(floor(s_r)+1));
         redraw_request |= REDRAW_CAL_STATUS;
         dirty = true;                               // Must be  above if(scandirty!!!!!)
-      }else if (r > setting.reflevel - setting.scale/2) {
-          set_reflevel(setting.reflevel + setting.scale);
-          redraw_request |= REDRAW_CAL_STATUS;
-          dirty = true;                               // Must be  above if(scandirty!!!!!)
-      } else if (u_minlevel < setting.reflevel - 10.1 * setting.scale && r < setting.reflevel -  setting.scale * 1.5) {
-        set_reflevel(setting.reflevel - setting.scale);
-        redraw_request |= REDRAW_CAL_STATUS;
-        dirty = true;                               // Must be  above if(scandirty!!!!!)
-      } else if (u_minlevel > setting.reflevel - 8.8 * setting.scale) {
+      }else if (s_r > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
         set_reflevel(setting.reflevel + setting.scale);
+        redraw_request |= REDRAW_CAL_STATUS;
+        dirty = true;                               // Must be  above if(scandirty!!!!!)
+      } else if (s_min < s_ref - 10.1 && s_r < s_ref -  1.5) { // minimum to low and maximum can move up
+        set_reflevel(setting.reflevel - setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
         dirty = true;                               // Must be  above if(scandirty!!!!!)
       }

@@ -1791,7 +1791,6 @@ VNA_SHELL_FUNCTION(cmd_trace)
   }
 update:
 redraw_request |= REDRAW_CAL_STATUS;
-exit:
   return;
 usage:
   shell_printf("trace {%s}\r\n"\
