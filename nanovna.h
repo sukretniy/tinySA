@@ -202,9 +202,11 @@ void toggle_waterfall(void);
 void set_mode(int);
 int GetMode(void);
 void set_reflevel(float);
+void user_set_reflevel(float);
 #define REFLEVEL_MAX 9999.0
 #define REFLEVEL_MIN    1.0e-12
 void set_scale(float);
+void user_set_scale(float);
 void AllDirty(void);
 void MenuDirty(void);
 void toggle_LNA(void);

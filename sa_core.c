@@ -559,6 +559,16 @@ void set_unit(int u)
 const float unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
 const char * const unit_scale_text[]= {"","m", "u",     "n",        "p"};
 
+void user_set_reflevel(float level)
+{
+  set_auto_reflevel(false);
+  if (UNIT_IS_LINEAR(setting.unit) && level < setting.scale*NGRIDY) {
+    set_scale(level/NGRIDY);
+    set_reflevel(setting.scale*NGRIDY);
+  } else
+    set_reflevel(level);
+}
+
 void set_reflevel(float level)
 {
 
@@ -593,6 +603,30 @@ void set_reflevel(float level)
   dirty = true;
 }
 
+void round_reflevel_to_scale(void) {
+  int multi = floor((setting.reflevel + setting.scale/2)/setting.scale);
+  if (UNIT_IS_LINEAR(setting.unit)) {
+    if (multi < NGRIDY) {
+      setting.reflevel = setting.scale*10;  // Never negative bottom
+    }
+  } else {
+
+  }
+  setting.reflevel = multi*setting.scale;
+  set_trace_refpos(0,setting.reflevel);
+  set_trace_refpos(1,setting.reflevel);
+  set_trace_refpos(2,setting.reflevel);
+}
+
+void user_set_scale(float s)
+{
+  if (UNIT_IS_LINEAR(setting.unit))
+    set_auto_reflevel(false);
+  set_scale(s);
+  if (UNIT_IS_LINEAR(setting.unit) && setting.reflevel < setting.scale*NGRIDY)
+    set_reflevel(setting.scale*NGRIDY);
+}
+
 void set_scale(float t) {
   if (UNIT_IS_LINEAR(setting.unit)) {
     if (t < REFLEVEL_MIN/10.0)
@@ -623,12 +657,7 @@ void set_scale(float t) {
   set_trace_scale(0, t);
   set_trace_scale(1, t);
   set_trace_scale(2, t);
-//  if (!UNIT_IS_LINEAR(setting.unit)) {
-//    setting.reflevel = t * floor(setting.reflevel/t);
-//    set_trace_refpos(0,setting.reflevel);
-//    set_trace_refpos(1,setting.reflevel);
-//    set_trace_refpos(2,setting.reflevel);
-//  }
+  round_reflevel_to_scale();
 
 #if 0
   if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom

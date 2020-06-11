@@ -1904,19 +1904,10 @@ set_numeric_value(void)
     set_sweep_frequency(ST_CW, uistat.value);
     break;
   case KM_SCALE:
-    if (UNIT_IS_LINEAR(setting.unit))
-      set_auto_reflevel(false);
-    set_scale(uistat.value);
-    if (UNIT_IS_LINEAR(setting.unit) && setting.reflevel < setting.scale*NGRIDY)
-      set_reflevel(setting.scale*NGRIDY);
+    user_set_scale(uistat.value);
     break;
   case KM_REFLEVEL:
-    set_auto_reflevel(false);
-    if (UNIT_IS_LINEAR(setting.unit) && uistat.value < setting.scale*NGRIDY) {
-      set_scale(uistat.value/NGRIDY);
-      set_reflevel(setting.scale*NGRIDY);
-    } else
-      set_reflevel(uistat.value);
+    user_set_reflevel(uistat.value);
     break;
   case KM_ATTENUATION:
     setting.auto_attenuation = false;

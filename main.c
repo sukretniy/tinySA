@@ -1772,19 +1772,18 @@ VNA_SHELL_FUNCTION(cmd_trace)
   if (argc == 2) {
     switch (get_str_index(argv[0], cmd_scale_ref_list)) {
     case 0:
-      if (UNIT_IS_LINEAR(setting.unit))
-        set_auto_reflevel(false);
-      set_scale(my_atof(argv[1]));
-      if (UNIT_IS_LINEAR(setting.unit) && setting.reflevel < setting.scale*NGRIDY)
-        set_reflevel(setting.scale*NGRIDY);
+      if (strcmp(argv[1],"auto") == 0) {
+        set_auto_reflevel(true);
+      } else {
+        user_set_scale(my_atof(argv[1]));
+      }
       goto update;
     case 1:
       //trace[t].refpos = my_atof(argv[2]);
       if (strcmp(argv[1],"auto") == 0) {
         set_auto_reflevel(true);
       } else {
-        set_auto_reflevel(false);
-        set_reflevel(my_atof(argv[1]));
+        user_set_reflevel(my_atof(argv[1]));
       }
       goto update;
     }
