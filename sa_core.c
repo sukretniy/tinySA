@@ -450,7 +450,8 @@ void set_harmonic(int h)
 
 void set_step_delay(int d)
 {
-  if (d < 300 || d > 30000)
+
+  if ((2 <= d && d < 300) || d > 30000)
     return;
   setting.step_delay = d;
   dirty = true;
@@ -1538,7 +1539,7 @@ again:
 
   if (scandirty) {
     scandirty = false;
-    draw_cal_status();
+    redraw_request |= REDRAW_CAL_STATUS;
   }
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // Auto attenuate
@@ -1939,7 +1940,7 @@ void draw_cal_status(void)
   while (i < sizeof(scale_value)/sizeof(float)) {
     float t = (setting.scale/setting.unit_scale) / scale_value[i];;
     if (t > 0.9 && t < 1.1){
-      plot_printf(buf, BLEN, "%s/",scale_vtext[i]);
+      plot_printf(buf, BLEN, "%s%s/",scale_vtext[i],unit_scale_text[setting.unit_scale_index]);
       break;
     }
     i++;

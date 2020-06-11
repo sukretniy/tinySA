@@ -350,12 +350,12 @@ static const keypads_t keypads_freq[] = {
   { 0, 0, -1 }
 };
 
-// 7 8 9 n
-// 4 5 6 u
-// 1 2 3 m
+// 7 8 9
+// 4 5 6
+// 1 2 3
 // 0 . < x
 
-static const keypads_t keypads_scale[] = {
+static const keypads_t keypads_positive[] = {
   { 1, 3, KP_PERIOD },
   { 0, 3, 0 },
   { 0, 2, 1 },
@@ -367,15 +367,17 @@ static const keypads_t keypads_scale[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
-  { 3, 0, KP_n },
-  { 3, 1, KP_u },
-  { 3, 2, KP_m },
   { 3, 3, KP_X1 },
   { 2, 3, KP_BS },
   { 0, 0, -1 }
 };
 
-static const keypads_t keypads_newscale[] = {
+// 100 200 500 n
+// 10  20  50  u
+// 1   2   5   m
+// 0   .   <   x
+
+static const keypads_t keypads_pos_unit[] = {
   { 1, 3, KP_PERIOD },
   { 0, 3, 0 },
   { 0, 2, KP_1 },
@@ -400,7 +402,31 @@ static const keypads_t keypads_newscale[] = {
 // 1 2 3 -
 // 0 . < x
 
-static const keypads_t keypads_level[] = {
+static const keypads_t keypads_plusmin_unit[] = {
+  { 1, 3, KP_PERIOD },
+  { 0, 3, 0 },
+  { 0, 2, 1 },
+  { 1, 2, 2 },
+  { 2, 2, 3 },
+  { 0, 1, 4 },
+  { 1, 1, 5 },
+  { 2, 1, 6 },
+  { 0, 0, 7 },
+  { 1, 0, 8 },
+  { 2, 0, 9 },
+  { 3, 0, KP_u},
+  { 3, 1, KP_m},
+  { 3, 2, KP_MINUS },
+  { 3, 3, KP_X1 },
+  { 2, 3, KP_BS },
+  { 0, 0, -1 }
+};
+// 7 8 9
+// 4 5 6
+// 1 2 3 -
+// 0 . < x
+
+static const keypads_t keypads_plusmin[] = {
   { 1, 3, KP_PERIOD },
   { 0, 3, 0 },
   { 0, 2, 1 },
@@ -446,22 +472,22 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_freq, // center
   keypads_freq, // span
   keypads_freq, // cw freq
-  keypads_level, // refpos
-  keypads_newscale, // scale
-  keypads_scale, // attenuation
-  keypads_level, // actual power
+  keypads_plusmin_unit, // reflevel
+  keypads_pos_unit, // scale
+  keypads_positive, // attenuation
+  keypads_plusmin_unit, // actual power
   keypads_freq, // IF
-  keypads_level, // sample time
-  keypads_scale, // drive
-  keypads_level,    // KM_LOWOUTLEVEL
-  keypads_level,    // KM_DECAY
-  keypads_level,    // KM_NOISE
-  keypads_level,    // KM_10MHz
-  keypads_level,    // KM_REPEA
-  keypads_level,    // KM_OFFSET
-  keypads_level,    // KM_TRIGGER
-  keypads_level,    // KM_LEVELSWEEP
-  keypads_level,     // KM_SWEEP_TIME
+  keypads_positive, // sample delay
+  keypads_positive, // drive
+  keypads_plusmin,    // KM_LOWOUTLEVEL
+  keypads_positive,    // KM_DECAY
+  keypads_positive,    // KM_NOISE
+  keypads_plusmin,    // KM_10MHz
+  keypads_positive,    // KM_REPEA
+  keypads_plusmin,    // KM_OFFSET
+  keypads_plusmin_unit,    // KM_TRIGGER
+  keypads_plusmin,    // KM_LEVELSWEEP
+  keypads_positive,     // KM_SWEEP_TIME
 };
 
 #ifdef __VNA__
@@ -471,7 +497,7 @@ static const char * const keypad_mode_label[] = {
 #endif
 #ifdef __SA__
 static const char * const keypad_mode_label[] = {
-  "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "REFPOS", "SCALE", // 0-7
+  "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "\2REF\0LEVEL", "SCALE", // 0-7
   "\2ATTENUATE\0 0-31dB", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0DELAY", "DRIVE", "LEVEL", "SCANS", "LEVEL", // 8-15
   "OFFSET" , "\2SAMPLE\0REPEAT", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
 };
@@ -520,7 +546,7 @@ extern const menuitem_t  menu_topultra[];
     break;
 #endif
   }
-  draw_cal_status();
+  redraw_request |= REDRAW_CAL_STATUS;
 }
 
 void menu_load_preset_cb(int item, uint8_t data)
@@ -695,7 +721,7 @@ static void menu_spur_cb(int item, uint8_t data)
     SetSpur(1); // must be 0 or 1 !!!!
 //  menu_move_back();
   ui_mode_normal();
-  draw_cal_status();
+  redraw_request |= REDRAW_CAL_STATUS;
 }
 #endif
 
@@ -856,7 +882,7 @@ static void menu_average_cb(int item, uint8_t data)
   set_average(item);
   menu_move_back();
   ui_mode_normal();
-  draw_cal_status();
+  redraw_request |= REDRAW_CAL_STATUS;
 }
 
 static void
@@ -947,7 +973,7 @@ static void menu_trigger_cb(int item, uint8_t data)
   set_trigger(data);
 //  menu_move_back();
   ui_mode_normal();
-  draw_cal_status();
+  redraw_request |= REDRAW_CAL_STATUS;
 }
 
 #if 0
@@ -1684,6 +1710,8 @@ static void menu_item_modify_attribute(
   } else if (menu == menu_scanning_speed) {
     if (item == setting.step_delay){
       mark = true;
+    } else if (item == 2 && setting.step_delay > 1) {
+      mark = true;
     }
 #ifdef __ULTRA__
   } else if (MT_MASK(menu[item].type) == MT_CALLBACK && menu == menu_harmonic) {
@@ -1777,6 +1805,7 @@ static void fetch_numeric_target(void)
     break;
   case KM_ATTENUATION:
     uistat.value = get_attenuation();
+    kp_help_text = "0..30";
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
      break;
   case KM_ACTUALPOWER:
@@ -1789,10 +1818,12 @@ static void fetch_numeric_target(void)
     break;
   case KM_SAMPLETIME:
     uistat.value = setting.step_delay;
+    kp_help_text = "300..30000";
     plot_printf(uistat.text, sizeof uistat.text, "%3duS", ((int32_t)uistat.value));
     break;
   case KM_REPEAT:
     uistat.value = setting.repeat;
+    kp_help_text = "1..100";
     plot_printf(uistat.text, sizeof uistat.text, "%2d", ((int32_t)uistat.value));
     break;
   case KM_DRIVE:
@@ -1801,14 +1832,17 @@ static void fetch_numeric_target(void)
     break;
   case KM_LOWOUTLEVEL:
     uistat.value = get_attenuation();           // compensation for dB offset during low output mode
+    kp_help_text = "-76..-6";
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_DECAY:
     uistat.value = setting.decay;
+    kp_help_text = "1-1000";
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
   case KM_NOISE:
     uistat.value = setting.noise;
+    kp_help_text = "2..20";
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
   case KM_10MHZ:
@@ -1829,6 +1863,7 @@ static void fetch_numeric_target(void)
     else
       uistat.value = setting.sweep_time;
     uistat.value /= 1000.0;
+    kp_help_text = "15mS..600S";
     plot_printf(uistat.text, sizeof uistat.text, "%.1fS", uistat.value);
     break;
   case KM_TRIGGER:

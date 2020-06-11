@@ -774,7 +774,7 @@ menu_marker_op_cb(int item, uint8_t data)
   }
   menu_move_back();
   ui_mode_normal();
-  draw_cal_status();
+  redraw_request |= REDRAW_CAL_STATUS;
   //redraw_all();
 }
 
@@ -1222,7 +1222,7 @@ menu_invoke(int item)
       return;
     (*cb)(item, menu->data);
 //    if (!(menu->type & MT_FORM))
-      draw_cal_status();
+    redraw_request |= REDRAW_CAL_STATUS;
     break;
   }
 
@@ -1243,7 +1243,7 @@ menu_invoke(int item)
       ui_mode_keypad(menu->data);
       ui_process_keypad();
     }
-    draw_cal_status();
+    redraw_request |= REDRAW_CAL_STATUS;
     break;
   }
 }
@@ -1362,7 +1362,7 @@ static const char * const keypad_mode_label[] = {
 #endif
 
 static const char * const keypad_scale_text[] = { "1", "2", "5", "10", "20" , "50", "100", "200", "500"};
-static const int  keypad_scale_value[] = { 1, 2, 5, 10, 20 , 50, 100, 200, 500};
+//static const int  keypad_scale_value[] = { 1, 2, 5, 10, 20 , 50, 100, 200, 500};
 
 
 static void
@@ -1877,6 +1877,7 @@ ui_mode_keypad(int _keypad_mode)
     draw_menu();
   draw_keypad();
   draw_numeric_area_frame();
+  fetch_numeric_target();
   draw_numeric_input("");
 }
 

@@ -124,26 +124,6 @@ VNA_SHELL_FUNCTION(cmd_levelsweep)
   set_level_sweep(f);
 }
 
-
-
-VNA_SHELL_FUNCTION(cmd_reflevel)
-{
-  if (argc != 1) {
-  usage:
-    shell_printf("usage: reflevel <level>|auto\r\n");
-    return;
-  }
-  if (strcmp(argv[0],"auto") == 0) {
-    set_auto_reflevel(true);
-  } else {
-    float r = my_atof(argv[0]);
-    if (r < -150.0 || r>100.0)
-      goto usage;
-    set_auto_reflevel(false);
-    set_reflevel(r);
-  }
-}
-
 VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   if (argc == 0) {

@@ -1728,27 +1728,14 @@ VNA_SHELL_FUNCTION(cmd_trace)
     return;
   }
 
-  if (strcmp(argv[0], "all") == 0 &&
-      argc > 1 && strcmp(argv[1], "off") == 0) {
-    for (t = 0; t < TRACES_MAX; t++)
-      set_trace_type(t, TRC_OFF);
-    goto exit;
-  }
   if ('0' <= argv[0][0] && argv[0][0] <= '9') {
     t = my_atoi(argv[0]);
-    if (t < 0 || t >= TRACES_MAX)
+    if (argc != 1 || t < 0 || t >= TRACES_MAX)
       goto usage;
-    if (argc == 1) {
-      const char *type = get_trace_typename(t);
-      const char *channel = trc_channel_name[trace[t].channel];
-      shell_printf("%d %s %s\r\n", t, type, channel);
-      return;
-    }
-    if (argc > 1 && strcmp(argv[1], "off") == 0)
-      set_trace_type(t, TRC_OFF);
-    if (argc > 1 && strcmp(argv[1], "on") == 0)
-      set_trace_type(t, TRC_LOGMAG);
-    goto exit;
+    const char *type = get_trace_typename(t);
+    const char *channel = trc_channel_name[trace[t].channel];
+    shell_printf("%d %s %s\r\n", t, type, channel);
+    return;
   }
 #if MAX_UNIT_TYPE != 4
 #error "Unit type enum possibly changed, check cmd_trace function"
@@ -1758,31 +1745,59 @@ VNA_SHELL_FUNCTION(cmd_trace)
     int type = get_str_index(argv[0], cmd_type_list);
     if (type >= 0) {
       set_unit(type);
-      return;
+      goto update;
     }
+    goto usage;
+  }
+  static const char cmd_store_list[] = "store|clear|subtract";
+  if (argc == 1) {
+    int type = get_str_index(argv[0], cmd_store_list);
+    if (type >= 0) {
+      switch(type) {
+      case 0:
+        set_storage();
+        goto update;
+      case 1:
+        set_clear_storage();
+        goto update;
+      case 2:
+        set_subtract_storage();
+        goto update;
+      }
+    }
+    goto usage;
   }
   //                                            0      1
   static const char cmd_scale_ref_list[] = "scale|reflevel";
   if (argc == 2) {
     switch (get_str_index(argv[0], cmd_scale_ref_list)) {
     case 0:
-      //trace[t].scale = my_atof(argv[2]);
+      if (UNIT_IS_LINEAR(setting.unit))
+        set_auto_reflevel(false);
       set_scale(my_atof(argv[1]));
-      goto exit;
+      if (UNIT_IS_LINEAR(setting.unit) && setting.reflevel < setting.scale*NGRIDY)
+        set_reflevel(setting.scale*NGRIDY);
+      goto update;
     case 1:
       //trace[t].refpos = my_atof(argv[2]);
-      set_reflevel(my_atof(argv[1]));
-      goto exit;
-    default:
-      goto usage;
+      if (strcmp(argv[1],"auto") == 0) {
+        set_auto_reflevel(true);
+      } else {
+        set_auto_reflevel(false);
+        set_reflevel(my_atof(argv[1]));
+      }
+      goto update;
     }
+    goto usage;
   }
-  exit:
+update:
+redraw_request |= REDRAW_CAL_STATUS;
+exit:
   return;
 usage:
-  shell_printf("trace {0|1|2|all} [{on|off]\r\n"\
+  shell_printf("trace {%s}\r\n"\
                "trace {%s}\r\n"\
-               "trace {%s} {value}\r\n", cmd_type_list, cmd_scale_ref_list);
+               "trace {%s} {value|auto}\r\n", cmd_store_list, cmd_type_list, cmd_scale_ref_list);
 }
 
 
@@ -2286,7 +2301,6 @@ static const VNAShellCommand commands[] =
     { "leveloffset", cmd_leveloffset,    0 },
     { "levelsweep", cmd_levelsweep,    0 },
     { "modulation", cmd_modulation,    0 },
-    { "reflevel", cmd_reflevel,    0 },
     { "rbw", cmd_rbw,    0 },
     { "mode", cmd_mode,    0 },
     { "spur", cmd_spur,    0 },
