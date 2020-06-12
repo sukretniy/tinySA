@@ -434,9 +434,9 @@ void SI4432_Init()
 {
 
   palClearPad(GPIOB, GPIO_RF_PWR);
-  chThdSleepMilliseconds(100);
+  chThdSleepMilliseconds(20);
   palSetPad(GPIOB, GPIO_RF_PWR);
-  chThdSleepMilliseconds(100);
+  chThdSleepMilliseconds(20);
 
 
   //DebugLine("IO set");
@@ -450,13 +450,13 @@ void SI4432_Init()
   SI4432_Sel = 0;
 //  SI4432_Receive();// Enable receiver chain
 //  SI4432_Write_Byte(0x09, V0_XTAL_CAPACITANCE);// Tune the crystal
-  SI4432_Set_Frequency(433700000);
+  SI4432_Set_Frequency(433800000);
   SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 output to ground
 
 
   SI4432_Sel = 1;
 //  SI4432_Write_Byte(0x09, V1_XTAL_CAPACITANCE);// Tune the crystal
-  SI4432_Set_Frequency(443700000);
+  SI4432_Set_Frequency(443800000);
   SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 output to ground
 
   //  SI4432_Write_Byte(0x6D, 0x1C);//Set low power
