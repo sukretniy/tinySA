@@ -446,8 +446,8 @@ static const keypads_t keypads_plusmin[] = {
   { 0, 0, -1 }
 };
 
-// 7 8 9 n
-// 4 5 6 u
+// 7 8 9
+// 4 5 6
 // 1 2 3 m
 // 0 . < x
 static const keypads_t keypads_time[] = {
@@ -462,9 +462,10 @@ static const keypads_t keypads_time[] = {
   { 0, 0, 7 },
   { 1, 0, 8 },
   { 2, 0, 9 },
-  { 3, 1, KP_n},
-  { 3, 2, KP_u},
-  { 3, 3, KP_m },
+//  { 3, 0, KP_n},
+//  { 3, 1, KP_u},
+  { 3, 2, KP_m },
+  { 3, 3, KP_X1 },
   { 2, 3, KP_BS },
   { 0, 0, -1 }
 };
@@ -1922,9 +1923,9 @@ set_numeric_value(void)
     config_save();
     break;
   case KM_IF:
+    setting.auto_IF = false;
     set_IF(uistat.value);
 //    config_save();
-    setting.auto_IF = false;
     break;
   case KM_SAMPLETIME:
     set_step_delay(uistat.value);

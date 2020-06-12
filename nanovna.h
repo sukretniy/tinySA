@@ -602,7 +602,7 @@ void reset_settings(int m);
 #define S_STATE(X) ((X)&1)
 enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 #define MINIMUM_SWEEP_TIME  15     // Minimum sweep time on zero span in miliseconds
-#define REPEAT_TIME        34.0         // Time per extra repeat in uS
+#define REPEAT_TIME        134.0         // Time per extra repeat in uS
 #define MEASURE_TIME       175.0        // Time per vbwstep without stepdelay in uS
 
 extern uint32_t frequencies[POINTS_COUNT];

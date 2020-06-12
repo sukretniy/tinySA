@@ -330,8 +330,13 @@ float SI4432_RSSI(uint32_t i, int s)
     // chThdSleepMicroseconds(actualStepDelay);
     i = setting.repeat;
     RSSI_RAW  = 0;
-    while (i-->0)
-      RSSI_RAW += ((unsigned int)SI4432_Read_Byte( 0x26 )) << 4 ;
+again:
+    RSSI_RAW += ((unsigned int)SI4432_Read_Byte( 0x26 )) << 4 ;
+    i--;
+    if (i > 0) {
+      my_microsecond_delay(100);
+      goto again;
+    }
     if (setting.repeat > 1)
       RSSI_RAW = RSSI_RAW / setting.repeat;
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)

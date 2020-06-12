@@ -243,6 +243,8 @@ void set_repeat(int r)
 
 void set_IF(int f)
 {
+  if (f == 0)
+    setting.auto_IF = true;
   setting.frequency_IF = f;
   dirty = true;
 }
@@ -800,10 +802,14 @@ uint32_t peakFreq;
 int peakIndex;
 float temppeakLevel;
 int temppeakIndex;
+static unsigned long old_freq[4] = { 0, 0, 0, 0 };
+
 
 void setupSA(void)
 {
   SI4432_Init();
+  old_freq[0] = 0;
+  old_freq[1] = 0;
   SI4432_Sel = 0;
   SI4432_Receive();
 
@@ -812,8 +818,6 @@ void setupSA(void)
   PE4302_init();
   PE4302_Write_Byte(0);
 }
-
-static unsigned long old_freq[4] = { 0, 0, 0, 0 };
 
 void set_freq(int V, unsigned long freq)
 {
@@ -859,6 +863,8 @@ void set_AGC_LNA(void) {
 void set_switches(int m)
 {
   SI4432_Init();
+  old_freq[0] = 0;
+  old_freq[1] = 0;
 switch(m) {
 case M_LOW:     // Mixed into 0
 #ifdef __ULTRA__
@@ -942,18 +948,21 @@ void update_rbw(void)
 {
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
     setting.vbw = (setting.frequency_step)/1000.0;
-    actual_rbw = setting.rbw;
-    //  float old_rbw = actual_rbw;
-    if (actual_rbw == 0)
-      actual_rbw = 2*setting.vbw;
-    if (actual_rbw < 2.6)
-      actual_rbw = 2.6;
-    if (actual_rbw > 600)
-      actual_rbw = 600;
+  } else {
+    setting.vbw = 300; // trick to get right default rbw in zero span mode
+  }
+  actual_rbw = setting.rbw;
+  if (actual_rbw == 0)
+    actual_rbw = 2*setting.vbw;
+  if (actual_rbw < 2.6)
+    actual_rbw = 2.6;
+  if (actual_rbw > 600)
+    actual_rbw = 600;
 
-    SI4432_Sel =  MODE_SELECT(setting.mode);
-    actual_rbw = SI4432_SET_RBW(actual_rbw);
+  SI4432_Sel =  MODE_SELECT(setting.mode);
+  actual_rbw = SI4432_SET_RBW(actual_rbw);
 
+  if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
     if (setting.step_delay==1) // Precise
       vbwSteps = ((int)(2 * (setting.vbw + (actual_rbw/2)) / (actual_rbw / 2)));
     else
@@ -962,16 +971,6 @@ void update_rbw(void)
     if (vbwSteps < 1)
       vbwSteps = 1;
   } else {
-    actual_rbw = setting.rbw;
-    if (actual_rbw == 0)
-      actual_rbw = 600;
-    if (actual_rbw < 2.6)
-      actual_rbw = 2.6;
-    if (actual_rbw > 600)
-      actual_rbw = 600;
-
-    SI4432_Sel =  MODE_SELECT(setting.mode);
-    actual_rbw = SI4432_SET_RBW(actual_rbw);
     setting.vbw = actual_rbw;
     vbwSteps = 1;
   }
@@ -1146,7 +1145,7 @@ int avoid_spur(int f)
 //  int window = ((int)actual_rbw ) * 1000*2;
 //  if (window < 50000)
 //    window = 50000;
-  if (! setting.mode == M_LOW || setting.frequency_IF != spur_IF || actual_rbw > 300.0)
+  if (! setting.mode == M_LOW || !setting.auto_IF || actual_rbw > 300.0)
     return(false);
   return binary_search(f);
 }
@@ -1159,22 +1158,19 @@ static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };
 
 char age[POINTS_COUNT];
 
+static int old_a = -150;
+
 float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 {
-  long local_IF;
-  if (MODE_HIGH(setting.mode))
-    local_IF = 0;
-  else
-    local_IF = setting.frequency_IF;
-
-  if (i == 0 && dirty) {                                                        // SCan initiation
+  if (i == 0 && dirty ) {                                                        // SCan initiation
     apply_settings();
     scandirty = true;
     dirty = false;
+    if (setting.spur)
+      setting.spur = 1;         // resync spur in case of previous abort
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {
-    static int old_a = -150;
     int a = setting.level + (i / 290.0) * setting.level_sweep;
     if (a != old_a) {
       old_a = a;
@@ -1273,18 +1269,33 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
       lf = (uint32_t)(f + offs);
     }
 
+
+
     // --------------- Set all the LO's ------------------------
 #ifdef __SPUR__
     float spur_RSSI = 0;
-again:
 #endif
+
 
     if (MODE_INPUT(setting.mode) && i > 0 && FREQ_IS_CW())
       goto skip_LO_setting;                                                 // No LO changes during CW loop
 
+    long local_IF;
+    again:
+    if (MODE_HIGH(setting.mode))
+      local_IF = 0;
+    else {
+      if (setting.auto_IF) {
+        if (setting.spur)
+          local_IF = 433900000;
+        else
+          local_IF = 433800000;
+      }
+      else
+        local_IF = setting.frequency_IF;
+    }
     if (setting.mode == M_LOW && tracking) {                                // Measure BPF
-      set_freq (0, setting.frequency_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
-      local_IF = setting.frequency_IF ;
+      set_freq (0, local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
     } else if (MODE_LOW(setting.mode)) {
       if (setting.mode == M_LOW && !in_selftest && avoid_spur(f)) {
         local_IF = spur_alternate_IF;
@@ -1292,17 +1303,13 @@ again:
       } else if (setting.mode== M_LOW && setting.spur){
         if (S_IS_AUTO(setting.below_IF) && lf < 150000000) // if below 150MHz and auto_below_IF swap IF
         {              // else low/above IF
-          if (setting.auto_IF)
-            local_IF = 433900000;
-          else
-            local_IF = setting.frequency_IF;
           if (setting.spur == 1)
             setting.below_IF = S_AUTO_ON;
           else
             setting.below_IF = S_AUTO_OFF;
         }
         else
-          local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
+          local_IF  = local_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
 #endif
       } else {
 //        local_IF = setting.frequency_IF ;
@@ -1381,7 +1388,7 @@ again:
     }
     float subRSSI;
 
-    static float correct_RSSI = 0;
+    static float correct_RSSI;
     if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
       correct_RSSI = get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset + get_frequency_correction(f);
    wait:
@@ -1422,6 +1429,9 @@ again:
 #define MAX_MAX 4
 int16_t max_index[MAX_MAX];
 int16_t cur_max = 0;
+
+static int low_count = 0;
+
 
 // main loop for measurement
 static bool sweep(bool break_on_operation)
@@ -1598,7 +1608,6 @@ again:
 
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel) {  // Auto reflevel
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
-      static int low_count = 0;
       if (setting.reflevel > REFLEVEL_MIN)  {
         if (s_r <  2)
             low_count = 5;
@@ -2318,7 +2327,7 @@ int validate_signal_within(int i, float margin)
     return TS_CRITICAL;
   }
   test_fail_cause[i] = "Frequency ";
-  if (peakFreq < test_case[i].center * 1000000 - 100000 || test_case[i].center * 1000000 + 100000 < peakFreq )
+  if (peakFreq < test_case[i].center * 1000000 - 200000 || test_case[i].center * 1000000 + 200000 < peakFreq )
     return TS_FAIL;
   test_fail_cause[i] = "";
   return TS_PASS;
@@ -2442,6 +2451,8 @@ void test_prepare(int i)
 {
   setting.tracking = false; //Default test setup
   setting.step_atten = false;
+  setting.frequency_IF = 433800000;                // Default frequency
+  setting.auto_IF = true;
   set_attenuation(0);
   switch(test_case[i].setup) {                // Prepare test conditions
   case TPH_SILENT:                             // No input signal
@@ -2462,6 +2473,7 @@ common_silent:
   case TP_10MHZEXTRA:                         // Swept receiver
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
+    setting.auto_IF = false;
     setting.frequency_IF = 434000000;                // Center on SAW filters
     set_refer_output(2);
     goto common;
@@ -2592,6 +2604,7 @@ void self_test(int test)
     // RBW step time search
     in_selftest = true;
     reset_settings(M_LOW);
+    setting.auto_IF = false;
     setting.frequency_IF=433900000;
     ui_mode_normal();
     int i = 15;       // calibrate low mode power on 30 MHz;
@@ -2627,7 +2640,7 @@ void self_test(int test)
       shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting.step_delay);
     }
   } else if (test == 0) {
-    int old_IF = setting.frequency_IF;
+    reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     menu_autosettings_cb(0);
     for (int i=0; i < TEST_COUNT; i++) {          // All test cases waiting
@@ -2641,7 +2654,6 @@ void self_test(int test)
     if (setting.test_argument > 0)
       i=setting.test_argument-1;
     do {
-      setting.frequency_IF = old_IF;
       test_prepare(i);
       test_acquire(i);                        // Acquire test
       test_status[i] = test_validate(i);                       // Validate test

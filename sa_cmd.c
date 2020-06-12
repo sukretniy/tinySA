@@ -165,8 +165,9 @@ VNA_SHELL_FUNCTION(cmd_if)
     return;
   } else {
     int a = my_atoi(argv[0]);
-    if (a < 433000000 || a>435000000)
+    if (a!= 0 &&( a < 433000000 || a>435000000))
       goto usage;
+    setting.auto_IF = false;
     set_IF(a);
   }
 }
