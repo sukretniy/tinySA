@@ -126,7 +126,7 @@ float calc_min_sweep_time(void)         // Calculate minimum sweep time in mS
   float t;
   float a = (actualStepDelay + MEASURE_TIME)/1000.0; // in mS
   if (MODE_OUTPUT(setting.mode))
-    t = 1000;
+    t = 100;
   else {
     if (FREQ_IS_CW())
       a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
@@ -601,8 +601,8 @@ void set_reflevel(float level)
   set_trace_refpos(0, /* NGRIDY - */ level /* / get_trace_scale(0) */);
   set_trace_refpos(1, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
   set_trace_refpos(2, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
-
-  dirty = true;
+  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
+//  dirty = true;
 }
 
 void round_reflevel_to_scale(void) {
@@ -674,6 +674,7 @@ void set_scale(float t) {
   }
 #endif
   //  set_reflevel(setting.reflevel);
+  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
 }
 
 
@@ -1456,7 +1457,7 @@ again:
   float t = setting.sweep_time - calc_min_sweep_time(); // Time to delay in mS
   if (t < 0)
     t = 0;
-  t = t * 1000 / 290.0;
+  t = t * 1000 / 290.0;                         // Now in uS per point
   if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup
     t = 500;
   while (repeats--) {
@@ -1479,7 +1480,8 @@ again:
 
     if (MODE_INPUT(setting.mode)) {
 
-      temp_t[i] = RSSI;
+      if (setting.average != AV_OFF)
+          temp_t[i] = RSSI;
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
       }
@@ -1597,7 +1599,8 @@ again:
     }
     if (old_attenuate != setting.attenuate) {
       redraw_request |= REDRAW_CAL_STATUS;
-      dirty = true;                               // Must be  above if(scandirty!!!!!)
+      PE4302_Write_Byte(setting.attenuate * 2);
+      // dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
   }
   if (max_index[0] > 0)
@@ -1625,6 +1628,8 @@ again:
         //if (setting.scale * NGRIDY > r)
           set_scale(r / NGRIDY);
           set_reflevel(setting.scale*NGRIDY);
+          dirty = false;                        // Prevent reset of SI4432
+          redraw_request |= REDRAW_CAL_STATUS;
         }
       }
     } else {
@@ -1633,16 +1638,17 @@ again:
       if (s_r < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
         set_reflevel(setting.scale*(floor(s_r)+1));
         redraw_request |= REDRAW_CAL_STATUS;
-        dirty = true;                               // Must be  above if(scandirty!!!!!)
+//        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }else if (s_r > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
         set_reflevel(setting.reflevel + setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
-        dirty = true;                               // Must be  above if(scandirty!!!!!)
+//        dirty = true;                               // Must be  above if(scandirty!!!!!)
       } else if (s_min < s_ref - 10.1 && s_r < s_ref -  1.5) { // minimum to low and maximum can move up
         set_reflevel(setting.reflevel - setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
-        dirty = true;                               // Must be  above if(scandirty!!!!!)
+//        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }
+      dirty = false;                        // Prevent reset of SI4432
     }
   }
 #if 1

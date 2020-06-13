@@ -978,7 +978,8 @@ static void menu_trigger_cb(int item, uint8_t data)
   set_trigger(data);
 //  menu_move_back();
   ui_mode_normal();
-  redraw_request |= REDRAW_CAL_STATUS;
+  redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+  completed = true;
 }
 
 #if 0
@@ -1967,6 +1968,9 @@ set_numeric_value(void)
     if (setting.trigger == T_AUTO )
       set_trigger(T_NORMAL);
     set_trigger_level(to_dBm(uistat.value));
+    redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+    completed = true;
+
     break;
   }
 }

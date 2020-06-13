@@ -287,6 +287,8 @@ void set_10mhz(int f)
   setting_frequency_10mhz = f;
 }
 
+int SI4432_frequency_changed = false;
+
 void SI4432_Set_Frequency ( long Freq ) {
   int hbsel;
   long Carrier;
@@ -307,6 +309,7 @@ void SI4432_Set_Frequency ( long Freq ) {
 #else
   SI4432_Write_3_Byte ( 0x75, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF  );
 #endif
+  SI4432_frequency_changed = true;
 }
 
 int actualStepDelay = 1500;
@@ -324,21 +327,28 @@ float SI4432_RSSI(uint32_t i, int s)
   } else
 #endif
 //START_PROFILE
-    SI4432_Sel = s;
-    if (actualStepDelay)
-      my_microsecond_delay(actualStepDelay);
-    // chThdSleepMicroseconds(actualStepDelay);
-    i = setting.repeat;
-    RSSI_RAW  = 0;
-again:
-    RSSI_RAW += ((unsigned int)SI4432_Read_Byte( 0x26 )) << 4 ;
-    i--;
-    if (i > 0) {
-      my_microsecond_delay(100);
-      goto again;
+  SI4432_Sel = s;
+  int stepdelay = actualStepDelay;
+  if (SI4432_frequency_changed) {
+    if (stepdelay < 280) {
+      stepdelay = 280;
     }
-    if (setting.repeat > 1)
-      RSSI_RAW = RSSI_RAW / setting.repeat;
+    SI4432_frequency_changed = false;
+  }
+  if (stepdelay)
+    my_microsecond_delay(stepdelay);
+    // chThdSleepMicroseconds(actualStepDelay);
+  i = setting.repeat;
+  RSSI_RAW  = 0;
+again:
+  RSSI_RAW += ((unsigned int)SI4432_Read_Byte( 0x26 )) << 4 ;
+  i--;
+  if (i > 0) {
+    my_microsecond_delay(100);
+    goto again;
+  }
+  if (setting.repeat > 1)
+    RSSI_RAW = RSSI_RAW / setting.repeat;
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();
   float dBm = ((float)RSSI_RAW)/32.0 + SI4432_RSSI_correction;

@@ -158,6 +158,7 @@ enum {
 #define SWEEP_REMOTE    0x10
 
 extern int8_t sweep_mode;
+extern bool completed;
 extern const char *info_about[];
 
 // ------------------------------- sa_core.c ----------------------------------

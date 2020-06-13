@@ -121,13 +121,15 @@ const char *info_about[]={
   0 // sentinel
 };
 extern int dirty;
+
+bool completed = false;
+
 static THD_WORKING_AREA(waThread1, 900);
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
   chRegSetThreadName("sweep");
 
-  bool completed = false;
   ui_process();
 
   while (1) {
