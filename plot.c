@@ -843,6 +843,7 @@ static void trace_get_value_string(
   uint32_t dfreq = 0;
   float rlevel = 0;
   int ii = i;
+  int unit_index = setting.unit;
   if (mtype & M_DELTA) {
     if (ri > i) {
       dfreq = frequencies[ri] - frequencies[i];
@@ -854,11 +855,15 @@ static void trace_get_value_string(
       buf2[0] = '+';
     }
     rlevel = value(coeff[ri]);
+    unit_index = U_DBC;
   } else {
     dfreq = frequencies[i];
   }
   if (FREQ_IS_CW()) {
     float t = ii*(setting.actual_sweep_time)*1000.0/290.0;
+#if 1
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%.3FS" , t/1000000.0);
+#else
     if (t>1000000.0){
       plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/1000000.0);
       buf2[5] = 'S';
@@ -876,6 +881,7 @@ static void trace_get_value_string(
         buf2[6] = 'S';
         buf2[7]=0;
     }
+#endif
   } else {
   uint32_t resolution = get_sweep_frequency(ST_SPAN)/290;
   if (resolution  <= 2000)
@@ -898,7 +904,7 @@ static void trace_get_value_string(
       } else {
         plot_printf(buf3, sizeof(buf3), "%.1f", v);
       }
-      plot_printf(buf, len, "%s %s%s%s", buf2, buf3, unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
+      plot_printf(buf, len, "%s %s%s%s", buf2, buf3, unit_string[unit_index],(mtype & M_NOISE?"/Hz":""));
     }
 }
 
@@ -1580,13 +1586,13 @@ draw_all_cells(bool flush_markmap)
     clear_markmap();
   }
 #ifdef __SCROLL__
-  int w = area_width - 5;
+  int w = area_width;
   if (w < 5) w = 5;
   if (waterfall) {
     for (m = 226; m >= HEIGHT+3; m -= 1) {		// Scroll down
       uint16_t *buf = &spi_buffer[0];
-      ili9341_read_memory(5*5, m, w, 1, w, buf);
-      ili9341_bulk(5*5,m+1, w,1);
+      ili9341_read_memory(6*5, m, w, 1, w, buf);
+      ili9341_bulk(6*5,m+1, w,1);
     }
     for (int i=0; i<290; i++) {			// Add new topline
 #if 0
@@ -1678,7 +1684,7 @@ draw_all_cells(bool flush_markmap)
 #endif
       spi_buffer[i] = RGB565(r,g,b);
     }
-    ili9341_bulk(5*5,HEIGHT+3, w,1);
+    ili9341_bulk(6*5,HEIGHT+3, w,1);
   }
 #endif
 }

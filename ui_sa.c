@@ -1373,12 +1373,12 @@ static const menuitem_t menu_scanning_speed[] =
 
 static const menuitem_t menu_settings2[] =
 {
-  { MT_CALLBACK, 1,     "AGC",                  menu_settings2_cb},
-  { MT_CALLBACK, 2,     "LNA",                  menu_settings2_cb},
-  { MT_CALLBACK | MT_LOW, 3,     "BPF",                  menu_settings2_cb},
-  { MT_CALLBACK | MT_LOW, 4,     "\2BELOW\0IF",          menu_settings2_cb},
-  { MT_KEYPAD,   KM_DECAY,"\2HOLD\0TIME",         "1..1000"},
-  { MT_KEYPAD,   KM_NOISE,"\2NOISE\0LEVEL",       "2..20"},
+  { MT_CALLBACK, 1,             "AGC",              menu_settings2_cb},
+  { MT_CALLBACK, 2,             "LNA",              menu_settings2_cb},
+  { MT_CALLBACK | MT_LOW, 3,    "BPF",              menu_settings2_cb},
+  { MT_CALLBACK | MT_LOW, 4,    "\2BELOW\0IF",      menu_settings2_cb},
+  { MT_KEYPAD,   KM_DECAY,      "\2HOLD\0SWEEPS",   "1..1000"},
+  { MT_KEYPAD,   KM_NOISE,      "\2NOISE\0LEVEL",   "2..20"},
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif

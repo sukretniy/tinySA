@@ -351,7 +351,7 @@ enum trace_type {
 
 #define MAX_UNIT_TYPE 4
 enum unit_type {
-  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_WATT
+  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_WATT, U_DBC //  dBc only for displaying delta marker info
 };
 #define UNIT_IS_LINEAR(T) ( T >= U_VOLT ? true : false)
 #define UNIT_IS_LOG(T) ( T >= U_VOLT ? false : true)
