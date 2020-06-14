@@ -2686,7 +2686,7 @@ int main(void)
   set_mode(M_LOW);
   sweep(true);
 
-  setting.refer = -1;
+  set_refer_output(-1);
   ui_mode_menu();       // Show menu when autostarting mode
 
 

@@ -1168,13 +1168,13 @@ const menuitem_t  menu_modulation[] = {
 };
 
 const menuitem_t  menu_lowoutputmode[] = {
-  { MT_FORM | MT_CALLBACK, 0,                   "LOW OUTPUT             %s",       menu_outputmode_cb},
+  { MT_FORM | MT_CALLBACK, 0,                   "LOW OUTPUT              %s",       menu_outputmode_cb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           "FREQ: %s",         "10kHz..350Mhz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
   { MT_FORM | MT_SUBMENU,  0,                   "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVELSWEEP: %s",   "-70..70"},
-  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "15mS..600S"},
+  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600S"},
   //  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
   { MT_FORM | MT_CANCEL,   0,           "MODE",                     NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
@@ -1191,12 +1191,12 @@ const menuitem_t  menu_highoutputmode[] = {
 };
 
 static const menuitem_t  menu_average[] = {
-  { MT_CALLBACK, 0, "OFF",             menu_average_cb},
+  { MT_CALLBACK, 0, "OFF",            menu_average_cb},
   { MT_CALLBACK, 1, "\2MIN\0HOLD",    menu_average_cb},
   { MT_CALLBACK, 2, "\2MAX\0HOLD",    menu_average_cb},
   { MT_CALLBACK, 3, "\2MAX\0DECAY",   menu_average_cb},
-  { MT_CALLBACK, 4, "AVER 4",           menu_average_cb},
-  { MT_CALLBACK, 5, "AVER 16",          menu_average_cb},
+  { MT_CALLBACK, 4, "AVER 4",         menu_average_cb},
+  { MT_CALLBACK, 5, "AVER 16",        menu_average_cb},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
