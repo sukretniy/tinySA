@@ -27,8 +27,8 @@ uint16_t foreground_color = 0;
 uint16_t background_color = 0;
 
 // Display width and height definition
-#define ILI9341_WIDTH     320
-#define ILI9341_HEIGHT    240
+#define ILI9341_WIDTH     LCD_WIDTH
+#define ILI9341_HEIGHT    LCD_HEIGHT
 
 // Display commands list
 #define ILI9341_NOP                        0x00
@@ -726,15 +726,15 @@ void ili9341_test(int mode)
   switch (mode) {
     default:
 #if 1
-    ili9341_fill(0, 0, 320, 240, 0);
-    for (y = 0; y < 240; y++) {
-      ili9341_fill(0, y, 320, 1, RGB(240-y, y, (y + 120) % 256));
+    ili9341_fill(0, 0, LCD_WIDTH, LCD_HEIGHT, 0);
+    for (y = 0; y < LCD_HEIGHT; y++) {
+      ili9341_fill(0, y, LCD_WIDTH, 1, RGB(LCD_HEIGHT-y, y, (y + 120) % 256));
     }
     break;
     case 1:
-      ili9341_fill(0, 0, 320, 240, 0);
-      for (y = 0; y < 240; y++) {
-        for (x = 0; x < 320; x++) {
+      ili9341_fill(0, 0, LCD_WIDTH, LCD_HEIGHT, 0);
+      for (y = 0; y < LCD_HEIGHT; y++) {
+        for (x = 0; x < LCD_WIDTH; x++) {
           ili9341_pixel(x, y, (y<<8)|x);
         }
       }

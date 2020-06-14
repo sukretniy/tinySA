@@ -52,8 +52,8 @@ pixel_t *cell_buffer = (pixel_t *)spi_buffer;
 #endif
 
 // indicate dirty cells (not redraw if cell data not changed)
-#define MAX_MARKMAP_X    ((320+CELLWIDTH-1)/CELLWIDTH)
-#define MAX_MARKMAP_Y    ((240+CELLHEIGHT-1)/CELLHEIGHT)
+#define MAX_MARKMAP_X    ((LCD_WIDTH+CELLWIDTH-1)/CELLWIDTH)
+#define MAX_MARKMAP_Y    ((LCD_HEIGHT+CELLHEIGHT-1)/CELLHEIGHT)
 // Define markmap mask size
 #if MAX_MARKMAP_X <= 8
 typedef uint8_t map_t;
@@ -1725,9 +1725,9 @@ request_to_draw_cells_behind_menu(void)
 {
   // Values Hardcoded from ui.c
   if (current_menu_is_form())
-    invalidate_rect(25, 0, 319, 239);
+    invalidate_rect(25, 0, LCD_WIDTH-1, LCD_HEIGHT-1);
   else
-    invalidate_rect(320-60 - 25, 0, 319, 239);
+    invalidate_rect(LCD_WIDTH-60 - 25, 0, LCD_WIDTH-1, LCD_HEIGHT-1);
   redraw_request |= REDRAW_CELLS;
 }
 
@@ -1735,7 +1735,7 @@ void
 request_to_draw_cells_behind_numeric_input(void)
 {
   // Values Hardcoded from ui.c
-  invalidate_rect(0, 240-32, 319, 239);
+  invalidate_rect(0, LCD_HEIGHT-32, LCD_WIDTH-1, LCD_HEIGHT-1);
   redraw_request |= REDRAW_CELLS;
 }
 
@@ -2153,14 +2153,14 @@ draw_frequencies(void)
 #endif
   ili9341_set_foreground(DEFAULT_FG_COLOR);
   ili9341_set_background(DEFAULT_BG_COLOR);
-  ili9341_fill(0, FREQUENCIES_YPOS, 320, FONT_GET_HEIGHT, DEFAULT_BG_COLOR);
+  ili9341_fill(0, FREQUENCIES_YPOS, LCD_WIDTH, FONT_GET_HEIGHT, DEFAULT_BG_COLOR);
   if (uistat.lever_mode == LM_CENTER)
     buf1[0] = S_SARROW[0];
   if (uistat.lever_mode == LM_SPAN)
     buf2[0] = S_SARROW[0];
   int p2 = FREQUENCIES_XPOS2;
   if (FREQ_IS_CW()) {
-    p2 = 320 - 7*strlen(buf2);
+    p2 = LCD_WIDTH - 7*strlen(buf2);
   }
   ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
   ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);
@@ -2256,7 +2256,7 @@ toggle_waterfall(void)
 {
   if (!waterfall) {
     _height = HEIGHT_SCROLL;
-    ili9341_fill(5*5, HEIGHT, 320 - 5*5, 236-HEIGHT, 0);
+    ili9341_fill(5*5, HEIGHT, LCD_WIDTH - 5*5, 236-HEIGHT, 0);
     waterfall = true;
     fullscreen = false;
     w_min = (int)min_level;

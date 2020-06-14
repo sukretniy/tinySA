@@ -482,6 +482,9 @@ extern volatile uint8_t redraw_request;
 // Define size of screen buffer in pixels (one pixel 16bit size)
 #define SPI_BUFFER_SIZE             1024
 
+#define LCD_WIDTH                   320
+#define LCD_HEIGHT                  240
+
 #define DEFAULT_FG_COLOR            RGB565(255,255,255)
 #define DEFAULT_BG_COLOR            RGB565(  0,  0,  0)
 #define DARK_GREY                   RGB565(140,140,140)

@@ -285,7 +285,7 @@ enum {
 
 
 
-#define KP_X(x) (48*(x) + 2 + (320-BUTTON_WIDTH-192))
+#define KP_X(x) (48*(x) + 2 + (LCD_WIDTH-BUTTON_WIDTH-192))
 #define KP_Y(y) (48*(y) + 2)
 
 

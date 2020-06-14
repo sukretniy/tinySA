@@ -329,8 +329,8 @@ touch_cal_exec(void)
   y1 = last_touch_y;
 
   ili9341_clear_screen();
-  ili9341_line(320-1, 240-1, 320-1, 240-32);
-  ili9341_line(320-1, 240-1, 320-32, 240-1);
+  ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-1, LCD_HEIGHT-32);
+  ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-1);
   ili9341_drawstring("TOUCH LOWER RIGHT", 230, 220);
 
   touch_wait_release();
@@ -339,8 +339,8 @@ touch_cal_exec(void)
 
   config.touch_cal[0] = x1;
   config.touch_cal[1] = y1;
-  config.touch_cal[2] = (x2 - x1) * 16 / 320;
-  config.touch_cal[3] = (y2 - y1) * 16 / 240;
+  config.touch_cal[2] = (x2 - x1) * 16 / LCD_WIDTH;
+  config.touch_cal[3] = (y2 - y1) * 16 / LCD_HEIGHT;
 
   //redraw_all();
   touch_start_watchdog();
@@ -1107,9 +1107,9 @@ const menuitem_t menu_top[] = {
 
 
 #define MENU_BUTTON_WIDTH  60
-#define MENU_BUTTON_START  (320-MENU_BUTTON_WIDTH)
+#define MENU_BUTTON_START  (LCD_WIDTH-MENU_BUTTON_WIDTH)
 #define MENU_FORM_WIDTH    295
-#define MENU_FORM_START    (320 - MENU_FORM_WIDTH)
+#define MENU_FORM_START    (LCD_WIDTH - MENU_FORM_WIDTH)
 #define MENU_BUTTON_HEIGHT 30
 #define NUM_INPUT_HEIGHT   30
 
@@ -1252,7 +1252,7 @@ menu_invoke(int item)
 #define KP_WIDTH     48
 #define KP_HEIGHT    48
 // Key x, y position (0 - 15) on screen
-#define KP_GET_X(posx) ((posx)*KP_WIDTH + (320-64-KP_WIDTH*4))
+#define KP_GET_X(posx) ((posx)*KP_WIDTH + (LCD_WIDTH-64-KP_WIDTH*4))
 #define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
 #ifdef __VNA__
 // Key names
@@ -1401,14 +1401,14 @@ draw_numeric_area_frame(void)
 {
   const char *l1;
   const char *l2;
-  ili9341_fill(0, 240-NUM_INPUT_HEIGHT, 320, NUM_INPUT_HEIGHT, config.menu_normal_color);
+  ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT, config.menu_normal_color);
   ili9341_set_foreground(DEFAULT_MENU_TEXT_COLOR);
   ili9341_set_background(config.menu_normal_color);
   if (menu_is_multiline(keypad_mode_label[keypad_mode], &l1, &l2)) {
-    ili9341_drawstring_7x13(l1, 10, 240-NUM_INPUT_HEIGHT+1);
-    ili9341_drawstring_7x13(l2, 10, 240-NUM_INPUT_HEIGHT/2 + 1);
+    ili9341_drawstring_7x13(l1, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT+1);
+    ili9341_drawstring_7x13(l2, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT/2 + 1);
   } else
-    ili9341_drawstring_7x13(keypad_mode_label[keypad_mode], 10, 240-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+    ili9341_drawstring_7x13(keypad_mode_label[keypad_mode], 10, LCD_HEIGHT-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   //ili9341_drawfont(KP_KEYPAD, 300, 216);
 }
 
@@ -1440,26 +1440,26 @@ draw_numeric_input(const char *buf)
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
     if (c >= 0) // c is number
-      ili9341_drawfont(c, x, 240-NUM_INPUT_HEIGHT+4);
+      ili9341_drawfont(c, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
     else if (focused) // c not number, but focused
-      ili9341_drawfont(0, x, 240-NUM_INPUT_HEIGHT+4);
+      ili9341_drawfont(0, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
     else // erase
-      ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_WIDTH+2+8, bg);
+      ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_WIDTH+2+8, bg);
 
     x += xsim&0x8000 ? NUM_FONT_GET_WIDTH+2+8 : NUM_FONT_GET_WIDTH+2;
   }
   // erase last
-//  ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
-  ili9341_fill(x, 240-NUM_INPUT_HEIGHT+4, 320-64, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+//  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-64, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
   if (buf[0] == 0 && kp_help_text != NULL) {
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
     const char *l1,*l2;
     if (menu_is_multiline(kp_help_text, &l1, &l2)) {
-    ili9341_drawstring_7x13(l1, 64+NUM_FONT_GET_WIDTH+2, 240-NUM_INPUT_HEIGHT+1);
-    ili9341_drawstring_7x13(l2, 64+NUM_FONT_GET_WIDTH+2, 240-NUM_INPUT_HEIGHT/2 + 1);
+    ili9341_drawstring_7x13(l1, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-NUM_INPUT_HEIGHT+1);
+    ili9341_drawstring_7x13(l2, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-NUM_INPUT_HEIGHT/2 + 1);
   } else
-    ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, 240-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+    ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   }
 }
 
@@ -1588,7 +1588,7 @@ draw_menu_buttons(const menuitem_t *menu)
     int active_button_start;
     menu_item_modify_attribute(menu, i, &fg, &bg);      // before plot_printf to create status text
     if (menu[i].type & MT_FORM) {
-      active_button_start = 320 - MENU_FORM_WIDTH;
+      active_button_start = LCD_WIDTH - MENU_FORM_WIDTH;
       active_button_width = MENU_FORM_WIDTH - 30;       // Shorten at the right
       if (MT_MASK(menu[i].type) == MT_KEYPAD) {         // Only keypad retrieves value
         keypad_mode = menu[i].data;
@@ -1598,12 +1598,12 @@ draw_menu_buttons(const menuitem_t *menu)
     }
     else {
       active_button_width = MENU_BUTTON_WIDTH;
-      active_button_start = 320 - MENU_BUTTON_WIDTH;
+      active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
     }
     ili9341_fill(active_button_start, y, active_button_width, MENU_BUTTON_HEIGHT-4, old_bg);    // Set button to unmodified background color
 #if 0
     // 3D button accent
-    int bw = 320;
+    int bw = LCD_WIDTH;
 
     if (MT_MASK(menu[i].type) != MT_TITLE) {
         ili9341_fill(bw-active_button_width, y,    2,                      MENU_BUTTON_HEIGHT-4, LIGHT_GREY);    // Set button to unmodified background color
@@ -1620,7 +1620,7 @@ draw_menu_buttons(const menuitem_t *menu)
       ili9341_drawstring_size(text, active_button_start+6, y+6, 2);
 #ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
-        blit16BitWidthBitmap(240,y+6,16,16,&left_icons[((menu[i].data >>4)&0xf)*16]);
+        blit16BitWidthBitmap(LCD_HEIGHT,y+6,16,16,&left_icons[((menu[i].data >>4)&0xf)*16]);
         blit16BitWidthBitmap(256,y+6,16,16,&right_icons[((menu[i].data >>0)&0xf)*16]);
       }
 #endif
@@ -1685,7 +1685,7 @@ menu_apply_touch(void)
     else
       active_button_width = MENU_BUTTON_WIDTH;
 
-    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT && 320-active_button_width < touch_x) {
+    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT && LCD_WIDTH-active_button_width < touch_x) {
       menu_select_touch(i);
       return;
     }
@@ -1706,18 +1706,18 @@ draw_menu(void)
 static void
 erase_menu_buttons(void)
 {
-//  ili9341_fill(area_width, 0, 320 - area_width, area_height, DEFAULT_BG_COLOR);
+//  ili9341_fill(area_width, 0, LCD_WIDTH - area_width, area_height, DEFAULT_BG_COLOR);
   if (current_menu_is_form())
-    ili9341_fill(5*5, 0,320-5*5, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+    ili9341_fill(5*5, 0,LCD_WIDTH-5*5, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
   else
-    ili9341_fill(320-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
   draw_frequencies();
 }
 
 static void
 erase_numeric_input(void)
 {
-  ili9341_fill(0, 240-NUM_INPUT_HEIGHT, 320, NUM_INPUT_HEIGHT, DEFAULT_BG_COLOR);
+  ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT, DEFAULT_BG_COLOR);
 }
 
 static void
@@ -1850,7 +1850,7 @@ ui_mode_numeric(int _keypad_mode)
   keypad_mode = _keypad_mode;
   ui_mode = UI_NUMERIC;
   area_width = AREA_WIDTH_NORMAL;
-  area_height = 240-NUM_INPUT_HEIGHT;//AREA_HEIGHT_NORMAL - 32;
+  area_height = LCD_HEIGHT-NUM_INPUT_HEIGHT;//AREA_HEIGHT_NORMAL - 32;
 
   draw_numeric_area_frame();
   fetch_numeric_target();
@@ -2204,7 +2204,7 @@ numeric_apply_touch(void)
     return;
   }
 
-  if (touch_y > 240-40) {
+  if (touch_y > LCD_HEIGHT-40) {
     int n = 9 - (touch_x - 64) / 20;
     uistat.digit = n;
     uistat.digit_mode = TRUE;
@@ -2448,7 +2448,7 @@ touch_marker_select(void)
   int selected_marker = 0;
   int touch_x, touch_y;
   touch_position(&touch_x, &touch_y);
-  if (current_menu_is_form() || touch_x > 320-MENU_BUTTON_WIDTH || touch_x < 25 || touch_y > 30)
+  if (current_menu_is_form() || touch_x > LCD_WIDTH-MENU_BUTTON_WIDTH || touch_x < 25 || touch_y > 30)
     return FALSE;
   if (touch_y > 15)
     selected_marker = 2;

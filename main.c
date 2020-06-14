@@ -771,15 +771,15 @@ VNA_SHELL_FUNCTION(cmd_capture)
   (void)argc;
   (void)argv;
   int i, y;
-#if SPI_BUFFER_SIZE < (3*320 + 1)
+#if SPI_BUFFER_SIZE < (3*LCD_WIDTH + 1)
 #error "Low size of spi_buffer for cmd_capture"
 #endif
   // read 2 row pixel time (read buffer limit by 2/3 + 1 from spi_buffer size)
-  for (y = 0; y < 240; y += 2) {
+  for (y = 0; y < LCD_HEIGHT; y += 2) {
     // use uint16_t spi_buffer[2048] (defined in ili9341) for read buffer
     uint8_t *buf = (uint8_t *)spi_buffer;
-    ili9341_read_memory(0, y, 320, 2, 2 * 320, spi_buffer);
-    for (i = 0; i < 4 * 320; i++) {
+    ili9341_read_memory(0, y, LCD_WIDTH, 2, 2 * LCD_WIDTH, spi_buffer);
+    for (i = 0; i < 4 * LCD_WIDTH; i++) {
       streamPut(shell_stream, *buf++);
     }
   }
