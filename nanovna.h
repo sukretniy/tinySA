@@ -29,6 +29,8 @@
 #define __MEASURE__
 #define __SELFTEST__
 #define __CALIBRATE__
+#define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
+
 //#define __ULTRA__             // Add harmonics mode on low input.
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
@@ -602,7 +604,12 @@ void reset_settings(int m);
 #define S_IS_AUTO(x) ((x)&2)
 #define S_STATE(X) ((X)&1)
 enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
+
+#ifdef __FAST_SWEEP__
+#define MINIMUM_SWEEP_TIME  3     // Minimum sweep time on zero span in miliseconds
+#else
 #define MINIMUM_SWEEP_TIME  15     // Minimum sweep time on zero span in miliseconds
+#endif
 #define REPEAT_TIME        134.0         // Time per extra repeat in uS
 #define MEASURE_TIME       175.0        // Time per vbwstep without stepdelay in uS
 
@@ -807,6 +814,9 @@ byte SI4432_Read_Byte( byte ADR );
 void SI4432_Init(void);
 void SI4432_Drive(int);
 float SI4432_RSSI(uint32_t i, int s);
+#ifdef __FAST_SWEEP__
+void SI4432_Fill(int s);
+#endif
 void SI4432_Set_Frequency ( long Freq );
 float SI4432_SET_RBW(float WISH);
 void SI4432_SetReference(int freq);

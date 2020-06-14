@@ -1291,6 +1291,11 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     float signal_path_loss;
 
  skip_LO_setting:
+#ifdef __FAST_SWEEP__
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && actualStepDelay == 0 && setting.repeat == 1 && actualStepDelay < 1000) {
+      SI4432_Fill(MODE_SELECT(setting.mode));
+    }
+#endif
 
 #ifdef __ULTRA__
     if (setting.mode == M_ULTRA)

@@ -315,6 +315,33 @@ void SI4432_Set_Frequency ( long Freq ) {
 int actualStepDelay = 1500;
 //extern int setting.repeat;
 
+#ifdef __FAST_SWEEP__
+extern char age[POINTS_COUNT];
+static int buf_index = 0;
+static bool  buf_read = false;
+
+void SI4432_Fill(int s)
+{
+  SI4432_Sel = s;
+  int sel = SI_nSEL[SI4432_Sel];
+  float t = setting.sweep_time - calc_min_sweep_time(); // Time to delay in mS
+  if (t < 0)
+    t = 0;
+  int ti = t * 1000 / 290.0;                         // Now in uS per point      if (t < 30000)
+  for (int i=0; i<POINTS_COUNT; ) {
+    SPI2_CLK_LOW;
+    palClearPad(GPIOC, sel);
+    shiftOut( 0x26 );
+    age[i++]=(char)shiftIn();
+    palSetPad(GPIOC, sel);
+    if (ti)
+      my_microsecond_delay(ti);
+  }
+  buf_index = 0;
+  buf_read = true;
+}
+#endif
+
 float SI4432_RSSI(uint32_t i, int s)
 {
   (void) i;
@@ -327,6 +354,15 @@ float SI4432_RSSI(uint32_t i, int s)
   } else
 #endif
 //START_PROFILE
+#ifdef __FAST_SWEEP__
+  if (buf_read) {
+    float dBm = ((float)((unsigned char)age[buf_index++]))/2 + SI4432_RSSI_correction;
+    if (buf_index ==POINTS_COUNT) {
+      buf_read = false;
+    }
+    return dBm;
+  }
+#endif
   SI4432_Sel = s;
   int stepdelay = actualStepDelay;
   if (SI4432_frequency_changed) {
