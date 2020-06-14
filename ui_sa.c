@@ -1158,11 +1158,11 @@ static const menuitem_t menu_drive_wide[] = {
 const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
   { MT_FORM | MT_CALLBACK, MO_NONE,     "NONE",      menu_modulation_cb},
-  { MT_FORM | MT_CALLBACK, MO_AM_1kHz,  "AM 1kHz",   menu_modulation_cb},
-  { MT_FORM | MT_CALLBACK, MO_AM_10Hz,  "AM 10Hz",   menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK | MT_LOW, MO_AM_1kHz,  "AM 1kHz",   menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK | MT_LOW, MO_AM_10Hz,  "AM 10Hz",   menu_modulation_cb},
   { MT_FORM | MT_CALLBACK, MO_NFM,      "NARROW FM", menu_modulation_cb},
   { MT_FORM | MT_CALLBACK, MO_WFM,      "WIDE FM",   menu_modulation_cb},
-  { MT_FORM | MT_CALLBACK, MO_EXTERNAL, "EXTERNAL",  menu_modulation_cb},
+  { MT_FORM | MT_CALLBACK | MT_LOW, MO_EXTERNAL, "EXTERNAL",  menu_modulation_cb},
   { MT_FORM | MT_CANCEL,   0,             "\032 BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };

@@ -2590,7 +2590,7 @@ void self_test(int test)
 
     sweep_mode = SWEEP_ENABLE;
     show_test_info = FALSE;
-    set_refer_output(0);
+    set_refer_output(-1);
     reset_settings(M_LOW);
     in_selftest = false;
   }
