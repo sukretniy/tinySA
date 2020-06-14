@@ -1845,7 +1845,7 @@ void draw_cal_status(void)
 
   ili9341_set_background(DEFAULT_BG_COLOR);
 
-  float yMax = setting.reflevel;                    // Determine unit scale letter ( ,m,u,n,p)
+  float yMax = setting.reflevel;
   // Top level
   if (rounding)
     plot_printf(buf, BLEN, "%4d", (int)yMax);

@@ -1176,7 +1176,7 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVELSWEEP: %s",   "-70..70"},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "15mS..600S"},
   //  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHZ: %s",         NULL},
-  { MT_FORM | MT_CANCEL,   0,           "\032 BACK",    NULL },
+  { MT_FORM | MT_CANCEL,   0,           "MODE",                     NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
@@ -1186,7 +1186,7 @@ const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_SUBMENU,   0,          "LEVEL: %s",        menu_drive_wide},
   { MT_FORM | MT_SUBMENU,   0,          "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
-  { MT_FORM | MT_CANCEL,    0,          "\032 BACK",NULL },
+  { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 

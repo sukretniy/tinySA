@@ -198,7 +198,7 @@ static char *ftoaS(char *p, float num, uint32_t precision) {
   if (prefix)
     precision--;
 
-  // Auto set prescision
+  // Auto set precision
   uint32_t l = num;
   if (l > 100)
     precision-=2;
