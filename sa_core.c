@@ -128,8 +128,11 @@ float calc_min_sweep_time(void)         // Calculate minimum sweep time in mS
   if (MODE_OUTPUT(setting.mode))
     t = 100;
   else {
-    if (FREQ_IS_CW())
+    if (FREQ_IS_CW()) {
       a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
+      if (setting.trigger != T_AUTO || setting.repeat != 1 || setting.sweep_time >= 1000)
+        a = 15.0 / 290.0;       // time per step in CW mode with trigger
+    }
     t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME/1000.0));
   }
   return t;
@@ -1292,7 +1295,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 
  skip_LO_setting:
 #ifdef __FAST_SWEEP__
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && actualStepDelay == 0 && setting.repeat == 1 && actualStepDelay < 1000) {
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && actualStepDelay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
       SI4432_Fill(MODE_SELECT(setting.mode));
     }
 #endif
