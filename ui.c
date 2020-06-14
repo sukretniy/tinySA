@@ -1240,6 +1240,7 @@ menu_invoke(int item)
         area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
         redraw_frame();         // Remove form numbers
       }
+      kp_help_text = (char *)menu->reference;
       ui_mode_keypad(menu->data);
       ui_process_keypad();
     }
@@ -1877,7 +1878,6 @@ ui_mode_keypad(int _keypad_mode)
     draw_menu();
   draw_keypad();
   draw_numeric_area_frame();
-  fetch_numeric_target();
   draw_numeric_input("");
 }
 

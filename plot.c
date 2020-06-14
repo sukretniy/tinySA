@@ -888,18 +888,17 @@ static void trace_get_value_string(
 //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
     v = value(coeff[i]);
     if (mtype & M_NOISE)
-      v = v - 10*log10(get_actual_RBW()*1000.0);
+      v = v - 10*log10(actual_rbw*1000.0);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else {
       v = v - rlevel;
       if (UNIT_IS_LINEAR(setting.unit)) {
-        plot_printf(buf3, sizeof(buf3), "%4f", v/setting.unit_scale);
+        plot_printf(buf3, sizeof(buf3), "%.3F", v); // 5 characters incl u,m,etc...
       } else {
         plot_printf(buf3, sizeof(buf3), "%.1f", v);
       }
-      buf3[5] = 0;
-      plot_printf(buf, len, "%s %s%s%s%s", buf2, buf3, unit_scale_text[setting.unit_scale_index], unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
+      plot_printf(buf, len, "%s %s%s%s", buf2, buf3, unit_string[setting.unit],(mtype & M_NOISE?"/Hz":""));
     }
 }
 

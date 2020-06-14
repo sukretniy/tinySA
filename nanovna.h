@@ -820,9 +820,6 @@ void SI4432_SetReference(int freq);
 #define define_to_STR(x)  STR1(x)
 
 // sa_core.c
-int GetRBW(void);
-int GetStorage(void);
-int GetSubtractStorage(void);
 int get_waterfall(void);
 void toggle_tracking(void);
 void calibrate(void);
@@ -841,6 +838,7 @@ void wait_user(void);
 void calibrate(void);
 float to_dBm(float);
 float calc_min_sweep_time(void);
+extern float actual_rbw;
 
 enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY

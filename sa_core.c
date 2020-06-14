@@ -59,7 +59,7 @@ void reset_settings(int m)
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
   setting.refer = -1;
-  setting.mute = false;
+  setting.mute = true;
 #ifdef __SPUR__
   setting.spur = 0;
 #endif
@@ -140,11 +140,6 @@ void set_refer_output(int v)
 {
   setting.refer = v;
   dirty = true;
-}
-
-int get_refer_output(void)
-{
-  return(setting.refer);
 }
 
 void set_decay(int d)
@@ -249,13 +244,6 @@ void set_IF(int f)
   dirty = true;
 }
 
-int GetMode(void)
-{
-  return(setting.mode);
-  dirty = true;
-}
-
-
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
 #define POWER_OFFSET    15
 #define SWITCH_ATTENUATION  30
@@ -339,11 +327,6 @@ void set_storage(void)
   dirty = true;
 }
 
-int GetStorage(void)
-{
-  return(setting.show_stored);
-}
-
 void set_clear_storage(void)
 {
   setting.show_stored = false;
@@ -362,11 +345,6 @@ void set_subtract_storage(void)
     setting.subtract_stored = false;
   }
   dirty = true;
-}
-
-int GetSubtractStorage(void)
-{
-  return(setting.subtract_stored);
 }
 
 extern float peakLevel;
@@ -417,16 +395,6 @@ void set_RBW(int v)
   dirty = true;
 }
 
-int GetRBW(void)
-{
-  return(setting.rbw);
-}
-
-int get_actual_RBW(void)
-{
-  return((int) actual_rbw);
-}
-
 #ifdef __SPUR__
 void SetSpur(int v)
 {
@@ -466,11 +434,6 @@ void set_average(int v)
   dirty = true;
 }
 
-int GetAverage(void)
-{
-  return(setting.average);
-}
-
 void toggle_LNA(void)
 {
   if (S_IS_AUTO(setting.lna ))
@@ -495,16 +458,6 @@ void toggle_tracking(void)
   dirty = true;
 }
 
-int GetExtraVFO(void)
-{
-  return(setting.tracking);
-}
-
-int GetLNA(void)
-{
-  return(setting.lna);
-}
-
 void toggle_AGC(void)
 {
   if (S_IS_AUTO(setting.agc ))
@@ -514,11 +467,6 @@ void toggle_AGC(void)
   else
     setting.agc = true;
   dirty = true;
-}
-
-int GetAGC(void)
-{
-  return(setting.agc);
 }
 
 void set_unit(int u)
@@ -579,13 +527,6 @@ void set_reflevel(float level)
       level = REFLEVEL_MIN;
     if (level > REFLEVEL_MAX)
       level = REFLEVEL_MAX;
-#if 0
-    float s = setting.scale;
-    if (level < NGRIDY * s) {            // Never negative bottom
-      set_scale(level/NGRIDY);
-      level = setting.scale * NGRIDY;
-    }
-#endif
   }
 
   setting.unit_scale_index = 0;
@@ -660,20 +601,6 @@ void set_scale(float t) {
   set_trace_scale(1, t);
   set_trace_scale(2, t);
   round_reflevel_to_scale();
-
-#if 0
-  if (UNIT_IS_LINEAR(setting.unit)) {   // Never negative bottom
-    float r = setting.reflevel;
-    t = NGRIDY * t;
-    if (t > r) {
-      setting.reflevel = t;
-      set_trace_refpos(0, t);
-      set_trace_refpos(1, t);
-      set_trace_refpos(2, t);
-    }
-  }
-#endif
-  //  set_reflevel(setting.reflevel);
   redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
 }
 
@@ -739,12 +666,6 @@ void apply_settings(void)
     PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
     PE4302_Write_Byte(setting.attenuate * 2);
-#if 0
-  if (setting.modulation == MO_NONE) {
-    SI4432_Write_Byte(0x73, 0);  // Back to nominal offset
-    SI4432_Write_Byte(0x74, 0);
-  }
-#endif
   SI4432_SetReference(setting.refer);
   update_rbw();
   if (setting.frequency_step == 0.0) {
@@ -1925,23 +1846,12 @@ void draw_cal_status(void)
   ili9341_set_background(DEFAULT_BG_COLOR);
 
   float yMax = setting.reflevel;                    // Determine unit scale letter ( ,m,u,n,p)
-#if 0 // moved to set_reflevel
-  setting.unit_scale_index = 0;
-  setting.unit_scale = 1.0;
-  while (UNIT_IS_LINEAR(setting.unit) && setting.unit_scale_index < sizeof(unit_scale_value)/sizeof(float) - 1) {
-    if (yMax > unit_scale_value[setting.unit_scale_index])
-      break;
-    setting.unit_scale_index++;
-  }
-  setting.unit_scale = unit_scale_value[setting.unit_scale_index];
-#endif
-
   // Top level
   if (rounding)
     plot_printf(buf, BLEN, "%4d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%4f", (yMax/setting.unit_scale)+0.00005);
-  buf[5]=0;
+    plot_printf(buf, BLEN, "%.3F", (yMax/setting.unit_scale));
+//  buf[5]=0;
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
       color = DEFAULT_FG_COLOR;
@@ -1970,6 +1880,7 @@ void draw_cal_status(void)
   color = DEFAULT_FG_COLOR;
   ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2;
+#if 1
   unsigned int i = 0;
   while (i < sizeof(scale_value)/sizeof(float)) {
     float t = (setting.scale/setting.unit_scale) / scale_value[i];;
@@ -1979,11 +1890,8 @@ void draw_cal_status(void)
     }
     i++;
   }
-#if 0
-  if (rounding)
-    plot_printf(buf, BLEN, "%5d/",(int)setting.scale);
-  else
-    plot_printf(buf, BLEN, "%5f/",setting.scale);
+#else
+  plot_printf(buf, BLEN, "%.2F/",setting.scale);
 #endif
   ili9341_drawstring(buf, x, y);
 
@@ -2132,7 +2040,8 @@ void draw_cal_status(void)
     if (rounding)
       plot_printf(buf, BLEN, "%4f", value(setting.trigger_level));
     else
-      plot_printf(buf, BLEN, "%4f", value(setting.trigger_level)/setting.unit_scale);
+      plot_printf(buf, BLEN, "%.4F", value(setting.trigger_level));
+//    plot_printf(buf, BLEN, "%4f", value(setting.trigger_level)/setting.unit_scale);
     buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
@@ -2193,8 +2102,8 @@ void draw_cal_status(void)
   if (rounding)
     plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%4f", ((yMax - setting.scale * NGRIDY)/setting.unit_scale)+0.0005);
-  buf[5]=0;
+    plot_printf(buf, BLEN, "%.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
+//  buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
       color = DEFAULT_FG_COLOR;
