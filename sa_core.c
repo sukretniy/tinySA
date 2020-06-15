@@ -1144,6 +1144,10 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   }
   if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_AM_1kHz||setting.modulation == MO_AM_10Hz)) {               // AM modulation
     int p = setting.attenuate * 2 + am_modulation[modulation_counter];
+    if (p>63)
+      p = 63;
+    if (p<0)
+      p = 0;
     PE4302_Write_Byte(p);
     if (modulation_counter == 4) {  // 3dB modulation depth
       modulation_counter = 0;
@@ -1538,6 +1542,20 @@ again:
       PE4302_Write_Byte(setting.attenuate * 2);
       // dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
+  }
+  if (!in_selftest && MODE_INPUT(setting.mode) && S_IS_AUTO(setting.agc) && UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
+    unsigned char v;
+    static unsigned char old_v;
+    float actual_max_level = actual_t[max_index[0]] - setting.attenuate;
+    if (actual_max_level > - 45)
+      v = 0x50; // Disable AGC and enable LNA
+    else
+      v = 0x60; // Enable AGC and disable LNA
+    if (old_v != v) {
+      SI4432_Write_Byte(0x69, v);
+      old_v = v;
+    }
+
   }
   if (max_index[0] > 0)
     temppeakLevel = actual_t[max_index[0]];
