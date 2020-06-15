@@ -130,8 +130,8 @@ float calc_min_sweep_time(void)         // Calculate minimum sweep time in mS
   else {
     if (FREQ_IS_CW()) {
       a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
-      if (setting.trigger != T_AUTO || setting.repeat != 1 || setting.sweep_time >= 1000)
-        a = 15.0 / 290.0;       // time per step in CW mode with trigger
+      if (setting.repeat != 1 || setting.sweep_time >= 1000)
+        a = 15.0 / 290.0;       // time per step in CW mode with repeat
     }
     t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME/1000.0));
   }
@@ -193,6 +193,8 @@ void set_sweep_time(float t)
   if (t > 600000.0)
     t = 600000.0;
   setting.sweep_time = t;
+  if (FREQ_IS_CW())
+    update_grid();            // Really only needed in zero span mode
   dirty = true;
 }
 
@@ -1296,7 +1298,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
  skip_LO_setting:
 #ifdef __FAST_SWEEP__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && actualStepDelay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
-      SI4432_Fill(MODE_SELECT(setting.mode));
+      SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
 
@@ -1331,6 +1333,11 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
         break;         // abort
       if (subRSSI < setting.trigger_level)
         goto wait;
+#ifdef __FAST_SWEEP__
+        if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */ && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
+           SI4432_Fill(MODE_SELECT(setting.mode), 1);
+        }
+#endif
       actualStepDelay = old_actual_step_delay; // Trigger happened, restore step delay
       if (setting.trigger == T_SINGLE)
         pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
@@ -1819,7 +1826,7 @@ float my_round(float v)
   return v;
 }
 
-const char * const unit_string[] = { "dBm", "dBmV", "dBuV", "V", "W", "dBc" };
+const char * const unit_string[] = { "dBm", "dBmV", "dBuV", "V", "W", "dBc", "dBmVc", "dBuVc", "Vc", "Wc" }; // unit + 5 is delta unit
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};

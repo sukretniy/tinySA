@@ -320,7 +320,7 @@ extern char age[POINTS_COUNT];
 static int buf_index = 0;
 static bool  buf_read = false;
 
-void SI4432_Fill(int s)
+void SI4432_Fill(int s, int start)
 {
   SI4432_Sel = s;
   int sel = SI_nSEL[SI4432_Sel];
@@ -328,7 +328,7 @@ void SI4432_Fill(int s)
   if (t < 0)
     t = 0;
   int ti = t * 1000 / 290.0;                         // Now in uS per point      if (t < 30000)
-  for (int i=0; i<POINTS_COUNT; ) {
+  for (int i=start; i<POINTS_COUNT; ) {
     SPI2_CLK_LOW;
     palClearPad(GPIOC, sel);
     shiftOut( 0x26 );
@@ -337,7 +337,7 @@ void SI4432_Fill(int s)
     if (ti)
       my_microsecond_delay(ti);
   }
-  buf_index = 0;
+  buf_index = start;
   buf_read = true;
 }
 #endif

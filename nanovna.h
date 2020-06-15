@@ -818,7 +818,7 @@ void SI4432_Init(void);
 void SI4432_Drive(int);
 float SI4432_RSSI(uint32_t i, int s);
 #ifdef __FAST_SWEEP__
-void SI4432_Fill(int s);
+void SI4432_Fill(int s, int start);
 #endif
 void SI4432_Set_Frequency ( long Freq );
 float SI4432_SET_RBW(float WISH);

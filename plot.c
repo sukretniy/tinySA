@@ -845,6 +845,7 @@ static void trace_get_value_string(
   int ii = i;
   int unit_index = setting.unit;
   if (mtype & M_DELTA) {
+    unit_index = setting.unit+5;
     if (ri > i) {
       dfreq = frequencies[ri] - frequencies[i];
       ii = ri - i;
@@ -855,7 +856,6 @@ static void trace_get_value_string(
       buf2[0] = '+';
     }
     rlevel = value(coeff[ri]);
-    unit_index = U_DBC;
   } else {
     dfreq = frequencies[i];
   }
@@ -884,6 +884,7 @@ static void trace_get_value_string(
 #endif
   } else {
   uint32_t resolution = get_sweep_frequency(ST_SPAN)/290;
+#if 0
   if (resolution  <= 2000)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
   else if (resolution  <= 20000)
@@ -891,7 +892,16 @@ static void trace_get_value_string(
   else
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
   }
-//  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
+#else
+  int digits = 1;
+  if (resolution  <= 2000)
+    digits = 3;
+  else if (resolution  <= 20000)
+    digits = 2;
+  plot_printf(&buf2[1], sizeof(buf2) -1, "%3.*f" , digits, (dfreq + 50000) / 1000000.0);
+  }
+#endif
+  //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
     v = value(coeff[i]);
     if (mtype & M_NOISE)
       v = v - 10*log10(actual_rbw*1000.0);
