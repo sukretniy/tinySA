@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
+/* Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
  * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
@@ -22,10 +21,44 @@
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
+#define __SA__
+//#define __SIMULATION__
+//#define __PIPELINE__
+#define __SCROLL__
+#define __ICONS__
+#define __MEASURE__
+#define __SELFTEST__
+#define __CALIBRATE__
+#define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
+
+//#define __ULTRA__             // Add harmonics mode on low input.
+//#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
+#define __SPUR__                // Does spur reduction by shifting IF
+
 /*
  * main.c
  */
+#ifdef __SA__
+#define POINTS_COUNT     290
+#define MARKER_COUNT    4
 
+#define TRACES_MAX 3
+#define TRACE_AGE       3
+#define TRACE_ACTUAL    2
+#define TRACE_STORED    1
+#define TRACE_TEMP      0
+// #define age_t     measured[TRACE_AGE]
+#define stored_t  measured[TRACE_STORED]
+#define actual_t  measured[TRACE_ACTUAL]
+#define temp_t    measured[TRACE_TEMP]
+
+#define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
+
+typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
+extern measurement_t measured;
+#endif
+
+#ifdef __VNA__
 // Minimum frequency set
 #define START_MIN                50000
 // Maximum frequency set
@@ -81,25 +114,120 @@ extern float measured[2][POINTS_COUNT][2];
 
 void cal_collect(int type);
 void cal_done(void);
-
+#endif
 #define MAX_FREQ_TYPE 5
 enum stimulus_type {
   ST_START=0, ST_STOP, ST_CENTER, ST_SPAN, ST_CW
 };
 
+void update_frequencies(void);
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
-
+void my_microsecond_delay(int t);
 double my_atof(const char *p);
+int shell_printf(const char *fmt, ...);
 
 void toggle_sweep(void);
+void toggle_mute(void);
 void load_default_properties(void);
 
-#define SWEEP_ENABLE  0x01
-#define SWEEP_ONCE    0x02
+extern float perform(bool b, int i, uint32_t f, int e);
+enum {
+  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16
+};
+enum {
+  M_LOW, M_HIGH, M_GENLOW, M_GENHIGH, M_ULTRA
+};
+
+enum {
+  MO_NONE, MO_AM_1kHz, MO_AM_10Hz, MO_NFM, MO_WFM, MO_EXTERNAL,
+};
+
+#define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
+#ifdef __ULTRA__
+#define MODE_INPUT(x)  ((x) == M_LOW || (x) == M_HIGH || (x) == M_ULTRA )
+#else
+#define MODE_INPUT(x)  ((x) == M_LOW || (x) == M_HIGH )
+#endif
+#define MODE_HIGH(x)  ((x) == M_HIGH || (x) == M_GENHIGH )
+#define MODE_LOW(x)  ((x) == M_LOW || (x) == M_GENLOW )
+#define MODE_SELECT(x) (MODE_HIGH(x) ? 1 : 0)
+
+#define SWEEP_ENABLE    0x01
+#define SWEEP_ONCE      0x02
+#define SWEEP_CALIBRATE 0x04
+#define SWEEP_SELFTEST  0x08
+#define SWEEP_REMOTE    0x10
+
 extern int8_t sweep_mode;
+extern bool completed;
 extern const char *info_about[];
 
+// ------------------------------- sa_core.c ----------------------------------
+void reset_settings(int);
+//void ui_process_touch(void);
+void SetPowerGrid(int);
+void SetRefLevel(float);
+void set_refer_output(int);
+void toggle_below_IF(void);
+int get_refer_output(void);
+void set_attenuation(int);
+int get_attenuation(void);
+void set_harmonic(int);
+//extern int setting.harmonic;
+int search_is_greater(void);
+void set_auto_attenuation(void);
+void set_auto_reflevel(int);
+int is_paused(void);
+void set_actual_power(float);
+void SetGenerate(int);
+void set_RBW(int);
+void set_drive(int d);
+void set_IF(int f);
+void set_step_delay(int t);
+void set_repeat(int);
+void set_level_sweep(float);
+void set_level(float);
+void set_sweep_time(float);
+//extern int setting.repeat;
+//extern int setting.rbw;
+#ifdef __SPUR__
+//extern int setting.spur;
+void SetSpur(int v);
+#endif
+void set_average(int);
+int GetAverage(void);
+//extern int setting.average;
+void  set_storage(void);
+void  set_clear_storage(void);
+void  set_subtract_storage(void);
+void toggle_waterfall(void);
+void set_mode(int);
+int GetMode(void);
+void set_reflevel(float);
+void user_set_reflevel(float);
+#define REFLEVEL_MAX 9999.0
+#define REFLEVEL_MIN    1.0e-12
+void set_scale(float);
+void user_set_scale(float);
+void AllDirty(void);
+void MenuDirty(void);
+void toggle_LNA(void);
+void toggle_AGC(void);
+void redrawHisto(void);
+void self_test(int);
+void set_decay(int);
+void set_noise(int);
+void toggle_tracking_output(void);
+extern int32_t frequencyExtra;
+void set_10mhz(int);
+void set_modulation(int);
+//extern int setting.modulation;
+void set_measurement(int);
+// extern int settingSpeed;
+//extern int setting.step_delay;
+void sweep_remote(void);
+#ifdef __VNA__
 /*
  * dsp.c
  */
@@ -121,7 +249,9 @@ void reset_dsp_accumerator(void);
 void calculate_gamma(float *gamma);
 void fetch_amplitude(float *gamma);
 void fetch_amplitude_ref(float *gamma);
+#endif
 
+#ifdef __VNA__
 /*
  * tlv320aic3204.c
  */
@@ -130,21 +260,32 @@ extern void tlv320aic3204_init(void);
 extern void tlv320aic3204_set_gain(int lgain, int rgain);
 extern void tlv320aic3204_select(int channel);
 
+#endif
 /*
  * plot.c
  */
 
 // Offset of plot area
-#define OFFSETX 10
-#define OFFSETY  0
-
-// WIDTH better be n*(POINTS_COUNT-1)
-#define WIDTH  300
+#define OFFSETX 30
+#define OFFSETY 0
+#define BUTTON_WIDTH    60
+#ifdef __SCROLL__
+#define HEIGHT _height
+extern int _height;
+#define HEIGHT_SCROLL   180
+#define HEIGHT_NOSCROLL 232
+#else
 // HEIGHT = 8*GRIDY
 #define HEIGHT 232
+// WIDTH better be n*(POINTS_COUNT-1)
+#endif
+#define WIDTH  290
 
-//#define NGRIDY 10
-#define NGRIDY 8
+#define CELLWIDTH  (32)
+#define CELLHEIGHT (32)
+
+#define NGRIDY 10
+//#define NGRIDY 9
 
 #define FREQUENCIES_XPOS1 OFFSETX
 #define FREQUENCIES_XPOS2 200
@@ -155,8 +296,8 @@ extern void tlv320aic3204_select(int channel);
 #define GRIDY (HEIGHT / NGRIDY)
 
 //
-#define CELLOFFSETX 5
-#define AREA_WIDTH_NORMAL  (CELLOFFSETX + WIDTH  + 1 + 4)
+#define CELLOFFSETX 0
+#define AREA_WIDTH_NORMAL  (CELLOFFSETX + WIDTH)
 #define AREA_HEIGHT_NORMAL (              HEIGHT + 1)
 
 // Smith/polar chart
@@ -169,6 +310,7 @@ extern int16_t area_height;
 
 // font
 extern const uint8_t x5x7_bits [];
+extern const uint16_t x7x13b_bits [];
 #define FONT_GET_DATA(ch)   (&x5x7_bits[ch*7])
 #define FONT_GET_WIDTH(ch)  (8-(x5x7_bits[ch*7]&7))
 #define FONT_MAX_WIDTH      7
@@ -190,8 +332,6 @@ extern const uint16_t numfont16x22[];
 #define S_OHM   "\036"
 // trace 
 
-#define TRACES_MAX 4
-
 #define MAX_TRACE_TYPE 12
 enum trace_type {
   TRC_LOGMAG=0, TRC_PHASE, TRC_DELAY, TRC_SMITH, TRC_POLAR, TRC_LINEAR, TRC_SWR, TRC_REAL, TRC_IMAG, TRC_R, TRC_X, TRC_OFF
@@ -208,6 +348,15 @@ enum trace_type {
 
 // Electrical Delay
 // Phase
+
+#define MAX_UNIT_TYPE 4
+enum unit_type {
+  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_WATT, U_DBC //  dBc only for displaying delta marker info
+};
+#define UNIT_IS_LINEAR(T) ( T >= U_VOLT ? true : false)
+#define UNIT_IS_LOG(T) ( T >= U_VOLT ? false : true)
+
+float value(float);
 
 typedef struct trace {
   uint8_t enabled;
@@ -231,13 +380,21 @@ typedef struct config {
   uint16_t trace_color[TRACES_MAX];
   int16_t  touch_cal[4];
   int8_t   freq_mode;
+#ifdef __VNA__
   uint32_t harmonic_freq_threshold;
+#endif
   uint16_t vbat_offset;
-  uint8_t _reserved[22];
+  int16_t low_level_offset;
+  int16_t high_level_offset;
+  uint32_t correction_frequency[CORRECTION_POINTS];
+  float    correction_value[CORRECTION_POINTS];
+//  uint8_t _reserved[22];
   uint32_t checksum;
 } config_t;
 
 extern config_t config;
+//#define settingLevelOffset config.level_offset
+int get_level_offset(void);
 
 void set_trace_type(int t, int type);
 void set_trace_channel(int t, int channel);
@@ -246,20 +403,30 @@ void set_trace_refpos(int t, float refpos);
 float get_trace_scale(int t);
 float get_trace_refpos(int t);
 const char *get_trace_typename(int t);
+extern int in_selftest;
 
+#ifdef __VNA
 void set_electrical_delay(float picoseconds);
 float get_electrical_delay(void);
 float groupdelay_from_array(int i, float array[POINTS_COUNT][2]);
-
+#endif
 // marker
+enum {
+  M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_TRACKING=8, M_DELETE=16  // Tracking must be last.
+};
 
-#define MARKERS_MAX 4
+enum {
+  M_DISABLED = false, M_ENABLED = true
+};
 
-typedef struct marker {
+typedef struct {
   int8_t enabled;
+  int8_t mtype;
   int16_t index;
   uint32_t frequency;
 } marker_t;
+
+#define MARKERS_MAX 4
 
 extern int8_t previous_marker;
 extern int8_t marker_tracking;
@@ -272,7 +439,7 @@ void redraw_frame(void);
 void request_to_draw_cells_behind_menu(void);
 void request_to_draw_cells_behind_numeric_input(void);
 void redraw_marker(int marker);
-void plot_into_index(float measured[2][POINTS_COUNT][2]);
+void plot_into_index(measurement_t measured);
 void force_set_markmap(void);
 void draw_frequencies(void);
 void draw_all(bool flush);
@@ -287,6 +454,10 @@ void set_marker_search(int mode);
 int marker_search(void);
 int marker_search_left(int from);
 int marker_search_right(int from);
+int marker_search_left_max(int from);
+int marker_search_right_max(int from);
+int marker_search_left_min(int from);
+int marker_search_right_min(int from);
 
 // _request flag for update screen
 #define REDRAW_CELLS      (1<<0)
@@ -302,25 +473,36 @@ extern volatile uint8_t redraw_request;
  */
 // SPI bus revert byte order
 //gggBBBbb RRRrrGGG
-#define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
+#define byteReverse16(x) (uint16_t)(((x) << 8) & 0xff00) | (((x) >> 8) & 0xff)
+#define RGB565(r,g,b)     byteReverse16( ((((uint16_t)r)<<8)&0b1111100000000000) | ((((uint16_t)g)<<3)&0b0000011111100000) | ((((uint16_t)b)>>3)&0b0000000000011111) )
+
+//#define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
 #define RGBHEX(hex) ( (((hex)&0x001c00)<<3) | (((hex)&0x0000f8)<<5) | (((hex)&0xf80000)>>16) | (((hex)&0x00e000)>>13) )
 
 // Define size of screen buffer in pixels (one pixel 16bit size)
-#define SPI_BUFFER_SIZE             2048
+#define SPI_BUFFER_SIZE             1024
+
+#define LCD_WIDTH                   320
+#define LCD_HEIGHT                  240
 
 #define DEFAULT_FG_COLOR            RGB565(255,255,255)
 #define DEFAULT_BG_COLOR            RGB565(  0,  0,  0)
+#define DARK_GREY                   RGB565(140,140,140)
+#define LIGHT_GREY                  RGB565(220,220,220)
 #define DEFAULT_GRID_COLOR          RGB565(128,128,128)
 #define DEFAULT_MENU_COLOR          RGB565(255,255,255)
 #define DEFAULT_MENU_TEXT_COLOR     RGB565(  0,  0,  0)
 #define DEFAULT_MENU_ACTIVE_COLOR   RGB565(180,255,180)
-#define DEFAULT_TRACE_1_COLOR       RGB565(255,255,  0)
-#define DEFAULT_TRACE_2_COLOR       RGB565(  0,255,255)
-#define DEFAULT_TRACE_3_COLOR       RGB565(  0,255,  0)
-#define DEFAULT_TRACE_4_COLOR       RGB565(255,  0,255)
+#define DEFAULT_TRACE_1_COLOR       RGB565(255,  0,  0)  /* RGB565(255,255,  0) */
+#define DEFAULT_TRACE_2_COLOR       RGB565(  0,255,  0)/* RGB565(  0,255,255) */
+#define DEFAULT_TRACE_3_COLOR       RGB565(255,255,  0)/* RGB565(  0,255,  0) */
+//#define DEFAULT_TRACE_4_COLOR       RGB565(255,  0,255)
 #define DEFAULT_NORMAL_BAT_COLOR    RGB565( 31,227,  0)
 #define DEFAULT_LOW_BAT_COLOR       RGB565(255,  0,  0)
 #define DEFAULT_SPEC_INPUT_COLOR    RGB565(128,255,128);
+#define BRIGHT_COLOR_BLUE  RGB565(200,200,255)
+#define BRIGHT_COLOR_RED  RGB565(255,200,200)
+#define BRIGHT_COLOR_GREEN  RGB565(200,255,200)
 
 extern uint16_t foreground_color;
 extern uint16_t background_color;
@@ -331,12 +513,18 @@ void ili9341_init(void);
 void ili9341_test(int mode);
 void ili9341_bulk(int x, int y, int w, int h);
 void ili9341_fill(int x, int y, int w, int h, int color);
+#if 0
 void ili9341_set_foreground(uint16_t fg);
 void ili9341_set_background(uint16_t fg);
+#else
+#define ili9341_set_foreground(fg) {  foreground_color = fg; }
+#define ili9341_set_background(bg) {  background_color = bg;}
+#endif
 void ili9341_clear_screen(void);
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
+void ili9341_drawstring_7x13(const char *str, int x, int y);
 void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size);
 void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size);
@@ -349,73 +537,192 @@ void show_logo(void);
 /*
  * flash.c
  */
-#define SAVEAREA_MAX 5
-// Begin addr                   0x08018000
-#define SAVE_CONFIG_AREA_SIZE   0x00008000
-// config save area
-#define SAVE_CONFIG_ADDR        0x08018000
-// properties_t save area
-#define SAVE_PROP_CONFIG_0_ADDR 0x08018800
-#define SAVE_PROP_CONFIG_1_ADDR 0x0801a000
-#define SAVE_PROP_CONFIG_2_ADDR 0x0801b800
-#define SAVE_PROP_CONFIG_3_ADDR 0x0801d000
-#define SAVE_PROP_CONFIG_4_ADDR 0x0801e800
 
-typedef struct properties {
+
+typedef struct setting
+{
   uint32_t magic;
-  uint32_t _frequency0;
-  uint32_t _frequency1;
+//  uint32_t _frequency0;
+//  uint32_t _frequency1;
+  int mode;
   uint16_t _sweep_points;
-  uint16_t _cal_status;
-
-  uint32_t _frequencies[POINTS_COUNT];
-  float _cal_data[5][POINTS_COUNT][2];
-  float _electrical_delay; // picoseconds
-  
+  int attenuate;
+  int auto_attenuation;
+  int step_atten;
+  int rbw;
+  int below_IF;
+  int average;
+  int show_stored;
+  int subtract_stored;
+  int drive; // 0-7 , 7=+20dBm, 3dB steps
+  int agc;
+  int lna;
+  int auto_reflevel;
+  float reflevel;
+  float scale;
+  int tracking;
+  int modulation;
+  int step_delay;
+  int frequency_step;
+  int test;
+  int harmonic;
+  int decay;
+  int noise;
+  float vbw;
+  int  tracking_output;
+  int repeat;
+  uint32_t frequency0;
+  uint32_t frequency1;
+  uint32_t frequency_IF;
+  int freq_mode;
+  int measurement;
+  int refer;
+  int spur;
   trace_t _trace[TRACES_MAX];
   marker_t _markers[MARKERS_MAX];
-
-  float _velocity_factor; // %
   int8_t _active_marker;
+  int8_t unit;
+  float offset;
+  float trigger_level;
+  int trigger;
+  int linearity_step;
+  float level;
+  float level_sweep;
+  float sweep_time;
+  float actual_sweep_time;
+  int test_argument;
+  int auto_IF;
+  unsigned int unit_scale_index;
+  float unit_scale;
+  int mute;
+  uint32_t checksum;
+}setting_t;
+
+extern setting_t setting;
+
+extern int setting_frequency_10mhz;
+void reset_settings(int m);
+
+
+#define S_IS_AUTO(x) ((x)&2)
+#define S_STATE(X) ((X)&1)
+enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
+
+#ifdef __FAST_SWEEP__
+#define MINIMUM_SWEEP_TIME  3     // Minimum sweep time on zero span in miliseconds
+#else
+#define MINIMUM_SWEEP_TIME  15     // Minimum sweep time on zero span in miliseconds
+#endif
+#define REPEAT_TIME        134.0         // Time per extra repeat in uS
+#define MEASURE_TIME       175.0        // Time per vbwstep without stepdelay in uS
+
+extern uint32_t frequencies[POINTS_COUNT];
+extern const float unit_scale_value[];
+extern const char * const unit_scale_text[];
+
+#if 1
+#define SAVEAREA_MAX 9
+// config save area
+#define SAVE_CONFIG_ADDR        0x0801B000
+// setting_t save area
+#define SAVE_PROP_CONFIG_0_ADDR 0x0801B800
+#define SAVE_PROP_CONFIG_1_ADDR 0x0801C000
+#define SAVE_PROP_CONFIG_2_ADDR 0x0801C800
+#define SAVE_PROP_CONFIG_3_ADDR 0x0801D000
+#define SAVE_PROP_CONFIG_4_ADDR 0x0801D800
+#define SAVE_PROP_CONFIG_5_ADDR 0x0801E000
+#define SAVE_PROP_CONFIG_6_ADDR 0x0801E800
+#define SAVE_PROP_CONFIG_7_ADDR 0x0801F000
+#define SAVE_PROP_CONFIG_8_ADDR 0x0801F800
+
+#define SAVE_CONFIG_AREA_SIZE   (0x0801F800 -  SAVE_CONFIG_ADDR)     // Should include all save slots
+
+#else
+#define SAVEAREA_MAX 4
+// Begin addr                   0x0801C000
+#define SAVE_CONFIG_AREA_SIZE   0x00004000
+// config save area
+#define SAVE_CONFIG_ADDR        0x0801C000
+// properties_t save area
+#define SAVE_PROP_CONFIG_0_ADDR 0x0801C800
+#define SAVE_PROP_CONFIG_1_ADDR 0x0801D000
+#define SAVE_PROP_CONFIG_2_ADDR 0x0801D800
+#define SAVE_PROP_CONFIG_3_ADDR 0x0801E000
+#define SAVE_PROP_CONFIG_4_ADDR 0x0801e800
+#endif
+#if 0
+typedef struct properties {
+  uint32_t magic;
+  preset_t setting;
+//  uint32_t _frequency0;
+//  uint32_t _frequency1;
+  uint16_t _sweep_points;
+#ifdef __VNA__
+  uint16_t _cal_status;
+
+#endif
+#ifdef __SA__
+//  uint32_t _frequency_IF; //IF frequency
+#endif
+//  uint32_t _frequencies[POINTS_COUNT];
+#ifdef __VNA__
+  float _cal_data[5][POINTS_COUNT][2];
+  float _electrical_delay; // picoseconds
+#endif
+  trace_t _trace[TRACES_MAX];
+  marker_t _markers[MARKERS_MAX];
+  int8_t _active_marker;
+#ifdef __VNA__
+  float _velocity_factor; // %
   uint8_t _domain_mode; /* 0bxxxxxffm : where ff: TD_FUNC m: DOMAIN_MODE */
   uint8_t _marker_smith_format;
   uint8_t _bandwidth;
-  uint8_t _reserved[50];
+#endif  
+  uint8_t _reserved[2];
   uint32_t checksum;
 } properties_t;
+
+#endif
 
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC 0x434f4e45 /* 'CONF' */
 
 extern int16_t lastsaveid;
-extern properties_t *active_props;
-extern properties_t current_props;
+//extern properties_t *active_props;
 
-#define frequency0 current_props._frequency0
-#define frequency1 current_props._frequency1
-#define sweep_points current_props._sweep_points
+//extern properties_t current_props;
+
+//#define frequency0 current_props._frequency0
+//#define frequency1 current_props._frequency1
+#define sweep_points setting._sweep_points
+#ifdef __VNA__
 #define cal_status current_props._cal_status
-#define frequencies current_props._frequencies
+#endif
+#ifdef __SA__
+//#define frequency_IF current_props._frequency_IF
+#endif
+//#define frequencies current_props._frequencies
+#ifdef __VNA__
 #define cal_data active_props->_cal_data
 #define electrical_delay current_props._electrical_delay
-
-#define trace current_props._trace
-#define markers current_props._markers
-#define active_marker current_props._active_marker
+#endif
+#define trace setting._trace
+#define markers setting._markers
+#define active_marker setting._active_marker
+#ifdef __VNA__
 #define domain_mode current_props._domain_mode
 #define velocity_factor current_props._velocity_factor
 #define marker_smith_format current_props._marker_smith_format
 #define bandwidth current_props._bandwidth
+#endif
 
-#define FREQ_IS_STARTSTOP() (!(config.freq_mode&FREQ_MODE_CENTER_SPAN))
-#define FREQ_IS_CENTERSPAN() (config.freq_mode&FREQ_MODE_CENTER_SPAN)
-#define FREQ_IS_CW() (frequency0 == frequency1)
-
-int caldata_save(int id);
+#define FREQ_IS_STARTSTOP() (!(setting.freq_mode&FREQ_MODE_CENTER_SPAN))
+#define FREQ_IS_CENTERSPAN() (setting.freq_mode&FREQ_MODE_CENTER_SPAN)
+#define FREQ_IS_CW() (setting.frequency0 == setting.frequency1)
 int caldata_recall(int id);
-const properties_t *caldata_ref(int id);
-
+int caldata_save(int id);
+//const properties_t *caldata_ref(int id);
 int config_save(void);
 int config_recall(void);
 
@@ -426,11 +733,17 @@ void clear_all_config_prop_data(void);
  */
 extern void ui_init(void);
 extern void ui_process(void);
+int current_menu_is_form(void);
+
+void menu_mode_cb(int, uint8_t);
+void ui_mode_normal(void);
+void ui_mode_menu(void);
 
 // Irq operation process set
 #define OP_NONE       0x00
 #define OP_LEVER      0x01
 #define OP_TOUCH      0x02
+#define OP_CONSOLE    0x04
 //#define OP_FREQCHANGE 0x04
 extern volatile uint8_t operation_requested;
 
@@ -448,11 +761,13 @@ typedef struct uistat {
   int8_t digit; /* 0~5 */
   int8_t digit_mode;
   int8_t current_trace; /* 0..3 */
-  uint32_t value; // for editing at numeric input area
+  float value; // for editing at numeric input area
 //  uint32_t previous_value;
   uint8_t lever_mode;
   uint8_t marker_delta;
+  uint8_t marker_noise;
   uint8_t marker_tracking;
+  char text[20];
 } uistat_t;
 
 extern uistat_t uistat;
@@ -486,11 +801,63 @@ int16_t adc_vbat_read(void);
  */
 int plot_printf(char *str, int, const char *fmt, ...);
 #define PULSE do { palClearPad(GPIOC, GPIOC_LED); palSetPad(GPIOC, GPIOC_LED);} while(0)
+//extern int setting_attenuate;
+//extern int settingPowerCal;
+//extern int setting_step_delay;
+//extern int actualStepDelay;
+//extern int setting_mode;
+void update_rbw(void);
+int get_actual_RBW(void);
+
+#define byte uint8_t
+extern volatile int SI4432_Sel;         // currently selected SI4432
+void SI4432_Write_Byte(byte ADR, byte DATA );
+byte SI4432_Read_Byte( byte ADR );
+
+void SI4432_Init(void);
+void SI4432_Drive(int);
+float SI4432_RSSI(uint32_t i, int s);
+#ifdef __FAST_SWEEP__
+void SI4432_Fill(int s, int start);
+#endif
+void SI4432_Set_Frequency ( long Freq );
+float SI4432_SET_RBW(float WISH);
+void SI4432_SetReference(int freq);
 
 // Speed profile definition
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
-#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "T:%06d", chVTGetSystemTimeX() - time);ili9341_drawstringV(string_buf, 1, 60);}
+#define RESTART_PROFILE   time = chVTGetSystemTimeX();
+#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "T:%06d", chVTGetSystemTimeX() - time);ili9341_drawstringV(string_buf, 1, 180);}
 // Macros for convert define value to string
 #define STR1(x)  #x
 #define define_to_STR(x)  STR1(x)
+
+// sa_core.c
+int get_waterfall(void);
+void toggle_tracking(void);
+void calibrate(void);
+void reset_calibration(void);
+void set_reflevel(float);
+void set_offset(float);
+void set_unit(int);
+void set_RBW(int);
+void set_switches(int);
+void set_trigger_level(float);
+void set_trigger(int);
+//extern int setting_measurement;
+void self_test(int);
+//extern int setting_test;
+void wait_user(void);
+void calibrate(void);
+float to_dBm(float);
+float calc_min_sweep_time(void);
+extern float actual_rbw;
+
+enum {
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY
+};
+
+enum {
+  T_AUTO, T_NORMAL, T_SINGLE, T_DONE
+};
 /*EOF*/

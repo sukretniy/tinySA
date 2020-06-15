@@ -10,3 +10,7 @@ python
 TAGS
 .emacs-dirvars
 *png
+*.bak
+version.txt
+dorelease.bat
+ChibiOS
