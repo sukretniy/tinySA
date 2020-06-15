@@ -2075,20 +2075,21 @@ static void cell_draw_marker_info(int x0, int y0)
         buf[k++] = 'D';
       if (markers[i].mtype & M_NOISE)
         buf[k++] = 'N';
+      buf[k++] = ' ';
       buf[k++] = 0;
       ili9341_set_background(DEFAULT_BG_COLOR);
       ili9341_set_foreground(marker_color(markers[i].mtype));
 //      if (setting.unit)
 //        cell_drawstring(buf, xpos, ypos);
 //      else
-        cell_drawstring_7x13(buf, xpos, ypos);
-      xpos += strlen(buf)*7;
+//        cell_drawstring_7x13(buf, xpos, ypos);
+      int offs = strlen(buf);
       trace_get_value_string(
-          t, buf, sizeof buf,
+          t, &buf[offs], (sizeof buf) - offs,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
-//      if (setting.unit)
-//        cell_drawstring(buf, xpos, ypos);
-//      else
+      if (strlen(buf)*7> WIDTH/2 )
+        cell_drawstring(buf, xpos, ypos);
+      else
         cell_drawstring_7x13(buf, xpos, ypos);
       j++;
    }
