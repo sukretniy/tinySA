@@ -13,3 +13,4 @@ TAGS
 *.bak
 version.txt
 dorelease.bat
+ChibiOS
