@@ -1,8 +1,8 @@
 tinySA - tiny Spectrum Analyzer
 ==========================================================
 
-[![GitHub release](http://img.shields.io/github/release/erikkaashoek/NanoVNA.svg?style=flat)][release]
-[![CircleCI](https://circleci.com/gh/erikkaashoek/NanoVNA.svg?style=shield)](https://circleci.com/gh/ttrftech/NanoVNA)
+[![GitHub release](http://img.shields.io/github/release/erikkaashoek/tinySA.svg?style=flat)][release]
+[![CircleCI](https://circleci.com/gh/erikkaashoek/tinySA.svg?style=shield)](https://circleci.com/gh/erikkaashoek/tinySA)
 
 [release]: https://github.com/erikkaashoek/tinySA/releases
 
@@ -21,7 +21,7 @@ This repository contains source of tinySA firmware.
 
 ## Prepare ARM Cross Tools
 
-**UPDATE**: Recent gcc version works to build NanoVNA, no need old version.
+**UPDATE**: Recent gcc version works to build tinySA, no need old version.
 
 ### MacOSX
 
@@ -44,8 +44,8 @@ Download arm cross tools from [here](https://developer.arm.com/tools-and-softwar
 
 Fetch source and submodule.
 
-    $ git clone https://github.com/ttrftech/NanoVNA.git
-    $ cd NanoVNA
+    $ git clone https://github.com/erikkaashoek/tinySA.git
+    $ cd tinySA
     $ git submodule update --init --recursive
 
 ## Build
@@ -58,7 +58,7 @@ Just make in the directory.
 
 Using [this docker image](https://hub.docker.com/r/edy555/arm-embedded) and without installing arm toolchain, you can build the firmware.
 
-    $ cd NanoVNA
+    $ cd tinySA
     $ docker run -it --rm -v $(PWD):/work edy555/arm-embedded:8.2 make
 
 ## Flash firmware
@@ -89,29 +89,28 @@ There are seveal numbers of great companion PC tools from third-party.
 
 ## Documentation
 
-* [NanoVNA User Guide](https://cho45.github.io/NanoVNA-manual/) [(google translate)](https://translate.google.com/translate?sl=ja&tl=en&u=https%3A%2F%2Fcho45.github.io%2FNanoVNA-manual%2F) by cho45
+* [tinySA User Guide](https://tinySA.org/wiki/)
 
 ## Reference
 
-* [Schematics](/doc/nanovna-sch.pdf)
-* [PCB Photo](/doc/nanovna-pcb-photo.jpg)
-* [Block Diagram](/doc/nanovna-blockdiagram.png)
-* Kit available from https://ttrf.tk/kit/nanovna
+* [Specification](https://tinysa.org/wiki/pmwiki.php?n=Main.Specification)
+* [Technical info](https://tinysa.org/wiki/pmwiki.php?n=Main.TechnicalDescription)
 
 ## Note
 
-Hardware design material is disclosed to prevent bad quality clone. Please let me know if you would have your own unit.
+tinySA is a trademark owned by its respective owner. Unauthorized use the the name tinySA not permitted
 
 ## Authorized Distributor
 
-* [Nooelec](https://www.nooelec.com/store/nanovna-bundle.html)
+* [NotYet](https://www.notyet.com/)
 
 ## Credit
 
-* [@edy555](https://github.com/edy555)
+* [@erikkaashoek](https://github.com/erikkaashoek)
 
 ### Contributors
 
+* [@edy555](https://github.com/edy555)
 * [@hugen79](https://github.com/hugen79)
 * [@cho45](https://github.com/cho45)
 * [@DiSlord](https://github.com/DiSlord/)
