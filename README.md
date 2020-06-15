@@ -78,14 +78,10 @@ Or simply use make.
 
 ## Companion Tools
 
-There are seveal numbers of great companion PC tools from third-party.
+There are several numbers of great companion PC tools from third-party.
 
-* [NanoVNASharp Windows software](https://drive.google.com/drive/folders/1IZEtx2YdqchaTO8Aa9QbhQ8g_Pr5iNhr) by hugen79
-* [NanoVNA WebSerial/WebUSB](https://github.com/cho45/NanoVNA-WebUSB-Client) by cho45
-* [Android NanoVNA app](https://play.google.com/store/apps/details?id=net.lowreal.nanovnawebapp) by cho45
-* [NanoVNASaver](https://github.com/mihtjel/nanovna-saver) by mihtjel
-* [TAPR VNAR4](https://groups.io/g/nanovna-users/files/NanoVNA%20PC%20Software/TAPR%20VNA) supports NanoVNA by erikkaashoek
-* see [python](/python/README.md) directory to use NanoVNA with Python and Jupyter Notebook.
+* [Soon to come](https://github.com/erikkaashoek/tinySA-Win) by Erik
+* [tinySASaver](https://github.com/erikkaashoek/tinySA-saver) by Erik
 
 ## Documentation
 
