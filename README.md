@@ -1,23 +1,23 @@
-NanoVNA - Very tiny handheld Vector Network Analyzer
+tinySA - tiny Spectrum Analyzer
 ==========================================================
 
-[![GitHub release](http://img.shields.io/github/release/ttrftech/NanoVNA.svg?style=flat)][release]
-[![CircleCI](https://circleci.com/gh/ttrftech/NanoVNA.svg?style=shield)](https://circleci.com/gh/ttrftech/NanoVNA)
+[![GitHub release](http://img.shields.io/github/release/erikkaashoek/NanoVNA.svg?style=flat)][release]
+[![CircleCI](https://circleci.com/gh/erikkaashoek/NanoVNA.svg?style=shield)](https://circleci.com/gh/ttrftech/NanoVNA)
 
-[release]: https://github.com/ttrftech/NanoVNA/releases
+[release]: https://github.com/erikkaashoek/tinySA/releases
 
 <div align="center">
-<img src="/doc/nanovna.jpg" width="480px">
+<img src="/doc/tinySA.jpg" width="480px">
 </div>
 
 # About
 
-NanoVNA is very tiny handheld Vector Network Analyzer (VNA). It is
+tinySA is very tiny handheld Spectrum Analyzer (SA). It is
 standalone with lcd display, portable device with battery. This
-project aim to provide an RF gadget but useful instrument for
+project aim to provide an useful instrument for the RF 
 enthusiast.
 
-This repository contains source of NanoVNA firmware.
+This repository contains source of tinySA firmware.
 
 ## Prepare ARM Cross Tools
 
