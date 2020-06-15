@@ -195,6 +195,7 @@ void set_sweep_time(float t)
   setting.sweep_time = t;
   if (FREQ_IS_CW())
     update_grid();            // Really only needed in zero span mode
+  redraw_request |= REDRAW_FREQUENCY;
   dirty = true;
 }
 
