@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, TAKAHASHI Tomohiro (TTRFTECH) edy555@gmail.com
+/* Copyright (c) 2020, Erik Kaashoek erik@kaashoek.com
  * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
@@ -16,6 +16,8 @@
  * the Free Software Foundation, Inc., 51 Franklin Street,
  * Boston, MA 02110-1301, USA.
  */
+
+
 #include "ch.h"
 #include "hal.h"
 #include "nanovna.h"
