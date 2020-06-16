@@ -2036,8 +2036,12 @@ ui_process_normal(void)
       case LM_SPAN:
         if (FREQ_IS_STARTSTOP())
           lever_move(status, ST_STOP);
-        else
-          lever_zoom_time(status);
+        else {
+          if (FREQ_IS_CW())
+            lever_zoom_time(status);
+          else
+            lever_zoom_span(status);
+        }
         break;
 #ifdef __VNA__
       case LM_EDELAY:
