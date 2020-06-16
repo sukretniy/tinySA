@@ -193,6 +193,10 @@ void set_sweep_time(float t)
   if (t > 600000.0)
     t = 600000.0;
   setting.sweep_time = t;
+  float ta = calc_min_sweep_time();
+  if (ta < t)
+    ta = t;
+  setting.actual_sweep_time = ta;
   if (FREQ_IS_CW())
     update_grid();            // Really only needed in zero span mode
   redraw_request |= REDRAW_FREQUENCY;
@@ -1978,10 +1982,11 @@ void draw_cal_status(void)
   ili9341_drawstring("RBW:", x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "%dkHz", (int)actual_rbw);
-  buf[6]=0;
+  plot_printf(buf, BLEN, "%.1FkHz", actual_rbw);
+//  buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
+#if 0
   // VBW
   if (setting.frequency_step > 0) {
     ili9341_set_foreground(DEFAULT_FG_COLOR);
@@ -1993,7 +1998,7 @@ void draw_cal_status(void)
     buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
-
+#endif
   // Sweep time
   if (dirty)
     color = BRIGHT_COLOR_RED;

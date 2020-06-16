@@ -2151,9 +2151,9 @@ draw_frequencies(void)
       float t = setting.actual_sweep_time; // in mS
           ; // in mS
       if (t>=1000)
-          plot_printf(buf2, sizeof(buf2), "TIME %.2fS",t/1000.0);
+          plot_printf(buf2, sizeof(buf2), " TIME %.2fS",t/1000.0);
       else
-        plot_printf(buf2, sizeof(buf2), "TIME %.2fmS", t);
+        plot_printf(buf2, sizeof(buf2), " TIME %.2fmS", t);
 
     } else if (FREQ_IS_STARTSTOP()) {
       plot_printf(buf1, sizeof(buf1), " START %qHz", get_sweep_frequency(ST_START));

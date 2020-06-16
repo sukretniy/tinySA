@@ -1949,7 +1949,7 @@ step_round(uint32_t v)
 {
   // decade step
   uint32_t x = 1;
-  for (x = 1; x*10 < v; x*= 10)
+  for (x = 1; x*10 <= v; x*= 10)
     ;
 
   // 1-2-5 step
@@ -1972,6 +1972,21 @@ lever_zoom_span(int status)
     span = step_round(span * 3);
   }
   set_sweep_frequency(ST_SPAN, span);
+}
+
+static void
+lever_zoom_time(int status)
+{
+  uint32_t time = setting.sweep_time; // in mS
+  if (time < MINIMUM_SWEEP_TIME)
+    time = MINIMUM_SWEEP_TIME;
+  if (status & EVT_UP) {
+    time = time*10/25;
+  } else if (status & EVT_DOWN) {
+    time = time*25/10;
+  }
+  time = step_round(time);
+  set_sweep_time(time);
 }
 
 static void
@@ -2022,7 +2037,7 @@ ui_process_normal(void)
         if (FREQ_IS_STARTSTOP())
           lever_move(status, ST_STOP);
         else
-        lever_zoom_span(status);
+          lever_zoom_time(status);
         break;
 #ifdef __VNA__
       case LM_EDELAY:

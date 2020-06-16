@@ -182,7 +182,7 @@ static char *ftoa(char *p, float num, uint32_t precision) {
   return p;
 }
 
-static char *ftoaS(char *p, float num, uint32_t precision) {
+static char *ftoaS(char *p, float num, int precision) {
   char prefix=0;
   char *ptr;
   if (num > 1000.0){
@@ -200,10 +200,12 @@ static char *ftoaS(char *p, float num, uint32_t precision) {
 
   // Auto set precision
   uint32_t l = num;
-  if (l > 100)
+  if (l >= 100)
     precision-=2;
-  else if (l > 10)
+  else if (l >= 10)
     precision-=1;
+  if (precision<0)
+    precision=0;
   p=ftoa(p, num, precision);
   if (prefix)
     *p++ = prefix;
