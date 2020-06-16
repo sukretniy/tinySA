@@ -464,3 +464,41 @@ VNA_SHELL_FUNCTION(cmd_correction)
   config.correction_value[i] = v;
   shell_printf("updated %d to %d %.1f\r\n", i, config.correction_frequency[i], config.correction_value[i]);
 }
+
+VNA_SHELL_FUNCTION(cmd_scanraw)
+{
+  uint32_t start, stop;
+  uint32_t points = sweep_points;
+  if (argc < 2 || argc > 3) {
+    shell_printf("usage: scanraw {start(Hz)} {stop(Hz)} [points]\r\n");
+    return;
+  }
+
+  start = my_atoui(argv[0]);
+  stop = my_atoui(argv[1]);
+  if (start > stop) {
+      shell_printf("frequency range is invalid\r\n");
+      return;
+  }
+  if (argc == 3) {
+    points = my_atoi(argv[2]);
+  }
+  int old_step = setting.frequency_step;
+  float f_step = (stop-start)/ points;
+  setting.frequency_step = (int32_t)f_step;
+  streamPut(shell_stream, '{');
+  dirty = true;
+  for (uint32_t i = 0; i<points; i++) {
+    if (operation_requested)
+      break;
+    float val = perform(false, i, start +(int32_t)(f_step * i), false);
+    streamPut(shell_stream, 'x');
+    int v = val*2 + 256;
+    streamPut(shell_stream, (uint8_t)(v & 0xFF));
+    streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
+  }
+  streamPut(shell_stream, '}');
+  setting.frequency_step = old_step;
+}
+
+

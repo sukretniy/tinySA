@@ -965,7 +965,7 @@ VNA_SHELL_FUNCTION(cmd_scan)
 {
   uint32_t start, stop;
   uint32_t points = sweep_points;
-  int i;
+  uint32_t i;
   if (argc < 2 || argc > 4) {
     shell_printf("usage: scan {start(Hz)} {stop(Hz)} [points] [outmask]\r\n");
     return;
@@ -979,33 +979,11 @@ VNA_SHELL_FUNCTION(cmd_scan)
   }
   if (argc >= 3) {
     points = my_atoi(argv[2]);
- //   if (points <= 0 || points > POINTS_COUNT) {
- //     shell_printf("sweep points exceeds range "define_to_STR(POINTS_COUNT)"\r\n");
- //     return;
- //   }
-  }
-
-  if (argc==4 && my_atoui(argv[3]) == 16) {
-    int old_step = setting.frequency_step;
-    float f_step = (stop-start)/ points;
-    setting.frequency_step = (int32_t)f_step;
-    streamPut(shell_stream, '{');
-    dirty = true;
-    for (int i = 0; i<points; i++) {
-      if (operation_requested)
-        break;
-      float val = perform(false, i, start +(int32_t)(f_step * i), false);
-      streamPut(shell_stream, 'x');
-      int v = val*2 + 256;
-      streamPut(shell_stream, (uint8_t)(v & 0xFF));
-      streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
-    // enable led
+    if (points <= 0 || points > POINTS_COUNT) {
+      shell_printf("sweep points exceeds range "define_to_STR(POINTS_COUNT)"\r\n");
+      return;
     }
-    streamPut(shell_stream, '}');
-    setting.frequency_step = old_step;
-    return;
   }
-
   set_frequencies(start, stop, points);
 #ifdef __VNA__
   if (cal_auto_interpolate && (cal_status & CALSTAT_APPLY))
@@ -2284,6 +2262,7 @@ static const VNAShellCommand commands[] =
 #endif
 //  {"gamma"       , cmd_gamma       , 0},
     {"scan"        , cmd_scan        , CMD_WAIT_MUTEX},
+    {"scanraw"     , cmd_scanraw     , CMD_WAIT_MUTEX},
     {"sweep"       , cmd_sweep       , 0},
     {"test"        , cmd_test        , 0},
     {"touchcal"    , cmd_touchcal    , CMD_WAIT_MUTEX},
