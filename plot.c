@@ -2001,10 +2001,14 @@ static void cell_draw_marker_info(int x0, int y0)
   int t;
   int ref_marker = 0;
   int j = 0;
+  int count = 0;
+  int active=0;
   for (int i = 0; i < MARKER_COUNT; i++) {
-    if (markers[i].enabled && markers[i].mtype & M_REFERENCE) {
-      ref_marker = i;
-      break;
+    if (markers[i].enabled) {
+      if (markers[i].mtype & M_REFERENCE) {
+        ref_marker = i;
+      }
+      active++;
     }
   }
   for (int i = 0; i < MARKER_COUNT; i++) {
@@ -2087,7 +2091,7 @@ static void cell_draw_marker_info(int x0, int y0)
       trace_get_value_string(
           t, &buf[offs], (sizeof buf) - offs,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
-      if (strlen(buf)*7> WIDTH/2 )
+      if (/* strlen(buf)*7> WIDTH/2 && */active > 1)
         cell_drawstring(buf, xpos, ypos);
       else
         cell_drawstring_7x13(buf, xpos, ypos);
