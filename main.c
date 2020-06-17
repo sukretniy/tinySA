@@ -2306,9 +2306,10 @@ static const VNAShellCommand commands[] =
     { "spur", cmd_spur,    0 },
     { "load", cmd_load,    0 },
     { "selftest", cmd_selftest,    0 },
-#ifdef __ULTRA_SA__
-    { "x", cmd_x,    0 },
-#endif
+    { "correction", cmd_correction,    0 },
+ #ifdef ENABLE_THREADS_COMMAND
+     {"threads"     , cmd_threads     , 0},
+ #endif
     { "y", cmd_y,    0 },
    { "i", cmd_i,	0 },
    { "v", cmd_v,	0 },
@@ -2322,9 +2323,8 @@ static const VNAShellCommand commands[] =
    { "w", cmd_w,	0 },
    { "o", cmd_o,    0 },
    { "d", cmd_d,    0 },
-   { "correction", cmd_correction,    0 },
-#ifdef ENABLE_THREADS_COMMAND
-    {"threads"     , cmd_threads     , 0},
+#ifdef __ULTRA_SA__
+    { "x", cmd_x,    0 },
 #endif
     {NULL          , NULL            , 0}
 };
@@ -2335,7 +2335,7 @@ VNA_SHELL_FUNCTION(cmd_help)
   (void)argv;
   const VNAShellCommand *scp = commands;
   shell_printf("Commands:");
-  while (scp->sc_name != NULL) {
+  while (scp->sc_name != NULL && scp->sc_function != cmd_y) {
     shell_printf(" %s", scp->sc_name);
     scp++;
   }
