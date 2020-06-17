@@ -89,7 +89,7 @@ void reset_settings(int m)
     maxFreq = 520000000;
     set_sweep_frequency(ST_START, (uint32_t) 0);
     set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
-    setting.attenuate = 30;
+    setting.attenuate = 30.0;
     setting.sweep_time = 0;
     break;
 #ifdef __ULTRA__
@@ -189,7 +189,7 @@ void set_measurement(int m)
     for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = -150;
     setting.linearity_step = 0;
-    setting.attenuate = 29;
+    setting.attenuate = 29.0;
     setting.auto_attenuation = false;
   }
   dirty = true;
@@ -282,7 +282,7 @@ void set_IF(int f)
 void set_auto_attenuation(void)
 {
   setting.auto_attenuation = true;
-  setting.attenuate = 30;
+  setting.attenuate = 30.0;
 }
 
 void set_auto_reflevel(int v)
@@ -290,7 +290,7 @@ void set_auto_reflevel(int v)
   setting.auto_reflevel = v;
 }
 
-int get_attenuation(void)
+float get_attenuation(void)
 {
   if (setting.mode == M_GENLOW) {
     if (setting.step_atten)
@@ -308,7 +308,7 @@ void set_level(float v)
   dirty = true;
 }
 
-void set_attenuation(int a)
+void set_attenuation(float a)
 {
   if (setting.mode == M_GENLOW) {
     setting.drive = 8;              // Start at lowest drive level;
@@ -338,10 +338,10 @@ void set_attenuation(int a)
     setting.step_atten = 0;
     setting.auto_attenuation = false;
   }
-  if (a<0)
+  if (a<0.0)
       a = 0;
   if (a> 31)
-    a=31;
+    a=31.0;
 //  if (setting.attenuate == a)
 //    return;
   setting.attenuate = a;
@@ -695,7 +695,7 @@ void apply_settings(void)
   if (setting.mode == M_HIGH)
     PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
-    PE4302_Write_Byte(setting.attenuate * 2);
+    PE4302_Write_Byte((int)(setting.attenuate * 2));
   SI4432_SetReference(setting.refer);
   update_rbw();
   if (setting.frequency_step == 0.0) {
@@ -1110,7 +1110,7 @@ static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };
 
 char age[POINTS_COUNT];
 
-static int old_a = -150;
+static float old_a = -150;
 
 float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 {
@@ -1123,7 +1123,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {
-    int a = setting.level + (i / 290.0) * setting.level_sweep;
+    float a = ((int)((setting.level + (i / 290.0) * setting.level_sweep)*2.0 + 0.5)) / 2.0;
     if (a != old_a) {
       old_a = a;
       int d = 0;              // Start at lowest drive level;
@@ -1151,7 +1151,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
         set_switch_receive();
       }
       a = -a;
-      PE4302_Write_Byte(a * 2 );
+      PE4302_Write_Byte((int)(a * 2) );
     }
   }
 
@@ -1182,7 +1182,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
     if (setting.modulation == MO_AM_10Hz)
       my_microsecond_delay(20000);
     else
-      my_microsecond_delay(200);
+      my_microsecond_delay(180);
 //    chThdSleepMicroseconds(200);
 
   } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) { //FM modulation
@@ -1553,18 +1553,18 @@ again:
   }
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // Auto attenuate
-    int old_attenuate = setting.attenuate;
+    float old_attenuate = setting.attenuate;
     float actual_max_level = actual_t[max_index[0]] - setting.attenuate;
     if (actual_max_level < - 31 && setting.attenuate >= 10) {
-      setting.attenuate -= 10;
+      setting.attenuate -= 10.0;
     } else if (actual_max_level < - 26 && setting.attenuate >= 5) {
-        setting.attenuate -= 5;
+        setting.attenuate -= 5.0;
     } else if (actual_max_level > - 19 && setting.attenuate <= 20) {
-      setting.attenuate += 10;
+      setting.attenuate += 10.0;
     }
     if (old_attenuate != setting.attenuate) {
       redraw_request |= REDRAW_CAL_STATUS;
-      PE4302_Write_Byte(setting.attenuate * 2);
+      PE4302_Write_Byte((int)(setting.attenuate * 2));
       // dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
   }
@@ -1705,7 +1705,7 @@ again:
   }
   }
   if (setting.measurement == M_LINEARITY && setting.linearity_step < setting._sweep_points) {
-    setting.attenuate = 29 - setting.linearity_step * 30 / 290;
+    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / 290.0;
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
@@ -1963,7 +1963,7 @@ void draw_cal_status(void)
   ili9341_drawstring("Attn:", x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "%ddB", setting.attenuate);
+  plot_printf(buf, BLEN, "%.2FdB", setting.attenuate);
   buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
@@ -2427,7 +2427,7 @@ void test_prepare(int i)
   setting.step_atten = false;
   setting.frequency_IF = 433800000;                // Default frequency
   setting.auto_IF = true;
-  set_attenuation(0);
+  set_attenuation(0.0);
   switch(test_case[i].setup) {                // Prepare test conditions
   case TPH_SILENT:                             // No input signal
     set_mode(M_HIGH);
@@ -2561,7 +2561,7 @@ void self_test(int test)
     test_prepare(i);
     for (int j= 0; j < 32; j++ ) {
       test_prepare(i);
-      set_attenuation(j);
+      set_attenuation((float)j);
       float summed_peak_level = 0;
       for (int k=0; k<10; k++) {
         test_acquire(i);                        // Acquire test
