@@ -1869,7 +1869,7 @@ float my_round(float v)
   return v;
 }
 
-const char * const unit_string[] = { "dBm", "dBmV", "dBuV", "V", "W", "dBc", "dBmVc", "dBuVc", "Vc", "Wc" }; // unit + 5 is delta unit
+const char * const unit_string[] = { "dBm", "dBmV", "dBuV", "V", "W", "dBc", "dBc", "dBc", "Vc", "Wc" }; // unit + 5 is delta unit
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};

@@ -1194,7 +1194,7 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
   { MT_FORM | MT_SUBMENU,  0,                   "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
-  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVELSWEEP: %s",   "-70..70"},
+  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s",   "-70..70"},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600S"},
   //  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHz: %s",         NULL},
   { MT_FORM | MT_CANCEL,   0,           "MODE",                     NULL },
@@ -1793,7 +1793,15 @@ static void fetch_numeric_target(void)
     break;
   case KM_LOWOUTLEVEL:
     uistat.value = get_attenuation();           // compensation for dB offset during low output mode
-    plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
+    int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
+    if (end_level < -76)
+      end_level = -76;
+    if (end_level > -6)
+      end_level = -6;
+    if (setting.level_sweep != 0)
+      plot_printf(uistat.text, sizeof uistat.text, "%ddBm to %ddBm", ((int32_t)uistat.value), end_level);
+    else
+      plot_printf(uistat.text, sizeof uistat.text, "%ddBm", ((int32_t)uistat.value));
     break;
   case KM_DECAY:
     uistat.value = setting.decay;

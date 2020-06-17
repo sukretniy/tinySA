@@ -2023,14 +2023,16 @@ static void cell_draw_marker_info(int x0, int y0)
       j = 2;
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
       int ypos = 1 + (j/2)*(16) - y0;
-      cell_drawstring_7x13(buf, xpos, ypos);
+//      cell_drawstring_7x13(buf, xpos, ypos);
+      cell_drawstring(buf, xpos, ypos);
 
       ip = sr+ (sl - ir)/2;
       plot_printf(buf, sizeof buf, "OIP3: %4.1fdB", ip);
       j = 3;
       xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
       ypos = 1 + (j/2)*(16) - y0;
-      cell_drawstring_7x13(buf, xpos, ypos);
+//      cell_drawstring_7x13(buf, xpos, ypos);
+      cell_drawstring(buf, xpos, ypos);
       break;
     }
 #if 0
