@@ -84,6 +84,22 @@ VNA_SHELL_FUNCTION(cmd_spur)
     goto usage;
 }
 
+VNA_SHELL_FUNCTION(cmd_output)
+{
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: output on|off\r\n");
+    return;
+  }
+  if (strcmp(argv[0],"on") == 0) {
+    setting.mute = false;
+  } else if (strcmp(argv[0],"off") == 0) {
+    setting.mute = true;
+  } else
+    goto usage;
+  dirty = true;
+}
+
 VNA_SHELL_FUNCTION(cmd_load)
 {
   if (argc != 1) {
@@ -110,8 +126,8 @@ VNA_SHELL_FUNCTION(cmd_attenuate)
     set_auto_attenuation();
   } else {
     int a = my_atoi(argv[0]);
-    if (a < 0 || a>31)
-      goto usage;
+//    if (a < 0 || a>31)
+//      goto usage;
     set_attenuation(a);
   }
 }
@@ -434,6 +450,14 @@ VNA_SHELL_FUNCTION(cmd_w)
   int p = my_atoi(argv[0]);
 return;
   set_RBW(p);
+}
+
+VNA_SHELL_FUNCTION(cmd_f)
+{
+  (void)argc;
+  setting.test = 5;
+  setting.test_argument =  my_atoi(argv[0]);;
+  sweep_mode = SWEEP_SELFTEST;
 }
 
 VNA_SHELL_FUNCTION(cmd_correction)

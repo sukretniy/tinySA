@@ -311,20 +311,18 @@ void set_level(float v)
 void set_attenuation(float a)
 {
   if (setting.mode == M_GENLOW) {
-    setting.drive = 8;              // Start at lowest drive level;
     a = a + POWER_OFFSET;
-    if (a > 0) {
-      setting.drive++;
+    if (a > 6) {                // +9dB
+      setting.drive = 11;   // Maximum save drive for SAW filters.
+      a = a - 9;
+    } else if (a > 3) {         // +6dB
+      setting.drive = 10;
+      a = a - 6;
+    } else if (a > 0) {         // +3dB
+      setting.drive = 9;
       a = a - 3;
-    }
-    if (a > 0) {
-      setting.drive++;
-      a = a - 3;
-    }
-    if (a > 0) {
-      setting.drive++;
-      a = a - 3;
-    }
+    } else
+      setting.drive = 8;        // defined as 0dB level
     if (a > 0)
       a = 0;
     if( a >  - SWITCH_ATTENUATION) {
@@ -687,6 +685,7 @@ void set_mode(int m)
   if (setting.mode == m)
     return;
   reset_settings(m);
+//  dirty = true;
 }
 
 void apply_settings(void)
@@ -1123,7 +1122,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {
-    float a = ((int)((setting.level + (i / 290.0) * setting.level_sweep)*2.0 + 0.5)) / 2.0;
+    float ls=setting.level_sweep;
+    if (ls > 0)
+      ls += 0.5;
+    else
+      ls -= 0.5;
+    float a = ((int)((setting.level + (i / 290.0) * ls)*2.0)) / 2.0;
     if (a != old_a) {
       old_a = a;
       int d = 0;              // Start at lowest drive level;
@@ -1607,7 +1611,7 @@ again:
         //if (setting.scale * NGRIDY > r)
           set_scale(r / NGRIDY);
           set_reflevel(setting.scale*NGRIDY);
-          dirty = false;                        // Prevent reset of SI4432
+ //         dirty = false;                        // Prevent reset of SI4432
           redraw_request |= REDRAW_CAL_STATUS;
         }
       }
@@ -1627,7 +1631,7 @@ again:
         redraw_request |= REDRAW_CAL_STATUS;
 //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }
-      dirty = false;                        // Prevent reset of SI4432
+ //     dirty = false;                        // Prevent reset of SI4432
     }
   }
 #if 1
@@ -1953,19 +1957,20 @@ void draw_cal_status(void)
 #endif
   ili9341_drawstring(buf, x, y);
 
-  // Attenuation
-  if (setting.auto_attenuation)
-    color = DEFAULT_FG_COLOR;
-  else
-    color = BRIGHT_COLOR_GREEN;
-  ili9341_set_foreground(color);
-  y += YSTEP + YSTEP/2 ;
-  ili9341_drawstring("Attn:", x, y);
-
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%.2FdB", setting.attenuate);
-  buf[6]=0;
-  ili9341_drawstring(buf, x, y);
+  if (setting.mode == M_LOW) {
+    // Attenuation
+    if (setting.auto_attenuation)
+      color = DEFAULT_FG_COLOR;
+    else
+      color = BRIGHT_COLOR_GREEN;
+    ili9341_set_foreground(color);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("Attn:", x, y);
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%.2FdB", setting.attenuate);
+    buf[6]=0;
+    ili9341_drawstring(buf, x, y);
+  }
 
   // Average
   if (setting.average>0) {
@@ -2646,6 +2651,43 @@ void self_test(int test)
     show_test_info = FALSE;
     set_refer_output(-1);
     reset_settings(M_LOW);
+    in_selftest = false;
+  } else if (test == 5) {
+//    reset_settings(M_LOW);                      // Make sure we are in a defined state
+    in_selftest = true;
+    switch (setting.test_argument) {
+    case 0:
+      touch_draw_test();
+      area_width  = AREA_WIDTH_NORMAL;
+      area_height = AREA_HEIGHT_NORMAL;
+      break;
+    case 1:
+      reset_settings(M_LOW);
+      set_sweep_frequency(ST_START, 0);
+      set_sweep_frequency(ST_STOP, 50000000);
+      break;
+    case 2:
+      reset_settings(M_LOW);
+      set_sweep_frequency(ST_START, 300000000);
+      set_sweep_frequency(ST_STOP, 350000000);
+      break;
+    case 3:
+      reset_settings(M_HIGH);
+      set_sweep_frequency(ST_START, 300000000);
+      set_sweep_frequency(ST_STOP, 350000000);
+      break;
+    case 4:
+      reset_settings(M_GENLOW);
+      set_sweep_frequency(ST_CENTER, 20000000);
+      set_sweep_frequency(ST_SPAN, 0);
+      setting.mute = false;
+      break;
+    case 5:
+      reset_settings(M_GENHIGH);
+      set_sweep_frequency(ST_CENTER, 320000000);
+      set_sweep_frequency(ST_SPAN, 0);
+      break;
+    }
     in_selftest = false;
   }
 }

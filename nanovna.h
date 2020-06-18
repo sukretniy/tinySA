@@ -158,6 +158,8 @@ enum {
 #define SWEEP_CALIBRATE 0x04
 #define SWEEP_SELFTEST  0x08
 #define SWEEP_REMOTE    0x10
+//#define SWEEP_FACTORY    0x20
+
 
 extern int8_t sweep_mode;
 extern bool completed;

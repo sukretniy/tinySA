@@ -1708,10 +1708,10 @@ draw_all(bool flush)
     markmap_upperarea();
   if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_AREA))
     draw_all_cells(flush);
+  if (redraw_request & (REDRAW_CAL_STATUS | REDRAW_FREQUENCY) )
+    draw_cal_status();                      // calculates the actual sweep time, must be before draw_frequencies
   if (redraw_request & REDRAW_FREQUENCY)
     draw_frequencies();
-  if (redraw_request & REDRAW_CAL_STATUS)
-    draw_cal_status();
   if (redraw_request & REDRAW_BATTERY)
     draw_battery_status();
   redraw_request = 0;

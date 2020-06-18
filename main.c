@@ -2305,6 +2305,7 @@ static const VNAShellCommand commands[] =
     { "mode", cmd_mode,    0 },
     { "spur", cmd_spur,    0 },
     { "load", cmd_load,    0 },
+    { "output", cmd_output,    0 },
     { "selftest", cmd_selftest,    0 },
     { "correction", cmd_correction,    0 },
  #ifdef ENABLE_THREADS_COMMAND
@@ -2323,6 +2324,7 @@ static const VNAShellCommand commands[] =
    { "w", cmd_w,	0 },
    { "o", cmd_o,    0 },
    { "d", cmd_d,    0 },
+   { "f", cmd_f,    0 },
 #ifdef __ULTRA_SA__
     { "x", cmd_x,    0 },
 #endif
@@ -2687,8 +2689,8 @@ int main(void)
   sweep(true);
 
   set_refer_output(-1);
-  ui_mode_menu();       // Show menu when autostarting mode
-
+//  ui_mode_menu();       // Show menu when autostarting mode
+  ui_mode_normal();
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
