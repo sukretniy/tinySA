@@ -740,6 +740,9 @@ int current_menu_is_form(void);
 void menu_mode_cb(int, uint8_t);
 void ui_mode_normal(void);
 void ui_mode_menu(void);
+void menu_push_lowoutput(void);
+void menu_push_highoutput(void);
+void menu_move_top(void);
 
 // Irq operation process set
 #define OP_NONE       0x00

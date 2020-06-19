@@ -1148,12 +1148,15 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
       SI4432_Drive(d);
       if (a > 0)
         a = 0;
+
       if( a >  - SWITCH_ATTENUATION) {
         set_switch_transmit();
       } else {
         a = a + SWITCH_ATTENUATION;
         set_switch_receive();
       }
+      if (a < -31)
+        a = -31;
       a = -a;
       PE4302_Write_Byte((int)(a * 2) );
     }

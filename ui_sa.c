@@ -1933,3 +1933,11 @@ set_numeric_value(void)
     break;
   }
 }
+
+void
+menu_move_top(void)
+{
+  while (menu_current_level > 0)
+    menu_move_back();
+}
+

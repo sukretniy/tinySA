@@ -129,7 +129,6 @@ static void erase_menu_buttons(void);
 static void ui_process_keypad(void);
 static void ui_process_numeric(void);
 static void choose_active_marker(void);
-
 static void menu_move_back(void);
 static void menu_push_submenu(const menuitem_t *submenu);
 //static const menuitem_t menu_marker_type[];
@@ -1191,6 +1190,18 @@ menu_push_submenu(const menuitem_t *submenu)
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
   draw_menu();
+}
+
+void
+menu_push_lowoutput(void)
+{
+  menu_push_submenu(menu_lowoutputmode);
+}
+
+void
+menu_push_highoutput(void)
+{
+  menu_push_submenu(menu_highoutputmode);
 }
 
 int current_menu_is_form(void)

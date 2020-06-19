@@ -1,5 +1,4 @@
-/* Copyright (c) 2020, Erik Kaashoek erik@kaashoek.com
- * All rights reserved.
+/* All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,19 +36,24 @@ VNA_SHELL_FUNCTION(cmd_mode)
   int io = get_str_index(argv[1], cmd_in_out);
   if (lh<0 || io<0)
     goto usage;
+  menu_move_top();
   switch(lh+io*2)
   {
   case 0:
     set_mode(M_LOW);
+    ui_mode_normal();
     break;
   case 1:
     set_mode(M_HIGH);
+    ui_mode_normal();
     break;
   case 2:
     set_mode(M_GENLOW);
+    menu_push_lowoutput();
     break;
   case 3:
     set_mode(M_GENHIGH);
+    menu_push_highoutput();
     break;
   }
 }
