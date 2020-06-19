@@ -38,8 +38,22 @@ int const reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 20000
 
 int in_selftest = false;
 
+const char *dummy = "this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
+this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available"
+;
+
 void reset_settings(int m)
 {
+  strcpy((char *)spi_buffer, dummy);
   setting.mode = m;
   setting.unit_scale_index = 0;
   setting.unit_scale = 1;
@@ -301,10 +315,21 @@ float get_attenuation(void)
   return(setting.attenuate);
 }
 
+static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
+
 void set_level(float v)
 {
-  setting.level = v;
-  set_attenuation((int)v);
+  if (setting.mode == M_GENHIGH) {
+    int d = 0;
+    while (drive_dBm[d] < v - 1 && d < 16)
+      d++;
+    if (d == 8 && v < -12)  // Round towards closest level
+      d = 7;
+    set_drive(d);
+  } else {
+    setting.level = v;
+    set_attenuation((int)v);
+  }
   dirty = true;
 }
 
@@ -424,8 +449,10 @@ void set_RBW(int v)
 }
 
 #ifdef __SPUR__
-void SetSpur(int v)
+void set_spur(int v)
 {
+  if (setting.mode!=M_LOW)
+    return;
   setting.spur = v;
   if (setting.spur && actual_rbw > 360)
     set_RBW(300);

@@ -452,9 +452,15 @@ calculate:
     c = *p++ - '0';
     // c = to_upper(*p) - 'A' + 10
     if (c >= 'A' - '0') c = (c&(~0x20)) - ('A' - '0') + 10;
-    if (c >= radix) return value;
+    if (c >= radix) break;
     value = value * radix + c;
   }
+  switch (*(--p)) {
+  case 'k': value *= 1000; break;
+  case 'M': value *= 1000000; break;
+  case 'G': value *= 1000000000; break;
+  }
+  return value;
 }
 
 double
@@ -2277,6 +2283,7 @@ static const VNAShellCommand commands[] =
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX},
 #endif
     {"trace"       , cmd_trace       , 0},
+    {"trigger"     , cmd_trigger     , 0},
     {"marker"      , cmd_marker      , 0},
 #ifdef __VNA__
     {"edelay"      , cmd_edelay      , 0},
@@ -2562,7 +2569,7 @@ int mySerialReadline(unsigned char *buf, int len)
 // Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
 // Profile stack usage (enable threads command by def ENABLE_THREADS_COMMAND) show:
 // Stack maximum usage = 472 bytes (need test more and run all commands), free stack = 40 bytes
-//
+
 int main(void)
 {
   halInit();

@@ -138,7 +138,10 @@ VNA_SHELL_FUNCTION(cmd_attenuate)
 VNA_SHELL_FUNCTION(cmd_level)
 {
   if (argc != 1) {
-    shell_printf("usage: level -76..-6\r\n");
+    if (setting.mode==M_GENLOW)
+      shell_printf("usage: level -76..-6\r\n");
+    if (setting.mode==M_GENHIGH)
+      shell_printf("usage: level -38..13\r\n");
     return;
   }
   float f = my_atof(argv[0]);
@@ -219,6 +222,37 @@ VNA_SHELL_FUNCTION(cmd_if)
     setting.auto_IF = false;
     set_IF(a);
   }
+}
+
+
+VNA_SHELL_FUNCTION(cmd_trigger)
+{
+  if (argc == 0)
+    goto usage;
+
+  if (( '0' <= argv[0][0] && argv[0][0] <= '9') || argv[0][0] == '-') {
+    float t = my_atof(argv[0]);
+    if (setting.trigger == T_AUTO )
+      set_trigger(T_NORMAL);
+    set_trigger_level(t);
+    goto update;
+  }
+  static const char cmd_trigger_list[] = "auto|normal|single";
+  if (argc == 1) {
+    int type = get_str_index(argv[0], cmd_trigger_list);
+    if (type >= 0) {
+      set_trigger(type);
+      goto update;
+    }
+    goto usage;
+  }
+update:
+  redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+  completed = true;
+  return;
+usage:
+  shell_printf("trigger {value}\r\n"\
+               "trigger {%s}\r\n" , cmd_trigger_list);
 }
 
 
@@ -339,8 +373,9 @@ VNA_SHELL_FUNCTION(cmd_d)
 {
   (void) argc;
   (void) argv;
-//  int32_t a = my_atoi(argv[0]);
-//  setting.drive = a;
+  int32_t a = my_atoi(argv[0]);
+  setting.drive=a;
+  dirty = true;
 }
 
 

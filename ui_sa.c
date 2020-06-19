@@ -742,9 +742,9 @@ static void menu_spur_cb(int item, uint8_t data)
   (void)data;
   (void)item;
   if (setting.spur)
-    SetSpur(0);
+    set_spur(0);
   else
-    SetSpur(1); // must be 0 or 1 !!!!
+    set_spur(1); // must be 0 or 1 !!!!
 //  menu_move_back();
   ui_mode_normal();
   redraw_request |= REDRAW_CAL_STATUS;
