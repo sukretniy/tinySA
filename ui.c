@@ -123,7 +123,7 @@ void ui_mode_normal(void);
 //static void ui_mode_menu(void);
 static void ui_mode_numeric(int _keypad_mode);
 static void ui_mode_keypad(int _keypad_mode);
-static void draw_menu(void);
+// static void draw_menu(void);
 static void leave_ui_mode(void);
 static void erase_menu_buttons(void);
 static void ui_process_keypad(void);
@@ -1721,7 +1721,7 @@ menu_apply_touch(void)
   ui_mode_normal();
 }
 
-static void
+void
 draw_menu(void)
 {
   draw_menu_buttons(menu_stack[menu_current_level]);

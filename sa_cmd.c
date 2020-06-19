@@ -1,5 +1,4 @@
-/* All rights reserved.
- *
+/*
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
@@ -122,7 +121,7 @@ VNA_SHELL_FUNCTION(cmd_load)
 VNA_SHELL_FUNCTION(cmd_attenuate)
 {
   if (argc != 1) {
-  usage:
+//  usage:
     shell_printf("usage: attenuate 0..31|auto\r\n");
     return;
   }
@@ -146,12 +145,23 @@ VNA_SHELL_FUNCTION(cmd_level)
   set_level(f);
 }
 
-
-
-VNA_SHELL_FUNCTION(cmd_levelsweep)
+VNA_SHELL_FUNCTION(cmd_sweeptime)
 {
   if (argc != 1) {
-    shell_printf("usage: levelsweep -76..+76\r\n");
+    shell_printf("usage: sweeptime 0.03..600\r\n");
+    return;
+  }
+  float f = my_atof(argv[0]);
+  set_sweep_time(f*1000.0);
+}
+
+
+
+
+VNA_SHELL_FUNCTION(cmd_levelchange)
+{
+  if (argc != 1) {
+    shell_printf("usage: levelchange -70..+70\r\n");
     return;
   }
   float f = my_atof(argv[0]);

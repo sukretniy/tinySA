@@ -156,6 +156,8 @@ static THD_FUNCTION(Thread1, arg)
       shell_function(shell_nargs - 1, &shell_args[1]);
       shell_function = 0;
       osalThreadSleepMilliseconds(10);
+      if (dirty && MODE_OUTPUT(setting.mode))
+        draw_menu();    // update screen if in output mode and dirty
       continue;
     }
     // Process UI inputs
@@ -2298,8 +2300,9 @@ static const VNAShellCommand commands[] =
     { "if", cmd_if,    0 },
     { "attenuate", cmd_attenuate,    0 },
     { "level", cmd_level,    0 },
+    { "sweeptime", cmd_sweeptime,    0 },
     { "leveloffset", cmd_leveloffset,    0 },
-    { "levelsweep", cmd_levelsweep,    0 },
+    { "levelchange", cmd_levelchange,    0 },
     { "modulation", cmd_modulation,    0 },
     { "rbw", cmd_rbw,    0 },
     { "mode", cmd_mode,    0 },
@@ -2428,6 +2431,10 @@ static void VNAShell_executeLine(char *line)
         } while (shell_function);
       } else {
         scp->sc_function(shell_nargs - 1, &shell_args[1]);
+        if (dirty && MODE_OUTPUT(setting.mode)) {
+          operation_requested = true;   // ensure output is updated
+          draw_menu();
+        }
       }
       return;
     }
