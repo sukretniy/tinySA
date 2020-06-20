@@ -38,6 +38,7 @@ int const reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 20000
 
 int in_selftest = false;
 
+#if 0
 const char *dummy = "this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
 this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
 this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
@@ -50,10 +51,11 @@ this is a very long string only used to fill memory so I know when the memory is
 this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
 this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available"
 ;
+#endif
 
 void reset_settings(int m)
 {
-  strcpy((char *)spi_buffer, dummy);
+//  strcpy((char *)spi_buffer, dummy);
   setting.mode = m;
   setting.unit_scale_index = 0;
   setting.unit_scale = 1;
@@ -164,7 +166,7 @@ float calc_min_sweep_time(void)         // Calculate minimum sweep time in mS
   else {
     if (FREQ_IS_CW()) {
       a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
-      if (setting.repeat != 1 || setting.sweep_time >= 1000)
+      if (setting.repeat != 1 || setting.sweep_time >= 1000 || setting.spur != 0)
         a = 15.0 / 290.0;       // time per step in CW mode with repeat
     }
     t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME/1000.0));
@@ -1360,7 +1362,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 
  skip_LO_setting:
 #ifdef __FAST_SWEEP__
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && actualStepDelay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur == 0 && actualStepDelay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
@@ -1397,7 +1399,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
       if (subRSSI < setting.trigger_level)
         goto wait;
 #ifdef __FAST_SWEEP__
-        if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */ && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
+        if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
            SI4432_Fill(MODE_SELECT(setting.mode), 1);
         }
 #endif

@@ -195,7 +195,7 @@ void set_sweep_time(float);
 //extern int setting.rbw;
 #ifdef __SPUR__
 //extern int setting.spur;
-void SetSpur(int v);
+void set_spur(int v);
 #endif
 void set_average(int);
 int GetAverage(void);

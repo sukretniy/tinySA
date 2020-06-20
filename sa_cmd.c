@@ -80,11 +80,12 @@ VNA_SHELL_FUNCTION(cmd_spur)
     return;
   }
   if (strcmp(argv[0],"on") == 0) {
-    setting.spur = 1;
+    set_spur(1);
   } else if (strcmp(argv[0],"off") == 0) {
-    setting.spur = 0;
+    set_spur(0);
   } else
     goto usage;
+  redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
 }
 
 VNA_SHELL_FUNCTION(cmd_output)
@@ -133,6 +134,7 @@ VNA_SHELL_FUNCTION(cmd_attenuate)
 //      goto usage;
     set_attenuation(a);
   }
+  redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
 }
 
 VNA_SHELL_FUNCTION(cmd_level)
@@ -234,7 +236,7 @@ VNA_SHELL_FUNCTION(cmd_trigger)
     float t = my_atof(argv[0]);
     if (setting.trigger == T_AUTO )
       set_trigger(T_NORMAL);
-    set_trigger_level(t);
+    set_trigger_level(to_dBm(t));
     goto update;
   }
   static const char cmd_trigger_list[] = "auto|normal|single";

@@ -156,8 +156,12 @@ static THD_FUNCTION(Thread1, arg)
       shell_function(shell_nargs - 1, &shell_args[1]);
       shell_function = 0;
       osalThreadSleepMilliseconds(10);
-      if (dirty && MODE_OUTPUT(setting.mode))
-        draw_menu();    // update screen if in output mode and dirty
+      if (dirty) {
+        if (MODE_OUTPUT(setting.mode))
+          draw_menu();    // update screen if in output mode and dirty
+        else
+          redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA | REDRAW_FREQUENCY;
+      }
       continue;
     }
     // Process UI inputs
@@ -2438,9 +2442,12 @@ static void VNAShell_executeLine(char *line)
         } while (shell_function);
       } else {
         scp->sc_function(shell_nargs - 1, &shell_args[1]);
-        if (dirty && MODE_OUTPUT(setting.mode)) {
+        if (dirty) {
           operation_requested = true;   // ensure output is updated
-          draw_menu();
+          if (MODE_OUTPUT(setting.mode))
+            draw_menu();    // update screen if in output mode and dirty
+          else
+            redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA | REDRAW_FREQUENCY;
         }
       }
       return;

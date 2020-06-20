@@ -2154,7 +2154,11 @@ draw_frequencies(void)
 #endif
     if (FREQ_IS_CW()) {
       plot_printf(buf1, sizeof(buf1), " CW %qHz", get_sweep_frequency(ST_CW));
-      float t = setting.actual_sweep_time; // in mS
+
+      float t = calc_min_sweep_time();  // Calc minimum sweep time
+      if (t < setting.sweep_time)
+        t = setting.sweep_time;
+      setting.actual_sweep_time = t;
           ; // in mS
       if (t>=1000)
           plot_printf(buf2, sizeof(buf2), " TIME %.2fS",t/1000.0);
