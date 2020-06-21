@@ -153,6 +153,7 @@ static THD_FUNCTION(Thread1, arg)
     }
     // Run Shell command in sweep thread
     if (shell_function) {
+      operation_requested = false; // otherwise commands  will be aborted
       shell_function(shell_nargs - 1, &shell_args[1]);
       shell_function = 0;
       osalThreadSleepMilliseconds(10);
@@ -2441,6 +2442,7 @@ static void VNAShell_executeLine(char *line)
           osalThreadSleepMilliseconds(100);
         } while (shell_function);
       } else {
+        operation_requested = false; // otherwise commands  will be aborted
         scp->sc_function(shell_nargs - 1, &shell_args[1]);
         if (dirty) {
           operation_requested = true;   // ensure output is updated

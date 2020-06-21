@@ -127,12 +127,14 @@ VNA_SHELL_FUNCTION(cmd_attenuate)
     return;
   }
   if (strcmp(argv[0],"auto") == 0) {
-    set_auto_attenuation();
+    if (!setting.auto_attenuation)
+      set_auto_attenuation();
   } else {
     int a = my_atoi(argv[0]);
 //    if (a < 0 || a>31)
 //      goto usage;
-    set_attenuation(a);
+    if (setting.attenuate != a)
+      set_attenuation(a);
   }
   redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
 }
@@ -202,13 +204,15 @@ VNA_SHELL_FUNCTION(cmd_rbw)
     return;
   }
   if (strcmp(argv[0],"auto") == 0 || strcmp(argv[0],"0") == 0) {
-    set_RBW(0);
+    if (setting.rbw != 0)
+      set_RBW(0);
   } else {
     int a = my_atoi(argv[0]);
     if (a < 2 || a>600)
       goto usage;
-    set_RBW(a);
-  }
+    if (setting.rbw != a)
+      set_RBW(a);
+ }
 }
 
 VNA_SHELL_FUNCTION(cmd_if)
@@ -562,7 +566,14 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   float f_step = (stop-start)/ points;
   setting.frequency_step = (int32_t)f_step;
   streamPut(shell_stream, '{');
-  dirty = true;
+  static  uint32_t old_start=0, old_stop=0, old_points=0;
+  if (old_start != start || old_stop != stop || old_points != points) {
+    dirty = true;
+    old_start = start;
+    old_stop = stop;
+    old_points = points;
+  }
+  operation_requested = false;
   for (uint32_t i = 0; i<points; i++) {
     if (operation_requested)
       break;

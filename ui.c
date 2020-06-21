@@ -1265,6 +1265,12 @@ menu_invoke(int item)
         redraw_frame();         // Remove form numbers
       }
       kp_help_text = (char *)menu->reference;
+      if (menu->data <= KM_CW) {      // One of the frequency input keypads
+        if (MODE_LOW(setting.mode))
+          kp_help_text = "0..350MHz";
+        else
+          kp_help_text = "240..960Mhz";
+      }
       ui_mode_keypad(menu->data);
       ui_process_keypad();
     }

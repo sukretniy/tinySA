@@ -290,6 +290,8 @@ void set_10mhz(int f)
 }
 
 int SI4432_frequency_changed = false;
+static int old_freq_band[2] = {-1,-1};
+static int written[2]= {0,0};
 
 void SI4432_Set_Frequency ( long Freq ) {
   int hbsel;
@@ -304,13 +306,16 @@ void SI4432_Set_Frequency ( long Freq ) {
   long N = Freq / setting_frequency_10mhz;
   Carrier = ( 4 * ( Freq - N * setting_frequency_10mhz )) / 625;
   int Freq_Band = ( N - 24 ) | ( hbsel << 5 ) | ( sbsel << 6 );
-#if 0
-  SI4432_Write_Byte ( 0x75, Freq_Band );
-  SI4432_Write_Byte ( 0x76, (Carrier>>8) & 0xFF );
-  SI4432_Write_Byte ( 0x77, Carrier & 0xFF  );
-#else
-  SI4432_Write_3_Byte ( 0x75, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF  );
-#endif
+//  if (old_freq_band[SI4432_Sel] == Freq_Band) {
+//    if (written[SI4432_Sel]++ < 6)
+//      SI4432_Write_Byte ( 0x75, Freq_Band );
+//    SI4432_Write_Byte ( 0x76, (Carrier>>8) & 0xFF );
+//    SI4432_Write_Byte ( 0x77, Carrier & 0xFF  );
+//  } else {
+    SI4432_Write_3_Byte ( 0x75, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF);
+//    old_freq_band[SI4432_Sel] = Freq_Band;
+//    written[SI4432_Sel] = 0;
+//  }
   SI4432_frequency_changed = true;
 }
 
