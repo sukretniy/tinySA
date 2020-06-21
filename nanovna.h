@@ -268,7 +268,7 @@ extern void tlv320aic3204_select(int channel);
  */
 
 // Offset of plot area
-#define OFFSETX 29
+#define OFFSETX 30
 #define OFFSETY 0
 
 #ifdef __SCROLL__
@@ -281,7 +281,7 @@ extern int _height;
 #define HEIGHT 230
 // WIDTH better be n*(POINTS_COUNT-1)
 #endif
-#define WIDTH  290
+#define WIDTH  (320 - 1 - OFFSETX)
 
 #define CELLWIDTH  (32)
 #define CELLHEIGHT (32)

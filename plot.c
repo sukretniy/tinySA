@@ -1741,9 +1741,9 @@ request_to_draw_cells_behind_menu(void)
 {
   // Values Hardcoded from ui.c
   if (current_menu_is_form())
-    invalidate_rect(25, 0, LCD_WIDTH-1, LCD_HEIGHT-1);
+    invalidate_rect(0, 0, LCD_WIDTH-1, LCD_HEIGHT-1);
   else
-    invalidate_rect(LCD_WIDTH-60 - 25, 0, LCD_WIDTH-1, LCD_HEIGHT-1);
+    invalidate_rect(AREA_WIDTH_NORMAL-MENU_BUTTON_WIDTH, 0, LCD_WIDTH-1, LCD_HEIGHT-1);
   redraw_request |= REDRAW_CELLS;
 }
 
@@ -1751,7 +1751,7 @@ void
 request_to_draw_cells_behind_numeric_input(void)
 {
   // Values Hardcoded from ui.c
-  invalidate_rect(0, LCD_HEIGHT-32, LCD_WIDTH-1, LCD_HEIGHT-1);
+  invalidate_rect(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH-1, LCD_HEIGHT-1);
   redraw_request |= REDRAW_CELLS;
 }
 
