@@ -312,11 +312,18 @@ extern int16_t area_height;
 
 // font
 extern const uint8_t x5x7_bits [];
-extern const uint16_t x7x13b_bits [];
+extern const uint8_t x7x11b_bits [];
 #define FONT_GET_DATA(ch)   (&x5x7_bits[ch*7])
 #define FONT_GET_WIDTH(ch)  (8-(x5x7_bits[ch*7]&7))
 #define FONT_MAX_WIDTH      7
 #define FONT_GET_HEIGHT     7
+
+#define bFONT_GET_DATA(ch)   (&x7x11b_bits[ch*11])
+#define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[ch*11]&7))
+#define bFONT_MAX_WIDTH       8
+#define bFONT_WIDTH           7
+#define bFONT_GET_HEIGHT     11
+#define bFONT_STR_HEIGHT     11
 
 extern const uint16_t numfont16x22[];
 #define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*22])

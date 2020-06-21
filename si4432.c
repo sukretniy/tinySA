@@ -290,8 +290,8 @@ void set_10mhz(int f)
 }
 
 int SI4432_frequency_changed = false;
-static int old_freq_band[2] = {-1,-1};
-static int written[2]= {0,0};
+//static int old_freq_band[2] = {-1,-1};
+//static int written[2]= {0,0};
 
 void SI4432_Set_Frequency ( long Freq ) {
   int hbsel;

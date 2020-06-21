@@ -1833,21 +1833,22 @@ cell_drawstring_size(char *str, int x, int y, int size)
 }
 
 static int
-cell_drawchar_7x13(uint8_t ch, int x, int y)
+cell_draw_bchar(uint8_t ch, int x, int y)
 {
-  uint16_t bits;
+  uint8_t bits;
   int c, r, ch_size;
-  ch_size = 7;
+  const uint8_t *char_buf = bFONT_GET_DATA(ch);
+  ch_size = bFONT_GET_WIDTH(ch);
   //  if (y <= -FONT_GET_HEIGHT || y >= CELLHEIGHT || x <= -ch_size || x >= CELLWIDTH)
   //    return ch_size;
   if (x <= -ch_size)
     return ch_size;
-  for (c = 0; c < 13; c++) {
-    bits = x7x13b_bits[(ch * 13) + c];
+  for (c = 0; c < bFONT_GET_HEIGHT; c++) {
+    bits = *char_buf++;
     if ((y + c) < 0 || (y + c) >= CELLHEIGHT)
       continue;
     for (r = 0; r < ch_size; r++) {
-      if ((x+r) >= 0 && (x+r) < CELLWIDTH && (0x8000 & bits))
+      if ((x+r) >= 0 && (x+r) < CELLWIDTH && (0x80 & bits))
         cell_buffer[(y+c)*CELLWIDTH + (x+r)] = foreground_color;
       bits <<= 1;
     }
@@ -1859,12 +1860,12 @@ cell_drawchar_7x13(uint8_t ch, int x, int y)
 void
 cell_drawstring_7x13(char *str, int x, int y)
 {
-  if (y <= -13 || y >= CELLHEIGHT)
+  if (y <= -bFONT_GET_HEIGHT || y >= CELLHEIGHT)
     return;
   while (*str) {
     if (x >= CELLWIDTH)
       return;
-    x += cell_drawchar_7x13(*str++, x, y);
+    x += cell_draw_bchar(*str++, x, y);
   }
 }
 
@@ -2001,7 +2002,7 @@ static void cell_draw_marker_info(int x0, int y0)
   int t;
   int ref_marker = 0;
   int j = 0;
-  int count = 0;
+//  int count = 0;
   int active=0;
   for (int i = 0; i < MARKER_COUNT; i++) {
     if (markers[i].enabled) {
