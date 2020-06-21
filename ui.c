@@ -1117,14 +1117,6 @@ const menuitem_t menu_top[] = {
 };
 #endif
 
-
-#define MENU_BUTTON_WIDTH  60
-#define MENU_BUTTON_START  (LCD_WIDTH-MENU_BUTTON_WIDTH)
-#define MENU_FORM_WIDTH    295
-#define MENU_FORM_START    (LCD_WIDTH - MENU_FORM_WIDTH)
-#define MENU_BUTTON_HEIGHT 30
-#define NUM_INPUT_HEIGHT   30
-
 #include "ui_sa.c"
 
 #define MENU_STACK_DEPTH_MAX 5
@@ -1282,7 +1274,7 @@ menu_invoke(int item)
 #define KP_WIDTH     48
 #define KP_HEIGHT    48
 // Key x, y position (0 - 15) on screen
-#define KP_GET_X(posx) ((posx)*KP_WIDTH + (LCD_WIDTH-64-KP_WIDTH*4))
+#define KP_GET_X(posx) ((posx)*KP_WIDTH + (LCD_WIDTH-MENU_BUTTON_WIDTH-5-KP_WIDTH*4))
 #define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
 #ifdef __VNA__
 // Key names
@@ -1438,7 +1430,7 @@ draw_numeric_area_frame(void)
     ili9341_drawstring_7x13(l1, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT+1);
     ili9341_drawstring_7x13(l2, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT/2 + 1);
   } else
-    ili9341_drawstring_7x13(keypad_mode_label[keypad_mode], 10, LCD_HEIGHT-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+    ili9341_drawstring_7x13(keypad_mode_label[keypad_mode], 10, LCD_HEIGHT-(bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   //ili9341_drawfont(KP_KEYPAD, 300, 216);
 }
 
@@ -1489,7 +1481,7 @@ draw_numeric_input(const char *buf)
     ili9341_drawstring_7x13(l1, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-NUM_INPUT_HEIGHT+1);
     ili9341_drawstring_7x13(l2, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-NUM_INPUT_HEIGHT/2 + 1);
   } else
-    ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(FONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+    ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   }
 }
 
@@ -1592,7 +1584,7 @@ draw_menu_buttons(const menuitem_t *menu)
   int i = 0;
   char text[30];
   int y = 0;
-  for (i = 0; i < 8; i++) {
+  for (i = 0; i < MENU_BUTTON_MAX; i++) {
     const char *l1, *l2;
     if ((menu[i].type & MT_LOW) && !MODE_LOW(setting.mode))              //not applicable to mode
       continue;
@@ -1618,9 +1610,9 @@ draw_menu_buttons(const menuitem_t *menu)
     int active_button_start;
     menu_item_modify_attribute(menu, i, &fg, &bg);      // before plot_printf to create status text
     if (menu[i].type & MT_FORM) {
-      active_button_start = LCD_WIDTH - MENU_FORM_WIDTH;
-      active_button_width = MENU_FORM_WIDTH - 30;       // Shorten at the right
-      if (MT_MASK(menu[i].type) == MT_KEYPAD) {         // Only keypad retrieves value
+      active_button_width = MENU_FORM_WIDTH;                  // Shorten at the right
+      active_button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2;  // At center of screen
+      if (MT_MASK(menu[i].type) == MT_KEYPAD) {               // Only keypad retrieves value
         keypad_mode = menu[i].data;
         fetch_numeric_target();
       }
@@ -1630,7 +1622,7 @@ draw_menu_buttons(const menuitem_t *menu)
       active_button_width = MENU_BUTTON_WIDTH;
       active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
     }
-    ili9341_fill(active_button_start, y, active_button_width, MENU_BUTTON_HEIGHT-4, old_bg);    // Set button to unmodified background color
+    ili9341_fill(active_button_start, y, active_button_width, MENU_BUTTON_HEIGHT-2, old_bg);    // Set button to unmodified background color
 #if 0
     // 3D button accent
     int bw = LCD_WIDTH;
@@ -1646,35 +1638,30 @@ draw_menu_buttons(const menuitem_t *menu)
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
     if (menu[i].type & MT_FORM) {
-      ili9341_fill(active_button_start+2, y+2, active_button_width-4, FONT_GET_HEIGHT*2+8, bg);
-      ili9341_drawstring_size(text, active_button_start+6, y+6, 2);
+      ili9341_fill(active_button_start+2, y+2, active_button_width-4, MENU_BUTTON_HEIGHT-4-2, bg);
+      ili9341_drawstring_size(text, active_button_start+6, y+(MENU_BUTTON_HEIGHT-2-2*FONT_GET_HEIGHT)/2, 2);
 #ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
-        blit16BitWidthBitmap(LCD_HEIGHT,y+6,16,16,&left_icons[((menu[i].data >>4)&0xf)*16]);
-        blit16BitWidthBitmap(256,y+6,16,16,&right_icons[((menu[i].data >>0)&0xf)*16]);
+        blit16BitWidthBitmap(active_button_start+MENU_FORM_WIDTH-40   ,y+(MENU_BUTTON_HEIGHT-2-16)/2,16,16,& left_icons[((menu[i].data >>4)&0xf)*16]);
+        blit16BitWidthBitmap(active_button_start+MENU_FORM_WIDTH-40+16,y+(MENU_BUTTON_HEIGHT-2-16)/2,16,16,&right_icons[((menu[i].data >>0)&0xf)*16]);
       }
 #endif
     } else {
+      ili9341_fill(active_button_start+1, y+1, active_button_width-2, (MENU_BUTTON_HEIGHT-2)-2, bg);
       if (menu_is_multiline(menu[i].label, &l1, &l2)) {
 #define BIG_BUTTON_FONT 1
 #ifdef BIG_BUTTON_FONT
-#undef FONT_HEIGHT
-#define FONT_HEIGHT 13
-        ili9341_fill(active_button_start+1, y+1, active_button_width-2, 13+13 -2, bg);
-        ili9341_drawstring_7x13(l1, active_button_start+2, y+1);
-        ili9341_drawstring_7x13(l2, active_button_start+2, y+1+13-1);
+        ili9341_drawstring_7x13(l1, active_button_start+5, y+(MENU_BUTTON_HEIGHT-2)/2-bFONT_GET_HEIGHT);
+        ili9341_drawstring_7x13(l2, active_button_start+5, y+(MENU_BUTTON_HEIGHT-2)/2);
 #else
-        ili9341_fill(active_button_start+3, y+5, active_button_width-6, 2+FONT_GET_HEIGHT+1+FONT_GET_HEIGHT+2, bg);
-        ili9341_drawstring(l1, active_button_start+5, y+7);
-        ili9341_drawstring(l2, active_button_start+5, y+7+FONT_GET_HEIGHT+1);
+        ili9341_drawstring(l1, active_button_start+5, y+(MENU_BUTTON_HEIGHT-2)/2-FONT_GET_HEIGHT);
+        ili9341_drawstring(l2, active_button_start+5, y+(MENU_BUTTON_HEIGHT-2)/2);
 #endif
       } else {
 #ifdef BIG_BUTTON_FONT
-        ili9341_fill(active_button_start+1, y+1, active_button_width-2, 13+13 -2, bg);
-        ili9341_drawstring_7x13(menu[i].label, active_button_start+2, y+6);
+        ili9341_drawstring_7x13(menu[i].label, active_button_start+5, y+(MENU_BUTTON_HEIGHT-2-bFONT_GET_HEIGHT)/2);
 #else
-        ili9341_fill(active_button_start+3, y+8, active_button_width-6, 2+FONT_GET_HEIGHT+2, bg);
-        ili9341_drawstring(menu[i].label, active_button_start+5, y+10);
+        ili9341_drawstring(menu[i].label, active_button_start+5, y+(MENU_BUTTON_HEIGHT-2-FONT_GET_HEIGHT)/2);
 #endif
       }
     }
@@ -1700,7 +1687,7 @@ menu_apply_touch(void)
   int i;
   int y = 0;
   touch_position(&touch_x, &touch_y);
-  for (i = 0; i < 8; i++) {
+  for (i = 0; i < MENU_BUTTON_MAX; i++) {
     if ((menu[i].type & MT_LOW) && !MODE_LOW(setting.mode))              //not applicable to mode
       continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
@@ -1709,13 +1696,13 @@ menu_apply_touch(void)
       y += MENU_BUTTON_HEIGHT;
       continue;
     }
-    int active_button_width;
+    int active_button_start;
     if (menu[i].type & MT_FORM)
-      active_button_width = MENU_FORM_WIDTH;
+      active_button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2;
     else
-      active_button_width = MENU_BUTTON_WIDTH;
+      active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
 
-    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT && LCD_WIDTH-active_button_width < touch_x) {
+    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT && active_button_start < touch_x) {
       menu_select_touch(i);
       return;
     }
@@ -1738,9 +1725,9 @@ erase_menu_buttons(void)
 {
 //  ili9341_fill(area_width, 0, LCD_WIDTH - area_width, area_height, DEFAULT_BG_COLOR);
   if (current_menu_is_form())
-    ili9341_fill(5*5, 0,LCD_WIDTH-5*5, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+    ili9341_fill(5*5, 0,LCD_WIDTH-5*5, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
   else
-    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*8, DEFAULT_BG_COLOR);
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
   draw_frequencies();
 }
 
@@ -2626,8 +2613,9 @@ static const EXTConfig extcfg = {
   }
 };
 
+// Used for touch check interval
 static const GPTConfig gpt3cfg = {
-  1000,    /* 1kHz timer clock.*/
+  20,     /* 20Hz timer clock.*/
   NULL,   /* Timer callback.*/
   0x0020, /* CR2:MMS=02 to output TRGO */
   0

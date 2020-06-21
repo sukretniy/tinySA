@@ -1189,7 +1189,7 @@ const menuitem_t  menu_modulation[] = {
 };
 
 const menuitem_t  menu_lowoutputmode[] = {
-  { MT_FORM | MT_CALLBACK, 0,                   "LOW OUTPUT              %s",       menu_outputmode_cb},
+  { MT_FORM | MT_CALLBACK, 0,                   "LOW OUTPUT            %s",       menu_outputmode_cb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           "FREQ: %s",         "10kHz..350MHz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
   { MT_FORM | MT_SUBMENU,  0,                   "MODULATION: %s",   menu_modulation},
@@ -1202,7 +1202,7 @@ const menuitem_t  menu_lowoutputmode[] = {
 };
 
 const menuitem_t  menu_highoutputmode[] = {
-  { MT_FORM | MT_CALLBACK,  0,          "HIGH OUTPUT             %s",      menu_outputmode_cb},
+  { MT_FORM | MT_CALLBACK,  0,          "HIGH OUTPUT           %s",      menu_outputmode_cb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  "FREQ: %s",         "240MHz..960MHz"},
   { MT_FORM | MT_SUBMENU,   0,          "LEVEL: %s",        menu_drive_wide},
   { MT_FORM | MT_SUBMENU,   0,          "MODULATION: %s",   menu_modulation},

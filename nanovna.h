@@ -268,17 +268,17 @@ extern void tlv320aic3204_select(int channel);
  */
 
 // Offset of plot area
-#define OFFSETX 30
+#define OFFSETX 29
 #define OFFSETY 0
-#define BUTTON_WIDTH    60
+
 #ifdef __SCROLL__
 #define HEIGHT _height
 extern int _height;
 #define HEIGHT_SCROLL   180
-#define HEIGHT_NOSCROLL 232
+#define HEIGHT_NOSCROLL 230
 #else
-// HEIGHT = 8*GRIDY
-#define HEIGHT 232
+// HEIGHT = 10*GRIDY
+#define HEIGHT 230
 // WIDTH better be n*(POINTS_COUNT-1)
 #endif
 #define WIDTH  290
@@ -299,13 +299,25 @@ extern int _height;
 
 //
 #define CELLOFFSETX 0
-#define AREA_WIDTH_NORMAL  (CELLOFFSETX + WIDTH)
+#define AREA_WIDTH_NORMAL  (CELLOFFSETX + WIDTH  + 1)
 #define AREA_HEIGHT_NORMAL (              HEIGHT + 1)
 
 // Smith/polar chart
 #define P_CENTER_X (CELLOFFSETX + WIDTH/2)
 #define P_CENTER_Y (HEIGHT/2)
 #define P_RADIUS   (HEIGHT/2)
+
+// Menu Button
+// Maximum menu buttons count
+#define MENU_BUTTON_MAX     8
+#define MENU_BUTTON_WIDTH  70
+#define MENU_BUTTON_HEIGHT 28
+
+// Form button (at center screen better be less LCD_WIDTH - 2*OFFSETX)
+#define MENU_FORM_WIDTH    256
+
+// Num Input height at bottom
+#define NUM_INPUT_HEIGHT   30
 
 extern int16_t area_width;
 extern int16_t area_height;
