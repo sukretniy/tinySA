@@ -140,7 +140,7 @@ static THD_FUNCTION(Thread1, arg)
     } else if (sweep_mode & SWEEP_SELFTEST) {
       // call from lowest level to save stack space
       self_test(setting.test);
-      sweep_mode = SWEEP_ENABLE;
+//      sweep_mode = SWEEP_ENABLE;
     } else if (sweep_mode & SWEEP_REMOTE) {
       sweep_remote();
     } else if (sweep_mode & SWEEP_CALIBRATE) {

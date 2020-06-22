@@ -763,6 +763,7 @@ void menu_push_lowoutput(void);
 void menu_push_highoutput(void);
 void menu_move_top(void);
 void draw_menu(void);
+int check_touched(void);
 
 // Irq operation process set
 #define OP_NONE       0x00

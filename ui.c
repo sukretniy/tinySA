@@ -2676,3 +2676,12 @@ void wait_user(void)
   touch_start_watchdog();
 }
 
+int check_touched(void)
+{
+  int touched = false;
+  adc_stop();
+  if (touch_check() == EVT_TOUCH_RELEASED)
+    touched = true;
+  touch_start_watchdog();
+  return touched;
+}
