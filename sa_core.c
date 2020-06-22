@@ -2454,7 +2454,6 @@ int test_validate(int i)
   //  draw_frequencies();
 //  draw_cal_status();
   draw_all(TRUE);
-//  resume_sweep();
   return current_test_status;
 }
 
@@ -2729,7 +2728,7 @@ void self_test(int test)
     }
     in_selftest = false;
   }
-  test_wait = true;
+  test_wait = false;
   sweep_mode = SWEEP_ENABLE;
 }
 
