@@ -166,7 +166,8 @@ static THD_FUNCTION(Thread1, arg)
       continue;
     }
     // Process UI inputs
-    ui_process();
+    if (!(sweep_mode & SWEEP_SELFTEST))
+      ui_process();
     // Process collected data, calculate trace coordinates and plot only if scan
     // completed
     if (/* sweep_mode & SWEEP_ENABLE && */ completed) {

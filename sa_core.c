@@ -2551,7 +2551,7 @@ void self_test(int test)
 {
   if (test == 0) {
     if (test_wait ) {
-      if (test_case[test_step].kind == TC_END)
+      if (test_case[test_step].kind == TC_END || setting.test_argument != 0)
         goto resume2;
       else
         goto resume;
