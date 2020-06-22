@@ -185,101 +185,93 @@ void SI4432_Receive(void)
   }
 }
 
-
 // User asks for an RBW of WISH, go through table finding the last triple
 // for which WISH is greater than the first entry, use those values,
 // Return the first entry of the following triple for the RBW actually achieved
-static const short RBW_choices[] =
-{     // Each quadrupple is:  ndec, fils, WISH*10, corr*10
-      5,1,26,-5,
-      5,2,28,-5,
-      5,3,31,0,
-      5,4,32,0,
-      5,5,37,0,
-      5,6,42,0,
-      5,7,45,5,
-      4,1,49,5,
-      4,2,54,-5,
-      4,3,59,-5,
-      4,4,61,-5,
-      4,5,72,0,
-      4,6,82,0,
-      4,7,88,-5,
-      3,1,95,0,
-      3,2,106,0,
-      3,3,115,0,
-      3,4,121,-5,
-      3,5,142,0,
-      3,6,162,0,
-      3,7,175,0,
-      2,1,189,0,
-      2,2,210,-5,
-      2,3,227,0,
-      2,4,240,-5,
-      2,5,282,0,
-      2,6,322,0,
-      2,7,347,0,
-      1,1,377,0,
-      1,2,417,-5,
-      1,3,452,0,
-      1,4,479,-5,
-      1,5,562,0,
-      1,6,641,0,
-      1,7,692,0,
-      0,1,752,-5,
-      0,2,832,-5,
-      0,3,900,0,
-      0,4,953,-5,
-      0,5,1121,0,
-      0,6,1279,0,
-      0,7,1379,0,
-      1,4,1428,15,
-      1,5,1678,20,
-      1,9,1811,-55,
-      0,15,1915,-105,
-      0,1,2251,15,
-      0,2,2488,20,
-      0,3,2693,20,
-      0,4,2849,15,
-      0,8,3355,-15,
-      0,9,3618,-55,
-      0,10,4202,-15,
-      0,11,4684,-15,
-      0,12,5188,-20,
-      0,13,5770,-15,
-      0,14,6207,-10,
+#define IF_BW(dwn3, ndec, filset) (((dwn3)<<7)|((ndec)<<4)|(filset))
+typedef struct {
+  uint8_t  reg;                   // IF_BW(dwn3, ndec, filset)
+  int8_t   RSSI_correction_x_10;  // Correction * 10
+  uint16_t RBWx10;                // RBW * 10 in kHz
+}RBW_t; // sizeof(RBW_t) = 4 bytes
+
+static RBW_t RBW_choices[] = {
+// BW register    corr  freq
+  {IF_BW(0,5, 1),   -5,   26}, // RBW 2.6 kHz
+  {IF_BW(0,5, 2),   -5,   28},
+  {IF_BW(0,5, 3),    0,   31},
+  {IF_BW(0,5, 4),    0,   32},
+  {IF_BW(0,5, 5),    0,   37},
+  {IF_BW(0,5, 6),    0,   42},
+  {IF_BW(0,5, 7),    5,   45},
+  {IF_BW(0,4, 1),    5,   49},
+  {IF_BW(0,4, 2),   -5,   54},
+  {IF_BW(0,4, 3),   -5,   59},
+  {IF_BW(0,4, 4),   -5,   61},
+  {IF_BW(0,4, 5),    0,   72},
+  {IF_BW(0,4, 6),    0,   82},
+  {IF_BW(0,4, 7),   -5,   88},
+  {IF_BW(0,3, 1),    0,   95},
+  {IF_BW(0,3, 2),    0,  106},
+  {IF_BW(0,3, 3),    0,  115},
+  {IF_BW(0,3, 4),   -5,  121},
+  {IF_BW(0,3, 5),    0,  142},
+  {IF_BW(0,3, 6),    0,  162},
+  {IF_BW(0,3, 7),    0,  175},
+  {IF_BW(0,2, 1),    0,  189},
+  {IF_BW(0,2, 2),   -5,  210},
+  {IF_BW(0,2, 3),    0,  227},
+  {IF_BW(0,2, 4),   -5,  240},
+  {IF_BW(0,2, 5),    0,  282},
+  {IF_BW(0,2, 6),    0,  322},
+  {IF_BW(0,2, 7),    0,  347},
+  {IF_BW(0,1, 1),    0,  377},
+  {IF_BW(0,1, 2),   -5,  417},
+  {IF_BW(0,1, 3),    0,  452},
+  {IF_BW(0,1, 4),   -5,  479},
+  {IF_BW(0,1, 5),    0,  562},
+  {IF_BW(0,1, 6),    0,  641},
+  {IF_BW(0,1, 7),    0,  692},
+  {IF_BW(0,0, 1),   -5,  752},
+  {IF_BW(0,0, 2),   -5,  832},
+  {IF_BW(0,0, 3),    0,  900},
+  {IF_BW(0,0, 4),   -5,  953},
+  {IF_BW(0,0, 5),    0, 1121},
+  {IF_BW(0,0, 6),    0, 1279},
+  {IF_BW(0,0, 7),    0, 1379},
+  {IF_BW(1,1, 4),   15, 1428},
+  {IF_BW(1,1, 5),   20, 1678},
+  {IF_BW(1,1, 9),  -55, 1811},
+  {IF_BW(1,0,15), -105, 1915},
+  {IF_BW(1,0, 1),   15, 2251},
+  {IF_BW(1,0, 2),   20, 2488},
+  {IF_BW(1,0, 3),   20, 2693},
+  {IF_BW(1,0, 4),   15, 2849},
+  {IF_BW(1,0, 8),  -15, 3355},
+  {IF_BW(1,0, 9),  -55, 3618},
+  {IF_BW(1,0,10),  -15, 4202},
+  {IF_BW(1,0,11),  -15, 4684},
+  {IF_BW(1,0,12),  -20, 5188},
+  {IF_BW(1,0,13),  -15, 5770},
+  {IF_BW(1,0,14),  -10, 6207}
 };
 
 static float SI4432_RSSI_correction = -120.0;
 
-float SI4432_SET_RBW(float w)  {
-  uint8_t dwn3=0;
-  int32_t WISH = (uint32_t)(w * 10.0);
-  uint8_t ndec, fils, i;
-  if (WISH > 6207)   WISH=6207;     // Final value in RBW_choices[]
-  if (WISH > 1379) dwn3 = 1 ;
-  for (i=3; i<sizeof(RBW_choices)/sizeof(RBW_choices[0]); i+=4)
-    if (WISH <= RBW_choices[i-1])  break;
-  ndec = RBW_choices[i-3];
-  fils = RBW_choices[i-2];
-  WISH = RBW_choices[i-1];        // RBW achieved by Si4432 in Hz
-  SI4432_RSSI_correction = RBW_choices[i]/10.0 - 120.0;
-  uint8_t BW = (dwn3 << 7) | (ndec << 4) | fils ;
-  SI4432_Write_Byte(0x1C , BW ) ;
-  return (((float)WISH) / 10.0) ;
-}
-
 float SI4432_force_RBW(int i)
 {
-  return(SI4432_SET_RBW((float)(RBW_choices[i*4+2]/10.0)));
+  SI4432_Write_Byte(0x1C, RBW_choices[i].reg);                                    // Write RBW settings to Si4432
+  SI4432_RSSI_correction = ((int)RBW_choices[i].RSSI_correction_x_10-1200)/10.0;  // Set RSSI correction
+  return (((float)RBW_choices[i].RBWx10) / 10.0);                                 // RBW achieved by Si4432 in kHz
 }
 
-float SI4432_RBW_table(int i){
-  if (i < 0)
-    return 0;
-  if (i * 4 >= (int)(sizeof RBW_choices) / 2 )
-    return 0;
-  return(RBW_choices[i*4-1]);
+float SI4432_SET_RBW(float w)  {
+  uint16_t WISH = (uint16_t)(w * 10.0);
+  int i;
+  for (i=0; i < (int)(sizeof(RBW_choices)/sizeof(RBW_t)) - 1; i++)
+    if (WISH <= RBW_choices[i].RBWx10) 
+      break; 
+  return SI4432_force_RBW(i);
 }
 
 int setting_frequency_10mhz = 10000000;
