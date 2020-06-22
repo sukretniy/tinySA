@@ -2550,8 +2550,12 @@ static int test_step = 0;
 void self_test(int test)
 {
   if (test == 0) {
-    if (test_wait )
-      goto resume;
+    if (test_wait ) {
+      if (test_case[test_step].kind == TC_END)
+        goto resume2;
+      else
+        goto resume;
+    }
     reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     menu_autosettings_cb(0);
@@ -2570,8 +2574,8 @@ void self_test(int test)
       test_acquire(test_step);                        // Acquire test
       test_status[test_step] = test_validate(test_step);                       // Validate test
       if (test_status[test_step] != TS_PASS) {
+        resume:
         test_wait = true;
-      resume:
         if (!check_touched())
           return;
 //        wait_user();
@@ -2581,14 +2585,14 @@ void self_test(int test)
     ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     ili9341_drawstring_7x13("Self test complete", 50, 200);
     ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
-    wait_user();
-    ili9341_clear_screen();
+   resume2:
+    test_wait = true;
+    if (!check_touched())
+      return;
 
-    sweep_mode = SWEEP_ENABLE;
-    show_test_info = FALSE;
-    set_refer_output(-1);
+    ili9341_clear_screen();
     reset_settings(M_LOW);
-    in_selftest = false;
+    set_refer_output(-1);
   } else if (test ==1) {
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
@@ -2728,6 +2732,8 @@ void self_test(int test)
     }
     in_selftest = false;
   }
+  show_test_info = FALSE;
+  in_selftest = false;
   test_wait = false;
   sweep_mode = SWEEP_ENABLE;
 }
