@@ -1271,8 +1271,8 @@ menu_invoke(int item)
   }
 }
 
-#define KP_WIDTH     48
-#define KP_HEIGHT    48
+#define KP_WIDTH     (LCD_HEIGHT/5)
+#define KP_HEIGHT    (LCD_HEIGHT/5)
 // Key x, y position (0 - 15) on screen
 #define KP_GET_X(posx) ((posx)*KP_WIDTH + (LCD_WIDTH-MENU_BUTTON_WIDTH-5-KP_WIDTH*4))
 #define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )

@@ -281,7 +281,7 @@ extern int _height;
 #define HEIGHT 230
 // WIDTH better be n*(POINTS_COUNT-1)
 #endif
-#define WIDTH  (320 - 1 - OFFSETX)
+#define WIDTH  (LCD_WIDTH - 1 - OFFSETX)
 
 #define CELLWIDTH  (32)
 #define CELLHEIGHT (32)
@@ -291,7 +291,7 @@ extern int _height;
 
 #define FREQUENCIES_XPOS1 OFFSETX
 #define FREQUENCIES_XPOS2 200
-#define FREQUENCIES_YPOS  (240-7)
+#define FREQUENCIES_YPOS  (LCD_HEIGHT-7)
 
 // GRIDX calculated depends from frequency span
 //#define GRIDY 29
