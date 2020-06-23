@@ -18,6 +18,9 @@
  */
 #include "ch.h"
 
+#ifdef TINYSA_F303
+#include "adc_F303.h"
+#endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
@@ -533,7 +536,7 @@ extern uint16_t spi_buffer[SPI_BUFFER_SIZE];
 void ili9341_init(void);
 void ili9341_test(int mode);
 void ili9341_bulk(int x, int y, int w, int h);
-void ili9341_fill(int x, int y, int w, int h, int color);
+void ili9341_fill(int x, int y, int w, int h, uint16_t color);
 #if 0
 void ili9341_set_foreground(uint16_t fg);
 void ili9341_set_background(uint16_t fg);

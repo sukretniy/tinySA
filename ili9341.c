@@ -21,6 +21,9 @@
 #include "hal.h"
 #include "nanovna.h"
 
+// Allow enable DMA for read display data (some problem vs use in ST7796 in fast mode)
+#define __USE_DISPLAY_DMA_RX__
+
 uint16_t spi_buffer[SPI_BUFFER_SIZE];
 // Default foreground & background colors
 uint16_t foreground_color = 0;
@@ -195,6 +198,7 @@ static void spi_lld_serve_tx_interrupt(SPIDriver *spip, uint32_t flags)
   (void)flags;
 }
 
+#ifdef __USE_DISPLAY_DMA_RX__
 static const stm32_dma_stream_t  *dmarx = STM32_DMA_STREAM(STM32_SPI_SPI1_RX_DMA_STREAM);
 static uint32_t rxdmamode = STM32_DMA_CR_CHSEL(SPI1_RX_DMA_CHANNEL)
                         | STM32_DMA_CR_PL(STM32_SPI_SPI1_DMA_PRIORITY)
@@ -208,6 +212,7 @@ static void spi_lld_serve_rx_interrupt(SPIDriver *spip, uint32_t flags)
   (void)spip;
   (void)flags;
 }
+#endif
 
 static void dmaStreamFlush(uint32_t len)
 {
@@ -239,12 +244,14 @@ static void spi_init(void)
   // Tx DMA init
   dmaStreamAllocate(dmatx, STM32_SPI_SPI1_IRQ_PRIORITY, (stm32_dmaisr_t)spi_lld_serve_tx_interrupt, NULL);
   dmaStreamSetPeripheral(dmatx, &SPI1->DR);
+  SPI1->CR2|= SPI_CR2_TXDMAEN;    // Tx DMA enable
+#ifdef __USE_DISPLAY_DMA_RX__
   // Rx DMA init
   dmaStreamAllocate(dmarx, STM32_SPI_SPI1_IRQ_PRIORITY, (stm32_dmaisr_t)spi_lld_serve_rx_interrupt, NULL);
   dmaStreamSetPeripheral(dmarx, &SPI1->DR);
   // Enable DMA on SPI
-  SPI1->CR2|= SPI_CR2_TXDMAEN    // Tx DMA enable
-           |  SPI_CR2_RXDMAEN;   // Rx DMA enable
+  SPI1->CR2|= SPI_CR2_RXDMAEN;   // Rx DMA enable
+#endif
 #endif
   SPI1->CR1|= SPI_CR1_SPE;       //SPI enable
 }
@@ -369,7 +376,7 @@ void ili9341_bulk_8bit(int x, int y, int w, int h, uint16_t *palette)
 }
 
 #ifndef __USE_DISPLAY_DMA__
-void ili9341_fill(int x, int y, int w, int h, int color)
+void ili9341_fill(int x, int y, int w, int h, uint16_t color)
 {
 //uint8_t xx[4] = { x >> 8, x, (x+w-1) >> 8, (x+w-1) };
 //uint8_t yy[4] = { y >> 8, y, (y+h-1) >> 8, (y+h-1) };
@@ -404,13 +411,11 @@ void ili9341_bulk(int x, int y, int w, int h)
   }
 }
 #else
-
 //
 // Use DMA for send data
 //
-
 // Fill region by some color
-void ili9341_fill(int x, int y, int w, int h, int color)
+void ili9341_fill(int x, int y, int w, int h, uint16_t color)
 {
   uint32_t xx = __REV16(x | ((x + w - 1) << 16));
   uint32_t yy = __REV16(y | ((y + h - 1) << 16));
@@ -438,7 +443,9 @@ void ili9341_bulk(int x, int y, int w, int h)
                               STM32_DMA_CR_MSIZE_HWORD | STM32_DMA_CR_MINC);
   dmaStreamFlush(w * h);
 }
-#if 0  // If read DMA hangs
+#endif
+
+#ifndef __USE_DISPLAY_DMA_RX__
 static uint8_t ssp_sendrecvdata(void)
 {
   // Start RX clock (by sending data)
@@ -530,7 +537,6 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
     rgbbuf += 3;
   }
 }
-#endif
 #endif
 
 void ili9341_clear_screen(void) 

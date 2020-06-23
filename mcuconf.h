@@ -14,6 +14,9 @@
     limitations under the License.
 */
 
+#ifdef TINYSA_F303
+#include "mcuconf_F303.h"
+#else
 #ifndef MCUCONF_H
 #define MCUCONF_H
 
@@ -226,3 +229,4 @@
 #define STM32_WDG_USE_IWDG                  FALSE
 
 #endif /* MCUCONF_H */
+#endif
