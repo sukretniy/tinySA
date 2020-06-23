@@ -30,6 +30,7 @@ int fullscreen = true;
 #endif
 static void cell_draw_marker_info(int x0, int y0);
 static void draw_battery_status(void);
+static void update_waterfall(void);
 void cell_draw_test_info(int x0, int y0);
 void frequency_string(char *buf, size_t len, int32_t freq);
 
@@ -1595,108 +1596,12 @@ draw_all_cells(bool flush_markmap)
     // clear map for next plotting
     clear_markmap();
   }
+//  START_PROFILE
 #ifdef __SCROLL__
-  int w = area_width;
-  if (w < 5) w = 5;
-  if (waterfall) {
-    for (m = 226; m >= HEIGHT+3; m -= 1) {		// Scroll down
-      uint16_t *buf = &spi_buffer[0];
-      ili9341_read_memory(6*5, m, w, 1, w, buf);
-      ili9341_bulk(6*5,m+1, w,1);
-    }
-    for (int i=0; i<290; i++) {			// Add new topline
-#if 0
-      int k = (actual_t[i]+120 + 10)* 3 / 2;
-      unsigned int r=0,g=0,b=0;
-      if (k < 64)
-        r = k*4;
-      else if (k<128) {
-        r = 255;
-        g = (k-64)*4;
-      } else {
-        r = 255;
-        g = 255;
-        b = (k-128)*4;
-      }
-#else
-      if (w_min > (int)min_level)
-        w_min = (int)min_level;
-      if (w_max < (int)peakLevel)
-        w_max = (int)peakLevel;
-/*
-      def rgb(minimum, maximum, value):
-          minimum, maximum = float(minimum), float(maximum)
-          ratio = 2 * (value-minimum) / (maximum - minimum)
-          b = int(max(0, 255*(1 - ratio)))
-          r = int(max(0, 255*(ratio - 1)))
-          g = 255 - b - r
-          return r, g, b
-  */
-
-      int r,g,b;
-#if 0
-      int ratio = (int)(1024 * (actual_t[i] - w_min) / (w_max - w_min));
-
-      r = ratio - 512;
-      if (r<0) r=0;
-      b = (1024 - ratio*4) - 512;
-      if (b<0) b=0;
-      g = 512-r-b;
-      if (r>255) r=255;
-      if (g>255) g=255;
-      if (b>255) b=255;
-
-#define gamma_correct(X,L)  X = (L + X * (255 - L)/255 )
-      gamma_correct(r,160);
-      gamma_correct(g,160);
-      gamma_correct(b,160);
-
+  if (waterfall)
+    update_waterfall();
 #endif
-
-#if 1
-      float ratio = (int)(510.0 * (actual_t[i] - w_min) / (w_max - w_min));
-//      ratio = (i*2);    // Uncomment for testing the waterfall colors
-      b = 255 - ratio;
-      if (b > 255) b = 255;
-      if (b < 0) b = 0;
-      r = ratio - 255;
-      if (r > 255) r = 255;
-      if (r < 0) r = 0;
-//      g = 255 - b;        // if red is too weak to be seen.....
-      g = 255 - b - r;
-#if 1
-#define gamma_correct(X) X = (X < 64 ? X * 2 : X < 128 ? 128 + (X-64) : X < 192 ? 192 + (X - 128)/2 : 225 + (X - 192) / 4)
-      gamma_correct(r);
-      gamma_correct(g);
-      gamma_correct(b);
-#endif
-#endif
-
-#if 0
-      int k = (actual_t[i]+120)* 2 * 8;
-      k &= 255;
-      unsigned int r=0,g=0,b=0;
-      if (k < 64) {
-        b = 255;
-        g = k*2 + 128;
-      } else if (k < 128) {
-        g = 255;
-        b = 255 - (k-64)*2;
-      } else if (k < 192) {
-        g = 255;
-        r = (k-128)*2 + 128;
-      } else
-      {
-        g = 255 - (k-192)*2;
-        r = 255;
-      }
-#endif
-#endif
-      spi_buffer[i] = RGB565(r,g,b);
-    }
-    ili9341_bulk(6*5,HEIGHT+3, w,1);
-  }
-#endif
+//  STOP_PROFILE
 }
 
 void
@@ -2066,7 +1971,7 @@ static void cell_draw_marker_info(int x0, int y0)
       if (i == active_marker) {
 //        ili9341_set_foreground(DEFAULT_BG_COLOR);
 //        ili9341_set_background(marker_color(markers[i].mtype));
-        buf[k++] = '\033'; // Right arrow (?)
+        buf[k++] = S_SARROW[0];
       } else {
 //        ili9341_set_background(DEFAULT_BG_COLOR);
 //        ili9341_set_foreground(marker_color(markers[i].mtype));
@@ -2273,6 +2178,20 @@ redraw_frame(void)
   draw_cal_status();
 }
 
+static void update_waterfall(void){
+  int i;
+  int w_width = area_width < 290 ? area_width : 290;
+  for (i = HEIGHT_NOSCROLL-1; i >=HEIGHT_SCROLL+2; i--) {		// Scroll down
+    ili9341_read_memory(OFFSETX, i  , w_width, 1, w_width*1, spi_buffer);
+           ili9341_bulk(OFFSETX, i+1, w_width, 1);
+  }
+  index_t *index = trace_index[TRACE_ACTUAL];
+  for (i=0; i< w_width; i++) {			// Add new topline
+    uint16_t y = CELL_Y(index[i]);
+    spi_buffer[i] = RGB565(255-y, y, (128-y)&0xFF);
+  }
+  ili9341_bulk(OFFSETX, HEIGHT_SCROLL+2, w_width, 1);
+}
 
 int get_waterfall(void)
 {
@@ -2284,7 +2203,7 @@ toggle_waterfall(void)
 {
   if (!waterfall) {
     _height = HEIGHT_SCROLL;
-    ili9341_fill(5*5, HEIGHT, LCD_WIDTH - 5*5, 236-HEIGHT, 0);
+//    ili9341_fill(OFFSETX, HEIGHT_SCROLL, LCD_WIDTH - OFFSETX, HEIGHT_NOSCROLL - HEIGHT_SCROLL, 0);
     waterfall = true;
     fullscreen = false;
     w_min = (int)min_level;
