@@ -274,31 +274,28 @@ extern void tlv320aic3204_select(int channel);
 #define OFFSETX 30
 #define OFFSETY 0
 
+#define NGRIDY 10
+// GRIDX calculated depends from frequency span
 #ifdef __SCROLL__
-#define HEIGHT _height
-extern int _height;
-#define HEIGHT_SCROLL   180
-#define HEIGHT_NOSCROLL 230
+extern  uint16_t _grid_y;
+#define GRIDY  _grid_y
+#define HEIGHT_SCROLL     180
+#define HEIGHT_NOSCROLL   230
+#define SCROLL_GRIDY      (HEIGHT_SCROLL / NGRIDY)
+#define NOSCROLL_GRIDY    (HEIGHT_NOSCROLL / NGRIDY)
 #else
-// HEIGHT = 10*GRIDY
-#define HEIGHT 230
-// WIDTH better be n*(POINTS_COUNT-1)
+#define GRIDY             (230 / NGRIDY)
 #endif
+
 #define WIDTH  (LCD_WIDTH - 1 - OFFSETX)
+#define HEIGHT (GRIDY*NGRIDY)
 
 #define CELLWIDTH  (32)
 #define CELLHEIGHT (32)
 
-#define NGRIDY 10
-//#define NGRIDY 9
-
 #define FREQUENCIES_XPOS1 OFFSETX
 #define FREQUENCIES_XPOS2 200
 #define FREQUENCIES_YPOS  (LCD_HEIGHT-7)
-
-// GRIDX calculated depends from frequency span
-//#define GRIDY 29
-#define GRIDY (HEIGHT / NGRIDY)
 
 //
 #define CELLOFFSETX 0
@@ -498,7 +495,7 @@ extern volatile uint8_t redraw_request;
 // SPI bus revert byte order
 //gggBBBbb RRRrrGGG
 #define byteReverse16(x) (uint16_t)(((x) << 8) & 0xff00) | (((x) >> 8) & 0xff)
-#define RGB565(r,g,b)     byteReverse16( ((((uint16_t)r)<<8)&0b1111100000000000) | ((((uint16_t)g)<<3)&0b0000011111100000) | ((((uint16_t)b)>>3)&0b0000000000011111) )
+#define RGB565(r,g,b)     byteReverse16( ((((uint16_t)(r))<<8)&0b1111100000000000) | ((((uint16_t)(g))<<3)&0b0000011111100000) | ((((uint16_t)(b))>>3)&0b0000000000011111) )
 
 //#define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
 #define RGBHEX(hex) ( (((hex)&0x001c00)<<3) | (((hex)&0x0000f8)<<5) | (((hex)&0xf80000)>>16) | (((hex)&0x00e000)>>13) )

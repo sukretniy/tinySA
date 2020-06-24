@@ -1960,12 +1960,10 @@ void draw_cal_status(void)
 
 
 #define XSTEP   40
-
+  ili9341_fill(0, 0, OFFSETX, LCD_HEIGHT-1, 0x0000);
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
-    ili9341_fill(x, y, OFFSETX-5, HEIGHT, 0x0000);
     return;
   }
-  ili9341_fill(x, y, OFFSETX, HEIGHT, 0x0000);
 
     //  if (current_menu_is_form() && !in_selftest)
 //    return;
@@ -2227,7 +2225,7 @@ void draw_cal_status(void)
 //  ili9341_set_background(DEFAULT_BG_COLOR);
 
   // Bottom level
-  y = HEIGHT-7 + OFFSETY;
+  y = area_height - 7 + OFFSETY;
   if (rounding)
     plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
   else

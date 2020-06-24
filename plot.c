@@ -24,7 +24,7 @@
 #include "nanovna.h"
 
 #ifdef __SCROLL__
-int _height = HEIGHT_NOSCROLL;
+uint16_t _grid_y = NOSCROLL_GRIDY;
 int waterfall = false;
 int fullscreen = true;
 #endif
@@ -1541,6 +1541,7 @@ draw_cell(int m, int n)
   cell_draw_test_info(x0, y0);
 #endif
   //  PULSE;
+#if 0
 // Draw reference position (<10 system ticks for all screen calls)
   for (t = 0; t < TRACES_MAX; t++) {
     if (!trace[t].enabled)
@@ -1555,6 +1556,7 @@ draw_cell(int m, int n)
         draw_refpos(x, y, config.trace_color[t]);
     }
   }
+#endif
 // Need right clip cell render (25 system ticks for all screen calls)
 #if 1
   if (w < CELLWIDTH) {
@@ -2178,6 +2180,10 @@ redraw_frame(void)
   draw_cal_status();
 }
 
+#ifdef  _USE_WATERFALL_PALETTE
+#include "waterfall.c"
+#endif
+
 static void update_waterfall(void){
   int i;
   int w_width = area_width < 290 ? area_width : 290;
@@ -2187,25 +2193,47 @@ static void update_waterfall(void){
   }
   index_t *index = trace_index[TRACE_ACTUAL];
   for (i=0; i< w_width; i++) {			// Add new topline
-    uint16_t y = CELL_Y(index[i]);
-#if 0
-        spi_buffer[i] = RGB565(255-y, y, (128-y)&0xFF);
-#else
+    uint16_t color;
+    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
+#ifdef _USE_WATERFALL_PALETTE
+//    y = (uint8_t)i;  // for test
+    color = paltte[y];
+#elif 0
     uint16_t ratio = (HEIGHT_SCROLL - y)*2;
-//      ratio = (i*2);    // Uncomment for testing the waterfall colors
-      int16_t b = 255 - ratio;
-      if (b > 255) b = 255;
-      if (b < 0) b = 0;
-      int16_t r = ratio - 255;
-      if (r > 255) r = 255;
-      if (r < 0) r = 0;
-      int16_t g = 255 - b - r;
+//    ratio = (i*2);    // Uncomment for testing the waterfall colors
+    int16_t b = 255 - ratio;
+    if (b > 255) b = 255;
+    if (b < 0) b = 0;
+    int16_t r = ratio - 255;
+    if (r > 255) r = 255;
+    if (r < 0) r = 0;
+    int16_t g = 255 - b - r;
 #define gamma_correct(X) X = (X < 64 ? X * 2 : X < 128 ? 128 + (X-64) : X < 192 ? 192 + (X - 128)/2 : 225 + (X - 192) / 4)
-      gamma_correct(r);
-      gamma_correct(g);
-      gamma_correct(b);
-      spi_buffer[i] = RGB565(r, g, b);
+    gamma_correct(r);
+    gamma_correct(g);
+    gamma_correct(b);
+    color = RGB565(r, g, b);
+#else
+    // Calculate gradient palette for range 0 .. 192
+    // idx     r   g   b
+    //   0 - 192   0   0
+    //  32 - 255 127   0
+    //  64 - 255 255 127
+    //  96 - 255 255 255
+    // 128 - 127 255 255
+    // 160 -   0 127 255
+    // 192 -   0   0 127
+    // 224 -   0   0   0
+//    y = (uint8_t)i;  // for test
+         if (y <  32) color = RGB565( 192+((y-  0)*2),   0+((y-  0)*4),               0);
+    else if (y <  64) color = RGB565(             255, 127+((y- 32)*4),   0+((y- 32)*4));
+    else if (y <  96) color = RGB565(             255,             255, 127+((y- 64)*4));
+    else if (y < 128) color = RGB565( 252-((y- 96)*4),             255,             255);
+    else if (y < 160) color = RGB565( 124-((y-128)*4), 252-((y-128)*4),             255);
+    else              color = RGB565(               0, 124-((y-160)*4), 252-((y-160)*4));
+
 #endif
+    spi_buffer[i] = color;
   }
   ili9341_bulk(OFFSETX, HEIGHT_SCROLL+2, w_width, 1);
 }
@@ -2219,8 +2247,8 @@ void
 toggle_waterfall(void)
 {
   if (!waterfall) {
-    _height = HEIGHT_SCROLL;
-//    ili9341_fill(OFFSETX, HEIGHT_SCROLL, LCD_WIDTH - OFFSETX, HEIGHT_NOSCROLL - HEIGHT_SCROLL, 0);
+    _grid_y = SCROLL_GRIDY;
+    ili9341_fill(OFFSETX, HEIGHT_SCROLL, LCD_WIDTH - OFFSETX, HEIGHT_NOSCROLL - HEIGHT_SCROLL, 0);
     waterfall = true;
     fullscreen = false;
     w_min = (int)min_level;
@@ -2229,7 +2257,7 @@ toggle_waterfall(void)
       w_max = w_min + 20;
 
   } else {
-    _height = HEIGHT_NOSCROLL;
+    _grid_y = NOSCROLL_GRIDY;
     waterfall = false;
     fullscreen = true;
   }

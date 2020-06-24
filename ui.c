@@ -1154,7 +1154,7 @@ menu_move_back(void)
     redraw_frame();
     area_width = 0;
   } else {
-    redraw_frame();
+//    redraw_frame();
     request_to_redraw_grid();
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
@@ -1177,7 +1177,7 @@ menu_push_submenu(const menuitem_t *submenu)
     redraw_frame();
     area_width = 0;
   } else {
-    redraw_frame();
+//    redraw_frame();
     request_to_redraw_grid();
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
@@ -1725,7 +1725,7 @@ erase_menu_buttons(void)
 {
 //  ili9341_fill(area_width, 0, LCD_WIDTH - area_width, area_height, DEFAULT_BG_COLOR);
   if (current_menu_is_form())
-    ili9341_fill(5*5, 0,LCD_WIDTH-5*5, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
+    ili9341_fill(OFFSETX, 0,LCD_WIDTH-OFFSETX, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
   else
     ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
   draw_frequencies();
