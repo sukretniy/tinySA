@@ -2068,11 +2068,7 @@ draw_frequencies(void)
       if (t < setting.sweep_time)
         t = setting.sweep_time;
       setting.actual_sweep_time = t;
-          ; // in mS
-      if (t>=1000)
-          plot_printf(buf2, sizeof(buf2), " TIME %.2fS",t/1000.0);
-      else
-        plot_printf(buf2, sizeof(buf2), " TIME %.2fmS", t);
+      plot_printf(buf2, sizeof(buf2), " TIME %.3Fs",t/1000.0);
 
     } else if (FREQ_IS_STARTSTOP()) {
       plot_printf(buf1, sizeof(buf1), " START %qHz", get_sweep_frequency(ST_START));
@@ -2096,7 +2092,7 @@ draw_frequencies(void)
     buf2[0] = S_SARROW[0];
   int p2 = FREQUENCIES_XPOS2;
   if (FREQ_IS_CW()) {
-    p2 = LCD_WIDTH - 7*strlen(buf2);
+    p2 = LCD_WIDTH - FONT_MAX_WIDTH*strlen(buf2);
   }
   ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
   ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);

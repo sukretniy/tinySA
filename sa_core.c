@@ -2300,8 +2300,6 @@ static void test_acquire(int i)
   redraw_request |= REDRAW_CELLS | REDRAW_FREQUENCY;
 }
 
-extern void cell_drawstring_5x7(int w, int h, char *str, int x, int y, uint16_t fg);
-extern void cell_drawstring_7x13(int w, int h, char *str, int x, int y, uint16_t fg);
 void cell_drawstring(char *str, int x, int y);
 
 static char self_test_status_buf[35];
