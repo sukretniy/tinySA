@@ -305,6 +305,7 @@ void set_auto_attenuation(void)
     setting.attenuate = 0;
   }
   setting.atten_step = false;
+  dirty = true;
 }
 
 void set_auto_reflevel(int v)
@@ -1616,6 +1617,7 @@ again:
   }
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // Auto attenuate
+    setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     float old_attenuate = get_attenuation();
     float actual_max_level = actual_t[max_index[0]] - old_attenuate;
     if (actual_max_level < - 31 && setting.attenuate >= 10) {
@@ -1630,7 +1632,7 @@ again:
       PE4302_Write_Byte((int)(setting.attenuate * 2));
       SI4432_Sel = 0;
       if (setting.atten_step) {
-        set_switch_transmit();
+        set_switch_transmit();          // This should never happen
       } else {
         set_switch_receive();
       }
@@ -2274,7 +2276,7 @@ static const struct {
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20, 80,    -80 },      // 7 BPF loss and stop band
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18, 20,    -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       430,    60,     -80, 0,     -80},       // 9 LPF cutoff
- {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -58, 30,    -95 },      // 10 Switch isolation
+ {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -38, 30,    -65 },      // 10 Switch isolation using high attenuation
  {TC_END,       0,              0,      0,      0,   0,     0},
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5, 30,  -70 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -75 },       // 13 Measure powerlevel and noise
@@ -2494,7 +2496,7 @@ void test_prepare(int i)
   setting.atten_step = false;
   setting.frequency_IF = 433800000;                // Default frequency
   setting.auto_IF = true;
-  set_attenuation(0.0);
+  setting.auto_attenuation = false;
   switch(test_case[i].setup) {                // Prepare test conditions
   case TPH_SILENT:                             // No input signal
     set_mode(M_HIGH);
@@ -2509,7 +2511,6 @@ common_silent:
   case TP_10MHZ_SWITCH:
     set_mode(M_LOW);
     set_refer_output(2);
-    setting.atten_step = true;
     goto common;
   case TP_10MHZEXTRA:                         // Swept receiver
     set_mode(M_LOW);
@@ -2547,8 +2548,13 @@ common_silent:
     set_refer_output(0);
     goto common;
   }
-  setting.auto_attenuation = false;
-  setting.attenuate = 0;
+  switch(test_case[i].setup) {                // Prepare test conditions
+  case TP_10MHZ_SWITCH:
+    set_attenuation(32);                        // This forces the switch to transmit so isolation can be tested
+    break;
+  default:
+    set_attenuation(0.0);
+  }
   trace[TRACE_STORED].enabled = true;
   set_reflevel(test_case[i].pass+10);
   set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
