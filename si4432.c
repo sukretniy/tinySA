@@ -327,7 +327,7 @@ void SI4432_Fill(int s, int start)
   if (t < 0)
     t = 0;
   int ti = t * 1000 / 290.0;                         // Now in uS per point      if (t < 30000)
-  for (int i=start; i<POINTS_COUNT; ) {
+  for (int i=start; i<sweep_points; ) {
     SPI2_CLK_LOW;
     palClearPad(GPIOC, sel);
     shiftOut( 0x26 );
@@ -356,7 +356,7 @@ float SI4432_RSSI(uint32_t i, int s)
 #ifdef __FAST_SWEEP__
   if (buf_read) {
     float dBm = ((float)((unsigned char)age[buf_index++]))/2 + SI4432_RSSI_correction;
-    if (buf_index ==POINTS_COUNT) {
+    if (buf_index == sweep_points) {
       buf_read = false;
     }
     return dBm;

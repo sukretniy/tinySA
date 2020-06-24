@@ -863,7 +863,7 @@ static void trace_get_value_string(
   if (FREQ_IS_CW()) {
     float t = ii*(setting.actual_sweep_time)*1000.0/290.0;
 #if 1
-    plot_printf(&buf2[1], sizeof(buf2) -1, "%.3FS" , t/1000000.0);
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%.3Fs" , t/1000000.0);
 #else
     if (t>1000000.0){
       plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/1000000.0);
@@ -884,22 +884,17 @@ static void trace_get_value_string(
     }
 #endif
   } else {
-  uint32_t resolution = get_sweep_frequency(ST_SPAN)/290;
-#if 0
-  if (resolution  <= 2000)
+#if 1
+  uint32_t resolution = get_sweep_frequency(ST_SPAN);
+  if (resolution  <= 2000*290)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
-  else if (resolution  <= 20000)
+  else if (resolution  <= 20000*290)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.2f" , (dfreq + 5000) / 1000000.0);
   else
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
   }
 #else
-  int digits = 1;
-  if (resolution  <= 2000)
-    digits = 3;
-  else if (resolution  <= 20000)
-    digits = 2;
-  plot_printf(&buf2[1], sizeof(buf2) -1, "%3.*f" , digits, (dfreq + 50000) / 1000000.0);
+  plot_printf(&buf2[1], sizeof(buf2) -1, "%.8qHz" , dfreq);
   }
 #endif
   //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
@@ -1906,7 +1901,7 @@ cell_draw_marker_info(int x0, int y0)
 #endif
 static void cell_draw_marker_info(int x0, int y0)
 {
-  char buf[25];
+  char buf[32];
   int t;
   int ref_marker = 0;
   int j = 0;
@@ -1991,16 +1986,15 @@ static void cell_draw_marker_info(int x0, int y0)
       if (markers[i].mtype & M_NOISE)
         buf[k++] = 'N';
       buf[k++] = ' ';
-      buf[k++] = 0;
+//      buf[k++] = 0;
       ili9341_set_background(DEFAULT_BG_COLOR);
       ili9341_set_foreground(marker_color(markers[i].mtype));
 //      if (setting.unit)
 //        cell_drawstring(buf, xpos, ypos);
 //      else
 //        cell_drawstring_7x13(buf, xpos, ypos);
-      int offs = strlen(buf);
       trace_get_value_string(
-          t, &buf[offs], (sizeof buf) - offs,
+          t, &buf[k], (sizeof buf) - k,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
       if (/* strlen(buf)*7> WIDTH/2 && */active > 1)
         cell_drawstring(buf, xpos, ypos);
