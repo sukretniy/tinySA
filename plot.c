@@ -2131,9 +2131,10 @@ draw_cal_status(void)
       ili9341_drawstring(&calibration_text[i].text, x, y);
 }
 #endif
+
 // Draw battery level
 #define BATTERY_TOP_LEVEL       4100
-#define BATTERY_BOTTOM_LEVEL    3100
+#define BATTERY_BOTTOM_LEVEL    3200
 #define BATTERY_WARNING_LEVEL   3300
 
 static void draw_battery_status(void)
@@ -2145,24 +2146,28 @@ static void draw_battery_status(void)
   // Set battery color
   ili9341_set_foreground(vbat < BATTERY_WARNING_LEVEL ? DEFAULT_LOW_BAT_COLOR : DEFAULT_NORMAL_BAT_COLOR);
   ili9341_set_background(DEFAULT_BG_COLOR);
-//  plot_printf(string_buf, sizeof string_buf, "V:%d", vbat);
-//  ili9341_drawstringV(string_buf, 1, 60);
+
   // Prepare battery bitmap image
   // Battery top
   int x = 0;
+  string_buf[x++] = 0b00000000;
   string_buf[x++] = 0b00111100;
-  string_buf[x++] = 0b00100100;
+  string_buf[x++] = 0b00111100;
   string_buf[x++] = 0b11111111;
-//  string_buf[x++] = 0b10000001;
   // Fill battery status
-  for (int power=BATTERY_TOP_LEVEL; power > BATTERY_BOTTOM_LEVEL; power-=100)
+  for (int power=BATTERY_TOP_LEVEL; power > BATTERY_BOTTOM_LEVEL; ){
+    if ((x&3) == 0) {string_buf[x++] = 0b10000001; continue;}
     string_buf[x++] = (power > vbat) ? 0b10000001 : // Empty line
-                                       0b11111111;  // Full line
+                                       0b10111101;  // Full line
+    power-=100;
+  }
   // Battery bottom
-//  string_buf[x++] = 0b10000001;
+  string_buf[x++] = 0b10000001;
   string_buf[x++] = 0b11111111;
   // Draw battery
-  blit8BitWidthBitmap(1, 200, 8, x, string_buf);
+  blit8BitWidthBitmap(7, LCD_HEIGHT-50, 8, x, string_buf);
+  plot_printf((char*)string_buf, sizeof string_buf, "%.2fv", vbat/1000.0);
+  ili9341_drawstring((char*)string_buf, 1, LCD_HEIGHT-50+x+3);
 }
 
 void
