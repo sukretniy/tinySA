@@ -2188,7 +2188,24 @@ static void update_waterfall(void){
   index_t *index = trace_index[TRACE_ACTUAL];
   for (i=0; i< w_width; i++) {			// Add new topline
     uint16_t y = CELL_Y(index[i]);
-    spi_buffer[i] = RGB565(255-y, y, (128-y)&0xFF);
+#if 0
+        spi_buffer[i] = RGB565(255-y, y, (128-y)&0xFF);
+#else
+    uint16_t ratio = (HEIGHT_SCROLL - y)*2;
+//      ratio = (i*2);    // Uncomment for testing the waterfall colors
+      int16_t b = 255 - ratio;
+      if (b > 255) b = 255;
+      if (b < 0) b = 0;
+      int16_t r = ratio - 255;
+      if (r > 255) r = 255;
+      if (r < 0) r = 0;
+      int16_t g = 255 - b - r;
+#define gamma_correct(X) X = (X < 64 ? X * 2 : X < 128 ? 128 + (X-64) : X < 192 ? 192 + (X - 128)/2 : 225 + (X - 192) / 4)
+      gamma_correct(r);
+      gamma_correct(g);
+      gamma_correct(b);
+      spi_buffer[i] = RGB565(r, g, b);
+#endif
   }
   ili9341_bulk(OFFSETX, HEIGHT_SCROLL+2, w_width, 1);
 }
