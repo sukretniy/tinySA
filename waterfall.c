@@ -20,7 +20,8 @@
 // Test palette for waterfall
 // Possibly better use size = HEIGHT_SCROLL / 2 for more compact and allow use on different displays
 // And build table for every display size
-static const uint16_t palette[256] = {
+#define _PALETTE_ALIGN(idx)  ((idx)>>0)
+static const uint16_t waterfall_palette[] = {
 RGB565(0xBA,0x01,0x00),
 RGB565(0xBA,0x01,0x00),
 RGB565(0xB9,0x01,0x00),
@@ -277,5 +278,5 @@ RGB565(0x01,0x00,0x89),
 RGB565(0x01,0x00,0x8A),
 RGB565(0x00,0x00,0x87),
 RGB565(0x00,0x00,0x83),
-RGB565(0x00,0x00,0x84),
+RGB565(0x00,0x00,0x84)
 };

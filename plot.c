@@ -2180,6 +2180,7 @@ redraw_frame(void)
   draw_cal_status();
 }
 
+//#define _USE_WATERFALL_PALETTE
 #ifdef  _USE_WATERFALL_PALETTE
 #include "waterfall.c"
 #endif
@@ -2194,11 +2195,12 @@ static void update_waterfall(void){
   index_t *index = trace_index[TRACE_ACTUAL];
   for (i=0; i< w_width; i++) {			// Add new topline
     uint16_t color;
-    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
 #ifdef _USE_WATERFALL_PALETTE
+    uint16_t y = _PALETTE_ALIGN(CELL_Y(index[i])); // should be always in range 0 - HEIGHT_SCROLL
 //    y = (uint8_t)i;  // for test
-    color = paltte[y];
+    color = waterfall_palette[y];
 #elif 0
+    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
     uint16_t ratio = (HEIGHT_SCROLL - y)*2;
 //    ratio = (i*2);    // Uncomment for testing the waterfall colors
     int16_t b = 255 - ratio;
@@ -2214,6 +2216,7 @@ static void update_waterfall(void){
     gamma_correct(b);
     color = RGB565(r, g, b);
 #else
+    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
     // Calculate gradient palette for range 0 .. 192
     // idx     r   g   b
     //   0 - 192   0   0
