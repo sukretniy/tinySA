@@ -1598,12 +1598,6 @@ draw_all_cells(bool flush_markmap)
     // clear map for next plotting
     clear_markmap();
   }
-//  START_PROFILE
-#ifdef __SCROLL__
-  if (waterfall)
-    update_waterfall();
-#endif
-//  STOP_PROFILE
 }
 
 void
@@ -1613,8 +1607,15 @@ draw_all(bool flush)
     force_set_markmap();
   if (redraw_request & REDRAW_MARKER)
     markmap_upperarea();
-  if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_AREA))
+  if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_AREA)){
     draw_all_cells(flush);
+#ifdef __SCROLL__
+  //  START_PROFILE
+    if (waterfall)
+      update_waterfall();
+  //  STOP_PROFILE
+#endif
+  }
   if (redraw_request & (REDRAW_CAL_STATUS | REDRAW_FREQUENCY) )
     draw_cal_status();                      // calculates the actual sweep time, must be before draw_frequencies
   if (redraw_request & REDRAW_FREQUENCY)
@@ -2219,7 +2220,7 @@ static void update_waterfall(void){
     uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
     // Calculate gradient palette for range 0 .. 192
     // idx     r   g   b
-    //   0 - 192   0   0
+    //   0 - 127   0   0
     //  32 - 255 127   0
     //  64 - 255 255 127
     //  96 - 255 255 255
@@ -2227,8 +2228,8 @@ static void update_waterfall(void){
     // 160 -   0 127 255
     // 192 -   0   0 127
     // 224 -   0   0   0
-//    y = (uint8_t)i;  // for test
-         if (y <  32) color = RGB565( 192+((y-  0)*2),   0+((y-  0)*4),               0);
+    y = (uint8_t)i;  // for test
+         if (y <  32) color = RGB565( 127+((y-  0)*4),   0+((y-  0)*4),               0);
     else if (y <  64) color = RGB565(             255, 127+((y- 32)*4),   0+((y- 32)*4));
     else if (y <  96) color = RGB565(             255,             255, 127+((y- 64)*4));
     else if (y < 128) color = RGB565( 252-((y- 96)*4),             255,             255);
