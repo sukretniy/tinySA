@@ -133,7 +133,7 @@ VNA_SHELL_FUNCTION(cmd_attenuate)
     int a = my_atoi(argv[0]);
 //    if (a < 0 || a>31)
 //      goto usage;
-    if (setting.attenuate != a)
+    if (get_attenuation() != a)
       set_attenuation(a);
   }
   redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;

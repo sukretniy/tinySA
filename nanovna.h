@@ -569,7 +569,7 @@ typedef struct setting
   uint16_t _sweep_points;
   float attenuate;
   int auto_attenuation;
-  int step_atten;
+  int atten_step;
   int rbw;
   int below_IF;
   int average;

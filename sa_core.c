@@ -70,7 +70,7 @@ void reset_settings(int m)
   setting.auto_attenuation = true;
   setting.subtract_stored = 0;
   setting.drive=13;
-  setting.step_atten = 0;       // Only used in low output mode
+  setting.atten_step = 0;       // Only used in low output mode
   setting.agc = S_AUTO_ON;
   setting.lna = S_AUTO_OFF;
   setting.tracking = false;
@@ -304,7 +304,7 @@ void set_auto_attenuation(void)
   } else {
     setting.attenuate = 0;
   }
-  setting.step_atten = false;
+  setting.atten_step = false;
 }
 
 void set_auto_reflevel(int v)
@@ -315,11 +315,11 @@ void set_auto_reflevel(int v)
 float get_attenuation(void)
 {
   if (setting.mode == M_GENLOW) {
-    if (setting.step_atten)
-      return ( -(POWER_OFFSET + setting.attenuate - (setting.step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
+    if (setting.atten_step)
+      return ( -(POWER_OFFSET + setting.attenuate - (setting.atten_step-1)*POWER_STEP + SWITCH_ATTENUATION));
     else
       return ( -POWER_OFFSET - setting.attenuate + (setting.drive & 7) * 3);
-  } else if (setting.step_atten) {
+  } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
       return setting.attenuate + RECEIVE_SWITCH_ATTENUATION;
     else
@@ -364,21 +364,21 @@ void set_attenuation(float a)
     if (a > 0)
       a = 0;
     if( a >  - SWITCH_ATTENUATION) {
-      setting.step_atten = 0;
+      setting.atten_step = 0;
     } else {
       a = a + SWITCH_ATTENUATION;
-      setting.step_atten = 1;
+      setting.atten_step = 1;
     }
     a = -a;
   } else {
     if (setting.mode == M_LOW && a > 31) {
-      setting.step_atten = 1;
+      setting.atten_step = 1;
       a = a - RECEIVE_SWITCH_ATTENUATION;
     } else if (setting.mode == M_HIGH && a > 0) {
-      setting.step_atten = 1;
+      setting.atten_step = 1;
       a = a - SWITCH_ATTENUATION;
     } else
-      setting.step_atten = 0;
+      setting.atten_step = 0;
     setting.auto_attenuation = false;
   }
   if (a<0.0)
@@ -875,7 +875,7 @@ case M_ULTRA:
 #endif
     SI4432_Sel = 0;
     SI4432_Receive();
-    if (setting.step_atten) {
+    if (setting.atten_step) {
       set_switch_transmit();
     } else {
       set_switch_receive();
@@ -900,7 +900,7 @@ mute:
 
     SI4432_Sel = 1;
     SI4432_Receive();
-    if (setting.step_atten) {
+    if (setting.atten_step) {
        set_switch_transmit();
      } else {
        set_switch_receive();
@@ -912,7 +912,7 @@ case M_GENLOW:  // Mixed output from 0
     if (setting.mute)
       goto mute;
     SI4432_Sel = 0;
-    if (setting.step_atten) {
+    if (setting.atten_step) {
       set_switch_off();
     } else {
       set_switch_transmit();
@@ -1629,7 +1629,7 @@ again:
       redraw_request |= REDRAW_CAL_STATUS;
       PE4302_Write_Byte((int)(setting.attenuate * 2));
       SI4432_Sel = 0;
-      if (setting.step_atten) {
+      if (setting.atten_step) {
         set_switch_transmit();
       } else {
         set_switch_receive();
@@ -2491,7 +2491,7 @@ int test_validate(int i)
 void test_prepare(int i)
 {
   setting.tracking = false; //Default test setup
-  setting.step_atten = false;
+  setting.atten_step = false;
   setting.frequency_IF = 433800000;                // Default frequency
   setting.auto_IF = true;
   set_attenuation(0.0);
@@ -2509,7 +2509,7 @@ common_silent:
   case TP_10MHZ_SWITCH:
     set_mode(M_LOW);
     set_refer_output(2);
-    setting.step_atten = true;
+    setting.atten_step = true;
     goto common;
   case TP_10MHZEXTRA:                         // Swept receiver
     set_mode(M_LOW);
