@@ -293,12 +293,18 @@ void set_IF(int f)
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
 #define POWER_OFFSET    15
 #define SWITCH_ATTENUATION  30
+#define RECEIVE_SWITCH_ATTENUATION  21
 
 
 void set_auto_attenuation(void)
 {
   setting.auto_attenuation = true;
-  setting.attenuate = 30.0;
+  if (setting.mode == M_LOW) {
+    setting.attenuate = 30.0;
+  } else {
+    setting.attenuate = 0;
+  }
+  setting.step_atten = false;
 }
 
 void set_auto_reflevel(int v)
@@ -313,6 +319,11 @@ float get_attenuation(void)
       return ( -(POWER_OFFSET + setting.attenuate - (setting.step_atten-1)*POWER_STEP + SWITCH_ATTENUATION));
     else
       return ( -POWER_OFFSET - setting.attenuate + (setting.drive & 7) * 3);
+  } else if (setting.step_atten) {
+    if (setting.mode == M_LOW)
+      return setting.attenuate + RECEIVE_SWITCH_ATTENUATION;
+    else
+      return setting.attenuate + SWITCH_ATTENUATION;
   }
   return(setting.attenuate);
 }
@@ -360,13 +371,22 @@ void set_attenuation(float a)
     }
     a = -a;
   } else {
-    setting.step_atten = 0;
+    if (setting.mode == M_LOW && a > 31) {
+      setting.step_atten = 1;
+      a = a - RECEIVE_SWITCH_ATTENUATION;
+    } else if (setting.mode == M_HIGH && a > 0) {
+      setting.step_atten = 1;
+      a = a - SWITCH_ATTENUATION;
+    } else
+      setting.step_atten = 0;
     setting.auto_attenuation = false;
   }
   if (a<0.0)
       a = 0;
   if (a> 31)
     a=31.0;
+  if (setting.mode == M_HIGH)   // No attenuator in high mode
+    a = 0;
 //  if (setting.attenuate == a)
 //    return;
   setting.attenuate = a;
@@ -724,6 +744,9 @@ void apply_settings(void)
     PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
     PE4302_Write_Byte((int)(setting.attenuate * 2));
+  if (setting.mode == M_LOW) {
+
+  }
   SI4432_SetReference(setting.refer);
   update_rbw();
   if (setting.frequency_step == 0.0) {
@@ -877,7 +900,11 @@ mute:
 
     SI4432_Sel = 1;
     SI4432_Receive();
-    set_switch_receive();
+    if (setting.step_atten) {
+       set_switch_transmit();
+     } else {
+       set_switch_receive();
+     }
     set_AGC_LNA();
 
     break;
@@ -1387,7 +1414,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 
     static float correct_RSSI;
     if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
-      correct_RSSI = get_level_offset()+ setting.attenuate - signal_path_loss - setting.offset + get_frequency_correction(f);
+      correct_RSSI = get_level_offset()+ get_attenuation() - signal_path_loss - setting.offset + get_frequency_correction(f);
    wait:
     subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;
 //    if ( i < 3)
@@ -1589,8 +1616,8 @@ again:
   }
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // Auto attenuate
-    float old_attenuate = setting.attenuate;
-    float actual_max_level = actual_t[max_index[0]] - setting.attenuate;
+    float old_attenuate = get_attenuation();
+    float actual_max_level = actual_t[max_index[0]] - old_attenuate;
     if (actual_max_level < - 31 && setting.attenuate >= 10) {
       setting.attenuate -= 10.0;
     } else if (actual_max_level < - 26 && setting.attenuate >= 5) {
@@ -1598,16 +1625,22 @@ again:
     } else if (actual_max_level > - 19 && setting.attenuate <= 20) {
       setting.attenuate += 10.0;
     }
-    if (old_attenuate != setting.attenuate) {
+    if (old_attenuate != get_attenuation()) {
       redraw_request |= REDRAW_CAL_STATUS;
       PE4302_Write_Byte((int)(setting.attenuate * 2));
+      SI4432_Sel = 0;
+      if (setting.step_atten) {
+        set_switch_transmit();
+      } else {
+        set_switch_receive();
+      }
       // dirty = true;                               // Must be  above if(scandirty!!!!!)
     }
   }
   if (!in_selftest && MODE_INPUT(setting.mode) && S_IS_AUTO(setting.agc) && UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
     unsigned char v;
     static unsigned char old_v;
-    float actual_max_level = actual_t[max_index[0]] - setting.attenuate;
+    float actual_max_level = actual_t[max_index[0]] - get_attenuation();
     if (actual_max_level > - 45)
       v = 0x50; // Disable AGC and enable LNA
     else
@@ -1989,7 +2022,7 @@ void draw_cal_status(void)
 #endif
   ili9341_drawstring(buf, x, y);
 
-  if (setting.mode == M_LOW) {
+//  if (setting.mode == M_LOW) {
     // Attenuation
     if (setting.auto_attenuation)
       color = DEFAULT_FG_COLOR;
@@ -1999,10 +2032,10 @@ void draw_cal_status(void)
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Attn:", x, y);
     y += YSTEP;
-    plot_printf(buf, BLEN, "%.2FdB", setting.attenuate);
+    plot_printf(buf, BLEN, "%.2FdB", get_attenuation());
     buf[6]=0;
     ili9341_drawstring(buf, x, y);
-  }
+//  }
 
   // Average
   if (setting.average>0) {
@@ -2634,15 +2667,16 @@ void self_test(int test)
       if ((int)stored_t[j] > 1)
         shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
     }
-  } else if (test == 2) {
-    // Attenuator test
+  } else if (test == 2) {                                   // Attenuator test
     in_selftest = true;
     reset_settings(M_LOW);
     int i = 15;       // calibrate attenuator at 30 MHz;
     float reference_peak_level = 0;
     test_prepare(i);
-    for (int j= 0; j < 32; j++ ) {
+    for (int j= 0; j < 50; j++ ) {
       test_prepare(i);
+      set_RBW(30);
+
       set_attenuation((float)j);
       float summed_peak_level = 0;
       for (int k=0; k<10; k++) {
@@ -2653,7 +2687,7 @@ void self_test(int test)
       peakLevel = summed_peak_level / 10;
       if (j == 0)
         reference_peak_level = peakLevel;
-      shell_printf("Target %d, actual %f, delta %f\n\r",j, peakLevel, peakLevel - reference_peak_level);
+      shell_printf("Attenuation %ddB, measured level %.2fdBm, delta %.2fdB\n\r",j, peakLevel, peakLevel - reference_peak_level);
     }
   } else if (test == 3) {
     // RBW step time search
