@@ -2228,7 +2228,7 @@ static void update_waterfall(void){
     // 160 -   0 127 255
     // 192 -   0   0 127
     // 224 -   0   0   0
-    y = (uint8_t)i;  // for test
+//    y = (uint8_t)i;  // for test
          if (y <  32) color = RGB565( 127+((y-  0)*4),   0+((y-  0)*4),               0);
     else if (y <  64) color = RGB565(             255, 127+((y- 32)*4),   0+((y- 32)*4));
     else if (y <  96) color = RGB565(             255,             255, 127+((y- 64)*4));
