@@ -1949,8 +1949,9 @@ static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "20
 
 void draw_cal_status(void)
 {
-#define BLEN    10
-  char buf[BLEN];
+#define BLEN    7
+  char buf[BLEN+1];
+  buf[6]=0;
 #define YSTEP   8
   int x = 0;
   int y = OFFSETY;
@@ -1960,8 +1961,6 @@ void draw_cal_status(void)
     rounding  = true;
   const char * const unit = unit_string[setting.unit];
 
-
-#define XSTEP   40
   ili9341_fill(0, 0, OFFSETX, LCD_HEIGHT-1, 0x0000);
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
     return;
@@ -1975,10 +1974,10 @@ void draw_cal_status(void)
   float yMax = setting.reflevel;
   // Top level
   if (rounding)
-    plot_printf(buf, BLEN, "%4d", (int)yMax);
+    plot_printf(buf, BLEN, "%+4d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%.3F", (yMax/setting.unit_scale));
-//  buf[5]=0;
+    plot_printf(buf, BLEN, "%+.3F", (yMax/setting.unit_scale));
+
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
       color = DEFAULT_FG_COLOR;
@@ -2030,10 +2029,9 @@ void draw_cal_status(void)
       color = BRIGHT_COLOR_GREEN;
     ili9341_set_foreground(color);
     y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Attn:", x, y);
+    ili9341_drawstring("Atten:", x, y);
     y += YSTEP;
     plot_printf(buf, BLEN, "%.2FdB", get_attenuation());
-    buf[6]=0;
     ili9341_drawstring(buf, x, y);
 //  }
 
@@ -2045,7 +2043,6 @@ void draw_cal_status(void)
 
     y += YSTEP;
     plot_printf(buf, BLEN, "%s",averageText[setting.average]);
-    buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
   // Spur
@@ -2073,7 +2070,6 @@ void draw_cal_status(void)
 
   y += YSTEP;
   plot_printf(buf, BLEN, "%.1FkHz", actual_rbw);
-//  buf[6]=0;
   ili9341_drawstring(buf, x, y);
 
 #if 0
@@ -2107,16 +2103,7 @@ void draw_cal_status(void)
   if (t < setting.sweep_time)
     t = setting.sweep_time;
   setting.actual_sweep_time = t;
-  if (t>=10000.0)
-    plot_printf(buf, BLEN, "%5d",(int)(t/1000));
-  else if (t>=1000)
-    plot_printf(buf, BLEN, "%5f",t/1000.0);
-  else {
-    plot_printf(buf, BLEN, "%4dm",(int)t);
-    buf[4] = 'm';
-  }
-  buf[5]='S';
-  buf[6]=0;
+  plot_printf(buf, BLEN, "%.3Fs", t/1000.0);
   ili9341_drawstring(buf, x, y);
 
    // Cal output
@@ -2139,7 +2126,6 @@ void draw_cal_status(void)
 
     y += YSTEP;
     plot_printf(buf, BLEN, "%.1fdB",setting.offset);
-    buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
 
@@ -2171,7 +2157,6 @@ void draw_cal_status(void)
     else
       plot_printf(buf, BLEN, "%.4F", value(setting.trigger_level));
 //    plot_printf(buf, BLEN, "%4f", value(setting.trigger_level)/setting.unit_scale);
-    buf[6]=0;
     ili9341_drawstring(buf, x, y);
   }
 
@@ -2182,16 +2167,13 @@ void draw_cal_status(void)
     color = BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2 ;
-  if (MODE_LOW(setting.mode))
-      ili9341_drawstring_7x13("LOW", x, y);
-  else
-    ili9341_drawstring_7x13("HIGH", x, y);
+  ili9341_drawstring_7x13(MODE_LOW(setting.mode) ? "LOW" : "HIGH", x, y);
 
   // Compact status string
 //  ili9341_set_background(DEFAULT_FG_COLOR);
   ili9341_set_foreground(DEFAULT_FG_COLOR);
   y += YSTEP + YSTEP/2 ;
-  strncpy(buf,"      ",BLEN);
+  strncpy(buf,"     ",BLEN-1);
   if (setting.auto_attenuation)
     buf[0] = 'a';
   else
@@ -2220,8 +2202,7 @@ void draw_cal_status(void)
 
   // Version
   y += YSTEP + YSTEP/2 ;
-  strncpy(buf,&VERSION[8],6);
-  buf[6]=0;
+  strncpy(buf,&VERSION[8], BLEN-1);
   ili9341_drawstring(buf, x, y);
 
 //  ili9341_set_background(DEFAULT_BG_COLOR);
