@@ -522,7 +522,7 @@ extern volatile uint8_t redraw_request;
 #define DEFAULT_LOW_BAT_COLOR       RGB565(255,  0,  0)
 #define DEFAULT_SPEC_INPUT_COLOR    RGB565(128,255,128);
 #define BRIGHT_COLOR_BLUE  RGB565(0,0,255)
-#define BRIGHT_COLOR_RED  RGB565(255,0,0)
+#define BRIGHT_COLOR_RED  RGB565(255,128,128)
 #define BRIGHT_COLOR_GREEN  RGB565(0,255,0)
 
 extern uint16_t foreground_color;
