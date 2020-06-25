@@ -1899,6 +1899,9 @@ cell_draw_marker_info(int x0, int y0)
   }
 }
 #endif
+
+extern float temppeakLevel;
+
 static void cell_draw_marker_info(int x0, int y0)
 {
   char buf[32];
@@ -1988,7 +1991,13 @@ static void cell_draw_marker_info(int x0, int y0)
       buf[k++] = ' ';
 //      buf[k++] = 0;
       ili9341_set_background(DEFAULT_BG_COLOR);
-      ili9341_set_foreground(marker_color(markers[i].mtype));
+      uint16_t color;
+      if ((setting.mode == M_LOW && temppeakLevel - get_attenuation() > -1) ||
+          (setting.mode == M_HIGH && temppeakLevel - get_attenuation() > -10))
+        color = BRIGHT_COLOR_RED;
+      else
+        color = marker_color(markers[i].mtype);
+      ili9341_set_foreground(color);
 //      if (setting.unit)
 //        cell_drawstring(buf, xpos, ypos);
 //      else
