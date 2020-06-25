@@ -226,7 +226,7 @@ void set_decay(int);
 void set_noise(int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
-void set_10mhz(int);
+void set_10mhz(uint32_t);
 void set_modulation(int);
 //extern int setting.modulation;
 void set_measurement(int);
@@ -847,7 +847,7 @@ float SI4432_RSSI(uint32_t i, int s);
 #ifdef __FAST_SWEEP__
 void SI4432_Fill(int s, int start);
 #endif
-void SI4432_Set_Frequency ( long Freq );
+void SI4432_Set_Frequency ( uint32_t Freq );
 float SI4432_SET_RBW(float WISH);
 void SI4432_SetReference(int freq);
 

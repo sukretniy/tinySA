@@ -32,7 +32,7 @@ float SI4432_RSSI(uint32_t i, int s);
 #ifdef __SIMULATION__
 float Simulated_SI4432_RSSI(uint32_t i, int s);
 #endif
-void SI4432_Set_Frequency ( long Freq );
+void SI4432_Set_Frequency ( uint32_t Freq );
 void SI4432_Transmit(int d);
 void SI4432_Receive(void);
 float SI4432_SET_RBW(float WISH);
