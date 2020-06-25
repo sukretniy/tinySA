@@ -2671,6 +2671,7 @@ void self_test(int test)
       if ((int)stored_t[j] > 1)
         shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
     }
+    reset_settings(M_LOW);
   } else if (test == 2) {                                   // Attenuator test
     in_selftest = true;
     reset_settings(M_LOW);
@@ -2693,6 +2694,7 @@ void self_test(int test)
         reference_peak_level = peakLevel;
       shell_printf("Attenuation %ddB, measured level %.2fdBm, delta %.2fdB\n\r",j, peakLevel, peakLevel - reference_peak_level);
     }
+    reset_settings(M_LOW);
   } else if (test == 3) {
     // RBW step time search
     in_selftest = true;
@@ -2732,6 +2734,7 @@ void self_test(int test)
       setting.step_delay = setting.step_delay * 5 / 4;
       shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting.step_delay);
     }
+    reset_settings(M_LOW);
   } else if (test == 5) {
 //    reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
