@@ -206,6 +206,7 @@ int GetAverage(void);
 void  set_storage(void);
 void  set_clear_storage(void);
 void  set_subtract_storage(void);
+void  toggle_normalize(void);
 void toggle_waterfall(void);
 void set_mode(int);
 int GetMode(void);

@@ -423,6 +423,20 @@ void set_subtract_storage(void)
   dirty = true;
 }
 
+
+void toggle_normalize(void)
+{
+  if (!setting.subtract_stored) {
+    for (int i=0; i<POINTS_COUNT;i++)
+      stored_t[i] = actual_t[i];
+    setting.subtract_stored = true;
+  } else {
+    setting.subtract_stored = false;
+  }
+  dirty = true;
+}
+
+
 extern float peakLevel;
 void set_actual_power(float o)
 {
@@ -1616,7 +1630,7 @@ again:
     redraw_request |= REDRAW_CAL_STATUS;
   }
 
-  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // Auto attenuate
+  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0 && !setting.subtract_stored) {  // Auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     float old_attenuate = get_attenuation();
     float actual_max_level = actual_t[max_index[0]] - old_attenuate;

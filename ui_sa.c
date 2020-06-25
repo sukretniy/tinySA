@@ -893,6 +893,9 @@ static void menu_storage_cb(int item, uint8_t data)
       set_subtract_storage();
       break;
     case 3:
+      toggle_normalize();
+      break;
+    case 4:
       toggle_waterfall();
       break;
   }
@@ -1460,7 +1463,8 @@ static const menuitem_t menu_display[] = {
   { MT_CALLBACK,0,              "\2STORE\0TRACE",   menu_storage_cb},
   { MT_CALLBACK,1,              "\2CLEAR\0STORED",  menu_storage_cb},
   { MT_CALLBACK,2,              "\2SUBTRACT\0STORED",menu_storage_cb},
-  { MT_CALLBACK,3,              "WATERFALL",        menu_storage_cb},
+  { MT_CALLBACK,3,              "NORMALIZE",        menu_storage_cb},
+  { MT_CALLBACK,4,              "WATERFALL",        menu_storage_cb},
   { MT_KEYPAD,  KM_SWEEP_TIME,  "\2SWEEP\0TIME",    NULL},
 
   { MT_CANCEL, 0,           "\032 BACK", NULL },
@@ -1656,10 +1660,13 @@ static void menu_item_modify_attribute(
     if (item ==1 && setting.show_stored){
       mark = true;
     }
-    if (item == 3 && setting.subtract_stored){
+    if (item == 3 && setting.subtract_stored && setting.show_stored){
       mark = true;
     }
-    if (item == 4 && get_waterfall()){
+    if (item == 4 && setting.subtract_stored && !setting.show_stored){
+      mark = true;
+    }
+    if (item == 5 && get_waterfall()){
       mark = true;
     }
 #ifdef __SPUR__
