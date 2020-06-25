@@ -286,10 +286,8 @@ static const uint8_t ili9341_init_seq[] = {
   ILI9341_POWERB, 3, 0x00, 0xC1, 0x30,
   // Power on sequence control
   ILI9341_POWER_SEQ, 4, 0x64, 0x03, 0x12, 0x81,
-  //ILI9341_POWER_SEQ, 4, 0x55, 0x01, 0x23, 0x01,
   // Driver timing control A
   ILI9341_DTCA, 3, 0x85, 0x00, 0x78,
-  //ILI9341_DTCA, 3, 0x84, 0x11, 0x7a,
   // Power control A
   ILI9341_POWERA, 5, 0x39, 0x2C, 0x00, 0x34, 0x02,
   // Pump ratio control
@@ -301,11 +299,9 @@ static const uint8_t ili9341_init_seq[] = {
   // POWER_CONTROL_2
   ILI9341_POWER_CONTROL_2, 1, 0x10,
   // VCOM_CONTROL_1
-//  ILI9341_VCOM_CONTROL_1, 2, 0x35, 0x3E,
   ILI9341_VCOM_CONTROL_1, 2, 0x3e, 0x28,
   // VCOM_CONTROL_2
   ILI9341_VCOM_CONTROL_2, 1, 0xBE,
-//  ILI9341_VCOM_CONTROL_2, 1, 0x86,
   // MEMORY_ACCESS_CONTROL
   //ILI9341_MEMORY_ACCESS_CONTROL, 1, 0x48, // portlait
   ILI9341_MEMORY_ACCESS_CONTROL, 1, DISPLAY_ROTATION_0, // landscape
@@ -318,9 +314,9 @@ static const uint8_t ili9341_init_seq[] = {
   // gamma set for curve 01/2/04/08
   ILI9341_GAMMA_SET, 1, 0x01,
   // positive gamma correction
-ILI9341_POSITIVE_GAMMA_CORRECTION, 15, 0x0F,  0x31,  0x2B,  0x0C,  0x0E,  0x08,  0x4E,  0xF1,  0x37,  0x07,  0x10,  0x03,  0x0E, 0x09,  0x00,
+  ILI9341_POSITIVE_GAMMA_CORRECTION, 15, 0x0F,  0x31,  0x2B,  0x0C,  0x0E,  0x08,  0x4E,  0xF1,  0x37,  0x07,  0x10,  0x03,  0x0E, 0x09,  0x00,
   // negativ gamma correction
-ILI9341_NEGATIVE_GAMMA_CORRECTION, 15, 0x00,  0x0E,  0x14,  0x03,  0x11,  0x07,  0x31,  0xC1,  0x48,  0x08,  0x0F,  0x0C,  0x31, 0x36,  0x0F,
+  ILI9341_NEGATIVE_GAMMA_CORRECTION, 15, 0x00,  0x0E,  0x14,  0x03,  0x11,  0x07,  0x31,  0xC1,  0x48,  0x08,  0x0F,  0x0C,  0x31, 0x36,  0x0F,
   // Column Address Set
 //ILI9341_COLUMN_ADDRESS_SET, 4, 0x00, 0x00, 0x01, 0x3f, // width 320
   // Page Address Set
@@ -331,10 +327,6 @@ ILI9341_NEGATIVE_GAMMA_CORRECTION, 15, 0x00,  0x0E,  0x14,  0x03,  0x11,  0x07, 
   ILI9341_DISPLAY_FUNCTION_CONTROL, 3, 0x08, 0x82, 0x27,
   // Interface Control (set WEMODE=0)
   ILI9341_INTERFACE_CONTROL, 3, 0x00, 0x00, 0x00,
-  // control display
-  //ILI9341_WRITE_CTRL_DISPLAY, 1, 0x0c,
-  // diaplay brightness
-  //ILI9341_WRITE_BRIGHTNESS, 1, 0xff,
   // sleep out
   ILI9341_SLEEP_OUT, 0,
   // display on

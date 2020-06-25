@@ -993,7 +993,7 @@ VNA_SHELL_FUNCTION(cmd_scan)
   }
   if (argc >= 3) {
     points = my_atoi(argv[2]);
-    if (points <= 0 || points > POINTS_COUNT) {
+    if (points <= 0 || points > sweep_points) {
       shell_printf("sweep points exceeds range "define_to_STR(POINTS_COUNT)"\r\n");
       return;
     }

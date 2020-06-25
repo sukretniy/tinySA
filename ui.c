@@ -42,9 +42,9 @@ uistat_t uistat = {
 #define EVT_DOWN                0x20
 #define EVT_REPEAT              0x40
 
-#define BUTTON_DOWN_LONG_TICKS      5000   /* 1sec */
-#define BUTTON_DOUBLE_TICKS         2500   /* 500ms */
-#define BUTTON_REPEAT_TICKS         625    /* 125ms */
+#define BUTTON_DOWN_LONG_TICKS      5000   /* 500ms */
+#define BUTTON_DOUBLE_TICKS         2500   /* 250ms */
+#define BUTTON_REPEAT_TICKS         400    /*  40ms */
 #define BUTTON_DEBOUNCE_TICKS       200
 
 /* lever switch assignment */
@@ -62,7 +62,6 @@ uistat_t uistat = {
 static uint16_t last_button = 0b0000;
 static uint32_t last_button_down_ticks;
 static uint32_t last_button_repeat_ticks;
-static int8_t inhibit_until_release = FALSE;
 
 volatile uint8_t operation_requested = OP_NONE;
 
@@ -135,73 +134,62 @@ static void menu_push_submenu(const menuitem_t *submenu);
 
 static int btn_check(void)
 {
-    int cur_button = READ_PORT() & BUTTON_MASK;
-    int changed = last_button ^ cur_button;
-    int status = 0;
-    uint32_t ticks = chVTGetSystemTime();
-    if (changed & (1<<BIT_PUSH)) {
-      if ((cur_button & (1<<BIT_PUSH))
-          && ticks >= last_button_down_ticks + BUTTON_DEBOUNCE_TICKS) {
-        // button released
-        status |= EVT_BUTTON_SINGLE_CLICK;
-        if (inhibit_until_release) {
-          status = 0;
-          inhibit_until_release = FALSE;
-        }
-      }
-    }
-    if (changed & (1<<BIT_UP1)) {
-      if ((cur_button & (1<<BIT_UP1))
-          && (ticks >= last_button_down_ticks + BUTTON_DEBOUNCE_TICKS)) {
-        status |= EVT_UP;
-      }
-    }
-    if (changed & (1<<BIT_DOWN1)) {
-      if ((cur_button & (1<<BIT_DOWN1))
-          && (ticks >= last_button_down_ticks + BUTTON_DEBOUNCE_TICKS)) {
-        status |= EVT_DOWN;
-      }
-    }
-    last_button_down_ticks = ticks;
-    last_button = cur_button;
+  systime_t ticks;
+  // Debounce input
+  while(TRUE){
+    ticks = chVTGetSystemTimeX();
+    if(ticks - last_button_down_ticks > BUTTON_DEBOUNCE_TICKS)
+      break;
+    chThdSleepMilliseconds(10);
+  }
+  int status = 0;
+  uint16_t cur_button = READ_PORT() & BUTTON_MASK;
+  // Detect only changed and pressed buttons
+  uint16_t button_set = (last_button ^ cur_button) & cur_button;
+  last_button_down_ticks = ticks;
+  last_button = cur_button;
 
-    return status;
+  if (button_set & (1<<BIT_PUSH))
+    status |= EVT_BUTTON_SINGLE_CLICK;
+  if (button_set & (1<<BIT_UP1))
+    status |= EVT_UP;
+  if (button_set & (1<<BIT_DOWN1))
+    status |= EVT_DOWN;
+  return status;
 }
 
 static int btn_wait_release(void)
 {
   while (TRUE) {
-    int cur_button = READ_PORT() & BUTTON_MASK;
-    int changed = last_button ^ cur_button;
-    uint32_t ticks = chVTGetSystemTime();
-    int status = 0;
-    if (!inhibit_until_release) {
-      if ((cur_button & (1<<BIT_PUSH))
-          && ticks >= last_button_down_ticks + BUTTON_DOWN_LONG_TICKS) {
-        inhibit_until_release = TRUE;
-        return EVT_BUTTON_DOWN_LONG;
-      }
-      if ((changed & (1<<BIT_PUSH))
-          && ticks < last_button_down_ticks + BUTTON_DOWN_LONG_TICKS) {
-        return EVT_BUTTON_SINGLE_CLICK;
-      }
-    }
-
-    if (changed) {
+    systime_t ticks = chVTGetSystemTimeX();
+    systime_t dt = ticks - last_button_down_ticks;
+    // Debounce input
+//    if (dt < BUTTON_DEBOUNCE_TICKS){
+//      chThdSleepMilliseconds(10);
+//      continue;
+//    }
+    chThdSleepMilliseconds(1);
+    uint16_t cur_button = READ_PORT() & BUTTON_MASK;
+    uint16_t changed = last_button ^ cur_button;
+    if (dt >= BUTTON_DOWN_LONG_TICKS && (cur_button & (1<<BIT_PUSH)))
+      return EVT_BUTTON_DOWN_LONG;
+    else if (changed & (1<<BIT_PUSH)) // release
+      return EVT_BUTTON_SINGLE_CLICK;
+	    if (changed) {
       // finished
       last_button = cur_button;
       last_button_down_ticks = ticks;
-      inhibit_until_release = FALSE;
       return 0;
     }
 
-    if (ticks >= last_button_down_ticks + BUTTON_DOWN_LONG_TICKS
-        && ticks >=  last_button_repeat_ticks + BUTTON_REPEAT_TICKS) {
+    if (dt > BUTTON_DOWN_LONG_TICKS &&
+      ticks > last_button_repeat_ticks) {
+      int status = 0;
       if (cur_button & (1<<BIT_DOWN1))
         status |= EVT_DOWN | EVT_REPEAT;
       if (cur_button & (1<<BIT_UP1))
         status |= EVT_UP | EVT_REPEAT;
-      last_button_repeat_ticks = ticks;
+      last_button_repeat_ticks = ticks + BUTTON_REPEAT_TICKS;
       return status;
     }
   }
@@ -1926,8 +1914,8 @@ lever_move_marker(int status)
       }
       if ((status & EVT_UP) && markers[active_marker].index < sweep_points-1) {
         markers[active_marker].index += step;
-        if (markers[active_marker].index  > POINTS_COUNT-1)
-          markers[active_marker].index = POINTS_COUNT-1 ;
+        if (markers[active_marker].index  > sweep_points-1)
+          markers[active_marker].index = sweep_points-1 ;
         markers[active_marker].frequency = frequencies[markers[active_marker].index];
         redraw_marker(active_marker);
       }

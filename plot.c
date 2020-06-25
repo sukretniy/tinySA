@@ -863,7 +863,7 @@ static void trace_get_value_string(
   if (FREQ_IS_CW()) {
     float t = ii*(setting.actual_sweep_time)*1000.0/290.0;
 #if 1
-    plot_printf(&buf2[1], sizeof(buf2) -1, "%.3FS" , t/1000000.0);
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%.3Fs" , t/1000000.0);
 #else
     if (t>1000000.0){
       plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/1000000.0);
@@ -884,22 +884,17 @@ static void trace_get_value_string(
     }
 #endif
   } else {
-  uint32_t resolution = get_sweep_frequency(ST_SPAN)/290;
-#if 0
-  if (resolution  <= 2000)
+#if 1
+  uint32_t resolution = get_sweep_frequency(ST_SPAN);
+  if (resolution  <= 2000*290)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
-  else if (resolution  <= 20000)
+  else if (resolution  <= 20000*290)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.2f" , (dfreq + 5000) / 1000000.0);
   else
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
   }
 #else
-  int digits = 1;
-  if (resolution  <= 2000)
-    digits = 3;
-  else if (resolution  <= 20000)
-    digits = 2;
-  plot_printf(&buf2[1], sizeof(buf2) -1, "%3.*f" , digits, (dfreq + 50000) / 1000000.0);
+  plot_printf(&buf2[1], sizeof(buf2) -1, "%.8qHz" , dfreq);
   }
 #endif
   //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
@@ -1906,7 +1901,7 @@ cell_draw_marker_info(int x0, int y0)
 #endif
 static void cell_draw_marker_info(int x0, int y0)
 {
-  char buf[25];
+  char buf[32];
   int t;
   int ref_marker = 0;
   int j = 0;
@@ -1991,16 +1986,15 @@ static void cell_draw_marker_info(int x0, int y0)
       if (markers[i].mtype & M_NOISE)
         buf[k++] = 'N';
       buf[k++] = ' ';
-      buf[k++] = 0;
+//      buf[k++] = 0;
       ili9341_set_background(DEFAULT_BG_COLOR);
       ili9341_set_foreground(marker_color(markers[i].mtype));
 //      if (setting.unit)
 //        cell_drawstring(buf, xpos, ypos);
 //      else
 //        cell_drawstring_7x13(buf, xpos, ypos);
-      int offs = strlen(buf);
       trace_get_value_string(
-          t, &buf[offs], (sizeof buf) - offs,
+          t, &buf[k], (sizeof buf) - k,
           idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
       if (/* strlen(buf)*7> WIDTH/2 && */active > 1)
         cell_drawstring(buf, xpos, ypos);
@@ -2068,11 +2062,7 @@ draw_frequencies(void)
       if (t < setting.sweep_time)
         t = setting.sweep_time;
       setting.actual_sweep_time = t;
-          ; // in mS
-      if (t>=1000)
-          plot_printf(buf2, sizeof(buf2), " TIME %.2fS",t/1000.0);
-      else
-        plot_printf(buf2, sizeof(buf2), " TIME %.2fmS", t);
+      plot_printf(buf2, sizeof(buf2), " TIME %.3Fs",t/1000.0);
 
     } else if (FREQ_IS_STARTSTOP()) {
       plot_printf(buf1, sizeof(buf1), " START %qHz", get_sweep_frequency(ST_START));
@@ -2096,7 +2086,7 @@ draw_frequencies(void)
     buf2[0] = S_SARROW[0];
   int p2 = FREQUENCIES_XPOS2;
   if (FREQ_IS_CW()) {
-    p2 = LCD_WIDTH - 7*strlen(buf2);
+    p2 = LCD_WIDTH - FONT_MAX_WIDTH*strlen(buf2);
   }
   ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
   ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);
@@ -2131,9 +2121,10 @@ draw_cal_status(void)
       ili9341_drawstring(&calibration_text[i].text, x, y);
 }
 #endif
+
 // Draw battery level
 #define BATTERY_TOP_LEVEL       4100
-#define BATTERY_BOTTOM_LEVEL    3100
+#define BATTERY_BOTTOM_LEVEL    3200
 #define BATTERY_WARNING_LEVEL   3300
 
 static void draw_battery_status(void)
@@ -2145,24 +2136,28 @@ static void draw_battery_status(void)
   // Set battery color
   ili9341_set_foreground(vbat < BATTERY_WARNING_LEVEL ? DEFAULT_LOW_BAT_COLOR : DEFAULT_NORMAL_BAT_COLOR);
   ili9341_set_background(DEFAULT_BG_COLOR);
-//  plot_printf(string_buf, sizeof string_buf, "V:%d", vbat);
-//  ili9341_drawstringV(string_buf, 1, 60);
+
   // Prepare battery bitmap image
   // Battery top
   int x = 0;
+  string_buf[x++] = 0b00000000;
   string_buf[x++] = 0b00111100;
-  string_buf[x++] = 0b00100100;
+  string_buf[x++] = 0b00111100;
   string_buf[x++] = 0b11111111;
-//  string_buf[x++] = 0b10000001;
   // Fill battery status
-  for (int power=BATTERY_TOP_LEVEL; power > BATTERY_BOTTOM_LEVEL; power-=100)
+  for (int power=BATTERY_TOP_LEVEL; power > BATTERY_BOTTOM_LEVEL; ){
+    if ((x&3) == 0) {string_buf[x++] = 0b10000001; continue;}
     string_buf[x++] = (power > vbat) ? 0b10000001 : // Empty line
-                                       0b11111111;  // Full line
+                                       0b10111101;  // Full line
+    power-=100;
+  }
   // Battery bottom
-//  string_buf[x++] = 0b10000001;
+  string_buf[x++] = 0b10000001;
   string_buf[x++] = 0b11111111;
   // Draw battery
-  blit8BitWidthBitmap(1, 200, 8, x, string_buf);
+  blit8BitWidthBitmap(7, LCD_HEIGHT-50, 8, x, string_buf);
+  plot_printf((char*)string_buf, sizeof string_buf, "%.2fv", vbat/1000.0);
+  ili9341_drawstring((char*)string_buf, 1, LCD_HEIGHT-50+x+3);
 }
 
 void
