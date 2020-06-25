@@ -2072,6 +2072,12 @@ void draw_cal_status(void)
   }
 #endif
 
+  if (setting.subtract_stored) {
+    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("Subtr.", x, y);
+  }
+
   // RBW
   if (setting.rbw)
     color = BRIGHT_COLOR_GREEN;
