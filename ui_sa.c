@@ -508,7 +508,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_plusmin,    // KM_LOWOUTLEVEL
   keypads_positive,    // KM_DECAY
   keypads_positive,    // KM_NOISE
-  keypads_plusmin,    // KM_10MHz
+  keypads_freq,    // KM_10MHz
   keypads_positive,    // KM_REPEA
   keypads_plusmin,    // KM_OFFSET
   keypads_plusmin_unit,    // KM_TRIGGER
@@ -525,7 +525,7 @@ static const char * const keypad_mode_label[] = {
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "\2REF\0LEVEL", "SCALE", // 0-7
   "ATTENUATE", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0DELAY", "DRIVE", "LEVEL", "SCANS", "LEVEL", // 8-15
-  "OFFSET" , "\2SAMPLE\0REPEAT", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
+  "FREQ" , "\2SAMPLE\0REPEAT", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
 };
 #endif
 

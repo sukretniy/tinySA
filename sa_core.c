@@ -1,5 +1,4 @@
-/* Copyright (c) 2020, Erik Kaashoek erik@kaashoek.com
- * All rights reserved.
+/* All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -493,8 +492,8 @@ void set_spur(int v)
   if (setting.mode!=M_LOW)
     return;
   setting.spur = v;
-  if (setting.spur && actual_rbw > 360)
-    set_RBW(300);
+//  if (setting.spur && actual_rbw > 360)           // moved to update_rbw
+//    set_RBW(300);
   dirty = true;
 }
 #endif
@@ -978,12 +977,16 @@ void update_rbw(void)
     setting.vbw = 300; // trick to get right default rbw in zero span mode
   }
   actual_rbw = setting.rbw;
-  if (actual_rbw == 0)
+  if (actual_rbw == 0) {
     actual_rbw = 2*setting.vbw;
+  }
   if (actual_rbw < 2.6)
     actual_rbw = 2.6;
   if (actual_rbw > 600)
     actual_rbw = 600;
+
+  if (setting.spur && actual_rbw > 300)
+    actual_rbw = 250;
 
   SI4432_Sel =  MODE_SELECT(setting.mode);
   actual_rbw = SI4432_SET_RBW(actual_rbw);
@@ -1346,8 +1349,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
           else
             setting.below_IF = S_AUTO_OFF;
         }
-        else
-          local_IF  = local_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
+        else {
+          int32_t spur_offset = actual_rbw * 1000;
+          if (setting.spur == -1)
+            spur_offset = - spur_offset;
+          local_IF  = local_IF + spur_offset;
+        }
 #endif
       } else {
 //        local_IF = setting.frequency_IF ;
