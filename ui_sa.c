@@ -1199,7 +1199,6 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s",   "-70..70"},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600S"},
-  //  { MT_FORM | MT_KEYPAD,   KM_10MHZ,        "10MHz: %s",         NULL},
   { MT_FORM | MT_CANCEL,   0,           "MODE",                     NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1404,10 +1403,10 @@ static const menuitem_t menu_settings2[] =
   { MT_CALLBACK | MT_LOW, 4,    "\2BELOW\0IF",      menu_settings2_cb},
   { MT_KEYPAD,   KM_DECAY,      "\2HOLD\0SWEEPS",   "1..1000"},
   { MT_KEYPAD,   KM_NOISE,      "\2NOISE\0LEVEL",   "2..20"},
+  { MT_KEYPAD,   KM_10MHZ,      "\2CORRECT\0FREQUENCY", "Enter actual l0MHz frequency"},
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
-//  { MT_KEYPAD, KM_10MHZ,"\00210MHz\0ACTUAL",    NULL},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1861,20 +1860,20 @@ set_numeric_value(void)
 {
   switch (keypad_mode) {
   case KM_START:
-    set_sweep_frequency(ST_START, uistat.value);
+    set_sweep_frequency(ST_START, (uint32_t)uistat.value);
     break;
   case KM_STOP:
-    set_sweep_frequency(ST_STOP, uistat.value);
+    set_sweep_frequency(ST_STOP, (uint32_t)uistat.value);
     break;
   case KM_CENTER:
-    set_sweep_frequency(ST_CENTER, uistat.value);
+    set_sweep_frequency(ST_CENTER, (uint32_t)uistat.value);
     break;
   case KM_SPAN:
     setting.modulation = MO_NONE;
-    set_sweep_frequency(ST_SPAN, uistat.value);
+    set_sweep_frequency(ST_SPAN, (uint32_t)uistat.value);
     break;
   case KM_CW:
-    set_sweep_frequency(ST_CW, uistat.value);
+    set_sweep_frequency(ST_CW, (uint32_t)uistat.value);
     break;
   case KM_SCALE:
     user_set_scale(uistat.value);
@@ -1914,10 +1913,7 @@ set_numeric_value(void)
     set_noise(uistat.value);
     break;
   case KM_10MHZ:
-    if (uistat.value < 9000000) {
-      set_10mhz(setting_frequency_10mhz + uistat.value);
-    } else
-      set_10mhz(uistat.value);
+    set_10mhz(uistat.value);
     dirty = true;
     break;
   case KM_OFFSET:

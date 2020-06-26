@@ -30,8 +30,8 @@ uint32_t frequencies[POINTS_COUNT];
 
 float actual_rbw = 0;
 int vbwSteps = 1;
-float minFreq = 0;
-float maxFreq = 520000000;
+uint32_t minFreq = 0;
+uint32_t maxFreq = 520000000;
 
 //int setting.refer = -1;  // Off by default
 int const reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
@@ -122,7 +122,7 @@ void reset_settings(int m)
     setting.drive=8;
     minFreq = 0;
     maxFreq = 520000000;
-    set_sweep_frequency(ST_CENTER, (int32_t) 10000000);
+    set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time = 10000.0;
     break;
@@ -131,18 +131,18 @@ void reset_settings(int m)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 240000000;
-    maxFreq = 960000000;
+    minFreq = 24*setting_frequency_10mhz;
+    maxFreq = 96*setting_frequency_10mhz;
 #endif
-    set_sweep_frequency(ST_START, (int32_t) minFreq);
-    set_sweep_frequency(ST_STOP, (int32_t) maxFreq);
+    set_sweep_frequency(ST_START, minFreq);
+    set_sweep_frequency(ST_STOP,  maxFreq);
     setting.sweep_time = 0;
     break;
   case M_GENHIGH:
     setting.drive=8;
     minFreq = 240000000;
     maxFreq = 960000000;
-    set_sweep_frequency(ST_CENTER, (int32_t) 300000000);
+    set_sweep_frequency(ST_CENTER, 300000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time = 10000.0;
     break;
@@ -499,18 +499,20 @@ void set_spur(int v)
 }
 #endif
 
+#ifdef __ULTRA__
 void set_harmonic(int h)
 {
   setting.harmonic = h;
   minFreq = 684000000.0;
-  if (setting.harmonic * 240000000+434000000 >  minFreq)
+  if ((uint32_t)(setting.harmonic * 240000000)+434000000 >  minFreq)
     minFreq = setting.harmonic * 240000000.0+434000000.0;
   maxFreq = 4360000000;
   if (setting.harmonic != 0 && (960000000.0 * setting.harmonic + 434000000.0 )< 4360000000.0)
     maxFreq = (960000000.0 * setting.harmonic + 434000000.0 );
-  set_sweep_frequency(ST_START, (uint32_t) minFreq);
-  set_sweep_frequency(ST_STOP, (uint32_t) maxFreq);
+  set_sweep_frequency(ST_START, minFreq);
+  set_sweep_frequency(ST_STOP, maxFreq);
 }
+#endif
 
 void set_step_delay(int d)
 {
@@ -2558,8 +2560,8 @@ common_silent:
   }
   trace[TRACE_STORED].enabled = true;
   set_reflevel(test_case[i].pass+10);
-  set_sweep_frequency(ST_CENTER, (int32_t)(test_case[i].center * 1000000));
-  set_sweep_frequency(ST_SPAN, (int32_t)(test_case[i].span * 1000000));
+  set_sweep_frequency(ST_CENTER, (uint32_t)(test_case[i].center * 1000000));
+  set_sweep_frequency(ST_SPAN, (uint32_t)(test_case[i].span * 1000000));
   draw_cal_status();
 }
 
@@ -2711,7 +2713,7 @@ void self_test(int test)
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.rbw = SI4432_force_RBW(j);
       shell_printf("RBW = %d, ",setting.rbw);
-      set_sweep_frequency(ST_SPAN, (int32_t)(setting.rbw * 10000));
+      set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw * 10000));
       setting.repeat = 10;
       test_acquire(i);                        // Acquire test
       test_validate(i);                       // Validate test
@@ -2726,7 +2728,7 @@ void self_test(int test)
         test_prepare(i);
         setting.step_delay = setting.step_delay * 4 / 5;
         //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
-        set_sweep_frequency(ST_SPAN, (int32_t)(setting.rbw * 10000));
+        set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw * 10000));
         setting.repeat = 10;
         test_acquire(i);                        // Acquire test
         test_validate(i);                       // Validate test
