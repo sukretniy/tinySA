@@ -2077,7 +2077,7 @@ void draw_cal_status(void)
   if (setting.subtract_stored) {
     ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Subtr.", x, y);
+    ili9341_drawstring("Norm.", x, y);
   }
 
   // RBW

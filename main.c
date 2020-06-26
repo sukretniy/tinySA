@@ -750,7 +750,7 @@ VNA_SHELL_FUNCTION(cmd_data)
 
   if (sel >= 0 && sel <= MAX_DATA) {
     for (i = 0; i < sweep_points; i++)
-      shell_printf("%f\r\n", measured[sel][i]);
+      shell_printf("%f\r\n", value(measured[sel][i]));
     return;
   }
   shell_printf("usage: data [0-2]\r\n");
@@ -1011,9 +1011,9 @@ VNA_SHELL_FUNCTION(cmd_scan)
     if (mask) {
       for (i = 0; i < points; i++) {
         if (mask & 1) shell_printf("%u ", frequencies[i]);
-        if (mask & 2) shell_printf("%f ", measured[0][i]);
-        if (mask & 4) shell_printf("%f ", measured[1][i]);
-        if (mask & 8) shell_printf("%f ", measured[2][i]);
+        if (mask & 2) shell_printf("%f ", value(measured[0][i]));
+        if (mask & 4) shell_printf("%f ", value(measured[1][i]));
+        if (mask & 8) shell_printf("%f ", value(measured[2][i]));
         shell_printf("\r\n");
       }
     }
@@ -1848,7 +1848,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
-        shell_printf("%d %d %d %.2f\r\n", t+1, markers[t].index, markers[t].frequency, actual_t[markers[t].index]);
+        shell_printf("%d %d %d %f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
       }
     }
     return;
@@ -1864,7 +1864,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (t < 0 || t >= MARKERS_MAX)
     goto usage;
   if (argc == 1) {
-    shell_printf("%d %d %d %.2f\r\n", t+1, markers[t].index, markers[t].frequency, actual_t[markers[t].index]);
+    shell_printf("%d %d %d %.2f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
     active_marker = t;
     // select active marker
     markers[t].enabled = TRUE;
