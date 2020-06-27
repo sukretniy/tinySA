@@ -371,7 +371,7 @@ VNA_SHELL_FUNCTION(cmd_a)
 {
   (void)argc;
   if (argc != 1) {
-    shell_printf("a=%d\r\n", frequencyStart);
+    shell_printf("a=%u\r\n", frequencyStart);
     return;
   }
   uint32_t value = my_atoui(argv[0]);
@@ -383,7 +383,7 @@ VNA_SHELL_FUNCTION(cmd_b)
 {
   (void)argc;
   if (argc != 1) {
-    shell_printf("b=%d\r\n", frequencyStop);
+    shell_printf("b=%u\r\n", frequencyStop);
     return;
   }
   uint32_t value = my_atoui(argv[0]);
@@ -425,20 +425,25 @@ VNA_SHELL_FUNCTION(cmd_s)
 
 void sweep_remote(void)
 {
-  int old_step = setting.frequency_step;
-  uint32_t f_step = (frequencyStop-frequencyStart)/ points;
-  setting.frequency_step = f_step;
+  uint32_t i;
+  uint32_t step = (points - 1);
+  uint32_t span = frequencyStop - frequencyStart;
+  uint32_t delta = span / step;
+  uint32_t error = span % step;
+  uint32_t f = frequencyStart - setting.frequency_IF, df = step>>1;
+  uint32_t old_step = setting.frequency_step;
+  setting.frequency_step = delta;
   streamPut(shell_stream, '{');
   dirty = true;
-  for (int i = 0; i<points; i++) {
+  for (i = 0; i <= step; i++, f+=delta) {
     if (operation_requested)
       break;
-    float val = perform(false, i, frequencyStart - setting.frequency_IF + f_step * i, false);
+    float val = perform(false, i, f, false);
     streamPut(shell_stream, 'x');
-    int v = val*2 + 256;
+    uint16_t v = val*2 + 256;
     streamPut(shell_stream, (uint8_t)(v & 0xFF));
     streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
-  // enable led
+    df+=error;if (df >=step) {f++;df -= step;}
   }
   streamPut(shell_stream, '}');
   setting.frequency_step = old_step;

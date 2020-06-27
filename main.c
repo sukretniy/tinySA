@@ -38,8 +38,8 @@
 
 extern uint32_t minFreq;
 extern uint32_t maxFreq;
-float frequencyStart;
-float frequencyStop;
+uint32_t frequencyStart;
+uint32_t frequencyStop;
 int32_t frequencyExtra;
 #define START_MIN minFreq
 #define STOP_MAX maxFreq
@@ -133,6 +133,7 @@ static THD_FUNCTION(Thread1, arg)
   ui_process();
 
   while (1) {
+//  START_PROFILE
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
 //      if (dirty)
         completed = sweep(true);
@@ -151,6 +152,7 @@ static THD_FUNCTION(Thread1, arg)
 //      if (setting.mode != -1)
         __WFI();
     }
+//  STOP_PROFILE
     // Run Shell command in sweep thread
     if (shell_function) {
       operation_requested = OP_NONE; // otherwise commands  will be aborted
