@@ -1526,13 +1526,22 @@ again:
     }
 
     // back to toplevel to handle ui operation
-    if ((operation_requested || shell_function) && break_on_operation)
+    if ((operation_requested || shell_function) && break_on_operation) {
+      if (setting.actual_sweep_time > 1000) {
+        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
+      }
+
       return false;
+    }
     if (MODE_OUTPUT(setting.mode)) {
       continue;             // Skip all other processing
     }
 
     if (MODE_INPUT(setting.mode)) {
+      if (setting.actual_sweep_time > 1000 && (i & 0x07) == 0) {
+        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, i, 1, BRIGHT_COLOR_GREEN);
+        ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-i, 1, 0);
+      }
 
       if (setting.average != AV_OFF)
           temp_t[i] = RSSI;
@@ -1809,6 +1818,10 @@ again:
 
   //    redraw_marker(peak_marker, FALSE);
 //  STOP_PROFILE;
+  if (setting.actual_sweep_time > 1000) {
+    ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
+  }
+
   palSetPad(GPIOB, GPIOB_LED);
   return true;
 }
@@ -2705,14 +2718,14 @@ void self_test(int test)
       shell_printf("Attenuation %ddB, measured level %.2fdBm, delta %.2fdB\n\r",j, peakLevel, peakLevel - reference_peak_level);
     }
     reset_settings(M_LOW);
-  } else if (test == 3) {
-    // RBW step time search
+  } else if (test == 3) {                       // RBW step time search
     in_selftest = true;
-    reset_settings(M_LOW);
+    reset_settings(M_HIGH);
     setting.auto_IF = false;
     setting.frequency_IF=433900000;
     ui_mode_normal();
-    int i = 15;       // calibrate low mode power on 30 MHz;
+    int i = 13;       // calibrate low mode power on 30 MHz;
+//    int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
     setting.step_delay = 8000;
     for (int j= 0; j < 57; j++ ) {
@@ -2725,10 +2738,10 @@ void self_test(int test)
       test_acquire(i);                        // Acquire test
       test_validate(i);                       // Validate test
       float saved_peakLevel = peakLevel;
-      if (peakLevel < -35) {
-        shell_printf("Peak level too low, abort\n\r");
-        return;
-      }
+ //     if (peakLevel < -35) {
+ //       shell_printf("Peak level too low, abort\n\r");
+ //       return;
+ //     }
 
       shell_printf("Start level = %f, ",peakLevel);
       while (setting.step_delay > 10 && peakLevel > saved_peakLevel - 1) {

@@ -189,7 +189,7 @@ void SI4432_Transmit(int d)
   if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 2)
     return; // Already in transmit mode
   chThdSleepMilliseconds(20);
-  SI4432_Write_Byte( 0x07, 0x03);
+  SI4432_Write_Byte( 0x07, 0x02);
   chThdSleepMilliseconds(20);
   SI4432_Write_Byte( 0x07, 0x0b);
   chThdSleepMilliseconds(30);
@@ -204,7 +204,7 @@ void SI4432_Receive(void)
   if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 1)
     return; // Already in receive mode
   chThdSleepMilliseconds(20);
-  SI4432_Write_Byte( 0x07, 0x03);
+  SI4432_Write_Byte( 0x07, 0x02);
   chThdSleepMilliseconds(20);
   SI4432_Write_Byte( 0x07, 0x07);
   chThdSleepMilliseconds(30);
@@ -310,10 +310,14 @@ void set_10mhz(uint32_t f)
 }
 
 int SI4432_frequency_changed = false;
-//static int old_freq_band[2] = {-1,-1};
-//static int written[2]= {0,0};
+#if 0
+static int old_freq_band[2] = {-1,-1};
+static int written[2]= {0,0};
+#endif
 
 void SI4432_Set_Frequency ( uint32_t Freq ) {
+//  int mode = SI4432_Read_Byte(0x02) & 0x03;
+//  SI4432_Write_Byte(0x07, 0x02);    // Switch to tune mode
   uint8_t hbsel;
   if (Freq >= 480000000U) {
     hbsel = 1<<5;
@@ -326,17 +330,35 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
   uint32_t K = Freq % setting_frequency_10mhz;
   uint32_t Carrier = (K<<2) / 625;
   uint8_t Freq_Band = N | hbsel | sbsel;
-//  if (old_freq_band[SI4432_Sel] == Freq_Band) {
-//    if (written[SI4432_Sel]++ < 6)
-//      SI4432_Write_Byte ( 0x75, Freq_Band );
-//    SI4432_Write_Byte ( 0x76, (Carrier>>8) & 0xFF );
-//    SI4432_Write_Byte ( 0x77, Carrier & 0xFF  );
-//  } else {
-    SI4432_Write_3_Byte ( 0x75, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF);
-//    old_freq_band[SI4432_Sel] = Freq_Band;
-//    written[SI4432_Sel] = 0;
+//  int count = 0;
+//  my_microsecond_delay(200);
+//  int s;
+//  while (count++ < 100 && ( (s = SI4432_Read_Byte ( 0x02 )) & 0x03 ) != 0) {
+//    my_microsecond_delay(100);
 //  }
+
+#if 0
+  if (old_freq_band[SI4432_Sel] == Freq_Band) {
+    if (written[SI4432_Sel] < 4) {
+      SI4432_Write_Byte ( 0x75, Freq_Band );
+      written[SI4432_Sel]++;
+    }
+    SI4432_Write_Byte ( 0x76, (Carrier>>8) & 0xFF );
+    SI4432_Write_Byte ( 0x77, Carrier & 0xFF  );
+  } else {
+#endif
+
+    SI4432_Write_3_Byte ( 0x75, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF);
+#if 0
+    old_freq_band[SI4432_Sel] = Freq_Band;
+    written[SI4432_Sel] = 0;
+  }
+#endif
   SI4432_frequency_changed = true;
+//  if (mode == 1)        // RX mode
+//    SI4432_Write_Byte( 0x07, 0x07);
+//  else
+//    SI4432_Write_Byte( 0x07, 0x0B);
 }
 
 int actualStepDelay = 1500;
@@ -471,34 +493,35 @@ void SI4432_Sub_Init(void)
 //  byte fb = 19 ;    // 430�439.9 MHz
 //  byte FBS = (sbsel << 6 ) | (hbsel << 5 ) | fb ;
 //  SI4432_Write_Byte(0x75, FBS) ;
-  SI4432_Write_Byte(0x75, 0x46) ;
+//  SI4432_Write_Byte(0x75, 0x46) ;
   // Register 0x76 Nominal Carrier Frequency
   // WE USE 433.92 MHz
   // Si443x-Register-Settings_RevB1.xls
 //  SI4432_Write_Byte(0x76, 0x62) ;
-  SI4432_Write_Byte(0x76, 0x00) ;
+//  SI4432_Write_Byte(0x76, 0x00) ;
   // Register 0x77 Nominal Carrier Frequency
-  SI4432_Write_Byte(0x77, 0x00) ;
+//  SI4432_Write_Byte(0x77, 0x00) ;
   // RX MODEM SETTINGS
-  SI4432_Write_3_Byte(0x1C, 0x81, 0x3C, 0x02) ;
+//  SI4432_Write_3_Byte(0x1C, 0x81, 0x3C, 0x02) ;
 //  SI4432_Write_Byte(0x1C, 0x81) ;
-//  SI4432_Write_Byte(0x1D, 0x3C) ;
+  SI4432_Write_Byte(0x1D, 0x00) ;
 //  SI4432_Write_Byte(0x1E, 0x02) ;
   SI4432_Write_Byte(0x1F, 0x03) ;
   // SI4432_Write_Byte(0x20, 0x78) ;
-  SI4432_Write_3_Byte(0x21, 0x01, 0x11, 0x11) ;
-//  SI4432_Write_Byte(0x21, 0x01) ;
-//  SI4432_Write_Byte(0x22, 0x11) ;
-//  SI4432_Write_Byte(0x23, 0x11) ;
+//  SI4432_Write_3_Byte(0x21, 0x01, 0x11, 0x11) ;
+  SI4432_Write_Byte(0x21, 0x01) ;
+  SI4432_Write_Byte(0x22, 0x11) ;
+  SI4432_Write_Byte(0x23, 0x11) ;
   SI4432_Write_Byte(0x24, 0x01) ;
   SI4432_Write_Byte(0x25, 0x13) ;
   SI4432_Write_Byte(0x2A, 0xFF) ;
 
-  SI4432_Write_3_Byte(0x2C, 0x28, 0x0c, 0x28) ;
+//  SI4432_Write_3_Byte(0x2C, 0x28, 0x0c, 0x28) ;
 //  SI4432_Write_Byte(0x2C, 0x28) ;
 //  SI4432_Write_Byte(0x2D, 0x0C) ;
 //  SI4432_Write_Byte(0x2E, 0x28) ;
 
+  SI4432_Write_Byte(0x30, 0x61); // Disable all packet handling
 
   SI4432_Write_Byte(0x69, 0x60); // AGC, no LNA, fast gain increment
 
