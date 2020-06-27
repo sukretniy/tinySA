@@ -192,7 +192,7 @@ void SI4432_Transmit(int d)
   SI4432_Write_Byte( 0x07, 0x02);
   chThdSleepMilliseconds(20);
   SI4432_Write_Byte( 0x07, 0x0b);
-  chThdSleepMilliseconds(30);
+  chThdSleepMilliseconds(100);
   while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 2) {
     chThdSleepMilliseconds(10);
   }
@@ -207,7 +207,7 @@ void SI4432_Receive(void)
   SI4432_Write_Byte( 0x07, 0x02);
   chThdSleepMilliseconds(20);
   SI4432_Write_Byte( 0x07, 0x07);
-  chThdSleepMilliseconds(30);
+  chThdSleepMilliseconds(100);
   while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 1) {
     chThdSleepMilliseconds(5);
   }
