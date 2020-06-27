@@ -2704,13 +2704,15 @@ int main(void)
 //    menu_mode_cb(setting.mode,0);
 //  }
   redraw_frame();
-
   set_mode(M_HIGH);
+  set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
   sweep(true);
   osalThreadSleepMilliseconds(100);
 
   set_mode(M_LOW);
+  set_sweep_frequency(ST_STOP, (uint32_t) 4000000);
   sweep(true);
+  set_sweep_frequency(ST_STOP, (uint32_t) 35000000);
 
   set_refer_output(-1);
 //  ui_mode_menu();       // Show menu when autostarting mode
