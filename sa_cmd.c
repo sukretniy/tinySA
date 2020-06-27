@@ -274,36 +274,18 @@ VNA_SHELL_FUNCTION(cmd_v)
     shell_printf("VFO %d\r\n", VFO);
 }
 
-int xtoi(char *t)
-{
-
-  int v=0;
-  while (*t) {
-    if ('0' <= *t && *t <= '9')
-      v = v*16 + *t - '0';
-    else if ('a' <= *t && *t <= 'f')
-      v = v*16 + *t - 'a' + 10;
-    else if ('A' <= *t && *t <= 'F')
-      v = v*16 + *t - 'A' + 10;
-    else
-      return v;
-    t++;
-  }
-  return v;
-}
-
 VNA_SHELL_FUNCTION(cmd_y)
 {
   int rvalue;
   int lvalue = 0;
   if (argc != 1 && argc != 2) {
-    shell_printf("usage: y {addr(0-95)} [value(0-FF)]\r\n");
+    shell_printf("usage: y {addr(0-95)} [value(0-0xFF)]\r\n");
     return;
   }
-  rvalue = xtoi(argv[0]);
+  rvalue = my_atoui(argv[0]);
   SI4432_Sel = VFO;
   if (argc == 2){
-    lvalue = xtoi(argv[1]);
+    lvalue = my_atoui(argv[1]);
     SI4432_Write_Byte(rvalue, lvalue);
   } else {
     lvalue = SI4432_Read_Byte(rvalue);
@@ -359,7 +341,7 @@ return;             // Don't use!!!!
   SI4432_Init();
   shell_printf("SI4432 init done\r\n");
   if (argc == 1) {
-    rvalue = xtoi(argv[0]);
+    rvalue = my_atoui(argv[0]);
     set_switches(rvalue);
     set_mode(rvalue);
     shell_printf("SI4432 mode %d set\r\n", rvalue);
@@ -392,7 +374,7 @@ VNA_SHELL_FUNCTION(cmd_a)
     shell_printf("a=%d\r\n", frequencyStart);
     return;
   }
-  int32_t value = my_atoi(argv[0]);
+  uint32_t value = my_atoui(argv[0]);
   frequencyStart = value;
 }
 
@@ -404,7 +386,7 @@ VNA_SHELL_FUNCTION(cmd_b)
     shell_printf("b=%d\r\n", frequencyStop);
     return;
   }
-  int32_t value = my_atoi(argv[0]);
+  uint32_t value = my_atoui(argv[0]);
   frequencyStop = value;
 }
 
