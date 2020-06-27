@@ -440,7 +440,7 @@ void sweep_remote(void)
       break;
     float val = perform(false, i, f, false);
     streamPut(shell_stream, 'x');
-    uint16_t v = val*2 + 256;
+    int v = val*2 + 256;
     streamPut(shell_stream, (uint8_t)(v & 0xFF));
     streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
     df+=error;if (df >=step) {f++;df -= step;}
