@@ -24,6 +24,9 @@
 #include <math.h>
 #include "si4432.h"
 
+#pragma GCC push_options
+#pragma GCC optimize ("O2")
+
 #define CS_SI0_HIGH     palSetPad(GPIOC, GPIO_RX_SEL)
 #define CS_SI1_HIGH     palSetPad(GPIOC, GPIO_LO_SEL)
 #define CS_PE_HIGH      palSetPad(GPIOC, GPIO_PE_SEL)
@@ -40,9 +43,10 @@
 
 #define SPI2_SDI_HIGH   palSetPad(GPIOB, GPIO_SPI2_SDI)
 #define SPI2_SDI_LOW    palClearPad(GPIOB, GPIO_SPI2_SDI)
+#define SPI2_RESET      palClearPort(GPIOB, (1<<GPIO_SPI2_CLK)|(1<<GPIO_SPI2_SDI))
 
-#define SPI2_SDO    ((palReadPort(GPIOB)>>GPIO_SPI2_SDO)&1)
-
+#define SPI2_SDO       ((palReadPort(GPIOB)>>GPIO_SPI2_SDO)&1)
+#define SPI2_portSDO   (palReadPort(GPIOB)&(1<<GPIO_SPI2_SDO))
 
 //#define MAXLOG 1024
 //unsigned char SI4432_logging[MAXLOG];
@@ -51,10 +55,11 @@
 //#define SI4432_log(X)   { if (log_index < MAXLOG)  SI4432_logging[log_index++] = X; }
 #define SI4432_log(X)
 
-void shiftOut(uint8_t val)
+static void shiftOut(uint8_t val)
 {
   SI4432_log(SI4432_Sel);
   SI4432_log(val);
+#if 0
   uint8_t i = 0;
   do {
     if (val & 0x80)
@@ -65,20 +70,32 @@ void shiftOut(uint8_t val)
     SPI2_CLK_HIGH;
     SPI2_CLK_LOW;
   }while((++i) & 0x07);
-}
-
-uint8_t shiftIn(void) {
-  uint8_t value = 0;
+#else
   uint8_t i = 0;
   do {
+    if (val & 0x80)
+      SPI2_SDI_HIGH;
     SPI2_CLK_HIGH;
-    value = (value<<1)|SPI2_SDO;
-    SPI2_CLK_LOW;
+    SPI2_RESET;
+    val<<=1;
   }while((++i) & 0x07);
-  return value;
+#endif
 }
 
-void shiftInBuf(uint8_t *buf, uint16_t size) {
+static uint8_t shiftIn(void)
+{
+  uint32_t value = 0;
+  uint8_t i = 0;
+  do {
+    value<<=1;
+    SPI2_CLK_HIGH;
+    value|=SPI2_portSDO;
+    SPI2_CLK_LOW;
+  }while((++i) & 0x07);
+  return value>>GPIO_SPI2_SDO;
+}
+
+static void shiftInBuf(uint8_t *buf, uint16_t size, uint16_t delay) {
   uint8_t i = 0;
   do{
     uint8_t value = 0;
@@ -88,10 +105,12 @@ void shiftInBuf(uint8_t *buf, uint16_t size) {
       SPI2_CLK_LOW;
     }while((++i) & 0x07);
     *buf++=value;
+    if (delay)
+      my_microsecond_delay(delay);
   }while(--size);
 }
 
-void shiftOutBuf(uint8_t *buf, uint16_t size) {
+static void shiftOutBuf(uint8_t *buf, uint16_t size) {
   uint8_t i = 0;
   do{
     uint8_t val = *buf++;
@@ -376,25 +395,19 @@ void SI4432_Fill(int s, int start)
 {
   SI4432_Sel = s;
   int sel = SI_nSEL[SI4432_Sel];
-#if 1
-  float t = setting.sweep_time - calc_min_sweep_time(); // Time to delay in mS
-  if (t < 0)
-    t = 0;
-  int ti = t * 1000 / 290.0;                         // Now in uS per point      if (t < 30000)
-  for (int i=start; i<sweep_points; ) {
-    SPI2_CLK_LOW;
+  float t = setting.sweep_time - calc_min_sweep_time();    // Time to delay in mS for all sweep
+  uint32_t ti = t < 0 ? 0 : t * 1000 / (sweep_points - 1); // Now in uS per point      if (t < 30000)
+  SPI2_CLK_LOW;
+  int i = 0;
+  do {
     palClearPad(GPIOC, sel);
     shiftOut( 0x26 );
-    age[i++]=(char)shiftIn();
+    age[i]=(char)shiftIn();
     palSetPad(GPIOC, sel);
+    if (++i >= sweep_points) break;
     if (ti)
       my_microsecond_delay(ti);
-  }
-#else
-  palClearPad(GPIOC, sel);
-  shiftInBuf((uint8_t*)age, sweep_points);
-  palSetPad(GPIOC, sel);
-#endif
+  } while(1);
   buf_index = start;
   buf_read = true;
 }
@@ -1055,3 +1068,5 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 
 
 #endif
+
+#pragma GCC pop_options
