@@ -1387,8 +1387,9 @@ static const menuitem_t menu_harmonic[] =
 
 static const menuitem_t menu_scanning_speed[] =
 {
- { MT_CALLBACK, 0,             "FAST",      menu_scanning_speed_cb},
- { MT_CALLBACK, 1,             "PRECISE",   menu_scanning_speed_cb},
+ { MT_CALLBACK, 0,             "FAST",              menu_scanning_speed_cb},
+ { MT_CALLBACK, 1,             "PRECISE",           menu_scanning_speed_cb},
+ { MT_CALLBACK, 2,             "\2EXTRA\0FAST",     menu_scanning_speed_cb},
  { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0DELAY",   "300..30000"},
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel

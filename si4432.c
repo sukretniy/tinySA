@@ -310,6 +310,8 @@ void set_10mhz(uint32_t f)
 }
 
 int SI4432_frequency_changed = false;
+int SI4432_offset_changed = false;
+
 #if 0
 static int old_freq_band[2] = {-1,-1};
 static int written[2]= {0,0};
@@ -319,6 +321,7 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
 //  int mode = SI4432_Read_Byte(0x02) & 0x03;
 //  SI4432_Write_Byte(0x07, 0x02);    // Switch to tune mode
   uint8_t hbsel;
+  if (1) shell_printf("%d: Freq %q\r\n", SI4432_Sel, Freq);
   if (Freq >= 480000000U) {
     hbsel = 1<<5;
     Freq>>=1;
@@ -425,6 +428,9 @@ float SI4432_RSSI(uint32_t i, int s)
       stepdelay = 280;
     }
     SI4432_frequency_changed = false;
+  } else if (SI4432_offset_changed) {
+    stepdelay = 280 + stepdelay/4;
+    SI4432_offset_changed = false;
   }
   if (stepdelay)
     my_microsecond_delay(stepdelay);
@@ -557,13 +563,13 @@ void SI4432_Init()
   SI4432_Sel = 0;
 //  SI4432_Receive();// Enable receiver chain
 //  SI4432_Write_Byte(0x09, V0_XTAL_CAPACITANCE);// Tune the crystal
-  SI4432_Set_Frequency(433800000);
+//  SI4432_Set_Frequency(433800000);
   SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 output to ground
 
 
   SI4432_Sel = 1;
 //  SI4432_Write_Byte(0x09, V1_XTAL_CAPACITANCE);// Tune the crystal
-  SI4432_Set_Frequency(443800000);
+//  SI4432_Set_Frequency(443800000);
   SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 output to ground
 
   //  SI4432_Write_Byte(0x6D, 0x1C);//Set low power

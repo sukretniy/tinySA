@@ -516,7 +516,7 @@ void set_harmonic(int h)
 void set_step_delay(int d)
 {
 
-  if ((2 <= d && d < 300) || d > 30000)
+  if ((3 <= d && d < 300) || d > 30000)
     return;
   setting.step_delay = d;
   dirty = true;
@@ -768,7 +768,7 @@ void apply_settings(void)
   SI4432_SetReference(setting.refer);
   update_rbw();
   if (setting.frequency_step == 0.0) {
-    if (setting.step_delay <= 1)
+    if (setting.step_delay <= 2)
       actualStepDelay = 0;
     else
       actualStepDelay = setting.step_delay;
@@ -824,6 +824,7 @@ int peakIndex;
 float temppeakLevel;
 int temppeakIndex;
 static unsigned long old_freq[4] = { 0, 0, 0, 0 };
+static unsigned long real_old_freq[4] = { 0, 0, 0, 0 };
 
 
 void setupSA(void)
@@ -831,6 +832,8 @@ void setupSA(void)
   SI4432_Init();
   old_freq[0] = 0;
   old_freq[1] = 0;
+  real_old_freq[0] = 0;
+  real_old_freq[1] = 0;
   SI4432_Sel = 0;
   SI4432_Receive();
 
@@ -839,6 +842,8 @@ void setupSA(void)
   PE4302_init();
   PE4302_Write_Byte(0);
 }
+extern int SI4432_frequency_changed;
+extern int SI4432_offset_changed;
 
 void set_freq(int V, unsigned long freq)
 {
@@ -846,16 +851,43 @@ void set_freq(int V, unsigned long freq)
     if (V <= 1) {
       SI4432_Sel = V;
       if (freq < 240000000 || freq > 960000000) {
-        old_freq[V] = freq + 1;
+        real_old_freq[V] = freq + 1;
         return;
       }
+#if 1
+      if (setting.step_delay == 2) {
+        int delta =  freq - real_old_freq[V];
+
+        if (real_old_freq[V] >= 480000000)    // 480MHz, high band
+          delta = delta >> 1;
+        if (delta > 0 && delta < 80000) { // use frequency deviation registers
+          if (1) {
+            if (real_old_freq[V] >= 480000000)
+              shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
+            else
+              shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
+          }
+
+          delta = delta * 4 / 625; // = 156.25;
+          SI4432_Write_Byte(0x73, (uint8_t)(delta & 0xff));
+          uint8_t reg = delta >> 8;
+          SI4432_Write_Byte(0x74, (uint8_t)((delta >> 8) & 0x03));
+          SI4432_offset_changed = true;
+          old_freq[V] = freq;
+          return;
+        }
+#endif
+      }
       SI4432_Set_Frequency(freq);
+      SI4432_Write_Byte(0x73, 0);
+      SI4432_Write_Byte(0x74, 0);
 #ifdef __ULTRA_SA__
     } else {
       ADF4351_set_frequency(V-2,freq,3);
 #endif
     }
     old_freq[V] = freq;
+    real_old_freq[V] = freq;
   }
 }
 
@@ -886,7 +918,9 @@ void set_switches(int m)
   SI4432_Init();
   old_freq[0] = 0;
   old_freq[1] = 0;
-switch(m) {
+  real_old_freq[0] = 0;
+  real_old_freq[1] = 0;
+  switch(m) {
 case M_LOW:     // Mixed into 0
 #ifdef __ULTRA__
 case M_ULTRA:
@@ -2724,8 +2758,8 @@ void self_test(int test)
     setting.auto_IF = false;
     setting.frequency_IF=433900000;
     ui_mode_normal();
-    int i = 13;       // calibrate low mode power on 30 MHz;
-//    int i = 15;       // calibrate low mode power on 30 MHz;
+//    int i = 13;       // calibrate low mode power on 30 MHz;
+    int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
     setting.step_delay = 8000;
     for (int j= 0; j < 57; j++ ) {
