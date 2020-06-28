@@ -1691,7 +1691,7 @@ void set_trace_type(int t, int type)
   }
   if (force) {
     plot_into_index(measured);
-    force_set_markmap();
+//    force_set_markmap();
   }
 }
 
@@ -1699,7 +1699,7 @@ void set_trace_channel(int t, int channel)
 {
   if (trace[t].channel != channel) {
     trace[t].channel = channel;
-    force_set_markmap();
+//    force_set_markmap();
   }
 }
 
@@ -1707,7 +1707,7 @@ void set_trace_scale(int t, float scale)
 {
   if (trace[t].scale != scale) {
     trace[t].scale = scale;
-    force_set_markmap();
+//    force_set_markmap();
   }
 }
 
@@ -1720,7 +1720,7 @@ void set_trace_refpos(int t, float refpos)
 {
   if (trace[t].refpos != refpos) {
     trace[t].refpos = refpos;
-    force_set_markmap();
+//    force_set_markmap();
   }
 }
 
