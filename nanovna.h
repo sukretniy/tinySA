@@ -193,7 +193,7 @@ void set_step_delay(int t);
 void set_repeat(int);
 void set_level_sweep(float);
 void set_level(float);
-void set_sweep_time(float);
+void set_sweep_time_us(uint32_t);
 //extern int setting.repeat;
 //extern int setting.rbw;
 #ifdef __SPUR__
@@ -610,8 +610,8 @@ typedef struct setting
   int linearity_step;
   float level;
   float level_sweep;
-  float sweep_time;
-  float actual_sweep_time;
+  uint32_t sweep_time_us;
+  uint32_t actual_sweep_time_us;
   int test_argument;
   int auto_IF;
   unsigned int unit_scale_index;
@@ -631,12 +631,16 @@ void reset_settings(int m);
 enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 
 #ifdef __FAST_SWEEP__
-#define MINIMUM_SWEEP_TIME  3     // Minimum sweep time on zero span in miliseconds
+#define MINIMUM_SWEEP_TIME  3000U    // Minimum sweep time on zero span in uS
 #else
-#define MINIMUM_SWEEP_TIME  15     // Minimum sweep time on zero span in miliseconds
+#define MINIMUM_SWEEP_TIME  15000U   // Minimum sweep time on zero span in uS
 #endif
-#define REPEAT_TIME        134.0         // Time per extra repeat in uS
-#define MEASURE_TIME       175.0        // Time per vbwstep without stepdelay in uS
+#define MAXIMUM_SWEEP_TIME  6000000U // Maximum sweep time uS
+#define ONE_SECOND_TIME     1000000U // One second uS
+#define ONE_MS_TIME         1000U    // One ms uS
+
+#define REPEAT_TIME         134         // Time per extra repeat in uS
+#define MEASURE_TIME        175         // Time per vbwstep without stepdelay in uS
 
 extern uint32_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
@@ -708,7 +712,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e45 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e46 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
@@ -877,7 +881,7 @@ void self_test(int);
 void wait_user(void);
 void calibrate(void);
 float to_dBm(float);
-float calc_min_sweep_time(void);
+uint32_t calc_min_sweep_time_us(void);
 extern float actual_rbw;
 
 enum {

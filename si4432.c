@@ -395,8 +395,14 @@ void SI4432_Fill(int s, int start)
 {
   SI4432_Sel = s;
   int sel = SI_nSEL[SI4432_Sel];
-  float t = setting.sweep_time - calc_min_sweep_time();    // Time to delay in mS for all sweep
-  uint32_t ti = t < 0 ? 0 : t * 1000 / (sweep_points - 1); // Now in uS per point      if (t < 30000)
+  uint32_t t = calc_min_sweep_time_us(); // Time to delay in uS for all sweep
+  if (t < setting.sweep_time_us){
+    t = setting.sweep_time_us - t;
+    t = t / (sweep_points - 1);          // Now in uS per point
+  }
+  else
+    t = 0;
+
   SPI2_CLK_LOW;
   int i = 0;
   do {
@@ -405,8 +411,8 @@ void SI4432_Fill(int s, int start)
     age[i]=(char)shiftIn();
     palSetPad(GPIOC, sel);
     if (++i >= sweep_points) break;
-    if (ti)
-      my_microsecond_delay(ti);
+    if (t)
+      my_microsecond_delay(t);
   } while(1);
   buf_index = start;
   buf_read = true;

@@ -118,8 +118,7 @@ void update_grid(void)
   uint32_t grid;
 
   if (fspan == 0) {
-    fspan = setting.actual_sweep_time; // Time in mS
-    fspan *= 1000;
+    fspan = setting.actual_sweep_time_us; // Time in uS
     fstart = 0;
   }
 
@@ -861,17 +860,17 @@ static void trace_get_value_string(
     dfreq = frequencies[i];
   }
   if (FREQ_IS_CW()) {
-    float t = ii*(setting.actual_sweep_time)*1000.0/290.0;
+    float t = ii*(setting.actual_sweep_time_us)/(sweep_points - 1);
 #if 1
-    plot_printf(&buf2[1], sizeof(buf2) -1, "%.3Fs" , t/1000000.0);
+    plot_printf(&buf2[1], sizeof(buf2) -1, "%.3Fs" , t/ONE_SECOND_TIME);
 #else
-    if (t>1000000.0){
-      plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/1000000.0);
+    if (t>ONE_SECOND_TIME){
+      plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/ONE_SECOND_TIME);
       buf2[5] = 'S';
       buf2[6]=0;
     }
     else if (t>1000.0) {
-        plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/1000.0);
+        plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/ONE_MS_TIME);
         buf2[5] = 'm';
         buf2[6] = 'S';
         buf2[7]=0;
@@ -2067,11 +2066,11 @@ draw_frequencies(void)
     if (FREQ_IS_CW()) {
       plot_printf(buf1, sizeof(buf1), " CW %qHz", get_sweep_frequency(ST_CW));
 
-      float t = calc_min_sweep_time();  // Calc minimum sweep time
-      if (t < setting.sweep_time)
-        t = setting.sweep_time;
-      setting.actual_sweep_time = t;
-      plot_printf(buf2, sizeof(buf2), " TIME %.3Fs",t/1000.0);
+      uint32_t t = calc_min_sweep_time_us();  // Calc minimum sweep time
+      if (t < setting.sweep_time_us)
+        t = setting.sweep_time_us;
+      setting.actual_sweep_time_us = t;
+      plot_printf(buf2, sizeof(buf2), " TIME %.3Fs", (float)t/ONE_SECOND_TIME);
 
     } else if (FREQ_IS_STARTSTOP()) {
       plot_printf(buf1, sizeof(buf1), " START %qHz", get_sweep_frequency(ST_START));

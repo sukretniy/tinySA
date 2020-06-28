@@ -1832,11 +1832,11 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
   case KM_SWEEP_TIME:
-    if (setting.sweep_time < calc_min_sweep_time())
-      uistat.value = calc_min_sweep_time();
+    if (setting.sweep_time_us < calc_min_sweep_time_us())
+      uistat.value = calc_min_sweep_time_us();
     else
-      uistat.value = setting.sweep_time;
-    uistat.value /= 1000.0;
+      uistat.value = setting.sweep_time_us;
+    uistat.value /= (float)ONE_SECOND_TIME;
     plot_printf(uistat.text, sizeof uistat.text, "%.3FS", uistat.value);
     break;
   case KM_TRIGGER:
@@ -1925,7 +1925,7 @@ set_numeric_value(void)
     set_level_sweep(uistat.value);
     break;
   case KM_SWEEP_TIME:
-    set_sweep_time(uistat.value*1000.0);
+    set_sweep_time_us(uistat.value*ONE_SECOND_TIME);
     update_grid();
     break;
   case KM_TRIGGER:
