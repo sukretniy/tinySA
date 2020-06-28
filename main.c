@@ -2682,7 +2682,7 @@ int main(void)
   dacStart(&DACD2, &dac1cfg1);
 #endif
   setupSA();
-  sweep_points = 290;
+  sweep_points = POINTS_COUNT;
 /* initial frequencies */
   update_frequencies();
 

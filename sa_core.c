@@ -1208,7 +1208,7 @@ int avoid_spur(int f)                   // find if this frequency should be avoi
 //  int window = ((int)actual_rbw ) * 1000*2;
 //  if (window < 50000)
 //    window = 50000;
-  if (! setting.mode == M_LOW || !setting.auto_IF || actual_rbw > 300.0)
+  if (setting.mode != M_LOW || !setting.auto_IF || actual_rbw > 300.0)
     return(false);
   return binary_search(f);
 }
@@ -1239,7 +1239,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       ls += 0.5;
     else
       ls -= 0.5;
-    float a = ((int)((setting.level + (i / 290.0) * ls)*2.0)) / 2.0;
+    float a = ((int)((setting.level + (i / sweep_points) * ls)*2.0)) / 2.0;
     if (a != old_a) {
       old_a = a;
       int d = 0;              // Start at lowest drive level;
@@ -1288,26 +1288,26 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
   }
 
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
-
-  if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_AM_1kHz||setting.modulation == MO_AM_10Hz)) {               // AM modulation
-    int p = setting.attenuate * 2 + am_modulation[modulation_counter];
-    if (p>63)
-      p = 63;
-    if (p<0)
-      p = 0;
-    PE4302_Write_Byte(p);
-    if (modulation_counter == 4) {  // 3dB modulation depth
-      modulation_counter = 0;
-    } else {
-      modulation_counter++;
+  if (MODE_OUTPUT(setting.mode)){
+    if (setting.modulation == MO_AM_1kHz || setting.modulation == MO_AM_10Hz) {               // AM modulation
+      int p = setting.attenuate * 2 + am_modulation[modulation_counter];
+      if (p>63)
+        p = 63;
+      if (p<0)
+        p = 0;
+      PE4302_Write_Byte(p);
+      if (modulation_counter == 4) {  // 3dB modulation depth
+        modulation_counter = 0;
+      } else {
+        modulation_counter++;
+      }
+      if (setting.modulation == MO_AM_10Hz)
+        my_microsecond_delay(20000);
+      else
+        my_microsecond_delay(180);
+//      chThdSleepMicroseconds(200);
     }
-    if (setting.modulation == MO_AM_10Hz)
-      my_microsecond_delay(20000);
-    else
-      my_microsecond_delay(180);
-//    chThdSleepMicroseconds(200);
-
-  } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) { //FM modulation
+    else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
       SI4432_Sel = 1;
       int offset;
       if (setting.modulation == MO_NFM ) {
@@ -1326,7 +1326,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         modulation_counter++;
       my_microsecond_delay(200);
 //      chThdSleepMicroseconds(200);
+    }
   }
+
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   float RSSI = -150.0;
   int t = 0;
@@ -1910,7 +1912,7 @@ again:                          // Waiting for a trigger jumps back to here
 
 
   if (setting.measurement == M_LINEARITY && setting.linearity_step < setting._sweep_points) {
-    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / 290.0;
+    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / POINTS_COUNT;
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
@@ -2700,7 +2702,7 @@ int add_spur(int f)
       return stored_t[i];
     }
   }
-  if (last_spur < 290) {
+  if (last_spur < POINTS_COUNT) {
     temp_t[last_spur] = f;
     stored_t[last_spur++] = 1;
   }

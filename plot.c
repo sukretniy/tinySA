@@ -885,9 +885,9 @@ static void trace_get_value_string(
   } else {
 #if 1
   uint32_t resolution = get_sweep_frequency(ST_SPAN);
-  if (resolution  <= 2000*290)
+  if (resolution  <= 2000*POINTS_COUNT)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
-  else if (resolution  <= 20000*290)
+  else if (resolution  <= 20000*POINTS_COUNT)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.2f" , (dfreq + 5000) / 1000000.0);
   else
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
