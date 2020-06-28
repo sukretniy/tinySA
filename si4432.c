@@ -340,7 +340,7 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
 //  int mode = SI4432_Read_Byte(0x02) & 0x03;
 //  SI4432_Write_Byte(0x07, 0x02);    // Switch to tune mode
   uint8_t hbsel;
-  if (1) shell_printf("%d: Freq %q\r\n", SI4432_Sel, Freq);
+  if (0) shell_printf("%d: Freq %q\r\n", SI4432_Sel, Freq);
   if (Freq >= 480000000U) {
     hbsel = 1<<5;
     Freq>>=1;

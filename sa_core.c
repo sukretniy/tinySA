@@ -772,7 +772,7 @@ void apply_settings(void)
       actualStepDelay = 0;
     else
       actualStepDelay = setting.step_delay;
-  } else if (setting.step_delay < 2){
+  } else if (setting.step_delay <= 2){
     if (actual_rbw >= 191.0)        actualStepDelay =  280;
     else if (actual_rbw >= 142.0)   actualStepDelay =  350;
     else if (actual_rbw >= 75.0)    actualStepDelay =  450;
@@ -861,7 +861,7 @@ void set_freq(int V, unsigned long freq)
         if (real_old_freq[V] >= 480000000)    // 480MHz, high band
           delta = delta >> 1;
         if (delta > 0 && delta < 80000) { // use frequency deviation registers
-          if (1) {
+          if (0) {
             if (real_old_freq[V] >= 480000000)
               shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
             else
