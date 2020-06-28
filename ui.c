@@ -1982,7 +1982,7 @@ lever_zoom_span(int status)
 static void
 lever_zoom_time(int status)
 {
-  uint32_t time = setting.sweep_time; // in mS
+  uint32_t time = setting.sweep_time_us; // in uS
   if (time < MINIMUM_SWEEP_TIME)
     time = MINIMUM_SWEEP_TIME;
   if (status & EVT_UP) {
@@ -1991,7 +1991,7 @@ lever_zoom_time(int status)
     time = time*25/10;
   }
   time = step_round(time);
-  set_sweep_time(time);
+  set_sweep_time_us(time);
 }
 
 static void

@@ -155,11 +155,11 @@ VNA_SHELL_FUNCTION(cmd_level)
 VNA_SHELL_FUNCTION(cmd_sweeptime)
 {
   if (argc != 1) {
-    shell_printf("usage: sweeptime 0.03..600\r\n");
+    shell_printf("usage: sweeptime 0.003..60\r\n");
     return;
   }
   float f = my_atof(argv[0]);
-  set_sweep_time(f*1000.0);
+  set_sweep_time_us(f*ONE_SECOND_TIME);
 }
 
 

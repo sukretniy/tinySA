@@ -105,7 +105,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_START, (uint32_t) 0);
     set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
     setting.attenuate = 30.0;
-    setting.sweep_time = 0;
+    setting.sweep_time_us = 0;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -114,7 +114,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_START, (uint32_t) minFreq);
     set_sweep_frequency(ST_STOP, (uint32_t) maxFreq);
     setting.attenuate = 0;
-    setting.sweep_time = 0.0;
+    setting.sweep_time_us = 0;
     break;
 #endif
   case M_GENLOW:
@@ -123,7 +123,7 @@ void reset_settings(int m)
     maxFreq = 520000000;
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
-    setting.sweep_time = 10000.0;
+    setting.sweep_time_us = 10*ONE_SECOND_TIME;
     break;
   case M_HIGH:
 #ifdef __ULTRA_SA__
@@ -135,7 +135,7 @@ void reset_settings(int m)
 #endif
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
-    setting.sweep_time = 0;
+    setting.sweep_time_us = 0;
     break;
   case M_GENHIGH:
     setting.drive=8;
@@ -143,7 +143,7 @@ void reset_settings(int m)
     maxFreq = 960000000;
     set_sweep_frequency(ST_CENTER, 300000000);
     set_sweep_frequency(ST_SPAN, 0);
-    setting.sweep_time = 10000.0;
+    setting.sweep_time_us = 10*ONE_SECOND_TIME;
     break;
   }
   for (int i = 0; i< MARKERS_MAX; i++) {
@@ -156,19 +156,19 @@ void reset_settings(int m)
   dirty = true;
 }
 
-float calc_min_sweep_time(void)         // Calculate minimum sweep time in mS
+uint32_t calc_min_sweep_time_us(void)         // Calculate minimum sweep time in uS
 {
   float t;
-  float a = (actualStepDelay + MEASURE_TIME)/1000.0; // in mS
+  float a = (actualStepDelay + MEASURE_TIME); // in uS
   if (MODE_OUTPUT(setting.mode))
     t = 100;
   else {
     if (FREQ_IS_CW()) {
-      a = (float)MINIMUM_SWEEP_TIME / 290.0;       // time per step in CW mode
-      if (setting.repeat != 1 || setting.sweep_time >= 1000 || setting.spur != 0)
-        a = 15.0 / 290.0;       // time per step in CW mode with repeat
+      a = MINIMUM_SWEEP_TIME / (sweep_points - 1);       // time per step in CW mode
+      if (setting.repeat != 1 || setting.sweep_time_us >= ONE_SECOND_TIME || setting.spur != 0)
+        a = 15000.0 / (sweep_points - 1);       // time per step in CW mode with repeat
     }
-    t = vbwSteps * sweep_points * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME/1000.0));
+    t = vbwSteps * (sweep_points - 1) * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME));
   }
   return t;
 }
@@ -221,17 +221,17 @@ void set_level_sweep(float l)
   dirty = true;
 }
 
-void set_sweep_time(float t)
+void set_sweep_time_us(uint32_t t)
 {
   if (t < MINIMUM_SWEEP_TIME)
     t = MINIMUM_SWEEP_TIME;
-  if (t > 600000.0)
-    t = 600000.0;
-  setting.sweep_time = t;
-  float ta = calc_min_sweep_time();
+  if (t > MAXIMUM_SWEEP_TIME)
+    t = MAXIMUM_SWEEP_TIME;
+  setting.sweep_time_us = t;
+  uint32_t ta = calc_min_sweep_time_us();
   if (ta < t)
     ta = t;
-  setting.actual_sweep_time = ta;
+  setting.actual_sweep_time_us = ta;
   if (FREQ_IS_CW())
     update_grid();            // Really only needed in zero span mode
   redraw_request |= REDRAW_FREQUENCY;
@@ -1449,7 +1449,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
 
  skip_LO_setting:
 #ifdef __FAST_SWEEP__
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur == 0 && actualStepDelay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur == 0 && actualStepDelay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
@@ -1486,7 +1486,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)
       if (subRSSI < setting.trigger_level)
         goto wait;
 #ifdef __FAST_SWEEP__
-        if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time < 1000) {
+        if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
            SI4432_Fill(MODE_SELECT(setting.mode), 1);
         }
 #endif
@@ -1542,26 +1542,29 @@ again:
     repeats = 1000; // to avoid interrupting the tone during UI processing
     modulation_counter = 0;
   }
-  float t = setting.sweep_time - calc_min_sweep_time(); // Time to delay in mS
-  if (t < 0)
+  uint32_t t = calc_min_sweep_time_us(); // Time to delay in uS
+  if (t < setting.sweep_time_us){
+    t = setting.sweep_time_us - t;
+    t = t / (sweep_points - 1);                   // Now in uS per point
+  }
+  else
     t = 0;
-  t = t * 1000 / 290.0;                         // Now in uS per point
   if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup
     t = 500;
   while (repeats--) {
   for (int i = 0; i < sweep_points; i++) {
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);
-    if (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE) {
-      if (t < 30000)
-          my_microsecond_delay((int)t);
+    if (t && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {
+      if (t < 30*ONE_MS_TIME)
+        my_microsecond_delay(t);
       else
-        osalThreadSleepMilliseconds(((int)t)/1000);
+        osalThreadSleepMilliseconds(t / ONE_MS_TIME);
     }
 
     // back to toplevel to handle ui operation
     if ((operation_requested || shell_function) && break_on_operation) {
-      if (setting.actual_sweep_time > 1000) {
+      if (setting.actual_sweep_time_us > ONE_SECOND_TIME) {
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
       }
 
@@ -1572,7 +1575,7 @@ again:
     }
 
     if (MODE_INPUT(setting.mode)) {
-      if (setting.actual_sweep_time > 1000 && (i & 0x07) == 0) {
+      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, i, 1, BRIGHT_COLOR_GREEN);
         ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-i, 1, 0);
       }
@@ -1852,7 +1855,7 @@ again:
 
   //    redraw_marker(peak_marker, FALSE);
 //  STOP_PROFILE;
-  if (setting.actual_sweep_time > 1000) {
+  if (setting.actual_sweep_time_us > ONE_SECOND_TIME) {
     ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
   }
 
@@ -2177,11 +2180,11 @@ void draw_cal_status(void)
   ili9341_drawstring("Scan:", x, y);
 
   y += YSTEP;
-  float t = calc_min_sweep_time();
-  if (t < setting.sweep_time)
-    t = setting.sweep_time;
-  setting.actual_sweep_time = t;
-  plot_printf(buf, BLEN, "%.3FS", t/1000.0);
+  uint32_t t = calc_min_sweep_time_us();
+  if (t < setting.sweep_time_us)
+    t = setting.sweep_time_us;
+  setting.actual_sweep_time_us = t;
+  plot_printf(buf, BLEN, "%.3FS", (float)t/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
 
    // Cal output
