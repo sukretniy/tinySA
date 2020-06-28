@@ -844,7 +844,6 @@ void setupSA(void)
 }
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
-static systime_t set_freq_time;
 
 void set_freq(int V, unsigned long freq)
 {
@@ -878,7 +877,6 @@ void set_freq(int V, unsigned long freq)
         }
       }
 #endif
-      set_freq_time = chVTGetSystemTimeX();
       SI4432_Set_Frequency(freq);
       SI4432_Write_Byte(0x73, 0);
       SI4432_Write_Byte(0x74, 0);
@@ -1533,7 +1531,7 @@ static bool sweep(bool break_on_operation)
   int16_t downslope;
 //  if (setting.mode== -1)
 //    return;
-//  START_PROFILE;
+
 again:
   downslope = true;
   palClearPad(GPIOB, GPIOB_LED);
@@ -1555,20 +1553,15 @@ again:
     t = 0;
   if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup
     t = 500;
-  set_freq_time = 0;
+  // Here is init measure
+  systime_t set_freq_time = 0;
+
+  // This debug to display
+  START_PROFILE;
   while (repeats--) {
   for (int i = 0; i < sweep_points; i++) {
-
-    if (start_index == -1 && start_time == 0 && set_freq_time != 0) {
-      start_index = i;
-      start_time = set_freq_time;
-      set_freq_time = 0;
-    } else if (start_index != -1 && start_time != 0 && set_freq_time != 0 ) {
-      uint32_t total_time = 290*(set_freq_time - start_time)*100/(i - start_index);
-      if (1) shell_printf("%d T:%f\r\n", i, total_time / 1000000.0);
-      set_freq_time = 0;
-    }
-
+    // Here is start measure one part of cycle
+    set_freq_time-= chVTGetSystemTimeX();
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);
     if (t && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {
       if (t < 30*ONE_MS_TIME)
@@ -1576,6 +1569,11 @@ again:
       else
         osalThreadSleepMilliseconds(t / ONE_MS_TIME);
     }
+    // here is stop measure
+    set_freq_time+= chVTGetSystemTimeX();
+    // !!!!! execution time for next part of cycle not measured!!! if need move it to end, or move out from sweep cycle
+    //  |
+    //  V
 
     // back to toplevel to handle ui operation
     if ((operation_requested || shell_function) && break_on_operation) {
@@ -1861,6 +1859,10 @@ again:
     min_level = temp_min_level;
   }
   }
+  // Show sweep time on display in system tick, 10 system tick = 1ms
+  STOP_PROFILE;
+  // here is output result measure
+  if (1) shell_printf("Sweep time: %.1fmS\r\n", set_freq_time / 10.0);
   if (setting.measurement == M_LINEARITY && setting.linearity_step < setting._sweep_points) {
     setting.attenuate = 29.0 - setting.linearity_step * 30.0 / 290.0;
     dirty = true;
