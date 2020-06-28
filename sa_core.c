@@ -876,8 +876,8 @@ void set_freq(int V, unsigned long freq)
           old_freq[V] = freq;
           return;
         }
-#endif
       }
+#endif
       SI4432_Set_Frequency(freq);
       SI4432_Write_Byte(0x73, 0);
       SI4432_Write_Byte(0x74, 0);
@@ -2754,9 +2754,10 @@ void self_test(int test)
     reset_settings(M_LOW);
   } else if (test == 3) {                       // RBW step time search
     in_selftest = true;
-    reset_settings(M_HIGH);
+//    reset_settings(M_LOW);
     setting.auto_IF = false;
     setting.frequency_IF=433900000;
+    setting.step_delay = 2;
     ui_mode_normal();
 //    int i = 13;       // calibrate low mode power on 30 MHz;
     int i = 15;       // calibrate low mode power on 30 MHz;
@@ -2764,6 +2765,7 @@ void self_test(int test)
     setting.step_delay = 8000;
     for (int j= 0; j < 57; j++ ) {
       test_prepare(i);
+      setting.spur = 0;
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.rbw = SI4432_force_RBW(j);
       shell_printf("RBW = %d, ",setting.rbw);
@@ -2780,6 +2782,7 @@ void self_test(int test)
       shell_printf("Start level = %f, ",peakLevel);
       while (setting.step_delay > 10 && peakLevel > saved_peakLevel - 1) {
         test_prepare(i);
+        setting.spur = 0;
         setting.step_delay = setting.step_delay * 4 / 5;
         //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
         set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw * 10000));

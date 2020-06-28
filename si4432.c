@@ -442,7 +442,7 @@ float SI4432_RSSI(uint32_t i, int s)
     }
     SI4432_frequency_changed = false;
   } else if (SI4432_offset_changed) {
-    stepdelay = 280 + stepdelay/4;
+    stepdelay = 280 + stepdelay/8;
     SI4432_offset_changed = false;
   }
   if (stepdelay)
