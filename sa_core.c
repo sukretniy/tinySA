@@ -156,6 +156,12 @@ void reset_settings(int m)
   dirty = true;
 }
 
+static uint32_t extra_vbw_step_time = 0;
+static uint32_t etra_repeat_time = 0;
+static uint32_t minimum_zero_span_sweep_time = 0;
+static uint32_t minimum_sweep_time = 0;
+
+
 uint32_t calc_min_sweep_time_us(void)         // Calculate minimum sweep time in uS needed just because of the delays for the RSSI to become stable
 {
   float t;
@@ -825,7 +831,12 @@ float temppeakLevel;
 int temppeakIndex;
 static unsigned long old_freq[4] = { 0, 0, 0, 0 };
 static unsigned long real_old_freq[4] = { 0, 0, 0, 0 };
+volatile int t;
 
+//static uint32_t extra_vbw_step_time = 0;
+//static uint32_t etra_repeat_time = 0;
+//static uint32_t minimum_zero_span_sweep_time = 0;
+//static uint32_t minimum_sweep_time = 0;
 
 void setupSA(void)
 {
@@ -841,6 +852,15 @@ void setupSA(void)
   SI4432_Transmit(0);
   PE4302_init();
   PE4302_Write_Byte(0);
+
+  setting.sweep_time_us = 0;
+  START_PROFILE
+  SI4432_Fill(0,200);
+  int t1 = DELTA_TIME;
+  RESTART_PROFILE
+  SI4432_Fill(0,0);
+  int t2 = DELTA_TIME;
+  t = (t2 - t1) * 100 * 290 / 200;
 }
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;

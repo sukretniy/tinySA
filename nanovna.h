@@ -631,7 +631,7 @@ void reset_settings(int m);
 enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 
 #ifdef __FAST_SWEEP__
-#define MINIMUM_SWEEP_TIME  3000U    // Minimum sweep time on zero span in uS
+#define MINIMUM_SWEEP_TIME  2000U    // Minimum sweep time on zero span in uS
 #else
 #define MINIMUM_SWEEP_TIME  15000U   // Minimum sweep time on zero span in uS
 #endif
@@ -859,6 +859,7 @@ void SI4432_SetReference(int freq);
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
 #define RESTART_PROFILE   time = chVTGetSystemTimeX();
 #define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "T:%06d", chVTGetSystemTimeX() - time);ili9341_drawstringV(string_buf, 1, 180);}
+#define DELTA_TIME (time = chVTGetSystemTimeX() - time)
 // Macros for convert define value to string
 #define STR1(x)  #x
 #define define_to_STR(x)  STR1(x)

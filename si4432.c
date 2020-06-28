@@ -404,7 +404,7 @@ void SI4432_Fill(int s, int start)
     t = 0;
 
   SPI2_CLK_LOW;
-  int i = 0;
+  int i = start;
   do {
     palClearPad(GPIOC, sel);
     shiftOut( 0x26 );
@@ -414,7 +414,7 @@ void SI4432_Fill(int s, int start)
     if (t)
       my_microsecond_delay(t);
   } while(1);
-  buf_index = start;
+  buf_index = start; // Is used to skip 1st entry during level triggering
   buf_read = true;
 }
 #endif
