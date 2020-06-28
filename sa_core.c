@@ -870,7 +870,6 @@ void set_freq(int V, unsigned long freq)
 
           delta = delta * 4 / 625; // = 156.25;
           SI4432_Write_Byte(0x73, (uint8_t)(delta & 0xff));
-          uint8_t reg = delta >> 8;
           SI4432_Write_Byte(0x74, (uint8_t)((delta >> 8) & 0x03));
           SI4432_offset_changed = true;
           old_freq[V] = freq;
@@ -2167,9 +2166,7 @@ void draw_cal_status(void)
   }
 #endif
   // Sweep time
-  if (dirty)
-    color = BRIGHT_COLOR_RED;
-  else if (setting.step_delay)
+  if (setting.step_delay)
     color = BRIGHT_COLOR_GREEN;
   else
     color = DEFAULT_FG_COLOR;
@@ -2177,7 +2174,14 @@ void draw_cal_status(void)
   ili9341_set_foreground(color);
 
   y += YSTEP + YSTEP/2 ;
-  ili9341_drawstring("Scan:", x, y);
+
+  buf[0] = ' ';
+  if (setting.step_delay == 1)
+    buf[0] = 'P';
+  if (setting.step_delay == 2)
+    buf[0] = 'F';
+  strcpy(&buf[1],"Scan:");
+  ili9341_drawstring(buf, x, y);
 
   y += YSTEP;
   uint32_t t = calc_min_sweep_time_us();
@@ -2189,7 +2193,7 @@ void draw_cal_status(void)
 
    // Cal output
   if (setting.refer >= 0) {
-    ili9341_set_foreground(BRIGHT_COLOR_RED);
+    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Ref:", x, y);
 
@@ -2201,7 +2205,7 @@ void draw_cal_status(void)
 
   // Offset
   if (setting.offset != 0.0) {
-    ili9341_set_foreground(BRIGHT_COLOR_RED);
+    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Amp:", x, y);
 

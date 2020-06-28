@@ -1093,6 +1093,7 @@ search_index_range_x(int x1, int x2, index_t index[POINTS_COUNT], int *i0, int *
 
   return TRUE;
 }
+#if 0       // Not used as refpos is always at top of screen
 
 #define REFERENCE_WIDTH    6
 #define REFERENCE_HEIGHT   5
@@ -1124,6 +1125,7 @@ draw_refpos(int x, int y, int c)
     }
   }
 }
+#endif
 
 #define MARKER_WIDTH  7
 #define MARKER_HEIGHT 10
