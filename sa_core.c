@@ -2423,15 +2423,13 @@ void cell_draw_test_info(int x0, int y0)
   } while (test_case[i].kind != TC_END);
 }
 
-#define fabs(X) ((X)<0?-(X):(X))
-
 int validate_signal_within(int i, float margin)
 {
   test_fail_cause[i] = "Signal level ";
-  if (fabs(peakLevel-test_case[i].pass) > 2*margin) {
+  if (fabsf(peakLevel-test_case[i].pass) > 2*margin) {
     return TS_FAIL;
   }
-  if (fabs(peakLevel-test_case[i].pass) > margin) {
+  if (fabsf(peakLevel-test_case[i].pass) > margin) {
     return TS_CRITICAL;
   }
   test_fail_cause[i] = "Frequency ";
