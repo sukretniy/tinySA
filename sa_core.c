@@ -844,6 +844,7 @@ void setupSA(void)
 }
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
+static systime_t set_freq_time;
 
 void set_freq(int V, unsigned long freq)
 {
@@ -877,6 +878,7 @@ void set_freq(int V, unsigned long freq)
         }
       }
 #endif
+      set_freq_time = chVTGetSystemTimeX();
       SI4432_Set_Frequency(freq);
       SI4432_Write_Byte(0x73, 0);
       SI4432_Write_Byte(0x74, 0);
@@ -1525,6 +1527,9 @@ static int low_count = 0;
 static bool sweep(bool break_on_operation)
 {
   float RSSI;
+  systime_t start_time = 0;
+  int start_index = -1;
+
   int16_t downslope;
 //  if (setting.mode== -1)
 //    return;
@@ -1550,8 +1555,19 @@ again:
     t = 0;
   if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup
     t = 500;
+  set_freq_time = 0;
   while (repeats--) {
   for (int i = 0; i < sweep_points; i++) {
+
+    if (start_index == -1 && start_time == 0 && set_freq_time != 0) {
+      start_index = i;
+      start_time = set_freq_time;
+      set_freq_time = 0;
+    } else if (start_index != -1 && start_time != 0 && set_freq_time != 0 ) {
+      uint32_t total_time = 290*(set_freq_time - start_time)*100/(i - start_index);
+      if (1) shell_printf("%d T:%f\r\n", i, total_time / 1000000.0);
+      set_freq_time = 0;
+    }
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);
     if (t && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {
