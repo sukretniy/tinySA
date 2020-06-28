@@ -2173,8 +2173,7 @@ static void draw_battery_status(void)
 void
 request_to_redraw_grid(void)
 {
-  force_set_markmap();
-  redraw_request |= REDRAW_CELLS;
+  redraw_request |= REDRAW_AREA;
 }
 
 void

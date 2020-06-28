@@ -637,7 +637,7 @@ void set_reflevel(float level)
   set_trace_refpos(0, /* NGRIDY - */ level /* / get_trace_scale(0) */);
   set_trace_refpos(1, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
   set_trace_refpos(2, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
-  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
+  redraw_request |= REDRAW_CELLS | REDRAW_CAL_STATUS;
 //  dirty = true;
 }
 
@@ -696,7 +696,7 @@ void set_scale(float t) {
   set_trace_scale(1, t);
   set_trace_scale(2, t);
   round_reflevel_to_scale();
-  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
+  redraw_request |= REDRAW_CELLS | REDRAW_CAL_STATUS;
 }
 
 

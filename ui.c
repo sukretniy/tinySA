@@ -1143,7 +1143,7 @@ menu_move_back(void)
     area_width = 0;
   } else {
 //    redraw_frame();
-    request_to_redraw_grid();
+//    request_to_redraw_grid();
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
 
@@ -1166,7 +1166,7 @@ menu_push_submenu(const menuitem_t *submenu)
     area_width = 0;
   } else {
 //    redraw_frame();
-    request_to_redraw_grid();
+//    request_to_redraw_grid();
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
   draw_menu();
@@ -1736,6 +1736,7 @@ leave_ui_mode()
     erase_numeric_input();
     draw_frequencies();
   }
+  redraw_request|=REDRAW_AREA;
 }
 
 #ifdef __VNA__
@@ -2357,7 +2358,7 @@ ui_process_keypad(void)
     ensure_selection();
   } else {
     ui_mode_normal();
-    request_to_redraw_grid();
+//  request_to_redraw_grid();
   }
   //redraw_all();
   touch_start_watchdog();
