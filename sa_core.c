@@ -31,6 +31,7 @@ float actual_rbw = 0;
 int vbwSteps = 1;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
+uint32_t measured_sweep_time = 0;
 
 //int setting.refer = -1;  // Off by default
 int const reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
@@ -1594,12 +1595,14 @@ again:                          // Waiting for a trigger jumps back to here
   if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     t = 500;
 
-  set_freq_time = 0;                        // for predicting the weep time
 
 sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
+  set_freq_time = 0;                        // for predicting the weep time
+
   // ------------------------- start sweep loop -----------------------------------
-  //   START_PROFILE;
+  START_PROFILE;        // needed to measure actual sweep time except for fast scan in zero span mode
+
   for (int i = 0; i < sweep_points; i++) {
 
     if (start_index == -1 && start_time == 0 && set_freq_time != 0) {           // Sweep time prediction: first real set SI4432 freq
@@ -1732,7 +1735,8 @@ sweep_again:                                // stay in sweep loop when output mo
     goto sweep_again;                                             // Keep repeating sweep loop till user aborts by input
 
 
-  //  STOP_PROFILE;
+  measured_sweep_time = DELTA_TIME*100;                         // in us
+  //STOP_PROFILE;
   // --------------- check if maximum is above trigger level -----------------
 
   if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active

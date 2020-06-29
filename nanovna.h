@@ -639,8 +639,8 @@ enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 #define ONE_SECOND_TIME     1000000U // One second uS
 #define ONE_MS_TIME         1000U    // One ms uS
 
-#define REPEAT_TIME         134         // Time per extra repeat in uS
-#define MEASURE_TIME        175         // Time per vbwstep without stepdelay in uS
+#define REPEAT_TIME         110         // Time per extra repeat in uS
+#define MEASURE_TIME        127         // Time per vbwstep without step delay in uS
 
 extern uint32_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
