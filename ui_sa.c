@@ -870,6 +870,15 @@ static void menu_atten_cb(int item, uint8_t data)
   ui_mode_normal();
 }
 
+static void menu_atten_high_cb(int item, uint8_t data)
+{
+  (void)item;
+  setting.auto_attenuation = false;
+  set_attenuation(data);
+  menu_move_back();
+  ui_mode_normal();
+}
+
 static void menu_reflevel_cb(int item, uint8_t data)
 {
   (void)item;
@@ -1286,12 +1295,13 @@ static const menuitem_t menu_reffer[] = {
 };
 
 static const menuitem_t menu_atten[] = {
-  { MT_CALLBACK,0,               "AUTO",           menu_atten_cb},
-  { MT_KEYPAD, KM_ATTENUATION,  "MANUAL",         "0..30"},
+  { MT_CALLBACK | MT_LOW, 0,               "AUTO",    menu_atten_cb},
+  { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL",  "0..30"},
+  { MT_CALLBACK | MT_HIGH,0,               "0dB",     menu_atten_high_cb},
+  { MT_CALLBACK | MT_HIGH,30,              "30dB",    menu_atten_high_cb},
   { MT_CANCEL, 0,               "\032 BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
-
 
 static const menuitem_t menu_reflevel[] = {
   { MT_CALLBACK,0,          "AUTO",    menu_reflevel_cb},
@@ -1723,8 +1733,16 @@ static void menu_item_modify_attribute(
     if ((item  == 0 && setting.auto_reflevel) || (item == 1 && !setting.auto_reflevel))
       mark = true;
   } else if (menu == menu_atten) {
-    if ((item  == 0 && setting.auto_attenuation ) || (item  == 1 && !setting.auto_attenuation))
+    if ((item  == 0 && setting.auto_attenuation ))
       mark = true;
+    if (!setting.auto_attenuation) {
+      if (item  == 1)
+        mark = true;
+      if (item == 2 && !setting.atten_step)
+        mark = true;
+      if (item == 3 && setting.atten_step)
+        mark = true;
+    }
   }
   if (m_auto) {
     *bg = LIGHT_GREY;

@@ -444,6 +444,7 @@ enum {
   MT_CLOSE,
   MT_KEYPAD,
   MT_ICON = 0x10,
+  MT_HIGH = 0x20,               // Only applicable to high mode
   MT_LOW = 0x40,                // Only applicable to low mode
   MT_FORM = 0x80,               // Large button menu
 };
@@ -1576,6 +1577,8 @@ draw_menu_buttons(const menuitem_t *menu)
     const char *l1, *l2;
     if ((menu[i].type & MT_LOW) && !MODE_LOW(setting.mode))              //not applicable to mode
       continue;
+    if ((menu[i].type & MT_HIGH) && !MODE_HIGH(setting.mode))              //not applicable to mode
+      continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
     if (MT_MASK(menu[i].type) == MT_BLANK)
@@ -1677,6 +1680,8 @@ menu_apply_touch(void)
   touch_position(&touch_x, &touch_y);
   for (i = 0; i < MENU_BUTTON_MAX; i++) {
     if ((menu[i].type & MT_LOW) && !MODE_LOW(setting.mode))              //not applicable to mode
+      continue;
+    if ((menu[i].type & MT_HIGH) && !MODE_HIGH(setting.mode))              //not applicable to mode
       continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
@@ -2074,7 +2079,8 @@ ui_process_menu(void)
       do {
         if (status & EVT_UP) {
           // close menu if next item is sentinel
-          while ((menu_stack[menu_current_level][selection+1].type & MT_LOW) && !MODE_LOW(setting.mode))
+          while (((menu_stack[menu_current_level][selection+1].type & MT_LOW) && !MODE_LOW(setting.mode) ) ||
+                ((menu_stack[menu_current_level][selection+1].type & MT_HIGH) && !MODE_HIGH(setting.mode)))
             selection++;
           if (menu_stack[menu_current_level][selection+1].type == MT_NONE)
             goto menuclose;
@@ -2082,7 +2088,8 @@ ui_process_menu(void)
             selection++;
         }
         if (status & EVT_DOWN) {
-          while ((menu_stack[menu_current_level][selection+1].type & MT_LOW) && !MODE_LOW(setting.mode))
+          while (((menu_stack[menu_current_level][selection+1].type & MT_LOW) && !MODE_LOW(setting.mode) ) ||
+                ((menu_stack[menu_current_level][selection+1].type & MT_HIGH) && !MODE_HIGH(setting.mode)))
             selection--;
           if (! ( selection == 0 && menu_stack[menu_current_level][0].type & MT_FORM))
             selection--;

@@ -66,7 +66,7 @@ void reset_settings(int m)
   setting.average = 0;
   setting.harmonic = 0;
   setting.show_stored = 0;
-  setting.auto_attenuation = true;
+  setting.auto_attenuation = false;
   setting.subtract_stored = 0;
   setting.drive=13;
   setting.atten_step = 0;       // Only used in low output mode
@@ -105,6 +105,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_START, (uint32_t) 0);
     set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
     setting.attenuate = 30.0;
+    setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
     break;
 #ifdef __ULTRA__
@@ -854,13 +855,13 @@ void setupSA(void)
   PE4302_Write_Byte(0);
 
   setting.sweep_time_us = 0;
-  START_PROFILE
+  START_PROFILE             // measure 90 points to get overhead
   SI4432_Fill(0,200);
   int t1 = DELTA_TIME;
-  RESTART_PROFILE
+  RESTART_PROFILE           // measure 290 points to get real added time for 200 points
   SI4432_Fill(0,0);
   int t2 = DELTA_TIME;
-  t = (t2 - t1) * 100 * 290 / 200;
+  t = (t2 - t1) * 100 * POINTS_COUNT / 200; // And calculate real time excluding overhead for all points
 }
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
