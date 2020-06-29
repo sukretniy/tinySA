@@ -52,7 +52,7 @@ static const uint32_t pow10[FLOAT_PRECISION+1] = {
 static char bigPrefix[] = {' ', 'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y', 0};
 // Prefixes for values less   then 1.0
 //                          1e-3, 1e-6, 1e-9, 1e-12, 1e-15, 1e-18, 1e-21, 1e-24
-static char smallPrefix[] = {'m', 'u', 'n', 'p', 'f', 'a', 'z', 'y', 0};
+static char smallPrefix[] = {'m', 0x1d, 'n', 'p', 'f', 'a', 'z', 'y', 0};
 
 #pragma pack(pop)
 
