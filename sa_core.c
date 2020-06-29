@@ -610,7 +610,7 @@ void set_unit(int u)
   dirty = true;
 }
 float const unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
-const char * const unit_scale_text[]= {"","m", "u",     "n",        "p"};
+const char * const unit_scale_text[]= {"","m", "\035",     "n",        "p"};
 
 void user_set_reflevel(float level)
 {
