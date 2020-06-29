@@ -124,7 +124,7 @@ extern int dirty;
 
 bool completed = false;
 
-static THD_WORKING_AREA(waThread1, 900);
+static THD_WORKING_AREA(waThread1, 768);
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
@@ -2784,7 +2784,7 @@ void hard_fault_handler_c(uint32_t *sp)
   uint32_t psr = sp[7];
   int y = 0;
   int x = 20;
-static  char buf[16];
+  static  char buf[16];
   ili9341_set_background(0x0000);
   ili9341_set_foreground(0xFFFF);
 
