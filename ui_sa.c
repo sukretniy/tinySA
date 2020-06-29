@@ -1207,7 +1207,7 @@ const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_SUBMENU,  0,                   "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s",   "-70..70"},
-  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600S"},
+  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
   { MT_FORM | MT_CANCEL,   0,           "MODE",                     NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1218,7 +1218,7 @@ const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_SUBMENU,   0,          "LEVEL: %s",        menu_drive_wide},
   { MT_FORM | MT_SUBMENU,   0,          "MODULATION: %s",   menu_modulation},
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
-  { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600S"},
+  { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1412,8 +1412,8 @@ static const menuitem_t menu_settings2[] =
   { MT_CALLBACK, 2,             "LNA",              menu_settings2_cb},
   { MT_CALLBACK | MT_LOW, 3,    "BPF",              menu_settings2_cb},
   { MT_CALLBACK | MT_LOW, 4,    "\2BELOW\0IF",      menu_settings2_cb},
-  { MT_KEYPAD,   KM_DECAY,      "\2HOLD\0SWEEPS",   "1..1000"},
-  { MT_KEYPAD,   KM_NOISE,      "\2NOISE\0LEVEL",   "2..20"},
+  { MT_KEYPAD,   KM_DECAY,      "\2HOLD\0SWEEPS",   "1..1000 sweeps"},
+  { MT_KEYPAD,   KM_NOISE,      "\2NOISE\0LEVEL",   "2..20 dB"},
   { MT_KEYPAD,   KM_10MHZ,      "\2CORRECT\0FREQUENCY", "Enter actual l0MHz frequency"},
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},

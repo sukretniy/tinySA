@@ -2275,7 +2275,7 @@ void draw_cal_status(void)
   if (t < setting.sweep_time_us)
     t = setting.sweep_time_us;
   setting.actual_sweep_time_us = t;
-  plot_printf(buf, BLEN, "%.3FS", (float)t/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%.3Fs", (float)t/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
 
    // Cal output
