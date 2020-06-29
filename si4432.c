@@ -185,34 +185,34 @@ byte SI4432_Read_Byte( byte ADR )
 void SI4432_Reset(void)
 {
   int count = 0;
-  SI4432_Read_Byte ( 0x03 );    // Clear pending interrupts
-  SI4432_Read_Byte ( 0x04 );
+  SI4432_Read_Byte (SI4432_INT_STATUS1);    // Clear pending interrupts
+  SI4432_Read_Byte (SI4432_INT_STATUS2);
   // always perform a system reset (don't send 0x87)
-  SI4432_Write_Byte( 0x07, 0x80);
+  SI4432_Write_Byte(SI4432_STATE, 0x80);
   chThdSleepMilliseconds(50);
   // wait for chiprdy bit
-  while (count++ < 100 && ( SI4432_Read_Byte ( 0x04 ) & 0x02 ) == 0) {
+  while (count++ < 100 && ( SI4432_Read_Byte (SI4432_INT_STATUS2) & 0x02 ) == 0) {
     chThdSleepMilliseconds(10);
   }
 }
 
 void SI4432_Drive(int d)
 {
-  SI4432_Write_Byte(0x6D, (byte) (0x18+(d & 7)));
+  SI4432_Write_Byte(SI4432_TX_POWER, (byte) (0x18+(d & 7)));
 }
 
 void SI4432_Transmit(int d)
 {
   int count = 0;
-  SI4432_Write_Byte(0x6D, (byte) (0x18+(d & 7)));
-  if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 2)
+  SI4432_Write_Byte(SI4432_TX_POWER, (byte) (0x18+(d & 7)));
+  if (( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) == 2)
     return; // Already in transmit mode
   chThdSleepMilliseconds(20);
-  SI4432_Write_Byte( 0x07, 0x02);
+  SI4432_Write_Byte(SI4432_STATE, 0x02);
   chThdSleepMilliseconds(20);
-  SI4432_Write_Byte( 0x07, 0x0b);
+  SI4432_Write_Byte(SI4432_STATE, 0x0b);
   chThdSleepMilliseconds(100);
-  while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 2) {
+  while (count++ < 100 && ( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) != 2) {
     chThdSleepMilliseconds(10);
   }
 }
@@ -220,14 +220,14 @@ void SI4432_Transmit(int d)
 void SI4432_Receive(void)
 {
   int count = 0;
-  if (( SI4432_Read_Byte ( 0x02 ) & 0x03 ) == 1)
+  if (( SI4432_Read_Byte (SI4432_DEV_STATUS) & 0x03 ) == 1)
     return; // Already in receive mode
   chThdSleepMilliseconds(20);
-  SI4432_Write_Byte( 0x07, 0x02);
+  SI4432_Write_Byte(SI4432_STATE, 0x02);
   chThdSleepMilliseconds(20);
-  SI4432_Write_Byte( 0x07, 0x07);
+  SI4432_Write_Byte(SI4432_STATE, 0x07);
   chThdSleepMilliseconds(100);
-  while (count++ < 100 && ( SI4432_Read_Byte ( 0x02 ) & 0x03 ) != 1) {
+  while (count++ < 100 && ( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) != 1) {
     chThdSleepMilliseconds(5);
   }
 }
@@ -307,7 +307,7 @@ static float SI4432_RSSI_correction = -120.0;
 
 float SI4432_force_RBW(int i)
 {
-  SI4432_Write_Byte(0x1C, RBW_choices[i].reg);                                    // Write RBW settings to Si4432
+  SI4432_Write_Byte(SI4432_IF_FILTER_BW, RBW_choices[i].reg);                     // Write RBW settings to Si4432
   SI4432_RSSI_correction = ((int)RBW_choices[i].RSSI_correction_x_10-1200)/10.0;  // Set RSSI correction
   return (((float)RBW_choices[i].RBWx10) / 10.0);                                 // RBW achieved by Si4432 in kHz
 }
@@ -365,12 +365,12 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
       SI4432_Write_Byte ( 0x75, Freq_Band );
       written[SI4432_Sel]++;
     }
-    SI4432_Write_Byte ( 0x76, (Carrier>>8) & 0xFF );
-    SI4432_Write_Byte ( 0x77, Carrier & 0xFF  );
+    SI4432_Write_Byte(SI4432_FREQCARRIER_H, (Carrier>>8) & 0xFF );
+    SI4432_Write_Byte(SI4432_FREQCARRIER_L, Carrier & 0xFF  );
   } else {
 #endif
 
-    SI4432_Write_3_Byte ( 0x75, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF);
+    SI4432_Write_3_Byte (SI4432_FREQBAND, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF);
 #if 0
     old_freq_band[SI4432_Sel] = Freq_Band;
     written[SI4432_Sel] = 0;
@@ -407,7 +407,7 @@ void SI4432_Fill(int s, int start)
   int i = start;
   do {
     palClearPad(GPIOC, sel);
-    shiftOut( 0x26 );
+    shiftOut(SI4432_REG_RSSI);
     age[i]=(char)shiftIn();
     palSetPad(GPIOC, sel);
     if (++i >= sweep_points) break;
@@ -457,7 +457,7 @@ float SI4432_RSSI(uint32_t i, int s)
   i = setting.repeat;
   RSSI_RAW  = 0;
 again:
-  RSSI_RAW += ((unsigned int)SI4432_Read_Byte( 0x26 )) << 4 ;
+  RSSI_RAW += ((unsigned int)SI4432_Read_Byte(SI4432_REG_RSSI)) << 4 ;
   i--;
   if (i > 0) {
     my_microsecond_delay(100);
@@ -482,16 +482,16 @@ void SI4432_Sub_Init(void)
   SI4432_Reset();
 
 
-  SI4432_Write_Byte(0x69, 0x60); //AGC override according to WBS3
+  SI4432_Write_Byte(SI4432_AGC_OVERRIDE, 0x60); //AGC override according to WBS3
 
 
 #if 0           // Not sure if these add any value
   //set VCO and PLL Only for SI4432 V2
-  SI4432_Write_Byte(0x72, 0x1F); //write 0x1F to the Frequency Deviation register
+  SI4432_Write_Byte(SI4432_FREQ_DEVIATION, 0x1F); //write 0x1F to the Frequency Deviation register
   // VCO tuning registers
-  SI4432_Write_Byte(0x5A, 0x7F); //write 0x7F to the VCO Current Trimming register
-  SI4432_Write_Byte(0x58, 0x80); //write 0xD7 to the ChargepumpCurrentTrimmingOverride register
-  SI4432_Write_Byte(0x59, 0x40); //write 0x40 to the Divider Current Trimming register
+  SI4432_Write_Byte(SI4432_VCO_CURRENT_TRIM, 0x7F); //write 0x7F to the VCO Current Trimming register
+  SI4432_Write_Byte(SI4432_CHARGEPUMP_OVERRIDE, 0x80); //write 0xD7 to the ChargepumpCurrentTrimmingOverride register
+  SI4432_Write_Byte(SI4432_DIVIDER_CURRENT_TRIM, 0x40); //write 0x40 to the Divider Current Trimming register
 #endif
 #if 0
   //set the AGC,  BAD FOR PERFORMANCE!!!!!!
@@ -504,12 +504,12 @@ void SI4432_Sub_Init(void)
 #endif
 
 
-  SI4432_Write_Byte(0x05, 0x0);
-  SI4432_Write_Byte(0x06, 0x0);
+  SI4432_Write_Byte(SI4432_INT_ENABLE1, 0x0);
+  SI4432_Write_Byte(SI4432_INT_ENABLE2, 0x0);
   // Enable receiver chain
-//  SI4432_Write_Byte(0x07, 0x05);
+//  SI4432_Write_Byte(SI4432_STATE, 0x05);
   // Clock Recovery Gearshift Value
-  SI4432_Write_Byte(0x1F, 0x00);
+  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_GEARSHIFT, 0x00);
   // IF Filter Bandwidth
   SI4432_SET_RBW(10) ;
 //  // Register 0x75 Frequency Band Select
@@ -517,43 +517,43 @@ void SI4432_Sub_Init(void)
 //  byte hbsel = 0 ;  // low bands
 //  byte fb = 19 ;    // 430�439.9 MHz
 //  byte FBS = (sbsel << 6 ) | (hbsel << 5 ) | fb ;
-//  SI4432_Write_Byte(0x75, FBS) ;
-//  SI4432_Write_Byte(0x75, 0x46) ;
+//  SI4432_Write_Byte(SI4432_FREQBAND, FBS) ;
+//  SI4432_Write_Byte(SI4432_FREQBAND, 0x46) ;
   // Register 0x76 Nominal Carrier Frequency
   // WE USE 433.92 MHz
   // Si443x-Register-Settings_RevB1.xls
-//  SI4432_Write_Byte(0x76, 0x62) ;
-//  SI4432_Write_Byte(0x76, 0x00) ;
+//  SI4432_Write_Byte(SI4432_FREQCARRIER_H, 0x62) ;
+//  SI4432_Write_Byte(SI4432_FREQCARRIER_H, 0x00) ;
   // Register 0x77 Nominal Carrier Frequency
-//  SI4432_Write_Byte(0x77, 0x00) ;
+//  SI4432_Write_Byte(SI4432_FREQCARRIER_L, 0x00) ;
   // RX MODEM SETTINGS
-//  SI4432_Write_3_Byte(0x1C, 0x81, 0x3C, 0x02) ;
-//  SI4432_Write_Byte(0x1C, 0x81) ;
-  SI4432_Write_Byte(0x1D, 0x00) ;
-//  SI4432_Write_Byte(0x1E, 0x02) ;
-  SI4432_Write_Byte(0x1F, 0x03) ;
-  // SI4432_Write_Byte(0x20, 0x78) ;
-//  SI4432_Write_3_Byte(0x21, 0x01, 0x11, 0x11) ;
-  SI4432_Write_Byte(0x21, 0x01) ;
-  SI4432_Write_Byte(0x22, 0x11) ;
-  SI4432_Write_Byte(0x23, 0x11) ;
-  SI4432_Write_Byte(0x24, 0x01) ;
-  SI4432_Write_Byte(0x25, 0x13) ;
-  SI4432_Write_Byte(0x2A, 0xFF) ;
+//  SI4432_Write_3_Byte(SI4432_IF_FILTER_BW, 0x81, 0x3C, 0x02) ;
+//  SI4432_Write_Byte(SI4432_IF_FILTER_BW, 0x81) ;
+  SI4432_Write_Byte(SI4432_AFC_LOOP_GEARSHIFT_OVERRIDE, 0x00) ;
+//  SI4432_Write_Byte(SI4432_AFC_TIMING_CONTROL, 0x02) ;
+  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_GEARSHIFT, 0x03) ;
+  // SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OVERSAMPLING, 0x78) ;
+//  SI4432_Write_3_Byte(SI4432_CLOCK_RECOVERY_OFFSET2, 0x01, 0x11, 0x11) ;
+  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OFFSET2, 0x01) ;
+  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OFFSET1, 0x11) ;
+  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OFFSET0, 0x11) ;
+  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_TIMING_GAIN1, 0x01) ;
+  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_TIMING_GAIN0, 0x13) ;
+  SI4432_Write_Byte(SI4432_AFC_LIMITER, 0xFF) ;
 
 //  SI4432_Write_3_Byte(0x2C, 0x28, 0x0c, 0x28) ;
-//  SI4432_Write_Byte(0x2C, 0x28) ;
-//  SI4432_Write_Byte(0x2D, 0x0C) ;
-//  SI4432_Write_Byte(0x2E, 0x28) ;
+//  SI4432_Write_Byte(Si4432_OOK_COUNTER_VALUE_1, 0x28) ;
+//  SI4432_Write_Byte(Si4432_OOK_COUNTER_VALUE_2, 0x0C) ;
+//  SI4432_Write_Byte(Si4432_SLICER_PEAK_HOLD, 0x28) ;
 
-  SI4432_Write_Byte(0x30, 0x61); // Disable all packet handling
+  SI4432_Write_Byte(SI4432_DATAACCESS_CONTROL, 0x61); // Disable all packet handling
 
-  SI4432_Write_Byte(0x69, 0x60); // AGC, no LNA, fast gain increment
+  SI4432_Write_Byte(SI4432_AGC_OVERRIDE, 0x60); // AGC, no LNA, fast gain increment
 
 
 // GPIO automatic antenna switching
-  SI4432_Write_Byte(0x0B, 0x12) ; // Normal
-  SI4432_Write_Byte(0x0C, 0x15) ;
+  SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x12) ; // Normal
+  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x15) ;
 
 }
 
@@ -581,31 +581,31 @@ void SI4432_Init()
 
   SI4432_Sel = 0;
 //  SI4432_Receive();// Enable receiver chain
-//  SI4432_Write_Byte(0x09, V0_XTAL_CAPACITANCE);// Tune the crystal
+//  SI4432_Write_Byte(Si4432_CRYSTAL_OSC_LOAD_CAP, V0_XTAL_CAPACITANCE);// Tune the crystal
 //  SI4432_Set_Frequency(433800000);
-  SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 output to ground
+  SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 output to ground
 
 
   SI4432_Sel = 1;
-//  SI4432_Write_Byte(0x09, V1_XTAL_CAPACITANCE);// Tune the crystal
+//  SI4432_Write_Byte(Si4432_CRYSTAL_OSC_LOAD_CAP, V1_XTAL_CAPACITANCE);// Tune the crystal
 //  SI4432_Set_Frequency(443800000);
-  SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 output to ground
+  SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 output to ground
 
-  //  SI4432_Write_Byte(0x6D, 0x1C);//Set low power
+  //  SI4432_Write_Byte(SI4432_TX_POWER, 0x1C);//Set low power
 //  SI4432_Transmit(0);
 
-//  SI4432_Write_Byte(0x0D, 0xC0) ; // Set GPIO2 maximumdrive and clock output
-//  SI4432_Write_Byte(0x0A, 0x02) ; // Set 10MHz output
+//  SI4432_Write_Byte(SI4432_GPIO2_CONF, 0xC0) ; // Set GPIO2 maximumdrive and clock output
+//  SI4432_Write_Byte(Si4432_UC_OUTPUT_CLOCK, 0x02) ; // Set 10MHz output
 }
 
 void SI4432_SetReference(int freq)
 {
   SI4432_Sel = 1;         //Select Lo module
   if (freq < 0 || freq > 7 ) {
-    SI4432_Write_Byte(0x0D, 0x1F) ; // Set GPIO2 to GND
+    SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 to GND
   } else {
-    SI4432_Write_Byte(0x0D, 0xC0) ; // Set GPIO2 maximumdrive and clock output
-    SI4432_Write_Byte(0x0A, freq & 0x07) ; // Set GPIO2 frequency
+    SI4432_Write_Byte(SI4432_GPIO2_CONF, 0xC0) ; // Set GPIO2 maximumdrive and clock output
+    SI4432_Write_Byte(Si4432_UC_OUTPUT_CLOCK, freq & 0x07) ; // Set GPIO2 frequency
   }
 }
 

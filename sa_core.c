@@ -891,8 +891,8 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
           }
 #endif
           delta = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
-          SI4432_Write_Byte(0x73, (uint8_t)(delta & 0xff));
-          SI4432_Write_Byte(0x74, (uint8_t)((delta >> 8) & 0x03));
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff));
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((delta >> 8) & 0x03));
           SI4432_offset_changed = true;                 // Signal offset changed so RSSI retrieval is delayed for frequency settling
           old_freq[V] = freq;
           return;
@@ -901,8 +901,8 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
 #endif
       set_freq_time = chVTGetSystemTimeX();
       SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
-      SI4432_Write_Byte(0x73, 0);           // set offset to zero
-      SI4432_Write_Byte(0x74, 0);
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
 #ifdef __ULTRA_SA__
     } else {
       ADF4351_set_frequency(V-2,freq,3);
@@ -914,25 +914,25 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
 }
 
 void set_switch_transmit(void) {
-  SI4432_Write_Byte(0x0b, 0x1f);// Set switch to transmit
-  SI4432_Write_Byte(0x0c, 0x1d);
+  SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x1f);// Set switch to transmit
+  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1d);
 }
 
 void set_switch_receive(void) {
-  SI4432_Write_Byte(0x0b, 0x1d);// Set switch to receive
-  SI4432_Write_Byte(0x0c, 0x1f);
+  SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x1d);// Set switch to receive
+  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1f);
 }
 
 void set_switch_off(void) {
-  SI4432_Write_Byte(0x0b, 0x1d);// Set both switch off
-  SI4432_Write_Byte(0x0c, 0x1f);
+  SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x1d);// Set both switch off
+  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1f);
 }
 
 void set_AGC_LNA(void) {
   unsigned char v = 0x40;
   if (S_STATE(setting.agc)) v |= 0x20;
   if (S_STATE(setting.lna)) v |= 0x10;
-  SI4432_Write_Byte(0x69, v);
+  SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
 }
 
 void set_switches(int m)
@@ -1020,8 +1020,8 @@ case M_GENHIGH: // Direct output from 1
     break;
   }
   SI4432_Sel = 1;
-  SI4432_Write_Byte(0x73, 0);  // Back to nominal offset
-  SI4432_Write_Byte(0x74, 0);
+  SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);  // Back to nominal offset
+  SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
 
 }
 
@@ -1228,7 +1228,7 @@ int avoid_spur(int f)                   // find if this frequency should be avoi
 //  int window = ((int)actual_rbw ) * 1000*2;
 //  if (window < 50000)
 //    window = 50000;
-  if (! setting.mode == M_LOW || !setting.auto_IF || actual_rbw > 300.0)
+  if (setting.mode != M_LOW || !setting.auto_IF || actual_rbw > 300.0)
     return(false);
   return binary_search(f);
 }
@@ -1259,7 +1259,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       ls += 0.5;
     else
       ls -= 0.5;
-    float a = ((int)((setting.level + (i / 290.0) * ls)*2.0)) / 2.0;
+    float a = ((int)((setting.level + (i / sweep_points) * ls)*2.0)) / 2.0;
     if (a != old_a) {
       old_a = a;
       int d = 0;              // Start at lowest drive level;
@@ -1302,43 +1302,43 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     else
       v = 0x60; // Enable AGC and disable LNA
     if (old_v != v) {
-      SI4432_Write_Byte(0x69, v);
+      SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
       old_v = v;
     }
   }
 
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
-
-  if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_AM_1kHz||setting.modulation == MO_AM_10Hz)) {               // AM modulation
-    int p = setting.attenuate * 2 + am_modulation[modulation_counter];
-    if (p>63)
-      p = 63;
-    if (p<0)
-      p = 0;
-    PE4302_Write_Byte(p);
-    if (modulation_counter == 4) {  // 3dB modulation depth
-      modulation_counter = 0;
-    } else {
-      modulation_counter++;
+  if (MODE_OUTPUT(setting.mode)){
+    if (setting.modulation == MO_AM_1kHz || setting.modulation == MO_AM_10Hz) {               // AM modulation
+      int p = setting.attenuate * 2 + am_modulation[modulation_counter];
+      if (p>63)
+        p = 63;
+      if (p<0)
+        p = 0;
+      PE4302_Write_Byte(p);
+      if (modulation_counter == 4) {  // 3dB modulation depth
+        modulation_counter = 0;
+      } else {
+        modulation_counter++;
+      }
+      if (setting.modulation == MO_AM_10Hz)
+        my_microsecond_delay(20000);
+      else
+        my_microsecond_delay(180);
+//      chThdSleepMicroseconds(200);
     }
-    if (setting.modulation == MO_AM_10Hz)
-      my_microsecond_delay(20000);
-    else
-      my_microsecond_delay(180);
-//    chThdSleepMicroseconds(200);
-
-  } else if (MODE_OUTPUT(setting.mode) && (setting.modulation == MO_NFM || setting.modulation == MO_WFM )) { //FM modulation
+    else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
       SI4432_Sel = 1;
       int offset;
       if (setting.modulation == MO_NFM ) {
         offset = nfm_modulation[modulation_counter] ;
-        SI4432_Write_Byte(0x73, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
-        SI4432_Write_Byte(0x74, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
+        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
       }
       else {
         offset = wfm_modulation[modulation_counter] ;
-        SI4432_Write_Byte(0x73, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
-        SI4432_Write_Byte(0x74, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
+        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
       }
       if (modulation_counter == 4)
         modulation_counter = 0;
@@ -1346,7 +1346,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         modulation_counter++;
       my_microsecond_delay(200);
 //      chThdSleepMicroseconds(200);
+    }
   }
+
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   float RSSI = -150.0;
   int t = 0;
@@ -1596,7 +1598,7 @@ again:                          // Waiting for a trigger jumps back to here
   while (repeats--) {
 
 // ------------------------- sweep loop -----------------------------------
-
+//   START_PROFILE;
    for (int i = 0; i < sweep_points; i++) {
 
     if (start_index == -1 && start_time == 0 && set_freq_time != 0) {           // Sweep time prediction: first real set SI4432 freq
@@ -1730,7 +1732,7 @@ again:                          // Waiting for a trigger jumps back to here
       temp_min_level = actual_t[i];
 
   }
-
+//  STOP_PROFILE;
  // --------------- check if maximum is above trigger level -----------------
 
   if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
@@ -1787,7 +1789,7 @@ again:                          // Waiting for a trigger jumps back to here
     else
       v = 0x60; // Enable AGC and disable LNA
     if (old_v != v) {
-      SI4432_Write_Byte(0x69, v);
+      SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
       old_v = v;
     }
 
@@ -1930,7 +1932,7 @@ again:                          // Waiting for a trigger jumps back to here
 
 
   if (setting.measurement == M_LINEARITY && setting.linearity_step < setting._sweep_points) {
-    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / 290.0;
+    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / POINTS_COUNT;
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
@@ -2720,7 +2722,7 @@ int add_spur(int f)
       return stored_t[i];
     }
   }
-  if (last_spur < 290) {
+  if (last_spur < POINTS_COUNT) {
     temp_t[last_spur] = f;
     stored_t[last_spur++] = 1;
   }
