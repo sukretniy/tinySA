@@ -619,6 +619,7 @@ void user_set_reflevel(float level)
     set_reflevel(setting.scale*NGRIDY);
   } else
     set_reflevel(level);
+  force_set_markmap();
 }
 
 void set_reflevel(float level)
@@ -670,6 +671,7 @@ void user_set_scale(float s)
   set_scale(s);
   if (UNIT_IS_LINEAR(setting.unit) && setting.reflevel < setting.scale*NGRIDY)
     set_reflevel(setting.scale*NGRIDY);
+  force_set_markmap();
 }
 
 void set_scale(float t) {
@@ -710,6 +712,7 @@ void set_scale(float t) {
 void set_offset(float offset)
 {
   setting.offset = offset;
+  force_set_markmap();
   dirty = true;
 }
 
@@ -1260,7 +1263,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       ls += 0.5;
     else
       ls -= 0.5;
-    float a = ((int)((setting.level + (i / sweep_points) * ls)*2.0)) / 2.0;
+    float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0;
     if (a != old_a) {
       old_a = a;
       int d = 0;              // Start at lowest drive level;
@@ -1565,9 +1568,9 @@ static bool sweep(bool break_on_operation)
   int start_index = -1;
 
   int16_t downslope;
-//  if (setting.mode== -1)
-//    return;
-//  START_PROFILE;
+  //  if (setting.mode== -1)
+  //    return;
+  //  START_PROFILE;
 again:                          // Waiting for a trigger jumps back to here
   palClearPad(GPIOB, GPIOB_LED);
 
@@ -1576,12 +1579,9 @@ again:                          // Waiting for a trigger jumps back to here
   float temp_min_level = 100;
 
   //  spur_old_stepdelay = 0;
-  int repeats = 1;
-//  shell_printf("\r\n");
-  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE) {     // If in output mode
-    repeats = 1000;                                                     // stay as long as possible in the sweep loop to avoid interrupting the tone during by UI processing
-    modulation_counter = 0;                                             // init modulation counter
-  }
+  //  shell_printf("\r\n");
+
+  modulation_counter = 0;                                             // init modulation counter in case needed
 
   uint32_t t = calc_min_sweep_time_us(); // Time to delay in uS
   if (t < setting.sweep_time_us){
@@ -1591,16 +1591,16 @@ again:                          // Waiting for a trigger jumps back to here
   else
     t = 0;
 
-  if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup
+  if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     t = 500;
 
   set_freq_time = 0;                        // for predicting the weep time
 
-  while (repeats--) {
+sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
-// ------------------------- sweep loop -----------------------------------
-//   START_PROFILE;
-   for (int i = 0; i < sweep_points; i++) {
+  // ------------------------- start sweep loop -----------------------------------
+  //   START_PROFILE;
+  for (int i = 0; i < sweep_points; i++) {
 
     if (start_index == -1 && start_time == 0 && set_freq_time != 0) {           // Sweep time prediction: first real set SI4432 freq
       start_index = i;
@@ -1618,8 +1618,8 @@ again:                          // Waiting for a trigger jumps back to here
 
     // ----------------- delay between points if needed ----------------
 
-    if (t && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {
-      if (t < 30*ONE_MS_TIME)
+    if (t && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {     // No delay when modulation is active
+      if (t < 30*ONE_MS_TIME)                                                   // Maximum delay time using my_microsecond_delay
         my_microsecond_delay(t);
       else
         osalThreadSleepMilliseconds(t / ONE_MS_TIME);
@@ -1633,25 +1633,21 @@ again:                          // Waiting for a trigger jumps back to here
       return false;
     }
 
-    if (MODE_OUTPUT(setting.mode)) {                    // if in output mode
-      continue;                                         // Skip all other processing in sweep loop
-    }
-
-    if (MODE_INPUT(setting.mode)) {             // this is always true I guess......
+    if (MODE_INPUT(setting.mode)) {
 
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, i, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
         ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-i, 1, 0);
       }
 
-        // ------------------------ do all RSSI calculations frm CALC menu -------------------
+      // ------------------------ do all RSSI calculations from CALC menu -------------------
 
       if (setting.average != AV_OFF)
-          temp_t[i] = RSSI;
+        temp_t[i] = RSSI;
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
       }
-//         stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in the stored trace
+      //         stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in the stored trace
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;
@@ -1674,6 +1670,9 @@ again:                          // Waiting for a trigger jumps back to here
         case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
         }
       }
+
+      if (temp_min_level > actual_t[i])   // Remember minimum
+        temp_min_level = actual_t[i];
 
       // --------------------------- find peak and add to peak table if found  ------------------------
 
@@ -1719,22 +1718,22 @@ again:                          // Waiting for a trigger jumps back to here
             }
             //STOP_PROFILE
           }
-                                                              // Insert done
+          // Insert done
           temppeakIndex = i;            // Latest minimum
           temppeakLevel = actual_t[i];
 
           downslope = true;
         }
-      }
-    }                   // end of peak finding
+      }        // end of peak finding
+    }           // end of input specific processing
+  }  // ---------------------- end of sweep loop -----------------------------
+
+  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE) // if in output mode with modulation
+    goto sweep_again;                                             // Keep repeating sweep loop till user aborts by input
 
 
-    if (temp_min_level > actual_t[i])   // Remember minimum
-      temp_min_level = actual_t[i];
-
-  }
-//  STOP_PROFILE;
- // --------------- check if maximum is above trigger level -----------------
+  //  STOP_PROFILE;
+  // --------------- check if maximum is above trigger level -----------------
 
   if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
     if (actual_t[max_index[0]] < setting.trigger_level) {
@@ -1762,7 +1761,7 @@ again:                          // Waiting for a trigger jumps back to here
     if (actual_max_level < - 31 && setting.attenuate >= 10) {
       setting.attenuate -= 10.0;
     } else if (actual_max_level < - 26 && setting.attenuate >= 5) {
-        setting.attenuate -= 5.0;
+      setting.attenuate -= 5.0;
     } else if (actual_max_level > - 19 && setting.attenuate <= 20) {
       setting.attenuate += 10.0;
     }
@@ -1808,11 +1807,11 @@ again:                          // Waiting for a trigger jumps back to here
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
       if (setting.reflevel > REFLEVEL_MIN)  {
         if (s_r <  2)
-            low_count = 5;
+          low_count = 5;
         else if (s_r < 4)
-            low_count++;
-          else
-            low_count = 0;
+          low_count++;
+        else
+          low_count = 0;
       }
       if ((low_count > 4) || (setting.reflevel < REFLEVEL_MAX && s_r > NGRIDY) ) { // ensure minimum and maximum reflevel
         if (r < REFLEVEL_MIN)
@@ -1820,10 +1819,10 @@ again:                          // Waiting for a trigger jumps back to here
         if (r > REFLEVEL_MAX)
           r = REFLEVEL_MAX;
         if (r != setting.reflevel) {
-        //if (setting.scale * NGRIDY > r)
+          //if (setting.scale * NGRIDY > r)
           set_scale(r / NGRIDY);
           set_reflevel(setting.scale*NGRIDY);
- //         dirty = false;                        // Prevent reset of SI4432
+          //         dirty = false;                        // Prevent reset of SI4432
           redraw_request |= REDRAW_CAL_STATUS;
         }
       }
@@ -1833,17 +1832,17 @@ again:                          // Waiting for a trigger jumps back to here
       if (s_r < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
         set_reflevel(setting.scale*(floor(s_r)+1));
         redraw_request |= REDRAW_CAL_STATUS;
-//        dirty = true;                               // Must be  above if(scandirty!!!!!)
+        //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }else if (s_r > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
         set_reflevel(setting.reflevel + setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
-//        dirty = true;                               // Must be  above if(scandirty!!!!!)
+        //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       } else if (s_min < s_ref - 10.1 && s_r < s_ref -  1.5) { // minimum to low and maximum can move up
         set_reflevel(setting.reflevel - setting.scale);
         redraw_request |= REDRAW_CAL_STATUS;
-//        dirty = true;                               // Must be  above if(scandirty!!!!!)
+        //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }
- //     dirty = false;                        // Prevent reset of SI4432
+      //     dirty = false;                        // Prevent reset of SI4432
     }
   }
 
@@ -1926,7 +1925,8 @@ again:                          // Waiting for a trigger jumps back to here
 #endif
     min_level = temp_min_level;
   }
-  }
+  //  } while (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE);      // Never exit sweep loop while in output mode with modulation
+
 
 
   //---------------- in Linearity measurement the attenuation has to be adapted ------------------
@@ -1940,7 +1940,7 @@ again:                          // Waiting for a trigger jumps back to here
   }
 
   //    redraw_marker(peak_marker, FALSE);
-//  STOP_PROFILE;
+  //  STOP_PROFILE;
   if (setting.actual_sweep_time_us > ONE_SECOND_TIME) {         // Clear sweep progress bar at end of sweep
     ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
   }
