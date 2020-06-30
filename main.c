@@ -2522,7 +2522,7 @@ static const GPTConfig gpt4cfg = {
 
 void my_microsecond_delay(int t)
 {
-  if (t>0) gptPolledDelay(&GPTD14, t); // t us delay
+  if (t>1) gptPolledDelay(&GPTD14, t); // t us delay
 }
 #if 0
 /*

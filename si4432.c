@@ -391,10 +391,18 @@ extern char age[POINTS_COUNT];
 static int buf_index = 0;
 static bool  buf_read = false;
 
+#if 0
+int SI4432_is_fast_mode(void)
+{
+  return buf_read;
+}
+#endif
+
 void SI4432_Fill(int s, int start)
 {
   SI4432_Sel = s;
   int sel = SI_nSEL[SI4432_Sel];
+#if 0
   uint32_t t = calc_min_sweep_time_us(); // Time to delay in uS for all sweep
   if (t < setting.sweep_time_us){
     t = setting.sweep_time_us - t;
@@ -402,7 +410,9 @@ void SI4432_Fill(int s, int start)
   }
   else
     t = 0;
-
+#endif
+  uint32_t t = setting.additional_step_delay_us;
+  START_PROFILE;
   SPI2_CLK_LOW;
   int i = start;
   do {
@@ -414,8 +424,10 @@ void SI4432_Fill(int s, int start)
     if (t)
       my_microsecond_delay(t);
   } while(1);
+  setting.actual_sweep_time_us = DELTA_TIME*100;
   buf_index = start; // Is used to skip 1st entry during level triggering
   buf_read = true;
+
 }
 #endif
 

@@ -612,6 +612,7 @@ typedef struct setting
   float level_sweep;
   uint32_t sweep_time_us;
   uint32_t actual_sweep_time_us;
+  uint32_t additional_step_delay_us;
   int test_argument;
   int auto_IF;
   unsigned int unit_scale_index;
@@ -850,6 +851,9 @@ void SI4432_Drive(int);
 float SI4432_RSSI(uint32_t i, int s);
 #ifdef __FAST_SWEEP__
 void SI4432_Fill(int s, int start);
+#if 0
+int SI4432_is_fast_mode(void);
+#endif
 #endif
 void SI4432_Set_Frequency ( uint32_t Freq );
 float SI4432_SET_RBW(float WISH);

@@ -2070,10 +2070,10 @@ ui_process_menu(void)
   int status = btn_check();
   if (status != 0) {
     if (status & EVT_BUTTON_SINGLE_CLICK) {
-      if (selection == -1) {
-        selection = 0;
-        goto activate;
-      }
+//      if (selection == -1) {
+//        selection = 0;
+//        goto activate;
+//      }
       menu_invoke(selection);
     } else {
       do {
@@ -2094,7 +2094,7 @@ ui_process_menu(void)
           if (! ( selection == 0 && menu_stack[menu_current_level][0].type & MT_FORM))
             selection--;
         }
-activate:
+//activate:
         ensure_selection();
         draw_menu();
         status = btn_wait_release();
