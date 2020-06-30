@@ -2208,13 +2208,13 @@ VNA_SHELL_FUNCTION(cmd_color)
 #if CH_CFG_USE_REGISTRY == FALSE
 #error "Threads Requite enabled CH_CFG_USE_REGISTRY in chconf.h"
 #endif
+static const char *states[] = {CH_STATE_NAMES};
 VNA_SHELL_FUNCTION(cmd_threads) 
 {
-  static const char *states[] = {CH_STATE_NAMES};
   thread_t *tp;
   (void)argc;
   (void)argv;
-  shell_printf("stklimit|   |stk free|    addr|refs|prio|    state|        name"VNA_SHELL_NEWLINE_STR);
+  shell_printf("stklimit|        |stk free|    addr|refs|prio|    state|        name"VNA_SHELL_NEWLINE_STR);
   tp = chRegFirstThread();
   do {
     uint32_t max_stack_use = 0U;
@@ -2783,8 +2783,8 @@ void hard_fault_handler_c(uint32_t *sp)
   uint32_t pc  = sp[6];
   uint32_t psr = sp[7];
   int y = 0;
-  int x = 20;
-  static  char buf[16];
+  int x = OFFSETX + 1;
+  static  char buf[96];
   ili9341_set_background(0x0000);
   ili9341_set_foreground(0xFFFF);
 
@@ -2805,7 +2805,27 @@ void hard_fault_handler_c(uint32_t *sp)
   plot_printf(buf, sizeof(buf), "LR  0x%08x",  lr);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
   plot_printf(buf, sizeof(buf), "PC  0x%08x",  pc);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
   plot_printf(buf, sizeof(buf), "PSR 0x%08x", psr);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-
+#ifdef ENABLE_THREADS_COMMAND
+  thread_t *tp;
+  tp = chRegFirstThread();
+  do {
+    uint32_t max_stack_use = 0U;
+#if (CH_DBG_ENABLE_STACK_CHECK == TRUE) || (CH_CFG_USE_DYNAMIC == TRUE)
+    uint32_t stklimit = (uint32_t)tp->wabase;
+#if CH_DBG_FILL_THREADS == TRUE
+    uint8_t *p = (uint8_t *)tp->wabase; while(p[max_stack_use]==CH_DBG_STACK_FILL_VALUE) max_stack_use++;
+#endif
+#else
+    uint32_t stklimit = 0U;
+#endif
+    plot_printf(buf, sizeof(buf), "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
+             stklimit, (uint32_t)tp->ctx.sp, max_stack_use, (uint32_t)tp,
+             (uint32_t)tp->refs - 1, (uint32_t)tp->prio, states[tp->state],
+             tp->name == NULL ? "" : tp->name);
+    ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
+    tp = chRegNextThread(tp);
+  } while (tp != NULL);
+#endif
   shell_printf("===================================\r\n");
 #else
   (void)sp;
