@@ -1907,29 +1907,22 @@ ui_mode_normal(void)
 static void
 lever_move_marker(int status)
 {
-  int step = 1;
-  int count = 0;
+  uint16_t step = 1<<2;
   do {
     if (active_marker >= 0 && markers[active_marker].enabled) {
-      if ((status & EVT_DOWN) && markers[active_marker].index > 0) {
-        markers[active_marker].index -= step;
+      if (status & EVT_DOWN) {
+        markers[active_marker].index -= step>>2;
         if (markers[active_marker].index < 0)
           markers[active_marker].index = 0 ;
-        markers[active_marker].frequency = frequencies[markers[active_marker].index];
-        redraw_marker(active_marker);
       }
-      if ((status & EVT_UP) && markers[active_marker].index < sweep_points-1) {
-        markers[active_marker].index += step;
+      if (status & EVT_UP) {
+        markers[active_marker].index += step>>2;
         if (markers[active_marker].index  > sweep_points-1)
           markers[active_marker].index = sweep_points-1 ;
-        markers[active_marker].frequency = frequencies[markers[active_marker].index];
-        redraw_marker(active_marker);
       }
-      count++;
-      if (count > 10) {
-        step *= 2;
-        count = 0;
-      }
+      markers[active_marker].frequency = frequencies[markers[active_marker].index];
+      redraw_marker(active_marker);
+      step++;
     }
     status = btn_wait_release();
   } while (status != 0);
