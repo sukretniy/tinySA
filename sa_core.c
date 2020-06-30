@@ -1594,7 +1594,7 @@ again:                          // Waiting for a trigger jumps back to here
       t = setting.sweep_time_us;
     } else
       setting.additional_step_delay_us = 0;
-    setting.actual_sweep_time_us = t;
+    //setting.actual_sweep_time_us = t;
     if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
       setting.additional_step_delay_us = 500;
     if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
