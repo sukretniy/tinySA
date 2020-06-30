@@ -34,7 +34,7 @@ uint32_t maxFreq = 520000000;
 uint32_t measured_sweep_time = 0;
 
 //int setting.refer = -1;  // Off by default
-int const reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
+static const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
 int in_selftest = false;
 

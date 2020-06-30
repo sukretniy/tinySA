@@ -59,18 +59,6 @@ static void shiftOut(uint8_t val)
 {
   SI4432_log(SI4432_Sel);
   SI4432_log(val);
-#if 0
-  uint8_t i = 0;
-  do {
-    if (val & 0x80)
-      SPI2_SDI_HIGH;
-    else
-      SPI2_SDI_LOW;
-    val<<=1;
-    SPI2_CLK_HIGH;
-    SPI2_CLK_LOW;
-  }while((++i) & 0x07);
-#else
   uint8_t i = 0;
   do {
     if (val & 0x80)
@@ -79,7 +67,6 @@ static void shiftOut(uint8_t val)
     SPI2_RESET;
     val<<=1;
   }while((++i) & 0x07);
-#endif
 }
 
 static uint8_t shiftIn(void)
@@ -95,21 +82,32 @@ static uint8_t shiftIn(void)
   return value>>GPIO_SPI2_SDO;
 }
 
-static void shiftInBuf(uint8_t *buf, uint16_t size, uint16_t delay) {
+static inline void shiftInBuf(uint16_t sel, uint8_t addr, uint8_t *buf, uint16_t size, uint16_t delay) {
   uint8_t i = 0;
   do{
-    uint8_t value = 0;
+    uint32_t value = addr;
+    palClearPad(GPIOC, sel);
+    do {
+      if (value & 0x80)
+        SPI2_SDI_HIGH;
+      SPI2_CLK_HIGH;
+      SPI2_RESET;
+      value<<=1;
+    }while((++i) & 0x07);
+    value = 0;
     do {
       SPI2_CLK_HIGH;
-      value = (value<<1)|SPI2_SDO;
+      value<<=1;
+      value|=SPI2_portSDO;
       SPI2_CLK_LOW;
     }while((++i) & 0x07);
-    *buf++=value;
+    palSetPad(GPIOC, sel);
+    *buf++=value>>GPIO_SPI2_SDO;
     if (delay)
       my_microsecond_delay(delay);
   }while(--size);
 }
-
+#if 0
 static void shiftOutBuf(uint8_t *buf, uint16_t size) {
   uint8_t i = 0;
   do{
@@ -125,7 +123,7 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
     }while((++i) & 0x07);
   }while(--size);
 }
-
+#endif
 const int SI_nSEL[3] = { GPIO_RX_SEL, GPIO_LO_SEL, 0}; // #3 is dummy!!!!!!
 
 volatile int SI4432_Sel = 0;         // currently selected SI4432
@@ -413,6 +411,7 @@ void SI4432_Fill(int s, int start)
 #endif
   uint32_t t = setting.additional_step_delay_us;
   START_PROFILE;
+#if 1
   SPI2_CLK_LOW;
   int i = start;
   do {
@@ -424,6 +423,10 @@ void SI4432_Fill(int s, int start)
     if (t)
       my_microsecond_delay(t);
   } while(1);
+#else
+  shiftInBuf(sel, SI4432_REG_RSSI, (uint8_t *)&age[start], sweep_points - start, t);
+#endif
+//  STOP_PROFILE;
   setting.actual_sweep_time_us = DELTA_TIME*100;
   buf_index = start; // Is used to skip 1st entry during level triggering
   buf_read = true;

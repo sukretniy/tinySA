@@ -502,7 +502,7 @@ extern volatile uint8_t redraw_request;
 #define RGBHEX(hex) ( (((hex)&0x001c00)<<3) | (((hex)&0x0000f8)<<5) | (((hex)&0xf80000)>>16) | (((hex)&0x00e000)>>13) )
 
 // Define size of screen buffer in pixels (one pixel 16bit size)
-#define SPI_BUFFER_SIZE             1024
+#define SPI_BUFFER_SIZE             (CELLWIDTH*CELLHEIGHT)
 
 #define LCD_WIDTH                   320
 #define LCD_HEIGHT                  240
