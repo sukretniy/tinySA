@@ -168,17 +168,17 @@ void reset_settings(int m)
 
 uint32_t calc_min_sweep_time_us(void)         // Calculate minimum sweep time in uS needed just because of the delays for the RSSI to become stable
 {
-  float t;
-  float a = (SI4432_step_delay + MEASURE_TIME); // Single RSSI delay and measurement time in uS while scanning
+  uint32_t t;
   if (MODE_OUTPUT(setting.mode))
     t = 100;
   else {
+    uint32_t a = (SI4432_step_delay + MEASURE_TIME) * (sweep_points - 1); // Single RSSI delay and measurement time in uS while scanning
     if (FREQ_IS_CW()) {
-      a = MINIMUM_SWEEP_TIME / (sweep_points - 1);       // time per step in fast CW mode
+      a = MINIMUM_SWEEP_TIME;       // time per step in fast CW mode
       if (setting.repeat != 1 || setting.sweep_time_us >= ONE_SECOND_TIME || setting.spur != 0)
-        a = 15000.0 / (sweep_points - 1);       // time per step in CW mode with repeat too long for fast delay
+        a = 15000;       // time per step in CW mode with repeat too long for fast delay
     }
-    t = vbwSteps * (sweep_points - 1) * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* REPEAT_TIME));
+    t = vbwSteps * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* ( REPEAT_TIME * (sweep_points - 1))));
   }
   return t;
 }
@@ -1653,6 +1653,7 @@ sweep_again:                                // stay in sweep loop when output mo
 //      if (prev_sweep_time > ONE_SECOND_TIME) {
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
 //      }
+      setting.actual_sweep_time_us = prev_sweep_time;     // restore last sweep time when aborting
       return false;
     }
 
