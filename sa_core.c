@@ -1766,12 +1766,12 @@ sweep_again:                                // stay in sweep loop when output mo
 
   // ---------------------- process measured actual sweep time -----------------
   // Update actual time on change on status panel
-//  static uint32_t old_time = 0;
-//  uint32_t delta = abs((int)(setting.actual_sweep_time_us - old_time));
-//  if ((delta<<3) > setting.actual_sweep_time_us){ // update if delta > 1/8
-//    redraw_request|=REDRAW_CAL_STATUS;
-//    old_time = setting.actual_sweep_time_us;
-//  }
+  static uint32_t old_time = 0;
+  uint32_t delta = abs((int)(setting.actual_sweep_time_us - old_time));
+  if ((delta<<3) > setting.actual_sweep_time_us){ // update if delta > 1/8
+    redraw_request|=REDRAW_CAL_STATUS;
+    old_time = setting.actual_sweep_time_us;
+  }
   // Not possible reduce sweep time, it minimum!
   if (setting.sweep_time_us < setting.actual_sweep_time_us && setting.additional_step_delay_us == 0){
 // Warning!! not correct set sweep time here, you get error!!
