@@ -1776,7 +1776,14 @@ sweep_again:                                // stay in sweep loop when output mo
     uint32_t dt = 0;
     static uint32_t last_dt = 0;
     // selected time less then actual, need reduce delay
-    if (setting.sweep_time_us < setting.actual_sweep_time_us){
+    // manually set delay, for better sync
+    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 0;
+    }
+    else if (setting.sweep_time_us < 3 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 1;
+    }
+    else if (setting.sweep_time_us < setting.actual_sweep_time_us){
       dt = (setting.actual_sweep_time_us - setting.sweep_time_us)/(sweep_points - 1);
       if (setting.additional_step_delay_us > dt) setting.additional_step_delay_us-=dt;
       else setting.additional_step_delay_us = 0;
