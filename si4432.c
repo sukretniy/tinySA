@@ -25,7 +25,7 @@
 #include "si4432.h"
 
 #pragma GCC push_options
-//#pragma GCC optimize ("O2")
+#pragma GCC optimize ("O2")
 
 #define CS_SI0_HIGH     palSetPad(GPIOC, GPIO_RX_SEL)
 #define CS_SI1_HIGH     palSetPad(GPIOC, GPIO_LO_SEL)
