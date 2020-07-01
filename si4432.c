@@ -411,7 +411,7 @@ void SI4432_Fill(int s, int start)
 #endif
   uint32_t t = setting.additional_step_delay_us;
   START_PROFILE;
-#if 1
+#if 0
   SPI2_CLK_LOW;
   int i = start;
   do {
@@ -433,6 +433,8 @@ void SI4432_Fill(int s, int start)
 
 }
 #endif
+
+#define MINIMUM_WAIT_FOR_RSSI   0
 
 float SI4432_RSSI(uint32_t i, int s)
 {
@@ -458,12 +460,12 @@ float SI4432_RSSI(uint32_t i, int s)
   SI4432_Sel = s;
   int stepdelay = actualStepDelay;
   if (SI4432_frequency_changed) {
-    if (stepdelay < 280) {
-      stepdelay = 280;
+    if (stepdelay < MINIMUM_WAIT_FOR_RSSI) {
+      stepdelay = MINIMUM_WAIT_FOR_RSSI;
     }
     SI4432_frequency_changed = false;
   } else if (SI4432_offset_changed) {
-    stepdelay = 280 + (stepdelay - 280)/8;
+    stepdelay = MINIMUM_WAIT_FOR_RSSI + (stepdelay - MINIMUM_WAIT_FOR_RSSI)/8;
     SI4432_offset_changed = false;
   }
   if (stepdelay)

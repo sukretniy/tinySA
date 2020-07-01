@@ -768,19 +768,9 @@ void set_mode(int m)
 //  dirty = true;
 }
 
-void apply_settings(void)       // Ensure all settings in the setting structure are translated to the right HW setup
+void calculate_step_delay(void)
 {
-  set_switches(setting.mode);
-  if (setting.mode == M_HIGH)
-    PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
-  else
-    PE4302_Write_Byte((int)(setting.attenuate * 2));
-  if (setting.mode == M_LOW) {
-
-  }
-  SI4432_SetReference(setting.refer);
-  update_rbw();
-  if (setting.frequency_step == 0.0) {          // zero span mode, not dependend on selected RBW
+  if (setting.frequency_step == 0.0) {          // zero span mode, not dependent on selected RBW
     if (setting.step_delay <= 2)
       actualStepDelay = 0;
     else
@@ -800,9 +790,23 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
   } else
     actualStepDelay = setting.step_delay;
 }
+void apply_settings(void)       // Ensure all settings in the setting structure are translated to the right HW setup
+{
+  set_switches(setting.mode);
+  if (setting.mode == M_HIGH)
+    PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
+  else
+    PE4302_Write_Byte((int)(setting.attenuate * 2));
+  if (setting.mode == M_LOW) {
+
+  }
+  SI4432_SetReference(setting.refer);
+  update_rbw();
+  calculate_step_delay();
+}
 
 //------------------------------------------
-#if 0
+#if 0           // moved to config
 #define CORRECTION_POINTS  10
 
 static const uint32_t correction_frequency[CORRECTION_POINTS] =
@@ -838,7 +842,7 @@ float temppeakLevel;
 int temppeakIndex;
 static unsigned long old_freq[4] = { 0, 0, 0, 0 };
 static unsigned long real_old_freq[4] = { 0, 0, 0, 0 };
-volatile int t;
+// volatile int t;
 
 //static uint32_t extra_vbw_step_time = 0;
 //static uint32_t etra_repeat_time = 0;
@@ -860,6 +864,7 @@ void setupSA(void)
   PE4302_init();
   PE4302_Write_Byte(0);
 
+#if 0           // Measure fast scan time
   setting.sweep_time_us = 0;
   setting.additional_step_delay_us = 0;
   START_PROFILE             // measure 90 points to get overhead
@@ -868,7 +873,8 @@ void setupSA(void)
   RESTART_PROFILE           // measure 290 points to get real added time for 200 points
   SI4432_Fill(0,0);
   int t2 = DELTA_TIME;
-  t = (t2 - t1) * 100 * POINTS_COUNT / 200; // And calculate real time excluding overhead for all points
+  int t = (t2 - t1) * 100 * POINTS_COUNT / 200; // And calculate real time excluding overhead for all points
+#endif
 }
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
@@ -891,12 +897,10 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
           delta = delta >> 1;
         if (delta > 0 && delta < 80000) { // and requested frequency can be reached by using the offset registers
 #if 0
-          if (0) {
             if (real_old_freq[V] >= 480000000)
               shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
             else
               shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
-          }
 #endif
           delta = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
           SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff));
@@ -1588,6 +1592,8 @@ again:                          // Waiting for a trigger jumps back to here
   modulation_counter = 0;                                             // init modulation counter in case needed
 
   if (dirty) {                      // Calculate new scanning solution
+    update_rbw();
+    calculate_step_delay();
     uint32_t t = calc_min_sweep_time_us();
     if (t < setting.sweep_time_us) {
       setting.additional_step_delay_us = (setting.sweep_time_us - t) / (sweep_points - 1);
@@ -1608,19 +1614,7 @@ again:                          // Waiting for a trigger jumps back to here
   }
   uint32_t prev_sweep_time = setting.actual_sweep_time_us;
   setting.actual_sweep_time_us = 0;         // to signal need for measuring
-  t = setting.additional_step_delay_us;
-#if 0
-  uint32_t t = calc_min_sweep_time_us(); // Time to delay in uS
-  if (t < setting.sweep_time_us){
-    t = setting.sweep_time_us - t;
-    t = t / (sweep_points - 1);                   // Now in uS per point
-  }
-  else
-    t = 0;
-
-  if (MODE_OUTPUT(setting.mode) && t < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
-    t = 500;
-#endif
+//  t = setting.additional_step_delay_us;
 
 sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
@@ -1630,29 +1624,6 @@ sweep_again:                                // stay in sweep loop when output mo
   START_PROFILE;        // needed to measure actual sweep time
 
   for (int i = 0; i < sweep_points; i++) {
-
-#if 0
-    if (!SI4432_is_fast_mode()){
-      if (start_index == -1 && start_time == 0 && set_freq_time != 0) {           // Sweep time prediction: first real set SI4432 freq
-        start_index = i;
-        start_time = set_freq_time;                                               // remember time
-        set_freq_time = 0;
-      } else if (start_index != -1 && start_time != 0 && set_freq_time != 0 ) {   // next real set si4432 freq
-        int32_t new_estimated_sweep_time = 290*(set_freq_time - start_time)*100/(i - start_index); // use in between time to predict total sweep time
-        setting.actual_sweep_time_us = new_estimated_sweep_time;
-        // shell_printf("%d T:%f\r\n", i, estimated_sweep_time / 1000000.0);
-
-        int delta = (int32_t)(new_estimated_sweep_time>>10) - (estimated_sweep_time>>10); // estimate milliseconds wrong in sweep time
-        if (delta < 0)
-          delta = - delta;
-        if (delta > 10) {
-          estimated_sweep_time = new_estimated_sweep_time ;
-//          draw_cal_status();
-        }
-        set_freq_time = 0;                                                        // retrigger detection of si4432 set freq
-      }
-    }
-#endif
     // --------------------- measure -------------------------
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);    // Measure RSSI for one of the frequencies
@@ -1666,17 +1637,17 @@ sweep_again:                                // stay in sweep loop when output mo
         osalThreadSleepMilliseconds(setting.additional_step_delay_us / ONE_MS_TIME);
     }
 
-    // back to toplevel to handle ui operation
+    // if break back to toplevel to handle ui operation
     if ((operation_requested || shell_function) && break_on_operation) {    // break loop if needed
-      if (setting.actual_sweep_time_us > ONE_SECOND_TIME) {
+//      if (prev_sweep_time > ONE_SECOND_TIME) {
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
-      }
+//      }
       return false;
     }
 
     if (MODE_INPUT(setting.mode)) {
 
-      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
+      if (prev_sweep_time > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, i, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
         ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-i, 1, 0);
       }
@@ -1773,7 +1744,8 @@ sweep_again:                                // stay in sweep loop when output mo
     goto sweep_again;                                             // Keep repeating sweep loop till user aborts by input
 
 
-  if (setting.actual_sweep_time_us == 0) setting.actual_sweep_time_us = DELTA_TIME*100;
+  if (setting.actual_sweep_time_us == 0)
+    setting.actual_sweep_time_us = DELTA_TIME*100;
 
 
 
@@ -1791,11 +1763,11 @@ sweep_again:                                // stay in sweep loop when output mo
 
   // ---------------------- process measured actual sweep time -----------------
 
-  int time_error = ((int) prev_sweep_time) - (int)setting.actual_sweep_time_us;
-  if (time_error < 0)
-    time_error = -time_error;
+  int time_difference = ((int) prev_sweep_time) - (int)setting.actual_sweep_time_us;
+  if (time_difference < 0)
+    time_difference = -time_difference;
 
-  if ( time_error >=1000) {                                    // Update scan time if more then 1ms error
+  if ( time_difference >=1000) {                                    // Update scan time if more then 1ms error
     redraw_request |= REDRAW_CAL_STATUS;
     if (FREQ_IS_CW()) {                                       // if zero span mode
       update_grid();                                          // and update grid
@@ -1994,12 +1966,6 @@ sweep_again:                                // stay in sweep loop when output mo
     peakIndex = max_index[0];
     peakLevel = actual_t[peakIndex];
     peakFreq = frequencies[peakIndex];
-#if 0
-    int peak_marker = 0;
-    markers[peak_marker].enabled = true;
-    markers[peak_marker].index = peakIndex;
-    markers[peak_marker].frequency = frequencies[markers[peak_marker].index];
-#endif
     min_level = temp_min_level;
   }
   //  } while (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE);      // Never exit sweep loop while in output mode with modulation
@@ -2018,9 +1984,9 @@ sweep_again:                                // stay in sweep loop when output mo
 
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
-  if (setting.actual_sweep_time_us > ONE_SECOND_TIME) {         // Clear sweep progress bar at end of sweep
+//  if (prev_sweep_time > ONE_SECOND_TIME) {         // Clear sweep progress bar at end of sweep
     ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
-  }
+//  }
 
   palSetPad(GPIOB, GPIOB_LED);
   return true;
@@ -2539,12 +2505,6 @@ static void test_acquire(int i)
 {
   (void)i;
   pause_sweep();
-#if 0
-  if (test_case[i].center < 300)
-    setting.mode = M_LOW;
-  else
-    setting.mode = M_HIGH;
-#endif
 //  SetAverage(4);
   sweep(false);
 //  sweep(false);
@@ -2938,6 +2898,8 @@ void self_test(int test)
     test_prepare(i);
     setting.step_delay = 8000;
     for (int j= 0; j < 57; j++ ) {
+      if (setting.test_argument != 0)
+        j = setting.test_argument;
       test_prepare(i);
       setting.spur = 0;
       setting.step_delay = setting.step_delay * 5 / 4;
@@ -2967,6 +2929,8 @@ void self_test(int test)
       }
       setting.step_delay = setting.step_delay * 5 / 4;
       shell_printf("End level = %f, step time = %d\n\r",peakLevel, setting.step_delay);
+      if (setting.test_argument != 0)
+        break;
     }
     reset_settings(M_LOW);
   } else if (test == 5) {
