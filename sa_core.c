@@ -1605,6 +1605,15 @@ again:                          // Waiting for a trigger jumps back to here
       setting.additional_step_delay_us = 0;
       setting.sweep_time_us = t;
     }
+    // manually set delay, for better sync
+    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 0;
+      setting.sweep_time_us = 0;
+    }
+    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 1;
+      setting.sweep_time_us = 3000;
+    }
     if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
       setting.additional_step_delay_us = 500;
     if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
@@ -1757,12 +1766,12 @@ sweep_again:                                // stay in sweep loop when output mo
 
   // ---------------------- process measured actual sweep time -----------------
   // Update actual time on change on status panel
-  static uint32_t old_time = 0;
-  uint32_t delta = abs((int)(setting.actual_sweep_time_us - old_time));
-  if ((delta<<3) > setting.actual_sweep_time_us){ // update if delta > 1/8
-    redraw_request|=REDRAW_CAL_STATUS;
-    old_time = setting.actual_sweep_time_us;
-  }
+//  static uint32_t old_time = 0;
+//  uint32_t delta = abs((int)(setting.actual_sweep_time_us - old_time));
+//  if ((delta<<3) > setting.actual_sweep_time_us){ // update if delta > 1/8
+//    redraw_request|=REDRAW_CAL_STATUS;
+//    old_time = setting.actual_sweep_time_us;
+//  }
   // Not possible reduce sweep time, it minimum!
   if (setting.sweep_time_us < setting.actual_sweep_time_us && setting.additional_step_delay_us == 0){
 // Warning!! not correct set sweep time here, you get error!!
@@ -1776,14 +1785,7 @@ sweep_again:                                // stay in sweep loop when output mo
     uint32_t dt = 0;
     static uint32_t last_dt = 0;
     // selected time less then actual, need reduce delay
-    // manually set delay, for better sync
-    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 0;
-    }
-    else if (setting.sweep_time_us < 3 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 1;
-    }
-    else if (setting.sweep_time_us < setting.actual_sweep_time_us){
+    if (setting.sweep_time_us < setting.actual_sweep_time_us){
       dt = (setting.actual_sweep_time_us - setting.sweep_time_us)/(sweep_points - 1);
       if (setting.additional_step_delay_us > dt) setting.additional_step_delay_us-=dt;
       else setting.additional_step_delay_us = 0;
