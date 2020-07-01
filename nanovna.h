@@ -591,7 +591,7 @@ typedef struct setting
   int harmonic;
   int decay;
   int noise;
-  float vbw;
+  uint32_t vbw_x10;
   int  tracking_output;
   int repeat;
   uint32_t frequency0;
