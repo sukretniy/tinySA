@@ -1612,10 +1612,11 @@ draw_all(bool flush)
   //  STOP_PROFILE
 #endif
   }
-  if (redraw_request & (REDRAW_CAL_STATUS | REDRAW_FREQUENCY) )
+  if (redraw_request & (REDRAW_CAL_STATUS | REDRAW_FREQUENCY) ) {
     draw_cal_status();                      // calculates the actual sweep time, must be before draw_frequencies
-  if (redraw_request & REDRAW_FREQUENCY)
+//  if (redraw_request & REDRAW_FREQUENCY)
     draw_frequencies();
+  }
   if (redraw_request & REDRAW_BATTERY)
     draw_battery_status();
   redraw_request = 0;

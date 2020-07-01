@@ -1608,12 +1608,19 @@ again:                          // Waiting for a trigger jumps back to here
     if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
       setting.additional_step_delay_us = 500;
     if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
+      redraw_request |= REDRAW_CAL_STATUS;
+      if (FREQ_IS_CW()) {                                       // if zero span mode
+        update_grid();                                          // and update grid
+        redraw_request |= REDRAW_FREQUENCY;                     // and time at bottom
+      }
+#if 0
       draw_cal_status();                                        // show sweep time estimation
       if (FREQ_IS_CW()) {                                       // if zero span mode
         update_grid();                                          // and update grid
         //redraw_request |= REDRAW_FREQUENCY; // and time at bottom
         draw_frequencies();
       }
+#endif
     }
   }
   uint32_t prev_sweep_time = setting.actual_sweep_time_us;
