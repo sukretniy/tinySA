@@ -489,9 +489,9 @@ int level_is_calibrated(void)
   return(0);
 }
 
-void set_RBW(int v)
+void set_RBW(uint32_t rbw_x10)
 {
-  setting.rbw_x10 = v;
+  setting.rbw_x10 = rbw_x10;
   update_rbw();
   dirty = true;
 }

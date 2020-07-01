@@ -203,11 +203,11 @@ VNA_SHELL_FUNCTION(cmd_rbw)
     shell_printf("usage: rbw 2..600|auto\r\n");
     return;
   }
-  if (strcmp(argv[0],"auto") == 0 || strcmp(argv[0],"0") == 0) {
+  if (get_str_index(argv[0], "auto|0")>=0) {
     if (setting.rbw_x10 != 0)
       set_RBW(0);
   } else {
-    int a = my_atoi(argv[0]);
+    uint32_t a = my_atoui(argv[0]);
     if (a < 2 || a>600)
       goto usage;
     if (setting.rbw_x10 != a*10)
@@ -491,7 +491,7 @@ VNA_SHELL_FUNCTION(cmd_w)
   (void)argc;
   int p = my_atoi(argv[0]);
 return;
-  set_RBW(p);
+  set_RBW(p*10);
 }
 
 VNA_SHELL_FUNCTION(cmd_f)
