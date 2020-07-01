@@ -899,7 +899,7 @@ static void trace_get_value_string(
   //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
     v = value(coeff[i]);
     if (mtype & M_NOISE)
-      v = v - 10*log10(actual_rbw*1000.0);
+      v = v - 10*log10(actual_rbw_x10*100.0);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else {

@@ -111,7 +111,7 @@ float Simulated_SI4432_RSSI(uint32_t i, int s);
 void SI4432_Set_Frequency ( uint32_t Freq );
 void SI4432_Transmit(int d);
 void SI4432_Receive(void);
-float SI4432_SET_RBW(float WISH);
+uint16_t SI4432_SET_RBW(uint16_t WISH);
 void PE4302_Write_Byte(unsigned char DATA );
 void PE4302_init(void);
 

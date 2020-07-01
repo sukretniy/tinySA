@@ -571,7 +571,7 @@ typedef struct setting
   float attenuate;
   int auto_attenuation;
   int atten_step;
-  int rbw;
+  int rbw_x10;
   int below_IF;
   int average;
   int show_stored;
@@ -856,7 +856,7 @@ int SI4432_is_fast_mode(void);
 #endif
 #endif
 void SI4432_Set_Frequency ( uint32_t Freq );
-float SI4432_SET_RBW(float WISH);
+uint16_t SI4432_SET_RBW(uint16_t WISH);
 void SI4432_SetReference(int freq);
 
 // Speed profile definition
@@ -887,7 +887,7 @@ void wait_user(void);
 void calibrate(void);
 float to_dBm(float);
 uint32_t calc_min_sweep_time_us(void);
-extern float actual_rbw;
+extern uint16_t actual_rbw_x10;
 
 enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY

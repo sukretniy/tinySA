@@ -303,15 +303,14 @@ static RBW_t RBW_choices[] = {
 
 static float SI4432_RSSI_correction = -120.0;
 
-float SI4432_force_RBW(int i)
+uint16_t SI4432_force_RBW(int i)
 {
   SI4432_Write_Byte(SI4432_IF_FILTER_BW, RBW_choices[i].reg);                     // Write RBW settings to Si4432
   SI4432_RSSI_correction = ((int)RBW_choices[i].RSSI_correction_x_10-1200)/10.0;  // Set RSSI correction
-  return (((float)RBW_choices[i].RBWx10) / 10.0);                                 // RBW achieved by Si4432 in kHz
+  return RBW_choices[i].RBWx10;                                                   // RBW achieved by Si4432 in kHz * 10
 }
 
-float SI4432_SET_RBW(float w)  {
-  uint16_t WISH = (uint16_t)(w * 10.0);
+uint16_t SI4432_SET_RBW(uint16_t WISH)  {
   int i;
   for (i=0; i < (int)(sizeof(RBW_choices)/sizeof(RBW_t)) - 1; i++)
     if (WISH <= RBW_choices[i].RBWx10) 
@@ -526,7 +525,7 @@ void SI4432_Sub_Init(void)
   // Clock Recovery Gearshift Value
   SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_GEARSHIFT, 0x00);
   // IF Filter Bandwidth
-  SI4432_SET_RBW(10) ;
+  SI4432_SET_RBW(100) ;
 //  // Register 0x75 Frequency Band Select
 //  byte sbsel = 1 ;  // recommended setting
 //  byte hbsel = 0 ;  // low bands

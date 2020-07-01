@@ -204,14 +204,14 @@ VNA_SHELL_FUNCTION(cmd_rbw)
     return;
   }
   if (strcmp(argv[0],"auto") == 0 || strcmp(argv[0],"0") == 0) {
-    if (setting.rbw != 0)
+    if (setting.rbw_x10 != 0)
       set_RBW(0);
   } else {
     int a = my_atoi(argv[0]);
     if (a < 2 || a>600)
       goto usage;
-    if (setting.rbw != a)
-      set_RBW(a);
+    if (setting.rbw_x10 != a*10)
+      set_RBW(a*10);
  }
 }
 

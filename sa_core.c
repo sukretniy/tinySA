@@ -27,7 +27,7 @@ extern int actualStepDelay;
 setting_t setting;
 uint32_t frequencies[POINTS_COUNT];
 
-float actual_rbw = 0;
+uint16_t actual_rbw_x10 = 0;
 int vbwSteps = 1;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
@@ -63,7 +63,7 @@ void reset_settings(int m)
   set_scale(10);
   set_reflevel(-10);
   setting.attenuate = 0;
-  setting.rbw = 0;
+  setting.rbw_x10 = 0;
   setting.average = 0;
   setting.harmonic = 0;
   setting.show_stored = 0;
@@ -491,7 +491,7 @@ int level_is_calibrated(void)
 
 void set_RBW(int v)
 {
-  setting.rbw = v;
+  setting.rbw_x10 = v;
   update_rbw();
   dirty = true;
 }
@@ -786,14 +786,14 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
     else
       actualStepDelay = setting.step_delay;
   } else if (setting.step_delay <= 2){          // Frequency sweep so use RBW to calculate minimum delay when changing frequency
-    if (actual_rbw >= 191.0)        actualStepDelay =  280;
-    else if (actual_rbw >= 142.0)   actualStepDelay =  350;
-    else if (actual_rbw >= 75.0)    actualStepDelay =  450;
-    else if (actual_rbw >= 56.0)    actualStepDelay =  650;
-    else if (actual_rbw >= 37.0)    actualStepDelay =  700;
-    else if (actual_rbw >= 18.0)    actualStepDelay = 1100;
-    else if (actual_rbw >=  9.0)    actualStepDelay = 1700;
-    else if (actual_rbw >=  5.0)    actualStepDelay = 3300;
+    if (actual_rbw_x10 >= 1910)        actualStepDelay =  280;
+    else if (actual_rbw_x10 >= 1420)   actualStepDelay =  350;
+    else if (actual_rbw_x10 >= 750)    actualStepDelay =  450;
+    else if (actual_rbw_x10 >= 560)    actualStepDelay =  650;
+    else if (actual_rbw_x10 >= 370)    actualStepDelay =  700;
+    else if (actual_rbw_x10 >= 180)    actualStepDelay = 1100;
+    else if (actual_rbw_x10 >=  90)    actualStepDelay = 1700;
+    else if (actual_rbw_x10 >=  50)    actualStepDelay = 3300;
     else                           actualStepDelay = 6400;
     if (setting.step_delay == 1)    // In precise mode wait twice as long for RSSI to stabalize
       actualStepDelay *= 2;
@@ -1040,29 +1040,29 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   } else {
     setting.vbw = 300; // trick to get right default rbw in zero span mode
   }
-  actual_rbw = setting.rbw;     // requested rbw
-  if (actual_rbw == 0) {        // if auto rbw
-    actual_rbw = 2*setting.vbw; // rbw is twice the frequency step to ensure no gaps in coverage
+  actual_rbw_x10 = setting.rbw_x10;     // requested rbw
+  if (actual_rbw_x10 == 0) {        // if auto rbw
+    actual_rbw_x10 = 20.0*setting.vbw; // rbw is twice the frequency step to ensure no gaps in coverage
   }
-  if (actual_rbw < 2.6)
-    actual_rbw = 2.6;
-  if (actual_rbw > 600)
-    actual_rbw = 600;
+  if (actual_rbw_x10 < 26)
+    actual_rbw_x10 = 26;
+  if (actual_rbw_x10 > 6000)
+    actual_rbw_x10 = 6000;
 
-  if (setting.spur && actual_rbw > 300)
-    actual_rbw = 250;           // if spur suppression reduce max rbw to fit within BPF
+  if (setting.spur && actual_rbw_x10 > 3000)
+    actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
 
   SI4432_Sel =  MODE_SELECT(setting.mode);
-  actual_rbw = SI4432_SET_RBW(actual_rbw);  // see what rbw the SI4432 can realize
+  actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
-    vbwSteps = ((int)(2 * (setting.vbw + (actual_rbw/2)) / actual_rbw)); // calculate # steps in between each frequency step due to rbw being less than frequency step
+    vbwSteps = ((int)(2 * (setting.vbw + (actual_rbw_x10/20.0)) / (actual_rbw_x10/10.0))); // calculate # steps in between each frequency step due to rbw being less than frequency step
     if (setting.step_delay==1)                  // if in Precise scanning
       vbwSteps *= 2;                            // use twice as many steps
     if (vbwSteps < 1)                            // at least one step
       vbwSteps = 1;
   } else {                      // in all other modes
-    setting.vbw = actual_rbw;
+    setting.vbw = actual_rbw_x10/10.0;
     vbwSteps = 1;               // only one vbwSteps
   }
   dirty = true;
@@ -1072,8 +1072,8 @@ int binary_search_frequency(int f)      // Search which index in the frequency t
 {
   int L = 0;
   int R =  (sizeof frequencies)/sizeof(int) - 1;
-  int fmin =  f - ((int)actual_rbw ) * 1000;
-  int fplus = f + ((int)actual_rbw ) * 1000;
+  int fmin =  f - actual_rbw_x10 * 100;
+  int fplus = f + actual_rbw_x10 * 100;
   while (L <= R) {
     int m = (L + R) / 2;
     if ((int)frequencies[m] < fmin)
@@ -1216,8 +1216,8 @@ int binary_search(int f)
 {
   int L = 0;
   int R =  (sizeof spur_table)/sizeof(int) - 1;
-  int fmin =  f - ((int)actual_rbw ) * 1000;
-  int fplus = f + ((int)actual_rbw ) * 1000;
+  int fmin =  f - actual_rbw_x10 * 100;
+  int fplus = f + actual_rbw_x10 * 100;
   while (L <= R) {
     int m = (L + R) / 2;
     if (spur_table[m] < fmin)
@@ -1236,7 +1236,7 @@ int avoid_spur(int f)                   // find if this frequency should be avoi
 //  int window = ((int)actual_rbw ) * 1000*2;
 //  if (window < 50000)
 //    window = 50000;
-  if (setting.mode != M_LOW || !setting.auto_IF || actual_rbw > 300.0)
+  if (setting.mode != M_LOW || !setting.auto_IF || actual_rbw_x10 > 3000)
     return(false);
   return binary_search(f);
 }
@@ -1355,7 +1355,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       } else {            // Even, shift half step
         offs = (t - (vbwSteps >> 1)) * sm + sm/2;
       }
-      offs = (int)(offs * actual_rbw);
+      offs = (int)(offs * actual_rbw_x10/10.0);
       lf = (uint32_t)(f + offs);
     }
 
@@ -1399,7 +1399,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
             setting.below_IF = S_AUTO_OFF;              // and above IF in second pass
         }
         else {
-          int32_t spur_offset = actual_rbw * 1000;      // Can not use below IF so calculate IF shift that hopefully will kill the spur.
+          int32_t spur_offset = actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
           if (setting.spur == -1)                       // If second spur pass
             spur_offset = - spur_offset;                // IF shift in the other direction
           local_IF  = local_IF + spur_offset;           // apply IF spur shift
@@ -2285,7 +2285,7 @@ void draw_cal_status(void)
   }
 
   // RBW
-  if (setting.rbw)
+  if (setting.rbw_x10)
     color = BRIGHT_COLOR_GREEN;
   else
     color = DEFAULT_FG_COLOR;
@@ -2295,7 +2295,7 @@ void draw_cal_status(void)
   ili9341_drawstring("RBW:", x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "%.1FkHz", actual_rbw);
+  plot_printf(buf, BLEN, "%.1FkHz", actual_rbw_x10/10.0);
   ili9341_drawstring(buf, x, y);
 
 #if 0
@@ -2853,7 +2853,7 @@ void self_test(int test)
 
 #define FREQ_STEP   3000
 
-    set_RBW(FREQ_STEP/1000);
+    set_RBW(FREQ_STEP/100);
     last_spur = 0;
     for (int j = 0; j < 10; j++) {
 
@@ -2893,7 +2893,7 @@ void self_test(int test)
     test_prepare(i);
     for (int j= 0; j < 50; j++ ) {
       test_prepare(i);
-      set_RBW(30);
+      set_RBW(300);
 
       set_attenuation((float)j);
       float summed_peak_level = 0;
@@ -2923,9 +2923,9 @@ void self_test(int test)
       test_prepare(i);
       setting.spur = 0;
       setting.step_delay = setting.step_delay * 5 / 4;
-      setting.rbw = SI4432_force_RBW(j);
-      shell_printf("RBW = %d, ",setting.rbw);
-      set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw * 10000));
+      setting.rbw_x10 = SI4432_force_RBW(j);
+      shell_printf("RBW = %d, ",setting.rbw_x10/10);
+      set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 1000));
       setting.repeat = 10;
       test_acquire(i);                        // Acquire test
       test_validate(i);                       // Validate test
@@ -2941,7 +2941,7 @@ void self_test(int test)
         setting.spur = 0;
         setting.step_delay = setting.step_delay * 4 / 5;
         //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
-        set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw * 10000));
+        set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 1000));
         setting.repeat = 10;
         test_acquire(i);                        // Acquire test
         test_validate(i);                       // Validate test

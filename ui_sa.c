@@ -970,13 +970,13 @@ static void menu_marker_modify_cb(int item, uint8_t data)
   draw_menu();
 }
 
-
-const int rbwsel[]={0,3,10,30,100,300,600};
+// last index - for item back button!!
+static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000, -1};
 
 static void menu_rbw_cb(int item, uint8_t data)
 {
   (void)item;
-  set_RBW(rbwsel[data]);
+  set_RBW(rbwsel_x10[data]);
   menu_move_back();
   ui_mode_normal();
 //  draw_cal_status();
@@ -1643,7 +1643,7 @@ static void menu_item_modify_attribute(
       mark = true;
     }
   } else if (menu == menu_rbw) {
-    if (rbwsel[item] == setting.rbw){
+    if (rbwsel_x10[item] == setting.rbw_x10){
       mark = true;
     }
 
