@@ -435,12 +435,12 @@ select_lever_mode(int mode)
 
 // type of menu item 
 enum {
-  MT_NONE,
-  MT_BLANK,
-  MT_SUBMENU,
-  MT_CALLBACK,
-  MT_CANCEL,
-  MT_TITLE,
+  MT_NONE,                      // sentinel menu
+  MT_BLANK,                     // blank menu (nothing draw)
+  MT_SUBMENU,                   // enter to submenu
+  MT_CALLBACK,                  // call user function
+  MT_CANCEL,                    // menu, step back on one level up
+  MT_TITLE,                     // Title
   MT_CLOSE,
   MT_KEYPAD,
   MT_ICON = 0x10,
@@ -1567,6 +1567,16 @@ extern void menu_item_modify_attribute(
     const menuitem_t *menu, int item, uint16_t *fg, uint16_t *bg);
 #endif
 
+static bool menuDisabled(uint8_t type){
+  if ((type & MT_LOW) && !MODE_LOW(setting.mode))
+    return true;
+  if ((type & MT_HIGH) && !MODE_HIGH(setting.mode))
+    return true;
+  if (type == MT_BLANK)
+    return true;
+  return false;
+}
+
 static void
 draw_menu_buttons(const menuitem_t *menu)
 {
@@ -1575,14 +1585,10 @@ draw_menu_buttons(const menuitem_t *menu)
   int y = 0;
   for (i = 0; i < MENU_BUTTON_MAX; i++) {
     const char *l1, *l2;
-    if ((menu[i].type & MT_LOW) && !MODE_LOW(setting.mode))              //not applicable to mode
-      continue;
-    if ((menu[i].type & MT_HIGH) && !MODE_HIGH(setting.mode))              //not applicable to mode
+    if (menuDisabled(menu[i].type))            //not applicable to mode
       continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
-    if (MT_MASK(menu[i].type) == MT_BLANK)
-      continue;
     uint16_t bg;
     uint16_t fg;
     if (MT_MASK(menu[i].type) == MT_TITLE) {
@@ -2060,36 +2066,39 @@ ui_process_normal(void)
 static void
 ui_process_menu(void)
 {
+  // Flag show, can close menu if user come out from it
+  // if false user must select some thing
+  const menuitem_t *menu = menu_stack[menu_current_level];
   int status = btn_check();
   if (status != 0) {
     if (status & EVT_BUTTON_SINGLE_CLICK) {
-//      if (selection == -1) {
-//        selection = 0;
-//        goto activate;
-//      }
       menu_invoke(selection);
     } else {
       do {
         if (status & EVT_UP) {
-          // close menu if next item is sentinel
-          while (((menu_stack[menu_current_level][selection+1].type & MT_LOW) && !MODE_LOW(setting.mode) ) ||
-                ((menu_stack[menu_current_level][selection+1].type & MT_HIGH) && !MODE_HIGH(setting.mode)))
+          // skip menu item if disabled
+          while (menuDisabled(menu[selection+1].type))
             selection++;
-          if (menu_stack[menu_current_level][selection+1].type == MT_NONE)
+          // close menu if next item is sentinel, else step up
+          if (menu[selection+1].type != MT_NONE)
+            selection++;
+          else if (!(menu[0].type & MT_FORM))  // not close if type = form menu
             goto menuclose;
-          if (!(menu_stack[menu_current_level][selection+1].type == (MT_FORM | MT_NONE)))
-            selection++;
         }
         if (status & EVT_DOWN) {
-          while (((menu_stack[menu_current_level][selection+1].type & MT_LOW) && !MODE_LOW(setting.mode) ) ||
-                ((menu_stack[menu_current_level][selection+1].type & MT_HIGH) && !MODE_HIGH(setting.mode)))
+          // skip menu item if disabled
+          while (menuDisabled(menu[selection-1].type))
             selection--;
-          if (! ( selection == 0 && menu_stack[menu_current_level][0].type & MT_FORM))
+          // close menu if item is 0, else step down
+          if (selection > 0)
             selection--;
+          else if (!(menu[0].type & MT_FORM)) // not close if type = form menu
+            goto menuclose;
         }
 //activate:
         ensure_selection();
         draw_menu();
+        chThdSleepMilliseconds(100); // Add delay for not move so fast in menu
         status = btn_wait_release();
       } while (status != 0);
     }
