@@ -1803,7 +1803,7 @@ static void fetch_numeric_target(void)
     break;
   case KM_SAMPLETIME:
     uistat.value = setting.step_delay;
-    plot_printf(uistat.text, sizeof uistat.text, "%3duS", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%3dus", ((int32_t)uistat.value));
     break;
   case KM_REPEAT:
     uistat.value = setting.repeat;
@@ -1851,7 +1851,7 @@ static void fetch_numeric_target(void)
     else
       uistat.value = setting.sweep_time_us;
     uistat.value /= (float)ONE_SECOND_TIME;
-    plot_printf(uistat.text, sizeof uistat.text, "%.3FS", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3Fs", uistat.value);
     break;
   case KM_TRIGGER:
     uistat.value = setting.trigger_level;
