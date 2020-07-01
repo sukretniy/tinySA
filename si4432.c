@@ -409,7 +409,7 @@ void SI4432_Fill(int s, int start)
     t = 0;
 #endif
   uint32_t t = setting.additional_step_delay_us;
-  START_PROFILE;
+  systime_t measure = chVTGetSystemTimeX();
 #if 0
   SPI2_CLK_LOW;
   int i = start;
@@ -425,11 +425,9 @@ void SI4432_Fill(int s, int start)
 #else
   shiftInBuf(sel, SI4432_REG_RSSI, (uint8_t *)&age[start], sweep_points - start, t);
 #endif
-//  STOP_PROFILE;
-  setting.actual_sweep_time_us = DELTA_TIME*100;
+  setting.actual_sweep_time_us+= (chVTGetSystemTimeX() - measure)*100;
   buf_index = start; // Is used to skip 1st entry during level triggering
   buf_read = true;
-
 }
 #endif
 

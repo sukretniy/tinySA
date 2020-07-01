@@ -1102,7 +1102,11 @@ set_sweep_frequency(int type, uint32_t freq)
     freq = START_MIN;
   if (freq > STOP_MAX)
     freq = STOP_MAX;
-
+  // CW mode if span freq = 0
+  if (type == ST_SPAN && freq == 0){
+    type = ST_CW;
+    freq = setting.frequency0 / 2 + setting.frequency1 / 2;
+  }
   ensure_edit_config();
   switch (type) {
     case ST_START:
@@ -1155,6 +1159,7 @@ set_sweep_frequency(int type, uint32_t freq)
       if (setting.frequency0 != freq || setting.frequency1 != freq) {
         setting.frequency0 = freq;
         setting.frequency1 = freq;
+        setting.sweep_time_us = 0; // use minimum as start
       }
       break;
   }

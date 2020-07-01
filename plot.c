@@ -1612,11 +1612,10 @@ draw_all(bool flush)
   //  STOP_PROFILE
 #endif
   }
-  if (redraw_request & (REDRAW_CAL_STATUS | REDRAW_FREQUENCY) ) {
+  if (redraw_request & REDRAW_CAL_STATUS)
     draw_cal_status();                      // calculates the actual sweep time, must be before draw_frequencies
-//  if (redraw_request & REDRAW_FREQUENCY)
+  if (redraw_request & REDRAW_FREQUENCY)
     draw_frequencies();
-  }
   if (redraw_request & REDRAW_BATTERY)
     draw_battery_status();
   redraw_request = 0;
@@ -2068,7 +2067,7 @@ draw_frequencies(void)
 #endif
     if (FREQ_IS_CW()) {
       plot_printf(buf1, sizeof(buf1), " CW %qHz", get_sweep_frequency(ST_CW));
-
+      // Show user actual select sweep time?
       uint32_t t = setting.actual_sweep_time_us;
       plot_printf(buf2, sizeof(buf2), " TIME %.3Fs", (float)t/ONE_SECOND_TIME);
 
