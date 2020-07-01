@@ -18,6 +18,7 @@
 
 
 #include "SI4432.h"		// comment out for simulation
+#include "stdlib.h"
 
 int dirty = true;
 int scandirty = true;
@@ -1567,7 +1568,6 @@ int16_t max_index[MAX_MAX];
 int16_t cur_max = 0;
 
 static int low_count = 0;
-int32_t estimated_sweep_time  = 0;
 
 // main loop for measurement
 static bool sweep(bool break_on_operation)
@@ -1594,8 +1594,11 @@ again:                          // Waiting for a trigger jumps back to here
     update_rbw();
     calculate_step_delay();
     uint32_t t = calc_min_sweep_time_us();
-    // User can select only for CW mode
-    if (setting.sweep_time_us > t && FREQ_IS_CW()){
+    // Possible situation then old time > recommend time, i don`t know user input this value or this is old value
+    // Need add flag for auto time set?
+    // Fix me here |
+    //             V
+    if (setting.sweep_time_us > t){
       setting.additional_step_delay_us = (setting.sweep_time_us - t)/(sweep_points-1);
     }
     else{ // not add additional correction, apply recommend time
@@ -1753,6 +1756,13 @@ sweep_again:                                // stay in sweep loop when output mo
   }
 
   // ---------------------- process measured actual sweep time -----------------
+  // Update actual time on change on status panel
+  static uint32_t old_time = 0;
+  uint32_t delta = abs((int)(setting.actual_sweep_time_us - old_time));
+  if ((delta<<3) > setting.actual_sweep_time_us){ // update if delta > 1/8
+    redraw_request|=REDRAW_CAL_STATUS;
+    old_time = setting.actual_sweep_time_us;
+  }
   // Not possible reduce sweep time, it minimum!
   if (setting.sweep_time_us < setting.actual_sweep_time_us && setting.additional_step_delay_us == 0){
 // Warning!! not correct set sweep time here, you get error!!
