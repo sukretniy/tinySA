@@ -1679,11 +1679,6 @@ static void menu_item_modify_attribute(
     if (item == 5 && get_waterfall()){
       mark = true;
     }
-#ifdef __SPUR__
-    if (item == 5 && setting.spur) {
-      mark = true;
-    }
-#endif
   } else if (menu == menu_settings) {
     if (item ==0 && setting.tracking_output){
       mark = true;

@@ -1322,40 +1322,22 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
     if (setting.modulation == MO_AM_1kHz || setting.modulation == MO_AM_10Hz) {               // AM modulation
-      int p = setting.attenuate * 2 + am_modulation[modulation_counter];
-      if (p>63)
-        p = 63;
-      if (p<0)
-        p = 0;
+      int p = setting.attenuate * 2 + am_modulation[modulation_counter++];
+      if      (p>63) p = 63;
+      else if (p< 0) p =  0;
       PE4302_Write_Byte(p);
-      if (modulation_counter == 4) {  // 3dB modulation depth
+      if (modulation_counter == 5)  // 3dB modulation depth
         modulation_counter = 0;
-      } else {
-        modulation_counter++;
-      }
-      if (setting.modulation == MO_AM_10Hz)
-        my_microsecond_delay(20000);
-      else
-        my_microsecond_delay(180);
-//      chThdSleepMicroseconds(200);
+      my_microsecond_delay(setting.modulation == MO_AM_10Hz ? 20000 : 180);
     }
     else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
       SI4432_Sel = 1;
-      int offset;
-      if (setting.modulation == MO_NFM ) {
-        offset = nfm_modulation[modulation_counter] ;
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
-      }
-      else {
-        offset = wfm_modulation[modulation_counter] ;
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
-      }
-      if (modulation_counter == 4)
+      int offset = setting.modulation == MO_NFM ? nfm_modulation[modulation_counter] : wfm_modulation[modulation_counter] ;
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+      modulation_counter++;
+      if (modulation_counter == 5)  // 3dB modulation depth
         modulation_counter = 0;
-      else
-        modulation_counter++;
       my_microsecond_delay(200);
 //      chThdSleepMicroseconds(200);
     }
