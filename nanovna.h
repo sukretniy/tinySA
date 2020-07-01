@@ -190,6 +190,7 @@ void set_RBW(uint32_t rbw_x10);
 void set_drive(int d);
 void set_IF(int f);
 void set_step_delay(int t);
+void set_offset_delay(int t);
 void set_repeat(int);
 void set_level_sweep(float);
 void set_level(float);
@@ -618,6 +619,8 @@ typedef struct setting
   unsigned int unit_scale_index;
   float unit_scale;
   int mute;
+  int step_delay_mode;
+  int offset_delay;
   uint32_t checksum;
 }setting_t;
 
@@ -630,6 +633,8 @@ void reset_settings(int m);
 #define S_IS_AUTO(x) ((x)&2)
 #define S_STATE(X) ((X)&1)
 enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
+
+enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
 
 #ifdef __FAST_SWEEP__
 #define MINIMUM_SWEEP_TIME  2000U    // Minimum sweep time on zero span in uS

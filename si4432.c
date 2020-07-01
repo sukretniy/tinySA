@@ -25,7 +25,7 @@
 #include "si4432.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("O2")
+//#pragma GCC optimize ("O2")
 
 #define CS_SI0_HIGH     palSetPad(GPIOC, GPIO_RX_SEL)
 #define CS_SI1_HIGH     palSetPad(GPIOC, GPIO_LO_SEL)
@@ -380,7 +380,7 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
 //    SI4432_Write_Byte( 0x07, 0x0B);
 }
 
-int actualStepDelay = 1500;
+int SI4432_step_delay = 1500;
 //extern int setting.repeat;
 
 #ifdef __FAST_SWEEP__
@@ -410,7 +410,7 @@ void SI4432_Fill(int s, int start)
 #endif
   uint32_t t = setting.additional_step_delay_us;
   START_PROFILE;
-#if 1
+#if 0
   SPI2_CLK_LOW;
   int i = start;
   do {
@@ -432,6 +432,9 @@ void SI4432_Fill(int s, int start)
 
 }
 #endif
+
+#define MINIMUM_WAIT_FOR_RSSI   280
+int SI4432_offset_delay = 300;
 
 float SI4432_RSSI(uint32_t i, int s)
 {
@@ -455,19 +458,20 @@ float SI4432_RSSI(uint32_t i, int s)
   }
 #endif
   SI4432_Sel = s;
-  int stepdelay = actualStepDelay;
+  int stepdelay = SI4432_step_delay;
   if (SI4432_frequency_changed) {
-    if (stepdelay < 280) {
-      stepdelay = 280;
+    if (stepdelay < MINIMUM_WAIT_FOR_RSSI) {
+      stepdelay = MINIMUM_WAIT_FOR_RSSI;
     }
     SI4432_frequency_changed = false;
   } else if (SI4432_offset_changed) {
-    stepdelay = 280 + (stepdelay - 280)/8;
+//    stepdelay = MINIMUM_WAIT_FOR_RSSI + (stepdelay - MINIMUM_WAIT_FOR_RSSI)/8;
+    stepdelay = SI4432_offset_delay;
     SI4432_offset_changed = false;
   }
   if (stepdelay)
     my_microsecond_delay(stepdelay);
-    // chThdSleepMicroseconds(actualStepDelay);
+    // chThdSleepMicroseconds(SI4432_step_delay);
   i = setting.repeat;
   RSSI_RAW  = 0;
 again:
