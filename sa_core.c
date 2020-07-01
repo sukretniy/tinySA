@@ -1082,7 +1082,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
-    vbwSteps = ((int)(2 * (setting.vbw + (actual_rbw/2)) / actual_rbw)); // calculate # steps in between each frequency step due to rbw being less than frequency step
+    vbwSteps = ((int)(2 * (setting.vbw + (actual_rbw_x10/20.0)) / (actual_rbw_x10/10))); // calculate # steps in between each frequency step due to rbw being less than frequency step
     if (setting.step_delay==1)                  // if in Precise scanning
       vbwSteps *= 2;                            // use twice as many steps
     if (vbwSteps < 1)                            // at least one step
@@ -2909,7 +2909,7 @@ do_again:
       setting.step_delay_mode = SD_NORMAL;
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.rbw_x10 = SI4432_force_RBW(j);
-      shell_printf("RBW = %d, ",setting.rbw/10);
+      shell_printf("RBW = %d, ",setting.rbw_x10/10);
       set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 20000));
 
       setting.repeat = 10;
@@ -2948,14 +2948,14 @@ do_again:
 #endif
       setting.offset_delay = 1600;
       test_value = saved_peakLevel;
-      if ((uint32_t)(setting.rbw * 10000) / 290 < 8000) {           // fast mode possible
+      if ((uint32_t)(setting.rbw_x10 * 1000) / 290 < 8000) {           // fast mode possible
         while (setting.offset_delay > 0 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
           test_prepare(i);
           setting.step_delay_mode = SD_FAST;
           setting.offset_delay /= 2;
           setting.spur = 0;
           //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
-          set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw * 200000));   // 200 times RBW
+          set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 20000));   // 200 times RBW
           setting.repeat = 10;
           test_acquire(i);                        // Acquire test
           test_validate(i);                       // Validate test

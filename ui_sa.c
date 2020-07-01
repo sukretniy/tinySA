@@ -324,6 +324,7 @@ enum {
 #define KP_m 21
 #define KP_u 22
 #define KP_n 23
+#define KP_p 24
 
 #define KP_1    32
 #define KP_2    33
