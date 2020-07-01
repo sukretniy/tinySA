@@ -1776,8 +1776,11 @@ sweep_again:                                // stay in sweep loop when output mo
       setting.additional_step_delay_us+=dt;
     }
     // Update info on correction on next step, after apply this one
-    if (last_dt && dt == 0)
-      redraw_request|=REDRAW_CAL_STATUS|REDRAW_FREQUENCY;
+    if (last_dt && dt == 0){
+      redraw_request|=REDRAW_CAL_STATUS;
+      if (FREQ_IS_CW())                // if zero span mode
+        update_grid();                 // and update grid and frequency
+    }
     last_dt = dt;
   }
 
