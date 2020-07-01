@@ -1745,9 +1745,8 @@ leave_ui_mode()
   } else if (ui_mode == UI_NUMERIC) {
     request_to_draw_cells_behind_numeric_input();
     erase_numeric_input();
-    draw_frequencies();
   }
-  redraw_request|=REDRAW_AREA;
+  redraw_request|=REDRAW_AREA|REDRAW_FREQUENCY;
 }
 
 #ifdef __VNA__
