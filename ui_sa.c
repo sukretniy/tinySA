@@ -301,7 +301,7 @@ const uint16_t right_icons [] =
 enum {
   KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
-  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME,
+  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
 };
 
 
@@ -514,6 +514,7 @@ static const keypads_t * const keypads_mode_tbl[] = {
   keypads_plusmin_unit,    // KM_TRIGGER
   keypads_plusmin,    // KM_LEVELSWEEP
   keypads_time,     // KM_SWEEP_TIME
+  keypads_positive, // KM_OFFSET_DELAY
 };
 
 #ifdef __VNA__
@@ -525,7 +526,7 @@ static const char * const keypad_mode_label[] = {
 static const char * const keypad_mode_label[] = {
   "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "\2REF\0LEVEL", "SCALE", // 0-7
   "ATTENUATE", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0DELAY", "DRIVE", "LEVEL", "SCANS", "LEVEL", // 8-15
-  "FREQ" , "\2SAMPLE\0REPEAT", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS"// 16-
+  "FREQ" , "\2SAMPLE\0REPEAT", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS", "\2OFFSET\0DELAY" // 16-
 };
 #endif
 
@@ -1397,10 +1398,11 @@ static const menuitem_t menu_harmonic[] =
 
 static const menuitem_t menu_scanning_speed[] =
 {
- { MT_CALLBACK, 0,             "NORMAL",            menu_scanning_speed_cb},
- { MT_CALLBACK, 1,             "PRECISE",           menu_scanning_speed_cb},
- { MT_CALLBACK, 2,             "FAST",              menu_scanning_speed_cb},
- { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0DELAY",   "300..30000"},
+ { MT_CALLBACK, SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
+ { MT_CALLBACK, SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
+ { MT_CALLBACK, SD_FAST,       "FAST",              menu_scanning_speed_cb},
+ { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0DELAY",   "300..30000"},              // item number must match SD_MANUAL
+ { MT_KEYPAD, KM_OFFSET_DELAY, "\2OFFSET\0DELAY",   "300..30000"},              // item number must match SD_MANUAL
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1685,9 +1687,7 @@ static void menu_item_modify_attribute(
     } else if (item == 2 && setting.auto_IF)
       m_auto = true;
   } else if (menu == menu_scanning_speed) {
-    if (item == setting.step_delay){
-      mark = true;
-    } else if (item == 2 && setting.step_delay > 1) {
+    if (item == setting.step_delay_mode){
       mark = true;
     }
 #ifdef __ULTRA__
@@ -1910,6 +1910,9 @@ set_numeric_value(void)
     break;
   case KM_SAMPLETIME:
     set_step_delay(uistat.value);
+    break;
+  case KM_OFFSET_DELAY:
+    set_offset_delay(uistat.value);
     break;
   case KM_REPEAT:
     set_repeat(uistat.value);
