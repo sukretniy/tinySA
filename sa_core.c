@@ -1573,7 +1573,6 @@ static int low_count = 0;
 static bool sweep(bool break_on_operation)
 {
   float RSSI;
-  systime_t measure;
   int16_t downslope;
   //  if (setting.mode== -1)
   //    return;
@@ -1593,17 +1592,18 @@ again:                          // Waiting for a trigger jumps back to here
   if (dirty) {                      // Calculate new scanning solution
     update_rbw();
     calculate_step_delay();
-    uint32_t t = calc_min_sweep_time_us();
+    // Set for actual time pre calculated value (update after sweep)
+    setting.actual_sweep_time_us = calc_min_sweep_time_us();
     // Possible situation then old time > recommend time, i don`t know user input this value or this is old value
     // Need add flag for auto time set?
     // Fix me here |
     //             V
-    if (setting.sweep_time_us > t){
-      setting.additional_step_delay_us = (setting.sweep_time_us - t)/(sweep_points-1);
+    if (setting.sweep_time_us > setting.actual_sweep_time_us){
+      setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points-1);
     }
     else{ // not add additional correction, apply recommend time
       setting.additional_step_delay_us = 0;
-      setting.sweep_time_us = t;
+      setting.sweep_time_us = setting.actual_sweep_time_us;
     }
     // manually set delay, for better sync
     if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
@@ -1616,6 +1616,7 @@ again:                          // Waiting for a trigger jumps back to here
     }
     if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
       setting.additional_step_delay_us = 500;
+    // Update greed and status after
     if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
       redraw_request |= REDRAW_CAL_STATUS;
       if (FREQ_IS_CW()) {                                       // if zero span mode
@@ -1623,8 +1624,9 @@ again:                          // Waiting for a trigger jumps back to here
       }
     }
   }
-  setting.actual_sweep_time_us = 0;         // start measure sweep time
-  measure = chVTGetSystemTimeX();
+
+  setting.measure_sweep_time_us = chVTGetSystemTimeX();         // start measure sweep time
+
 sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
   // ------------------------- start sweep loop -----------------------------------
@@ -1748,10 +1750,6 @@ sweep_again:                                // stay in sweep loop when output mo
   if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE) // if in output mode with modulation
     goto sweep_again;                                             // Keep repeating sweep loop till user aborts by input
 
-  // For CW mode value calculated in SI4432_Fill
-  if (setting.actual_sweep_time_us == 0)
-    setting.actual_sweep_time_us = (chVTGetSystemTimeX() - measure) * 100;
-
   // --------------- check if maximum is above trigger level -----------------
 
   if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
@@ -1765,13 +1763,16 @@ sweep_again:                                // stay in sweep loop when output mo
   }
 
   // ---------------------- process measured actual sweep time -----------------
+  // For CW mode value calculated in SI4432_Fill
+  if (setting.measure_sweep_time_us == 0)
+	  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - setting.measure_sweep_time_us) * 100;
+
   // Update actual time on change on status panel
-  static uint32_t old_time = 0;
-  uint32_t delta = abs((int)(setting.actual_sweep_time_us - old_time));
+  uint32_t delta = abs((int)(setting.actual_sweep_time_us - setting.measure_sweep_time_us));
   if ((delta<<3) > setting.actual_sweep_time_us){ // update if delta > 1/8
     redraw_request|=REDRAW_CAL_STATUS;
-    old_time = setting.actual_sweep_time_us;
   }
+  setting.actual_sweep_time_us = setting.measure_sweep_time_us;
   // Not possible reduce sweep time, it minimum!
   if (setting.sweep_time_us < setting.actual_sweep_time_us && setting.additional_step_delay_us == 0){
 // Warning!! not correct set sweep time here, you get error!!

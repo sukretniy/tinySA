@@ -612,6 +612,7 @@ typedef struct setting
   float level;
   float level_sweep;
   uint32_t sweep_time_us;
+  systime_t measure_sweep_time_us;
   uint32_t actual_sweep_time_us;
   uint32_t additional_step_delay_us;
   int test_argument;
