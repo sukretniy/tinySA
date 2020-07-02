@@ -1625,7 +1625,8 @@ again:                          // Waiting for a trigger jumps back to here
     }
   }
 
-  setting.measure_sweep_time_us = chVTGetSystemTimeX();         // start measure sweep time
+  setting.measure_sweep_time_us = 0;
+  systime_t measure = chVTGetSystemTimeX();         // start measure sweep time
 
 sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
@@ -1765,7 +1766,7 @@ sweep_again:                                // stay in sweep loop when output mo
   // ---------------------- process measured actual sweep time -----------------
   // For CW mode value calculated in SI4432_Fill
   if (setting.measure_sweep_time_us == 0)
-	  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - setting.measure_sweep_time_us) * 100;
+    setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure) * 100;
 
   // Update actual time on change on status panel
   uint32_t delta = abs((int)(setting.actual_sweep_time_us - setting.measure_sweep_time_us));
