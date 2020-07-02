@@ -796,10 +796,10 @@ void calculate_step_delay(void)
     if (setting.frequency_step == 0.0) {          // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
-      if (actual_rbw_x10 >= 1910)        SI4432_step_delay =  280;
-      else if (actual_rbw_x10 >= 1420)   SI4432_step_delay =  350;
-      else if (actual_rbw_x10 >= 750)    SI4432_step_delay =  450;
-      else if (actual_rbw_x10 >= 560)    SI4432_step_delay =  650;
+      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 200; }
+      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 200; }
+      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 200; }
+      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 200; }
       else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 200; }
       else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 250; }
       else if (actual_rbw_x10 >=  90)  { SI4432_step_delay = 1700; SI4432_offset_delay = 400; }
@@ -1535,6 +1535,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         break;         // abort
       if (subRSSI < setting.trigger_level)                                  // trigger level not yet reached
         goto wait;                                                          // get next rssi
+      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // Actually one sample to late
 
 #ifdef __FAST_SWEEP__
         if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
@@ -2339,6 +2340,10 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 #if 1
   y += YSTEP;
+  int old_dirty = dirty;
+  update_rbw();             // To ensure the calc_min_sweep time shown takes the latest delay into account
+  calculate_step_delay();
+  dirty = old_dirty;            // restore as update_rbw sets dirty
   uint32_t t = calc_min_sweep_time_us();
 //  if (t < setting.sweep_time_us)
 //    t = setting.sweep_time_us;
