@@ -638,7 +638,7 @@ enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
 
 #ifdef __FAST_SWEEP__
-#define MINIMUM_SWEEP_TIME  2000U    // Minimum sweep time on zero span in uS
+#define MINIMUM_SWEEP_TIME  1800U    // Minimum sweep time on zero span in uS
 #else
 #define MINIMUM_SWEEP_TIME  15000U   // Minimum sweep time on zero span in uS
 #endif
@@ -646,8 +646,8 @@ enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
 #define ONE_SECOND_TIME     1000000U // One second uS
 #define ONE_MS_TIME         1000U    // One ms uS
 
-#define REPEAT_TIME         110         // Time per extra repeat in uS
-#define MEASURE_TIME        127         // Time per vbwstep without step delay in uS
+#define REPEAT_TIME         111         // Time per extra repeat in uS
+#define MEASURE_TIME        127         // Time per single point measurement with vbwstep =1 without step delay in uS
 
 extern uint32_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
