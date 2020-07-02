@@ -172,14 +172,14 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
   if (MODE_OUTPUT(setting.mode))
     t = 100;
   else {
-    uint32_t bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points - 1); // Single RSSI delay and measurement time in uS while scanning
+    uint32_t bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
     if (FREQ_IS_CW()) {
       bare_sweep_time = MINIMUM_SWEEP_TIME;       // minimum sweep time in fast CW mode
-      if (setting.repeat != 1 || setting.sweep_time_us >= ONE_SECOND_TIME || setting.spur != 0) // if no fast CW sweep possible
+      if (setting.repeat != 1 || setting.sweep_time_us >= 100*ONE_MS_TIME || setting.spur != 0) // if no fast CW sweep possible
         bare_sweep_time = 15000;       // minimum CW sweep time when not in fast CW mode
     }
     t = vbwSteps * (setting.spur ? 2 : 1) * bare_sweep_time ;           // factor in vbwSteps and spur impact
-    t += (setting.repeat - 1)* REPEAT_TIME * (sweep_points - 1);        // Add time required for repeats
+    t += (setting.repeat - 1)* REPEAT_TIME * (sweep_points);            // Add time required for repeats
   }
   return t;
 }
@@ -1285,7 +1285,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     dirty = false;
     if (setting.spur)                                                       // if in spur avoidance mode
       setting.spur = 1;                                                     // resync spur in case of previous abort
-    start_of_sweep_timestamp = chVTGetSystemTimeX();                                         // initialize again to eliminate time spend in apply_settings
+//    start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize again to eliminate time spend in apply_settings
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {             // if in low output mode and level sweep is active
@@ -1526,6 +1526,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       correct_RSSI = get_level_offset()+ get_attenuation() - signal_path_loss - setting.offset + get_frequency_correction(f); // calcuate the RSSI correction for later use
 
   wait:
+    if (i == 0)                                                             // if first point in scan (here is get 1 point data)
+      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
+
     subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;   // Get RSSI, either from pre-filled buffer or by reading SI4432 RSSI
 //    if ( i < 3)
 //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
@@ -1535,7 +1538,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         break;         // abort
       if (subRSSI < setting.trigger_level)                                  // trigger level not yet reached
         goto wait;                                                          // get next rssi
-      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // Actually one sample to late
+//      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // Actually one sample to late
 
 #ifdef __FAST_SWEEP__
         if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
@@ -1597,12 +1600,10 @@ again:                          // Waiting for a trigger jumps back to here
     calculate_step_delay();
     // Set for actual time pre calculated value (update after sweep)
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
-    // Possible situation then old time > recommend time, i don`t know user input this value or this is old value
-    // Need add flag for auto time set?
-    // Fix me here |
-    //             V
+    // Change actual sweep time as user input if it greater minimum
+    // And set start delays for 1 run
     if (setting.sweep_time_us > setting.actual_sweep_time_us){
-      setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points-1);
+      setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points);
       setting.actual_sweep_time_us = setting.sweep_time_us;
     }
     else{ // not add additional correction, apply recommend time
@@ -1795,14 +1796,14 @@ sweep_again:                                // stay in sweep loop when output mo
     static uint32_t last_dt = 0;
     // selected time less then actual, need reduce delay
     if (setting.sweep_time_us < setting.actual_sweep_time_us){
-      dt = (setting.actual_sweep_time_us - setting.sweep_time_us)/(sweep_points - 1);
+      dt = (setting.actual_sweep_time_us - setting.sweep_time_us)/(sweep_points);
       if (setting.additional_step_delay_us > dt)
         setting.additional_step_delay_us-=dt;
       else
         setting.additional_step_delay_us = 0;
     }// selected time greater then actual, need increase delay
     else if (setting.sweep_time_us > setting.actual_sweep_time_us){
-      dt = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points - 1);
+      dt = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points);
       setting.additional_step_delay_us+=dt;
     }
     // Update info on correction on next step, after apply . Always show when changed
