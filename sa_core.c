@@ -1275,7 +1275,7 @@ static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wi
 char age[POINTS_COUNT];
 
 static float old_a = -150;
-systime_t measure;
+systime_t start_of_sweep_timestamp;
 
 float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
@@ -1285,7 +1285,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     dirty = false;
     if (setting.spur)                                                       // if in spur avoidance mode
       setting.spur = 1;                                                     // resync spur in case of previous abort
-    measure = chVTGetSystemTimeX();                                         // initialize again to eliminate time spend in apply_settings
+    start_of_sweep_timestamp = chVTGetSystemTimeX();                                         // initialize again to eliminate time spend in apply_settings
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {             // if in low output mode and level sweep is active
@@ -1631,7 +1631,7 @@ again:                          // Waiting for a trigger jumps back to here
   }
 
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
-  measure = chVTGetSystemTimeX();
+  start_of_sweep_timestamp = chVTGetSystemTimeX();
 
 sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
@@ -1771,7 +1771,7 @@ sweep_again:                                // stay in sweep loop when output mo
   // ---------------------- process measured actual sweep time -----------------
   // For CW mode value calculated in SI4432_Fill
   if (setting.measure_sweep_time_us == 0)
-	  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure) * 100;
+	  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - start_of_sweep_timestamp) * 100;
 
   // Update actual time on change on status panel
   uint32_t delta = abs((int)(setting.actual_sweep_time_us - setting.measure_sweep_time_us));
