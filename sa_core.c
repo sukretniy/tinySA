@@ -1535,6 +1535,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         break;         // abort
       if (subRSSI < setting.trigger_level)                                  // trigger level not yet reached
         goto wait;                                                          // get next rssi
+      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // Actually one sample to late
 
 #ifdef __FAST_SWEEP__
         if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
