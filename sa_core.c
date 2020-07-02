@@ -1526,7 +1526,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       correct_RSSI = get_level_offset()+ get_attenuation() - signal_path_loss - setting.offset + get_frequency_correction(f); // calcuate the RSSI correction for later use
 
   wait:
-    if (i == 0)                                                             // if first point in scan (here is get 1 point data)
+    if (i == 0 && t == 0)                                                             // if first point in scan (here is get 1 point data)
       start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
 
     subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;   // Get RSSI, either from pre-filled buffer or by reading SI4432 RSSI
