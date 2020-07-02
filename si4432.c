@@ -427,7 +427,7 @@ void SI4432_Fill(int s, int start)
   shiftInBuf(sel, SI4432_REG_RSSI, (uint8_t *)&age[start], sweep_points - start, t);
 #endif
 //  __enable_irq();
-  setting.measure_sweep_time_us+= (chVTGetSystemTimeX() - measure)*100;
+  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
   buf_index = start; // Is used to skip 1st entry during level triggering
   buf_read = true;
 }

@@ -166,19 +166,20 @@ void reset_settings(int m)
 //static uint32_t minimum_sweep_time = 0;
 
 
-uint32_t calc_min_sweep_time_us(void)         // Calculate minimum sweep time in uS needed just because of the delays for the RSSI to become stable
+uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in uS,  needed to calculate the initial delays for the RSSI before first sweep
 {
   uint32_t t;
   if (MODE_OUTPUT(setting.mode))
     t = 100;
   else {
-    uint32_t a = (SI4432_step_delay + MEASURE_TIME) * (sweep_points - 1); // Single RSSI delay and measurement time in uS while scanning
+    uint32_t bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points - 1); // Single RSSI delay and measurement time in uS while scanning
     if (FREQ_IS_CW()) {
-      a = MINIMUM_SWEEP_TIME;       // time per step in fast CW mode
-      if (setting.repeat != 1 || setting.sweep_time_us >= ONE_SECOND_TIME || setting.spur != 0)
-        a = 15000;       // time per step in CW mode with repeat too long for fast delay
+      bare_sweep_time = MINIMUM_SWEEP_TIME;       // minimum sweep time in fast CW mode
+      if (setting.repeat != 1 || setting.sweep_time_us >= ONE_SECOND_TIME || setting.spur != 0) // if no fast CW sweep possible
+        bare_sweep_time = 15000;       // minimum CW sweep time when not in fast CW mode
     }
-    t = vbwSteps * (setting.spur ? 2 : 1) * ( (a + (setting.repeat - 1)* ( REPEAT_TIME * (sweep_points - 1))));
+    t = vbwSteps * (setting.spur ? 2 : 1) * bare_sweep_time ;           // factor in vbwSteps and spur impact
+    t += (setting.repeat - 1)* REPEAT_TIME * (sweep_points - 1);        // Add time required for repeats
   }
   return t;
 }
@@ -233,8 +234,8 @@ void set_level_sweep(float l)
 
 void set_sweep_time_us(uint32_t t)          // Set the sweep time as the user wants it to be.
 {
-  if (t < MINIMUM_SWEEP_TIME)
-    t = MINIMUM_SWEEP_TIME;
+//  if (t < MINIMUM_SWEEP_TIME)             // Sweep time of zero means sweep as fast as possible
+//    t = MINIMUM_SWEEP_TIME;
   if (t > MAXIMUM_SWEEP_TIME)
     t = MAXIMUM_SWEEP_TIME;
   setting.sweep_time_us = t;
@@ -1274,6 +1275,7 @@ static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wi
 char age[POINTS_COUNT];
 
 static float old_a = -150;
+systime_t start_of_sweep_timestamp;
 
 float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
@@ -1283,6 +1285,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     dirty = false;
     if (setting.spur)                                                       // if in spur avoidance mode
       setting.spur = 1;                                                     // resync spur in case of previous abort
+    start_of_sweep_timestamp = chVTGetSystemTimeX();                                         // initialize again to eliminate time spend in apply_settings
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {             // if in low output mode and level sweep is active
@@ -1588,7 +1591,6 @@ again:                          // Waiting for a trigger jumps back to here
   //  shell_printf("\r\n");
 
   modulation_counter = 0;                                             // init modulation counter in case needed
-
   if (dirty) {                      // Calculate new scanning solution
     update_rbw();
     calculate_step_delay();
@@ -1600,11 +1602,13 @@ again:                          // Waiting for a trigger jumps back to here
     //             V
     if (setting.sweep_time_us > setting.actual_sweep_time_us){
       setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points-1);
+      setting.actual_sweep_time_us = setting.sweep_time_us;
     }
     else{ // not add additional correction, apply recommend time
       setting.additional_step_delay_us = 0;
-      setting.sweep_time_us = setting.actual_sweep_time_us;
+//      setting.sweep_time_us = setting.actual_sweep_time_us;
     }
+#if 0
     // manually set delay, for better sync
     if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
       setting.additional_step_delay_us = 0;
@@ -1614,6 +1618,7 @@ again:                          // Waiting for a trigger jumps back to here
       setting.additional_step_delay_us = 1;
       setting.sweep_time_us = 3000;
     }
+#endif
     if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
       setting.additional_step_delay_us = 500;
     // Update greed and status after
@@ -1625,8 +1630,8 @@ again:                          // Waiting for a trigger jumps back to here
     }
   }
 
-  setting.measure_sweep_time_us = 0;
-  systime_t measure = chVTGetSystemTimeX();         // start measure sweep time
+  setting.measure_sweep_time_us = 0;                   // start measure sweep time
+  start_of_sweep_timestamp = chVTGetSystemTimeX();
 
 sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
@@ -1647,7 +1652,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
     // if break back to top level to handle ui operation
     if ((operation_requested || shell_function) && break_on_operation) {    // break loop if needed
-      if (setting.sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
+      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
       }
       return false;
@@ -1655,7 +1660,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
     if (MODE_INPUT(setting.mode)) {
 
-      if (setting.sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
+      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, i, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
         ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-i, 1, 0);
       }
@@ -1766,7 +1771,7 @@ sweep_again:                                // stay in sweep loop when output mo
   // ---------------------- process measured actual sweep time -----------------
   // For CW mode value calculated in SI4432_Fill
   if (setting.measure_sweep_time_us == 0)
-    setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure) * 100;
+    setting.measure_sweep_time_us = (chVTGetSystemTimeX() - start_of_sweep_timestamp) * 100;
 
   // Update actual time on change on status panel
   uint32_t delta = abs((int)(setting.actual_sweep_time_us - setting.measure_sweep_time_us));
@@ -1789,15 +1794,17 @@ sweep_again:                                // stay in sweep loop when output mo
     // selected time less then actual, need reduce delay
     if (setting.sweep_time_us < setting.actual_sweep_time_us){
       dt = (setting.actual_sweep_time_us - setting.sweep_time_us)/(sweep_points - 1);
-      if (setting.additional_step_delay_us > dt) setting.additional_step_delay_us-=dt;
-      else setting.additional_step_delay_us = 0;
+      if (setting.additional_step_delay_us > dt)
+        setting.additional_step_delay_us-=dt;
+      else
+        setting.additional_step_delay_us = 0;
     }// selected time greater then actual, need increase delay
     else if (setting.sweep_time_us > setting.actual_sweep_time_us){
       dt = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points - 1);
       setting.additional_step_delay_us+=dt;
     }
-    // Update info on correction on next step, after apply this one
-    if (last_dt && dt == 0){
+    // Update info on correction on next step, after apply . Always show when changed
+    if (last_dt /* && dt == 0 */){
       redraw_request|=REDRAW_CAL_STATUS;
       if (FREQ_IS_CW())                // if zero span mode
         update_grid();                 // and update grid and frequency
