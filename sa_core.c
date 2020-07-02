@@ -2340,6 +2340,10 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 #if 1
   y += YSTEP;
+  int old_dirty = dirty;
+  update_rbw();             // To ensure the calc_min_sweep time shown takes the latest delay into account
+  calculate_step_delay();
+  dirty = old_dirty;            // restore as update_rbw sets dirty
   uint32_t t = calc_min_sweep_time_us();
 //  if (t < setting.sweep_time_us)
 //    t = setting.sweep_time_us;
