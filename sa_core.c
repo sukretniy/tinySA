@@ -1804,8 +1804,8 @@ sweep_again:                                // stay in sweep loop when output mo
       dt = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points - 1);
       setting.additional_step_delay_us+=dt;
     }
-    // Update info on correction on next step, after apply this one
-    if (last_dt && dt == 0){
+    // Update info on correction on next step, after apply . Always show when changed
+    if (last_dt /* && dt == 0 */){
       redraw_request|=REDRAW_CAL_STATUS;
       if (FREQ_IS_CW())                // if zero span mode
         update_grid();                 // and update grid and frequency
