@@ -796,10 +796,10 @@ void calculate_step_delay(void)
     if (setting.frequency_step == 0.0) {          // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
-      if (actual_rbw_x10 >= 1910)        SI4432_step_delay =  280;
-      else if (actual_rbw_x10 >= 1420)   SI4432_step_delay =  350;
-      else if (actual_rbw_x10 >= 750)    SI4432_step_delay =  450;
-      else if (actual_rbw_x10 >= 560)    SI4432_step_delay =  650;
+      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 200; }
+      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 200; }
+      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 200; }
+      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 200; }
       else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 200; }
       else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 250; }
       else if (actual_rbw_x10 >=  90)  { SI4432_step_delay = 1700; SI4432_offset_delay = 400; }
