@@ -1642,13 +1642,14 @@ sweep_again:                                // stay in sweep loop when output mo
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);    // Measure RSSI for one of the frequencies
 
-    // ----------------- delay between points if needed ----------------
-
-    if (setting.additional_step_delay_us && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {     // No delay when modulation is active
-      if (setting.additional_step_delay_us < 30*ONE_MS_TIME)                                                   // Maximum delay time using my_microsecond_delay
-        my_microsecond_delay(setting.additional_step_delay_us);
-      else
-        osalThreadSleepMilliseconds(setting.additional_step_delay_us / ONE_MS_TIME);
+    // Delay between points if needed, (all delays can apply in SI4432 fill)
+    if (setting.measure_sweep_time_us == 0){
+      if (setting.additional_step_delay_us && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {     // No delay when modulation is active
+        if (setting.additional_step_delay_us < 30*ONE_MS_TIME)                                                   // Maximum delay time using my_microsecond_delay
+          my_microsecond_delay(setting.additional_step_delay_us);
+        else
+          osalThreadSleepMilliseconds(setting.additional_step_delay_us / ONE_MS_TIME);
+      }
     }
 
     // if break back to top level to handle ui operation
