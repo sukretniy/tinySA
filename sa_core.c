@@ -1493,10 +1493,10 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     // ---------------- Prepare RSSI ----------------------
 
     float signal_path_loss;
-    int wait_for_trigger;
+
  skip_LO_setting:                           // jump here if in zero span mode and all HW frequency setup is done.
 
- wait_for_trigger = false;
+ int wait_for_trigger = false;
  int old_actual_step_delay = SI4432_step_delay;
  if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
    wait_for_trigger = true;                                                // signal the wait for trigger
@@ -1546,8 +1546,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         start_of_sweep_timestamp = chVTGetSystemTimeX();                    // update time after triggered
 
 #ifdef __FAST_SWEEP__
-        if (i == 0 /* setting.frequency_step == 0  && setting.trigger == T_AUTO */ &&
-            setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+        if (i == 0 && /* setting.frequency_step == 0  && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
            SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
         }
 #endif
