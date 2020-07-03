@@ -20,8 +20,12 @@
 #include "SI4432.h"		// comment out for simulation
 #include "stdlib.h"
 
-//#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and fast CW mode will be disabled
-
+//#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
+#ifdef __DEBUG_AGC__
+#ifdef __FAST_SWEEP__
+#undef __FAST_SWEEP__
+#endif
+#endif
 int dirty = true;
 int scandirty = true;
 
@@ -1287,7 +1291,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     dirty = false;
     if (setting.spur)                                                       // if in spur avoidance mode
       setting.spur = 1;                                                     // resync spur in case of previous abort
-//    start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize again to eliminate time spend in apply_settings
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {             // if in low output mode and level sweep is active
@@ -1501,9 +1504,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 #ifdef __FAST_SWEEP__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
-#ifndef __DEBUG_AGC__                       // Don't prefill if debugging the AGC
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
-#endif
     }
 #endif
 
@@ -1517,11 +1518,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     else
       signal_path_loss = +7;         // Loss in dB (+ is gain)
 
-#define TLEVEL_UNDEF     0
-#define T_LEVEL_BOTTOM   1
-#define T_LEVEL_TOP      2
-    uint16_t data_level  = TLEVEL_UNDEF;
-    uint16_t last_data_level = TLEVEL_UNDEF;
+#define T_LEVEL_UNDEF       0
+#define T_LEVEL_BELOW       1
+#define T_LEVEL_ABOVE       2
+
+    uint16_t data_level  = T_LEVEL_UNDEF;
+    uint16_t prev_data_level = T_LEVEL_UNDEF;
     int wait_for_trigger = false;
     int old_SI4432_step_delay = SI4432_step_delay;
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
@@ -1545,20 +1547,19 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     if (wait_for_trigger) {                                                 // wait for trigger to happen
       if ((operation_requested || shell_function) && break_on_operation)    // allow aborting a wait for trigger
         break;                                                              // abort
-      // Trigger on rise edge of data
-      last_data_level = data_level;
-      // trigger level not yet reached from top
-      data_level = subRSSI < setting.trigger_level ? T_LEVEL_BOTTOM : T_LEVEL_TOP;
 
-      // wait trigger from bottom to top (
-      if (!(last_data_level == T_LEVEL_BOTTOM &&
-            data_level == T_LEVEL_TOP))                                     // trigger level change
+      // Trigger on rise edge of data
+      prev_data_level = data_level;
+      // To reduce float comparisons, remember if above or below trigger
+      data_level = subRSSI < setting.trigger_level ? T_LEVEL_BELOW : T_LEVEL_ABOVE;
+
+      // wait for rising edge
+      if (!(prev_data_level == T_LEVEL_BELOW &&
+            data_level == T_LEVEL_ABOVE))                                     // trigger level change
         goto wait;                                                          // get next rssi
 #ifdef __FAST_SWEEP__
         if (i == 0 && setting.frequency_step == 0 && setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
-#ifndef __DEBUG_AGC__
            SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
-#endif
         }
 #endif
       if (setting.trigger == T_SINGLE)
@@ -1649,7 +1650,7 @@ static bool sweep(bool break_on_operation)
 
 again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
-  start_of_sweep_timestamp = chVTGetSystemTimeX();
+//  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
 
 sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
@@ -1660,7 +1661,7 @@ sweep_again:                                // stay in sweep loop when output mo
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);    // Measure RSSI for one of the frequencies
 
     // Delay between points if needed, (all delays can apply in SI4432 fill)
-    if (setting.measure_sweep_time_us == 0){
+    if (setting.measure_sweep_time_us == 0){                                    // If not already buffer
       if (setting.additional_step_delay_us && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {     // No delay when modulation is active
         if (setting.additional_step_delay_us < 30*ONE_MS_TIME)                                                   // Maximum delay time using my_microsecond_delay
           my_microsecond_delay(setting.additional_step_delay_us);
@@ -1672,7 +1673,7 @@ sweep_again:                                // stay in sweep loop when output mo
     // if break back to top level to handle ui operation
     if ((operation_requested || shell_function) && break_on_operation) {    // break loop if needed
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
+        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
       }
       return false;
     }
