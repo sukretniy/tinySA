@@ -1488,11 +1488,11 @@ static const menuitem_t menu_unit[] =
 {
  { MT_CALLBACK,U_DBM,       "dBm",              menu_unit_cb},
  { MT_CALLBACK,U_DBMV,      "dBmV",             menu_unit_cb},
- { MT_CALLBACK,U_DBUV,      "dBuV",             menu_unit_cb},
+ { MT_CALLBACK,U_DBUV,      "dB"S_MICRO"V",             menu_unit_cb},
  { MT_CALLBACK,U_VOLT,      "Volt",             menu_unit_cb},
-// { MT_CALLBACK,U_UVOLT,     "uVolt",             menu_unit_cb},
+// { MT_CALLBACK,U_UVOLT,     S_MICRO"Volt",             menu_unit_cb},
  { MT_CALLBACK,U_WATT,      "Watt",             menu_unit_cb},
-// { MT_CALLBACK,U_UWATT,    "uWatt",             menu_unit_cb},
+// { MT_CALLBACK,U_UWATT,    S_MICRO"Watt",             menu_unit_cb},
   { MT_CANCEL, 0,           "\032 BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
