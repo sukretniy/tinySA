@@ -868,7 +868,7 @@ void SI4432_SetReference(int freq);
 // Speed profile definition
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
 #define RESTART_PROFILE   time = chVTGetSystemTimeX();
-#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "T:%06d", chVTGetSystemTimeX() - time);ili9341_drawstringV(string_buf, 1, 180);}
+#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "%06d", chVTGetSystemTimeX() - time);ili9341_drawstring(string_buf, 0, FREQUENCIES_YPOS);}
 #define DELTA_TIME (time = chVTGetSystemTimeX() - time)
 // Macros for convert define value to string
 #define STR1(x)  #x
