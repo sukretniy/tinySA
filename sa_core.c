@@ -1493,7 +1493,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     // ---------------- Prepare RSSI ----------------------
 
     float signal_path_loss;
-    int wait_for_trigger;
+
  skip_LO_setting:                           // jump here if in zero span mode and all HW frequency setup is done.
 
 #ifdef __FAST_SWEEP__
@@ -1513,11 +1513,16 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     else
       signal_path_loss = +7;         // Loss in dB (+ is gain)
 
+#define TLEVEL_UNDEF     0
+#define T_LEVEL_BOTTOM   1
+#define T_LEVEL_TOP      2
+    uint16_t data_level  = TLEVEL_UNDEF;
+    uint16_t last_data_level = TLEVEL_UNDEF;
     int wait_for_trigger = false;
-    int old_actual_step_delay = SI4432_step_delay;
+    int old_SI4432_step_delay = SI4432_step_delay;
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
       wait_for_trigger = true;                                                // signal the wait for trigger
-      SI4432_step_delay = 0;                                                      // and ignore requested sweep time to be as fast as possible
+      SI4432_step_delay = 0;
     }
     float subRSSI;
 
@@ -1535,21 +1540,25 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
     if (wait_for_trigger) {                                                 // wait for trigger to happen
       if ((operation_requested || shell_function) && break_on_operation)    // allow aborting a wait for trigger
-        break;         // abort
-      if (subRSSI < setting.trigger_level)                                  // trigger level not yet reached
-        goto wait;                                                          // get next rssi
-//      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // Actually one sample to late
+        break;                                                              // abort
+      // Trigger on rise edge of data
+      last_data_level = data_level;
+      // trigger level not yet reached from top
+      data_level = subRSSI < setting.trigger_level ? T_LEVEL_BOTTOM : T_LEVEL_TOP;
 
+      // wait trigger from bottom to top (
+      if (!(last_data_level == T_LEVEL_BOTTOM &&
+            data_level == T_LEVEL_TOP))                                     // trigger level change
+        goto wait;                                                          // get next rssi
 #ifdef __FAST_SWEEP__
-        if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
+        if (i == 0 && setting.frequency_step == 0 && setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
            SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
         }
 #endif
-      SI4432_step_delay = old_actual_step_delay; // Trigger happened, restore step delay
       if (setting.trigger == T_SINGLE)
         pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
     }
-
+    SI4432_step_delay = old_SI4432_step_delay;
 #ifdef __SPUR__
     if (setting.spur == 1) {                                     // If first spur pass
       spur_RSSI = subRSSI;                                       // remember measure RSSI
