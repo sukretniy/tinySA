@@ -1496,8 +1496,15 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
  skip_LO_setting:                           // jump here if in zero span mode and all HW frequency setup is done.
 
+ int wait_for_trigger = false;
+ int old_actual_step_delay = SI4432_step_delay;
+ if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
+   wait_for_trigger = true;                                                // signal the wait for trigger
+   SI4432_step_delay = 0;                                                  // and ignore requested sweep time to be as fast as possible
+ }
+
 #ifdef __FAST_SWEEP__
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+    if (i == 0 && wait_for_trigger == 0 && setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
@@ -1513,22 +1520,18 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     else
       signal_path_loss = +7;         // Loss in dB (+ is gain)
 
-    int wait_for_trigger = false;
-    int old_actual_step_delay = SI4432_step_delay;
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
-      wait_for_trigger = true;                                                // signal the wait for trigger
-      SI4432_step_delay = 0;                                                      // and ignore requested sweep time to be as fast as possible
-    }
+
     float subRSSI;
 
     static float correct_RSSI;                  // This is re-used between calls
     if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
       correct_RSSI = get_level_offset()+ get_attenuation() - signal_path_loss - setting.offset + get_frequency_correction(f); // calcuate the RSSI correction for later use
 
-  wait:
-    if (i == 0 && t == 0)                                                             // if first point in scan (here is get 1 point data)
+    // Start time after 1 data get and triggered
+    if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
       start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
 
+  wait:
     subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;   // Get RSSI, either from pre-filled buffer or by reading SI4432 RSSI
 //    if ( i < 3)
 //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
@@ -1538,10 +1541,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         break;         // abort
       if (subRSSI < setting.trigger_level)                                  // trigger level not yet reached
         goto wait;                                                          // get next rssi
-//      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // Actually one sample to late
+
+      if (i == 0 && t == 0)                                                 // if first point in scan (here is get 1 point data)
+        start_of_sweep_timestamp = chVTGetSystemTimeX();                    // update time after triggered
 
 #ifdef __FAST_SWEEP__
-        if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
+        if (i == 0 && /* setting.frequency_step == 0  && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
            SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
         }
 #endif
