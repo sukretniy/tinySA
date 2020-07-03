@@ -1849,7 +1849,7 @@ static void fetch_numeric_target(void)
 //    if (setting.sweep_time_us < calc_min_sweep_time_us())
 //      uistat.value = calc_min_sweep_time_us();
 //    else
-      uistat.value = setting.sweep_time_us;
+      uistat.value = setting.actual_sweep_time_us;
     uistat.value /= (float)ONE_SECOND_TIME;
     plot_printf(uistat.text, sizeof uistat.text, "%.3Fs", uistat.value);
     break;

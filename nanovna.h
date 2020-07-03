@@ -642,7 +642,7 @@ enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
 #else
 #define MINIMUM_SWEEP_TIME  15000U   // Minimum sweep time on zero span in uS
 #endif
-#define MAXIMUM_SWEEP_TIME  6000000U // Maximum sweep time uS
+#define MAXIMUM_SWEEP_TIME  600000000U // Maximum sweep time uS
 #define ONE_SECOND_TIME     1000000U // One second uS
 #define ONE_MS_TIME         1000U    // One ms uS
 

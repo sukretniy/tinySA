@@ -176,7 +176,7 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
 {
   uint32_t t;
   if (MODE_OUTPUT(setting.mode))
-    t = 100;
+    t = 200*sweep_points;                   // 200 microseconds is the delay set in perform when sweeping in output mode
   else {
     uint32_t bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
     if (FREQ_IS_CW()) {
@@ -245,6 +245,8 @@ void set_sweep_time_us(uint32_t t)          // Set the sweep time as the user wa
   if (t > MAXIMUM_SWEEP_TIME)
     t = MAXIMUM_SWEEP_TIME;
   setting.sweep_time_us = t;
+  if (MODE_OUTPUT(setting.mode))
+    setting.actual_sweep_time_us = t;       // To ensure time displayed is correct before first sweep is completed
 #if 0
   uint32_t ta = calc_min_sweep_time_us();   // Can not be faster than minimum sweep time
   if (ta < t)
@@ -1490,15 +1492,22 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 #endif
     }
 
+    if (MODE_OUTPUT(setting.mode)) {
+      my_microsecond_delay(200);                 // To prevent lockup of SI4432
+    }
+
+
     // ------------------------- end of processing when in output mode ------------------------------------------------
 
     float signal_path_loss;
 
  skip_LO_setting:
 
-    if (MODE_OUTPUT(setting.mode))              // No substepping and no RSSI in output mode
+    if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
+      if (i == 0 && t == 0)                                                             // if first point in scan (here is get 1 point data)
+        start_of_sweep_timestamp = chVTGetSystemTimeX();
       return(0);
-
+    }
     // ---------------- Prepare RSSI ----------------------
 
                           // jump here if in zero span mode and all HW frequency setup is done.
@@ -1639,9 +1648,9 @@ static bool sweep(bool break_on_operation)
       setting.sweep_time_us = 3000;
     }
 #endif
-    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
-      setting.additional_step_delay_us = 500;
-    // Update greed and status after
+//    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
+//      setting.additional_step_delay_us = 500;
+    // Update grid and status after
     if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
       redraw_request |= REDRAW_CAL_STATUS;
       if (FREQ_IS_CW()) {                                       // if zero span mode
@@ -1663,7 +1672,7 @@ sweep_again:                                // stay in sweep loop when output mo
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);    // Measure RSSI for one of the frequencies
 
     // Delay between points if needed, (all delays can apply in SI4432 fill)
-    if (setting.measure_sweep_time_us == 0){                                    // If not already buffer
+    if (setting.measure_sweep_time_us == 0){                                    // If not already in buffer
       if (setting.additional_step_delay_us && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {     // No delay when modulation is active
         if (setting.additional_step_delay_us < 30*ONE_MS_TIME)                                                   // Maximum delay time using my_microsecond_delay
           my_microsecond_delay(setting.additional_step_delay_us);
