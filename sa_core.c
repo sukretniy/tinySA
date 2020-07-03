@@ -1786,7 +1786,7 @@ sweep_again:                                // stay in sweep loop when output mo
     }           // end of input specific processing
   }  // ---------------------- end of sweep loop -----------------------------
 
-  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE) // if in output mode with modulation
+  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE ) // if in output mode with modulation
     goto sweep_again;                                             // Keep repeating sweep loop till user aborts by input
 
   // --------------- check if maximum is above trigger level -----------------
@@ -1851,6 +1851,10 @@ sweep_again:                                // stay in sweep loop when output mo
     scandirty = false;
     redraw_request |= REDRAW_CAL_STATUS;
   }
+
+  if (MODE_OUTPUT(setting.mode) )                            // Sweep time is calculated, we can sweep again in output mode
+    goto again;                                             // Keep repeating sweep loop till user aborts by input
+
 
   // -------------------------- auto attenuate ----------------------------------
 
