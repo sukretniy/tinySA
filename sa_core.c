@@ -20,6 +20,8 @@
 #include "SI4432.h"		// comment out for simulation
 #include "stdlib.h"
 
+//#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and fast CW mode will be disabled
+
 int dirty = true;
 int scandirty = true;
 
@@ -1499,7 +1501,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 #ifdef __FAST_SWEEP__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
+#ifndef __DEBUG_AGC__                       // Don't prefill if debugging the AGC
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
+#endif
     }
 #endif
 
@@ -1542,7 +1546,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
 #ifdef __FAST_SWEEP__
         if (i == 0 && setting.frequency_step == 0 /* && setting.trigger == T_AUTO */&& setting.spur == 0 && old_actual_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
-           SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
+#ifndef __DEBUG_AGC__                               // do not prefill if debugging the AGC
+          SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
+#endif
         }
 #endif
       SI4432_step_delay = old_actual_step_delay; // Trigger happened, restore step delay
@@ -1675,7 +1681,9 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
       }
-      //         stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in the stored trace
+#ifdef __DEBUG_AGC__                 // For debugging the AGC control
+      stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in the stored trace
+#endif
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;
