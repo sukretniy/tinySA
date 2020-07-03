@@ -1397,7 +1397,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 #ifdef __SPUR__
     float spur_RSSI = 0;
 #endif
-    if (MODE_INPUT(setting.mode) && i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
+    if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
     long local_IF;
@@ -1492,14 +1492,16 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
     // ------------------------- end of processing when in output mode ------------------------------------------------
 
+    float signal_path_loss;
+
+ skip_LO_setting:
+
     if (MODE_OUTPUT(setting.mode))              // No substepping and no RSSI in output mode
       return(0);
 
     // ---------------- Prepare RSSI ----------------------
 
-    float signal_path_loss;
-
- skip_LO_setting:                           // jump here if in zero span mode and all HW frequency setup is done.
+                          // jump here if in zero span mode and all HW frequency setup is done.
 
 #ifdef __FAST_SWEEP__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
@@ -1555,8 +1557,8 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
       // wait for rising edge
       if (!(prev_data_level == T_LEVEL_BELOW &&
-            data_level == T_LEVEL_ABOVE))                                     // trigger level change
-        goto wait;                                                          // get next rssi
+            data_level == T_LEVEL_ABOVE))                                    // trigger level change
+        goto wait;                                                           // get next rssi
 #ifdef __FAST_SWEEP__
         if (i == 0 && setting.frequency_step == 0 && setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
            SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
@@ -1889,10 +1891,11 @@ sweep_again:                                // stay in sweep loop when output mo
   if (max_index[0] > 0)
     temppeakLevel = actual_t[max_index[0]];
 
-  float r = value(temppeakLevel);
-  float s_r = r / setting.scale;
-
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel) {  // Auto reflevel
+
+    float r = value(temppeakLevel);
+    float s_r = r / setting.scale;                  // Peak level normalized to /div
+
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
       if (setting.reflevel > REFLEVEL_MIN)  {
         if (s_r <  2)
@@ -2024,9 +2027,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
-//  if (prev_sweep_time > ONE_SECOND_TIME) {         // Clear sweep progress bar at end of sweep
-    ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
-//  }
+  ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
 
   palSetPad(GPIOB, GPIOB_LED);
   return true;
