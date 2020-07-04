@@ -68,13 +68,15 @@ uint16_t adc_single_read(uint32_t chsel)
   VNA_ADC->CFGR1  = ADC_CFGR1_RES_12BIT;
   VNA_ADC->CHSELR = chsel;
 
-  /* ADC conversion start.*/
-  VNA_ADC->CR |= ADC_CR_ADSTART;
-
-  while (VNA_ADC->CR & ADC_CR_ADSTART)
-    ;
-
-  return VNA_ADC->DR;
+  uint32_t result = 0;
+  uint32_t count = 1<<3; // Average count
+  do{
+    VNA_ADC->CR |= ADC_CR_ADSTART; // ADC conversion start.
+    while (VNA_ADC->CR & ADC_CR_ADSTART)
+      ;
+    result+=VNA_ADC->DR;
+  }while(--count);
+  return result>>3;
 }
 
 int16_t adc_vbat_read(void)
