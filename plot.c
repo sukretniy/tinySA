@@ -1959,7 +1959,7 @@ static void cell_grid_line_info(int x0, int y0)
       cell_drawstring(buf, xpos, ypos);
     }
     ypos+=GRIDY;
-    ref+=scale;
+    ref-=scale;
   }
 }
 
