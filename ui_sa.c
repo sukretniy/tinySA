@@ -1498,10 +1498,12 @@ static const menuitem_t menu_unit[] =
 };
 
 static const menuitem_t menu_trigger[] = {
-  { MT_CALLBACK,T_AUTO,      "AUTO",              menu_trigger_cb},
-  { MT_CALLBACK,T_NORMAL,    "NORMAL",             menu_trigger_cb},
-  { MT_CALLBACK,T_SINGLE,    "SINGLE",             menu_trigger_cb},
-  { MT_KEYPAD,  KM_TRIGGER,   "LEVEL",            NULL},
+  { MT_CALLBACK,T_AUTO,     "AUTO",             menu_trigger_cb},
+  { MT_CALLBACK,T_NORMAL,   "NORMAL",           menu_trigger_cb},
+  { MT_CALLBACK,T_SINGLE,   "SINGLE",           menu_trigger_cb},
+  { MT_KEYPAD,  KM_TRIGGER, "LEVEL",            NULL},
+  { MT_CALLBACK,T_UP,       "UP",               menu_trigger_cb},
+  { MT_CALLBACK,T_DOWN,     "DOWN",             menu_trigger_cb},
   { MT_CANCEL, 0,           "\032 BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1664,6 +1666,9 @@ static void menu_item_modify_attribute(
     }
   } else if (menu == menu_trigger && MT_MASK(menu[item].type) == MT_CALLBACK) {
     if (data == setting.trigger){
+      mark = true;
+    }
+    if (data == setting.trigger_direction) {
       mark = true;
     }
   } else if (menu == menu_display /* || menu == menu_displayhigh */) {
