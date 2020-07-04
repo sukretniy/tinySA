@@ -1955,7 +1955,7 @@ static void cell_grid_line_info(int x0, int y0)
   for (int i = 0; i < NGRIDY; i++){
     if (ypos >= CELLHEIGHT) break;
     if (ypos >= -FONT_GET_HEIGHT){
-      plot_printf(buf, sizeof buf, "% .2F", ref);
+      plot_printf(buf, sizeof buf, "% 6.2F", ref);
       cell_drawstring(buf, xpos, ypos);
     }
     ypos+=GRIDY;

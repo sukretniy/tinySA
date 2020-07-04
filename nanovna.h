@@ -304,7 +304,7 @@ extern  uint16_t _grid_y;
 #define AREA_WIDTH_NORMAL  (CELLOFFSETX + WIDTH  + 1)
 #define AREA_HEIGHT_NORMAL (              HEIGHT + 1)
 
-#define GRID_X_TEXT       (AREA_WIDTH_NORMAL - 25)
+#define GRID_X_TEXT       (AREA_WIDTH_NORMAL - 6*5)
 
 // Smith/polar chart
 #define P_CENTER_X (CELLOFFSETX + WIDTH/2)
