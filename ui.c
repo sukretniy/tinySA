@@ -1138,7 +1138,7 @@ menu_move_back(void)
     area_width = 0;
   } else {
 //    redraw_frame();
-//    request_to_redraw_grid();
+    redraw_request |= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
 
@@ -1742,14 +1742,14 @@ erase_numeric_input(void)
 static void
 leave_ui_mode()
 {
-  if (ui_mode == UI_MENU) {
-    request_to_draw_cells_behind_menu();
-    erase_menu_buttons();
-  } else if (ui_mode == UI_NUMERIC) {
-    request_to_draw_cells_behind_numeric_input();
-    erase_numeric_input();
-  }
-  redraw_request|=REDRAW_AREA|REDRAW_FREQUENCY;
+//  if (ui_mode == UI_MENU) {
+//    request_to_draw_cells_behind_menu();
+//    erase_menu_buttons();
+//  } else if (ui_mode == UI_NUMERIC) {
+//    request_to_draw_cells_behind_numeric_input();
+//    erase_numeric_input();
+//  }
+  redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
 }
 
 #ifdef __VNA__
