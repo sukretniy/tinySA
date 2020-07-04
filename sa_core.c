@@ -409,8 +409,8 @@ void set_attenuation(float a)       // Is used both in output mode and input mod
     a=31.0;
   if (setting.mode == M_HIGH)   // No attenuator in high mode
     a = 0;
-//  if (setting.attenuate == a)
-//    return;
+  if (setting.attenuate == a)
+    return;
   setting.attenuate = a;
   dirty = true;
 }
@@ -1847,16 +1847,22 @@ sweep_again:                                // stay in sweep loop when output mo
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
+    int changed = false;
     float actual_max_level = actual_t[max_index[0]] - get_attenuation();
     if (actual_max_level < - 31 && setting.attenuate >= 10) {
       setting.attenuate -= 10.0;
+      changed = true;
     } else if (actual_max_level < - 26 && setting.attenuate >= 5) {
       setting.attenuate -= 5.0;
+      changed = true;
     } else if (actual_max_level > - 19 && setting.attenuate <= 20) {
       setting.attenuate += 10.0;
+      changed = true;
     }
+
     // Try update settings
-    if (PE4302_Write_Byte((int) get_attenuation() * 2)) {
+    if (changed){
+      PE4302_Write_Byte((int) get_attenuation() * 2);
       redraw_request |= REDRAW_CAL_STATUS;
       SI4432_Sel = 0;
       if (setting.atten_step) {
