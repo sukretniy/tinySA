@@ -873,10 +873,10 @@ void setupSA(void)
   old_freq[1] = 0;
   real_old_freq[0] = 0;
   real_old_freq[1] = 0;
-  SI4432_Sel = 0;
+  SI4432_Sel = SI4432_RX ;
   SI4432_Receive();
 
-  SI4432_Sel = 1;
+  SI4432_Sel = SI4432_LO ;
   SI4432_Transmit(0);
   PE4302_init();
   PE4302_Write_Byte(0);
@@ -974,7 +974,7 @@ case M_LOW:     // Mixed into 0
 #ifdef __ULTRA__
 case M_ULTRA:
 #endif
-    SI4432_Sel = 0;
+    SI4432_Sel = SI4432_RX ;
     SI4432_Receive();
     if (setting.atten_step) {   // use switch as attenuator
       set_switch_transmit();
@@ -983,7 +983,7 @@ case M_ULTRA:
     }
     set_AGC_LNA();
 
-    SI4432_Sel = 1;
+    SI4432_Sel = SI4432_LO ;
     if (setting.tracking_output)
       set_switch_transmit();
     else
@@ -995,11 +995,11 @@ case M_ULTRA:
 case M_HIGH:    // Direct into 1
 mute:
     // SI4432_SetReference(-1); // Stop reference output
-    SI4432_Sel = 0; // both as receiver to avoid spurs
+    SI4432_Sel = SI4432_RX ; // both as receiver to avoid spurs
     set_switch_receive();
     SI4432_Receive();
 
-    SI4432_Sel = 1;
+    SI4432_Sel = SI4432_LO ;
     SI4432_Receive();
     if (setting.atten_step) {// use switch as attenuator
        set_switch_transmit();
@@ -1012,7 +1012,7 @@ mute:
 case M_GENLOW:  // Mixed output from 0
     if (setting.mute)
       goto mute;
-    SI4432_Sel = 0;
+    SI4432_Sel = SI4432_RX ;
     if (setting.atten_step) { // use switch as attenuator
       set_switch_off();
     } else {
@@ -1020,7 +1020,7 @@ case M_GENLOW:  // Mixed output from 0
     }
     SI4432_Transmit(setting.drive);
 
-    SI4432_Sel = 1;
+    SI4432_Sel = SI4432_LO ;
     if (setting.modulation == MO_EXTERNAL) {
       set_switch_transmit();  // High input for external LO scuh as tracking output of other tinySA
       SI4432_Receive();
@@ -1032,11 +1032,11 @@ case M_GENLOW:  // Mixed output from 0
 case M_GENHIGH: // Direct output from 1
     if (setting.mute)
       goto mute;
-    SI4432_Sel = 0;
+    SI4432_Sel = SI4432_RX ;
     SI4432_Receive();
     set_switch_receive();
 
-    SI4432_Sel = 1;
+    SI4432_Sel = SI4432_LO ;
     if (setting.drive < 8) {
       set_switch_off(); // use switch as attenuator
     } else {
@@ -1046,7 +1046,7 @@ case M_GENHIGH: // Direct output from 1
 
     break;
   }
-  SI4432_Sel = 1;
+  SI4432_Sel = SI4432_LO ;
   SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);  // Back to nominal offset
   SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
 
@@ -1304,7 +1304,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         d++;
         a = a - 3;
       }
-      SI4432_Sel = 0;
+      SI4432_Sel = SI4432_RX ;
       SI4432_Drive(d);
       if (a > 0)
         a = 0;
@@ -1347,7 +1347,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       my_microsecond_delay(setting.modulation == MO_AM_10Hz ? 20000 : 180);
     }
     else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
-      SI4432_Sel = 1;
+      SI4432_Sel = SI4432_LO ;
       int offset = setting.modulation == MO_NFM ? nfm_modulation[modulation_counter] : wfm_modulation[modulation_counter] ;
       SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
       SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
@@ -1405,7 +1405,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         local_IF = setting.frequency_IF;
     }
     if (setting.mode == M_LOW && tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
-      set_freq (0, local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
+      set_freq (SI4432_RX , local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
     } else if (MODE_LOW(setting.mode)) {
       if (setting.mode == M_LOW && !in_selftest && avoid_spur(f)) {         // check is alternate IF is needed to avoid spur.
         local_IF = spur_alternate_IF;
@@ -1431,12 +1431,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
       // --------------------- IF know, set the RX SI4432 frequency ------------------------
 
-      set_freq (0, local_IF);
+      set_freq (SI4432_RX , local_IF);
 
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
       local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
-      set_freq (0, local_IF);
+      set_freq (SI4432_RX , local_IF);
  //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?setting.spur * 1000 * actual_rbw:0);
 #endif
     } else          // This must be high mode
@@ -1448,17 +1448,17 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 //      else
       if (setting.spur != 1) {  // Left of tables
         if (lf > 3250000000 )
-          set_freq (1, lf/5 - local_IF/5);
+          set_freq (SI4432_LO , lf/5 - local_IF/5);
         if (lf > 1250000000 )
-          set_freq (1, lf/3 - local_IF/3);
+          set_freq (SI4432_LO, lf/3 - local_IF/3);
         else
-          set_freq (1,  lf - local_IF);
+          set_freq (SI4432_LO,  lf - local_IF);
 
       } else {              // Right of tables
         if (lf >= 2350000000)
-          set_freq (1,  lf/5 + local_IF/5);
+          set_freq (SI4432_LO,  lf/5 + local_IF/5);
         else
-          set_freq (1, lf/3 + local_IF/3);
+          set_freq (SI4432_LO, lf/3 + local_IF/3);
       }
     } else
 #endif
@@ -1469,12 +1469,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
        set_freq (2, IF_2 + lf);                 // Scanning LO up to IF2
        set_freq (3, IF_2 - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
-       set_freq (1, 433800000);                 // Second IF fixe in Ultra SA mode
+       set_freq (SI4432_LO, 433800000);                 // Second IF fixe in Ultra SA mode
 #else
        if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
-         set_freq (1, local_IF-lf);                                                 // set LO SI4432 to below IF frequency
+         set_freq (SI4432_LO, local_IF-lf);                                                 // set LO SI4432 to below IF frequency
        else
-         set_freq (1, local_IF+lf);                                                 // otherwise to above IF
+         set_freq (SI4432_LO, local_IF+lf);                                                 // otherwise to above IF
 #endif
     }
 
@@ -1864,7 +1864,7 @@ sweep_again:                                // stay in sweep loop when output mo
     if (changed){
       PE4302_Write_Byte((int) get_attenuation() * 2);
       redraw_request |= REDRAW_CAL_STATUS;
-      SI4432_Sel = 0;
+      SI4432_Sel = SI4432_RX ;
       if (setting.atten_step) {
         set_switch_transmit();          // This should never happen
       } else {

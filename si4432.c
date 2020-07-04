@@ -443,7 +443,7 @@ float SI4432_RSSI(uint32_t i, int s)
   int32_t RSSI_RAW;
   (void) i;
   // SEE DATASHEET PAGE 61
-#ifdef USE_SI4463
+#ifdef USE_SI4463           // Not used!!!!!!!
   if (SI4432_Sel == 2) {
     RSSI_RAW = Si446x_getRSSI();
   } else
@@ -591,21 +591,21 @@ void SI4432_Init()
 
 
   //DebugLine("IO set");
-  SI4432_Sel = 0;
+  SI4432_Sel = SI4432_RX;
   SI4432_Sub_Init();
 
-  SI4432_Sel = 1;
+  SI4432_Sel = SI4432_LO;
   SI4432_Sub_Init();
 //DebugLine("1 init done");
 
-  SI4432_Sel = 0;
+  SI4432_Sel = SI4432_RX;
 //  SI4432_Receive();// Enable receiver chain
 //  SI4432_Write_Byte(Si4432_CRYSTAL_OSC_LOAD_CAP, V0_XTAL_CAPACITANCE);// Tune the crystal
 //  SI4432_Set_Frequency(433800000);
   SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 output to ground
 
 
-  SI4432_Sel = 1;
+  SI4432_Sel = SI4432_LO;
 //  SI4432_Write_Byte(Si4432_CRYSTAL_OSC_LOAD_CAP, V1_XTAL_CAPACITANCE);// Tune the crystal
 //  SI4432_Set_Frequency(443800000);
   SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 output to ground
@@ -619,7 +619,7 @@ void SI4432_Init()
 
 void SI4432_SetReference(int freq)
 {
-  SI4432_Sel = 1;         //Select Lo module
+  SI4432_Sel = SI4432_LO;         //Select Lo module
   if (freq < 0 || freq > 7 ) {
     SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 to GND
   } else {

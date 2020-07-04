@@ -22,11 +22,11 @@
 
 #define __SI4432_H__
 //
-#define MAX_SI4432                         3
+#define MAX_SI4432                         2
 
 #define SI4432_RX                          0
-#define SI4432_LO_OUT                      1
-#define SI4432_DUMMY                       2
+#define SI4432_LO                          1
+// #define SI4432_DUMMY                       2     // never used
 
 #define SI4432_DEV_TYPE                    0x00
 #define SI4432_DEV_VERSION                 0x01
