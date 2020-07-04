@@ -553,14 +553,12 @@ extern const menuitem_t  menu_topultra[];
   case 0:
 //    if (setting.mode != M_LOW)
 //      set_mode(M_LOW);
-    menu_move_back();
-    ui_mode_normal();
+    menu_move_back_and_leave_ui();
     break;
   case 1:
 //    if (setting.mode != M_HIGH)
 //      set_mode(M_HIGH);
-    menu_move_back();
-    ui_mode_normal();
+    menu_move_back_and_leave_ui();
     break;
   case 2:
     menu_push_submenu(menu_lowoutputmode);
@@ -588,8 +586,7 @@ void menu_load_preset_cb(int item, uint8_t data)
       return;
      }
   }
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
 }
 
 void menu_store_preset_cb(int item, uint8_t data)
@@ -601,8 +598,7 @@ void menu_store_preset_cb(int item, uint8_t data)
     data = 0;
   }
   caldata_save(data);
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
 }
 
 
@@ -636,8 +632,7 @@ static void menu_calibrate_cb(int item, uint8_t data)
   switch (item) {
   case 1:
     sweep_mode = SWEEP_CALIBRATE;
-    menu_move_back();
-    ui_mode_normal();
+    menu_move_back_and_leave_ui();
     break;
   case 2:
     reset_calibration();
@@ -672,8 +667,7 @@ static void menu_config_cb(int item, uint8_t data)
     break;
   case 2:
     sweep_mode = 0;         // Suspend sweep to save time
-    menu_move_back();
-    ui_mode_normal();
+    menu_move_back_and_leave_ui();
     setting.test = 0;
     setting.test_argument = 0;
     sweep_mode = SWEEP_SELFTEST;
@@ -868,8 +862,7 @@ static void menu_atten_cb(int item, uint8_t data)
   (void)item;
   (void)data;
   set_auto_attenuation();
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
 }
 
 static void menu_atten_high_cb(int item, uint8_t data)
@@ -877,8 +870,7 @@ static void menu_atten_high_cb(int item, uint8_t data)
   (void)item;
   setting.auto_attenuation = false;
   set_attenuation(data);
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
 }
 
 static void menu_reflevel_cb(int item, uint8_t data)
@@ -886,8 +878,7 @@ static void menu_reflevel_cb(int item, uint8_t data)
   (void)item;
   (void)data;
   set_auto_reflevel(true);
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
 }
 
 static void menu_storage_cb(int item, uint8_t data)
@@ -910,8 +901,7 @@ static void menu_storage_cb(int item, uint8_t data)
       toggle_waterfall();
       break;
   }
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
 //  draw_cal_status();
 }
 
@@ -919,8 +909,7 @@ static void menu_average_cb(int item, uint8_t data)
 {
   (void)data;
   set_average(item);
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
   redraw_request |= REDRAW_CAL_STATUS;
 }
 
@@ -979,17 +968,14 @@ static void menu_rbw_cb(int item, uint8_t data)
 {
   (void)item;
   set_RBW(rbwsel_x10[data]);
-  menu_move_back();
-  ui_mode_normal();
-//  draw_cal_status();
+  menu_move_back_and_leave_ui();
 }
 
 static void menu_unit_cb (int item, uint8_t data)
 {
   (void)item;
   set_unit(data);
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
 }
 
 enum {
@@ -1001,9 +987,7 @@ static void menu_scale_per_cb(int item, uint8_t data)
 {
   (void)item;
   set_scale(menu_scale_per_value[data]);
-  menu_move_back();
-  ui_mode_normal();
-//  draw_cal_status();
+  menu_move_back_and_leave_ui();
 }
 
 static void menu_trigger_cb(int item, uint8_t data)

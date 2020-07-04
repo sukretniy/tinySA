@@ -129,6 +129,7 @@ static void ui_process_keypad(void);
 static void ui_process_numeric(void);
 static void choose_active_marker(void);
 static void menu_move_back(void);
+static void menu_move_back_and_leave_ui(void);
 static void menu_push_submenu(const menuitem_t *submenu);
 //static const menuitem_t menu_marker_type[];
 
@@ -767,8 +768,7 @@ menu_marker_op_cb(int item, uint8_t data)
     break;
 #endif
   }
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
   redraw_request |= REDRAW_CAL_STATUS;
   //redraw_all();
 }
@@ -1143,6 +1143,18 @@ menu_move_back(void)
   }
 
   draw_menu();
+}
+
+static void
+menu_move_back_and_leave_ui(void)
+{
+  if (menu_current_level == 0)
+    return;
+  menu_current_level--;
+  if (selection >= 0)
+    selection = 0;
+  ensure_selection();
+  ui_mode_normal();
 }
 
 static void
