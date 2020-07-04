@@ -299,7 +299,7 @@ void set_repeat(int r)
 {
   if (r > 0 && r <= 100) {
     setting.repeat = r;
-    dirty = true;
+//    dirty = true;             // No HW update required, only status panel refresh
   }
 }
 
@@ -421,7 +421,7 @@ void set_storage(void)
     stored_t[i] = actual_t[i];
   setting.show_stored = true;
   trace[TRACE_STORED].enabled = true;
-  dirty = true;
+  //dirty = true;             // No HW update required, only status panel refresh
 }
 
 void set_clear_storage(void)
@@ -429,7 +429,7 @@ void set_clear_storage(void)
   setting.show_stored = false;
   setting.subtract_stored = false;
   trace[TRACE_STORED].enabled = false;
-  dirty = true;
+  // dirty = true;             // No HW update required, only status panel refresh
 }
 
 void set_subtract_storage(void)
@@ -442,7 +442,7 @@ void set_subtract_storage(void)
   } else {
     setting.subtract_stored = false;
   }
-  dirty = true;
+  //dirty = true;             // No HW update required, only status panel refresh
 }
 
 
@@ -456,7 +456,7 @@ void toggle_normalize(void)
   } else {
     setting.subtract_stored = false;
   }
-  dirty = true;
+  //dirty = true;             // No HW update required, only status panel refresh
 }
 
 
@@ -474,7 +474,7 @@ void set_actual_power(float o)              // Set peak level to known value
     config.low_level_offset = new_offset;
 #endif
   }
-  dirty = true;
+  // dirty = true;             // No HW update required, only status panel refresh
 }
 
 int get_level_offset(void)
@@ -562,7 +562,7 @@ void set_average(int v)
 {
   setting.average = v;
   trace[TRACE_TEMP].enabled = (v != 0);
-  dirty = true;
+  //dirty = true;             // No HW update required, only status panel refresh
 }
 
 void toggle_LNA(void)
@@ -635,7 +635,7 @@ void set_unit(int u)
   }
   plot_into_index(measured);
   redraw_request|=REDRAW_AREA;
-  dirty = true;
+  //dirty = true;             // No HW update required, only status panel refresh
 }
 float const unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
 const char * const unit_scale_text[]= {"","m", "\035",     "n",        "p"};
@@ -733,14 +733,14 @@ void set_offset(float offset)
 {
   setting.offset = offset;
   force_set_markmap();
-  dirty = true;
+  //dirty = true;             // No HW update required, only status panel refresh
 }
 
 void set_trigger_level(float trigger_level)
 {
   setting.trigger_level = trigger_level;
   redraw_request |= REDRAW_TRIGGER;
-  dirty = true;
+  //dirty = true;             // No HW update required, only status panel refresh
 }
 
 void set_trigger(int trigger)
@@ -752,7 +752,8 @@ void set_trigger(int trigger)
     redraw_request |= REDRAW_TRIGGER;
     sweep_mode = SWEEP_ENABLE;
   }
-  dirty = true;
+  redraw_request|=REDRAW_TRIGGER;
+  //dirty = true;             // No HW update required, only status panel refresh
 }
 
 
