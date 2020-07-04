@@ -634,7 +634,7 @@ void set_unit(int u)
       setting.lna = S_AUTO_OFF;
   }
   plot_into_index(measured);
-  force_set_markmap();
+  redraw_request|=REDRAW_AREA;
   dirty = true;
 }
 float const unit_scale_value[]={1,0.001,0.000001,0.000000001,0.000000000001};
@@ -648,7 +648,7 @@ void user_set_reflevel(float level)
     set_reflevel(setting.scale*NGRIDY);
   } else
     set_reflevel(level);
-  force_set_markmap();
+  redraw_request|=REDRAW_AREA;
 }
 
 void set_reflevel(float level)
@@ -669,12 +669,8 @@ void set_reflevel(float level)
     setting.unit_scale_index++;
   }
   setting.unit_scale = unit_scale_value[setting.unit_scale_index];
-
   setting.reflevel = level;
-  set_trace_refpos(0, /* NGRIDY - */ level /* / get_trace_scale(0) */);
-  set_trace_refpos(1, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
-  set_trace_refpos(2, /* NGRIDY - */ level /* / get_trace_scale(0) */ );
-  redraw_request |= REDRAW_CELLS | REDRAW_CAL_STATUS;
+  set_trace_refpos(level);
 //  dirty = true;
 }
 
@@ -688,9 +684,7 @@ void round_reflevel_to_scale(void) {
 
   }
   setting.reflevel = multi*setting.scale;
-  set_trace_refpos(0,setting.reflevel);
-  set_trace_refpos(1,setting.reflevel);
-  set_trace_refpos(2,setting.reflevel);
+  set_trace_refpos(setting.reflevel);
 }
 
 void user_set_scale(float s)
@@ -730,11 +724,8 @@ void set_scale(float t) {
     t = 1.0;
   t = t*m;
   setting.scale = t;
-  set_trace_scale(0, t);
-  set_trace_scale(1, t);
-  set_trace_scale(2, t);
+  set_trace_scale(t);
   round_reflevel_to_scale();
-  redraw_request |= REDRAW_CELLS | REDRAW_CAL_STATUS;
 }
 
 
@@ -1923,7 +1914,6 @@ sweep_again:                                // stay in sweep loop when output mo
           set_scale(r / NGRIDY);
           set_reflevel(setting.scale*NGRIDY);
           //         dirty = false;                        // Prevent reset of SI4432
-          redraw_request |= REDRAW_CAL_STATUS;
         }
       }
     } else {
@@ -1931,15 +1921,12 @@ sweep_again:                                // stay in sweep loop when output mo
       float s_ref = setting.reflevel/setting.scale;
       if (s_r < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
         set_reflevel(setting.scale*(floor(s_r)+1));
-        redraw_request |= REDRAW_CAL_STATUS;
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }else if (s_r > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
         set_reflevel(setting.reflevel + setting.scale);
-        redraw_request |= REDRAW_CAL_STATUS;
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       } else if (s_min < s_ref - 10.1 && s_r < s_ref -  1.5) { // minimum to low and maximum can move up
         set_reflevel(setting.reflevel - setting.scale);
-        redraw_request |= REDRAW_CAL_STATUS;
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }
       //     dirty = false;                        // Prevent reset of SI4432

@@ -421,8 +421,8 @@ int get_level_offset(void);
 
 void set_trace_type(int t, int type);
 void set_trace_channel(int t, int channel);
-void set_trace_scale(int t, float scale);
-void set_trace_refpos(int t, float refpos);
+void set_trace_scale(float scale);
+void set_trace_refpos(float refpos);
 float get_trace_scale(int t);
 float get_trace_refpos(int t);
 const char *get_trace_typename(int t);
@@ -520,7 +520,7 @@ extern volatile uint8_t redraw_request;
 #define DEFAULT_TRACE_1_COLOR       RGB565(255,  0,  0)  /* RGB565(255,255,  0) */
 #define DEFAULT_TRACE_2_COLOR       RGB565(  0,255,  0)/* RGB565(  0,255,255) */
 #define DEFAULT_TRACE_3_COLOR       RGB565(255,255,  0)/* RGB565(  0,255,  0) */
-#define DEFAULT_TRIGGER_COLOR       RGB565(  0,0  ,255)/* RGB565(  0,190,  0) */
+#define DEFAULT_TRIGGER_COLOR       RGB565(  0,  0,255)/* RGB565(  0   0,255) */
 //#define DEFAULT_TRACE_4_COLOR       RGB565(255,  0,255)
 #define DEFAULT_NORMAL_BAT_COLOR    RGB565( 31,227,  0)
 #define DEFAULT_LOW_BAT_COLOR       RGB565(255,  0,  0)

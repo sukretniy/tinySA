@@ -1711,11 +1711,13 @@ void set_trace_channel(int t, int channel)
   }
 }
 
-void set_trace_scale(int t, float scale)
+void set_trace_scale(float scale)
 {
-  if (trace[t].scale != scale) {
-    trace[t].scale = scale;
-    force_set_markmap();
+  if (trace[TRACE_ACTUAL].scale != scale){
+    trace[TRACE_ACTUAL].scale = scale;
+    trace[TRACE_STORED].scale = scale;
+    trace[TRACE_TEMP].scale = scale;
+    redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
   }
 }
 
@@ -1724,11 +1726,13 @@ float get_trace_scale(int t)
   return trace[t].scale;
 }
 
-void set_trace_refpos(int t, float refpos)
+void set_trace_refpos(float refpos)
 {
-  if (trace[t].refpos != refpos) {
-    trace[t].refpos = refpos;
-    force_set_markmap();
+  if (trace[TRACE_ACTUAL].refpos != refpos){
+    trace[TRACE_ACTUAL].refpos = refpos;
+    trace[TRACE_STORED].refpos = refpos;
+    trace[TRACE_TEMP].refpos = refpos;
+    redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
   }
 }
 
