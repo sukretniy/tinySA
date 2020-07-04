@@ -1012,7 +1012,7 @@ static void menu_trigger_cb(int item, uint8_t data)
   set_trigger(data);
 //  menu_move_back();
   ui_mode_normal();
-  redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+  redraw_request |= REDRAW_CAL_STATUS;
   completed = true;
 }
 
