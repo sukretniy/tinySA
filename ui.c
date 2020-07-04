@@ -195,71 +195,74 @@ static int btn_wait_release(void)
   }
 }
 
+// ADC read count for measure X and Y (better be 2^n)
+#define TOUCH_MEASURE_COUNT 8
 static int
 touch_measure_y(void)
 {
-  int v;
+  int v = 0, i = TOUCH_MEASURE_COUNT;
   // open Y line
-  palSetPadMode(GPIOB, 1, PAL_MODE_INPUT_PULLDOWN );
-  palSetPadMode(GPIOA, 7, PAL_MODE_INPUT_PULLDOWN );
+  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_INPUT_PULLDOWN);
+  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_INPUT_PULLDOWN);
   // drive low to high on X line
-  palSetPadMode(GPIOB, 0, PAL_MODE_OUTPUT_PUSHPULL );
-  palClearPad(GPIOB, 0);
-  palSetPadMode(GPIOA, 6, PAL_MODE_OUTPUT_PUSHPULL );
-  palSetPad(GPIOA, 6);
+  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_OUTPUT_PUSHPULL);
+  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_OUTPUT_PUSHPULL);
+  // drive low to high on X line (coordinates from left to right)
+  palClearPad(GPIOB, GPIOB_XN);
+  palSetPad(GPIOA, GPIOA_XP);
 
-  chThdSleepMilliseconds(2);
-  v = adc_single_read(ADC_CHSELR_CHSEL7);
-  //chThdSleepMilliseconds(2);
-  //v += adc_single_read(ADC1, ADC_CHSELR_CHSEL7);
-  return v;
+  do{
+    v+= adc_single_read(ADC_TOUCH_Y);
+  }while(--i);
+  return v/TOUCH_MEASURE_COUNT;
 }
 
 static int
 touch_measure_x(void)
 {
-  int v;
-  // open X line
-  palSetPadMode(GPIOB, 0, PAL_MODE_INPUT_PULLDOWN );
-  palSetPadMode(GPIOA, 6, PAL_MODE_INPUT_PULLDOWN );
-  // drive low to high on Y line
-  palSetPadMode(GPIOB, 1, PAL_MODE_OUTPUT_PUSHPULL );
-  palSetPad(GPIOB, 1);
-  palSetPadMode(GPIOA, 7, PAL_MODE_OUTPUT_PUSHPULL );
-  palClearPad(GPIOA, 7);
+  int v = 0, i = TOUCH_MEASURE_COUNT;
+  // Set X line as input
+  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_INPUT_PULLDOWN);
+  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_INPUT_PULLDOWN);
+  // Set Y line as output
+  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_OUTPUT_PUSHPULL);
+  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_OUTPUT_PUSHPULL);
+  // drive high to low on Y line (coordinates from bottom to top)
+  palSetPad(GPIOB, GPIOB_YN);
+  palClearPad(GPIOA, GPIOA_YP);
 
-  chThdSleepMilliseconds(2);
-  v = adc_single_read(ADC_CHSELR_CHSEL6);
-  //chThdSleepMilliseconds(2);
-  //v += adc_single_read(ADC1, ADC_CHSELR_CHSEL6);
-  return v;
+  do{
+    v+= adc_single_read(ADC_TOUCH_X);
+  }while(--i);
+  return v/TOUCH_MEASURE_COUNT;
 }
 
 void
 touch_prepare_sense(void)
 {
-  // open Y line
-  palSetPadMode(GPIOB, 1, PAL_MODE_INPUT_PULLDOWN );
-  palSetPadMode(GPIOA, 7, PAL_MODE_INPUT_PULLDOWN );
+  // Set Y line as input
+  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_INPUT_PULLDOWN);
+  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_INPUT_PULLDOWN);
   // force high X line
-  palSetPadMode(GPIOB, 0, PAL_MODE_OUTPUT_PUSHPULL );
-  palSetPad(GPIOB, 0);
-  palSetPadMode(GPIOA, 6, PAL_MODE_OUTPUT_PUSHPULL );
-  palSetPad(GPIOA, 6);
+  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_OUTPUT_PUSHPULL);
+  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_OUTPUT_PUSHPULL);
+  // drive high on X line (for touch sense on Y)
+  palSetPad(GPIOB, GPIOB_XN);
+  palSetPad(GPIOA, GPIOA_XP);
 }
 
 void
 touch_start_watchdog(void)
 {
   touch_prepare_sense();
-  adc_start_analog_watchdogd(ADC_CHSELR_CHSEL7);
+  adc_start_analog_watchdogd(ADC_TOUCH_Y);
 }
 
 static int
 touch_status(void)
 {
   touch_prepare_sense();
-  return adc_single_read(ADC_CHSELR_CHSEL7) > TOUCH_THRESHOLD;
+  return adc_single_read(ADC_TOUCH_Y) > TOUCH_THRESHOLD;
 }
 
 static int
@@ -267,7 +270,7 @@ touch_check(void)
 {
   int stat = touch_status();
   if (stat) {
-    chThdSleepMilliseconds(10);
+//    chThdSleepMilliseconds(10);
     int x = touch_measure_x();
     int y = touch_measure_y();
     if (touch_status()) {
