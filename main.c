@@ -133,7 +133,7 @@ static THD_FUNCTION(Thread1, arg)
   ui_process();
 
   while (1) {
-  START_PROFILE
+//  START_PROFILE
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
 //      if (dirty)
         completed = sweep(true);
@@ -152,7 +152,7 @@ static THD_FUNCTION(Thread1, arg)
 //      if (setting.mode != -1)
         __WFI();
     }
-  STOP_PROFILE
+//  STOP_PROFILE
     // Run Shell command in sweep thread
     if (shell_function) {
       operation_requested = OP_NONE; // otherwise commands  will be aborted
