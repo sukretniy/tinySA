@@ -34,10 +34,10 @@ int waterfall = false;
 int fullscreen = true;
 #endif
 static void cell_draw_marker_info(int x0, int y0);
+static void cell_grid_line_info(int x0, int y0);
 static void draw_battery_status(void);
 static void update_waterfall(void);
 void cell_draw_test_info(int x0, int y0);
-void frequency_string(char *buf, size_t len, int32_t freq);
 
 static int16_t grid_offset;
 static int16_t grid_width;
@@ -908,7 +908,6 @@ static void trace_get_value_string(
   plot_printf(&buf2[1], sizeof(buf2) -1, "%.8qHz" , dfreq);
   }
 #endif
-  //  frequency_string(&buf2[1], sizeof(buf2) -1, dfreq);
     v = value(coeff[i]);
     if (mtype & M_NOISE)
       v = v - 10*log10(actual_rbw_x10*100.0);
@@ -1503,6 +1502,12 @@ draw_cell(int m, int n)
           cell_buffer[tp * CELLWIDTH + x] = DEFAULT_TRIGGER_COLOR;
   }
 
+#if 1
+  // Only right cells
+  if (m >= (GRID_X_TEXT)/CELLWIDTH)
+    cell_grid_line_info(x0, y0);
+#endif
+
 // Draw traces (50-600 system ticks for all screen calls, depend from lines
 // count and size)
 #if 1
@@ -1939,6 +1944,25 @@ cell_draw_marker_info(int x0, int y0)
 
 extern float temppeakLevel;
 
+static void cell_grid_line_info(int x0, int y0)
+{
+  char buf[32];
+  int xpos = GRID_X_TEXT - x0;
+  int ypos = 0 - y0 + 2;
+  ili9341_set_foreground(DEFAULT_GRID_COLOR);
+  float   ref = get_trace_refpos(TRACE_ACTUAL);
+  float scale = get_trace_scale(TRACE_ACTUAL);;
+  for (int i = 0; i < NGRIDY; i++){
+    if (ypos >= CELLHEIGHT) break;
+    if (ypos >= -FONT_GET_HEIGHT){
+      plot_printf(buf, sizeof buf, "% .2F", ref);
+      cell_drawstring(buf, xpos, ypos);
+    }
+    ypos+=GRIDY;
+    ref+=scale;
+  }
+}
+
 static void cell_draw_marker_info(int x0, int y0)
 {
   char buf[32];
@@ -2049,43 +2073,6 @@ static void cell_draw_marker_info(int x0, int y0)
       j++;
    }
   }
-}
-void frequency_string(char *buf, size_t len, int32_t freq)
-{
-  if (freq < 0) {
-    freq = -freq;
-    *buf++ = '-';
-    len -= 1;
-  }
-#ifdef __VNA__
-  if (freq < 1000) {
-    plot_printf(buf, len, "%d Hz", (int)freq);
-  } else if (freq < 1000000) {
-    plot_printf(buf, len, "%d.%03d kHz",
-             (int)(freq / 1000),
-             (int)(freq % 1000));
-  } else {
-    plot_printf(buf, len, "%d.%03d %03d MHz",
-             (int)(freq / 1000000),
-             (int)((freq / 1000) % 1000),
-             (int)(freq % 1000));
-  }
-#endif
-#ifdef __SA__
-/*
-  if (freq < 1000) {
-    plot_printf(buf, len, "%dHz", (int)freq);
-  } else if (freq < 1000000) {
-    plot_printf(buf, len, "%d.%03dkHz",
-             (int)(freq / 1000),
-             (int)(freq % 1000));
-  } else
-*/  {
-    plot_printf(buf, len, "%d.%03",
-             (int)(freq / 1000000),
-             (int)((freq / 1000) % 1000));
-  }
-#endif
 }
 
 void
