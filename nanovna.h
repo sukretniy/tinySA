@@ -520,7 +520,7 @@ extern volatile uint8_t redraw_request;
 #define DEFAULT_TRACE_1_COLOR       RGB565(255,  0,  0)  /* RGB565(255,255,  0) */
 #define DEFAULT_TRACE_2_COLOR       RGB565(  0,255,  0)/* RGB565(  0,255,255) */
 #define DEFAULT_TRACE_3_COLOR       RGB565(255,255,  0)/* RGB565(  0,255,  0) */
-#define DEFAULT_TRIGGER_COLOR       RGB565(  0,190,  0)/* RGB565(  0,190,  0) */
+#define DEFAULT_TRIGGER_COLOR       RGB565(  0,0  ,255)/* RGB565(  0,190,  0) */
 //#define DEFAULT_TRACE_4_COLOR       RGB565(255,  0,255)
 #define DEFAULT_NORMAL_BAT_COLOR    RGB565( 31,227,  0)
 #define DEFAULT_LOW_BAT_COLOR       RGB565(255,  0,  0)
