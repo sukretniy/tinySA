@@ -34,7 +34,7 @@
 
 // Enable [flags], support:
 // ' ' Prepends a space for positive signed-numeric types. positive = ' ', negative = '-'. This flag is ignored if the + flag exists.
-//#define CHPRINTF_USE_SPACE_FLAG
+#define CHPRINTF_USE_SPACE_FLAG
 
 // Force putting trailing zeros on float value
 #define CHPRINTF_FORCE_TRAILING_ZEROS
