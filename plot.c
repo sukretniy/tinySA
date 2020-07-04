@@ -23,6 +23,11 @@
 #include "chprintf.h"
 #include "nanovna.h"
 
+
+#pragma GCC push_options
+// #pragma GCC optimize ("O2")      // Makes the code just a bit faster, disable during debugging.
+
+
 #ifdef __SCROLL__
 uint16_t _grid_y = NOSCROLL_GRIDY;
 int waterfall = false;
@@ -454,6 +459,10 @@ draw_on_strut(int v0, int d, int color)
 }
 #endif
 
+#define SQRT_50 ((float)7.0710678118654)
+#define LOG_10_SQRT_50 ((float)0.84948500216800)
+#define POW_30_20   ((float) 0.215443469)
+#define POW_SQRT    1.5234153789
 /*
  * calculate log10(abs(gamma))
  */ 
@@ -463,13 +472,16 @@ value(const float v)
   switch(setting.unit)
   {
   case U_DBMV:
-    return v + 30.0 + 20.0*log10(sqrt(50));
+//    return v + 30.0 + 20.0*log10(sqrt(50));
+    return v + 30.0 + 20.0*LOG_10_SQRT_50;     //TODO convert constants to single float number as GCC compiler does runtime calculation
     break;
   case U_DBUV:
-    return v + 90.0 + 20.0*log10(sqrt(50.0));
+//    return v + 90.0 + 20.0*log10(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
+    return v + 90.0 + 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
     return pow(10, (v-30.0)/20.0) * sqrt(50.0);
+//    return pow(10, v/20.0) * POW_SQRT;      //TODO there is an error in this calculation as the outcome is different from the not optimized version
     break;
   case U_WATT:
     return pow(10, v/10.0)/1000.0;
@@ -1370,6 +1382,7 @@ void
 plot_into_index(measurement_t measured)
 {
   int t, i;
+//  START_PROFILE
   for (t = 0; t < TRACES_MAX; t++) {
     if (!trace[t].enabled)
       continue;
@@ -1378,6 +1391,7 @@ plot_into_index(measurement_t measured)
     for (i = 0; i < sweep_points; i++)
       index[i] = trace_into_index(t, i, measured[ch]);
   }
+//  STOP_PROFILE
 #if 0
   for (t = 0; t < TRACES_MAX; t++)
     if (trace[t].enabled && trace[t].polar)
@@ -2295,3 +2309,6 @@ plot_init(void)
 {
   force_set_markmap();
 }
+
+
+#pragma GCC pop_options

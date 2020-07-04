@@ -96,6 +96,7 @@ void reset_settings(int m)
   setting.auto_IF = true;
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
+  setting.trigger_direction = T_UP;
   setting.level_sweep = 0.0;
   setting.level = -15.0;
   setting.trigger_level = -150.0;
@@ -753,9 +754,13 @@ void set_trigger_level(float trigger_level)
 
 void set_trigger(int trigger)
 {
-  setting.trigger = trigger;
-  redraw_request |= REDRAW_TRIGGER;
-  sweep_mode = SWEEP_ENABLE;
+  if (trigger == T_UP || trigger == T_DOWN){
+    setting.trigger_direction = trigger;
+  } else {
+    setting.trigger = trigger;
+    redraw_request |= REDRAW_TRIGGER;
+    sweep_mode = SWEEP_ENABLE;
+  }
   dirty = true;
 }
 
@@ -1552,8 +1557,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       data_level = subRSSI < setting.trigger_level ? T_LEVEL_BELOW : T_LEVEL_ABOVE;
 
       // wait for rising edge
-      if (!(prev_data_level == T_LEVEL_BELOW &&
-            data_level == T_LEVEL_ABOVE))                                    // trigger level change
+      if (setting.trigger_direction == T_UP && !(prev_data_level == T_LEVEL_BELOW && data_level == T_LEVEL_ABOVE))                                    // trigger level change
+        goto wait;                                                           // get next rssi
+      if (setting.trigger_direction == T_DOWN && !(prev_data_level == T_LEVEL_ABOVE && data_level == T_LEVEL_BELOW))                                    // trigger level change
         goto wait;                                                           // get next rssi
 #ifdef __FAST_SWEEP__
       if (setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {

@@ -609,6 +609,7 @@ typedef struct setting
   int8_t unit;
   float offset;
   float trigger_level;
+  int trigger_direction;
   int trigger;
   int linearity_step;
   float level;
@@ -901,6 +902,6 @@ enum {
 };
 
 enum {
-  T_AUTO, T_NORMAL, T_SINGLE, T_DONE
+  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN
 };
 /*EOF*/

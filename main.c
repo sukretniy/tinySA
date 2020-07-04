@@ -167,6 +167,7 @@ static THD_FUNCTION(Thread1, arg)
       }
       continue;
     }
+//    START_PROFILE
     // Process UI inputs
     if (!(sweep_mode & SWEEP_SELFTEST))
       ui_process();
@@ -191,7 +192,9 @@ static THD_FUNCTION(Thread1, arg)
     // plot trace and other indications as raster
     draw_all(completed);  // flush markmap only if scan completed to prevent
                           // remaining traces
+//    STOP_PROFILE
   }
+
 }
 
 int
