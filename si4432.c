@@ -124,7 +124,8 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
   }while(--size);
 }
 #endif
-const int SI_nSEL[3] = { GPIO_RX_SEL, GPIO_LO_SEL, 0}; // #3 is dummy!!!!!!
+
+const uint16_t SI_nSEL[MAX_SI4432] = { GPIO_RX_SEL, GPIO_LO_SEL, 0}; // #3 is dummy!!!!!!
 
 volatile int SI4432_Sel = 0;         // currently selected SI4432
 // volatile int SI4432_guard = 0;
@@ -398,7 +399,7 @@ int SI4432_is_fast_mode(void)
 void SI4432_Fill(int s, int start)
 {
   SI4432_Sel = s;
-  int sel = SI_nSEL[SI4432_Sel];
+  uint16_t sel = SI_nSEL[SI4432_Sel];
 #if 0
   uint32_t t = calc_min_sweep_time_us(); // Time to delay in uS for all sweep
   if (t < setting.sweep_time_us){
@@ -657,8 +658,12 @@ void PE4302_shiftOut(uint8_t val)
      }
 }
 #endif
-void PE4302_Write_Byte(unsigned char DATA )
+
+static unsigned char old_attenuation = 0;
+bool PE4302_Write_Byte(unsigned char DATA )
 {
+  if (old_attenuation == DATA)
+    return false;
 //  chThdSleepMicroseconds(PE4302_DELAY);
   SPI2_CLK_LOW;
 //  chThdSleepMicroseconds(PE4302_DELAY);
@@ -670,7 +675,7 @@ void PE4302_Write_Byte(unsigned char DATA )
 //  chThdSleepMicroseconds(PE4302_DELAY);
   CS_PE_LOW;
 //  chThdSleepMicroseconds(PE4302_DELAY);
-
+  return true;
 }
 
 #endif

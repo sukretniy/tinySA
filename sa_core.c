@@ -857,8 +857,8 @@ uint32_t peakFreq;
 int peakIndex;
 float temppeakLevel;
 int temppeakIndex;
-static unsigned long old_freq[4] = { 0, 0, 0, 0 };
-static unsigned long real_old_freq[4] = { 0, 0, 0, 0 };
+static unsigned long old_freq[4] = { 0, 0, 0, 0};
+static unsigned long real_old_freq[4] = { 0, 0, 0, 0};
 // volatile int t;
 
 //static uint32_t extra_vbw_step_time = 0;
@@ -1785,7 +1785,7 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.trigger == T_SINGLE)
         pause_sweep();                    // Stop scanning after completing this sweep if above trigger
     }
-    scandirty = true;                // To show trigger happened
+//    scandirty = true;                // To show trigger happened
   }
 
   // ---------------------- process measured actual sweep time -----------------
@@ -1847,8 +1847,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
-    float old_attenuate = get_attenuation();
-    float actual_max_level = actual_t[max_index[0]] - old_attenuate;
+    float actual_max_level = actual_t[max_index[0]] - get_attenuation();
     if (actual_max_level < - 31 && setting.attenuate >= 10) {
       setting.attenuate -= 10.0;
     } else if (actual_max_level < - 26 && setting.attenuate >= 5) {
@@ -1856,9 +1855,9 @@ sweep_again:                                // stay in sweep loop when output mo
     } else if (actual_max_level > - 19 && setting.attenuate <= 20) {
       setting.attenuate += 10.0;
     }
-    if (old_attenuate != get_attenuation()) {
+    // Try update settings
+    if (PE4302_Write_Byte((int) get_attenuation() * 2)) {
       redraw_request |= REDRAW_CAL_STATUS;
-      PE4302_Write_Byte((int)(setting.attenuate * 2));
       SI4432_Sel = 0;
       if (setting.atten_step) {
         set_switch_transmit();          // This should never happen
