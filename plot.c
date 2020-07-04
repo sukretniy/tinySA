@@ -1024,6 +1024,17 @@ markmap_upperarea(void)
   invalidate_rect(0, 0, AREA_WIDTH_NORMAL, 31);
 }
 
+static uint16_t get_trigger_level(void){
+  index_t idx = trace_into_index(TRACE_ACTUAL, 0, &setting.trigger_level);
+  return CELL_Y(idx);
+}
+
+static inline void
+markmap_trigger_area(void){
+  uint16_t tp = get_trigger_level();
+  markmap[current_mappage][tp/CELLWIDTH] = 0xFFFF;
+}
+
 //
 // in most cases _compute_outcode clip calculation not give render line speedup
 //
@@ -1469,6 +1480,15 @@ draw_cell(int m, int n)
 #endif
 //  PULSE;
 #endif
+// Draw trigger line
+  if (setting.trigger != T_AUTO) {
+    int tp = get_trigger_level() - y0;
+    if (tp>=0 && tp < h)
+      for (x = 0; x < w; x++)
+        if (x + x0 >= CELLOFFSETX && x + x0 <= WIDTH + CELLOFFSETX)
+          cell_buffer[tp * CELLWIDTH + x] = DEFAULT_TRIGGER_COLOR;
+  }
+
 // Draw traces (50-600 system ticks for all screen calls, depend from lines
 // count and size)
 #if 1
@@ -1603,7 +1623,9 @@ draw_all(bool flush)
     force_set_markmap();
   if (redraw_request & REDRAW_MARKER)
     markmap_upperarea();
-  if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_AREA)){
+  if (redraw_request & REDRAW_TRIGGER)
+    markmap_trigger_area();
+  if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_AREA | REDRAW_TRIGGER)){
     draw_all_cells(flush);
 #ifdef __SCROLL__
   //  START_PROFILE

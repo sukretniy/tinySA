@@ -744,30 +744,17 @@ void set_offset(float offset)
   dirty = true;
 }
 
-void show_stored_trace_at(float v)
-{
-  for (int j = 0; j < setting._sweep_points; j++)
-    stored_t[j] = v;
-  trace[TRACE_STORED].enabled = true;
-}
-
 void set_trigger_level(float trigger_level)
 {
   setting.trigger_level = trigger_level;
-  if (setting.trigger != T_AUTO) {
-    show_stored_trace_at(setting.trigger_level);
-  }
+  redraw_request |= REDRAW_TRIGGER;
   dirty = true;
 }
 
 void set_trigger(int trigger)
 {
   setting.trigger = trigger;
-  if (trigger == T_AUTO) {
-    trace[TRACE_STORED].enabled = false;
-  } else {
-    show_stored_trace_at(setting.trigger_level);
-  }
+  redraw_request |= REDRAW_TRIGGER;
   sweep_mode = SWEEP_ENABLE;
   dirty = true;
 }
