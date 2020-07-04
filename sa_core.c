@@ -2421,7 +2421,7 @@ void draw_cal_status(void)
 
   // Trigger
   if (setting.trigger != T_AUTO) {
-    if (is_paused()) {
+    if (is_paused() || setting.trigger == T_NORMAL) {
       ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     } else {
       ili9341_set_foreground(BRIGHT_COLOR_RED);
