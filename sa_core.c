@@ -854,7 +854,7 @@ uint32_t peakFreq;
 int peakIndex;
 float temppeakLevel;
 int temppeakIndex;
-static unsigned long old_freq[MAX_SI4432] = { 0, 0, 0,;
+static unsigned long old_freq[MAX_SI4432] = { 0, 0, 0};
 static unsigned long real_old_freq[MAX_SI4432] = { 0, 0, 0};
 // volatile int t;
 
