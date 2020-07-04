@@ -1260,11 +1260,20 @@ menu_invoke(int item)
   }
 }
 
+#if 1
+#define KP_WIDTH                  ((LCD_WIDTH -  MENU_BUTTON_WIDTH) / 4)// numeric keypad button width
+#define KP_HEIGHT                 ((LCD_HEIGHT - NUM_INPUT_HEIGHT) / 4) // numeric keypad button height
+// Key x, y position (0 - 15) on screen
+#define KP_GET_X(posx)            ((posx) * KP_WIDTH)                   // numeric keypad left
+#define KP_GET_Y(posy)            ((posy) * KP_HEIGHT)                  // numeric keypad top
+#else
 #define KP_WIDTH     (LCD_HEIGHT/5)
 #define KP_HEIGHT    (LCD_HEIGHT/5)
 // Key x, y position (0 - 15) on screen
 #define KP_GET_X(posx) ((posx)*KP_WIDTH + (LCD_WIDTH-MENU_BUTTON_WIDTH-5-KP_WIDTH*4))
 #define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
+#endif
+
 #ifdef __VNA__
 // Key names
 #define KP_0          0

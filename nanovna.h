@@ -489,6 +489,7 @@ int marker_search_right_min(int from);
 #define REDRAW_MARKER     (1<<3)
 #define REDRAW_BATTERY    (1<<4)
 #define REDRAW_AREA       (1<<5)
+#define REDRAW_TRIGGER    (1<<6)
 extern volatile uint8_t redraw_request;
 
 /*
@@ -519,6 +520,7 @@ extern volatile uint8_t redraw_request;
 #define DEFAULT_TRACE_1_COLOR       RGB565(255,  0,  0)  /* RGB565(255,255,  0) */
 #define DEFAULT_TRACE_2_COLOR       RGB565(  0,255,  0)/* RGB565(  0,255,255) */
 #define DEFAULT_TRACE_3_COLOR       RGB565(255,255,  0)/* RGB565(  0,255,  0) */
+#define DEFAULT_TRIGGER_COLOR       RGB565(  0,190,  0)/* RGB565(  0,190,  0) */
 //#define DEFAULT_TRACE_4_COLOR       RGB565(255,  0,255)
 #define DEFAULT_NORMAL_BAT_COLOR    RGB565( 31,227,  0)
 #define DEFAULT_LOW_BAT_COLOR       RGB565(255,  0,  0)
@@ -869,7 +871,7 @@ void SI4432_SetReference(int freq);
 // Speed profile definition
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
 #define RESTART_PROFILE   time = chVTGetSystemTimeX();
-#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "%06d", (chVTGetSystemTimeX() - time));ili9341_drawstringV(string_buf, 1, 180);}
+#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "%06d", chVTGetSystemTimeX() - time);ili9341_drawstring(string_buf, 0, FREQUENCIES_YPOS);}
 #define DELTA_TIME (time = chVTGetSystemTimeX() - time)
 // Macros for convert define value to string
 #define STR1(x)  #x

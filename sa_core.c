@@ -745,19 +745,10 @@ void set_offset(float offset)
   dirty = true;
 }
 
-void show_stored_trace_at(float v)
-{
-  for (int j = 0; j < setting._sweep_points; j++)
-    stored_t[j] = v;
-  trace[TRACE_STORED].enabled = true;
-}
-
 void set_trigger_level(float trigger_level)
 {
   setting.trigger_level = trigger_level;
-  if (setting.trigger != T_AUTO) {
-    show_stored_trace_at(setting.trigger_level);
-  }
+  redraw_request |= REDRAW_TRIGGER;
   dirty = true;
 }
 
@@ -767,11 +758,7 @@ void set_trigger(int trigger)
     setting.trigger_direction = trigger;
   } else {
     setting.trigger = trigger;
-    if (trigger == T_AUTO) {
-      trace[TRACE_STORED].enabled = false;
-    } else {
-      show_stored_trace_at(setting.trigger_level);
-    }
+    redraw_request |= REDRAW_TRIGGER;
     sweep_mode = SWEEP_ENABLE;
   }
   dirty = true;
@@ -1575,9 +1562,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       if (setting.trigger_direction == T_DOWN && !(prev_data_level == T_LEVEL_ABOVE && data_level == T_LEVEL_BELOW))                                    // trigger level change
         goto wait;                                                           // get next rssi
 #ifdef __FAST_SWEEP__
-        if (i == 0 && setting.frequency_step == 0 && setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < ONE_SECOND_TIME) {
-           SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
-        }
+      if (setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+         SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
+      }
 #endif
       if (setting.trigger == T_SINGLE)
         pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
@@ -2204,7 +2191,7 @@ float my_round(float v)
   return v;
 }
 
-const char * const unit_string[] = { "dBm", "dBmV", "dBuV", "V", "W", "dBc", "dBc", "dBc", "Vc", "Wc" }; // unit + 5 is delta unit
+const char * const unit_string[] = { "dBm", "dBmV", "dB"S_MICRO"V", "V", "W", "dBc", "dBc", "dBc", "Vc", "Wc" }; // unit + 5 is delta unit
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
@@ -2225,7 +2212,7 @@ void draw_cal_status(void)
     rounding  = true;
   const char * const unit = unit_string[setting.unit];
 
-  ili9341_fill(0, 0, OFFSETX, LCD_HEIGHT-1, 0x0000);
+  ili9341_fill(0, 0, OFFSETX, HEIGHT_NOSCROLL, 0x0000);
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
     return;
   }
