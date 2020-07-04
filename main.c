@@ -133,7 +133,7 @@ static THD_FUNCTION(Thread1, arg)
   ui_process();
 
   while (1) {
-//  START_PROFILE
+  START_PROFILE
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
 //      if (dirty)
         completed = sweep(true);
@@ -152,7 +152,7 @@ static THD_FUNCTION(Thread1, arg)
 //      if (setting.mode != -1)
         __WFI();
     }
-//  STOP_PROFILE
+  STOP_PROFILE
     // Run Shell command in sweep thread
     if (shell_function) {
       operation_requested = OP_NONE; // otherwise commands  will be aborted
@@ -1696,7 +1696,7 @@ void set_trace_type(int t, int type)
   }
   if (force) {
     plot_into_index(measured);
-//    force_set_markmap();
+    force_set_markmap();
   }
 }
 
@@ -1704,7 +1704,7 @@ void set_trace_channel(int t, int channel)
 {
   if (trace[t].channel != channel) {
     trace[t].channel = channel;
-//    force_set_markmap();
+    force_set_markmap();
   }
 }
 
@@ -1712,7 +1712,7 @@ void set_trace_scale(int t, float scale)
 {
   if (trace[t].scale != scale) {
     trace[t].scale = scale;
-//    force_set_markmap();
+    force_set_markmap();
   }
 }
 
@@ -1725,7 +1725,7 @@ void set_trace_refpos(int t, float refpos)
 {
   if (trace[t].refpos != refpos) {
     trace[t].refpos = refpos;
-//    force_set_markmap();
+    force_set_markmap();
   }
 }
 
