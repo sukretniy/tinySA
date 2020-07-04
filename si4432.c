@@ -659,10 +659,10 @@ void PE4302_shiftOut(uint8_t val)
 }
 #endif
 
-static unsigned char old_attenuation[MAX_SI4432] = {0, 0, 0};
+static unsigned char old_attenuation = 0;
 bool PE4302_Write_Byte(unsigned char DATA )
 {
-  if (old_attenuation[SI4432_Sel] == DATA)
+  if (old_attenuation == DATA)
     return false;
 //  chThdSleepMicroseconds(PE4302_DELAY);
   SPI2_CLK_LOW;
