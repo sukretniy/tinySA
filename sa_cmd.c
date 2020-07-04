@@ -270,7 +270,7 @@ VNA_SHELL_FUNCTION(cmd_v)
         shell_printf("%d\r\n", SI4432_Sel);
         return;
     }
-    VFO = my_atoi(argv[0]);
+    VFO = my_atoi(argv[0]) > 0 ? 1 : 0;
     shell_printf("VFO %d\r\n", VFO);
 }
 

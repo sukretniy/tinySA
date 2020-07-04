@@ -21,6 +21,12 @@
 #ifndef __SI4432_H__
 
 #define __SI4432_H__
+//
+#define MAX_SI4432                         3
+
+#define SI4432_RX                          0
+#define SI4432_LO_OUT                      1
+#define SI4432_DUMMY                       2
 
 #define SI4432_DEV_TYPE                    0x00
 #define SI4432_DEV_VERSION                 0x01
@@ -112,7 +118,7 @@ void SI4432_Set_Frequency ( uint32_t Freq );
 void SI4432_Transmit(int d);
 void SI4432_Receive(void);
 uint16_t SI4432_SET_RBW(uint16_t WISH);
-void PE4302_Write_Byte(unsigned char DATA );
+bool PE4302_Write_Byte(unsigned char DATA );
 void PE4302_init(void);
 
 #ifdef __ULTRA_SA__
