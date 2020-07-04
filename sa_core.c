@@ -791,19 +791,21 @@ void calculate_step_delay(void)
 {
   if (setting.step_delay_mode == SD_MANUAL || setting.step_delay != 0) {        // The latter part required for selftest 3
     SI4432_step_delay = setting.step_delay;
+    if (setting.offset_delay != 0)      // Override if set
+      SI4432_offset_delay = setting.offset_delay;
   } else {
     SI4432_offset_delay = 0;
     if (setting.frequency_step == 0.0) {          // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
-      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 200; }
-      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 200; }
-      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 200; }
-      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 200; }
-      else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 200; }
-      else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 250; }
+      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 200; }
       else if (actual_rbw_x10 >=  90)  { SI4432_step_delay = 1700; SI4432_offset_delay = 400; }
-      else if (actual_rbw_x10 >=  50)  { SI4432_step_delay = 3300; SI4432_offset_delay = 800; }
+      else if (actual_rbw_x10 >=  50)  { SI4432_step_delay = 3300; SI4432_offset_delay = 400; }
       else                             { SI4432_step_delay = 6400; SI4432_offset_delay =1600; }
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
@@ -2812,7 +2814,7 @@ common_silent:
 }
 
 extern void menu_autosettings_cb(int item);
-extern float SI4432_force_RBW(int i);
+
 
 int last_spur = 0;
 int add_spur(int f)
@@ -2963,10 +2965,13 @@ do_again:
       setting.step_delay_mode = SD_NORMAL;
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.rbw_x10 = SI4432_force_RBW(j);
-      shell_printf("RBW = %d, ",setting.rbw_x10/10);
-      set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 20000));
+      shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
+      if (setting.rbw_x10 < 1000)
+        set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));
+      else
+        set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
 
-      setting.repeat = 10;
+//      setting.repeat = 10;
       test_acquire(i);                        // Acquire test
       test_validate(i);                       // Validate test
       if (test_value == 0) {
@@ -2979,17 +2984,19 @@ do_again:
  //       shell_printf("Peak level too low, abort\n\r");
  //       return;
  //     }
-#if 0
+#if 1
       shell_printf("Start level = %f, ",peakLevel);
       while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 0.5) {
         test_prepare(i);
         setting.spur = 0;
         setting.step_delay_mode = SD_NORMAL;
         setting.step_delay = setting.step_delay * 4 / 5;
-        //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
-        set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));
+        if (setting.rbw_x10 < 1000)
+          set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));
+        else
+          set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
 
-        setting.repeat = 10;
+//        setting.repeat = 10;
         test_acquire(i);                        // Acquire test
         test_validate(i);                       // Validate test
         //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
@@ -3008,9 +3015,11 @@ do_again:
           setting.step_delay_mode = SD_FAST;
           setting.offset_delay /= 2;
           setting.spur = 0;
-          //      shell_printf("\n\rRBW = %f",SI4432_force_RBW(j));
-          set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 20000));   // 200 times RBW
-          setting.repeat = 10;
+          if (setting.rbw_x10 < 1000)
+            set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));   // 50 times RBW
+          else
+            set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));     // Limit to 18MHz
+//          setting.repeat = 10;
           test_acquire(i);                        // Acquire test
           test_validate(i);                       // Validate test
           //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);

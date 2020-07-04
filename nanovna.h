@@ -867,6 +867,7 @@ int SI4432_is_fast_mode(void);
 void SI4432_Set_Frequency ( uint32_t Freq );
 uint16_t SI4432_SET_RBW(uint16_t WISH);
 void SI4432_SetReference(int freq);
+extern uint16_t SI4432_force_RBW(int i);
 
 // Speed profile definition
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
