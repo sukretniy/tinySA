@@ -196,9 +196,11 @@ static int btn_wait_release(void)
 }
 
 // ADC read count for measure X and Y (better be 2^n)
+#define TOUCH_MEASURE_COUNT 8
 static int
 touch_measure_y(void)
 {
+  int v = 0, i = TOUCH_MEASURE_COUNT;
   // open Y line
   palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_INPUT_PULLDOWN);
   palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_INPUT_PULLDOWN);
@@ -209,12 +211,16 @@ touch_measure_y(void)
   palClearPad(GPIOB, GPIOB_XN);
   palSetPad(GPIOA, GPIOA_XP);
 
-  return adc_single_read(ADC_TOUCH_Y);
+  do{
+    v+= adc_single_read(ADC_TOUCH_Y);
+  }while(--i);
+  return v/TOUCH_MEASURE_COUNT;
 }
 
 static int
 touch_measure_x(void)
 {
+  int v = 0, i = TOUCH_MEASURE_COUNT;
   // Set X line as input
   palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_INPUT_PULLDOWN);
   palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_INPUT_PULLDOWN);
@@ -225,7 +231,10 @@ touch_measure_x(void)
   palSetPad(GPIOB, GPIOB_YN);
   palClearPad(GPIOA, GPIOA_YP);
 
-  return adc_single_read(ADC_TOUCH_X);
+  do{
+    v+= adc_single_read(ADC_TOUCH_X);
+  }while(--i);
+  return v/TOUCH_MEASURE_COUNT;
 }
 
 void
