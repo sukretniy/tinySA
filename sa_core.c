@@ -1551,7 +1551,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       do{                                                 // wait for trigger to happen
         pureRSSI = SI4432_Read_Byte(SI4432_REG_RSSI)<<4;
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
-          break;                                                              // abort
+          return 0;                                                           // abort
 
         // Store data level bitfield (remember only last 2 states)
         // T_LEVEL_UNDEF mode bit drop after 2 shifts
