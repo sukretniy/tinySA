@@ -909,7 +909,7 @@ static void trace_get_value_string(
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
   }
 #else
-  plot_printf(&buf2[1], sizeof(buf2) -1, "% 8.3qHz" , dfreq);
+  plot_printf(&buf2[1], sizeof(buf2) -1, "%8.3qHz" , dfreq);
   }
 #endif
     v = value(coeff[i]);
