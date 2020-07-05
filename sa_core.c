@@ -1673,6 +1673,13 @@ sweep_again:                                // stay in sweep loop when output mo
     // --------------------- measure -------------------------
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);    // Measure RSSI for one of the frequencies
+    // if break back to top level to handle ui operation
+    if (break_on_operation && operation_requested) {                        // break loop if needed
+      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
+        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
+      }
+      return false;
+    }
 
     // Delay between points if needed, (all delays can apply in SI4432 fill)
     if (setting.measure_sweep_time_us == 0){                                    // If not already in buffer
@@ -1682,14 +1689,6 @@ sweep_again:                                // stay in sweep loop when output mo
         else
           osalThreadSleepMilliseconds(setting.additional_step_delay_us / ONE_MS_TIME);
       }
-    }
-
-    // if break back to top level to handle ui operation
-    if (break_on_operation && operation_requested) {                        // break loop if needed
-      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
-      }
-      return false;
     }
 
     if (MODE_INPUT(setting.mode)) {
