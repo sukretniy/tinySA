@@ -2797,8 +2797,8 @@ void hard_fault_handler_c(uint32_t *sp)
   int y = 0;
   int x = OFFSETX + 1;
   static  char buf[96];
-  ili9341_set_background(0x0000);
-  ili9341_set_foreground(0xFFFF);
+  ili9341_set_background(DEFAULT_BG_COLOR);
+  ili9341_set_foreground(DEFAULT_FG_COLOR);
 
   plot_printf(buf, sizeof(buf), "SP  0x%08x",  (uint32_t)sp);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
   plot_printf(buf, sizeof(buf), "R0  0x%08x",  r0);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);

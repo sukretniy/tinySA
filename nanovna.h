@@ -540,13 +540,15 @@ void ili9341_init(void);
 void ili9341_test(int mode);
 void ili9341_bulk(int x, int y, int w, int h);
 void ili9341_fill(int x, int y, int w, int h, uint16_t color);
-#if 0
+
+#if 1
 void ili9341_set_foreground(uint16_t fg);
 void ili9341_set_background(uint16_t fg);
 #else
 #define ili9341_set_foreground(fg) {  foreground_color = fg; }
 #define ili9341_set_background(bg) {  background_color = bg;}
 #endif
+
 void ili9341_clear_screen(void);
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);

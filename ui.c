@@ -129,6 +129,7 @@ static void ui_process_keypad(void);
 static void ui_process_numeric(void);
 static void choose_active_marker(void);
 static void menu_move_back(void);
+static void menu_move_back_and_leave_ui(void);
 static void menu_push_submenu(const menuitem_t *submenu);
 //static const menuitem_t menu_marker_type[];
 
@@ -767,8 +768,7 @@ menu_marker_op_cb(int item, uint8_t data)
     break;
 #endif
   }
-  menu_move_back();
-  ui_mode_normal();
+  menu_move_back_and_leave_ui();
   redraw_request |= REDRAW_CAL_STATUS;
   //redraw_all();
 }
@@ -1138,11 +1138,23 @@ menu_move_back(void)
     area_width = 0;
   } else {
 //    redraw_frame();
-//    request_to_redraw_grid();
+    redraw_request |= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
 
   draw_menu();
+}
+
+static void
+menu_move_back_and_leave_ui(void)
+{
+  if (menu_current_level == 0)
+    return;
+  menu_current_level--;
+  if (selection >= 0)
+    selection = 0;
+  ensure_selection();
+  ui_mode_normal();
 }
 
 static void
@@ -1742,14 +1754,14 @@ erase_numeric_input(void)
 static void
 leave_ui_mode()
 {
-  if (ui_mode == UI_MENU) {
-    request_to_draw_cells_behind_menu();
-    erase_menu_buttons();
-  } else if (ui_mode == UI_NUMERIC) {
-    request_to_draw_cells_behind_numeric_input();
-    erase_numeric_input();
-  }
-  redraw_request|=REDRAW_AREA|REDRAW_FREQUENCY;
+//  if (ui_mode == UI_MENU) {
+//    request_to_draw_cells_behind_menu();
+//    erase_menu_buttons();
+//  } else if (ui_mode == UI_NUMERIC) {
+//    request_to_draw_cells_behind_numeric_input();
+//    erase_numeric_input();
+//  }
+  redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
 }
 
 #ifdef __VNA__
