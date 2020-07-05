@@ -350,6 +350,16 @@ float get_attenuation(void)
   return(setting.attenuate);
 }
 
+static float get_signal_path_loss(void){
+#ifdef __ULTRA__
+  if (setting.mode == M_ULTRA)
+    return -15;       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+#endif
+  if (setting.mode == M_LOW)
+    return -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+  return +7;          // Loss in dB (+ is gain)
+}
+
 static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
 
 void set_level(float v)     // Set the drive level of the LO
@@ -1516,13 +1526,11 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
     // ------------------------- end of processing when in output mode ------------------------------------------------
 
-    float signal_path_loss;
-
  skip_LO_setting:
+    if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
+      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
 
     if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
-      if (i == 0 && t == 0)                                                             // if first point in scan (here is get 1 point data)
-        start_of_sweep_timestamp = chVTGetSystemTimeX();
       return(0);
     }
     // ---------------- Prepare RSSI ----------------------
@@ -1535,28 +1543,15 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
-
-#ifdef __ULTRA__
-    if (setting.mode == M_ULTRA)
-      signal_path_loss = -15;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-    else
-#endif
-    if (setting.mode == M_LOW)
-      signal_path_loss = -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-    else
-      signal_path_loss = +7;         // Loss in dB (+ is gain)
-
     static float correct_RSSI;                  // This is re-used between calls
-    if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
+    if (i == 0 || setting.frequency_step != 0 ){ // only cases where the value can change
       correct_RSSI = get_level_offset()
                    + get_attenuation()
-                   - signal_path_loss
+                   - get_signal_path_loss()
                    - setting.offset
                    + get_frequency_correction(f)
                    + getSI4432_RSSI_correction(); // calcuate the RSSI correction for later use
-
-    if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
-      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
+    }
     int16_t pureRSSI;
     //    if ( i < 3)
     //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
