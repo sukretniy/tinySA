@@ -110,7 +110,8 @@ void SI4432_Write_Byte(byte ADR, byte DATA );
 byte SI4432_Read_Byte( byte ADR );
 
 void SI4432_Init(void);
-float SI4432_RSSI(uint32_t i, int s);
+float getSI4432_RSSI_correction(void);
+int16_t SI4432_RSSI(uint32_t i, int s);
 #ifdef __SIMULATION__
 float Simulated_SI4432_RSSI(uint32_t i, int s);
 #endif

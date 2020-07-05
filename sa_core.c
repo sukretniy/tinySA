@@ -1515,47 +1515,55 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     else
       signal_path_loss = +7;         // Loss in dB (+ is gain)
 
+    static float correct_RSSI;                  // This is re-used between calls
+    if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
+      correct_RSSI = get_level_offset()
+                   + get_attenuation()
+                   - signal_path_loss
+                   - setting.offset
+                   + get_frequency_correction(f)
+                   + getSI4432_RSSI_correction(); // calcuate the RSSI correction for later use
+
 #define T_LEVEL_UNDEF       (1<<(16-2)) // should drop after 2 shifts left
 #define T_LEVEL_BELOW       1
 #define T_LEVEL_ABOVE       0
 #define T_LEVEL_CLEAN       ~(1<<2)     // cleanup old trigger data
-    uint16_t data_level  = T_LEVEL_UNDEF;
     int wait_for_trigger = false;
+    // Cache trigger search mode
+    register uint16_t t_mode;
+    uint16_t trigger_lvl;
+    uint16_t data_level = T_LEVEL_UNDEF;
     int old_SI4432_step_delay = SI4432_step_delay;
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
       wait_for_trigger = true;                                                // signal the wait for trigger
+      // Calculate trigger level
+      trigger_lvl = (setting.trigger_level - correct_RSSI)*32;
+
+      if (setting.trigger_direction == T_UP)
+        t_mode = (T_LEVEL_BELOW<<1)|T_LEVEL_ABOVE; // from bottom to up
+      else
+        t_mode = (T_LEVEL_ABOVE<<1)|T_LEVEL_BELOW; // from up to bottom
       SI4432_step_delay = 0;
     }
-    float subRSSI;
 
-    static float correct_RSSI;                  // This is re-used between calls
-    if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
-      correct_RSSI = get_level_offset()+ get_attenuation() - signal_path_loss - setting.offset + get_frequency_correction(f); // calcuate the RSSI correction for later use
-
-    // Cache trigger search mode
-    register uint16_t t_mode;
-    if (setting.trigger_direction == T_UP)
-      t_mode = (T_LEVEL_BELOW<<1)|T_LEVEL_ABOVE; // from bottom to up
-    else
-      t_mode = (T_LEVEL_ABOVE<<1)|T_LEVEL_BELOW; // from up to bottom
-  wait:
-    if (i == 0 && t == 0)                                                             // if first point in scan (here is get 1 point data)
+    if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
       start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
 
-    subRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode)) + correct_RSSI ;   // Get RSSI, either from pre-filled buffer or by reading SI4432 RSSI
+    int16_t pureRSSI;
 //    if ( i < 3)
 //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
 
     if (wait_for_trigger) {                                                 // wait for trigger to happen
-      if ((operation_requested || shell_function) && break_on_operation)    // allow aborting a wait for trigger
+      pureRSSI = SI4432_Read_Byte(SI4432_REG_RSSI)<<4;
+      if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
         break;                                                              // abort
 
       // Store data level bitfield (remember only last 2 states)
       // T_LEVEL_UNDEF mode bit drop after 2 shifts
-      data_level = ((data_level<<1) | (subRSSI < setting.trigger_level ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
+      data_level = ((data_level<<1) | (pureRSSI < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
       // wait trigger
       if (data_level != t_mode)                                             // trigger level change
-        goto wait;                                                          // get next rssi
+        continue;                                                           // get next rssi
 #ifdef __FAST_SWEEP__
       if (setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
          SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
@@ -1563,8 +1571,14 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 #endif
       if (setting.trigger == T_SINGLE)
         pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
+      start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
+    else
+      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer or by reading SI4432 RSSI need divide on 32!!
     SI4432_step_delay = old_SI4432_step_delay;
+    float subRSSI = pureRSSI / 32.0;
+    // add correction
+    subRSSI+=correct_RSSI;
 #ifdef __SPUR__
     if (setting.spur == 1) {                                     // If first spur pass
       spur_RSSI = subRSSI;                                       // remember measure RSSI
@@ -1579,7 +1593,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     if (RSSI < subRSSI)                                     // Take max during subscanning
       RSSI = subRSSI;
     t++;                                                    // one subscan done
-    if ((operation_requested || shell_function ) && break_on_operation)       // break subscanning if requested
+    if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
   return(RSSI);
@@ -1677,7 +1691,7 @@ sweep_again:                                // stay in sweep loop when output mo
     }
 
     // if break back to top level to handle ui operation
-    if ((operation_requested || shell_function) && break_on_operation) {    // break loop if needed
+    if (break_on_operation && operation_requested) {                        // break loop if needed
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
       }
