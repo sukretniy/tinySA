@@ -1392,6 +1392,16 @@ static const menuitem_t menu_scanning_speed[] =
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_sweep_speed[] =
+{
+ { MT_CALLBACK, SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
+ { MT_CALLBACK, SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
+ { MT_CALLBACK, SD_FAST,       "FAST",              menu_scanning_speed_cb},
+ { MT_KEYPAD,  KM_SWEEP_TIME,  "MANUAL",            "0..600s"},
+ { MT_CANCEL,   0,             "\032 BACK", NULL },
+ { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
 
 static const menuitem_t menu_settings2[] =
 {
@@ -1462,7 +1472,8 @@ static const menuitem_t menu_display[] = {
   { MT_CALLBACK,2,              "\2SUBTRACT\0STORED",menu_storage_cb},
   { MT_CALLBACK,3,              "NORMALIZE",        menu_storage_cb},
   { MT_CALLBACK,4,              "WATERFALL",        menu_storage_cb},
-  { MT_KEYPAD,  KM_SWEEP_TIME,  "\2SWEEP\0TIME",    NULL},
+  { MT_SUBMENU, 0,              "\2SWEEP\0TIME",    menu_sweep_speed},
+//  { MT_KEYPAD,  KM_SWEEP_TIME,  "\2SWEEP\0TIME",    NULL},
 
   { MT_CANCEL, 0,           "\032 BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
@@ -1652,7 +1663,7 @@ static void menu_item_modify_attribute(
     if (data == setting.trigger){
       mark = true;
     }
-    if (data == setting.trigger_direction) {
+    if (setting.trigger != T_AUTO && data == setting.trigger_direction) {
       mark = true;
     }
   } else if (menu == menu_display /* || menu == menu_displayhigh */) {
@@ -1678,6 +1689,13 @@ static void menu_item_modify_attribute(
       m_auto = true;
   } else if (menu == menu_scanning_speed) {
     if (item == setting.step_delay_mode){
+      mark = true;
+    }
+  } else if (menu == menu_sweep_speed) {
+    if (item == 3 && setting.sweep_time_us != 0){
+      mark = true;
+    }
+    if (item == setting.step_delay_mode && setting.sweep_time_us == 0){
       mark = true;
     }
 #ifdef __ULTRA__
