@@ -1589,7 +1589,7 @@ int16_t max_index[MAX_MAX];
 int16_t cur_max = 0;
 
 static int low_count = 0;
-
+static int sweep_counter = 0;
 // main loop for measurement
 static bool sweep(bool break_on_operation)
 {
@@ -1609,6 +1609,10 @@ static bool sweep(bool break_on_operation)
   //  shell_printf("\r\n");
 
   modulation_counter = 0;                                             // init modulation counter in case needed
+
+//  if (sweep_counter > 5000 && setting.average == AV_OFF)            // refresh HW after 5000 sweeps
+//    dirty = true;
+
   if (dirty) {                      // Calculate new scanning solution
     update_rbw();
     calculate_step_delay();
@@ -1644,7 +1648,10 @@ static bool sweep(bool break_on_operation)
         update_grid();                                          // and update grid and frequency
       }
     }
+    sweep_counter = 0;
   }
+  else
+    sweep_counter++;
 
 again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
