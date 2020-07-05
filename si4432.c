@@ -583,12 +583,12 @@ void SI4432_Sub_Init(void)
 
 void SI4432_Init()
 {
-
+#if 0
   palClearPad(GPIOB, GPIO_RF_PWR);
   chThdSleepMilliseconds(20);
   palSetPad(GPIOB, GPIO_RF_PWR);
   chThdSleepMilliseconds(20);
-
+#endif
 
   //DebugLine("IO set");
   SI4432_Sel = SI4432_RX;

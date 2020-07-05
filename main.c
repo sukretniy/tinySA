@@ -2628,8 +2628,10 @@ int main(void)
   * Powercycle the RF part to reset SI4432
   */
 
+#if 0
   palClearPad(GPIOB, GPIO_RF_PWR);
   chThdSleepMilliseconds(200);
+#endif
   palSetPad(GPIOB, GPIO_RF_PWR);
   chThdSleepMilliseconds(500);
 
