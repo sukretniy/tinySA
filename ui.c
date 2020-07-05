@@ -333,6 +333,8 @@ touch_cal_exec(void)
   config.touch_cal[2] = (x2 - x1) * 16 / LCD_WIDTH;
   config.touch_cal[3] = (y2 - y1) * 16 / LCD_HEIGHT;
 
+  config_save();            // Auto save touch calibration
+
   //redraw_all();
   touch_start_watchdog();
 }
