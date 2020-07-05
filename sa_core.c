@@ -1685,7 +1685,7 @@ sweep_again:                                // stay in sweep loop when output mo
     if (MODE_INPUT(setting.mode)) {
 
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
-    	int pos = i * sweep_points / (WIDTH+1);
+    	int pos = i * (WIDTH+1) / sweep_points;
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, pos, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
         ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-pos, 1, 0);
       }
