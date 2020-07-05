@@ -1278,6 +1278,38 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     dirty = false;
     if (setting.spur)                                                       // if in spur avoidance mode
       setting.spur = 1;                                                     // resync spur in case of previous abort
+    // Set for actual time pre calculated value (update after sweep)
+    setting.actual_sweep_time_us = calc_min_sweep_time_us();
+    // Change actual sweep time as user input if it greater minimum
+    // And set start delays for 1 run
+    if (setting.sweep_time_us > setting.actual_sweep_time_us){
+      setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points);
+      setting.actual_sweep_time_us = setting.sweep_time_us;
+    }
+    else{ // not add additional correction, apply recommend time
+      setting.additional_step_delay_us = 0;
+//      setting.sweep_time_us = setting.actual_sweep_time_us;
+    }
+#if 0
+    // manually set delay, for better sync
+    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 0;
+      setting.sweep_time_us = 0;
+    }
+    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 1;
+      setting.sweep_time_us = 3000;
+    }
+#endif
+    //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
+    //      setting.additional_step_delay_us = 500;
+    // Update grid and status after
+    if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
+      redraw_request |= REDRAW_CAL_STATUS;
+      if (FREQ_IS_CW()) {                                       // if zero span mode
+        update_grid();                                          // and update grid and frequency
+      }
+    }
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {             // if in low output mode and level sweep is active
@@ -1621,43 +1653,8 @@ static bool sweep(bool break_on_operation)
 //  if (sweep_counter > 5000 && setting.average == AV_OFF)            // refresh HW after 5000 sweeps
 //    dirty = true;
 
-  if (dirty) {                      // Calculate new scanning solution
-//    update_rbw();
-    calculate_step_delay();
-    // Set for actual time pre calculated value (update after sweep)
-    setting.actual_sweep_time_us = calc_min_sweep_time_us();
-    // Change actual sweep time as user input if it greater minimum
-    // And set start delays for 1 run
-    if (setting.sweep_time_us > setting.actual_sweep_time_us){
-      setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points);
-      setting.actual_sweep_time_us = setting.sweep_time_us;
-    }
-    else{ // not add additional correction, apply recommend time
-      setting.additional_step_delay_us = 0;
-//      setting.sweep_time_us = setting.actual_sweep_time_us;
-    }
-#if 0
-    // manually set delay, for better sync
-    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 0;
-      setting.sweep_time_us = 0;
-    }
-    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 1;
-      setting.sweep_time_us = 3000;
-    }
-#endif
-//    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
-//      setting.additional_step_delay_us = 500;
-    // Update grid and status after
-    if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
-      redraw_request |= REDRAW_CAL_STATUS;
-      if (FREQ_IS_CW()) {                                       // if zero span mode
-        update_grid();                                          // and update grid and frequency
-      }
-    }
+  if (dirty)                    // Calculate new scanning solution
     sweep_counter = 0;
-  }
   else
     sweep_counter++;
 
@@ -2377,10 +2374,8 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 #if 1
   y += YSTEP;
-  int old_dirty = dirty;
   update_rbw();             // To ensure the calc_min_sweep time shown takes the latest delay into account
   calculate_step_delay();
-  dirty = old_dirty;            // restore as update_rbw sets dirty
   uint32_t t = calc_min_sweep_time_us();
 //  if (t < setting.sweep_time_us)
 //    t = setting.sweep_time_us;
