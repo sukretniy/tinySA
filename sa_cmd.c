@@ -549,9 +549,9 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   if (argc == 3) {
     points = my_atoi(argv[2]);
   }
-  int old_step = setting.frequency_step;
+  uint32_t old_step = setting.frequency_step;
   float f_step = (stop-start)/ points;
-  setting.frequency_step = (int32_t)f_step;
+  setting.frequency_step = (uint32_t)f_step;
 
   streamPut(shell_stream, '{');
   static  uint32_t old_start=0, old_stop=0, old_points=0;
@@ -565,7 +565,7 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   for (uint32_t i = 0; i<points; i++) {
     if (operation_requested)
       break;
-    float val = perform(false, i, start +(int32_t)(f_step * i), false);
+    float val = perform(false, i, start +(uint32_t)(f_step * i), false);
     streamPut(shell_stream, 'x');
     int v = val*2 + 256;
     streamPut(shell_stream, (uint8_t)(v & 0xFF));

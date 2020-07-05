@@ -593,7 +593,7 @@ typedef struct setting
   int tracking;
   int modulation;
   int step_delay;
-  int frequency_step;
+  uint32_t frequency_step;
   int test;
   int harmonic;
   int decay;

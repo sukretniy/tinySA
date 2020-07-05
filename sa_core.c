@@ -797,7 +797,7 @@ void calculate_step_delay(void)
       SI4432_offset_delay = setting.offset_delay;
   } else {
     SI4432_offset_delay = 0;
-    if (setting.frequency_step == 0.0) {          // zero span mode, not dependent on selected RBW
+    if (setting.frequency_step == 0) {            // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
       if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 100; }
