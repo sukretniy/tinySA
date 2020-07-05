@@ -446,7 +446,6 @@ int16_t SI4432_RSSI(uint32_t i, int s)
   (void) i;
   int32_t RSSI_RAW;
   (void) i;
-  int16_t dBm;
   // SEE DATASHEET PAGE 61
 #ifdef USE_SI4463           // Not used!!!!!!!
   if (SI4432_Sel == 2) {
@@ -456,11 +455,9 @@ int16_t SI4432_RSSI(uint32_t i, int s)
 //START_PROFILE
 #ifdef __FAST_SWEEP__
   if (buf_read) {
-    int16_t dBm = (unsigned char)age[buf_index++]<<4;
-    if (buf_index == sweep_points) {
+    if (buf_index == sweep_points-1)
       buf_read = false;
-    }
-    return dBm;
+    return (unsigned char)age[buf_index++]<<4;
   }
 #endif
   SI4432_Sel = s;
@@ -481,7 +478,7 @@ int16_t SI4432_RSSI(uint32_t i, int s)
   i = setting.repeat;
   RSSI_RAW  = 0;
   do{
-    RSSI_RAW += ((unsigned int)SI4432_Read_Byte(SI4432_REG_RSSI))<<4 ;
+    RSSI_RAW += ((unsigned int)SI4432_Read_Byte(SI4432_REG_RSSI))<<4;
     if (--i == 0) break;
     my_microsecond_delay(100);
   }while(1);
@@ -490,13 +487,12 @@ int16_t SI4432_RSSI(uint32_t i, int s)
     RSSI_RAW = RSSI_RAW / setting.repeat;
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();
-  dBm = RSSI_RAW;
 #ifdef __SIMULATION__
-  dBm = Simulated_SI4432_RSSI(i,s);
+  RSSI_RAW = Simulated_SI4432_RSSI(i,s)<<4;
 #endif
 //STOP_PROFILE
   // Serial.println(dBm,2);
-  return dBm ;
+  return RSSI_RAW;
 }
 
 
