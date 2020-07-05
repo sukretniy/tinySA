@@ -1515,12 +1515,11 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     else
       signal_path_loss = +7;         // Loss in dB (+ is gain)
 
-#define T_LEVEL_UNDEF       0
+#define T_LEVEL_UNDEF       (1<<(16-2)) // should drop after 2 shifts left
 #define T_LEVEL_BELOW       1
-#define T_LEVEL_ABOVE       2
-
+#define T_LEVEL_ABOVE       0
+#define T_LEVEL_CLEAN       ~(1<<2)     // cleanup old trigger data
     uint16_t data_level  = T_LEVEL_UNDEF;
-    uint16_t prev_data_level = T_LEVEL_UNDEF;
     int wait_for_trigger = false;
     int old_SI4432_step_delay = SI4432_step_delay;
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
@@ -1533,6 +1532,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
       correct_RSSI = get_level_offset()+ get_attenuation() - signal_path_loss - setting.offset + get_frequency_correction(f); // calcuate the RSSI correction for later use
 
+    // Cache trigger search mode
+    register uint16_t t_mode;
+    if (setting.trigger_direction == T_UP)
+      t_mode = (T_LEVEL_BELOW<<1)|T_LEVEL_ABOVE; // from bottom to up
+    else
+      t_mode = (T_LEVEL_ABOVE<<1)|T_LEVEL_BELOW; // from up to bottom
   wait:
     if (i == 0 && t == 0)                                                             // if first point in scan (here is get 1 point data)
       start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
@@ -1545,16 +1550,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       if ((operation_requested || shell_function) && break_on_operation)    // allow aborting a wait for trigger
         break;                                                              // abort
 
-      // Trigger on rise edge of data
-      prev_data_level = data_level;
-      // To reduce float comparisons, remember if above or below trigger
-      data_level = subRSSI < setting.trigger_level ? T_LEVEL_BELOW : T_LEVEL_ABOVE;
-
-      // wait for rising edge
-      if (setting.trigger_direction == T_UP && !(prev_data_level == T_LEVEL_BELOW && data_level == T_LEVEL_ABOVE))                                    // trigger level change
-        goto wait;                                                           // get next rssi
-      if (setting.trigger_direction == T_DOWN && !(prev_data_level == T_LEVEL_ABOVE && data_level == T_LEVEL_BELOW))                                    // trigger level change
-        goto wait;                                                           // get next rssi
+      // Store data level bitfield (remember only last 2 states)
+      // T_LEVEL_UNDEF mode bit drop after 2 shifts
+      data_level = ((data_level<<1) | (subRSSI < setting.trigger_level ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
+      // wait trigger
+      if (data_level != t_mode)                                             // trigger level change
+        goto wait;                                                          // get next rssi
 #ifdef __FAST_SWEEP__
       if (setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
          SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
