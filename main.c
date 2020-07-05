@@ -853,7 +853,7 @@ config_t config = {
   .menu_active_color = DEFAULT_MENU_ACTIVE_COLOR,
   .trace_color =       { DEFAULT_TRACE_1_COLOR, DEFAULT_TRACE_2_COLOR, DEFAULT_TRACE_3_COLOR},
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
-  .touch_cal =         { 338, 522, 153, 192 },  // 2.8 inch LCD panel
+  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
   .freq_mode = FREQ_MODE_START_STOP,
 #ifdef __VNA__
   .harmonic_freq_threshold = 300000000,

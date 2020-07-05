@@ -196,51 +196,61 @@ static int btn_wait_release(void)
   }
 }
 
-// ADC read count for measure X and Y (better be 2^n)
+// ADC read count for measure X and Y (2^N count)
+#define TOUCH_X_N 3
+#define TOUCH_Y_N 3
 static int
 touch_measure_y(void)
 {
-  // open Y line
-  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_INPUT_PULLDOWN);
-  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_INPUT_PULLDOWN);
-  // drive low to high on X line
-  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_OUTPUT_PUSHPULL);
-  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_OUTPUT_PUSHPULL);
-  // drive low to high on X line (coordinates from left to right)
+  // drive low to high on X line (At this state after touch_prepare_sense)
+//  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_OUTPUT_PUSHPULL); //
+//  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_OUTPUT_PUSHPULL); //
+  // drive low to high on X line (coordinates from top to bottom)
   palClearPad(GPIOB, GPIOB_XN);
-  palSetPad(GPIOA, GPIOA_XP);
+//  palSetPad(GPIOA, GPIOA_XP);
 
-  return adc_single_read(ADC_TOUCH_Y);
+  // open Y line (At this state after touch_prepare_sense)
+//  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_INPUT);        // Hi-z mode
+  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_INPUT_ANALOG);   // <- ADC_TOUCH_Y channel
+
+//  chThdSleepMilliseconds(20);
+  uint32_t v = 0, cnt = 1<<TOUCH_Y_N;
+  do{v+=adc_single_read(ADC_TOUCH_Y);}while(--cnt);
+  return v>>TOUCH_Y_N;
 }
 
 static int
 touch_measure_x(void)
 {
-  // Set X line as input
-  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_INPUT_PULLDOWN);
-  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_INPUT_PULLDOWN);
+  // drive high to low on Y line (coordinates from left to right)
+  palSetPad(GPIOB, GPIOB_YN);
+  palClearPad(GPIOA, GPIOA_YP);
   // Set Y line as output
   palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_OUTPUT_PUSHPULL);
   palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_OUTPUT_PUSHPULL);
-  // drive high to low on Y line (coordinates from bottom to top)
-  palSetPad(GPIOB, GPIOB_YN);
-  palClearPad(GPIOA, GPIOA_YP);
+  // Set X line as input
+  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_INPUT);        // Hi-z mode
+  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_INPUT_ANALOG); // <- ADC_TOUCH_X channel
 
-  return adc_single_read(ADC_TOUCH_X);
+  uint32_t v = 0, cnt = 1<<TOUCH_X_N;
+  do{v+=adc_single_read(ADC_TOUCH_X);}while(--cnt);
+  return v>>TOUCH_X_N;
 }
 
 void
 touch_prepare_sense(void)
 {
   // Set Y line as input
-  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_INPUT_PULLDOWN);
-  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_INPUT_PULLDOWN);
-  // force high X line
-  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_OUTPUT_PUSHPULL);
-  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_OUTPUT_PUSHPULL);
+  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_INPUT);          // Hi-z mode
+  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_INPUT_PULLDOWN); // Use pull
   // drive high on X line (for touch sense on Y)
   palSetPad(GPIOB, GPIOB_XN);
   palSetPad(GPIOA, GPIOA_XP);
+  // force high X line
+  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_OUTPUT_PUSHPULL);
+  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_OUTPUT_PUSHPULL);
+
+//  chThdSleepMilliseconds(10); // Wait 10ms for denounce touch
 }
 
 void
@@ -250,10 +260,9 @@ touch_start_watchdog(void)
   adc_start_analog_watchdogd(ADC_TOUCH_Y);
 }
 
-static int
+static inline int
 touch_status(void)
 {
-  touch_prepare_sense();
   return adc_single_read(ADC_TOUCH_Y) > TOUCH_THRESHOLD;
 }
 
@@ -262,14 +271,14 @@ touch_check(void)
 {
   int stat = touch_status();
   if (stat) {
-//    chThdSleepMilliseconds(10);
-    int x = touch_measure_x();
     int y = touch_measure_y();
-    if (touch_status()) {
+    int x = touch_measure_x();
+    touch_prepare_sense();
+    if (touch_status())
+    {
       last_touch_x = x;
       last_touch_y = y;
     }
-    touch_prepare_sense();
   }
 
   if (stat != last_touch_status) {
@@ -339,9 +348,7 @@ touch_draw_test(void)
   ili9341_set_foreground(DEFAULT_FG_COLOR);
   ili9341_set_background(DEFAULT_BG_COLOR);
   ili9341_clear_screen();
-  ili9341_drawstring("TOUCH TEST: DRAG PANEL", OFFSETX, 233);
-
-//  touch_wait_pressed();
+  ili9341_drawstring("TOUCH TEST: DRAG PANEL, PRESS BUTTON TO FINISH", OFFSETX, LCD_HEIGHT - FONT_GET_HEIGHT);
 
   int old_button_state = 0;
   while (touch_check() != EVT_TOUCH_PRESSED) {
@@ -355,16 +362,18 @@ touch_draw_test(void)
 
   }
 
-  touch_position(&x0, &y0);
-
   do {
-    touch_position(&x1, &y1);
-    ili9341_line(x0, y0, x1, y1);
-    x0 = x1;
-    y0 = y1;
-    chThdSleepMilliseconds(50);
-  } while (touch_check() != EVT_TOUCH_RELEASED);
-
+    if (touch_check() == EVT_TOUCH_PRESSED){
+      touch_position(&x0, &y0);
+      do {
+        chThdSleepMilliseconds(50);
+        touch_position(&x1, &y1);
+        ili9341_line(x0, y0, x1, y1);
+        x0 = x1;
+        y0 = y1;
+      } while (touch_check() != EVT_TOUCH_RELEASED);
+    }
+  }while (!(btn_check() & EVT_BUTTON_SINGLE_CLICK));
   touch_start_watchdog();
 }
 
