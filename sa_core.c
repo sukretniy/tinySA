@@ -1533,7 +1533,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     register uint16_t t_mode;
     uint16_t trigger_lvl;
     uint16_t data_level = T_LEVEL_UNDEF;
-    int old_SI4432_step_delay = SI4432_step_delay;
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
       wait_for_trigger = true;                                                // signal the wait for trigger
       // Calculate trigger level
@@ -1543,7 +1542,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         t_mode = (T_LEVEL_BELOW<<1)|T_LEVEL_ABOVE; // from bottom to up
       else
         t_mode = (T_LEVEL_ABOVE<<1)|T_LEVEL_BELOW; // from up to bottom
-      SI4432_step_delay = 0;
     }
 
     if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
@@ -1565,7 +1563,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       if (data_level != t_mode)                                             // trigger level change
         continue;                                                           // get next rssi
 #ifdef __FAST_SWEEP__
-      if (setting.spur == 0 && old_SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+      if (setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
          SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
 #endif
@@ -1575,7 +1573,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     }
     else
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer or by reading SI4432 RSSI need divide on 32!!
-    SI4432_step_delay = old_SI4432_step_delay;
+
     float subRSSI = pureRSSI / 32.0;
     // add correction
     subRSSI+=correct_RSSI;
