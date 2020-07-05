@@ -87,8 +87,8 @@ static char *
 ulong_freq(char *p, uint32_t freq, uint32_t precision)
 {
   uint8_t flag = FREQ_PSET;
-  if (precision == 0)
-    flag|=FREQ_PREFIX_SPACE;
+  flag|= precision == 0 ? FREQ_PREFIX_SPACE : FREQ_NO_SPACE;
+
   if (precision == 0 || precision > MAX_FREQ_PRESCISION)
     precision = MAX_FREQ_PRESCISION;
   char *q = p + MAX_FREQ_PRESCISION;
@@ -132,11 +132,6 @@ ulong_freq(char *p, uint32_t freq, uint32_t precision)
 
   // Get string size
   uint32_t i = (b - q);
-  // Limit string size, max size is - precision
-  if (precision && i > precision) {
-    i = precision;
-    flag |= FREQ_NO_SPACE;
-  }
   // copy string
   // Replace first ' ' by '.', remove ' ' if size too big
   do {
@@ -150,6 +145,8 @@ ulong_freq(char *p, uint32_t freq, uint32_t precision)
         c = *q++;
     }
     *p++ = c;
+    if (!(flag & FREQ_PSET) && precision-- == 0)
+      break;
   } while (--i);
   // Put pref (amd space before it if need)
   if (flag & FREQ_PREFIX_SPACE && s != ' ') 

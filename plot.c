@@ -480,7 +480,8 @@ value(const float v)
     return v + 90.0 + 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
-    return pow(10, (v-30.0)/20.0) * sqrt(50.0);
+//  return pow(10, (v-30.0)/20.0) * sqrt(50.0);
+    return pow(10, (v-30.0)/20.0)*SQRT_50;
 //    return pow(10, v/20.0) * POW_SQRT;      //TODO there is an error in this calculation as the outcome is different from the not optimized version
     break;
   case U_WATT:
@@ -498,13 +499,16 @@ to_dBm(const float v)
   switch(setting.unit)
   {
   case U_DBMV:
-    return v - 30.0 - 20.0*log10(sqrt(50));
+//  return v - 30.0 - 20.0*log10(sqrt(50));
+    return v - 30.0 - 20.0*LOG_10_SQRT_50;
     break;
   case U_DBUV:
-    return v - 90.0 - 20.0*log10(sqrt(50.0));
+//  return v - 90.0 - 20.0*log10(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
+    return v - 90.0 - 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
-    return log10( v / (sqrt(50.0))) * 20.0 + 30.0 ;
+//  return log10( v / (sqrt(50.0))) * 20.0 + 30.0 ;
+    return log10( v / (SQRT_50)) * 20.0 + 30.0 ;
     break;
   case U_WATT:
     return log10(v*1000.0)*10.0;
@@ -849,7 +853,7 @@ static void trace_get_value_string(
   (void)freq;
   (void) point_count;
   float v;
-  char buf2[11];
+  char buf2[16];
   char buf3[8];
   buf2[0]=' ';
   uint32_t dfreq = 0;
@@ -895,7 +899,7 @@ static void trace_get_value_string(
     }
 #endif
   } else {
-#if 1
+#if 0
   uint32_t resolution = get_sweep_frequency(ST_SPAN);
   if (resolution  <= 2000*POINTS_COUNT)
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
@@ -905,7 +909,7 @@ static void trace_get_value_string(
     plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
   }
 #else
-  plot_printf(&buf2[1], sizeof(buf2) -1, "%.8qHz" , dfreq);
+  plot_printf(&buf2[1], sizeof(buf2) -1, "% 8.3qHz" , dfreq);
   }
 #endif
     v = value(coeff[i]);
