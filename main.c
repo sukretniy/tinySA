@@ -2452,6 +2452,7 @@ static void VNAShell_executeLine(char *line)
     if (strcmp(scp->sc_name, shell_args[0]) == 0) {
       if (scp->flags & CMD_WAIT_MUTEX) {
         shell_function = scp->sc_function;
+        operation_requested|=OP_CONSOLE;
         // Wait execute command in sweep thread
         do {
           osalThreadSleepMilliseconds(100);

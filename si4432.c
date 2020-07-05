@@ -437,7 +437,11 @@ void SI4432_Fill(int s, int start)
 #define MINIMUM_WAIT_FOR_RSSI   280
 int SI4432_offset_delay = 300;
 
-float SI4432_RSSI(uint32_t i, int s)
+float getSI4432_RSSI_correction(void){
+  return SI4432_RSSI_correction;
+};
+
+int16_t SI4432_RSSI(uint32_t i, int s)
 {
   (void) i;
   int32_t RSSI_RAW;
@@ -451,11 +455,9 @@ float SI4432_RSSI(uint32_t i, int s)
 //START_PROFILE
 #ifdef __FAST_SWEEP__
   if (buf_read) {
-    float dBm = ((float)((unsigned char)age[buf_index++]))/2 + SI4432_RSSI_correction;
-    if (buf_index == sweep_points) {
+    if (buf_index == sweep_points-1)
       buf_read = false;
-    }
-    return dBm;
+    return (unsigned char)age[buf_index++]<<4;
   }
 #endif
   SI4432_Sel = s;
@@ -475,24 +477,22 @@ float SI4432_RSSI(uint32_t i, int s)
     // chThdSleepMicroseconds(SI4432_step_delay);
   i = setting.repeat;
   RSSI_RAW  = 0;
-again:
-  RSSI_RAW += ((unsigned int)SI4432_Read_Byte(SI4432_REG_RSSI)) << 4 ;
-  i--;
-  if (i > 0) {
+  do{
+    RSSI_RAW += ((unsigned int)SI4432_Read_Byte(SI4432_REG_RSSI))<<4;
+    if (--i == 0) break;
     my_microsecond_delay(100);
-    goto again;
-  }
+  }while(1);
+
   if (setting.repeat > 1)
     RSSI_RAW = RSSI_RAW / setting.repeat;
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();
-  float dBm = ((float)RSSI_RAW)/32.0 + SI4432_RSSI_correction;
 #ifdef __SIMULATION__
-  dBm = Simulated_SI4432_RSSI(i,s);
+  RSSI_RAW = Simulated_SI4432_RSSI(i,s)<<4;
 #endif
 //STOP_PROFILE
   // Serial.println(dBm,2);
-  return dBm ;
+  return RSSI_RAW;
 }
 
 

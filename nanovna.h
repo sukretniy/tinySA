@@ -863,7 +863,7 @@ byte SI4432_Read_Byte( byte ADR );
 
 void SI4432_Init(void);
 void SI4432_Drive(int);
-float SI4432_RSSI(uint32_t i, int s);
+int16_t SI4432_RSSI(uint32_t i, int s);
 #ifdef __FAST_SWEEP__
 void SI4432_Fill(int s, int start);
 #if 0
