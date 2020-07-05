@@ -1074,7 +1074,7 @@ set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
   for (; i < POINTS_COUNT; i++)
     frequencies[i] = 0;
   setting.frequency_step = delta;
-  update_rbw();
+  dirty = true;
 }
 
 void
