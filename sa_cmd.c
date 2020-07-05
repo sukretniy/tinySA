@@ -552,7 +552,7 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   int old_step = setting.frequency_step;
   float f_step = (stop-start)/ points;
   setting.frequency_step = (int32_t)f_step;
-  update_rbw();
+
   streamPut(shell_stream, '{');
   static  uint32_t old_start=0, old_stop=0, old_points=0;
   if (old_start != start || old_stop != stop || old_points != points) {

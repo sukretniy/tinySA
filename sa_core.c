@@ -1084,7 +1084,6 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
     setting.vbw_x10 = actual_rbw_x10;
     vbwSteps = 1;               // only one vbwSteps
   }
-  dirty = true;
 }
 
 int binary_search_frequency(int f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
