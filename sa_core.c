@@ -1624,7 +1624,7 @@ static bool sweep(bool break_on_operation)
 
   if (dirty) {                      // Calculate new scanning solution
 //    update_rbw();
-//    calculate_step_delay();
+    calculate_step_delay();
     // Set for actual time pre calculated value (update after sweep)
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
     // Change actual sweep time as user input if it greater minimum
