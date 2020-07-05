@@ -1076,7 +1076,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
     vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
-    if (setting.step_delay==1)                  // if in Precise scanning
+    if (setting.step_delay_mode==SD_PRECISE)    // if in Precise scanning
       vbwSteps *= 2;                            // use twice as many steps
     if (vbwSteps < 1)                            // at least one step
       vbwSteps = 1;

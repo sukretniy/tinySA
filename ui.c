@@ -1113,7 +1113,7 @@ const menuitem_t menu_top[] = {
 
 #include "ui_sa.c"
 
-#define MENU_STACK_DEPTH_MAX 5
+#define MENU_STACK_DEPTH_MAX 7
 const menuitem_t *menu_stack[MENU_STACK_DEPTH_MAX] = {
   menu_top, NULL, NULL, NULL
 };
