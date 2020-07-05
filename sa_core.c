@@ -1524,47 +1524,43 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
                    + get_frequency_correction(f)
                    + getSI4432_RSSI_correction(); // calcuate the RSSI correction for later use
 
+    if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
+      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
+    int16_t pureRSSI;
+    //    if ( i < 3)
+    //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
+
+    // ************** trigger mode if need
 #define T_LEVEL_UNDEF       (1<<(16-2)) // should drop after 2 shifts left
 #define T_LEVEL_BELOW       1
 #define T_LEVEL_ABOVE       0
 #define T_LEVEL_CLEAN       ~(1<<2)     // cleanup old trigger data
-    int wait_for_trigger = false;
-    // Cache trigger search mode
-    register uint16_t t_mode;
-    uint16_t trigger_lvl;
-    uint16_t data_level = T_LEVEL_UNDEF;
+
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
-      wait_for_trigger = true;                                                // signal the wait for trigger
+      register uint16_t t_mode;
+      uint16_t trigger_lvl;
+      uint16_t data_level = T_LEVEL_UNDEF;
       // Calculate trigger level
-      trigger_lvl = (setting.trigger_level - correct_RSSI)*32;
+      trigger_lvl = (setting.trigger_level - correct_RSSI) * 32;
 
       if (setting.trigger_direction == T_UP)
         t_mode = (T_LEVEL_BELOW<<1)|T_LEVEL_ABOVE; // from bottom to up
       else
         t_mode = (T_LEVEL_ABOVE<<1)|T_LEVEL_BELOW; // from up to bottom
-    }
 
-    if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
-      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
+      do{                                                 // wait for trigger to happen
+        pureRSSI = SI4432_Read_Byte(SI4432_REG_RSSI)<<4;
+        if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
+          break;                                                              // abort
 
-    int16_t pureRSSI;
-//    if ( i < 3)
-//      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
-
-    if (wait_for_trigger) {                                                 // wait for trigger to happen
-      pureRSSI = SI4432_Read_Byte(SI4432_REG_RSSI)<<4;
-      if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
-        break;                                                              // abort
-
-      // Store data level bitfield (remember only last 2 states)
-      // T_LEVEL_UNDEF mode bit drop after 2 shifts
-      data_level = ((data_level<<1) | (pureRSSI < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
-      // wait trigger
-      if (data_level != t_mode)                                             // trigger level change
-        continue;                                                           // get next rssi
+        // Store data level bitfield (remember only last 2 states)
+        // T_LEVEL_UNDEF mode bit drop after 2 shifts
+        data_level = ((data_level<<1) | (pureRSSI < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
+        // wait trigger
+      }while(data_level != t_mode);                                             // trigger level change
 #ifdef __FAST_SWEEP__
       if (setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
-         SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
+        SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
 #endif
       if (setting.trigger == T_SINGLE)
@@ -1572,7 +1568,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
     else
-      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer or by reading SI4432 RSSI need divide on 32!!
+      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
 
     float subRSSI = pureRSSI / 32.0;
     // add correction
