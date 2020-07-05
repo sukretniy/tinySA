@@ -900,7 +900,7 @@ void setupSA(void)
   RESTART_PROFILE           // measure 290 points to get real added time for 200 points
   SI4432_Fill(0,0);
   int t2 = DELTA_TIME;
-  int t = (t2 - t1) * 100 * POINTS_COUNT / 200; // And calculate real time excluding overhead for all points
+  int t = (t2 - t1) * 100 * (sweep_points) / 200; // And calculate real time excluding overhead for all points
 #endif
 }
 extern int SI4432_frequency_changed;
@@ -1685,8 +1685,9 @@ sweep_again:                                // stay in sweep loop when output mo
     if (MODE_INPUT(setting.mode)) {
 
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, i, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
-        ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-i, 1, 0);
+    	int pos = i * sweep_points / (WIDTH+1);
+        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, pos, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
+        ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-pos, 1, 0);
       }
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------
@@ -2025,8 +2026,8 @@ sweep_again:                                // stay in sweep loop when output mo
   //---------------- in Linearity measurement the attenuation has to be adapted ------------------
 
 
-  if (setting.measurement == M_LINEARITY && setting.linearity_step < setting._sweep_points) {
-    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / POINTS_COUNT;
+  if (setting.measurement == M_LINEARITY && setting.linearity_step < sweep_points) {
+    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / (sweep_points);
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
@@ -3006,7 +3007,7 @@ do_again:
 #endif
       setting.offset_delay = 1600;
       test_value = saved_peakLevel;
-      if ((uint32_t)(setting.rbw_x10 * 1000) / 290 < 8000) {           // fast mode possible
+      if ((uint32_t)(setting.rbw_x10 * 1000) / (sweep_points) < 8000) {           // fast mode possible
         while (setting.offset_delay > 0 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
           test_prepare(i);
           setting.step_delay_mode = SD_FAST;

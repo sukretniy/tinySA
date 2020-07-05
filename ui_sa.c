@@ -1077,6 +1077,13 @@ static void menu_outputmode_cb(int item, uint8_t data)
   draw_menu();
 }
 
+static const uint16_t points_setting[] = {145, 290, -1};
+static void menu_points_cb(int item, uint8_t data){
+  (void)item;
+  set_sweep_points(points_setting[data]);
+  draw_menu();
+}
+
 //const int menu_drive_value[]={5,10,15,20};
 const char *menu_drive_text[]={"-38dBm","-35dBm","-33dBm","-30dBm","-27dBm","-24dBm","-21dBm","  -19dBm", "  -7dBm"," -4dBm"," -2dBm","  1dBm","  4dBm","  7dBm"," 10dBm"," 13dBm"};
 
@@ -1392,12 +1399,20 @@ static const menuitem_t menu_scanning_speed[] =
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+const menuitem_t menu_sweep_points[] = {
+  { MT_CALLBACK, 0, "145p", menu_points_cb },
+  { MT_CALLBACK, 1, "290p", menu_points_cb },
+  { MT_CANCEL,  -1, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_sweep_speed[] =
 {
  { MT_CALLBACK, SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
  { MT_CALLBACK, SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
  { MT_CALLBACK, SD_FAST,       "FAST",              menu_scanning_speed_cb},
  { MT_KEYPAD,  KM_SWEEP_TIME,  "MANUAL",            "0..600s"},
+ { MT_SUBMENU,  0,             "\2SWEEP\0POINTS",  menu_sweep_points},
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1691,7 +1706,12 @@ static void menu_item_modify_attribute(
     if (item == setting.step_delay_mode){
       mark = true;
     }
-  } else if (menu == menu_sweep_speed) {
+  } else if (menu == menu_sweep_points) {
+    if (points_setting[data] == sweep_points){
+      mark = true;
+    }
+  }
+  else if (menu == menu_sweep_speed) {
     if (item == 3 && setting.sweep_time_us != 0){
       mark = true;
     }
