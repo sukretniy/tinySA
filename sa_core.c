@@ -1275,7 +1275,7 @@ static const int am_modulation[5] =  { 4,0,1,5,7 };         // 5 step AM modulat
 static const int nfm_modulation[5] = { 0, 2, 1, -1, -2};    // 5 step narrow FM modulation
 static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wide FM modulation
 
-char age[POINTS_COUNT];
+deviceRSSI_t age[POINTS_COUNT];
 
 static float old_a = -150;
 static float correct_RSSI;
@@ -1400,7 +1400,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
   }
 
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
-  int16_t RSSI = (-150)*32;
+  pureRSSI_t RSSI = float_TO_PURE_RSSI(-150.0);
   int t = 0;
   do {
     int offs = 0,sm;
@@ -1547,7 +1547,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
-    int16_t pureRSSI;
+    pureRSSI_t pureRSSI;
     //    if ( i < 3)
     //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
 
@@ -1564,10 +1564,10 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
       register uint16_t t_mode;
-      uint16_t trigger_lvl;
+      pureRSSI_t trigger_lvl;
       uint16_t data_level = T_LEVEL_UNDEF;
       // Calculate trigger level
-      trigger_lvl = (setting.trigger_level - correct_RSSI) * 32;
+      trigger_lvl = float_TO_PURE_RSSI(setting.trigger_level - correct_RSSI);
 
       if (setting.trigger_direction == T_UP)
         t_mode = T_UP_MASK;
@@ -1577,7 +1577,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       if (setting.sweep_time_us >= 100*ONE_MS_TIME) additional_delay = 20;
       SI4432_Sel =  MODE_SELECT(setting.mode);
       do{                                                 // wait for trigger to happen
-        pureRSSI = SI4432_Read_Byte(SI4432_REG_RSSI)<<4;
+        pureRSSI = DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
           return 0;                                                           // abort
 
@@ -1602,7 +1602,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
 
 #ifdef __SPUR__
-    static int16_t spur_RSSI = -1;
+    static pureRSSI_t spur_RSSI = -1;
     if (setting.spur == 1) {
       if(spur_RSSI == -1) {                                         // If first spur pass
         spur_RSSI = pureRSSI;                                       // remember measure RSSI
@@ -1620,7 +1620,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
-  return(RSSI/32.0) + correct_RSSI; // add correction
+  return PURE_TO_float(RSSI) + correct_RSSI; // add correction
 }
 
 #define MAX_MAX 4

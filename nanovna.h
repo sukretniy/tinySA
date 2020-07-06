@@ -865,6 +865,15 @@ int plot_printf(char *str, int, const char *fmt, ...);
 #define define_to_STR(x)  STR1(x)
 
 // sa_core.c
+
+typedef uint8_t  deviceRSSI_t;
+typedef int16_t  pureRSSI_t;
+
+// RSSI values conversion macrp
+#define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
+#define float_TO_PURE_RSSI(rssi)  ((rssi)*32.0)
+#define PURE_TO_float(rssi)       ((rssi)/32.0)
+
 int get_waterfall(void);
 void toggle_tracking(void);
 void calibrate(void);
