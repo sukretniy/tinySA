@@ -1953,7 +1953,7 @@ static void cell_grid_line_info(int x0, int y0)
   char buf[32];
   int xpos = GRID_X_TEXT - x0;
   int ypos = 0 - y0 + 2;
-  ili9341_set_foreground(/* DEFAULT_GRID_COLOR */ DEFAULT_MENU_COLOR );
+  ili9341_set_foreground(DEFAULT_GRID_VALUE_COLOR);
   float   ref = get_trace_refpos(TRACE_ACTUAL);
   float scale = get_trace_scale(TRACE_ACTUAL);;
   for (int i = 0; i < NGRIDY; i++){

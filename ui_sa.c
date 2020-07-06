@@ -1042,7 +1042,7 @@ static void menu_settings2_cb(int item, uint8_t data)
     toggle_AGC();
     break;
   case 2:
-    toggle_LNA();;
+    toggle_LNA();
     break;
   case 3:
     toggle_tracking();

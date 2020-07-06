@@ -530,6 +530,7 @@ extern volatile uint8_t redraw_request;
 #define DARK_GREY                   RGB565(140,140,140)
 #define LIGHT_GREY                  RGB565(220,220,220)
 #define DEFAULT_GRID_COLOR          RGB565(128,128,128)
+#define DEFAULT_GRID_VALUE_COLOR    RGB565(196,196,196)
 #define DEFAULT_MENU_COLOR          RGB565(255,255,255)
 #define DEFAULT_MENU_TEXT_COLOR     RGB565(  0,  0,  0)
 #define DEFAULT_MENU_ACTIVE_COLOR   RGB565(180,255,180)
