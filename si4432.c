@@ -82,7 +82,7 @@ static uint8_t shiftIn(void)
   return value>>GPIO_SPI2_SDO;
 }
 
-static inline void shiftInBuf(uint16_t sel, uint8_t addr, uint8_t *buf, uint16_t size, uint16_t delay) {
+static inline void shiftInBuf(uint16_t sel, uint8_t addr, deviceRSSI_t *buf, uint16_t size, uint16_t delay) {
   uint8_t i = 0;
   do{
     uint32_t value = addr;
@@ -392,7 +392,7 @@ int SI4432_step_delay = 1500;
 //extern int setting.repeat;
 
 #ifdef __FAST_SWEEP__
-extern char age[POINTS_COUNT];
+extern deviceRSSI_t age[POINTS_COUNT];
 static int buf_index = 0;
 static bool  buf_read = false;
 
@@ -432,7 +432,7 @@ void SI4432_Fill(int s, int start)
       my_microsecond_delay(t);
   } while(1);
 #else
-  shiftInBuf(sel, SI4432_REG_RSSI, (uint8_t *)&age[start], sweep_points - start, t);
+  shiftInBuf(sel, SI4432_REG_RSSI, &age[start], sweep_points - start, t);
 #endif
 //  __enable_irq();
   setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
@@ -448,10 +448,10 @@ float getSI4432_RSSI_correction(void){
   return SI4432_RSSI_correction;
 };
 
-int16_t SI4432_RSSI(uint32_t i, int s)
+pureRSSI_t SI4432_RSSI(uint32_t i, int s)
 {
   (void) i;
-  int32_t RSSI_RAW;
+  pureRSSI_t RSSI_RAW;
   (void) i;
   // SEE DATASHEET PAGE 61
 #ifdef USE_SI4463           // Not used!!!!!!!
@@ -464,7 +464,7 @@ int16_t SI4432_RSSI(uint32_t i, int s)
   if (buf_read) {
     if (buf_index == sweep_points-1)
       buf_read = false;
-    return (unsigned char)age[buf_index++]<<4;
+    return DEVICE_TO_PURE_RSSI(age[buf_index++]);
   }
 #endif
   SI4432_Sel = s;
@@ -485,7 +485,7 @@ int16_t SI4432_RSSI(uint32_t i, int s)
   i = setting.repeat;
   RSSI_RAW  = 0;
   do{
-    RSSI_RAW += ((unsigned int)SI4432_Read_Byte(SI4432_REG_RSSI))<<4;
+    RSSI_RAW += DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
     if (--i == 0) break;
     my_microsecond_delay(100);
   }while(1);
@@ -495,7 +495,8 @@ int16_t SI4432_RSSI(uint32_t i, int s)
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();
 #ifdef __SIMULATION__
-  RSSI_RAW = Simulated_SI4432_RSSI(i,s)<<4;
+#error "Fixme!!! add correct simulation in pureRSSI_t type"
+  RSSI_RAW = Simulated_SI4432_RSSI(i,s);
 #endif
 //STOP_PROFILE
   // Serial.println(dBm,2);

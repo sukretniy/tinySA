@@ -16,11 +16,8 @@
  */
 
 
-extern volatile int SI4432_Sel;         // currently selected SI4432
-void SI4432_Write_Byte(byte ADR, byte DATA );
-byte SI4432_Read_Byte( byte ADR );
-int VFO = 0;
-int points = 101; // For 's' and 'm' commands
+static int VFO = 0;
+static int points = 101; // For 's' and 'm' commands
 
 VNA_SHELL_FUNCTION(cmd_mode)
 {
