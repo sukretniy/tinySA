@@ -321,7 +321,7 @@ extern  uint16_t _grid_y;
 #define MENU_FORM_WIDTH    256
 
 // Num Input height at bottom
-#define NUM_INPUT_HEIGHT   30
+#define NUM_INPUT_HEIGHT   32
 
 extern int16_t area_width;
 extern int16_t area_height;
@@ -345,6 +345,20 @@ extern const uint16_t numfont16x22[];
 #define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*22])
 #define NUM_FONT_GET_WIDTH      16
 #define NUM_FONT_GET_HEIGHT     22
+
+#if 1
+#define KP_WIDTH                  ((LCD_WIDTH) / 4)// numeric keypad button width
+#define KP_HEIGHT                 ((LCD_HEIGHT - NUM_INPUT_HEIGHT) / 4) // numeric keypad button height
+// Key x, y position (0 - 15) on screen
+#define KP_GET_X(posx)            ((posx) * KP_WIDTH)                   // numeric keypad left
+#define KP_GET_Y(posy)            ((posy) * KP_HEIGHT)                  // numeric keypad top
+#else
+#define KP_WIDTH     (LCD_HEIGHT/5)
+#define KP_HEIGHT    (LCD_HEIGHT/5)
+// Key x, y position (0 - 15) on screen
+#define KP_GET_X(posx) ((posx)*KP_WIDTH + (LCD_WIDTH-MENU_BUTTON_WIDTH-5-KP_WIDTH*4))
+#define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
+#endif
 
 #define S_DELTA "\004"
 #define S_DEGREE "\037"
