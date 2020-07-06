@@ -104,23 +104,36 @@
 #define SI4432_FIFO                        0x7F
 
 
-typedef byte uint8_t;
+typedef uint8_t byte;
 extern volatile int SI4432_Sel;         // currently selected SI4432
 void SI4432_Write_Byte(byte ADR, byte DATA );
 byte SI4432_Read_Byte( byte ADR );
 
+void SI4432_Transmit(int d);
+void SI4432_Receive(void);
+
 void SI4432_Init(void);
+void SI4432_Drive(int);
 float getSI4432_RSSI_correction(void);
 int16_t SI4432_RSSI(uint32_t i, int s);
 #ifdef __SIMULATION__
 float Simulated_SI4432_RSSI(uint32_t i, int s);
 #endif
 void SI4432_Set_Frequency ( uint32_t Freq );
-void SI4432_Transmit(int d);
-void SI4432_Receive(void);
+
+uint16_t SI4432_force_RBW(int i);
 uint16_t SI4432_SET_RBW(uint16_t WISH);
+void SI4432_SetReference(int freq);
+
 bool PE4302_Write_Byte(unsigned char DATA );
 void PE4302_init(void);
+
+#ifdef __FAST_SWEEP__
+void SI4432_Fill(int s, int start);
+#if 0
+int SI4432_is_fast_mode(void);
+#endif
+#endif
 
 #ifdef __ULTRA_SA__
 extern int ADF4351_LE[];

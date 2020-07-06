@@ -854,27 +854,6 @@ int plot_printf(char *str, int, const char *fmt, ...);
 //extern int setting_step_delay;
 //extern int actualStepDelay;
 //extern int setting_mode;
-void update_rbw(void);
-int get_actual_RBW(void);
-
-#define byte uint8_t
-extern volatile int SI4432_Sel;         // currently selected SI4432
-void SI4432_Write_Byte(byte ADR, byte DATA );
-byte SI4432_Read_Byte( byte ADR );
-
-void SI4432_Init(void);
-void SI4432_Drive(int);
-int16_t SI4432_RSSI(uint32_t i, int s);
-#ifdef __FAST_SWEEP__
-void SI4432_Fill(int s, int start);
-#if 0
-int SI4432_is_fast_mode(void);
-#endif
-#endif
-void SI4432_Set_Frequency ( uint32_t Freq );
-uint16_t SI4432_SET_RBW(uint16_t WISH);
-void SI4432_SetReference(int freq);
-extern uint16_t SI4432_force_RBW(int i);
 
 // Speed profile definition
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
@@ -896,6 +875,7 @@ void set_unit(int);
 void set_switches(int);
 void set_trigger_level(float);
 void set_trigger(int);
+void update_rbw(void);
 //extern int setting_measurement;
 void self_test(int);
 //extern int setting_test;
