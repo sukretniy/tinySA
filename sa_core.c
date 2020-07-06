@@ -1421,7 +1421,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     // Calculate the RSSI correction for later use
     if (i == 0){ // only cases where the value can change on 0 point of sweep
       correct_RSSI = getSI4432_RSSI_correction();
-  //      if (setting.frequency_step != 0 )
+      if (setting.frequency_step != 0 )
         correct_RSSI+= get_level_offset()
                     +  get_attenuation()
                     -  get_signal_path_loss()
@@ -1573,9 +1573,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         t_mode = T_UP_MASK;
       else
         t_mode = T_DOWN_MASK;
-      uint32_t count = 32;
       uint32_t additional_delay = 0;// reduce noise
       if (setting.sweep_time_us >= 100*ONE_MS_TIME) additional_delay = 20;
+      SI4432_Sel =  MODE_SELECT(setting.mode);
       do{                                                 // wait for trigger to happen
         pureRSSI = SI4432_Read_Byte(SI4432_REG_RSSI)<<4;
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
@@ -1586,11 +1586,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         data_level = ((data_level<<1) | (pureRSSI < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
         if (data_level == t_mode)  // wait trigger
           break;
-        // DIRTY HACK!!! FIX ME HERE
-        // not get data after dirty = true apply in code at first run!!!!
-        if (pureRSSI == 0 && --count == 0)
-          break;
-
         if (additional_delay)
           my_microsecond_delay(additional_delay);
       }while(1);
