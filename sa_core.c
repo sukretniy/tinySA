@@ -350,6 +350,16 @@ float get_attenuation(void)
   return(setting.attenuate);
 }
 
+static float get_signal_path_loss(void){
+#ifdef __ULTRA__
+  if (setting.mode == M_ULTRA)
+    return -15;       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+#endif
+  if (setting.mode == M_LOW)
+    return -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+  return +7;          // Loss in dB (+ is gain)
+}
+
 static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
 
 void set_level(float v)     // Set the drive level of the LO
@@ -787,7 +797,7 @@ void calculate_step_delay(void)
       SI4432_offset_delay = setting.offset_delay;
   } else {
     SI4432_offset_delay = 0;
-    if (setting.frequency_step == 0.0) {          // zero span mode, not dependent on selected RBW
+    if (setting.frequency_step == 0) {            // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
       if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 100; }
@@ -890,7 +900,7 @@ void setupSA(void)
   RESTART_PROFILE           // measure 290 points to get real added time for 200 points
   SI4432_Fill(0,0);
   int t2 = DELTA_TIME;
-  int t = (t2 - t1) * 100 * POINTS_COUNT / 200; // And calculate real time excluding overhead for all points
+  int t = (t2 - t1) * 100 * (sweep_points) / 200; // And calculate real time excluding overhead for all points
 #endif
 }
 extern int SI4432_frequency_changed;
@@ -1084,7 +1094,6 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
     setting.vbw_x10 = actual_rbw_x10;
     vbwSteps = 1;               // only one vbwSteps
   }
-  dirty = true;
 }
 
 int binary_search_frequency(int f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
@@ -1279,6 +1288,38 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     dirty = false;
     if (setting.spur)                                                       // if in spur avoidance mode
       setting.spur = 1;                                                     // resync spur in case of previous abort
+    // Set for actual time pre calculated value (update after sweep)
+    setting.actual_sweep_time_us = calc_min_sweep_time_us();
+    // Change actual sweep time as user input if it greater minimum
+    // And set start delays for 1 run
+    if (setting.sweep_time_us > setting.actual_sweep_time_us){
+      setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points);
+      setting.actual_sweep_time_us = setting.sweep_time_us;
+    }
+    else{ // not add additional correction, apply recommend time
+      setting.additional_step_delay_us = 0;
+//      setting.sweep_time_us = setting.actual_sweep_time_us;
+    }
+#if 0
+    // manually set delay, for better sync
+    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 0;
+      setting.sweep_time_us = 0;
+    }
+    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 1;
+      setting.sweep_time_us = 3000;
+    }
+#endif
+    //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
+    //      setting.additional_step_delay_us = 500;
+    // Update grid and status after
+    if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
+      redraw_request |= REDRAW_CAL_STATUS;
+      if (FREQ_IS_CW()) {                                       // if zero span mode
+        update_grid();                                          // and update grid and frequency
+      }
+    }
   }
 
   if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {             // if in low output mode and level sweep is active
@@ -1485,13 +1526,11 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 
     // ------------------------- end of processing when in output mode ------------------------------------------------
 
-    float signal_path_loss;
-
  skip_LO_setting:
+    if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
+      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
 
     if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
-      if (i == 0 && t == 0)                                                             // if first point in scan (here is get 1 point data)
-        start_of_sweep_timestamp = chVTGetSystemTimeX();
       return(0);
     }
     // ---------------- Prepare RSSI ----------------------
@@ -1504,28 +1543,15 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
-
-#ifdef __ULTRA__
-    if (setting.mode == M_ULTRA)
-      signal_path_loss = -15;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-    else
-#endif
-    if (setting.mode == M_LOW)
-      signal_path_loss = -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-    else
-      signal_path_loss = +7;         // Loss in dB (+ is gain)
-
     static float correct_RSSI;                  // This is re-used between calls
-    if (i == 0 || setting.frequency_step != 0 ) // only cases where the value can change
+    if (i == 0 || setting.frequency_step != 0 ){ // only cases where the value can change
       correct_RSSI = get_level_offset()
                    + get_attenuation()
-                   - signal_path_loss
+                   - get_signal_path_loss()
                    - setting.offset
                    + get_frequency_correction(f)
                    + getSI4432_RSSI_correction(); // calcuate the RSSI correction for later use
-
-    if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
-      start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
+    }
     int16_t pureRSSI;
     //    if ( i < 3)
     //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
@@ -1622,43 +1648,8 @@ static bool sweep(bool break_on_operation)
 //  if (sweep_counter > 5000 && setting.average == AV_OFF)            // refresh HW after 5000 sweeps
 //    dirty = true;
 
-  if (dirty) {                      // Calculate new scanning solution
-    update_rbw();
-    calculate_step_delay();
-    // Set for actual time pre calculated value (update after sweep)
-    setting.actual_sweep_time_us = calc_min_sweep_time_us();
-    // Change actual sweep time as user input if it greater minimum
-    // And set start delays for 1 run
-    if (setting.sweep_time_us > setting.actual_sweep_time_us){
-      setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points);
-      setting.actual_sweep_time_us = setting.sweep_time_us;
-    }
-    else{ // not add additional correction, apply recommend time
-      setting.additional_step_delay_us = 0;
-//      setting.sweep_time_us = setting.actual_sweep_time_us;
-    }
-#if 0
-    // manually set delay, for better sync
-    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 0;
-      setting.sweep_time_us = 0;
-    }
-    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 1;
-      setting.sweep_time_us = 3000;
-    }
-#endif
-//    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
-//      setting.additional_step_delay_us = 500;
-    // Update grid and status after
-    if (break_on_operation  && MODE_INPUT(setting.mode)) {                       // during normal operation
-      redraw_request |= REDRAW_CAL_STATUS;
-      if (FREQ_IS_CW()) {                                       // if zero span mode
-        update_grid();                                          // and update grid and frequency
-      }
-    }
+  if (dirty)                    // Calculate new scanning solution
     sweep_counter = 0;
-  }
   else
     sweep_counter++;
 
@@ -1673,6 +1664,13 @@ sweep_again:                                // stay in sweep loop when output mo
     // --------------------- measure -------------------------
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);    // Measure RSSI for one of the frequencies
+    // if break back to top level to handle ui operation
+    if (break_on_operation && operation_requested) {                        // break loop if needed
+      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
+        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
+      }
+      return false;
+    }
 
     // Delay between points if needed, (all delays can apply in SI4432 fill)
     if (setting.measure_sweep_time_us == 0){                                    // If not already in buffer
@@ -1684,19 +1682,12 @@ sweep_again:                                // stay in sweep loop when output mo
       }
     }
 
-    // if break back to top level to handle ui operation
-    if (break_on_operation && operation_requested) {                        // break loop if needed
-      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
-      }
-      return false;
-    }
-
     if (MODE_INPUT(setting.mode)) {
 
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, i, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
-        ili9341_fill(OFFSETX+i, HEIGHT_NOSCROLL+1, WIDTH-i, 1, 0);
+    	int pos = i * (WIDTH+1) / sweep_points;
+        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, pos, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
+        ili9341_fill(OFFSETX+pos, HEIGHT_NOSCROLL+1, WIDTH-pos, 1, 0);
       }
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------
@@ -2035,8 +2026,8 @@ sweep_again:                                // stay in sweep loop when output mo
   //---------------- in Linearity measurement the attenuation has to be adapted ------------------
 
 
-  if (setting.measurement == M_LINEARITY && setting.linearity_step < setting._sweep_points) {
-    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / POINTS_COUNT;
+  if (setting.measurement == M_LINEARITY && setting.linearity_step < sweep_points) {
+    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / (sweep_points);
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
@@ -2379,10 +2370,8 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 #if 1
   y += YSTEP;
-  int old_dirty = dirty;
   update_rbw();             // To ensure the calc_min_sweep time shown takes the latest delay into account
   calculate_step_delay();
-  dirty = old_dirty;            // restore as update_rbw sets dirty
   uint32_t t = calc_min_sweep_time_us();
 //  if (t < setting.sweep_time_us)
 //    t = setting.sweep_time_us;
@@ -3018,7 +3007,7 @@ do_again:
 #endif
       setting.offset_delay = 1600;
       test_value = saved_peakLevel;
-      if ((uint32_t)(setting.rbw_x10 * 1000) / 290 < 8000) {           // fast mode possible
+      if ((uint32_t)(setting.rbw_x10 * 1000) / (sweep_points) < 8000) {           // fast mode possible
         while (setting.offset_delay > 0 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
           test_prepare(i);
           setting.step_delay_mode = SD_FAST;

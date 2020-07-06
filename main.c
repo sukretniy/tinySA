@@ -980,6 +980,14 @@ bool sweep(bool break_on_operation)
 }
 #endif
 
+void set_sweep_points(uint16_t points){
+  if (points == sweep_points || points > POINTS_COUNT)
+    return;
+
+  sweep_points = points;
+  update_frequencies();
+}
+
 VNA_SHELL_FUNCTION(cmd_scan)
 {
   uint32_t start, stop;
@@ -1074,7 +1082,7 @@ set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
   for (; i < POINTS_COUNT; i++)
     frequencies[i] = 0;
   setting.frequency_step = delta;
-  update_rbw();
+  dirty = true;
 }
 
 void
@@ -2697,10 +2705,7 @@ int main(void)
   dacStart(&DACD2, &dac1cfg1);
 #endif
   setupSA();
-  sweep_points = POINTS_COUNT;
-/* initial frequencies */
-  update_frequencies();
-
+  set_sweep_points(POINTS_COUNT);
 
 #ifdef __VNA__
 /*
