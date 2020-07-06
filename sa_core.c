@@ -1284,6 +1284,9 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 {
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
     apply_settings();                                                       // Initialize HW
+
+    update_rbw();
+
     scandirty = true;                                                       // This is the first pass with new settings
     dirty = false;
     if (setting.spur)                                                       // if in spur avoidance mode
@@ -2516,6 +2519,8 @@ enum {
 
 #define TEST_COUNT  17
 
+#define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
+
 static const struct {
   int kind;
   int setup;
@@ -2525,24 +2530,24 @@ static const struct {
   int width;
   float stop;
 } test_case [TEST_COUNT] =
-{// Condition   Preparation     Center  Span    Pass Width  Stop
- {TC_BELOW,     TP_SILENT,      0.005,  0.01,  0,0,     0},         // 1 Zero Hz leakage
- {TC_BELOW,     TP_SILENT,      0.01,   0.01,  -30,   0,     0},         // 2 Phase noise of zero Hz
- {TC_SIGNAL,    TP_10MHZ,       20,     7,      -37, 30,    -90 },      // 3
- {TC_SIGNAL,    TP_10MHZ,       30,     7,      -32, 30,    -90 },      // 4
- {TC_BELOW,     TP_SILENT,      200,    100,    -75, 0,     0},         // 5  Wide band noise floor low mode
- {TC_BELOW,     TPH_SILENT,     600,    720,    -75, 0,     0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20, 80,    -80 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18, 20,    -60},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       430,    60,     -80, 0,     -80},       // 9 LPF cutoff
- {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -38, 30,    -65 },      // 10 Switch isolation using high attenuation
- {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5, 30,  -70 },      // 12 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -50, 30,    -75 },       // 13 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40, 30,    -65 },       // 14 Calibrate power high mode
- {TC_END,       0,              0,      0,      0,   0,     0},
- {TC_MEASURE,   TP_30MHZ,       30,     1,      -20, 30,    -60 },      // 16 Measure RBW step time
- {TC_END,       0,              0,      0,      0,   0,     0},
+{// Condition   Preparation     Center  Span    Pass    Width(%)Stop
+ {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
+ {TC_BELOW,     TP_SILENT,      0.01,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
+ {TC_SIGNAL,    TP_10MHZ,       20,     7,      -37,    10,     -90 },      // 3
+ {TC_SIGNAL,    TP_10MHZ,       30,     7,      -32,    10,     -90 },      // 4
+ {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
+ {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
+ {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
+ {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    7,     -60},       // 8 BPF pass band flatness
+ {TC_BELOW,     TP_30MHZ,       430,    60,     -80,    0,      -80},       // 9 LPF cutoff
+ {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -38,    10,     -65 },      // 10 Switch isolation using high attenuation
+ {TC_END,       0,              0,      0,      0,      0,      0},
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5,  10,     -70 },      // 12 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
+ {TC_END,       0,              0,      0,      0,      0,      0},
+ {TC_MEASURE,   TP_30MHZ,       30,     1,      -20,    10,     -60 },      // 16 Measure RBW step time
+ {TC_END,       0,              0,      0,      0,      0,      0},
 };
 
 enum {
@@ -2659,14 +2664,14 @@ int validate_flatness(int i) {
       break;
   }
   //shell_printf("\n\rRight width %d\n\r", j - peakIndex );
-  if (j - peakIndex < test_case[i].width)
+  if (j - peakIndex < W2P(test_case[i].width))
     return(TS_FAIL);
   for (j = peakIndex; j > 0; j--) {
     if (actual_t[j] < peakLevel - 6)    // Search left -3dB
       break;
   }
   //shell_printf("Left width %d\n\r", j - peakIndex );
-  if (peakIndex - j < test_case[i].width)
+  if (peakIndex - j < W2P(test_case[i].width))
     return(TS_FAIL);
   test_fail_cause[i] = "";
   return(TS_PASS);
@@ -2704,9 +2709,9 @@ int test_validate(int i)
   case TC_SIGNAL:           // Validate signal
   common: current_test_status = validate_signal_within(i, 5.0);
     if (current_test_status == TS_PASS) {            // Validate noise floor
-      current_test_status = validate_below(i, 0, setting._sweep_points/2 - test_case[i].width);
+      current_test_status = validate_below(i, 0, setting._sweep_points/2 - W2P(test_case[i].width));
       if (current_test_status == TS_PASS) {
-        current_test_status = validate_below(i, setting._sweep_points/2 + test_case[i].width, setting._sweep_points);
+        current_test_status = validate_below(i, setting._sweep_points/2 + W2P(test_case[i].width), setting._sweep_points);
       }
       if (current_test_status != TS_PASS)
         test_fail_cause[i] = "Stopband ";
@@ -2777,11 +2782,11 @@ common_silent:
 #endif
  common:
 
-    for (int j = 0; j < setting._sweep_points/2 - test_case[i].width; j++)
+    for (int j = 0; j < setting._sweep_points/2 - W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].stop;
-    for (int j = setting._sweep_points/2 + test_case[i].width; j < setting._sweep_points; j++)
+    for (int j = setting._sweep_points/2 + W2P(test_case[i].width); j < setting._sweep_points; j++)
       stored_t[j] = test_case[i].stop;
-    for (int j = setting._sweep_points/2 - test_case[i].width; j < setting._sweep_points/2 + test_case[i].width; j++)
+    for (int j = setting._sweep_points/2 - W2P(test_case[i].width); j < setting._sweep_points/2 + W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].pass;
     break;
   case TP_30MHZ:
@@ -2835,6 +2840,7 @@ static int test_step = 0;
 
 void self_test(int test)
 {
+//  set_sweep_points(POINTS_COUNT);
   if (test == 0) {
     if (test_wait ) {
       if (test_case[test_step].kind == TC_END || setting.test_argument != 0)
