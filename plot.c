@@ -1953,7 +1953,7 @@ static void cell_grid_line_info(int x0, int y0)
   char buf[32];
   int xpos = GRID_X_TEXT - x0;
   int ypos = 0 - y0 + 2;
-  ili9341_set_foreground(DEFAULT_GRID_COLOR);
+  ili9341_set_foreground(/* DEFAULT_GRID_COLOR */ DEFAULT_MENU_COLOR );
   float   ref = get_trace_refpos(TRACE_ACTUAL);
   float scale = get_trace_scale(TRACE_ACTUAL);;
   for (int i = 0; i < NGRIDY; i++){
@@ -2057,8 +2057,8 @@ static void cell_draw_marker_info(int x0, int y0)
 //      buf[k++] = 0;
       ili9341_set_background(DEFAULT_BG_COLOR);
       uint16_t color;
-      if ((setting.mode == M_LOW && temppeakLevel - get_attenuation() > -1) ||
-          (setting.mode == M_HIGH && temppeakLevel - get_attenuation() > -10))
+      if ((setting.mode == M_LOW && temppeakLevel - get_attenuation() - setting.offset > -1) ||
+          (setting.mode == M_HIGH && temppeakLevel - get_attenuation()- setting.offset > -10))
         color = BRIGHT_COLOR_RED;
       else
         color = marker_color(markers[i].mtype);
