@@ -329,13 +329,15 @@ void set_10mhz(uint32_t f)
 int SI4432_frequency_changed = false;
 int SI4432_offset_changed = false;
 
-#if 0
+// #define __CACHE_BAND__  // Is not reliable!!!!!!
+
+#ifdef __CACHE_BAND__
 static int old_freq_band[2] = {-1,-1};
 static int written[2]= {0,0};
 #endif
 
 void SI4432_Set_Frequency ( uint32_t Freq ) {
-//  int mode = SI4432_Read_Byte(0x02) & 0x03;
+//  int mode = SI4432_Read_Byte(0x02) & 0x03;           // Disabled as unreliable
 //  SI4432_Write_Byte(0x07, 0x02);    // Switch to tune mode
   uint8_t hbsel;
   if (0) shell_printf("%d: Freq %q\r\n", SI4432_Sel, Freq);
@@ -357,7 +359,7 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
 //    my_microsecond_delay(100);
 //  }
 
-#if 0
+#ifdef __CACHE_BAND__
   if (old_freq_band[SI4432_Sel] == Freq_Band) {
     if (written[SI4432_Sel] < 4) {
       SI4432_Write_Byte ( 0x75, Freq_Band );
@@ -367,15 +369,20 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
     SI4432_Write_Byte(SI4432_FREQCARRIER_L, Carrier & 0xFF  );
   } else {
 #endif
-
+#if 0       // Do not use multi byte write
+    SI4432_Write_Byte ( 0x75, Freq_Band );                          // Freq band must be written first !!!!!!!!!!!!
+    SI4432_Write_Byte(SI4432_FREQCARRIER_H, (Carrier>>8) & 0xFF );
+    SI4432_Write_Byte(SI4432_FREQCARRIER_L, Carrier & 0xFF  );
+#else
     SI4432_Write_3_Byte (SI4432_FREQBAND, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF);
-#if 0
+#endif
+#ifdef __CACHE_BAND__
     old_freq_band[SI4432_Sel] = Freq_Band;
     written[SI4432_Sel] = 0;
   }
 #endif
   SI4432_frequency_changed = true;
-//  if (mode == 1)        // RX mode
+//  if (mode == 1)        // RX mode            Disabled as unreliable
 //    SI4432_Write_Byte( 0x07, 0x07);
 //  else
 //    SI4432_Write_Byte( 0x07, 0x0B);
@@ -546,13 +553,13 @@ void SI4432_Sub_Init(void)
   // Register 0x77 Nominal Carrier Frequency
 //  SI4432_Write_Byte(SI4432_FREQCARRIER_L, 0x00) ;
   // RX MODEM SETTINGS
-//  SI4432_Write_3_Byte(SI4432_IF_FILTER_BW, 0x81, 0x3C, 0x02) ;
-//  SI4432_Write_Byte(SI4432_IF_FILTER_BW, 0x81) ;
+//  SI4432_Write_3_Byte(SI4432_IF_FILTER_BW, 0x81, 0x3C, 0x02) ;    // <----------
+//  SI4432_Write_Byte(SI4432_IF_FILTER_BW, 0x81) ;    // <----------
   SI4432_Write_Byte(SI4432_AFC_LOOP_GEARSHIFT_OVERRIDE, 0x00) ;
-//  SI4432_Write_Byte(SI4432_AFC_TIMING_CONTROL, 0x02) ;
+//  SI4432_Write_Byte(SI4432_AFC_TIMING_CONTROL, 0x02) ;    // <----------
   SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_GEARSHIFT, 0x03) ;
-  // SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OVERSAMPLING, 0x78) ;
-//  SI4432_Write_3_Byte(SI4432_CLOCK_RECOVERY_OFFSET2, 0x01, 0x11, 0x11) ;
+//  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OVERSAMPLING, 0x78) ;    // <----------
+//  SI4432_Write_3_Byte(SI4432_CLOCK_RECOVERY_OFFSET2, 0x01, 0x11, 0x11) ;    // <----------
   SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OFFSET2, 0x01) ;
   SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OFFSET1, 0x11) ;
   SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OFFSET0, 0x11) ;
@@ -560,7 +567,7 @@ void SI4432_Sub_Init(void)
   SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_TIMING_GAIN0, 0x13) ;
   SI4432_Write_Byte(SI4432_AFC_LIMITER, 0xFF) ;
 
-//  SI4432_Write_3_Byte(0x2C, 0x28, 0x0c, 0x28) ;
+//  SI4432_Write_3_Byte(0x2C, 0x28, 0x0c, 0x28) ;    // <----------
 //  SI4432_Write_Byte(Si4432_OOK_COUNTER_VALUE_1, 0x28) ;
 //  SI4432_Write_Byte(Si4432_OOK_COUNTER_VALUE_2, 0x0C) ;
 //  SI4432_Write_Byte(Si4432_SLICER_PEAK_HOLD, 0x28) ;
@@ -574,6 +581,8 @@ void SI4432_Sub_Init(void)
   SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x12) ; // Normal
   SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x15) ;
 
+//  SI4432_Receive();
+
 }
 
 #define V0_XTAL_CAPACITANCE 0x64
@@ -583,11 +592,20 @@ void SI4432_Sub_Init(void)
 
 void SI4432_Init()
 {
-#if 0
-  palClearPad(GPIOB, GPIO_RF_PWR);
-  chThdSleepMilliseconds(20);
-  palSetPad(GPIOB, GPIO_RF_PWR);
-  chThdSleepMilliseconds(20);
+#if 1
+
+  CS_SI0_LOW;                       // Drop CS so power can be removed
+  CS_SI1_LOW;                       // Drop CS so power can be removed
+  CS_PE_LOW;                        // low is the default safe state
+  SPI2_CLK_LOW;                     // low is the default safe state
+  SPI2_SDI_LOW;                     // will be set with any data out
+
+  palClearPad(GPIOB, GPIO_RF_PWR);  // Drop power
+  chThdSleepMilliseconds(20);      // Wait
+  palSetPad(GPIOB, GPIO_RF_PWR);    // Restore power
+  CS_SI0_HIGH;                      // And set chip select lines back to inactive
+  CS_SI1_HIGH;
+  chThdSleepMilliseconds(10);      // Wait
 #endif
   SPI2_CLK_LOW;
   //DebugLine("IO set");
