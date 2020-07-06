@@ -801,7 +801,7 @@ void calculate_step_delay(void)
     if (setting.frequency_step == 0) {            // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
-#if 1
+#if 0       // Table for 200us delay inside SI4432_set_freq
       if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  150; SI4432_offset_delay = 10; }
       else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 10; }
       else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 10; }
@@ -1673,8 +1673,8 @@ static bool sweep(bool break_on_operation)
 
   modulation_counter = 0;                                             // init modulation counter in case needed
 
-//  if (sweep_counter > 5000 && setting.average == AV_OFF)            // refresh HW after 5000 sweeps
-//    dirty = true;
+  if (sweep_counter > 5000 && setting.average == AV_OFF && setting.frequency_step > 0)      // refresh HW after 5000 sweeps
+    dirty = true;
 
   if (dirty)                    // Calculate new scanning solution
     sweep_counter = 0;
