@@ -1402,6 +1402,17 @@ static const char * const keypad_mode_label[] = {
 static const char * const keypad_scale_text[] = { "1", "2", "5", "10", "20" , "50", "100", "200", "500"};
 //static const int  keypad_scale_value[] = { 1, 2, 5, 10, 20 , 50, 100, 200, 500};
 
+static void
+draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t border_colour, uint16_t bg_colour)
+{
+// background
+  const uint16_t bw = 2;
+  ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2), bg_colour);
+  ili9341_fill(x,          y,          w,  bw, border_colour);   // top
+  ili9341_fill(x + w - bw, y,          bw,  h, border_colour);   // right
+  ili9341_fill(x,          y,          bw,  h, border_colour);   // left
+  ili9341_fill(x,          y + h - bw, w,  bw, border_colour);   // bottom
+}
 
 static void
 draw_keypad(void)
@@ -1416,7 +1427,7 @@ draw_keypad(void)
     int x = KP_GET_X(keypads[i].x);
     int y = KP_GET_Y(keypads[i].y);
 //     ili9341_fill(x, y, KP_WIDTH, KP_HEIGHT, DEFAULT_MENU_TEXT_COLOR); // black area around button, causes flicker....
-    ili9341_fill(x+2, y+2, KP_WIDTH-4, KP_HEIGHT-4, bg);
+    draw_button(x, y, KP_WIDTH, KP_HEIGHT, DEFAULT_BG_COLOR, bg);
     if (keypads[i].c < 32) { // KP_1
       ili9341_drawfont(keypads[i].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
@@ -1756,11 +1767,13 @@ erase_menu_buttons(void)
   draw_frequencies();
 }
 
+#if 0
 static void
 erase_numeric_input(void)
 {
   ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT, DEFAULT_BG_COLOR);
 }
+#endif
 
 static void
 leave_ui_mode()

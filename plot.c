@@ -2216,7 +2216,10 @@ redraw_frame(void)
 
 static void update_waterfall(void){
   int i;
-  int w_width = area_width < 290 ? area_width : 290;
+  int w_width = area_width < POINTS_COUNT ? area_width : POINTS_COUNT;
+  // Waterfall only in 290 or 145 points
+  if (!(sweep_points == 290 || sweep_points == 145))
+    return;
   for (i = HEIGHT_NOSCROLL-1; i >=HEIGHT_SCROLL+2; i--) {		// Scroll down
     ili9341_read_memory(OFFSETX, i  , w_width, 1, w_width*1, spi_buffer);
            ili9341_bulk(OFFSETX, i+1, w_width, 1);
@@ -2265,7 +2268,12 @@ static void update_waterfall(void){
     else              color = RGB565(               0, 124-((y-160)*4), 252-((y-160)*4));
 
 #endif
-    spi_buffer[i] = color;
+    if (sweep_points == 290)
+      spi_buffer[i] = color;
+    else {
+      spi_buffer[2*i  ] = color;
+      spi_buffer[2*i+1] = color;
+    }
   }
   ili9341_bulk(OFFSETX, HEIGHT_SCROLL+2, w_width, 1);
 }

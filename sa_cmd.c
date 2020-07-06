@@ -560,9 +560,9 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   }
   operation_requested = false;
   for (uint32_t i = 0; i<points; i++) {
-    if (operation_requested)
-      break;
     float val = perform(false, i, start +(uint32_t)(f_step * i), false);
+    if (operation_requested) // break on operation in perform
+      break;
     streamPut(shell_stream, 'x');
     int v = val*2 + 256;
     streamPut(shell_stream, (uint8_t)(v & 0xFF));
@@ -570,6 +570,7 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   }
   streamPut(shell_stream, '}');
   setting.frequency_step = old_step;
+  redraw_request = 0; // disable screen update in this mode
 }
 
 

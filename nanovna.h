@@ -135,7 +135,6 @@ void toggle_sweep(void);
 void toggle_mute(void);
 void load_default_properties(void);
 
-extern float perform(bool b, int i, uint32_t f, int e);
 enum {
   AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16
 };
@@ -874,6 +873,8 @@ typedef int16_t  pureRSSI_t;
 #define float_TO_PURE_RSSI(rssi)  ((rssi)*32.0)
 #define PURE_TO_float(rssi)       ((rssi)/32.0)
 
+extern uint16_t actual_rbw_x10;
+
 int get_waterfall(void);
 void toggle_tracking(void);
 void calibrate(void);
@@ -892,7 +893,7 @@ void wait_user(void);
 void calibrate(void);
 float to_dBm(float);
 uint32_t calc_min_sweep_time_us(void);
-extern uint16_t actual_rbw_x10;
+float perform(bool b, int i, uint32_t f, int e);
 
 enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY
