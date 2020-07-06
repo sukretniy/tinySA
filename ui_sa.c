@@ -1411,8 +1411,8 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_CALLBACK, SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
  { MT_CALLBACK, SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
  { MT_CALLBACK, SD_FAST,       "FAST",              menu_scanning_speed_cb},
- { MT_KEYPAD,  KM_SWEEP_TIME,  "MANUAL",            "0..600s"},
- { MT_SUBMENU,  0,             "\2SWEEP\0POINTS",  menu_sweep_points},
+ { MT_KEYPAD,  KM_SWEEP_TIME,  "\2SWEEP\0TIME",     "0..600s"},
+ { MT_SUBMENU,  0,             "\2SWEEP\0POINTS",   menu_sweep_points},
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1487,7 +1487,7 @@ static const menuitem_t menu_display[] = {
   { MT_CALLBACK,2,              "\2SUBTRACT\0STORED",menu_storage_cb},
   { MT_CALLBACK,3,              "NORMALIZE",        menu_storage_cb},
   { MT_CALLBACK,4,              "WATERFALL",        menu_storage_cb},
-  { MT_SUBMENU, 0,              "\2SWEEP\0TIME",    menu_sweep_speed},
+  { MT_SUBMENU, 0,              "\2SWEEP\0SETTINGS",    menu_sweep_speed},
 //  { MT_KEYPAD,  KM_SWEEP_TIME,  "\2SWEEP\0TIME",    NULL},
 
   { MT_CANCEL, 0,           "\032 BACK", NULL },

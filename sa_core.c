@@ -1284,9 +1284,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 {
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
     apply_settings();                                                       // Initialize HW
-
-    update_rbw();
-
     scandirty = true;                                                       // This is the first pass with new settings
     dirty = false;
     if (setting.spur)                                                       // if in spur avoidance mode
