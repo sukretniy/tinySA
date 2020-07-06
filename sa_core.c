@@ -412,6 +412,7 @@ void set_attenuation(float a)       // Is used both in output mode and input mod
     } else
       setting.atten_step = 0;
     setting.auto_attenuation = false;
+    dirty = true;
   }
   if (a<0.0)
       a = 0;
@@ -800,6 +801,17 @@ void calculate_step_delay(void)
     if (setting.frequency_step == 0) {            // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
+#if 1
+      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  150; SI4432_offset_delay = 10; }
+      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 10; }
+      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 10; }
+      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 10; }
+      else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 10; }
+      else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >=  90)  { SI4432_step_delay = 1700; SI4432_offset_delay = 400; }
+      else if (actual_rbw_x10 >=  48)  { SI4432_step_delay = 3300; SI4432_offset_delay = 400; }
+      else                             { SI4432_step_delay = 6400; SI4432_offset_delay = 800; }
+#else
       if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 100; }
@@ -809,6 +821,7 @@ void calculate_step_delay(void)
       else if (actual_rbw_x10 >=  90)  { SI4432_step_delay = 1700; SI4432_offset_delay = 400; }
       else if (actual_rbw_x10 >=  50)  { SI4432_step_delay = 3300; SI4432_offset_delay = 400; }
       else                             { SI4432_step_delay = 6400; SI4432_offset_delay =1600; }
+#endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
     }
