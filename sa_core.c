@@ -1278,6 +1278,7 @@ static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wi
 char age[POINTS_COUNT];
 
 static float old_a = -150;
+static float correct_RSSI;
 systime_t start_of_sweep_timestamp;
 
 float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -1286,8 +1287,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     apply_settings();                                                       // Initialize HW
     scandirty = true;                                                       // This is the first pass with new settings
     dirty = false;
-    if (setting.spur)                                                       // if in spur avoidance mode
-      setting.spur = 1;                                                     // resync spur in case of previous abort
     // Set for actual time pre calculated value (update after sweep)
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
     // Change actual sweep time as user input if it greater minimum
@@ -1401,7 +1400,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
   }
 
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
-  float RSSI = -150.0;
+  int16_t RSSI = (-150)*32;
   int t = 0;
   do {
     int offs = 0,sm;
@@ -1419,13 +1418,18 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       offs = (int)(offs * actual_rbw_x10/10.0);
       lf = (uint32_t)(f + offs);
     }
-
-
+    // Calculate the RSSI correction for later use
+    if (i == 0){ // only cases where the value can change on 0 point of sweep
+      correct_RSSI = getSI4432_RSSI_correction();
+  //      if (setting.frequency_step != 0 )
+        correct_RSSI+= get_level_offset()
+                    +  get_attenuation()
+                    -  get_signal_path_loss()
+                    -  setting.offset
+                    +  get_frequency_correction(f);
+    }
 
     // --------------- Set all the LO's ------------------------
-#ifdef __SPUR__
-    float spur_RSSI = 0;
-#endif
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
@@ -1543,15 +1547,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
-    static float correct_RSSI;                  // This is re-used between calls
-    if (i == 0 || setting.frequency_step != 0 ){ // only cases where the value can change
-      correct_RSSI = get_level_offset()
-                   + get_attenuation()
-                   - get_signal_path_loss()
-                   - setting.offset
-                   + get_frequency_correction(f)
-                   + getSI4432_RSSI_correction(); // calcuate the RSSI correction for later use
-    }
     int16_t pureRSSI;
     //    if ( i < 3)
     //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
@@ -1611,27 +1606,26 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     else
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
 
-    float subRSSI = pureRSSI / 32.0;
-    // add correction
-    subRSSI+=correct_RSSI;
 #ifdef __SPUR__
-    if (setting.spur == 1) {                                     // If first spur pass
-      spur_RSSI = subRSSI;                                       // remember measure RSSI
-      setting.spur = -1;                                         // and prepare for second pass
-      goto again;                                                // Skip all other processing
-    } else if (setting.spur == -1) {                            // If second  spur pass
-      subRSSI = ( subRSSI < spur_RSSI ? subRSSI : spur_RSSI);  // Take minimum of two
-      setting.spur = 1;                                        // and prepare for next call of perform.
+    static int16_t spur_RSSI = -1;
+    if (setting.spur == 1) {
+      if(spur_RSSI == -1) {                                         // If first spur pass
+        spur_RSSI = pureRSSI;                                       // remember measure RSSI
+        goto again;                                                 // Skip all other processing
+      } else {                                                      // If second  spur pass
+        pureRSSI = ( pureRSSI < spur_RSSI ? pureRSSI : spur_RSSI);  // Take minimum of two
+        spur_RSSI =-1;                                              // and prepare for next call of perform.
+      }
     }
 #endif
 
-    if (RSSI < subRSSI)                                     // Take max during subscanning
-      RSSI = subRSSI;
+    if (RSSI < pureRSSI)                                     // Take max during subscanning
+      RSSI = pureRSSI;
     t++;                                                    // one subscan done
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
-  return(RSSI);
+  return(RSSI/32.0) + correct_RSSI; // add correction
 }
 
 #define MAX_MAX 4
