@@ -137,7 +137,7 @@ void SI4432_Write_Byte(byte ADR, byte DATA )
 //  if (SI4432_guard)
 //    while(1) ;
 //  SI4432_guard = 1;
-  SPI2_CLK_LOW;
+//  SPI2_CLK_LOW;
   palClearPad(GPIOC, SI_nSEL[SI4432_Sel]);
 //  chThdSleepMicroseconds(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
@@ -152,7 +152,7 @@ void SI4432_Write_3_Byte(byte ADR, byte DATA1, byte DATA2, byte DATA3 )
 //  if (SI4432_guard)
 //    while(1) ;
 //  SI4432_guard = 1;
-  SPI2_CLK_LOW;
+//  SPI2_CLK_LOW;
   palClearPad(GPIOC, SI_nSEL[SI4432_Sel]);
 //  chThdSleepMicroseconds(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
@@ -170,7 +170,7 @@ byte SI4432_Read_Byte( byte ADR )
 //  if (SI4432_guard)
 //    while(1) ;
 //  SI4432_guard = 1;
-  SPI2_CLK_LOW;
+//  SPI2_CLK_LOW;
   palClearPad(GPIOC, SI_nSEL[SI4432_Sel]);
   shiftOut( ADR );
   DATA = shiftIn();
@@ -607,7 +607,7 @@ void SI4432_Init()
   CS_SI1_HIGH;
   chThdSleepMilliseconds(10);      // Wait
 #endif
-
+  SPI2_CLK_LOW;
   //DebugLine("IO set");
   SI4432_Sel = SI4432_RX;
   SI4432_Sub_Init();
@@ -683,7 +683,7 @@ bool PE4302_Write_Byte(unsigned char DATA )
   if (old_attenuation == DATA)
     return false;
 //  chThdSleepMicroseconds(PE4302_DELAY);
-  SPI2_CLK_LOW;
+//  SPI2_CLK_LOW;
 //  chThdSleepMicroseconds(PE4302_DELAY);
 //  PE4302_shiftOut(DATA);
 
