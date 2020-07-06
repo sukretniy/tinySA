@@ -1560,10 +1560,15 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
 
     // ************** trigger mode if need
-#define T_LEVEL_UNDEF       (1<<(16-2)) // should drop after 2 shifts left
+// trigger on measure 4 point
+#define T_POINTS            4
+#define T_LEVEL_UNDEF       (1<<(16-T_POINTS)) // should drop after 4 shifts left
 #define T_LEVEL_BELOW       1
 #define T_LEVEL_ABOVE       0
-#define T_LEVEL_CLEAN       ~(1<<2)     // cleanup old trigger data
+// Trigger mask, should have width T_POINTS bit
+#define T_DOWN_MASK         (0b0011)           // 2 from up 2 to bottom
+#define T_UP_MASK           (0b1100)           // 2 from bottom 2 to up
+#define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
 
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
       register uint16_t t_mode;
@@ -1573,10 +1578,12 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       trigger_lvl = (setting.trigger_level - correct_RSSI) * 32;
 
       if (setting.trigger_direction == T_UP)
-        t_mode = (T_LEVEL_BELOW<<1)|T_LEVEL_ABOVE; // from bottom to up
+        t_mode = T_UP_MASK;
       else
-        t_mode = (T_LEVEL_ABOVE<<1)|T_LEVEL_BELOW; // from up to bottom
+        t_mode = T_DOWN_MASK;
 
+      uint32_t additional_delay = 0;// reduce noise
+      if (setting.sweep_time_us >= 100*ONE_MS_TIME) additional_delay = 20;
       do{                                                 // wait for trigger to happen
         pureRSSI = SI4432_Read_Byte(SI4432_REG_RSSI)<<4;
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
@@ -1585,8 +1592,11 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
         // Store data level bitfield (remember only last 2 states)
         // T_LEVEL_UNDEF mode bit drop after 2 shifts
         data_level = ((data_level<<1) | (pureRSSI < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
-        // wait trigger
-      }while(data_level != t_mode);                                             // trigger level change
+        if (data_level == t_mode)  // wait trigger
+          break;
+        if (additional_delay)
+          my_microsecond_delay(additional_delay);
+      }while(1);
 #ifdef __FAST_SWEEP__
       if (setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
         SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
