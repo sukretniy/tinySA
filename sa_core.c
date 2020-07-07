@@ -1312,10 +1312,11 @@ static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wi
 deviceRSSI_t age[POINTS_COUNT];
 
 static float old_a = -150;          // cached value to reduce writes to level registers
-static float correct_RSSI;
+static pureRSSI_t correct_RSSI;
+static pureRSSI_t correct_RSSI_sweep;
 systime_t start_of_sweep_timestamp;
 
-float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
+pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
     apply_settings();                                                       // Initialize HW
@@ -1432,14 +1433,17 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 //      chThdSleepMicroseconds(200);
     }
   }
+
   // Calculate the RSSI correction for later use
-  if (MODE_INPUT(setting.mode) && (i == 0 || setting.frequency_step != 0) ){ // only cases where the value can change on 0 point of sweep
-    correct_RSSI =  getSI4432_RSSI_correction()
-                  + get_level_offset()
-                  +  get_attenuation()
-                  -  get_signal_path_loss()
-                  -  setting.offset
-                  +  get_frequency_correction(f);
+  if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
+    if (i == 0)
+      correct_RSSI_sweep = float_TO_PURE_RSSI(getSI4432_RSSI_correction()
+                     + get_level_offset()
+                     +  get_attenuation()
+                     -  get_signal_path_loss()
+                     -  setting.offset);
+    if (setting.frequency_step != 0)
+      correct_RSSI = correct_RSSI_sweep + float_TO_PURE_RSSI(get_frequency_correction(f));
   }
 
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
@@ -1600,7 +1604,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       pureRSSI_t trigger_lvl;
       uint16_t data_level = T_LEVEL_UNDEF;
       // Calculate trigger level
-      trigger_lvl = float_TO_PURE_RSSI(setting.trigger_level - correct_RSSI);
+      trigger_lvl = float_TO_PURE_RSSI(setting.trigger_level) - correct_RSSI;
 
       if (setting.trigger_direction == T_UP)
         t_mode = T_UP_MASK;
@@ -1653,7 +1657,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
-  return PURE_TO_float(RSSI) + correct_RSSI; // add correction
+  return RSSI + correct_RSSI; // add correction
 }
 
 #define MAX_MAX 4
@@ -1704,7 +1708,7 @@ sweep_again:                                // stay in sweep loop when output mo
   for (int i = 0; i < sweep_points; i++) {
     // --------------------- measure -------------------------
 
-    RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);    // Measure RSSI for one of the frequencies
+    RSSI = PURE_TO_float(perform(break_on_operation, i, frequencies[i], setting.tracking));    // Measure RSSI for one of the frequencies
     // if break back to top level to handle ui operation
     if (refreshing)
       scandirty = false;
@@ -2931,7 +2935,7 @@ void self_test(int test)
     test_prepare(4);
     int f = 400000;           // Start search at 400kHz
     //  int i = 0;                     // Index in spur table (temp_t)
-    float p2, p1, p;
+    pureRSSI_t p2, p1, p;
 
 #define FREQ_STEP   3000
 
@@ -2949,7 +2953,7 @@ void self_test(int test)
       f = 400000;
       while (f < 100000000) {
         p = perform(false, 1, f, false);
-#define SPUR_DELTA  6
+#define SPUR_DELTA  float_TO_PURE_RSSI(6)
         if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
           //        temp_t[i++] = f - FREQ_STEP;
           shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - FREQ_STEP)/1000, add_spur(f - FREQ_STEP));

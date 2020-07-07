@@ -435,11 +435,10 @@ void sweep_remote(void)
   for (i = 0; i <= step; i++, f+=delta) {
     if (operation_requested)
       break;
-    float val = perform(false, i, f, false);
+    int val = perform(false, i, f, false) + float_TO_PURE_RSSI(EXT_ZERO_LEVEL);
     streamPut(shell_stream, 'x');
-    int v = val*2 + 256;
-    streamPut(shell_stream, (uint8_t)(v & 0xFF));
-    streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
+    streamPut(shell_stream, (uint8_t)(val & 0xFF));
+    streamPut(shell_stream, (uint8_t)((val>>8) & 0xFF));
     df+=error;if (df >=step) {f++;df -= step;}
   }
   streamPut(shell_stream, '}');
@@ -560,13 +559,12 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   }
   operation_requested = false;
   for (uint32_t i = 0; i<points; i++) {
-    float val = perform(false, i, start +(uint32_t)(f_step * i), false);
+    int val = perform(false, i, start +(uint32_t)(f_step * i), false) + float_TO_PURE_RSSI(EXT_ZERO_LEVEL);
     if (operation_requested) // break on operation in perform
       break;
     streamPut(shell_stream, 'x');
-    int v = val*2 + 256;
-    streamPut(shell_stream, (uint8_t)(v & 0xFF));
-    streamPut(shell_stream, (uint8_t)((v>>8) & 0xFF));
+    streamPut(shell_stream, (uint8_t)(val & 0xFF));
+    streamPut(shell_stream, (uint8_t)((val>>8) & 0xFF));
   }
   streamPut(shell_stream, '}');
   setting.frequency_step = old_step;

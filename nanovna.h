@@ -883,7 +883,9 @@ int plot_printf(char *str, int, const char *fmt, ...);
 typedef uint8_t  deviceRSSI_t;
 typedef int16_t  pureRSSI_t;
 
-// RSSI values conversion macrp
+// RSSI values conversion macro
+// External programm zero level settings (need decrease on this value -)
+#define EXT_ZERO_LEVEL            (128)
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
 #define float_TO_PURE_RSSI(rssi)  ((rssi)*32.0)
 #define PURE_TO_float(rssi)       ((rssi)/32.0)
@@ -908,7 +910,7 @@ void wait_user(void);
 void calibrate(void);
 float to_dBm(float);
 uint32_t calc_min_sweep_time_us(void);
-float perform(bool b, int i, uint32_t f, int e);
+pureRSSI_t perform(bool b, int i, uint32_t f, int e);
 
 enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY
