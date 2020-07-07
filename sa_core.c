@@ -1313,7 +1313,7 @@ deviceRSSI_t age[POINTS_COUNT];
 
 static float old_a = -150;          // cached value to reduce writes to level registers
 static pureRSSI_t correct_RSSI;
-static pureRSSI_t correct_RSSI_sweep;
+static pureRSSI_t correct_RSSI_freq;
 systime_t start_of_sweep_timestamp;
 
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -1436,15 +1436,16 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 
   // Calculate the RSSI correction for later use
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
-    if (i == 0)
-      correct_RSSI_sweep = getSI4432_RSSI_correction()
+    if (i == 0){
+      correct_RSSI = getSI4432_RSSI_correction()
                + float_TO_PURE_RSSI(
                      + get_level_offset()
                      +  get_attenuation()
                      -  get_signal_path_loss()
                      -  setting.offset);
-    if (setting.frequency_step != 0)
-      correct_RSSI = correct_RSSI_sweep + float_TO_PURE_RSSI(get_frequency_correction(f));
+    }
+    if (i == 0 || setting.frequency_step != 0)
+      correct_RSSI_freq = float_TO_PURE_RSSI(get_frequency_correction(f));
   }
 
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
@@ -1605,7 +1606,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       pureRSSI_t trigger_lvl;
       uint16_t data_level = T_LEVEL_UNDEF;
       // Calculate trigger level
-      trigger_lvl = float_TO_PURE_RSSI(setting.trigger_level) - correct_RSSI;
+      trigger_lvl = float_TO_PURE_RSSI(setting.trigger_level) - correct_RSSI - correct_RSSI_freq;
 
       if (setting.trigger_direction == T_UP)
         t_mode = T_UP_MASK;
@@ -1658,7 +1659,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
-  return RSSI + correct_RSSI; // add correction
+  return RSSI + correct_RSSI + correct_RSSI_freq; // add correction
 }
 
 #define MAX_MAX 4
