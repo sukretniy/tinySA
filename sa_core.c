@@ -1437,7 +1437,8 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   // Calculate the RSSI correction for later use
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
     if (i == 0)
-      correct_RSSI_sweep = float_TO_PURE_RSSI(getSI4432_RSSI_correction()
+      correct_RSSI_sweep = getSI4432_RSSI_correction()
+               + float_TO_PURE_RSSI(
                      + get_level_offset()
                      +  get_attenuation()
                      -  get_signal_path_loss()
@@ -1447,7 +1448,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   }
 
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
-  pureRSSI_t RSSI = float_TO_PURE_RSSI(-150.0);
+  pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
   int t = 0;
   do {
     int offs = 0,sm;

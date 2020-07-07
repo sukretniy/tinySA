@@ -302,12 +302,12 @@ static RBW_t RBW_choices[] = {
   {IF_BW(1,0,14),  -10, 6207}
 };
 
-static float SI4432_RSSI_correction = -120.0;
+static pureRSSI_t SI4432_RSSI_correction = float_TO_PURE_RSSI(-120);
 
 uint16_t SI4432_force_RBW(int i)
 {
   SI4432_Write_Byte(SI4432_IF_FILTER_BW, RBW_choices[i].reg);                     // Write RBW settings to Si4432
-  SI4432_RSSI_correction = ((int)RBW_choices[i].RSSI_correction_x_10-1200)/10.0;  // Set RSSI correction
+  SI4432_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[i].RSSI_correction_x_10)/10 - 120;  // Set RSSI correction
   return RBW_choices[i].RBWx10;                                                   // RBW achieved by Si4432 in kHz * 10
 }
 
@@ -444,7 +444,7 @@ void SI4432_Fill(int s, int start)
 #define MINIMUM_WAIT_FOR_RSSI   280
 int SI4432_offset_delay = 300;
 
-float getSI4432_RSSI_correction(void){
+pureRSSI_t getSI4432_RSSI_correction(void){
   return SI4432_RSSI_correction;
 };
 

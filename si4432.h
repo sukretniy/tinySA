@@ -114,7 +114,7 @@ void SI4432_Receive(void);
 
 void SI4432_Init(void);
 void SI4432_Drive(int);
-float getSI4432_RSSI_correction(void);
+pureRSSI_t getSI4432_RSSI_correction(void);
 pureRSSI_t SI4432_RSSI(uint32_t i, int s);
 #ifdef __SIMULATION__
 float Simulated_SI4432_RSSI(uint32_t i, int s);
