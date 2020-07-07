@@ -307,7 +307,7 @@ static pureRSSI_t SI4432_RSSI_correction = float_TO_PURE_RSSI(-120);
 uint16_t SI4432_force_RBW(int i)
 {
   SI4432_Write_Byte(SI4432_IF_FILTER_BW, RBW_choices[i].reg);                     // Write RBW settings to Si4432
-  SI4432_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[i].RSSI_correction_x_10)/10 - 120;  // Set RSSI correction
+  SI4432_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[i].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
   return RBW_choices[i].RBWx10;                                                   // RBW achieved by Si4432 in kHz * 10
 }
 
