@@ -1311,7 +1311,7 @@ static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wi
 
 deviceRSSI_t age[POINTS_COUNT];
 
-static float old_a = -150;
+static float old_a = -150;          // cached value to reduce writes to level registers
 static float correct_RSSI;
 systime_t start_of_sweep_timestamp;
 
@@ -1432,6 +1432,15 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 //      chThdSleepMicroseconds(200);
     }
   }
+  // Calculate the RSSI correction for later use
+  if (MODE_INPUT(setting.mode) && (i == 0 || setting.frequency_step != 0) ){ // only cases where the value can change on 0 point of sweep
+    correct_RSSI =  getSI4432_RSSI_correction()
+                  + get_level_offset()
+                  +  get_attenuation()
+                  -  get_signal_path_loss()
+                  -  setting.offset
+                  +  get_frequency_correction(f);
+  }
 
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150.0);
@@ -1451,16 +1460,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       }
       offs = (int)(offs * actual_rbw_x10/10.0);
       lf = (uint32_t)(f + offs);
-    }
-    // Calculate the RSSI correction for later use
-    if (i == 0){ // only cases where the value can change on 0 point of sweep
-      correct_RSSI = getSI4432_RSSI_correction();
-      if (setting.frequency_step != 0 )
-        correct_RSSI+= get_level_offset()
-                    +  get_attenuation()
-                    -  get_signal_path_loss()
-                    -  setting.offset
-                    +  get_frequency_correction(f);
     }
 
     // --------------- Set all the LO's ------------------------
