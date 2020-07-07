@@ -451,7 +451,7 @@ pureRSSI_t getSI4432_RSSI_correction(void){
 pureRSSI_t SI4432_RSSI(uint32_t i, int s)
 {
   (void) i;
-  pureRSSI_t RSSI_RAW;
+  int32_t RSSI_RAW;
   (void) i;
   // SEE DATASHEET PAGE 61
 #ifdef USE_SI4463           // Not used!!!!!!!
