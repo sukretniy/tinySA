@@ -1308,6 +1308,7 @@ deviceRSSI_t age[POINTS_COUNT];
 
 static float old_a = -150;
 static float correct_RSSI;
+
 systime_t start_of_sweep_timestamp;
 
 float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -1649,7 +1650,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
-  return PURE_TO_float(RSSI) + correct_RSSI; // add correction
+  return PURE_TO_float(RSSI) + correct_RSSI*vbwSteps; // add correction
 }
 
 #define MAX_MAX 4
