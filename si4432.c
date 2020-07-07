@@ -188,7 +188,7 @@ void SI4432_Reset(void)
   SI4432_Read_Byte (SI4432_INT_STATUS2);
   // always perform a system reset (don't send 0x87)
   SI4432_Write_Byte(SI4432_STATE, 0x80);
-  chThdSleepMilliseconds(10);
+  chThdSleepMilliseconds(50);
   // wait for chiprdy bit
   while (count++ < 100 && ( SI4432_Read_Byte (SI4432_INT_STATUS2) & 0x02 ) == 0) {
     chThdSleepMilliseconds(10);
@@ -206,11 +206,11 @@ void SI4432_Transmit(int d)
   SI4432_Write_Byte(SI4432_TX_POWER, (byte) (0x18+(d & 7)));
   if (( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) == 2)
     return; // Already in transmit mode
-  chThdSleepMilliseconds(3);
+  chThdSleepMilliseconds(20);
   SI4432_Write_Byte(SI4432_STATE, 0x02);
-  chThdSleepMilliseconds(3);
+  chThdSleepMilliseconds(20);
   SI4432_Write_Byte(SI4432_STATE, 0x0b);
-  chThdSleepMilliseconds(10);
+  chThdSleepMilliseconds(100);
   while (count++ < 100 && ( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) != 2) {
     chThdSleepMilliseconds(10);
   }
@@ -221,11 +221,11 @@ void SI4432_Receive(void)
   int count = 0;
   if (( SI4432_Read_Byte (SI4432_DEV_STATUS) & 0x03 ) == 1)
     return; // Already in receive mode
-  chThdSleepMilliseconds(3);
+  chThdSleepMilliseconds(20);
   SI4432_Write_Byte(SI4432_STATE, 0x02);
-  chThdSleepMilliseconds(3);
+  chThdSleepMilliseconds(20);
   SI4432_Write_Byte(SI4432_STATE, 0x07);
-  chThdSleepMilliseconds(10);
+  chThdSleepMilliseconds(100);
   while (count++ < 100 && ( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) != 1) {
     chThdSleepMilliseconds(5);
   }
@@ -602,7 +602,7 @@ void SI4432_Init()
   SPI2_SDI_LOW;                     // will be set with any data out
 
   palClearPad(GPIOB, GPIO_RF_PWR);  // Drop power
-  chThdSleepMilliseconds(10);      // Wait
+  chThdSleepMilliseconds(20);      // Wait
   palSetPad(GPIOB, GPIO_RF_PWR);    // Restore power
   CS_SI0_HIGH;                      // And set chip select lines back to inactive
   CS_SI1_HIGH;

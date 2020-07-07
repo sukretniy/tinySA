@@ -919,8 +919,6 @@ void setupSA(void)
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
 
-//#define __WIDE_OFFSET__
-
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
   if (old_freq[V] != freq) {             // Do not change HW if not needed
@@ -932,11 +930,11 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       }
 #if 1
       if (setting.step_delay_mode == SD_FAST) {        // If in extra fast scanning mode
-        int delta =  ((int32_t)freq) - (int32_t)real_old_freq[V];   // subtracting uint can't create a negative number
+        int delta =  freq - real_old_freq[V];
 
         if (real_old_freq[V] >= 480000000)    // 480MHz, high band
           delta = delta >> 1;
-        if (delta > -80000 && delta < 80000) { // and requested frequency can be reached by using the offset registers
+        if (delta > 0 && delta < 80000) { // and requested frequency can be reached by using the offset registers
 #if 0
             if (real_old_freq[V] >= 480000000)
               shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
@@ -952,29 +950,16 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
         }
       }
 #endif
-#ifdef __WIDE_OFFSET__
-      if (freq >= 480000000) {
-        SI4432_Set_Frequency(freq + 160000 );           // Impossible to use offset so set SI4432 to new frequency
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
-        real_old_freq[V] = freq + 160000;
-      } else {
-        SI4432_Set_Frequency(freq + 80000 );           // Impossible to use offset so set SI4432 to new frequency
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
-        real_old_freq[V] = freq + 80000;
-      }
-#else
       SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
       SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
       SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
-#endif
 #ifdef __ULTRA_SA__
     } else {
       ADF4351_set_frequency(V-2,freq,3);
 #endif
     }
     old_freq[V] = freq;
+    real_old_freq[V] = freq;
   }
 }
 
@@ -1676,18 +1661,14 @@ static bool sweep(bool break_on_operation)
   //  shell_printf("\r\n");
 
   modulation_counter = 0;                                             // init modulation counter in case needed
-  int refreshing = false;
+
+  if (sweep_counter > 5000 && setting.average == AV_OFF && setting.frequency_step > 0)      // refresh HW after 5000 sweeps
+    dirty = true;
 
   if (dirty)                    // Calculate new scanning solution
     sweep_counter = 0;
-  else if ( MODE_INPUT(setting.mode) && setting.frequency_step > 0) {
+  else
     sweep_counter++;
-    if (sweep_counter > 50 ) {     // refresh HW after 50 sweeps
-      dirty = true;
-      refreshing = true;
-      sweep_counter = 0;
-    }
-  }
 
 again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
@@ -1701,8 +1682,6 @@ sweep_again:                                // stay in sweep loop when output mo
 
     RSSI = perform(break_on_operation, i, frequencies[i], setting.tracking);    // Measure RSSI for one of the frequencies
     // if break back to top level to handle ui operation
-    if (refreshing)
-      scandirty = false;
     if (break_on_operation && operation_requested) {                        // break loop if needed
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
         ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
