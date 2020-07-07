@@ -1390,12 +1390,12 @@ static const menuitem_t menu_harmonic[] =
 
 static const menuitem_t menu_scanning_speed[] =
 {
- { MT_CALLBACK, SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
- { MT_CALLBACK, SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
- { MT_CALLBACK, SD_FAST,       "FAST",              menu_scanning_speed_cb},
- { MT_KEYPAD, KM_SAMPLETIME,   "\2SAMPLE\0DELAY",   "300..30000"},              // item number must match SD_MANUAL
- { MT_KEYPAD, KM_OFFSET_DELAY, "\2OFFSET\0DELAY",   "300..30000"},              // item number must match SD_MANUAL
- { MT_CANCEL,   0,             "\032 BACK", NULL },
+ { MT_CALLBACK,         SD_NORMAL,  "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
+ { MT_CALLBACK,         SD_PRECISE, "PRECISE",           menu_scanning_speed_cb},
+ { MT_CALLBACK | MT_LOW,SD_FAST,    "FAST",              menu_scanning_speed_cb},
+ { MT_KEYPAD, KM_SAMPLETIME,        "\2SAMPLE\0DELAY",   "300..30000"},              // item number must match SD_MANUAL
+ { MT_KEYPAD, KM_OFFSET_DELAY,      "\2OFFSET\0DELAY",   "300..30000"},              // item number must match SD_MANUAL
+ { MT_CANCEL,   0,                  "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1511,9 +1511,9 @@ static const menuitem_t menu_trigger[] = {
   { MT_CALLBACK,T_AUTO,     "AUTO",             menu_trigger_cb},
   { MT_CALLBACK,T_NORMAL,   "NORMAL",           menu_trigger_cb},
   { MT_CALLBACK,T_SINGLE,   "SINGLE",           menu_trigger_cb},
-  { MT_KEYPAD,  KM_TRIGGER, "LEVEL",            NULL},
-  { MT_CALLBACK,T_UP,       "UP",               menu_trigger_cb},
-  { MT_CALLBACK,T_DOWN,     "DOWN",             menu_trigger_cb},
+  { MT_KEYPAD,  KM_TRIGGER, "\2TRIGGER\0LEVEL", NULL},
+  { MT_CALLBACK,T_UP,       "\2UP\0EDGE",       menu_trigger_cb},
+  { MT_CALLBACK,T_DOWN,     "\2DOWN\0EDGE",     menu_trigger_cb},
   { MT_CANCEL, 0,           "\032 BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };

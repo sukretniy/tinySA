@@ -919,7 +919,12 @@ void setupSA(void)
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
 
-//#define __WIDE_OFFSET__
+#define __WIDE_OFFSET__
+#ifdef __WIDE_OFFSET__
+#define OFFSET_LOWER_BOUND -80000
+#else
+#define OFFSET_LOWER_BOUND 0
+#endif
 
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
@@ -932,44 +937,43 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       }
 #if 1
       if (setting.step_delay_mode == SD_FAST) {        // If in extra fast scanning mode
-        int delta =  ((int32_t)freq) - (int32_t)real_old_freq[V];   // subtracting uint can't create a negative number
+        int delta =  freq - real_old_freq[V];
 
         if (real_old_freq[V] >= 480000000)    // 480MHz, high band
-          delta = delta / 2;
-#ifdef __WIDE_OFFSET__
-        if (delta > -80000 && delta < 80000) { // and requested frequency can be reached by using the offset registers
-#else
-        if (delta >=0 && delta < 80000) { // and requested frequency can be reached by using the offset registers
-#endif
+          delta = delta >> 1;
+        if (delta > OFFSET_LOWER_BOUND && delta < 80000) { // and requested frequency can be reached by using the offset registers
 #if 0
             if (real_old_freq[V] >= 480000000)
               shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
             else
               shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
 #endif
-          int offset  = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(offset & 0xff));
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((offset >> 8) & 0x03));
+          delta = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff));
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((delta >> 8) & 0x03));
           SI4432_offset_changed = true;                 // Signal offset changed so RSSI retrieval is delayed for frequency settling
           old_freq[V] = freq;
           return;
         }
       }
 #endif
-      int delta;
 #ifdef __WIDE_OFFSET__
-      if (freq >= 480000000)
-        delta = - 160000;
-      else
-        delta = - 80000;
+      uint32_t target_f;                    // Impossible to use offset so set SI4432 to new frequency
+      if (freq >= 480000000) {
+        target_f = freq + 160000;
+      } else {
+        target_f = freq + 80000;
+      }
+      SI4432_Set_Frequency(target_f);
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
+      real_old_freq[V] = target_f;
 #else
-      delta = 0;
+      SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
+      real_old_freq[V] = freq;
 #endif
-      SI4432_Set_Frequency(freq - delta);           // Impossible to use offset so set SI4432 to new frequency
-      int offset = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
-      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(offset & 0xff));
-      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((offset >> 8) & 0x03));
-      real_old_freq[V] = freq - delta;
 #ifdef __ULTRA_SA__
     } else {
       ADF4351_set_frequency(V-2,freq,3);
@@ -1008,6 +1012,10 @@ void set_switches(int m)
   old_freq[1] = 0;
   real_old_freq[0] = 0;
   real_old_freq[1] = 0;
+  SI4432_Sel = SI4432_LO ;
+  SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);  // Back to nominal offset
+  SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
+
   switch(m) {
 case M_LOW:     // Mixed into 0
 #ifdef __ULTRA__
@@ -1085,9 +1093,6 @@ case M_GENHIGH: // Direct output from 1
 
     break;
   }
-  SI4432_Sel = SI4432_LO ;
-  SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);  // Back to nominal offset
-  SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
 
 }
 
@@ -1306,9 +1311,8 @@ static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wi
 
 deviceRSSI_t age[POINTS_COUNT];
 
-static float old_a = -150;
+static float old_a = -150;          // cached value to reduce writes to level registers
 static float correct_RSSI;
-
 systime_t start_of_sweep_timestamp;
 
 float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -1428,6 +1432,15 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
 //      chThdSleepMicroseconds(200);
     }
   }
+  // Calculate the RSSI correction for later use
+  if (MODE_INPUT(setting.mode) && (i == 0 || setting.frequency_step != 0) ){ // only cases where the value can change on 0 point of sweep
+    correct_RSSI =  getSI4432_RSSI_correction()
+                  + get_level_offset()
+                  +  get_attenuation()
+                  -  get_signal_path_loss()
+                  -  setting.offset
+                  +  get_frequency_correction(f);
+  }
 
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150.0);
@@ -1447,16 +1460,6 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
       }
       offs = (int)(offs * actual_rbw_x10/10.0);
       lf = (uint32_t)(f + offs);
-    }
-    // Calculate the RSSI correction for later use
-    if (i == 0){ // only cases where the value can change on 0 point of sweep
-      correct_RSSI = getSI4432_RSSI_correction();
-      if (setting.frequency_step != 0 )
-        correct_RSSI+= get_level_offset()
-                    +  get_attenuation()
-                    -  get_signal_path_loss()
-                    -  setting.offset
-                    +  get_frequency_correction(f);
     }
 
     // --------------- Set all the LO's ------------------------
@@ -1650,7 +1653,7 @@ float perform(bool break_on_operation, int i, uint32_t f, int tracking)     // M
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
-  return PURE_TO_float(RSSI) + correct_RSSI*vbwSteps; // add correction
+  return PURE_TO_float(RSSI) + correct_RSSI; // add correction
 }
 
 #define MAX_MAX 4
