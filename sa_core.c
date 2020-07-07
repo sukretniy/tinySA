@@ -919,7 +919,7 @@ void setupSA(void)
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
 
-//#define __WIDE_OFFSET__
+#define __WIDE_OFFSET__
 
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
@@ -968,6 +968,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
       SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
       SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
+      real_old_freq[V] = freq;
 #endif
 #ifdef __ULTRA_SA__
     } else {
