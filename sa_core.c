@@ -935,7 +935,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
         int delta =  ((int32_t)freq) - (int32_t)real_old_freq[V];   // subtracting uint can't create a negative number
 
         if (real_old_freq[V] >= 480000000)    // 480MHz, high band
-          delta = delta >> 1;
+          delta = delta / 2;
 #ifdef __WIDE_OFFSET__
         if (delta > -80000 && delta < 80000) { // and requested frequency can be reached by using the offset registers
 #else
@@ -947,33 +947,29 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
             else
               shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
 #endif
-          delta = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff));
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((delta >> 8) & 0x03));
+          int offset  = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(offset & 0xff));
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((offset >> 8) & 0x03));
           SI4432_offset_changed = true;                 // Signal offset changed so RSSI retrieval is delayed for frequency settling
           old_freq[V] = freq;
           return;
         }
       }
 #endif
+      int delta;
 #ifdef __WIDE_OFFSET__
-      if (freq >= 480000000) {
-        SI4432_Set_Frequency(freq + 160000 - 2);           // Impossible to use offset so set SI4432 to new frequency
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
-        real_old_freq[V] = freq + 160000 - 2;
-      } else {
-        SI4432_Set_Frequency(freq + 80000 - 1);           // Impossible to use offset so set SI4432 to new frequency
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
-        real_old_freq[V] = freq + 80000 - 1;
-      }
+      if (freq >= 480000000)
+        delta = - 160000;
+      else
+        delta = - 80000;
 #else
-      SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
-      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
-      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
-      real_old_freq[V] = freq;
+      delta = 0;
 #endif
+      SI4432_Set_Frequency(freq - delta);           // Impossible to use offset so set SI4432 to new frequency
+      int offset = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(offset & 0xff));
+      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((offset >> 8) & 0x03));
+      real_old_freq[V] = freq - delta;
 #ifdef __ULTRA_SA__
     } else {
       ADF4351_set_frequency(V-2,freq,3);
