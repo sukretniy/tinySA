@@ -856,6 +856,26 @@ static const float correction_value[CORRECTION_POINTS] =
 { +4.0, +2.0, +1.5, +0.5, 0.0, 0.0, +1.0, +1.0, +2.5, +5.0 };
 #endif
 
+/*
+ * To avoid float calculations the correction values are maximum +/-16 and accuracy of 0.5 so they fit easily in 8 bits
+ * The frequency steps between correction factors is assumed to be maximum 500MHz or 0x2000000 and minimum 100kHz or > 0x10000
+ * The divider 1/m is pre-calculated into delta_div as 2^scale_factor * correction_step/frequency_step
+ */
+
+#define SCALE_FACTOR 14     // min scaled correction = 2^15, max scaled correction = 256 * 2^15
+                            // min scaled f = 6, max scaled f =  1024
+
+static int32_t correction_factor[CORRECTION_POINTS];
+
+void calculate_correction(void)
+{
+  for (int i = 1; i < CORRECTION_POINTS; i++) {
+    int32_t m = (config.correction_value[i] - config.correction_value[i-1]) * (1 << (SCALE_FACTOR));
+    int32_t d = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR;
+    correction_factor[i] = (int32_t) ( m / d );
+  }
+}
+
 float get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
   if (!(setting.mode == M_LOW))
@@ -868,8 +888,14 @@ float get_frequency_correction(uint32_t f)      // Frequency dependent RSSI corr
   if (i == 0)
     return(config.correction_value[0]);
   f = f - config.correction_frequency[i-1];
-  uint32_t m = config.correction_frequency[i] - config.correction_frequency[i-1] ;
-  float cv = config.correction_value[i-1] + (config.correction_value[i] - config.correction_value[i-1]) * (float)f / (float)m;
+#if 0
+  uint32_t m = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR ;
+  float multi = (config.correction_value[i] - config.correction_value[i-1]) * (1 << (SCALE_FACTOR -1)) / (float)m;
+  float cv = config.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
+#else
+  int32_t scaled_f = f >> SCALE_FACTOR;
+  float cv = config.correction_value[i-1] + ((float)(scaled_f * correction_factor[i]))/(float)(1 << (SCALE_FACTOR)) ;
+#endif
   return(cv);
 }
 
@@ -1309,7 +1335,7 @@ static const int am_modulation[5] =  { 4,0,1,5,7 };         // 5 step AM modulat
 static const int nfm_modulation[5] = { 0, 2, 1, -1, -2};    // 5 step narrow FM modulation
 static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wide FM modulation
 
-deviceRSSI_t age[POINTS_COUNT];
+deviceRSSI_t age[POINTS_COUNT];     // Array used for 1: calculating the age of any max and 2: buffer for fast sweep RSSI values;
 
 static float old_a = -150;          // cached value to reduce writes to level registers
 static pureRSSI_t correct_RSSI;
@@ -1319,9 +1345,11 @@ systime_t start_of_sweep_timestamp;
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
+    calculate_correction();                                                 // pre-calculate correction factor dividers to avoid float division
     apply_settings();                                                       // Initialize HW
     scandirty = true;                                                       // This is the first pass with new settings
     dirty = false;
+    if (setting.spur == -1) setting.spur = 1;                              // ensure spur processing starts in right phase
     // Set for actual time pre calculated value (update after sweep)
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
     // Change actual sweep time as user input if it greater minimum
@@ -1333,6 +1361,14 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     else{ // not add additional correction, apply recommend time
       setting.additional_step_delay_us = 0;
 //      setting.sweep_time_us = setting.actual_sweep_time_us;
+    }
+    if (MODE_INPUT(setting.mode)) {
+      correct_RSSI = getSI4432_RSSI_correction()
+                + float_TO_PURE_RSSI(
+                      + get_level_offset()
+                      +  get_attenuation()
+                      -  get_signal_path_loss()
+                      -  setting.offset);
     }
 #if 0
     // manually set delay, for better sync
@@ -1436,14 +1472,6 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 
   // Calculate the RSSI correction for later use
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
-    if (i == 0){
-      correct_RSSI = getSI4432_RSSI_correction()
-               + float_TO_PURE_RSSI(
-                     + get_level_offset()
-                     +  get_attenuation()
-                     -  get_signal_path_loss()
-                     -  setting.offset);
-    }
     if (i == 0 || setting.frequency_step != 0)
       correct_RSSI_freq = float_TO_PURE_RSSI(get_frequency_correction(f));
   }
@@ -1641,15 +1669,14 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
 
 #ifdef __SPUR__
-    static pureRSSI_t spur_RSSI = -1;
-    if (setting.spur == 1) {
-      if(spur_RSSI == -1) {                                         // If first spur pass
+    static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
+    if (setting.spur == 1) {                                        // If first spur pass
         spur_RSSI = pureRSSI;                                       // remember measure RSSI
+        setting.spur = -1;
         goto again;                                                 // Skip all other processing
-      } else {                                                      // If second  spur pass
+    } else if (setting.spur == -1) {                              // If second  spur pass
         pureRSSI = ( pureRSSI < spur_RSSI ? pureRSSI : spur_RSSI);  // Take minimum of two
-        spur_RSSI =-1;                                              // and prepare for next call of perform.
-      }
+        setting.spur = 1;                                           // and prepare for next call of perform.
     }
 #endif
 
