@@ -353,7 +353,7 @@ float get_attenuation(void)
 static pureRSSI_t get_signal_path_loss(void){
 #ifdef __ULTRA__
   if (setting.mode == M_ULTRA)
-    return -float_TO_PURE_RSSI(15);       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+    return float_TO_PURE_RSSI(-15);       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
 #endif
   if (setting.mode == M_LOW)
     return float_TO_PURE_RSSI(-5.5);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2

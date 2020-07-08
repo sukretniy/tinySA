@@ -887,7 +887,7 @@ typedef int16_t  pureRSSI_t;
 // External programm zero level settings (need decrease on this value -)
 #define EXT_ZERO_LEVEL            (128)
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
-#define float_TO_PURE_RSSI(rssi)  ((rssi)*32.0)
+#define float_TO_PURE_RSSI(rssi)  ((rssi)*32)
 #define PURE_TO_float(rssi)       ((rssi)/32.0)
 
 extern uint16_t actual_rbw_x10;
