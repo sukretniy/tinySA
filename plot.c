@@ -30,8 +30,7 @@
 
 #ifdef __SCROLL__
 uint16_t _grid_y = NOSCROLL_GRIDY;
-int waterfall = false;
-int fullscreen = true;
+static int waterfall = false;
 #endif
 static void cell_draw_marker_info(int x0, int y0);
 static void cell_grid_line_info(int x0, int y0);
@@ -2290,7 +2289,6 @@ toggle_waterfall(void)
     _grid_y = SCROLL_GRIDY;
     ili9341_fill(OFFSETX, HEIGHT_SCROLL, LCD_WIDTH - OFFSETX, HEIGHT_NOSCROLL - HEIGHT_SCROLL, 0);
     waterfall = true;
-    fullscreen = false;
     w_min = (int)min_level;
     w_max = (int)peakLevel;
     if (w_max < w_min + 20)
@@ -2299,7 +2297,6 @@ toggle_waterfall(void)
   } else {
     _grid_y = NOSCROLL_GRIDY;
     waterfall = false;
-    fullscreen = true;
   }
   request_to_redraw_grid();
 }

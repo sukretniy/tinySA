@@ -1508,12 +1508,8 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     if (MODE_HIGH(setting.mode))
       local_IF = 0;
     else {
-      if (setting.auto_IF) {
-        if (setting.spur)
-          local_IF = 433900000;
-        else
-          local_IF = 433800000;
-      }
+      if (setting.auto_IF)
+        local_IF = setting.spur ? 433900000 : 433800000;
       else
         local_IF = setting.frequency_IF;
     }
