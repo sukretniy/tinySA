@@ -1486,20 +1486,15 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
   int t = 0;
   do {
-    int offs = 0,sm;
-    uint32_t lf = (uint32_t)f;
-    if (vbwSteps > 1) {         // Calculate sub steps
+    uint32_t lf = f;
+    if (vbwSteps > 1) {          // Calculate sub steps
+      int offs_div10 = (t - (vbwSteps >> 1)) * 500 / 10; // steps of half the rbw
+      if ((vbwSteps & 1) == 0)                           // Uneven steps, center
+        offs_div10+= 250 / 10;                           // Even, shift half step
+      int offs = offs_div10 * actual_rbw_x10;
       if (setting.step_delay_mode == SD_PRECISE)
-        sm = 250; // steps of a quarter rbw
-      else
-        sm = 500; // steps of half the rbw
-      if (vbwSteps & 1) { // Uneven steps, center
-        offs = (t - (vbwSteps >> 1)) * sm;
-      } else {            // Even, shift half step
-        offs = (t - (vbwSteps >> 1)) * sm + sm/2;
-      }
-      offs = (int)(offs * actual_rbw_x10/10.0);
-      lf = (uint32_t)(f + offs);
+        offs>>=1;                                        // steps of a quarter rbw
+      lf += offs;
     }
 
     // --------------- Set all the LO's ------------------------
