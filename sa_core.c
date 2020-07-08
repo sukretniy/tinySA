@@ -790,6 +790,14 @@ void set_mode(int m)
 
 extern int SI4432_offset_delay;
 
+int fast_speedup = 0;
+
+void set_fast_speedup(int s)
+{
+  fast_speedup = s;
+  dirty = true;
+}
+
 void calculate_step_delay(void)
 {
   if (setting.step_delay_mode == SD_MANUAL || setting.step_delay != 0) {        // The latter part required for selftest 3
@@ -824,6 +832,8 @@ void calculate_step_delay(void)
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
+      if (fast_speedup >0)
+        SI4432_offset_delay = SI4432_step_delay / fast_speedup;
     }
     if (setting.offset_delay != 0)      // Override if set
       SI4432_offset_delay = setting.offset_delay;

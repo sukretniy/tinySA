@@ -903,6 +903,7 @@ void set_switches(int);
 void set_trigger_level(float);
 void set_trigger(int);
 void update_rbw(void);
+void set_fast_speedup(int);
 //extern int setting_measurement;
 void self_test(int);
 //extern int setting_test;
