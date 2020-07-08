@@ -865,14 +865,17 @@ static const float correction_value[CORRECTION_POINTS] =
 #define SCALE_FACTOR 14     // min scaled correction = 2^15, max scaled correction = 256 * 2^15
                             // min scaled f = 6, max scaled f =  1024
 
-static int32_t correction_factor[CORRECTION_POINTS];
+static int32_t scaled_correction_multi[CORRECTION_POINTS];
+static int32_t scaled_correction_value[CORRECTION_POINTS];
 
 void calculate_correction(void)
 {
+  scaled_correction_value[0] = config.correction_value[0]  * (1 << (SCALE_FACTOR));
   for (int i = 1; i < CORRECTION_POINTS; i++) {
-    int32_t m = (config.correction_value[i] - config.correction_value[i-1]) * (1 << (SCALE_FACTOR));
+    scaled_correction_value[i] = config.correction_value[i]  * (1 << (SCALE_FACTOR));
+    int32_t m = scaled_correction_value[i] - scaled_correction_value[i-1];
     int32_t d = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR;
-    correction_factor[i] = (int32_t) ( m / d );
+    scaled_correction_multi[i] = (int32_t) ( m / d );
   }
 }
 
@@ -894,7 +897,7 @@ float get_frequency_correction(uint32_t f)      // Frequency dependent RSSI corr
   float cv = config.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
 #else
   int32_t scaled_f = f >> SCALE_FACTOR;
-  float cv = config.correction_value[i-1] + ((float)(scaled_f * correction_factor[i]))/(float)(1 << (SCALE_FACTOR)) ;
+  float cv = ((float)(scaled_correction_value[i-1] + (scaled_f * scaled_correction_multi[i])))/(float)(1 << (SCALE_FACTOR)) ;
 #endif
   return(cv);
 }
