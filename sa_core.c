@@ -966,12 +966,12 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       return;
     }
 #if 1
-    if (setting.step_delay_mode == SD_FAST) {        // If in extra fast scanning mode
+    if (V == 1 && setting.step_delay_mode == SD_FAST) {        // If in extra fast scanning mode and NOT SI4432_RX !!!!!!
       int delta =  freq - real_old_freq[V];
 
       if (real_old_freq[V] >= 480000000)    // 480MHz, high band
         delta = delta >> 1;
-      if (delta > OFFSET_LOWER_BOUND && delta < 80000) { // and requested frequency can be reached by using the offset registers
+      if (delta > OFFSET_LOWER_BOUND && delta < 79999) { // and requested frequency can be reached by using the offset registers
 #if 0
         if (real_old_freq[V] >= 480000000)
           shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
@@ -983,27 +983,30 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
         SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((delta >> 8) & 0x03));
         SI4432_offset_changed = true;                 // Signal offset changed so RSSI retrieval is delayed for frequency settling
         old_freq[V] = freq;
-        return;
-      }
-    }
-#endif
+      } else {
 #ifdef __WIDE_OFFSET__
-    uint32_t target_f;                    // Impossible to use offset so set SI4432 to new frequency
-    if (freq >= 480000000) {
-      target_f = freq + 160000;
-    } else {
-      target_f = freq + 80000;
-    }
-    SI4432_Set_Frequency(target_f);
-    SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
-    SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
-    real_old_freq[V] = target_f;
+        uint32_t target_f;                    // Impossible to use offset so set SI4432 to new frequency
+        if (freq + 80000 >= 480000000) {
+          target_f = freq + 160000;
+        } else {
+          target_f = freq + 80000;
+        }
+        SI4432_Set_Frequency(target_f);
+        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
+        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
+        real_old_freq[V] = target_f;
 #else
-    SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
-    SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
-    SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
-    real_old_freq[V] = freq;
+        SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
+        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
+        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
+        real_old_freq[V] = freq;
 #endif
+      }
+    } else {
+#endif
+      SI4432_Set_Frequency(freq);           // Not in fast mode
+      real_old_freq[V] = freq;
+    }
 #ifdef __ULTRA_SA__
   } else {
     ADF4351_set_frequency(V-2,freq,3);
@@ -1956,7 +1959,7 @@ sweep_again:                                // stay in sweep loop when output mo
       } else {
         set_switch_receive();
       }
-      // dirty = true;                               // Must be  above if(scandirty!!!!!)
+      dirty = true;                               // Needed to recalculate the correction factor
     }
   }
 
