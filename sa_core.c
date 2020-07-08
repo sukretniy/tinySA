@@ -350,14 +350,14 @@ float get_attenuation(void)
   return(setting.attenuate);
 }
 
-static float get_signal_path_loss(void){
+static pureRSSI_t get_signal_path_loss(void){
 #ifdef __ULTRA__
   if (setting.mode == M_ULTRA)
-    return -15;       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+    return -float_TO_PURE_RSSI(15);       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
 #endif
   if (setting.mode == M_LOW)
-    return -5.5;      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-  return +7;          // Loss in dB (+ is gain)
+    return float_TO_PURE_RSSI(-5.5);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+  return float_TO_PURE_RSSI(+7);          // Loss in dB (+ is gain)
 }
 
 static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
@@ -1370,10 +1370,10 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     }
     if (MODE_INPUT(setting.mode)) {
       correct_RSSI = getSI4432_RSSI_correction()
-                + float_TO_PURE_RSSI(
+                     -  get_signal_path_loss()
+                     + float_TO_PURE_RSSI(
                       + get_level_offset()
                       +  get_attenuation()
-                      -  get_signal_path_loss()
                       -  setting.offset);
     }
 #if 0
