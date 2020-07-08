@@ -879,7 +879,7 @@ void calculate_correction(void)
   }
 }
 
-float get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
+pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
   if (!(setting.mode == M_LOW))
     return(0.0);
@@ -897,7 +897,7 @@ float get_frequency_correction(uint32_t f)      // Frequency dependent RSSI corr
   float cv = config.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
 #else
   int32_t scaled_f = f >> SCALE_FACTOR;
-  float cv = ((float)(scaled_correction_value[i-1] + (scaled_f * scaled_correction_multi[i])))/(float)(1 << (SCALE_FACTOR)) ;
+  pureRSSI_t cv = (scaled_correction_value[i-1] + (scaled_f * scaled_correction_multi[i])) >> (SCALE_FACTOR - 5) ;
 #endif
   return(cv);
 }
@@ -1476,7 +1476,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   // Calculate the RSSI correction for later use
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
     if (i == 0 || setting.frequency_step != 0)
-      correct_RSSI_freq = float_TO_PURE_RSSI(get_frequency_correction(f));
+      correct_RSSI_freq = get_frequency_correction(f);
   }
 
 // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
