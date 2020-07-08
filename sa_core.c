@@ -801,16 +801,16 @@ void calculate_step_delay(void)
     if (setting.frequency_step == 0) {            // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
-#if 0       // Table for 200us delay inside SI4432_set_freq
-      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  150; SI4432_offset_delay = 10; }
-      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 10; }
-      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 10; }
-      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 10; }
-      else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 10; }
-      else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 100; }
+#if 1       // Table for double offset delay
+      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 200; }
+      else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 300; }
       else if (actual_rbw_x10 >=  90)  { SI4432_step_delay = 1700; SI4432_offset_delay = 400; }
-      else if (actual_rbw_x10 >=  48)  { SI4432_step_delay = 3300; SI4432_offset_delay = 400; }
-      else                             { SI4432_step_delay = 6400; SI4432_offset_delay = 800; }
+      else if (actual_rbw_x10 >=  50)  { SI4432_step_delay = 3300; SI4432_offset_delay = 800; }
+      else                             { SI4432_step_delay = 6400; SI4432_offset_delay =1600; }
 #else
       if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
