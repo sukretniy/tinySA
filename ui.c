@@ -1771,6 +1771,9 @@ leave_ui_mode()
 //    request_to_draw_cells_behind_numeric_input();
 //    erase_numeric_input();
 //  }
+  // Erase bottom area (not redraw on area update)
+  if (MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height > 0)
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height, DEFAULT_BG_COLOR);
   redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
 }
 
@@ -1927,10 +1930,9 @@ ui_mode_normal(void)
 {
   if (ui_mode == UI_NORMAL)
     return;
-
+  leave_ui_mode();
   area_width  = AREA_WIDTH_NORMAL;
   area_height = AREA_HEIGHT_NORMAL;
-  leave_ui_mode();
   ui_mode = UI_NORMAL;
 }
 
