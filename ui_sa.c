@@ -1579,8 +1579,6 @@ const menuitem_t menu_top[] = {
 
 #define ACTIVE_COLOR RGBHEX(0x007FFF)
 
-void frequency_string(char *buf, size_t len, int32_t freq);
-
 int menu_is_form(const menuitem_t *menu)
 {
   int i;
