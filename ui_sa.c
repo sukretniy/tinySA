@@ -887,7 +887,7 @@ static void menu_storage_cb(int item, uint8_t data)
       toggle_waterfall();
       break;
   }
-  menu_move_back_and_leave_ui();
+//  menu_move_back_and_leave_ui();
 //  draw_cal_status();
 }
 
@@ -1588,37 +1588,38 @@ int menu_is_form(const menuitem_t *menu)
 
 static void fetch_numeric_target(void);
 
-#define P_TEXT(data) (data)
-#define P_INT(data)  ((void*)((int32_t)data))
-#define P_UINT(data) ((void*)((uint32_t)data))
-#define P_FLOAT(data) ((void*)((float)data))
-
 static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, ui_button_t *button)
 {
   int mark = false;
   int m_auto = false;
   int data = menu[item].data;
-  const void *param_1 = 0;     // void data 1 for printf
-  const void *param_2 = 0;     // void data 2 for printf
+
+  union {
+    int32_t  i;
+    uint32_t u;
+    const char *text;
+  } param_1, param_2;    // void data for printf
+  param_1.u = 0;
+  param_2.u = 0;
   if (menu == menu_mode) {
     if (item == setting.mode)  {
-      param_1 = P_TEXT("RETURN");
+      param_1.text = "RETURN";
       mark = true;
     } else if (item < 4){
-      param_1 = P_TEXT("SWITCH");
+      param_1.text = "SWITCH";
     }  else if (item == 4) {
-      param_1 = P_TEXT(menu_reffer_text[setting.refer+1]);
+      param_1.text = menu_reffer_text[setting.refer+1];
     }
   } else if (menu == menu_highoutputmode && item == 2) {
-    param_1 = P_INT(menu_drive_value[setting.drive]);
+    param_1.i = menu_drive_value[setting.drive];
   } else if (menu == menu_lowoutputmode || menu == menu_highoutputmode) {
     if (item == 0) {
-      param_1 = P_TEXT(setting.mute ? "OFF" : "ON");
+      param_1.text = setting.mute ? "OFF" : "ON";
       mark = true;
     }
     else if (item == 3) {
-      param_1 = P_TEXT(menu_modulation_text[setting.modulation]);
+      param_1.text = menu_modulation_text[setting.modulation];
     }
   } else if (menu == menu_reffer) {
     if (item < 5 && item == setting.refer + 1){
@@ -1636,7 +1637,7 @@ static void menu_item_modify_attribute(
     if (item == setting.average){
       mark = true;
     }
-  } else if (menu == menu_scale_per) {
+  } else if (menu == menu_scale_per || menu ==  menu_scale_per2) {
     if (menu_scale_per_value[data] == setting.scale){
       mark = true;
     }
@@ -1645,7 +1646,7 @@ static void menu_item_modify_attribute(
       mark = true;
     }
   } else if (menu == menu_rbw) {
-    param_1 = P_INT(rbwsel_x10[data]/10);
+    param_1.u = rbwsel_x10[data]/10;
     if (rbwsel_x10[data] == setting.rbw_x10){
       mark = true;
     }
@@ -1654,7 +1655,7 @@ static void menu_item_modify_attribute(
       mark = true;
     }
   } else if (MT_MASK(menu[item].type) == MT_CALLBACK && (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2|| menu == menu_drive_wide3)) {
-    param_1 = P_INT(menu_drive_value[data]);
+    param_1.i = menu_drive_value[data];
     if (data == setting.drive){
       mark = true;
     }
@@ -1732,7 +1733,7 @@ static void menu_item_modify_attribute(
     if (item == 4 && markers[active_marker].mtype & M_TRACKING)
       mark = true;
   } else if (menu == menu_marker_sel || menu == menu_marker_select) {
-    param_1 = P_INT(data);
+    param_1.i = data;
     if (item < 4 && markers[item].enabled)
       mark = true;
     else if (item == 4 && uistat.marker_delta)
@@ -1760,10 +1761,10 @@ static void menu_item_modify_attribute(
   if (menu[item].type & MT_FORM && MT_MASK(menu[item].type) == MT_KEYPAD) {
     keypad_mode = menu[item].data;
     fetch_numeric_target();
-    param_1 = P_TEXT(uistat.text);
+    param_1.text = uistat.text;
   }
   // Prepare button label
-  plot_printf(button->text, sizeof button->text, menu[item].label, param_1, param_2);
+  plot_printf(button->text, sizeof button->text, menu[item].label, param_1.u, param_2.u);
 
   if (m_auto) {
     button->bg = LIGHT_GREY;
