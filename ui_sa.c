@@ -708,14 +708,11 @@ static void menu_modulation_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-
-const int menu_reffer_value[]={-1,0,1,2,3,4,5,6};
-const char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
 static void menu_reffer_cb(int item, uint8_t data)
 {
   (void)item;
 //Serial.println(item);
-  set_refer_output(menu_reffer_value[data]);
+  set_refer_output((int)data - 1);
   menu_move_back();
 //  ui_mode_normal();   // Stay in menu mode
 //  draw_cal_status();
@@ -1265,23 +1262,24 @@ static const menuitem_t menu_scale_per[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+//                               0      1       2       3      4      5      6      7
+const char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
 static const menuitem_t menu_reffer2[] = {
-  { MT_FORM | MT_CALLBACK, 5, "3MHz" ,   menu_reffer_cb},
-  { MT_FORM | MT_CALLBACK, 6, "2MHz" ,   menu_reffer_cb},
-  { MT_FORM | MT_CALLBACK, 7, "1MHz" ,   menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK, 5, "3MHz",  menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK, 6, "2MHz",  menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK, 7, "1MHz",  menu_reffer_cb},
   { MT_FORM | MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-
 static const menuitem_t menu_reffer[] = {
-  { MT_FORM | MT_CALLBACK, 0, "OFF"  ,   menu_reffer_cb},
-  { MT_FORM | MT_CALLBACK, 1, "30MHz",   menu_reffer_cb},
-  { MT_FORM | MT_CALLBACK, 2, "15MHz",   menu_reffer_cb},
-  { MT_FORM | MT_CALLBACK, 3, "10MHz",   menu_reffer_cb},
-  { MT_FORM | MT_CALLBACK, 4, "4MHz" ,   menu_reffer_cb},
-  { MT_FORM | MT_CALLBACK, 6, "2MHz" ,   menu_reffer_cb},
-  { MT_FORM | MT_CALLBACK, 7, "1MHz" ,   menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK,  0,   "OFF", menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK,  1, "30MHz", menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK,  2, "15MHz", menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK,  3, "10MHz", menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK,  4,  "4MHz", menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK,  6,  "2MHz", menu_reffer_cb},
+  { MT_FORM | MT_CALLBACK,  7,  "1MHz", menu_reffer_cb},
 //  { MT_FORM | MT_SUBMENU,  0, "\033 MORE", menu_reffer2},
   { MT_FORM | MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
