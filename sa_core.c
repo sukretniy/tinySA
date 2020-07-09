@@ -789,6 +789,14 @@ void set_mode(int m)
 
 extern int SI4432_offset_delay;
 
+int fast_speedup = 0;
+
+void set_fast_speedup(int s)
+{
+  fast_speedup = s;
+  dirty = true;
+}
+
 void calculate_step_delay(void)
 {
   if (setting.step_delay_mode == SD_MANUAL || setting.step_delay != 0) {        // The latter part required for selftest 3
@@ -823,6 +831,8 @@ void calculate_step_delay(void)
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
+      if (fast_speedup >0)
+        SI4432_offset_delay = SI4432_step_delay / fast_speedup;
     }
     if (setting.offset_delay != 0)      // Override if set
       SI4432_offset_delay = setting.offset_delay;
@@ -985,15 +995,27 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       } else {
 #ifdef __WIDE_OFFSET__
         uint32_t target_f;                    // Impossible to use offset so set SI4432 to new frequency
-        if (freq + 80000 >= 480000000) {
-          target_f = freq + 160000;
-        } else {
-          target_f = freq + 80000;
+        if (freq < real_old_freq[V]) {                          // sweeping down
+          if (freq - 80000 >= 480000000) {
+            target_f = freq - 160000;
+          } else {
+            target_f = freq - 80000;
+          }
+          SI4432_Set_Frequency(target_f);
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0xff);           // set offset to most positive
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x01);
+          real_old_freq[V] = target_f;
+        } else {                                                // sweeping up
+          if (freq + 80000 >= 480000000) {
+            target_f = freq + 160000;
+          } else {
+            target_f = freq + 80000;
+          }
+          SI4432_Set_Frequency(target_f);
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
+          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
+          real_old_freq[V] = target_f;
         }
-        SI4432_Set_Frequency(target_f);
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
-        real_old_freq[V] = target_f;
 #else
         SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
         SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
@@ -1136,7 +1158,13 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   }
   actual_rbw_x10 = setting.rbw_x10;     // requested rbw
   if (actual_rbw_x10 == 0) {        // if auto rbw
-    actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
+    if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
+      if (fast_speedup > 2)
+        actual_rbw_x10 = 6*setting.vbw_x10; // rbw is four the frequency step to ensure no gaps in coverage as there are some weird jumps
+      else
+        actual_rbw_x10 = 4*setting.vbw_x10; // rbw is four the frequency step to ensure no gaps in coverage as there are some weird jumps
+    } else
+      actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
   }
   if (actual_rbw_x10 < 26)
     actual_rbw_x10 = 26;
