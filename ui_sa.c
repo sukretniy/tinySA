@@ -887,7 +887,7 @@ static void menu_storage_cb(int item, uint8_t data)
       toggle_waterfall();
       break;
   }
-//  menu_move_back_and_leave_ui();
+  ui_mode_normal();
 //  draw_cal_status();
 }
 
