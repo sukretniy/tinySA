@@ -301,7 +301,8 @@ const uint16_t right_icons [] =
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
-  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY, KM_FAST_SPEEDUP
+  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY, KM_FAST_SPEEDUP,
+  KM_NONE // always at enum end
 };
 
 
@@ -492,12 +493,10 @@ static const keypads_t keypads_time[] = {
   { 0, 0, -1 }
 };
 
-typedef struct {
+static const struct {
   const keypads_t *keypad_type;
   char *name;
-} keypads_list;
-
-static const keypads_list keypads_mode_tbl[] = {
+} keypads_mode_tbl[KM_NONE] = {
   {keypads_freq        , "START"}, // start
   {keypads_freq        , "STOP"}, // stop
   {keypads_freq        , "CENTER"}, // center
@@ -731,7 +730,6 @@ static void menu_spur_cb(int item, uint8_t data)
     set_spur(1); // must be 0 or 1 !!!!
 //  menu_move_back();
   ui_mode_normal();
-  redraw_request |= REDRAW_CAL_STATUS;
 }
 #endif
 
@@ -898,7 +896,6 @@ static void menu_average_cb(int item, uint8_t data)
   (void)data;
   set_average(item);
   menu_move_back_and_leave_ui();
-  redraw_request |= REDRAW_CAL_STATUS;
 }
 
 static void
