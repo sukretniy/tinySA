@@ -2599,9 +2599,10 @@ int mySerialReadline(unsigned char *buf, int len)
 }
 #endif
 
-// Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
-// Profile stack usage (enable threads command by def ENABLE_THREADS_COMMAND) show:
-// Stack maximum usage = 472 bytes (need test more and run all commands), free stack = 40 bytes
+/* Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
+ * Profile stack usage (enable threads command by def ENABLE_THREADS_COMMAND) show:
+ *Stack maximum usage = 472 bytes (need test more and run all commands), free stack = 40 bytes
+ */
 
 int main(void)
 {
