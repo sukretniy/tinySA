@@ -1613,13 +1613,6 @@ draw_menu_buttons(const menuitem_t *menu)
     uint16_t old_bg = button.bg;
 
     menu_item_modify_attribute(menu, i, &button);      // before plot_printf to create status text
-    if (menu[i].type & MT_FORM) {
-      if (MT_MASK(menu[i].type) == MT_KEYPAD) {               // Only keypad retrieves value
-        keypad_mode = menu[i].data;
-        fetch_numeric_target();
-      }
-    }
-    plot_printf(button.text, sizeof button.text, menu[i].label, uistat.text);
 
     ili9341_set_foreground(button.fg);
     ili9341_set_background(button.bg);
