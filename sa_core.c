@@ -750,7 +750,7 @@ void set_offset(float offset)
 void set_trigger_level(float trigger_level)
 {
   setting.trigger_level = trigger_level;
-  redraw_request |= REDRAW_TRIGGER;
+  redraw_request |= REDRAW_TRIGGER | REDRAW_CAL_STATUS | REDRAW_AREA;
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -760,10 +760,9 @@ void set_trigger(int trigger)
     setting.trigger_direction = trigger;
   } else {
     setting.trigger = trigger;
-    redraw_request |= REDRAW_TRIGGER;
     sweep_mode = SWEEP_ENABLE;
   }
-  redraw_request|=REDRAW_TRIGGER;
+  redraw_request|=REDRAW_TRIGGER | REDRAW_CAL_STATUS;
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
