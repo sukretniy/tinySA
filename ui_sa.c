@@ -1427,7 +1427,7 @@ static const menuitem_t menu_settings[] =
 {
   { MT_CALLBACK | MT_LOW, 5,    "\2LO\0OUTPUT",menu_settings2_cb},
   { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
-  { MT_KEYPAD | MT_LOW, KM_IF,  "\2IF\0FREQ",       NULL},
+  { MT_KEYPAD | MT_LOW, KM_IF,  "\2IF\0FREQ",       "Set to zero for auto IF"},
   { MT_SUBMENU,0,               "\2SCAN\0SPEED",         menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "\2SAMPLE\0REPEAT",          "1..100"},
   { MT_SUBMENU | MT_LOW,0,      "\2MIXER\0DRIVE",      menu_drive},
