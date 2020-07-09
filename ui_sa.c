@@ -1292,7 +1292,7 @@ static const menuitem_t menu_atten[] = {
   { MT_CALLBACK | MT_LOW, 0,               "AUTO",    menu_atten_cb},
   { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL",  "0..30"},
   { MT_CALLBACK | MT_HIGH,0,               "0dB",     menu_atten_high_cb},
-  { MT_CALLBACK | MT_HIGH,30,              "\00225..30dB",    menu_atten_high_cb},
+  { MT_CALLBACK | MT_HIGH,30,              "\00225..40dB",    menu_atten_high_cb},
   { MT_CANCEL, 0,               "\032 BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
