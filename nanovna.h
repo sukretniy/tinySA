@@ -894,7 +894,6 @@ extern uint16_t actual_rbw_x10;
 
 int get_waterfall(void);
 void toggle_tracking(void);
-void calibrate(void);
 void reset_calibration(void);
 void set_reflevel(float);
 void set_offset(float);

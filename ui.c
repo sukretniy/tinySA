@@ -1438,11 +1438,12 @@ draw_numeric_area_frame(void)
   ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT, config.menu_normal_color);
   ili9341_set_foreground(DEFAULT_MENU_TEXT_COLOR);
   ili9341_set_background(config.menu_normal_color);
-  if (menu_is_multiline(keypad_mode_label[keypad_mode], &l1, &l2)) {
+  char *name = keypads_mode_tbl[keypad_mode].name;
+  if (menu_is_multiline(name, &l1, &l2)) {
     ili9341_drawstring_7x13(l1, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT+1);
     ili9341_drawstring_7x13(l2, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT/2 + 1);
   } else
-    ili9341_drawstring_7x13(keypad_mode_label[keypad_mode], 10, LCD_HEIGHT-(bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+    ili9341_drawstring_7x13(name, 10, LCD_HEIGHT-(bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   //ili9341_drawfont(KP_KEYPAD, 300, 216);
 }
 
@@ -1909,7 +1910,7 @@ ui_mode_keypad(int _keypad_mode)
 
   // keypads array
   keypad_mode = _keypad_mode;
-  keypads = keypads_mode_tbl[_keypad_mode];
+  keypads = keypads_mode_tbl[_keypad_mode].keypad_type;
   int i;
   for (i = 0; keypads[i+1].c >= 0; i++)
     ;

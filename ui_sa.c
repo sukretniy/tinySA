@@ -299,7 +299,7 @@ const uint16_t right_icons [] =
 };
 
 enum {
-  KM_START=1, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
+  KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY, KM_FAST_SPEEDUP
 };
@@ -492,46 +492,36 @@ static const keypads_t keypads_time[] = {
   { 0, 0, -1 }
 };
 
-static const keypads_t * const keypads_mode_tbl[] = {
-  NULL,         // never used
-  keypads_freq, // start
-  keypads_freq, // stop
-  keypads_freq, // center
-  keypads_freq, // span
-  keypads_freq, // cw freq
-  keypads_plusmin_unit, // reflevel
-  keypads_pos_unit, // scale
-  keypads_positive, // attenuation
-  keypads_plusmin_unit, // actual power
-  keypads_freq, // IF
-  keypads_positive, // sample delay
-  keypads_positive, // drive
-  keypads_plusmin,    // KM_LOWOUTLEVEL
-  keypads_positive,    // KM_DECAY
-  keypads_positive,    // KM_NOISE
-  keypads_freq,    // KM_10MHz
-  keypads_positive,    // KM_REPEA
-  keypads_plusmin,    // KM_OFFSET
-  keypads_plusmin_unit,    // KM_TRIGGER
-  keypads_plusmin,    // KM_LEVELSWEEP
-  keypads_time,     // KM_SWEEP_TIME
-  keypads_positive, // KM_OFFSET_DELAY
-  keypads_positive, // KM_FAST_SPEEDUP
-};
+typedef struct {
+  const keypads_t *keypad_type;
+  char *name;
+} keypads_list;
 
-#ifdef __VNA__
-static const char * const keypad_mode_label[] = {
-  "START", "STOP", "CENTER", "SPAN", "CW FREQ", "SCALE", "REFPOS", "EDELAY", "VELOCITY%", "DELAY"
+static const keypads_list keypads_mode_tbl[] = {
+  {keypads_freq        , "START"}, // start
+  {keypads_freq        , "STOP"}, // stop
+  {keypads_freq        , "CENTER"}, // center
+  {keypads_freq        , "SPAN"}, // span
+  {keypads_freq        , "FREQ"}, // cw freq
+  {keypads_plusmin_unit, "\2REF\0LEVEL"}, // reflevel
+  {keypads_pos_unit    , "SCALE"}, // scale
+  {keypads_positive    , "ATTENUATE"}, // attenuation
+  {keypads_plusmin_unit, "\2ACTUAL\0POWER"}, // actual power
+  {keypads_freq        , "IF"}, // IF
+  {keypads_positive    , "\2SAMPLE\0DELAY"}, // sample delay
+  {keypads_positive    , "DRIVE"}, // drive
+  {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
+  {keypads_positive    , "SCANS"},    // KM_DECAY
+  {keypads_positive    , "LEVEL"},    // KM_NOISE
+  {keypads_freq        , "FREQ"},    // KM_10MHz
+  {keypads_positive    , "\2SAMPLE\0REPEAT"},    // KM_REPEA
+  {keypads_plusmin     , "OFFSET"},    // KM_OFFSET
+  {keypads_plusmin_unit, "\2TRIGGER\0LEVEL"},    // KM_TRIGGER
+  {keypads_plusmin     , "\2LEVEL\0SWEEP"},    // KM_LEVELSWEEP
+  {keypads_time        , "\2SWEEP\0SECONDS"},    // KM_SWEEP_TIME
+  {keypads_positive    , "\2OFFSET\0DELAY"}, // KM_OFFSET_DELAY
+  {keypads_positive    , "\2FAST\0SPEEDUP"}, // KM_FAST_SPEEDUP
 };
-#endif
-#ifdef __SA__
-static const char * const keypad_mode_label[] = {
-  "error", "START", "STOP", "CENTER", "SPAN", "FREQ", "\2REF\0LEVEL", "SCALE", // 0-7
-  "ATTENUATE", "\2ACTUAL\0POWER", "IF", "\2SAMPLE\0DELAY", "DRIVE", "LEVEL", "SCANS", "LEVEL", // 8-15
-  "FREQ" , "\2SAMPLE\0REPEAT", "OFFSET", "\2TRIGGER\0LEVEL", "\2LEVEL\0SWEEP", "\2SWEEP\0SECONDS", "\2OFFSET\0DELAY", "\2FAST\0SPEEDUP" // 16-
-};
-#endif
-
 
 // ===[MENU CALLBACKS]=========================================================
 
