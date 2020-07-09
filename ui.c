@@ -1445,7 +1445,7 @@ draw_numeric_area_frame(void)
   ili9341_set_background(config.menu_normal_color);
   char *name = keypads_mode_tbl[keypad_mode].name;
   int lines = menu_is_multiline(name);
-  ili9341_drawstring_7x13(name, 10, LCD_HEIGHT-(lines*bFONT_STR_HEIGHT-NUM_INPUT_HEIGHT)/2);
+  ili9341_drawstring_7x13(name, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT + (NUM_INPUT_HEIGHT-lines*bFONT_STR_HEIGHT)/2);
   //ili9341_drawfont(KP_KEYPAD, 300, 216);
 }
 
