@@ -422,9 +422,8 @@ enter_dfu(void)
   ili9341_set_background(DEFAULT_BG_COLOR);
   // leave a last message 
   ili9341_clear_screen();
-  ili9341_drawstring_7x13("DFU: Device Firmware Update Mode", x, y += bFONT_STR_HEIGHT);
-  ili9341_drawstring_7x13("To exit DFU mode, please reset device yourself.", x, y += bFONT_STR_HEIGHT);
-
+  ili9341_drawstring_7x13("DFU: Device Firmware Update Mode\n"
+                          "To exit DFU mode, please reset device yourself.", x, y);
   // see __early_init in ./NANOVNA_STM32_F072/board.c
   *((unsigned long *)BOOT_FROM_SYTEM_MEMORY_MAGIC_ADDRESS) = BOOT_FROM_SYTEM_MEMORY_MAGIC;
   NVIC_SystemReset();
@@ -1427,23 +1426,26 @@ draw_keypad(void)
     i++;
   }
 }
+
 static int
-menu_is_multiline(const char *label, const char **l1, const char **l2);
+menu_is_multiline(const char *label)
+{
+  int n = 1;
+  while (*label)
+    if (*label++ == '\n')
+      n++;
+  return n;
+}
 
 static void
 draw_numeric_area_frame(void)
 {
-  const char *l1;
-  const char *l2;
   ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT, config.menu_normal_color);
   ili9341_set_foreground(DEFAULT_MENU_TEXT_COLOR);
   ili9341_set_background(config.menu_normal_color);
   char *name = keypads_mode_tbl[keypad_mode].name;
-  if (menu_is_multiline(name, &l1, &l2)) {
-    ili9341_drawstring_7x13(l1, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT+1);
-    ili9341_drawstring_7x13(l2, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT/2 + 1);
-  } else
-    ili9341_drawstring_7x13(name, 10, LCD_HEIGHT-(bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+  int lines = menu_is_multiline(name);
+  ili9341_drawstring_7x13(name, 10, LCD_HEIGHT-(lines*bFONT_STR_HEIGHT-NUM_INPUT_HEIGHT)/2);
   //ili9341_drawfont(KP_KEYPAD, 300, 216);
 }
 
@@ -1489,24 +1491,9 @@ draw_numeric_input(const char *buf)
   if (buf[0] == 0 && kp_help_text != NULL) {
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
-    const char *l1,*l2;
-    if (menu_is_multiline(kp_help_text, &l1, &l2)) {
-    ili9341_drawstring_7x13(l1, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-NUM_INPUT_HEIGHT+1);
-    ili9341_drawstring_7x13(l2, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-NUM_INPUT_HEIGHT/2 + 1);
-  } else
-    ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
+    int  lines = menu_is_multiline(kp_help_text);
+    ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(lines*bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   }
-}
-
-static int
-menu_is_multiline(const char *label, const char **l1, const char **l2)
-{
-  if (label[0] != '\2')
-    return FALSE;
-
-  *l1 = &label[1];
-  *l2 = &label[1] + strlen(&label[1]) + 1;
-  return TRUE;
 }
 
 #ifdef __VNA__
@@ -1588,7 +1575,7 @@ menu_item_modify_attribute(const menuitem_t *menu, int item,
 
 #ifndef __VNA__
 extern void menu_item_modify_attribute(
-    const menuitem_t *menu, int item, uint16_t *fg, uint16_t *bg);
+    const menuitem_t *menu, int item, ui_button_t *button);
 #endif
 
 static bool menuDisabled(uint8_t type){
@@ -1605,48 +1592,45 @@ static void
 draw_menu_buttons(const menuitem_t *menu)
 {
   int i = 0;
-  char text[30];
   int y = 0;
+  ui_button_t button;
   for (i = 0; i < MENU_BUTTON_MAX; i++) {
-    const char *l1, *l2;
     if (menuDisabled(menu[i].type))            //not applicable to mode
       continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
-    uint16_t bg;
-    uint16_t fg;
     if (MT_MASK(menu[i].type) == MT_TITLE) {
-      fg = config.menu_normal_color;
-      bg = DEFAULT_MENU_TEXT_COLOR;
+      button.fg = config.menu_normal_color;
+      button.bg = DEFAULT_MENU_TEXT_COLOR;
     } else {
-      bg = config.menu_normal_color;
-      fg = DEFAULT_MENU_TEXT_COLOR;
+      button.bg = config.menu_normal_color;
+      button.fg = DEFAULT_MENU_TEXT_COLOR;
     }
     // focus only in MENU mode but not in KEYPAD mode
     if (ui_mode == UI_MENU && i == selection)
-      bg = config.menu_active_color;
+      button.bg = config.menu_active_color;
 
-    uint16_t old_bg = bg;
+    uint16_t old_bg = button.bg;
 
-    menu_item_modify_attribute(menu, i, &fg, &bg);      // before plot_printf to create status text
+    menu_item_modify_attribute(menu, i, &button);      // before plot_printf to create status text
     if (menu[i].type & MT_FORM) {
       if (MT_MASK(menu[i].type) == MT_KEYPAD) {               // Only keypad retrieves value
         keypad_mode = menu[i].data;
         fetch_numeric_target();
       }
-      plot_printf(text, sizeof text, menu[i].label, uistat.text);
     }
+    plot_printf(button.text, sizeof button.text, menu[i].label, uistat.text);
 
-    ili9341_set_foreground(fg);
-    ili9341_set_background(bg);
+    ili9341_set_foreground(button.fg);
+    ili9341_set_background(button.bg);
     if (menu[i].type & MT_FORM) {
       int button_width = MENU_FORM_WIDTH;
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen
       int button_height = MENU_BUTTON_HEIGHT-2;
 //      draw_button(button_start, y, button_width, button_height, bg == old_bg? fg : DARK_GREY, bg);
       ili9341_fill(button_start, y, button_width, button_height, old_bg);    // Set button to unmodified background color
-      ili9341_fill(button_start+2, y+2, button_width-4, button_height-4, bg);
-      ili9341_drawstring_size(text, button_start+6, y+(button_height-2*FONT_GET_HEIGHT)/2, 2);
+      ili9341_fill(button_start+2, y+2, button_width-4, button_height-4, button.bg);
+      ili9341_drawstring_size(button.text, button_start+6, y+(button_height-2*FONT_GET_HEIGHT)/2, 2);
 #ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
         blit16BitWidthBitmap(button_start+MENU_FORM_WIDTH-40   ,y+(button_height-16)/2,16,16,& left_icons[((menu[i].data >>4)&0xf)*16]);
@@ -1658,24 +1642,15 @@ draw_menu_buttons(const menuitem_t *menu)
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
       int button_height = MENU_BUTTON_HEIGHT-2;
       ili9341_fill(button_start, y, button_width, button_height, old_bg);    // Set button to unmodified background color
-      ili9341_fill(button_start+1, y+1, button_width-2, button_height - 2, bg);
+      ili9341_fill(button_start+1, y+1, button_width-2, button_height - 2, button.bg);
 //      draw_button(button_start, y, button_width, button_height, bg == old_bg? fg : DARK_GREY, bg);
-      if (menu_is_multiline(menu[i].label, &l1, &l2)) {
+      int lines = menu_is_multiline(button.text);
 #define BIG_BUTTON_FONT 1
 #ifdef BIG_BUTTON_FONT
-        ili9341_drawstring_7x13(l1, button_start+5, y+button_height/2-bFONT_GET_HEIGHT);
-        ili9341_drawstring_7x13(l2, button_start+5, y+button_height/2);
+      ili9341_drawstring_7x13(button.text, button_start+5, y+(button_height-lines*bFONT_GET_HEIGHT)/2);
 #else
-        ili9341_drawstring(l1, button_start+5, y+button_height/2-FONT_GET_HEIGHT);
-        ili9341_drawstring(l2, button_start+5, y+button_height/2);
+      ili9341_drawstring(button.text, button_start+5, y+(button_height-linesFONT_GET_HEIGHT)/2);
 #endif
-      } else {
-#ifdef BIG_BUTTON_FONT
-        ili9341_drawstring_7x13(menu[i].label, button_start+5, y+(button_height-bFONT_GET_HEIGHT)/2);
-#else
-        ili9341_drawstring(menu[i].label, button_start+5, y+(button_height-FONT_GET_HEIGHT)/2);
-#endif
-      }
     }
     y += MENU_BUTTON_HEIGHT;
   }

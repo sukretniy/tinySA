@@ -502,24 +502,24 @@ static const struct {
   {keypads_freq        , "CENTER"}, // center
   {keypads_freq        , "SPAN"}, // span
   {keypads_freq        , "FREQ"}, // cw freq
-  {keypads_plusmin_unit, "\2REF\0LEVEL"}, // reflevel
+  {keypads_plusmin_unit, "REF\nLEVEL"}, // reflevel
   {keypads_pos_unit    , "SCALE"}, // scale
   {keypads_positive    , "ATTENUATE"}, // attenuation
-  {keypads_plusmin_unit, "\2ACTUAL\0POWER"}, // actual power
+  {keypads_plusmin_unit, "ACTUAL\nPOWER"}, // actual power
   {keypads_freq        , "IF"}, // IF
-  {keypads_positive    , "\2SAMPLE\0DELAY"}, // sample delay
+  {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay
   {keypads_positive    , "DRIVE"}, // drive
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "SCANS"},    // KM_DECAY
   {keypads_positive    , "LEVEL"},    // KM_NOISE
   {keypads_freq        , "FREQ"},    // KM_10MHz
-  {keypads_positive    , "\2SAMPLE\0REPEAT"},    // KM_REPEA
+  {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA
   {keypads_plusmin     , "OFFSET"},    // KM_OFFSET
-  {keypads_plusmin_unit, "\2TRIGGER\0LEVEL"},    // KM_TRIGGER
-  {keypads_plusmin     , "\2LEVEL\0SWEEP"},    // KM_LEVELSWEEP
-  {keypads_time        , "\2SWEEP\0SECONDS"},    // KM_SWEEP_TIME
-  {keypads_positive    , "\2OFFSET\0DELAY"}, // KM_OFFSET_DELAY
-  {keypads_positive    , "\2FAST\0SPEEDUP"}, // KM_FAST_SPEEDUP
+  {keypads_plusmin_unit, "TRIGGER\nLEVEL"},    // KM_TRIGGER
+  {keypads_plusmin     , "LEVEL\nSWEEP"},    // KM_LEVELSWEEP
+  {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
+  {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY
+  {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
 };
 
 // ===[MENU CALLBACKS]=========================================================
@@ -1077,19 +1077,19 @@ const char *menu_drive_text[]={"-38dBm","-35dBm","-33dBm","-30dBm","-27dBm","-24
 
 static const menuitem_t menu_store_preset_high[8] =
 {
-  { MT_CALLBACK, 0,     "\2STORE\0STARTUP",menu_store_preset_cb},
+  { MT_CALLBACK, 0,     "STORE\nSTARTUP",menu_store_preset_cb},
   { MT_CALLBACK, 5,     "STORE 5"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 6,     "STORE 6"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 7,     "STORE 7"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 8,     "STORE 8"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 100,   "\2FACTORY\0DEFAULTS",menu_store_preset_cb},
+  { MT_CALLBACK, 100,   "FACTORY\nDEFAULTS",menu_store_preset_cb},
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
 static const menuitem_t menu_load_preset_high[] =
 {
-  { MT_CALLBACK, 0,     "\2LOAD\0STARTUP",menu_load_preset_cb},
+  { MT_CALLBACK, 0,     "LOAD\nSTARTUP",menu_load_preset_cb},
   { MT_CALLBACK, 5,     "LOAD 5"  ,      menu_load_preset_cb},
   { MT_CALLBACK, 6,     "LOAD 6"  ,      menu_load_preset_cb},
   { MT_CALLBACK, 7,     "LOAD 7"  ,      menu_load_preset_cb},
@@ -1101,19 +1101,19 @@ static const menuitem_t menu_load_preset_high[] =
 
 static const menuitem_t menu_store_preset[] =
 {
-  { MT_CALLBACK, 0,     "\2STORE AS\0STARTUP",menu_store_preset_cb},
+  { MT_CALLBACK, 0,     "STORE AS\nSTARTUP",menu_store_preset_cb},
   { MT_CALLBACK, 1,     "STORE 1"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 2,     "STORE 2"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 3,     "STORE 3"  ,      menu_store_preset_cb},
   { MT_CALLBACK, 4,     "STORE 4"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 100,   "\2FACTORY\0DEFAULTS",menu_store_preset_cb},
+  { MT_CALLBACK, 100,   "FACTORY\nDEFAULTS",menu_store_preset_cb},
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
 static const menuitem_t menu_load_preset[] =
 {
-  { MT_CALLBACK, 0,     "\2LOAD\0STARTUP",menu_load_preset_cb},
+  { MT_CALLBACK, 0,     "LOAD\nSTARTUP",menu_load_preset_cb},
   { MT_CALLBACK, 1,     "LOAD 1"  ,      menu_load_preset_cb},
   { MT_CALLBACK, 2,     "LOAD 2"  ,      menu_load_preset_cb},
   { MT_CALLBACK, 3,     "LOAD 3"  ,      menu_load_preset_cb},
@@ -1202,9 +1202,9 @@ const menuitem_t  menu_highoutputmode[] = {
 
 static const menuitem_t  menu_average[] = {
   { MT_CALLBACK, 0, "OFF",            menu_average_cb},
-  { MT_CALLBACK, 1, "\2MIN\0HOLD",    menu_average_cb},
-  { MT_CALLBACK, 2, "\2MAX\0HOLD",    menu_average_cb},
-  { MT_CALLBACK, 3, "\2MAX\0DECAY",   menu_average_cb},
+  { MT_CALLBACK, 1, "MIN\nHOLD",    menu_average_cb},
+  { MT_CALLBACK, 2, "MAX\nHOLD",    menu_average_cb},
+  { MT_CALLBACK, 3, "MAX\nDECAY",   menu_average_cb},
   { MT_CALLBACK, 4, "AVER 4",         menu_average_cb},
   { MT_CALLBACK, 5, "AVER 16",        menu_average_cb},
   { MT_CANCEL,   0, "\032 BACK", NULL },
@@ -1276,7 +1276,7 @@ static const menuitem_t menu_atten[] = {
   { MT_CALLBACK | MT_LOW, 0,               "AUTO",    menu_atten_cb},
   { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL",  "0..30"},
   { MT_CALLBACK | MT_HIGH,0,               "0dB",     menu_atten_high_cb},
-  { MT_CALLBACK | MT_HIGH,30,              "\00225..40dB",    menu_atten_high_cb},
+  { MT_CALLBACK | MT_HIGH,30,              "\n0225..40dB",    menu_atten_high_cb},
   { MT_CANCEL, 0,               "\032 BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1290,10 +1290,10 @@ static const menuitem_t menu_reflevel[] = {
 
 const menuitem_t menu_marker_search[] = {
   //{ MT_CALLBACK, "OFF", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "\2MIN\0" "\032 LEFT",  menu_marker_search_cb },
-  { MT_CALLBACK, 1, "\2MIN\0" "\033 RIGHT", menu_marker_search_cb },
-  { MT_CALLBACK, 2, "\2MAX\0" "\032 LEFT",  menu_marker_search_cb },
-  { MT_CALLBACK, 3, "\2MAX\0" "\033 RIGHT", menu_marker_search_cb },
+  { MT_CALLBACK, 0, "MIN\n" "\032 LEFT",  menu_marker_search_cb },
+  { MT_CALLBACK, 1, "MIN\n" "\033 RIGHT", menu_marker_search_cb },
+  { MT_CALLBACK, 2, "MAX\n" "\032 LEFT",  menu_marker_search_cb },
+  { MT_CALLBACK, 3, "MAX\n" "\033 RIGHT", menu_marker_search_cb },
   { MT_CALLBACK, 4, "TRACKING",                 menu_marker_search_cb },
   { MT_CANCEL, 0, "\032 BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
@@ -1346,10 +1346,10 @@ const menuitem_t menu_marker_ops[] = {
 
 
 static const menuitem_t menu_marker[] = {
-//  { MT_SUBMENU,  0, "\2SELECT\0MARKER",     menu_marker_sel},
-  { MT_SUBMENU,  0, "\2MODIFY\0MARKERS",    menu_marker_select},
-  { MT_SUBMENU,  0, "\2MARKER\0OPS",        menu_marker_ops},
-  { MT_SUBMENU,  0, "\2SEARCH\0MARKER",     menu_marker_search},
+//  { MT_SUBMENU,  0, "SELECT\nMARKER",     menu_marker_sel},
+  { MT_SUBMENU,  0, "MODIFY\nMARKERS",    menu_marker_select},
+  { MT_SUBMENU,  0, "MARKER\nOPS",        menu_marker_ops},
+  { MT_SUBMENU,  0, "SEARCH\nMARKER",     menu_marker_search},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1378,9 +1378,9 @@ static const menuitem_t menu_scanning_speed[] =
  { MT_CALLBACK,         SD_NORMAL,  "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
  { MT_CALLBACK,         SD_PRECISE, "PRECISE",           menu_scanning_speed_cb},
  { MT_CALLBACK | MT_LOW,SD_FAST,    "FAST",              menu_scanning_speed_cb},
- { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "\2FAST\0SPEEDUP",   "2..20"},
- { MT_KEYPAD, KM_SAMPLETIME,        "\2SAMPLE\0DELAY",   "300..30000"},              // item number must match SD_MANUAL
- { MT_KEYPAD, KM_OFFSET_DELAY,      "\2OFFSET\0DELAY",   "300..30000"},              // item number must match SD_MANUAL
+ { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20"},
+ { MT_KEYPAD, KM_SAMPLETIME,        "SAMPLE\nDELAY",   "300..30000"},              // item number must match SD_MANUAL
+ { MT_KEYPAD, KM_OFFSET_DELAY,      "OFFSET\nDELAY",   "300..30000"},              // item number must match SD_MANUAL
  { MT_CANCEL,   0,                  "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1397,8 +1397,8 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_CALLBACK, SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
  { MT_CALLBACK, SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
  { MT_CALLBACK, SD_FAST,       "FAST",              menu_scanning_speed_cb},
- { MT_KEYPAD,  KM_SWEEP_TIME,  "\2SWEEP\0TIME",     "0..600s"},
- { MT_SUBMENU,  0,             "\2SWEEP\0POINTS",   menu_sweep_points},
+ { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",     "0..600s"},
+ { MT_SUBMENU,  0,             "SWEEP\nPOINTS",   menu_sweep_points},
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1409,10 +1409,10 @@ static const menuitem_t menu_settings2[] =
   { MT_CALLBACK, 1,             "AGC",              menu_settings2_cb},
   { MT_CALLBACK, 2,             "LNA",              menu_settings2_cb},
   { MT_CALLBACK | MT_LOW, 3,    "BPF",              menu_settings2_cb},
-  { MT_CALLBACK | MT_LOW, 4,    "\2BELOW\0IF",      menu_settings2_cb},
-  { MT_KEYPAD,   KM_DECAY,      "\2HOLD\0SWEEPS",   "1..1000 sweeps"},
-  { MT_KEYPAD,   KM_NOISE,      "\2NOISE\0LEVEL",   "2..20 dB"},
-  { MT_KEYPAD,   KM_10MHZ,      "\2CORRECT\0FREQUENCY", "Enter actual l0MHz frequency"},
+  { MT_CALLBACK | MT_LOW, 4,    "BELOW\nIF",      menu_settings2_cb},
+  { MT_KEYPAD,   KM_DECAY,      "HOLD\nSWEEPS",   "1..1000 sweeps"},
+  { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
+  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
@@ -1422,12 +1422,12 @@ static const menuitem_t menu_settings2[] =
 
 static const menuitem_t menu_settings[] =
 {
-  { MT_CALLBACK | MT_LOW, 5,    "\2LO\0OUTPUT",menu_settings2_cb},
-  { MT_KEYPAD, KM_ACTUALPOWER,  "\2ACTUAL\0POWER",  NULL},
-  { MT_KEYPAD | MT_LOW, KM_IF,  "\2IF\0FREQ",       "Set to zero for auto IF"},
-  { MT_SUBMENU,0,               "\2SCAN\0SPEED",         menu_scanning_speed},
-  { MT_KEYPAD, KM_REPEAT,       "\2SAMPLE\0REPEAT",          "1..100"},
-  { MT_SUBMENU | MT_LOW,0,      "\2MIXER\0DRIVE",      menu_drive},
+  { MT_CALLBACK | MT_LOW, 5,    "LO\nOUTPUT",menu_settings2_cb},
+  { MT_KEYPAD, KM_ACTUALPOWER,  "ACTUAL\nPOWER",  NULL},
+  { MT_KEYPAD | MT_LOW, KM_IF,  "IF\nFREQ",       "Set to zero for auto IF"},
+  { MT_SUBMENU,0,               "SCAN\nSPEED",         menu_scanning_speed},
+  { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",          "1..100"},
+  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_drive},
   { MT_SUBMENU,  0,             "\033 MORE",    menu_settings2},
   { MT_CANCEL,   0,             "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -1437,9 +1437,9 @@ static const menuitem_t menu_measure[] = {
   { MT_CALLBACK,            M_OFF,        "OFF",              menu_measure_cb},
   { MT_CALLBACK,            M_IMD,        "HARMONIC",         menu_measure_cb},
   { MT_CALLBACK,            M_OIP3,       "OIP3",             menu_measure_cb},
-  { MT_CALLBACK,            M_PHASE_NOISE,"\2PHASE\0NOISE",   menu_measure_cb},
-  { MT_CALLBACK,            M_STOP_BAND,  "\2STOP\0BAND",     menu_measure_cb},
-  { MT_CALLBACK,            M_PASS_BAND,  "\2PASS\0BAND",     menu_measure_cb},
+  { MT_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",   menu_measure_cb},
+  { MT_CALLBACK,            M_STOP_BAND,  "STOP\nBAND",     menu_measure_cb},
+  { MT_CALLBACK,            M_PASS_BAND,  "PASS\nBAND",     menu_measure_cb},
   { MT_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",           menu_measure_cb},
   { MT_CANCEL, 0,               "\032 BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
@@ -1455,26 +1455,26 @@ static const menuitem_t menu_calibrate[] =
 };
 
 static const menuitem_t menu_config[] = {
-  { MT_CALLBACK, 0, "\2TOUCH\0CAL",     menu_config_cb},
-  { MT_CALLBACK, 0, "\2TOUCH\0TEST",    menu_config_cb},
-  { MT_CALLBACK, 0, "\2SELF\0TEST",     menu_config_cb},
-  { MT_SUBMENU,  0, "\2LEVEL\0CAL",     menu_calibrate},
+  { MT_CALLBACK, 0, "TOUCH\nCAL",     menu_config_cb},
+  { MT_CALLBACK, 0, "TOUCH\nTEST",    menu_config_cb},
+  { MT_CALLBACK, 0, "SELF\nTEST",     menu_config_cb},
+  { MT_SUBMENU,  0, "LEVEL\nCAL",     menu_calibrate},
   { MT_CALLBACK, 0, "VERSION",          menu_config_cb},
-  { MT_SUBMENU,  0, "\2EXPERT\0CONFIG", menu_settings},
+  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
   { MT_SUBMENU,  0, "\033DFU",  menu_dfu},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_display[] = {
-  { MT_CALLBACK,0,              "\2PAUSE\0SWEEP",   menu_pause_cb},
-  { MT_CALLBACK,0,              "\2STORE\0TRACE",   menu_storage_cb},
-  { MT_CALLBACK,1,              "\2CLEAR\0STORED",  menu_storage_cb},
-  { MT_CALLBACK,2,              "\2SUBTRACT\0STORED",menu_storage_cb},
+  { MT_CALLBACK,0,              "PAUSE\nSWEEP",   menu_pause_cb},
+  { MT_CALLBACK,0,              "STORE\nTRACE",   menu_storage_cb},
+  { MT_CALLBACK,1,              "CLEAR\nSTORED",  menu_storage_cb},
+  { MT_CALLBACK,2,              "SUBTRACT\nSTORED",menu_storage_cb},
   { MT_CALLBACK,3,              "NORMALIZE",        menu_storage_cb},
   { MT_CALLBACK,4,              "WATERFALL",        menu_storage_cb},
-  { MT_SUBMENU, 0,              "\2SWEEP\0SETTINGS",    menu_sweep_speed},
-//  { MT_KEYPAD,  KM_SWEEP_TIME,  "\2SWEEP\0TIME",    NULL},
+  { MT_SUBMENU, 0,              "SWEEP\nSETTINGS",    menu_sweep_speed},
+//  { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",    NULL},
 
   { MT_CANCEL, 0,           "\032 BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
@@ -1497,21 +1497,21 @@ static const menuitem_t menu_trigger[] = {
   { MT_CALLBACK,T_AUTO,     "AUTO",             menu_trigger_cb},
   { MT_CALLBACK,T_NORMAL,   "NORMAL",           menu_trigger_cb},
   { MT_CALLBACK,T_SINGLE,   "SINGLE",           menu_trigger_cb},
-  { MT_KEYPAD,  KM_TRIGGER, "\2TRIGGER\0LEVEL", NULL},
-  { MT_CALLBACK,T_UP,       "\2UP\0EDGE",       menu_trigger_cb},
-  { MT_CALLBACK,T_DOWN,     "\2DOWN\0EDGE",     menu_trigger_cb},
+  { MT_KEYPAD,  KM_TRIGGER, "TRIGGER\nLEVEL", NULL},
+  { MT_CALLBACK,T_UP,       "UP\nEDGE",       menu_trigger_cb},
+  { MT_CALLBACK,T_DOWN,     "DOWN\nEDGE",     menu_trigger_cb},
   { MT_CANCEL, 0,           "\032 BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_level[] = {
-  { MT_SUBMENU, 0,          "\2REF\0LEVEL", menu_reflevel},
-//  { MT_SUBMENU, 0,          "\2SCALE/\0DIV",menu_scale_per},
-  { MT_KEYPAD,  KM_SCALE,   "\2SCALE/\0DIV",NULL},
+  { MT_SUBMENU, 0,          "REF\nLEVEL", menu_reflevel},
+//  { MT_SUBMENU, 0,          "SCALE/\nDIV",menu_scale_per},
+  { MT_KEYPAD,  KM_SCALE,   "SCALE/\nDIV",NULL},
   { MT_SUBMENU, 0,          "ATTEN",        menu_atten},
   { MT_SUBMENU,0,           "CALC",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_OFFSET,  "\2EXTERN\0AMP",NULL},
+  { MT_KEYPAD,  KM_OFFSET,  "EXTERN\nAMP",NULL},
   { MT_SUBMENU,  0,         "TRIGGER",      menu_trigger},
   { MT_CANCEL, 0,           "\032 BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
@@ -1522,10 +1522,10 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_STOP,    "STOP",             NULL},
   { MT_KEYPAD,  KM_CENTER,  "CENTER",           NULL},
   { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
-  { MT_KEYPAD,  KM_CW,      "\2ZERO\0SPAN",          NULL},
+  { MT_KEYPAD,  KM_CW,      "ZERO\nSPAN",          NULL},
   { MT_SUBMENU,0,           "RBW",              menu_rbw},
 #ifdef __SPUR__
-  { MT_CALLBACK | MT_LOW,0,           "\2SPUR\0REMOVAL", menu_spur_cb},
+  { MT_CALLBACK | MT_LOW,0,           "SPUR\nREMOVAL", menu_spur_cb},
 #endif
   { MT_CANCEL,  0,          "\032 BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
@@ -1588,9 +1588,8 @@ int menu_is_form(const menuitem_t *menu)
   return(false);
 }
 
-
 static void menu_item_modify_attribute(
-    const menuitem_t *menu, int item, uint16_t *fg, uint16_t *bg)
+    const menuitem_t *menu, int item, ui_button_t *button)
 {
   int mark = false;
   int m_auto = false;
@@ -1752,11 +1751,11 @@ static void menu_item_modify_attribute(
     }
   }
   if (m_auto) {
-    *bg = LIGHT_GREY;
-    *fg = config.menu_normal_color;
+    button->bg = LIGHT_GREY;
+    button->fg = config.menu_normal_color;
   } else if (mark) {
-    *bg = DEFAULT_MENU_TEXT_COLOR;
-    *fg = config.menu_normal_color;
+    button->bg = DEFAULT_MENU_TEXT_COLOR;
+    button->fg = config.menu_normal_color;
   }
   if (ui_mode == UI_MENU && menu_is_form(menu)) {
     //    if (item == 0)

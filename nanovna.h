@@ -333,6 +333,7 @@ extern const uint8_t x7x11b_bits [];
 #define FONT_GET_WIDTH(ch)  (8-(x5x7_bits[ch*7]&7))
 #define FONT_MAX_WIDTH      7
 #define FONT_GET_HEIGHT     7
+#define FONT_STR_HEIGHT     8
 
 #define bFONT_GET_DATA(ch)   (&x7x11b_bits[ch*11])
 #define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[ch*11]&7))
@@ -818,10 +819,10 @@ enum marker_smithvalue {
 };
 
 typedef struct uistat {
+  float value; // for editing at numeric input area
   int8_t digit; /* 0~5 */
   int8_t digit_mode;
   int8_t current_trace; /* 0..3 */
-  float value; // for editing at numeric input area
 //  uint32_t previous_value;
   uint8_t lever_mode;
   uint8_t marker_delta;
@@ -829,6 +830,12 @@ typedef struct uistat {
   uint8_t marker_tracking;
   char text[20];
 } uistat_t;
+
+typedef struct ui_button {
+  uint16_t fg;
+  uint16_t bg;
+  char text[32];
+} ui_button_t;
 
 extern uistat_t uistat;
 void ui_init(void);

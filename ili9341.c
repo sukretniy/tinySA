@@ -586,8 +586,10 @@ void ili9341_drawchar(uint8_t ch, int x, int y)
 
 void ili9341_drawstring(const char *str, int x, int y)
 {
+  int x_pos = x;
   while (*str) {
     uint8_t ch = *str++;
+    if (ch == '\n') {x = x_pos; y+=FONT_STR_HEIGHT; continue;}
     const uint8_t *char_buf = FONT_GET_DATA(ch);
     uint16_t w = FONT_GET_WIDTH(ch);
     blit8BitWidthBitmap(x, y, w, FONT_GET_HEIGHT, char_buf);
@@ -597,8 +599,10 @@ void ili9341_drawstring(const char *str, int x, int y)
 
 void ili9341_drawstring_7x13(const char *str, int x, int y)
 {
+  int x_pos = x;
   while (*str) {
     uint8_t ch = *str++;
+    if (ch == '\n') {x = x_pos; y+=bFONT_STR_HEIGHT; continue;}
     const uint8_t *char_buf = bFONT_GET_DATA(ch);
     uint16_t w = bFONT_GET_WIDTH(ch);
     blit8BitWidthBitmap(x, y, w, bFONT_GET_HEIGHT, char_buf);
