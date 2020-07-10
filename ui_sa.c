@@ -1083,7 +1083,7 @@ static const menuitem_t menu_store_preset_high[8] =
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
-
+#if 0
 static const menuitem_t menu_load_preset_high[] =
 {
   { MT_CALLBACK, 0,     "LOAD\nSTARTUP",menu_load_preset_cb},
@@ -1095,6 +1095,7 @@ static const menuitem_t menu_load_preset_high[] =
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
+#endif
 
 static const menuitem_t menu_store_preset[] =
 {
@@ -1381,8 +1382,8 @@ static const menuitem_t menu_scanning_speed[] =
  { MT_CALLBACK,         SD_PRECISE, "PRECISE",           menu_scanning_speed_cb},
  { MT_CALLBACK | MT_LOW,SD_FAST,    "FAST",              menu_scanning_speed_cb},
  { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20"},
- { MT_KEYPAD, KM_SAMPLETIME,        "SAMPLE\nDELAY",   "300..30000"},              // item number must match SD_MANUAL
- { MT_KEYPAD, KM_OFFSET_DELAY,      "OFFSET\nDELAY",   "300..30000"},              // item number must match SD_MANUAL
+ { MT_KEYPAD, KM_SAMPLETIME,        "SAMPLE\nDELAY",   "300..30000"},              // This must be item 4 to match highlighting
+ { MT_KEYPAD, KM_OFFSET_DELAY,      "OFFSET\nDELAY",   "300..30000"},              // This must be item 5 to match highlighting
  { MT_CANCEL,   0,                  "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1399,8 +1400,9 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_CALLBACK, SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
  { MT_CALLBACK, SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
  { MT_CALLBACK, SD_FAST,       "FAST",              menu_scanning_speed_cb},
- { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",     "0..600s"},
+ { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",     "0..600s, 0=disable"},                   // This must be item 3 to match highlighting
  { MT_SUBMENU,  0,             "SWEEP\nPOINTS",   menu_sweep_points},
+ { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20, 0=disable"},
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1698,19 +1700,24 @@ static void menu_item_modify_attribute(
     } else if (item == 2 && setting.auto_IF)
       m_auto = true;
   } else if (menu == menu_scanning_speed) {
-    if (item == setting.step_delay_mode){
+    if (item == setting.step_delay_mode && item < SD_MANUAL){
+      mark = true;
+    } else
+    if (item == 4 && setting.step_delay > 0)
+      mark = true;
+    if (item == 5 && setting.offset_delay > 0)
+      mark = true;
+  }
+  else if (menu == menu_sweep_speed) {
+    if (item == setting.step_delay_mode && item < SD_MANUAL){
+      mark = true;
+    } else if (item == 3 && setting.sweep_time_us != 0){
+      mark = true;
+    } else if (item == 5 && setting.fast_speedup != 0){
       mark = true;
     }
   } else if (menu == menu_sweep_points) {
     if (points_setting[data] == sweep_points){
-      mark = true;
-    }
-  }
-  else if (menu == menu_sweep_speed) {
-    if (item == 3 && setting.sweep_time_us != 0){
-      mark = true;
-    }
-    if (item == setting.step_delay_mode && setting.sweep_time_us == 0){
       mark = true;
     }
 #ifdef __ULTRA__

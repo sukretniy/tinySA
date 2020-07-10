@@ -97,6 +97,7 @@ void reset_settings(int m)
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
   setting.trigger_direction = T_UP;
+  setting.fast_speedup = 0;
   setting.level_sweep = 0.0;
   setting.level = -15.0;
   setting.trigger_level = -150.0;
@@ -789,11 +790,9 @@ void set_mode(int m)
 
 extern int SI4432_offset_delay;
 
-int fast_speedup = 0;
-
 void set_fast_speedup(int s)
 {
-  fast_speedup = s;
+  setting.fast_speedup = s;
   dirty = true;
 }
 
@@ -831,8 +830,8 @@ void calculate_step_delay(void)
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
-      if (fast_speedup >0)
-        SI4432_offset_delay = SI4432_step_delay / fast_speedup;
+      if (setting.fast_speedup >0)
+        SI4432_offset_delay = SI4432_step_delay / setting.fast_speedup;
     }
     if (setting.offset_delay != 0)      // Override if set
       SI4432_offset_delay = setting.offset_delay;
@@ -1159,7 +1158,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   actual_rbw_x10 = setting.rbw_x10;     // requested rbw
   if (actual_rbw_x10 == 0) {        // if auto rbw
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
-      if (fast_speedup > 2)
+      if (setting.fast_speedup > 2)
         actual_rbw_x10 = 6*setting.vbw_x10; // rbw is four the frequency step to ensure no gaps in coverage as there are some weird jumps
       else
         actual_rbw_x10 = 4*setting.vbw_x10; // rbw is four the frequency step to ensure no gaps in coverage as there are some weird jumps

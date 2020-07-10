@@ -645,6 +645,7 @@ typedef struct setting
   int mute;
   int step_delay_mode;
   int offset_delay;
+  int fast_speedup;
   uint32_t checksum;
 }setting_t;
 
