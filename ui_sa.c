@@ -495,7 +495,7 @@ static const keypads_t keypads_time[] = {
 
 static const struct {
   const keypads_t *keypad_type;
-  char *name;
+  char * name;
 } keypads_mode_tbl[KM_NONE] = {
   {keypads_freq        , "START"}, // start
   {keypads_freq        , "STOP"}, // stop
@@ -966,14 +966,14 @@ static void menu_unit_cb (int item, uint8_t data)
 enum {
   S_20,S_10,S_5,S_2,S_1,S_P5,S_P2,S_P1,S_P05,S_P02,S_P01
 };
-static const float menu_scale_per_value[11]={20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01};
+//static const float menu_scale_per_value[11]={20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01};
 
-static void menu_scale_per_cb(int item, uint8_t data)
-{
-  (void)item;
-  set_scale(menu_scale_per_value[data]);
-  menu_move_back_and_leave_ui();
-}
+//static void menu_scale_per_cb(int item, uint8_t data)
+//{
+//  (void)item;
+//  set_scale(menu_scale_per_value[data]);
+//  menu_move_back_and_leave_ui();
+//}
 
 static void menu_trigger_cb(int item, uint8_t data)
 {
@@ -1221,7 +1221,7 @@ static const menuitem_t menu_rbw[] = {
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
 
-
+#if 0
 static const menuitem_t menu_scale_per2[] = {
   { MT_CALLBACK, 6, "0.1 /",   menu_scale_per_cb},
   { MT_CALLBACK, 7, "0.2 /",   menu_scale_per_cb},
@@ -1246,9 +1246,10 @@ static const menuitem_t menu_scale_per[] = {
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
-
+#endif
 //                               0      1       2       3      4      5      6      7
 const char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
+#if 0
 static const menuitem_t menu_reffer2[] = {
   { MT_FORM | MT_CALLBACK, 5, "3MHz",  menu_reffer_cb},
   { MT_FORM | MT_CALLBACK, 6, "2MHz",  menu_reffer_cb},
@@ -1256,6 +1257,7 @@ static const menuitem_t menu_reffer2[] = {
   { MT_FORM | MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
+#endif
 
 static const menuitem_t menu_reffer[] = {
   { MT_FORM | MT_CALLBACK,  0,   "OFF", menu_reffer_cb},
@@ -1309,6 +1311,7 @@ const menuitem_t menu_marker_modify[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+#if 0
 const menuitem_t menu_marker_sel[] = {
   { MT_CALLBACK, 1, "MARKER %d", menu_marker_sel_cb },
   { MT_CALLBACK, 2, "MARKER %d", menu_marker_sel_cb },
@@ -1321,6 +1324,7 @@ const menuitem_t menu_marker_sel[] = {
   { MT_CANCEL, 0, "\032 BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
+#endif
 
 const menuitem_t menu_marker_select[] = {
   { MT_CALLBACK, 1, "MARKER %d", menu_marker_select_cb },
@@ -1625,10 +1629,12 @@ static void menu_item_modify_attribute(
     if (item < 5 && item == setting.refer + 1){
       mark = true;
    }
+#if 0
   } else if (menu == menu_reffer2) {
     if (item == setting.refer - 4){
       mark = true;
     }
+#endif
   } else if (menu == menu_stimulus) {
     if (item == 6 && setting.spur) {
       mark = true;
@@ -1637,10 +1643,10 @@ static void menu_item_modify_attribute(
     if (item == setting.average){
       mark = true;
     }
-  } else if (menu == menu_scale_per || menu ==  menu_scale_per2) {
-    if (menu_scale_per_value[data] == setting.scale){
-      mark = true;
-    }
+//  } else if (menu == menu_scale_per || menu ==  menu_scale_per2) {
+//    if (menu_scale_per_value[data] == setting.scale){
+//     mark = true;
+//   }
   } else if (menu == menu_measure && MT_MASK(menu[item].type) == MT_CALLBACK) {
     if (data == setting.measurement){
       mark = true;
@@ -1732,16 +1738,18 @@ static void menu_item_modify_attribute(
   } else if (menu == menu_marker_search) {
     if (item == 4 && markers[active_marker].mtype & M_TRACKING)
       mark = true;
-  } else if (menu == menu_marker_sel || menu == menu_marker_select) {
+  } else if (/* menu == menu_marker_sel || */ menu == menu_marker_select) {
     param_1.i = data;
     if (item < 4 && markers[item].enabled)
       mark = true;
+#if 0
     else if (item == 4 && uistat.marker_delta)
       mark = true;
     else if (item == 5 && uistat.marker_noise)
       mark = true;
     else if (item == 6 && uistat.marker_tracking)
       mark = true;
+#endif
   } else if (menu == menu_reflevel) {
     if ((item  == 0 && setting.auto_reflevel) || (item == 1 && !setting.auto_reflevel))
       mark = true;

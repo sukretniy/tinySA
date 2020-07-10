@@ -848,7 +848,7 @@ active_marker_select(int item)
     active_marker = item;
   }
 }
-
+#ifdef __VNA__
 static void
 menu_marker_sel_cb(int item, uint8_t data)
 {
@@ -892,7 +892,7 @@ menu_marker_sel_cb(int item, uint8_t data)
   redraw_marker(active_marker);
   draw_menu();
 }
-#ifdef __VNA__
+
 static const menuitem_t menu_calop[] = {
   { MT_CALLBACK, CAL_OPEN,  "OPEN",  menu_calop_cb },
   { MT_CALLBACK, CAL_SHORT, "SHORT", menu_calop_cb },
