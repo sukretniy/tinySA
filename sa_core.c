@@ -1389,7 +1389,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     // manually set delay, for better sync
     if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
       setting.additional_step_delay_us = 0;
-      setting.sweep_time_us = setting.actual_sweep_time_us; // set minimum
+      setting.sweep_time_us = 0; // set minimum
     }
     else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
       setting.additional_step_delay_us = 1;

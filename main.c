@@ -2729,12 +2729,12 @@ int main(void)
   redraw_frame();
   set_mode(M_HIGH);
   set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
-  sweep(true);
+  sweep(false);
   osalThreadSleepMilliseconds(100);
 
   set_mode(M_LOW);
   set_sweep_frequency(ST_STOP, (uint32_t) 4000000);
-  sweep(true);
+  sweep(false);
   set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
 
   set_refer_output(-1);
