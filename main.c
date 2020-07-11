@@ -165,7 +165,7 @@ static THD_FUNCTION(Thread1, arg)
         else
           redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA | REDRAW_FREQUENCY;
       }
-      continue;
+//      continue;
     }
 //    START_PROFILE
     // Process UI inputs
@@ -2310,7 +2310,7 @@ static const VNAShellCommand commands[] =
     {"save"        , cmd_save        , 0},
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX},
 #endif
-    {"trace"       , cmd_trace       , 0},
+    {"trace"       , cmd_trace       , CMD_WAIT_MUTEX},
     {"trigger"     , cmd_trigger     , 0},
     {"marker"      , cmd_marker      , 0},
 #ifdef __VNA__
