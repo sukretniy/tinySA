@@ -204,6 +204,9 @@ static char *ftoaS(char *p, float num, int precision) {
   if (precision<0)
     precision=0;
   p=ftoa(p, num, precision);
+  // remove zeros at end
+  while (p[-1]=='0') p--;
+  if (p[-1]=='.') p--;
   if (prefix)
     *p++ = prefix;
   return p;

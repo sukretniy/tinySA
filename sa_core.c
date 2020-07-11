@@ -2330,7 +2330,7 @@ void draw_cal_status(void)
   if (rounding)
     plot_printf(buf, BLEN, "%+4d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%+.3F", (yMax/setting.unit_scale));
+    plot_printf(buf, BLEN, "%+4.3F", (yMax/setting.unit_scale));
 
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
@@ -2464,10 +2464,10 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "%.3Fs", (float)setting.sweep_time_us/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.sweep_time_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
   y += YSTEP;
-  plot_printf(buf, BLEN, "%.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
 #if 1
   y += YSTEP;
@@ -2477,10 +2477,10 @@ void draw_cal_status(void)
 //  if (t < setting.sweep_time_us)
 //    t = setting.sweep_time_us;
 //  setting.actual_sweep_time_us = t;
-  plot_printf(buf, BLEN, "%.3Fs", (float)t/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%5.3Fs", (float)t/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
   y += YSTEP;
-  plot_printf(buf, BLEN, "%.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
 
 #endif
@@ -2587,11 +2587,11 @@ void draw_cal_status(void)
 //  ili9341_set_background(DEFAULT_BG_COLOR);
 
   // Bottom level
-  y = area_height - 7 + OFFSETY;
+  y = area_height - 8 + OFFSETY;
   if (rounding)
     plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
+    plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
 //  buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
