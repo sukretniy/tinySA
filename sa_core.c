@@ -1386,7 +1386,16 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
     // Change actual sweep time as user input if it greater minimum
     // And set start delays for 1 run
-    if (setting.sweep_time_us > setting.actual_sweep_time_us){
+    // manually set delay, for better sync
+    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 0;
+      setting.sweep_time_us = setting.actual_sweep_time_us; // set minimum
+    }
+    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 1;
+      setting.sweep_time_us = 3000;
+    }
+    else if (setting.sweep_time_us > setting.actual_sweep_time_us){
       setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points);
       setting.actual_sweep_time_us = setting.sweep_time_us;
     }
@@ -1402,17 +1411,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
                       +  get_attenuation()
                       -  setting.offset);
     }
-#if 0
-    // manually set delay, for better sync
-    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 0;
-      setting.sweep_time_us = 0;
-    }
-    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 1;
-      setting.sweep_time_us = 3000;
-    }
-#endif
+
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
     // Update grid and status after

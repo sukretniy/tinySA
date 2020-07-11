@@ -2782,7 +2782,6 @@ void HardFault_Handler(void)
   __asm volatile("mrs %0, psp \n\t" : "=r"(sp));
   hard_fault_handler_c(sp);
 }
-#define FONT_STR_HEIGHT 7
 
 void hard_fault_handler_c(uint32_t *sp)
 {
