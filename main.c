@@ -165,7 +165,7 @@ static THD_FUNCTION(Thread1, arg)
         else
           redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA | REDRAW_FREQUENCY;
       }
-      continue;
+//      continue;
     }
 //    START_PROFILE
     // Process UI inputs
@@ -2310,7 +2310,7 @@ static const VNAShellCommand commands[] =
     {"save"        , cmd_save        , 0},
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX},
 #endif
-    {"trace"       , cmd_trace       , 0},
+    {"trace"       , cmd_trace       , CMD_WAIT_MUTEX},
     {"trigger"     , cmd_trigger     , 0},
     {"marker"      , cmd_marker      , 0},
 #ifdef __VNA__
@@ -2729,12 +2729,12 @@ int main(void)
   redraw_frame();
   set_mode(M_HIGH);
   set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
-  sweep(true);
+  sweep(false);
   osalThreadSleepMilliseconds(100);
 
   set_mode(M_LOW);
   set_sweep_frequency(ST_STOP, (uint32_t) 4000000);
-  sweep(true);
+  sweep(false);
   set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
 
   set_refer_output(-1);
@@ -2782,7 +2782,6 @@ void HardFault_Handler(void)
   __asm volatile("mrs %0, psp \n\t" : "=r"(sp));
   hard_fault_handler_c(sp);
 }
-#define FONT_STR_HEIGHT 7
 
 void hard_fault_handler_c(uint32_t *sp)
 {

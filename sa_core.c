@@ -1386,7 +1386,16 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
     // Change actual sweep time as user input if it greater minimum
     // And set start delays for 1 run
-    if (setting.sweep_time_us > setting.actual_sweep_time_us){
+    // manually set delay, for better sync
+    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 0;
+      setting.sweep_time_us = 0; // set minimum
+    }
+    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
+      setting.additional_step_delay_us = 1;
+      setting.sweep_time_us = 3000;
+    }
+    else if (setting.sweep_time_us > setting.actual_sweep_time_us){
       setting.additional_step_delay_us = (setting.sweep_time_us - setting.actual_sweep_time_us)/(sweep_points);
       setting.actual_sweep_time_us = setting.sweep_time_us;
     }
@@ -1402,17 +1411,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
                       +  get_attenuation()
                       -  setting.offset);
     }
-#if 0
-    // manually set delay, for better sync
-    if (setting.sweep_time_us < 2.5 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 0;
-      setting.sweep_time_us = 0;
-    }
-    else if (setting.sweep_time_us <= 3 * ONE_MS_TIME){
-      setting.additional_step_delay_us = 1;
-      setting.sweep_time_us = 3000;
-    }
-#endif
+
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
     // Update grid and status after
@@ -2331,7 +2330,7 @@ void draw_cal_status(void)
   if (rounding)
     plot_printf(buf, BLEN, "%+4d", (int)yMax);
   else
-    plot_printf(buf, BLEN, "%+.3F", (yMax/setting.unit_scale));
+    plot_printf(buf, BLEN, "%+4.3F", (yMax/setting.unit_scale));
 
   if (level_is_calibrated()) {
     if (setting.auto_reflevel)
@@ -2465,10 +2464,10 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
   y += YSTEP;
-  plot_printf(buf, BLEN, "%.3Fs", (float)setting.sweep_time_us/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.sweep_time_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
   y += YSTEP;
-  plot_printf(buf, BLEN, "%.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
 #if 1
   y += YSTEP;
@@ -2478,10 +2477,10 @@ void draw_cal_status(void)
 //  if (t < setting.sweep_time_us)
 //    t = setting.sweep_time_us;
 //  setting.actual_sweep_time_us = t;
-  plot_printf(buf, BLEN, "%.3Fs", (float)t/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%5.3Fs", (float)t/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
   y += YSTEP;
-  plot_printf(buf, BLEN, "%.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
 
 #endif
@@ -2588,11 +2587,11 @@ void draw_cal_status(void)
 //  ili9341_set_background(DEFAULT_BG_COLOR);
 
   // Bottom level
-  y = area_height - 7 + OFFSETY;
+  y = area_height - 8 + OFFSETY;
   if (rounding)
     plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
   else
-    plot_printf(buf, BLEN, "%.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
+    plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
 //  buf[5]=0;
   if (level_is_calibrated())
     if (setting.auto_reflevel)
