@@ -2759,14 +2759,14 @@ int validate_flatness(int i) {
   volatile int j;
   test_fail_cause[i] = "Passband ";
   for (j = peakIndex; j < setting._sweep_points; j++) {
-    if (actual_t[j] < peakLevel - 6)    // Search right -3dB
+    if (actual_t[j] < peakLevel - 15)    // Search right -3dB
       break;
   }
   //shell_printf("\n\rRight width %d\n\r", j - peakIndex );
   if (j - peakIndex < W2P(test_case[i].width))
     return(TS_FAIL);
   for (j = peakIndex; j > 0; j--) {
-    if (actual_t[j] < peakLevel - 6)    // Search left -3dB
+    if (actual_t[j] < peakLevel - 15)    // Search left -3dB
       break;
   }
   //shell_printf("Left width %d\n\r", j - peakIndex );
@@ -2869,7 +2869,7 @@ common_silent:
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
-    setting.frequency_IF = 434000000;                // Center on SAW filters
+    setting.frequency_IF = 433900000;                // Center on SAW filters
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input
