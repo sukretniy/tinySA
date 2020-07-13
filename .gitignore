@@ -14,3 +14,6 @@ TAGS
 version.txt
 dorelease.bat
 ChibiOS
+.settings/language.settings.xml
+.cproject
+.settings/language.settings.xml
