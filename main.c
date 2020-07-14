@@ -2344,6 +2344,7 @@ static const VNAShellCommand commands[] =
     { "spur", cmd_spur,    0 },
     { "load", cmd_load,    0 },
     { "output", cmd_output,    0 },
+    { "deviceid", cmd_deviceid,    0 },
     { "selftest", cmd_selftest,    0 },
     { "correction", cmd_correction,    0 },
  #ifdef ENABLE_THREADS_COMMAND

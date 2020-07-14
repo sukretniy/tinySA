@@ -428,6 +428,7 @@ typedef struct config {
   int16_t high_level_offset;
   uint32_t correction_frequency[CORRECTION_POINTS];
   float    correction_value[CORRECTION_POINTS];
+  uint32_t deviceid;
 //  uint8_t _reserved[22];
   uint32_t checksum;
 } config_t;

@@ -192,6 +192,19 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_deviceid)
+{
+  if (argc == 0) {
+    shell_printf("deviceid %d\r\n", config.deviceid);
+    return;
+  } else if (argc == 1) {
+    float v = my_atoui(argv[0]);
+    config.deviceid = v;
+  } else {
+    shell_printf("deviceid [<number>]\r\n");
+  }
+}
+
 
 VNA_SHELL_FUNCTION(cmd_rbw)
 {
