@@ -201,7 +201,7 @@ VNA_SHELL_FUNCTION(cmd_deviceid)
     float v = my_atoui(argv[0]);
     config.deviceid = v;
   } else {
-    shell_printf("deviceid [<number>]\r\n");
+    shell_printf("usage: deviceid [<number>]\r\n");
   }
 }
 
