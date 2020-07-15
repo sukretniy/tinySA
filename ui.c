@@ -1387,32 +1387,62 @@ static const char * const keypad_mode_label[] = {
 static const char * const keypad_scale_text[] = { "1", "2", "5", "10", "20" , "50", "100", "200", "500"};
 //static const int  keypad_scale_value[] = { 1, 2, 5, 10, 20 , 50, 100, 200, 500};
 
+
+// Button definition (used in MT_ADV_CALLBACK for custom)
+#define BUTTON_ICON_NONE            -1
+#define BUTTON_ICON_NOCHECK          0
+#define BUTTON_ICON_CHECK            1
+#define BUTTON_ICON_GROUP            2
+#define BUTTON_ICON_GROUP_CHECKED    3
+
+#define BUTTON_BORDER_NONE           0x00
+#define BUTTON_BORDER_WIDTH_MASK     0x0F
+
+// Define mask for draw border (if 1 use light color, if 0 dark)
+#define BUTTON_BORDER_TYPE_MASK      0xF0
+#define BUTTON_BORDER_TOP            0x10
+#define BUTTON_BORDER_BOTTOM         0x20
+#define BUTTON_BORDER_LEFT           0x40
+#define BUTTON_BORDER_RIGHT          0x80
+
+#define BUTTON_BORDER_FLAT           0x00
+#define BUTTON_BORDER_RISE           (BUTTON_BORDER_TOP|BUTTON_BORDER_RIGHT)
+#define BUTTON_BORDER_FALLING        (BUTTON_BORDER_BOTTOM|BUTTON_BORDER_LEFT)
+
 static void
-draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t border_colour, uint16_t bg_colour)
+draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
 {
-// background
-  const uint16_t bw = 2;
-  ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2), bg_colour);
-  ili9341_fill(x,          y,          w,  bw, border_colour);   // top
-  ili9341_fill(x + w - bw, y,          bw,  h, border_colour);   // right
-  ili9341_fill(x,          y,          bw,  h, border_colour);   // left
-  ili9341_fill(x,          y + h - bw, w,  bw, border_colour);   // bottom
+  uint16_t bw = b->border&BUTTON_BORDER_WIDTH_MASK;
+  ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2), b->bg);
+  if (bw==0) return;
+  uint16_t br = RGB565(255,255,255);
+  uint16_t bd = RGB565(196,196,196);
+  uint16_t type = b->border;
+  ili9341_fill(x,          y,           w, bw, type&BUTTON_BORDER_TOP    ? br : bd); // top
+  ili9341_fill(x + w - bw, y,          bw,  h, type&BUTTON_BORDER_RIGHT  ? br : bd); // right
+  ili9341_fill(x,          y,          bw,  h, type&BUTTON_BORDER_LEFT   ? br : bd); // left
+  ili9341_fill(x,          y + h - bw,  w, bw, type&BUTTON_BORDER_BOTTOM ? br : bd); // bottom
 }
 
 static void
 draw_keypad(void)
 {
   int i = 0;
+  ui_button_t button;
+  button.fg = DEFAULT_MENU_TEXT_COLOR;
   while (keypads[i].c >= 0) {
-    uint16_t bg = config.menu_normal_color;
-    if (i == selection)
-      bg = config.menu_active_color;
-    ili9341_set_foreground(DEFAULT_MENU_TEXT_COLOR);
-    ili9341_set_background(bg);
+    button.bg = RGB565(230,230,230);//config.menu_normal_color;
+    if (i == selection){
+      button.bg = RGB565(210,210,210);//config.menu_active_color;
+      button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_FALLING;
+    }
+    else
+      button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_RISE;
+    ili9341_set_foreground(button.fg);
+    ili9341_set_background(button.bg);
     int x = KP_GET_X(keypads[i].x);
     int y = KP_GET_Y(keypads[i].y);
-//     ili9341_fill(x, y, KP_WIDTH, KP_HEIGHT, DEFAULT_MENU_TEXT_COLOR); // black area around button, causes flicker....
-    draw_button(x, y, KP_WIDTH, KP_HEIGHT, DEFAULT_BG_COLOR, bg);
+    draw_button(x, y, KP_WIDTH, KP_HEIGHT, &button);
     if (keypads[i].c < 32) { // KP_1
       ili9341_drawfont(keypads[i].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
