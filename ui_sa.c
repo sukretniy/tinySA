@@ -17,19 +17,6 @@
  * Boston, MA 02110-1301, USA.
  */
 
-
-
-void markmap_all_markers(void);
-static void menu_marker_modify_cb(int item, uint8_t data);
-extern const menuitem_t menu_marker_modify[];
-void set_sweep_frequency(int type, uint32_t frequency);
-uint32_t get_sweep_frequency(int type);
-void clearDisplay(void);
-
-void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
-                                 const uint16_t *bitmap);
-
-
 const uint16_t left_icons [] =
 {
 #define I_EMPTY 0*16
@@ -534,7 +521,7 @@ extern const menuitem_t  menu_top[];
 extern const menuitem_t  menu_tophigh[];
 extern const menuitem_t  menu_topultra[];
 
- void menu_mode_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_mode_cb)
 {
   (void)data;
   set_mode(item);
@@ -565,7 +552,7 @@ extern const menuitem_t  menu_topultra[];
   redraw_request |= REDRAW_CAL_STATUS;
 }
 
-void menu_load_preset_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_load_preset_cb)
 {
   (void)item;
   if (caldata_recall(data) == -1) {
@@ -579,7 +566,7 @@ void menu_load_preset_cb(int item, uint8_t data)
   menu_move_back_and_leave_ui();
 }
 
-void menu_store_preset_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_store_preset_cb)
 {
   (void)item;
   if (data == 100) {
@@ -593,7 +580,7 @@ void menu_store_preset_cb(int item, uint8_t data)
 
 
 extern int dirty;
-void menu_autosettings_cb(int item, uint8_t data)
+UI_FUNCTION_CALLBACK(menu_autosettings_cb)
 {
   (void)item;
   (void)data;
@@ -616,7 +603,7 @@ void menu_autosettings_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-static void menu_calibrate_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_calibrate_cb)
 {
   (void)data;
   switch (item) {
@@ -631,7 +618,7 @@ static void menu_calibrate_cb(int item, uint8_t data)
   }
 }
 
-static void menu_scanning_speed_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_scanning_speed_cb)
 {
   (void)item;
   set_step_delay(data);
@@ -639,7 +626,7 @@ static void menu_scanning_speed_cb(int item, uint8_t data)
   ui_mode_normal();
 }
 
-static void menu_config_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_config_cb)
 {
   (void)data;
   switch (item) {
@@ -670,20 +657,18 @@ static void menu_config_cb(int item, uint8_t data)
   }
 }
 
-static void menu_dfu_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 {
   (void)data;
-  switch (item) {
-  case 0:
-      enter_dfu();
-  }
+  (void)item;
+  enter_dfu();
 }
 
 
 // const int menu_modulation_value[]={MO_NONE,MO_AM_1, MO_NFM, MO_WFM, MO_EXTERNAL};
 const char *menu_modulation_text[]={"NONE","AM 1kHz","AM 10Hz","NARROW FM","WIDE FM", "EXTERNAL"};
 
-static void menu_modulation_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_modulation_cb)
 {
   (void)item;
 //Serial.println(item);
@@ -697,7 +682,7 @@ static void menu_modulation_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-static void menu_reffer_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_reffer_cb)
 {
   (void)item;
 //Serial.println(item);
@@ -707,7 +692,7 @@ static void menu_reffer_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-static void menu_drive_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_drive_cb)
 {
   (void)item;
 //Serial.println(item);
@@ -720,7 +705,7 @@ static void menu_drive_cb(int item, uint8_t data)
 
 
 #ifdef __SPUR__
-static void menu_spur_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_spur_cb)
 {
   (void)data;
   (void)item;
@@ -733,7 +718,7 @@ static void menu_spur_cb(int item, uint8_t data)
 }
 #endif
 
-static void menu_measure_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_measure_cb)
 {
   (void)item;
   menu_move_back();
@@ -843,7 +828,7 @@ static void menu_measure_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-static void menu_atten_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_atten_cb)
 {
   (void)item;
   (void)data;
@@ -851,7 +836,7 @@ static void menu_atten_cb(int item, uint8_t data)
   menu_move_back_and_leave_ui();
 }
 
-static void menu_atten_high_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_atten_high_cb)
 {
   (void)item;
   setting.auto_attenuation = false;
@@ -859,7 +844,7 @@ static void menu_atten_high_cb(int item, uint8_t data)
   menu_move_back_and_leave_ui();
 }
 
-static void menu_reflevel_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_reflevel_cb)
 {
   (void)item;
   (void)data;
@@ -867,7 +852,7 @@ static void menu_reflevel_cb(int item, uint8_t data)
   menu_move_back_and_leave_ui();
 }
 
-static void menu_storage_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_storage_cb)
 {
   (void)item;
   switch(data) {
@@ -891,15 +876,15 @@ static void menu_storage_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-static void menu_average_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_average_cb)
 {
   (void)data;
   set_average(item);
   menu_move_back_and_leave_ui();
 }
 
-static void
-menu_marker_select_cb(int item, uint8_t data)
+extern const menuitem_t menu_marker_modify[];
+static UI_FUNCTION_CALLBACK(menu_marker_select_cb)
 {
   (void)data;
 //  int t;
@@ -912,7 +897,7 @@ menu_marker_select_cb(int item, uint8_t data)
   }
 }
 
-static void menu_marker_modify_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_marker_modify_cb)
 {
   (void)item;
   if (markers[active_marker].enabled == M_ENABLED)
@@ -949,14 +934,14 @@ static void menu_marker_modify_cb(int item, uint8_t data)
 // last index - for item back button!!
 static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000, -1};
 
-static void menu_rbw_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_rbw_cb)
 {
   (void)item;
   set_RBW(rbwsel_x10[data]);
   menu_move_back_and_leave_ui();
 }
 
-static void menu_unit_cb (int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_unit_cb)
 {
   (void)item;
   set_unit(data);
@@ -975,7 +960,7 @@ enum {
 //  menu_move_back_and_leave_ui();
 //}
 
-static void menu_trigger_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_trigger_cb)
 {
   (void)item;
   set_trigger(data);
@@ -1010,7 +995,7 @@ static void choose_active_marker(void)
 }
 
 #ifdef __ULTRA__
-static void menu_harmonic_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_harmonic_cb)
 {
   (void)item;
   set_harmonic(data);
@@ -1018,7 +1003,7 @@ static void menu_harmonic_cb(int item, uint8_t data)
 }
 #endif
 
-static void menu_settings2_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_settings2_cb)
 {
   (void)item;
   switch(data) {
@@ -1042,7 +1027,7 @@ static void menu_settings2_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-static void menu_pause_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_pause_cb)
 {
   (void) data;
   (void) item;
@@ -1053,7 +1038,7 @@ static void menu_pause_cb(int item, uint8_t data)
 //  draw_cal_status();
 }
 
-static void menu_outputmode_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_outputmode_cb)
 {
   (void) data;
   (void) item;
@@ -1062,7 +1047,7 @@ static void menu_outputmode_cb(int item, uint8_t data)
 }
 
 static const uint16_t points_setting[] = {145, 290, -1};
-static void menu_points_cb(int item, uint8_t data){
+static UI_FUNCTION_CALLBACK(menu_points_cb){
   (void)item;
   set_sweep_points(points_setting[data]);
   draw_menu();
@@ -1776,7 +1761,7 @@ static void menu_item_modify_attribute(
   if (menu[item].type & MT_FORM && MT_MASK(menu[item].type) == MT_KEYPAD) {
     keypad_mode = menu[item].data;
     fetch_numeric_target();
-    param_1.text = uistat.text;
+    param_1.text = button->text;
   }
   // Prepare button label
   plot_printf(button->text, sizeof button->text, menu[item].label, param_1.u, param_2.u);

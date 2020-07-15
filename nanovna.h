@@ -480,6 +480,7 @@ void redraw_frame(void);
 void request_to_draw_cells_behind_menu(void);
 void request_to_draw_cells_behind_numeric_input(void);
 void redraw_marker(int marker);
+void markmap_all_markers(void);
 void plot_into_index(measurement_t measured);
 void force_set_markmap(void);
 void draw_frequencies(void);
@@ -568,6 +569,7 @@ void ili9341_set_background(uint16_t fg);
 
 void ili9341_clear_screen(void);
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
+void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
 void ili9341_drawstring_7x13(const char *str, int x, int y);
@@ -578,7 +580,6 @@ void ili9341_drawfont(uint8_t ch, int x, int y);
 void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t* out);
 void ili9341_line(int x0, int y0, int x1, int y1);
 void show_version(void);
-void show_logo(void);
 
 /*
  * flash.c
@@ -793,7 +794,6 @@ extern void ui_init(void);
 extern void ui_process(void);
 int current_menu_is_form(void);
 
-void menu_mode_cb(int, uint8_t);
 void ui_mode_normal(void);
 void ui_mode_menu(void);
 void menu_push_lowoutput(void);
@@ -836,6 +836,8 @@ typedef struct uistat {
 typedef struct ui_button {
   uint16_t fg;
   uint16_t bg;
+  uint8_t  border;
+  int8_t   icon;
   char text[32];
 } ui_button_t;
 

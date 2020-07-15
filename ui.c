@@ -108,12 +108,6 @@ static int8_t last_touch_status = EVT_TOUCH_NONE;
 static int16_t last_touch_x;
 static int16_t last_touch_y;
 
-//int16_t touch_cal[4] = { 1000, 1000, 10*16, 12*16 };
-//int16_t touch_cal[4] = { 620, 600, 130, 180 };
-
-//int awd_count;
-//int touch_x, touch_y;
-
 #define KP_CONTINUE 0
 #define KP_DONE 1
 #define KP_CANCEL 2
@@ -444,9 +438,9 @@ enum {
   MT_BLANK,                     // blank menu (nothing draw)
   MT_SUBMENU,                   // enter to submenu
   MT_CALLBACK,                  // call user function
+  MT_ADV_CALLBACK,              // adv call user function
   MT_CANCEL,                    // menu, step back on one level up
   MT_TITLE,                     // Title
-  MT_CLOSE,
   MT_KEYPAD,
   MT_ICON = 0x10,
   MT_HIGH = 0x20,               // Only applicable to high mode
@@ -457,7 +451,12 @@ enum {
 #define MT_LEAVE    0x20
 #define MT_MASK(x) (0xF & (x))
 
-typedef void (*menuaction_cb_t)(int item, uint8_t data);
+// Call back functions for MT_CALLBACK type
+typedef void (*menuaction_cb_t)(int item, uint16_t data);
+#define UI_FUNCTION_CALLBACK(ui_function_name) void ui_function_name(int item, uint16_t data)
+
+typedef void (*menuaction_acb_t)(int item, uint16_t data, ui_button_t *b);
+#define UI_FUNCTION_ADV_CALLBACK(ui_function_name) void ui_function_name(int item, uint16_t data, ui_button_t *b)
 
 #ifdef __VNA__
 static void
@@ -731,8 +730,7 @@ get_marker_frequency(int marker)
   return frequencies[markers[marker].index];
 }
 
-static void
-menu_marker_op_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
 {
   (void)item;
   uint32_t freq = get_marker_frequency(active_marker);
@@ -783,8 +781,7 @@ menu_marker_op_cb(int item, uint8_t data)
   //redraw_all();
 }
 
-static void
-menu_marker_search_cb(int item, uint8_t data)
+static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
 {
   (void)item;
   int i = -1;
@@ -1229,7 +1226,6 @@ menu_invoke(int item)
   switch (MT_MASK(menu->type)) {
   case MT_NONE:
   case MT_BLANK:
-  case MT_CLOSE:
     ui_mode_normal();
     break;
 
@@ -1239,14 +1235,18 @@ menu_invoke(int item)
 
   case MT_CALLBACK: {
     menuaction_cb_t cb = (menuaction_cb_t)menu->reference;
-    if (cb == NULL)
-      return;
-    (*cb)(item, menu->data);
+    if (cb) (*cb)(item, menu->data);
 //    if (!(menu->type & MT_FORM))
     redraw_request |= REDRAW_CAL_STATUS;
     break;
   }
-
+  case MT_ADV_CALLBACK: {
+    menuaction_acb_t cb = (menuaction_acb_t)menu->reference;
+    if (cb) (*cb)(item, menu->data, NULL);
+//    if (!(menu->type & MT_FORM))
+    redraw_request |= REDRAW_CAL_STATUS;
+    break;
+  }
   case MT_SUBMENU:
     menu_push_submenu((const menuitem_t*)menu->reference);
     break;
@@ -1612,8 +1612,14 @@ draw_menu_buttons(const menuitem_t *menu)
 
     uint16_t old_bg = button.bg;
 
+    // Need replace this obsolete bad function on new MT_ADV_CALLBACK variant
     menu_item_modify_attribute(menu, i, &button);      // before plot_printf to create status text
 
+    // MT_ADV_CALLBACK - allow change button data in callback, more easy and correct
+    if (menu[i].type == MT_ADV_CALLBACK){
+      menuaction_acb_t cb = (menuaction_acb_t)menu[i].reference;
+      if (cb) (*cb)(i, menu[i].data, &button);
+    }
     ili9341_set_foreground(button.fg);
     ili9341_set_background(button.bg);
     if (menu[i].type & MT_FORM) {
