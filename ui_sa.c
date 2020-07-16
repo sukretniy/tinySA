@@ -1762,7 +1762,7 @@ static void menu_item_modify_attribute(
   if (menu[item].type & MT_FORM && MT_MASK(menu[item].type) == MT_KEYPAD) {
     keypad_mode = menu[item].data;
     fetch_numeric_target();
-    param_1.text = button->text;
+    param_1.text = uistat.text;
   }
   // Prepare button label
   plot_printf(button->text, sizeof button->text, menu[item].label, param_1.u, param_2.u);
