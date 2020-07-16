@@ -273,8 +273,6 @@ usage:
 
 
 VNA_SHELL_FUNCTION(cmd_v)
-
-
 {
     if (argc != 1) {
         shell_printf("%d\r\n", SI4432_Sel);
@@ -537,6 +535,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
   float v = my_atof(argv[2]);
   config.correction_frequency[i] = f;
   config.correction_value[i] = v;
+  redraw_request|=REDRAW_AREA;                  // to ensure the change in level will be visible
   shell_printf("updated %d to %d %.1f\r\n", i, config.correction_frequency[i], config.correction_value[i]);
 }
 

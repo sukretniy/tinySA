@@ -3250,7 +3250,7 @@ quit:
 
   in_selftest = false;
   sweep_mode = SWEEP_ENABLE;
-  set_refer_output(0);
+  set_refer_output(-1);
   reset_settings(M_LOW);
 #endif
 }

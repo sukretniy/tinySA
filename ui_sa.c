@@ -571,6 +571,7 @@ static UI_FUNCTION_CALLBACK(menu_store_preset_cb)
   (void)item;
   if (data == 100) {
     reset_settings(M_LOW);  // Restore all defaults in Low mode
+    set_refer_output(-1);
  //   setting.mode = -1;
     data = 0;
   }
