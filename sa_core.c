@@ -889,7 +889,7 @@ void calculate_correction(void)
 
 pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
-  if (!(setting.mode == M_LOW))
+  if (!(setting.mode == M_LOW || setting.mode == M_GENLOW))
     return(0.0);
   int i = 0;
   while (f > config.correction_frequency[i] && i < CORRECTION_POINTS)
@@ -1423,13 +1423,14 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     }
   }
 
-  if (setting.mode == M_GENLOW && setting.level_sweep != 0.0) {             // if in low output mode and level sweep is active
+  if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
     float ls=setting.level_sweep;                                           // calculate and set the output level
     if (ls > 0)
       ls += 0.5;
     else
       ls -= 0.5;
     float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0;
+    a += PURE_TO_float(get_frequency_correction(f));
     if (a != old_a) {
       old_a = a;
       int d = 0;              // Start at lowest drive level;
@@ -2391,7 +2392,7 @@ void draw_cal_status(void)
 
   // Average
   if (setting.average>0) {
-    ili9341_set_foreground(BRIGHT_COLOR_BLUE);
+    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Calc:", x, y);
 
