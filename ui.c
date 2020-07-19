@@ -1718,13 +1718,13 @@ draw_menu_buttons(const menuitem_t *menu)
       continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
-    // Change area update size for form and menu
-    if (i == 0 && ui_mode == UI_MENU){
-      if (menu[i].type & MT_FORM)
-        area_width = 0;
-      else
-        area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
-    }
+    // Change area update size for form and menu (not need, apply on menu back, or menu select)
+//    if (i == 0 && ui_mode == UI_MENU){
+//      if (menu[i].type & MT_FORM)
+//        area_width = 0;
+//      else
+//        area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
+//    }
     button.icon = BUTTON_ICON_NONE;
     // Border width
     button.border = MENU_BUTTON_BORDER;
@@ -1802,6 +1802,12 @@ draw_menu_buttons(const menuitem_t *menu)
     }
     y += MENU_BUTTON_HEIGHT;
   }
+  // Not erase Form menu (used full screen clear)
+  if (menu[i].type & MT_FORM)
+    return;
+  // Cleanup other buttons (less flicker)
+  for (; i < MENU_BUTTON_MAX; i++, y+=MENU_BUTTON_HEIGHT)
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT, DEFAULT_BG_COLOR);
 }
 
 static void
@@ -1856,11 +1862,12 @@ draw_menu(void)
 static void
 erase_menu_buttons(void)
 {
+// Not need, screen redraw in all cases
 //  ili9341_fill(area_width, 0, LCD_WIDTH - area_width, area_height, DEFAULT_BG_COLOR);
-  if (current_menu_is_form())
-    ili9341_fill(OFFSETX, 0,LCD_WIDTH-OFFSETX, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
-  else
-    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
+ // if (current_menu_is_form())
+ //   ili9341_fill(OFFSETX, 0,LCD_WIDTH-OFFSETX, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
+ // else
+ //   ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
   draw_frequencies();
 }
 
@@ -2028,7 +2035,7 @@ ui_mode_keypad(int _keypad_mode)
 
   ui_mode = UI_KEYPAD;
   area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
-  area_height = HEIGHT - 32;
+  area_height = HEIGHT - NUM_INPUT_HEIGHT;
   if (!current_menu_is_form())
     draw_menu();
   draw_keypad();
