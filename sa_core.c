@@ -2648,7 +2648,7 @@ static const struct {
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    7,     -60},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       430,    60,     -80,    0,      -80},       // 9 LPF cutoff
+ {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -38,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_END,       0,              0,      0,      0,      0,      0},
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5,  10,     -70 },      // 12 Measure power level and noise
