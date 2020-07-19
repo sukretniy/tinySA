@@ -1639,8 +1639,8 @@ static const menuitem_t menu_trigger[] = {
 static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,          "REF LEVEL", menu_reflevel},
 //  { MT_SUBMENU, 0,          "SCALE/\nDIV",menu_scale_per},
-  { MT_KEYPAD,  KM_SCALE,   "SCALE/\nDIV",NULL},
-  { MT_SUBMENU, 0,          "ATTEN",        menu_atten},
+  { MT_KEYPAD,  KM_SCALE,   "SCALE/DIV",NULL},
+  { MT_SUBMENU, 0,          "ATTENUATE",    menu_atten},
   { MT_SUBMENU,0,           "CALC",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,  "EXTERNAL\nAMP",NULL},
@@ -1747,9 +1747,9 @@ static void menu_item_modify_attribute(
       button->icon = setting.auto_IF ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
   } else if (menu == menu_scanning_speed) {
     if (item == 0)
-      button->icon = setting.step_delay > 0 ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
+      button->icon = setting.step_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
     else if (item == 1)
-      button->icon =setting.offset_delay > 0 ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
+      button->icon =setting.offset_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
   }
   else if (menu == menu_sweep_speed) {
     if (item == 3)
