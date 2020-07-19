@@ -1740,12 +1740,12 @@ draw_menu_buttons(const menuitem_t *menu)
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
       int button_height = MENU_BUTTON_HEIGHT;
       draw_button(button_start, y, button_width, button_height, &button);
-      uint16_t text_offs = button_start + 5;
-      if (button.icon >=0){
-        blit16BitWidthBitmap(LCD_WIDTH-MENU_BUTTON_WIDTH+MENU_BUTTON_BORDER + 1, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*ICON_HEIGHT]);
-        text_offs = button_start + 1 + ICON_WIDTH;
-      }
+
+      if (button.icon >=0)
+        blit16BitWidthBitmap(LCD_WIDTH - ICON_WIDTH - 4, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*ICON_HEIGHT]);
+
       int lines = menu_is_multiline(button.text);
+      uint16_t text_offs = button_start + 5;
 #define BIG_BUTTON_FONT 1
 #ifdef BIG_BUTTON_FONT
       ili9341_drawstring_7x13(button.text, text_offs, y+(button_height-lines*bFONT_GET_HEIGHT)/2);
