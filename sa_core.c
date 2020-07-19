@@ -2457,33 +2457,34 @@ void draw_cal_status(void)
   y += YSTEP + YSTEP/2 ;
 
   buf[0] = ' ';
+  strcpy(&buf[1],"Scan:");
   if (setting.step_delay_mode == SD_PRECISE)
     buf[0] = 'P';
-  if (setting.step_delay_mode == SD_FAST)
+  else if (setting.step_delay_mode == SD_FAST)
     buf[0] = 'F';
-  strcpy(&buf[1],"Scan:");
+  else
+    strcpy(&buf[0],"Scan:");
   ili9341_drawstring(buf, x, y);
 
+#if 0                   // Activate for sweep time debugging
   y += YSTEP;
   plot_printf(buf, BLEN, "%5.3Fs", (float)setting.sweep_time_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
+#endif
   y += YSTEP;
   plot_printf(buf, BLEN, "%5.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
-#if 1
+#if 0                   // Activate for sweep time debugging
   y += YSTEP;
   update_rbw();             // To ensure the calc_min_sweep time shown takes the latest delay into account
   calculate_step_delay();
   uint32_t t = calc_min_sweep_time_us();
-//  if (t < setting.sweep_time_us)
-//    t = setting.sweep_time_us;
-//  setting.actual_sweep_time_us = t;
   plot_printf(buf, BLEN, "%5.3Fs", (float)t/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
+
   y += YSTEP;
   plot_printf(buf, BLEN, "%5.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
   ili9341_drawstring(buf, x, y);
-
 #endif
 
    // Cal output

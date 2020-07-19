@@ -1364,10 +1364,10 @@ static const menuitem_t menu_harmonic[] =
 
 static const menuitem_t menu_scanning_speed[] =
 {
- { MT_CALLBACK,         SD_NORMAL,  "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
- { MT_CALLBACK,         SD_PRECISE, "PRECISE",           menu_scanning_speed_cb},
- { MT_CALLBACK | MT_LOW,SD_FAST,    "FAST",              menu_scanning_speed_cb},
- { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20"},
+// { MT_CALLBACK,         SD_NORMAL,  "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
+// { MT_CALLBACK,         SD_PRECISE, "PRECISE",           menu_scanning_speed_cb},
+// { MT_CALLBACK | MT_LOW,SD_FAST,    "FAST",              menu_scanning_speed_cb},
+// { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20"},
  { MT_KEYPAD, KM_SAMPLETIME,        "SAMPLE\nDELAY",   "300..30000"},              // This must be item 4 to match highlighting
  { MT_KEYPAD, KM_OFFSET_DELAY,      "OFFSET\nDELAY",   "300..30000"},              // This must be item 5 to match highlighting
  { MT_CANCEL,   0,                  "\032 BACK", NULL },
@@ -1383,12 +1383,12 @@ const menuitem_t menu_sweep_points[] = {
 
 static const menuitem_t menu_sweep_speed[] =
 {
- { MT_CALLBACK, SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
- { MT_CALLBACK, SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
- { MT_CALLBACK, SD_FAST,       "FAST",              menu_scanning_speed_cb},
- { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",     "0..600s, 0=disable"},                   // This must be item 3 to match highlighting
- { MT_SUBMENU,  0,             "SWEEP\nPOINTS",   menu_sweep_points},
- { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20, 0=disable"},
+ { MT_CALLBACK,         SD_NORMAL,     "NORMAL",            menu_scanning_speed_cb},    // order must match definition of enum
+ { MT_CALLBACK,         SD_PRECISE,    "PRECISE",           menu_scanning_speed_cb},
+ { MT_CALLBACK | MT_LOW,SD_FAST,       "FAST",              menu_scanning_speed_cb},
+ { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},                   // This must be item 3 to match highlighting
+ { MT_SUBMENU,          0,             "SWEEP\nPOINTS",   menu_sweep_points},
+ { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",   "2..20, 0=disable"},
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
