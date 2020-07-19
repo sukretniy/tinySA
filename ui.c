@@ -1803,7 +1803,7 @@ draw_menu_buttons(const menuitem_t *menu)
     y += MENU_BUTTON_HEIGHT;
   }
   // Cleanup other buttons (less flicker)
-  for (; i < MENU_BUTTON_MAX; i++, y+=MENU_BUTTON_HEIGHT)
+  for (; y < MENU_BUTTON_MAX*MENU_BUTTON_HEIGHT; y+=MENU_BUTTON_HEIGHT)
     ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT, DEFAULT_BG_COLOR);
 }
 
