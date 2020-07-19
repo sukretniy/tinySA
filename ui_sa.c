@@ -715,9 +715,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_reffer_acb)
 //  draw_cal_status();
 }
 
-static UI_FUNCTION_CALLBACK(menu_drive_cb)
+const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
+static UI_FUNCTION_ADV_CALLBACK(menu_drive_acb)
 {
   (void)item;
+  if(b){
+    b->param_1.i = menu_drive_value[data];
+    b->icon = data == setting.drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
 //Serial.println(item);
   set_drive(data);
   menu_move_back();
@@ -1189,8 +1195,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
   draw_menu();
 }
 
-//const int menu_drive_value[]={5,10,15,20};
-
 // ===[MENU DEFINITION]=========================================================
 
 static const menuitem_t menu_store_preset_high[8] =
@@ -1242,44 +1246,43 @@ static const menuitem_t menu_load_preset[] =
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
-const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
 static const menuitem_t menu_drive[] = {
-  { MT_CALLBACK, 15, "%+ddBm",   menu_drive_cb},
-  { MT_CALLBACK, 14, "%+ddBm",   menu_drive_cb},
-  { MT_CALLBACK, 13, "%+ddBm",   menu_drive_cb},
-  { MT_CALLBACK, 12, "%+ddBm",   menu_drive_cb},
+  { MT_ADV_CALLBACK, 15, "%+ddBm",   menu_drive_acb},
+  { MT_ADV_CALLBACK, 14, "%+ddBm",   menu_drive_acb},
+  { MT_ADV_CALLBACK, 13, "%+ddBm",   menu_drive_acb},
+  { MT_ADV_CALLBACK, 12, "%+ddBm",   menu_drive_acb},
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide3[] = {
- { MT_FORM | MT_CALLBACK, 5, "%+ddBm",   menu_drive_cb  },
- { MT_FORM | MT_CALLBACK, 4, "%+ddBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK, 3, "%+ddBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK, 2, "%+ddBm",   menu_drive_cb  },
- { MT_FORM | MT_CALLBACK, 1, "%+ddBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK, 0, "%+ddBm",   menu_drive_cb},
+ { MT_FORM | MT_ADV_CALLBACK, 5, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 4, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 3, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 2, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 1, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 0, "%+ddBm",   menu_drive_acb},
   { MT_FORM | MT_CANCEL,   255, "\032 BACK", NULL },
  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide2[] = {
- { MT_FORM | MT_CALLBACK, 10, "%+ddBm",   menu_drive_cb  },
- { MT_FORM | MT_CALLBACK,  9, "%+ddBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK,  8, "%+ddBm",   menu_drive_cb},
- { MT_FORM | MT_CALLBACK,  7, "%+ddBm",   menu_drive_cb  },
- { MT_FORM | MT_CALLBACK,  6, "%+ddBm",   menu_drive_cb},
+ { MT_FORM | MT_ADV_CALLBACK, 10, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK,  9, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK,  8, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK,  7, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK,  6, "%+ddBm",   menu_drive_acb},
  { MT_FORM | MT_SUBMENU,  255, "\033 MORE", menu_drive_wide3},
  { MT_FORM | MT_CANCEL,   255, "\032 BACK", NULL },
  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide[] = {
-  { MT_FORM | MT_CALLBACK, 15, "%+ddBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 14, "%+ddBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 13, "%+ddBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 12, "%+ddBm",   menu_drive_cb},
-  { MT_FORM | MT_CALLBACK, 11, "%+ddBm",   menu_drive_cb},
+  { MT_FORM | MT_ADV_CALLBACK, 15, "%+ddBm",   menu_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 14, "%+ddBm",   menu_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 13, "%+ddBm",   menu_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 12, "%+ddBm",   menu_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 11, "%+ddBm",   menu_drive_acb},
   { MT_FORM | MT_SUBMENU,  255, "\033 MORE", menu_drive_wide2},
   { MT_FORM | MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
@@ -1720,36 +1723,24 @@ static void menu_item_modify_attribute(
 {
   int mark = false;
   int m_auto = false;
-  int data = menu[item].data;
 
   if (menu == menu_mode) {
-    if (item == 4) {
+    if (item == 4)
       button->param_1.text = menu_reffer_text[setting.refer+1];
-    }
-  } else if (menu == menu_highoutputmode && item == 2) {
-	  button->param_1.i = menu_drive_value[setting.drive];
+  } else if (menu == menu_highoutputmode && item == 2){
+    button->param_1.i = menu_drive_value[setting.drive];
   } else if (menu == menu_lowoutputmode || menu == menu_highoutputmode) {
-      if (item == 0) {
+    if (item == 0)
       button->param_1.text = setting.mute ? "OFF" : "ON";
-    }
-    else if (item == 3) {
+    else if (item == 3)
       button->param_1.text = menu_modulation_text[setting.modulation];
-    }
-  } else if (MT_MASK(menu[item].type) == MT_CALLBACK && (menu == menu_drive || menu == menu_drive_wide || menu == menu_drive_wide2|| menu == menu_drive_wide3)) {
-    button->param_1.i = menu_drive_value[data];
-    if (data == setting.drive){
-      mark = true;
-    }
   } else if (menu == menu_display /* || menu == menu_displayhigh */) {
-    if (item ==1 && setting.show_stored){
+    if (item ==1 && setting.show_stored)
       mark = true;
-    }
-    if (item == 3 && setting.subtract_stored && setting.show_stored){
+    if (item == 3 && setting.subtract_stored && setting.show_stored)
       mark = true;
-    }
-    if (item == 4 && setting.subtract_stored && !setting.show_stored){
+    if (item == 4 && setting.subtract_stored && !setting.show_stored)
       mark = true;
-    }
   } else if (menu == menu_settings) {
     if (item == 2)
       button->icon = setting.auto_IF ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
