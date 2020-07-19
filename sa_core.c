@@ -3062,33 +3062,42 @@ void self_test(int test)
     for (int j= 0; j < 57; j++ ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
-do_again:
+// do_again:
       test_prepare(i);
       setting.spur = 0;
+#if 1               // Disable for offset baseline scanning
       setting.step_delay_mode = SD_NORMAL;
+      setting.repeat = 1;
+#else
+      setting.step_delay_mode = SD_FAST;
+      setting.repeat = 20;
+#endif
       setting.step_delay = setting.step_delay * 5 / 4;
+      setting.offset_delay = setting.step_delay / 2;
       setting.rbw_x10 = SI4432_force_RBW(j);
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
+#if 0
+      set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 1000));     // Wide
+#else
       if (setting.rbw_x10 < 1000)
-        set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));
+        set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));   // Narrow
       else
         set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
-
-//      setting.repeat = 10;
+#endif
       test_acquire(i);                        // Acquire test
       test_validate(i);                       // Validate test
-      if (test_value == 0) {
-        setting.step_delay = setting.step_delay * 4 / 5;
-        goto do_again;
-      }
+//      if (test_value == 0) {
+//        setting.step_delay = setting.step_delay * 4 / 5;
+//        goto do_again;
+//      }
 
       float saved_peakLevel = peakLevel;
  //     if (peakLevel < -35) {
  //       shell_printf("Peak level too low, abort\n\r");
  //       return;
  //     }
-#if 1
       shell_printf("Start level = %f, ",peakLevel);
+#if 1                                                                       // Enable for step delay tuning
       while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 0.5) {
         test_prepare(i);
         setting.spur = 0;
@@ -3111,6 +3120,7 @@ do_again:
 
 #endif
       setting.offset_delay = 1600;
+#if 1                       // Enable for offset tuning stepping
       test_value = saved_peakLevel;
       if ((uint32_t)(setting.rbw_x10 * 1000) / (sweep_points) < 8000) {           // fast mode possible
         while (setting.offset_delay > 0 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
@@ -3128,7 +3138,7 @@ do_again:
           //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
         }
       }
-
+#endif
       shell_printf("End level = %f, step time = %d, fast delay = %d\n\r",peakLevel, setting.step_delay, setting.offset_delay*2);
       if (setting.test_argument != 0)
         break;
