@@ -1182,7 +1182,7 @@ static const uint16_t points_setting[] = {145, 290, -1};
 static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
   (void)item;
   if(b){
-    b->icon = points_setting[data] == sweep_points ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->icon = points_setting[data] == sweep_points ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
   set_sweep_points(points_setting[data]);
