@@ -88,6 +88,28 @@ static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int  selection = 0;
 
+// Button definition (used in MT_ADV_CALLBACK for custom)
+#define BUTTON_ICON_NONE            -1
+#define BUTTON_ICON_NOCHECK          0
+#define BUTTON_ICON_CHECK            1
+#define BUTTON_ICON_CHECK_AUTO       2
+#define BUTTON_ICON_GROUP            3
+#define BUTTON_ICON_GROUP_CHECKED    4
+
+#define BUTTON_BORDER_NONE           0x00
+#define BUTTON_BORDER_WIDTH_MASK     0x0F
+
+// Define mask for draw border (if 1 use light color, if 0 dark)
+#define BUTTON_BORDER_TYPE_MASK      0xF0
+#define BUTTON_BORDER_TOP            0x10
+#define BUTTON_BORDER_BOTTOM         0x20
+#define BUTTON_BORDER_LEFT           0x40
+#define BUTTON_BORDER_RIGHT          0x80
+
+#define BUTTON_BORDER_FLAT           0x00
+#define BUTTON_BORDER_RISE           (BUTTON_BORDER_TOP|BUTTON_BORDER_RIGHT)
+#define BUTTON_BORDER_FALLING        (BUTTON_BORDER_BOTTOM|BUTTON_BORDER_LEFT)
+
 // Set structure align as WORD (save flash memory)
 #pragma pack(push, 2)
 typedef struct {
@@ -1387,28 +1409,6 @@ static const char * const keypad_mode_label[] = {
 static const char * const keypad_scale_text[] = { "1", "2", "5", "10", "20" , "50", "100", "200", "500"};
 //static const int  keypad_scale_value[] = { 1, 2, 5, 10, 20 , 50, 100, 200, 500};
 
-
-// Button definition (used in MT_ADV_CALLBACK for custom)
-#define BUTTON_ICON_NONE            -1
-#define BUTTON_ICON_NOCHECK          0
-#define BUTTON_ICON_CHECK            1
-#define BUTTON_ICON_GROUP            2
-#define BUTTON_ICON_GROUP_CHECKED    3
-
-#define BUTTON_BORDER_NONE           0x00
-#define BUTTON_BORDER_WIDTH_MASK     0x0F
-
-// Define mask for draw border (if 1 use light color, if 0 dark)
-#define BUTTON_BORDER_TYPE_MASK      0xF0
-#define BUTTON_BORDER_TOP            0x10
-#define BUTTON_BORDER_BOTTOM         0x20
-#define BUTTON_BORDER_LEFT           0x40
-#define BUTTON_BORDER_RIGHT          0x80
-
-#define BUTTON_BORDER_FLAT           0x00
-#define BUTTON_BORDER_RISE           (BUTTON_BORDER_TOP|BUTTON_BORDER_RIGHT)
-#define BUTTON_BORDER_FALLING        (BUTTON_BORDER_BOTTOM|BUTTON_BORDER_LEFT)
-
 static void
 draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
 {
@@ -1618,6 +1618,70 @@ static bool menuDisabled(uint8_t type){
   return false;
 }
 
+#define ICON_WIDTH        16
+#define ICON_HEIGHT       11
+static const uint16_t check_box[] = {
+  0b0011111111110000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0011111111110000,
+
+  0b0011111111110000,
+  0b0010000000001000,
+  0b0010000000011000,
+  0b0010000000110000,
+  0b0010000001100000,
+  0b0010100011010000,
+  0b0010110110010000,
+  0b0010011100010000,
+  0b0010001000010000,
+  0b0010000000010000,
+  0b0011111111110000,
+
+  0b0011111111110000,
+  0b0010000000010000,
+  0b0010001111010000,
+  0b0010011011010000,
+  0b0010110011010000,
+  0b0010110011010000,
+  0b0010111111010000,
+  0b0010110011010000,
+  0b0010110011010000,
+  0b0010000000010000,
+  0b0011111111110000,
+
+  0b0000000000000000,
+  0b0000001111000000,
+  0b0000010000100000,
+  0b0000100000010000,
+  0b0001000000001000,
+  0b0001000000001000,
+  0b0001000000001000,
+  0b0001000000001000,
+  0b0000100000010000,
+  0b0000010000100000,
+  0b0000001111000000,
+
+  0b0000000000000000,
+  0b0000001111000000,
+  0b0000010000100000,
+  0b0000100110010000,
+  0b0001001111001000,
+  0b0001011111101000,
+  0b0001011111101000,
+  0b0001001111001000,
+  0b0000100110010000,
+  0b0000010000100000,
+  0b0000001111000000,
+};
+
 static void
 draw_menu_buttons(const menuitem_t *menu)
 {
@@ -1629,18 +1693,25 @@ draw_menu_buttons(const menuitem_t *menu)
       continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
+    button.icon = BUTTON_ICON_NONE;
+    // Border width
+    button.border = MENU_BUTTON_BORDER;
+
     if (MT_MASK(menu[i].type) == MT_TITLE) {
-      button.fg = config.menu_normal_color;
+      button.fg = RGB565(255,255,255);//config.menu_normal_color;
       button.bg = DEFAULT_MENU_TEXT_COLOR;
+      button.border = 0; // no border for title
     } else {
-      button.bg = config.menu_normal_color;
+      button.bg = RGB565(230,230,230);
       button.fg = DEFAULT_MENU_TEXT_COLOR;
     }
-    // focus only in MENU mode but not in KEYPAD mode
-    if (ui_mode == UI_MENU && i == selection)
-      button.bg = config.menu_active_color;
 
-    uint16_t old_bg = button.bg;
+    if (i == selection){
+      button.bg = RGB565(210,210,210);//config.menu_active_color;
+      button.border|= BUTTON_BORDER_FALLING;
+    }
+    else
+      button.border|= BUTTON_BORDER_RISE;
 
     // Need replace this obsolete bad function on new MT_ADV_CALLBACK variant
     menu_item_modify_attribute(menu, i, &button);      // before plot_printf to create status text
@@ -1655,10 +1726,8 @@ draw_menu_buttons(const menuitem_t *menu)
     if (menu[i].type & MT_FORM) {
       int button_width = MENU_FORM_WIDTH;
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen
-      int button_height = MENU_BUTTON_HEIGHT-2;
-//      draw_button(button_start, y, button_width, button_height, bg == old_bg? fg : DARK_GREY, bg);
-      ili9341_fill(button_start, y, button_width, button_height, old_bg);    // Set button to unmodified background color
-      ili9341_fill(button_start+2, y+2, button_width-4, button_height-4, button.bg);
+      int button_height = MENU_BUTTON_HEIGHT;
+      draw_button(button_start, y, button_width, button_height, &button);
       ili9341_drawstring_size(button.text, button_start+6, y+(button_height-2*FONT_GET_HEIGHT)/2, 2);
 #ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
@@ -1669,16 +1738,19 @@ draw_menu_buttons(const menuitem_t *menu)
     } else {
       int button_width = MENU_BUTTON_WIDTH;
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
-      int button_height = MENU_BUTTON_HEIGHT-2;
-      ili9341_fill(button_start, y, button_width, button_height, old_bg);    // Set button to unmodified background color
-      ili9341_fill(button_start+1, y+1, button_width-2, button_height - 2, button.bg);
-//      draw_button(button_start, y, button_width, button_height, bg == old_bg? fg : DARK_GREY, bg);
+      int button_height = MENU_BUTTON_HEIGHT;
+      draw_button(button_start, y, button_width, button_height, &button);
+      uint16_t text_offs = button_start + 5;
+      if (button.icon >=0){
+        blit16BitWidthBitmap(LCD_WIDTH-MENU_BUTTON_WIDTH+MENU_BUTTON_BORDER + 1, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*ICON_HEIGHT]);
+        text_offs = button_start + 1 + ICON_WIDTH;
+      }
       int lines = menu_is_multiline(button.text);
 #define BIG_BUTTON_FONT 1
 #ifdef BIG_BUTTON_FONT
-      ili9341_drawstring_7x13(button.text, button_start+5, y+(button_height-lines*bFONT_GET_HEIGHT)/2);
+      ili9341_drawstring_7x13(button.text, text_offs, y+(button_height-lines*bFONT_GET_HEIGHT)/2);
 #else
-      ili9341_drawstring(button.text, button_start+5, y+(button_height-linesFONT_GET_HEIGHT)/2);
+      ili9341_drawstring(button.text, text_offs, y+(button_height-linesFONT_GET_HEIGHT)/2);
 #endif
     }
     y += MENU_BUTTON_HEIGHT;
