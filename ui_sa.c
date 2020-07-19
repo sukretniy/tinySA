@@ -949,12 +949,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
 {
   (void)item;
   if(b){
-	if (markers[data].enabled) b->icon = BUTTON_ICON_CHECK;
+	if (markers[data-1].enabled) b->icon = BUTTON_ICON_CHECK;
 	b->param_1.i = data;
     return;
   }
-  markers[data].enabled = true;
-  active_marker_select(data);
+  markers[data-1].enabled = true;
+  active_marker_select(data-1);
   menu_push_submenu(menu_marker_modify);
   redraw_marker(active_marker);
   draw_menu();
