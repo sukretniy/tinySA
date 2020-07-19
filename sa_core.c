@@ -2900,6 +2900,7 @@ common_silent:
     break;
   case TP_30MHZ:
     set_mode(M_LOW);
+    maxFreq = 520000000;            // needed to measure the LPF rejection
     set_refer_output(0);
  //   set_step_delay(1);                      // Do not set !!!!!
 #ifdef __SPUR__
