@@ -2377,6 +2377,14 @@ void draw_cal_status(void)
 #endif
   ili9341_drawstring(buf, x, y);
 
+  if (is_paused()) {
+    color = BRIGHT_COLOR_GREEN;
+    ili9341_set_foreground(color);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("PAUSED", x, y);
+
+  }
+
 //  if (setting.mode == M_LOW) {
     // Attenuation
     if (setting.auto_attenuation)
