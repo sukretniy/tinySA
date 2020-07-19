@@ -2641,7 +2641,7 @@ static const struct {
 } test_case [TEST_COUNT] =
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
  {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
- {TC_BELOW,     TP_SILENT,      0.01,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
+ {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
  {TC_SIGNAL,    TP_10MHZ,       20,     7,      -37,    10,     -90 },      // 3
  {TC_SIGNAL,    TP_10MHZ,       30,     7,      -32,    10,     -90 },      // 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
@@ -2885,7 +2885,8 @@ common_silent:
   case TP_10MHZ:                              // 10MHz input
     set_mode(M_LOW);
     set_refer_output(2);
-    set_step_delay(1);                      // Precise scanning speed
+    setting.step_delay_mode == SD_PRECISE;
+//        set_step_delay(1);                      // Precise scanning speed
 #ifdef __SPUR__
     setting.spur = 1;
 #endif
@@ -3221,6 +3222,7 @@ void calibrate(void)
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
     set_RBW(power_rbw[j]);
     test_prepare(i);
+    setting.step_delay_mode == SD_PRECISE;
     test_acquire(i);                        // Acquire test
     local_test_status = test_validate(i);                       // Validate test
 //    chThdSleepMilliseconds(1000);
