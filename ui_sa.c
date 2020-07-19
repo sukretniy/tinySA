@@ -1768,11 +1768,9 @@ static void menu_item_modify_attribute(
   plot_printf(button->text, sizeof button->text, menu[item].label, param_1.u, param_2.u);
 
   if (m_auto) {
-    button->bg = LIGHT_GREY;
-    button->fg = config.menu_normal_color;
+    button->icon = BUTTON_ICON_CHECK_AUTO;
   } else if (mark) {
-    button->bg = DEFAULT_MENU_TEXT_COLOR;
-    button->fg = config.menu_normal_color;
+    button->icon = BUTTON_ICON_CHECK;
   }
   if (ui_mode == UI_MENU && menu_is_form(menu)) {
     //    if (item == 0)

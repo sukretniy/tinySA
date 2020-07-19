@@ -1691,7 +1691,7 @@ request_to_draw_cells_behind_menu(void)
   if (current_menu_is_form())
     invalidate_rect(0, 0, LCD_WIDTH-1, LCD_HEIGHT-1);
   else
-    invalidate_rect(AREA_WIDTH_NORMAL-MENU_BUTTON_WIDTH, 0, LCD_WIDTH-1, LCD_HEIGHT-1);
+    invalidate_rect(LCD_WIDTH-MENU_BUTTON_WIDTH-OFFSETX, 0, LCD_WIDTH-OFFSETX, LCD_HEIGHT-1);
   redraw_request |= REDRAW_CELLS;
 }
 
