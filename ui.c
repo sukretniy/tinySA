@@ -93,8 +93,9 @@ static int  selection = 0;
 #define BUTTON_ICON_NOCHECK          0
 #define BUTTON_ICON_CHECK            1
 #define BUTTON_ICON_CHECK_AUTO       2
-#define BUTTON_ICON_GROUP            3
-#define BUTTON_ICON_GROUP_CHECKED    4
+#define BUTTON_ICON_CHECK_MANUAL     3
+#define BUTTON_ICON_GROUP            4
+#define BUTTON_ICON_GROUP_CHECKED    5
 
 #define BUTTON_BORDER_NONE           0x00
 #define BUTTON_BORDER_WIDTH_MASK     0x0F
@@ -841,6 +842,18 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   redraw_marker(active_marker);
   select_lever_mode(LM_SEARCH);
 }
+
+static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = (active_marker >=0 && markers[active_marker].mtype & M_TRACKING) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  markers[active_marker].mtype ^= M_TRACKING;
+  draw_menu();
+}
+
 #ifdef __VNA__
 static void
 menu_marker_smith_cb(int item, uint8_t data)
@@ -1645,43 +1658,55 @@ static const uint16_t check_box[] = {
   0b0010000000010000,
   0b0011111111110000,
 
-  0b0011111111110000,
+  0b0011111111111000,
+  0b0010000000001000,
+  0b0010001111101000,
+  0b0010011001101000,
+  0b0010110001101000,
+  0b0010110001101000,
+  0b0010111111101000,
+  0b0010110001101000,
+  0b0010110001101000,
+  0b0010000000001000,
+  0b0011111111111000,
+
+  0b0011111111111000,
+  0b0010000000001000,
+  0b0010110001101000,
+  0b0010110001101000,
+  0b0010111011101000,
+  0b0010111111101000,
+  0b0010110101101000,
+  0b0010110101101000,
+  0b0010110001101000,
+  0b0010000000001000,
+  0b0011111111111000,
+
+  0b0000000000000000,
+  0b0000011110000000,
+  0b0000100001000000,
+  0b0001000000100000,
   0b0010000000010000,
-  0b0010001111010000,
-  0b0010011011010000,
-  0b0010110011010000,
-  0b0010110011010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0010000000010000,
+  0b0001000000100000,
+  0b0000100001000000,
+  0b0000011110000000,
+
+  0b0000000000000000,
+  0b0000011110000000,
+  0b0000100001000000,
+  0b0001001100100000,
+  0b0010011110010000,
   0b0010111111010000,
-  0b0010110011010000,
-  0b0010110011010000,
-  0b0010000000010000,
-  0b0011111111110000,
-
-  0b0000000000000000,
-  0b0000001111000000,
-  0b0000010000100000,
-  0b0000100000010000,
-  0b0001000000001000,
-  0b0001000000001000,
-  0b0001000000001000,
-  0b0001000000001000,
-  0b0000100000010000,
-  0b0000010000100000,
-  0b0000001111000000,
-
-  0b0000000000000000,
-  0b0000001111000000,
-  0b0000010000100000,
-  0b0000100110010000,
-  0b0001001111001000,
-  0b0001011111101000,
-  0b0001011111101000,
-  0b0001001111001000,
-  0b0000100110010000,
-  0b0000010000100000,
-  0b0000001111000000,
+  0b0010111111010000,
+  0b0010011110010000,
+  0b0001001100100000,
+  0b0000100001000000,
+  0b0000011110000000,
 };
-
+//103492	    680	  15896	 120068	  1d504	build/tinySA.elf
 static void
 draw_menu_buttons(const menuitem_t *menu)
 {
@@ -1717,10 +1742,13 @@ draw_menu_buttons(const menuitem_t *menu)
     menu_item_modify_attribute(menu, i, &button);      // before plot_printf to create status text
 
     // MT_ADV_CALLBACK - allow change button data in callback, more easy and correct
-    if (menu[i].type == MT_ADV_CALLBACK){
+    if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK){
       menuaction_acb_t cb = (menuaction_acb_t)menu[i].reference;
       if (cb) (*cb)(i, menu[i].data, &button);
     }
+    // Prepare button label
+    plot_printf(button.text, sizeof button.text, menu[i].label, button.param_1.u, button.param_2.u);
+
     ili9341_set_foreground(button.fg);
     ili9341_set_background(button.bg);
     if (menu[i].type & MT_FORM) {
@@ -1728,7 +1756,12 @@ draw_menu_buttons(const menuitem_t *menu)
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen
       int button_height = MENU_BUTTON_HEIGHT;
       draw_button(button_start, y, button_width, button_height, &button);
-      ili9341_drawstring_size(button.text, button_start+6, y+(button_height-2*FONT_GET_HEIGHT)/2, 2);
+      uint16_t text_offs = button_start + 6;
+      if (button.icon >=0){
+        blit16BitWidthBitmap(button_start+3, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*ICON_HEIGHT]);
+        text_offs = button_start+6+ICON_WIDTH+1;
+      }
+      ili9341_drawstring_size(button.text, text_offs, y+(button_height-2*FONT_GET_HEIGHT)/2, 2);
 #ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
         blit16BitWidthBitmap(button_start+MENU_FORM_WIDTH-40   ,y+(button_height-16)/2,16,16,& left_icons[((menu[i].data >>4)&0xf)*16]);
@@ -1740,12 +1773,12 @@ draw_menu_buttons(const menuitem_t *menu)
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
       int button_height = MENU_BUTTON_HEIGHT;
       draw_button(button_start, y, button_width, button_height, &button);
-
-      if (button.icon >=0)
-        blit16BitWidthBitmap(LCD_WIDTH - ICON_WIDTH - 4, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*ICON_HEIGHT]);
-
+      uint16_t text_offs = button_start + 7;
+      if (button.icon >=0){
+        blit16BitWidthBitmap(button_start+2, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*ICON_HEIGHT]);
+        text_offs = button_start+2+ICON_WIDTH;
+      }
       int lines = menu_is_multiline(button.text);
-      uint16_t text_offs = button_start + 5;
 #define BIG_BUTTON_FONT 1
 #ifdef BIG_BUTTON_FONT
       ili9341_drawstring_7x13(button.text, text_offs, y+(button_height-lines*bFONT_GET_HEIGHT)/2);

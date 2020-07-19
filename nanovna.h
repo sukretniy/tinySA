@@ -841,6 +841,11 @@ typedef struct ui_button {
   uint16_t bg;
   uint8_t  border;
   int8_t   icon;
+  union {
+    int32_t  i;
+    uint32_t u;
+    const char *text;
+  } param_1, param_2;    // void data for label printf
   char text[32];
 } ui_button_t;
 
