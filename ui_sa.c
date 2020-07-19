@@ -1466,10 +1466,10 @@ const menuitem_t menu_marker_select[] = {
 
 
 const menuitem_t menu_marker_ops[] = {
-  { MT_CALLBACK, ST_START, "\033START", menu_marker_op_cb },
-  { MT_CALLBACK, ST_STOP, "\033STOP", menu_marker_op_cb },
-  { MT_CALLBACK, ST_CENTER, "\033CENTER", menu_marker_op_cb },
-  { MT_CALLBACK, ST_SPAN, "\033SPAN", menu_marker_op_cb },
+  { MT_CALLBACK, ST_START, "\033 START", menu_marker_op_cb },
+  { MT_CALLBACK, ST_STOP, "\033 STOP", menu_marker_op_cb },
+  { MT_CALLBACK, ST_CENTER, "\033 CENTER", menu_marker_op_cb },
+  { MT_CALLBACK, ST_SPAN, "\033 SPAN", menu_marker_op_cb },
   { MT_CANCEL, 0, "\032 BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1593,7 +1593,7 @@ static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0, "LEVEL CAL",     menu_calibrate},
   { MT_CALLBACK, 0, "VERSION",          menu_config_cb},
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
-  { MT_SUBMENU,  0, "\033DFU",  menu_dfu},
+  { MT_SUBMENU,  0, "\033 DFU",  menu_dfu},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
