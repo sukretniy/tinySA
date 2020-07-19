@@ -1263,7 +1263,7 @@ static const menuitem_t menu_atten[] = {
   { MT_CALLBACK | MT_LOW, 0,               "AUTO",    menu_atten_cb},
   { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL",  "0..30"},
   { MT_CALLBACK | MT_HIGH,0,               "0dB",     menu_atten_high_cb},
-  { MT_CALLBACK | MT_HIGH,30,              "\n0225..40dB",    menu_atten_high_cb},
+  { MT_CALLBACK | MT_HIGH,30,              "22.5dB..\n40dB",    menu_atten_high_cb},
   { MT_CANCEL, 0,               "\032 BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1428,9 +1428,9 @@ static const menuitem_t menu_measure[] = {
   { MT_CALLBACK,            M_IMD,        "HARMONIC",         menu_measure_cb},
   { MT_CALLBACK,            M_OIP3,       "OIP3",             menu_measure_cb},
   { MT_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",   menu_measure_cb},
-  { MT_CALLBACK,            M_STOP_BAND,  "STOP\nBAND",     menu_measure_cb},
-  { MT_CALLBACK,            M_PASS_BAND,  "PASS\nBAND",     menu_measure_cb},
-  { MT_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",           menu_measure_cb},
+//  { MT_CALLBACK,            M_STOP_BAND,  "STOP\nBAND",     menu_measure_cb},
+//  { MT_CALLBACK,            M_PASS_BAND,  "PASS\nBAND",     menu_measure_cb},
+//  { MT_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",           menu_measure_cb},
   { MT_CANCEL, 0,               "\032 BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1501,7 +1501,7 @@ static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,          "ATTEN",        menu_atten},
   { MT_SUBMENU,0,           "CALC",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_OFFSET,  "EXTERN\nAMP",NULL},
+  { MT_KEYPAD,  KM_OFFSET,  "EXTERNAL\nAMP",NULL},
   { MT_SUBMENU,  0,         "TRIGGER",      menu_trigger},
   { MT_CANCEL, 0,           "\032 BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel

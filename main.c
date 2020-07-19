@@ -1210,29 +1210,30 @@ VNA_SHELL_FUNCTION(cmd_sweep)
   }
   uint32_t value0 = 0;
   uint32_t value1 = 0;
+  uint32_t value2 = 0;
   if (argc >= 1) value0 = my_atoui(argv[0]);
   if (argc >= 2) value1 = my_atoui(argv[1]);
+  if (argc >= 3) value2 = my_atoui(argv[2]);
 #if MAX_FREQ_TYPE != 5
 #error "Sweep mode possibly changed, check cmd_sweep function"
 #endif
   // Parse sweep {start|stop|center|span|cw} {freq(Hz)}
   // get enum ST_START, ST_STOP, ST_CENTER, ST_SPAN, ST_CW
   static const char sweep_cmd[] = "start|stop|center|span|cw";
-  if (argc == 2 && value0 == 0) {
-    int type = get_str_index(argv[0], sweep_cmd);
-    if (type == -1)
-      goto usage;
+  int type = get_str_index(argv[0], sweep_cmd);
+  if (type >=0) {
     set_sweep_frequency(type, value1);
     return;
   }
   //  Parse sweep {start(Hz)} [stop(Hz)]
-  if (value0)
-    set_sweep_frequency(ST_START, value0);
+  set_sweep_frequency(ST_START, value0);
   if (value1)
     set_sweep_frequency(ST_STOP, value1);
+  if (value2)
+    set_sweep_points(value2);
   return;
 usage:
-  shell_printf("usage: sweep {start(Hz)} [stop(Hz)]\r\n"\
+  shell_printf("usage: sweep {start(Hz)} [stop(Hz)] [points]\r\n"\
                "\tsweep {%s} {freq(Hz)}\r\n", sweep_cmd);
 }
 

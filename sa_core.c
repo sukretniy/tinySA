@@ -112,7 +112,7 @@ void reset_settings(int m)
   switch(m) {
   case M_LOW:
     minFreq = 0;
-    maxFreq = 520000000;
+    maxFreq = 350000000;
     set_sweep_frequency(ST_START, (uint32_t) 0);
     set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
     setting.attenuate = 30.0;
@@ -132,7 +132,7 @@ void reset_settings(int m)
   case M_GENLOW:
     setting.drive=8;
     minFreq = 0;
-    maxFreq = 520000000;
+    maxFreq = 350000000;
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
@@ -895,9 +895,9 @@ pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI
   while (f > config.correction_frequency[i] && i < CORRECTION_POINTS)
     i++;
   if (i >= CORRECTION_POINTS)
-    return(config.correction_value[CORRECTION_POINTS-1]);
+    return(scaled_correction_value[CORRECTION_POINTS-1] >> (SCALE_FACTOR - 5) );
   if (i == 0)
-    return(config.correction_value[0]);
+    return(scaled_correction_value[0] >> (SCALE_FACTOR - 5) );
   f = f - config.correction_frequency[i-1];
 #if 0
   uint32_t m = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR ;
@@ -2725,7 +2725,7 @@ int validate_signal_within(int i, float margin)
     return TS_CRITICAL;
   }
   test_fail_cause[i] = "Frequency ";
-  if (peakFreq < test_case[i].center * 1000000 - 200000 || test_case[i].center * 1000000 + 200000 < peakFreq )
+  if (peakFreq < test_case[i].center * 1000000 - 600000 || test_case[i].center * 1000000 + 600000 < peakFreq )
     return TS_FAIL;
   test_fail_cause[i] = "";
   return TS_PASS;
