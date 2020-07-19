@@ -2651,7 +2651,7 @@ static const struct {
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -38,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_END,       0,              0,      0,      0,      0,      0},
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5,  10,     -70 },      // 12 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,      0,      0},
@@ -2885,7 +2885,7 @@ common_silent:
   case TP_10MHZ:                              // 10MHz input
     set_mode(M_LOW);
     set_refer_output(2);
-    setting.step_delay_mode == SD_PRECISE;
+    setting.step_delay_mode = SD_PRECISE;
 //        set_step_delay(1);                      // Precise scanning speed
 #ifdef __SPUR__
     setting.spur = 1;
@@ -3222,7 +3222,9 @@ void calibrate(void)
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
     set_RBW(power_rbw[j]);
     test_prepare(i);
-    setting.step_delay_mode == SD_PRECISE;
+    setting.step_delay_mode = SD_PRECISE;
+    setting.agc = S_OFF;
+    setting.lna = S_OFF;
     test_acquire(i);                        // Acquire test
     local_test_status = test_validate(i);                       // Validate test
 //    chThdSleepMilliseconds(1000);
@@ -3231,7 +3233,7 @@ void calibrate(void)
       ili9341_drawstring_7x13("Calibration failed", 30, 120);
       goto quit;
     } else {
-      set_actual_power(-22.5);           // Should be -22.5dBm
+      set_actual_power(-25.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
       chThdSleepMilliseconds(1000);
     }
   }
