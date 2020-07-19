@@ -1089,9 +1089,13 @@ static void choose_active_marker(void)
 }
 
 #ifdef __ULTRA__
-static UI_FUNCTION_CALLBACK(menu_harmonic_cb)
+static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
 {
   (void)item;
+  if(b){
+    b->icon = setting.harmonic == data ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
   set_harmonic(data);
   draw_menu();
 }
@@ -1490,10 +1494,10 @@ static const menuitem_t menu_dfu[] = {
 #ifdef __ULTRA__
 static const menuitem_t menu_harmonic[] =
 {
-  { MT_CALLBACK, 2,     "2",                  menu_harmonic_cb},
-  { MT_CALLBACK, 3,     "3",                  menu_harmonic_cb},
-  { MT_CALLBACK, 4,     "4",                  menu_harmonic_cb},
-  { MT_CALLBACK, 5,     "5",                  menu_harmonic_cb},
+  { MT_ADV_CALLBACK, 2,     "2",              menu_harmonic_acb},
+  { MT_ADV_CALLBACK, 3,     "3",              menu_harmonic_acb},
+  { MT_ADV_CALLBACK, 4,     "4",              menu_harmonic_acb},
+  { MT_ADV_CALLBACK, 5,     "5",              menu_harmonic_acb},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1721,9 +1725,6 @@ static void fetch_numeric_target(void);
 static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, ui_button_t *button)
 {
-  int mark = false;
-  int m_auto = false;
-
   if (menu == menu_mode) {
     if (item == 4)
       button->param_1.text = menu_reffer_text[setting.refer+1];
@@ -1736,11 +1737,11 @@ static void menu_item_modify_attribute(
       button->param_1.text = menu_modulation_text[setting.modulation];
   } else if (menu == menu_display /* || menu == menu_displayhigh */) {
     if (item ==1 && setting.show_stored)
-      mark = true;
+      button->icon = BUTTON_ICON_CHECK;
     if (item == 3 && setting.subtract_stored && setting.show_stored)
-      mark = true;
+      button->icon = BUTTON_ICON_CHECK;
     if (item == 4 && setting.subtract_stored && !setting.show_stored)
-      mark = true;
+      button->icon = BUTTON_ICON_CHECK;
   } else if (menu == menu_settings) {
     if (item == 2)
       button->icon = setting.auto_IF ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
@@ -1755,38 +1756,12 @@ static void menu_item_modify_attribute(
       button->icon = setting.sweep_time_us != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
     else if (item == 5)
       button->icon = setting.fast_speedup != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
-#ifdef __ULTRA__
-  } else if (MT_MASK(menu[item].type) == MT_CALLBACK && menu == menu_harmonic) {
-    if (data == setting.harmonic)
-      mark = true;
-#endif
   } else if (menu == menu_reflevel) {
     if (item == 1)
       button->icon = setting.auto_reflevel ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
   } else if (menu == menu_atten) {
     if (item == 1)
       button->icon = setting.auto_attenuation ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
-  }
-  // Only keypad retrieves value
-  if (menu[item].type & MT_FORM && MT_MASK(menu[item].type) == MT_KEYPAD) {
-    keypad_mode = menu[item].data;
-    fetch_numeric_target();
-    button->param_1.text = uistat.text;
-  }
-
-  if (m_auto) {
-    button->icon = BUTTON_ICON_CHECK_AUTO;
-  } else if (mark) {
-    button->icon = BUTTON_ICON_CHECK;
-  }
-  if (ui_mode == UI_MENU && menu_is_form(menu)) {
-    //    if (item == 0)
-    //      redraw_frame();
-    if (item <= 1) {
-      area_width = 0;
-    }
-  }else{
-    area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
 }
 
