@@ -183,7 +183,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     if (strcmp(argv[0],"low") == 0)
       config.low_level_offset = v;
     else if (strcmp(argv[0],"high") == 0)
-      config.low_level_offset = v;
+      config.high_level_offset = v;
     else
       goto usage;
   } else {

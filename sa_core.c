@@ -63,6 +63,7 @@ void reset_settings(int m)
 {
 //  strcpy((char *)spi_buffer, dummy);
   setting.mode = m;
+  sweep_mode |= SWEEP_ENABLE;
   setting.unit_scale_index = 0;
   setting.unit_scale = 1;
   setting.unit = U_DBM;
@@ -2376,6 +2377,14 @@ void draw_cal_status(void)
 #endif
   ili9341_drawstring(buf, x, y);
 
+  if (is_paused()) {
+    color = BRIGHT_COLOR_GREEN;
+    ili9341_set_foreground(color);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("PAUSED", x, y);
+
+  }
+
 //  if (setting.mode == M_LOW) {
     // Attenuation
     if (setting.auto_attenuation)
@@ -2632,17 +2641,17 @@ static const struct {
 } test_case [TEST_COUNT] =
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
  {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
- {TC_BELOW,     TP_SILENT,      0.01,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
+ {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
  {TC_SIGNAL,    TP_10MHZ,       20,     7,      -37,    10,     -90 },      // 3
  {TC_SIGNAL,    TP_10MHZ,       30,     7,      -32,    10,     -90 },      // 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    7,     -60},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       430,    60,     -80,    0,      -80},       // 9 LPF cutoff
+ {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -38,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_END,       0,              0,      0,      0,      0,      0},
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -22.5,  10,     -70 },      // 12 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,      0,      0},
@@ -2807,7 +2816,7 @@ int test_validate(int i)
     goto common;
   case TC_MEASURE:
   case TC_SIGNAL:           // Validate signal
-  common: current_test_status = validate_signal_within(i, 5.0);
+  common: current_test_status = validate_signal_within(i, 10.0);
     if (current_test_status == TS_PASS) {            // Validate noise floor
       current_test_status = validate_below(i, 0, setting._sweep_points/2 - W2P(test_case[i].width));
       if (current_test_status == TS_PASS) {
@@ -2876,7 +2885,8 @@ common_silent:
   case TP_10MHZ:                              // 10MHz input
     set_mode(M_LOW);
     set_refer_output(2);
-    set_step_delay(1);                      // Precise scanning speed
+    setting.step_delay_mode = SD_PRECISE;
+//        set_step_delay(1);                      // Precise scanning speed
 #ifdef __SPUR__
     setting.spur = 1;
 #endif
@@ -2891,6 +2901,7 @@ common_silent:
     break;
   case TP_30MHZ:
     set_mode(M_LOW);
+    maxFreq = 520000000;            // needed to measure the LPF rejection
     set_refer_output(0);
  //   set_step_delay(1);                      // Do not set !!!!!
 #ifdef __SPUR__
@@ -3211,6 +3222,9 @@ void calibrate(void)
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
     set_RBW(power_rbw[j]);
     test_prepare(i);
+    setting.step_delay_mode = SD_PRECISE;
+    setting.agc = S_OFF;
+    setting.lna = S_OFF;
     test_acquire(i);                        // Acquire test
     local_test_status = test_validate(i);                       // Validate test
 //    chThdSleepMilliseconds(1000);
@@ -3219,7 +3233,7 @@ void calibrate(void)
       ili9341_drawstring_7x13("Calibration failed", 30, 120);
       goto quit;
     } else {
-      set_actual_power(-22.5);           // Should be -22.5dBm
+      set_actual_power(-25.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
       chThdSleepMilliseconds(1000);
     }
   }
