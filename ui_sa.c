@@ -949,8 +949,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
 {
   (void)item;
   if(b){
-	if (markers[data-1].enabled) b->icon = BUTTON_ICON_CHECK;
-	b->param_1.i = data;
+    if (markers[data-1].enabled) b->icon = BUTTON_ICON_CHECK;
+    b->param_1.i = data;
     return;
   }
   markers[data-1].enabled = true;
@@ -963,8 +963,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
 {
   (void)item;
+  if (active_marker == -1) return;
   if(b){
-    if (active_marker >= 0 && markers[active_marker].enabled == M_ENABLED) {
+    if (markers[active_marker].enabled == M_ENABLED) {
       b->icon = BUTTON_ICON_NOCHECK;
       if (data & markers[active_marker].mtype)
         b->icon = BUTTON_ICON_CHECK;
@@ -1423,7 +1424,7 @@ const menuitem_t menu_marker_search[] = {
   { MT_CALLBACK, 1, "MIN\n" "\033 RIGHT", menu_marker_search_cb },
   { MT_CALLBACK, 2, "MAX\n" "\032 LEFT",  menu_marker_search_cb },
   { MT_CALLBACK, 3, "MAX\n" "\033 RIGHT", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "TRACKING",           menu_marker_tracking_acb },
+  { MT_ADV_CALLBACK, 0, "TRACKING",       menu_marker_tracking_acb },
   { MT_CANCEL, 0, "\032 BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1432,7 +1433,7 @@ const menuitem_t menu_marker_modify[] = {
   { MT_ADV_CALLBACK, M_REFERENCE,   "REFER",        menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_DELTA,       "DELTA",        menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_NOISE,       "NOISE",        menu_marker_modify_acb},
-  { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING",     menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING",     menu_marker_tracking_acb},
   { MT_ADV_CALLBACK, M_NORMAL,      "NORMAL",       menu_marker_modify_acb},
   { MT_SUBMENU,  0,             "SEARCH",       menu_marker_search},
   { MT_CALLBACK, M_DELETE,      "DELETE",       menu_marker_delete_cb},

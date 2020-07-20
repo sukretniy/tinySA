@@ -846,7 +846,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb){
   (void)item;
   (void)data;
-  if (active_marker < 0) return;
+  if (active_marker == -1) return;
   if(b){
     b->icon = markers[active_marker].mtype & M_TRACKING ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     return;
