@@ -746,7 +746,7 @@ void set_offset(float offset)
 {
   setting.offset = offset;
   force_set_markmap();
-  //dirty = true;             // No HW update required, only status panel refresh
+  dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
 }
 
 void set_trigger_level(float trigger_level)
