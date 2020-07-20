@@ -870,7 +870,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_atten_acb)
   (void)item;
   (void)data;
   if(b){
-    b->icon = setting.auto_attenuation ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->icon = setting.auto_attenuation ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
   set_auto_attenuation();
@@ -894,7 +894,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_reflevel_acb)
   (void)item;
   (void)data;
   if(b){
-	if (setting.auto_reflevel) b->icon = BUTTON_ICON_CHECK;
+    b->icon = setting.auto_reflevel ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
   set_auto_reflevel(true);
@@ -949,7 +949,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
 {
   (void)item;
   if(b){
-    if (markers[data-1].enabled) b->icon = BUTTON_ICON_CHECK;
+    b->icon = markers[data-1].enabled ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     b->param_1.i = data;
     return;
   }
@@ -1759,10 +1759,10 @@ static void menu_item_modify_attribute(
       button->icon = setting.fast_speedup != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
   } else if (menu == menu_reflevel) {
     if (item == 1)
-      button->icon = setting.auto_reflevel ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
+      button->icon = setting.auto_reflevel ? BUTTON_ICON_GROUP: BUTTON_ICON_GROUP_CHECKED;
   } else if (menu == menu_atten) {
     if (item == 1)
-      button->icon = setting.auto_attenuation ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
+      button->icon = setting.auto_attenuation ? BUTTON_ICON_GROUP: BUTTON_ICON_GROUP_CHECKED;
   }
 }
 
