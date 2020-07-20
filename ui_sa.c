@@ -562,23 +562,31 @@ static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
   redraw_request |= REDRAW_CAL_STATUS;
 }
 
-static UI_FUNCTION_CALLBACK(menu_load_preset_cb)
+static UI_FUNCTION_ADV_CALLBACK(menu_load_preset_acb)
 {
   (void)item;
+  if(b){
+    b->param_1.u = data;
+    return;
+  }
   if (caldata_recall(data) == -1) {
     if (data == 0)
       reset_settings(setting.mode);  // Restore all defaults
-     else {
+    else {
       draw_menu();
       return;
-     }
+    }
   }
   menu_move_back_and_leave_ui();
 }
 
-static UI_FUNCTION_CALLBACK(menu_store_preset_cb)
+static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
 {
   (void)item;
+  if(b){
+    b->param_1.u = data;
+    return;
+  }
   if (data == 100) {
     reset_settings(M_LOW);  // Restore all defaults in Low mode
     set_refer_output(-1);
@@ -701,11 +709,14 @@ static UI_FUNCTION_ADV_CALLBACK(menu_modulation_acb)
 //  draw_cal_status();
 }
 
+//                               0      1       2       3      4      5      6      7
+const char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
 static UI_FUNCTION_ADV_CALLBACK(menu_reffer_acb)
 {
   (void)item;
   if (b){
     b->icon = setting.refer == ((int)data-1) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->param_1.text = menu_reffer_text[data];
     return;
   }
 //Serial.println(item);
@@ -730,8 +741,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_drive_acb)
 //  ui_mode_normal();
 //  draw_cal_status();
 }
-
-
 
 #ifdef __SPUR__
 static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
@@ -901,9 +910,20 @@ static UI_FUNCTION_ADV_CALLBACK(menu_reflevel_acb)
   menu_move_back_and_leave_ui();
 }
 
-static UI_FUNCTION_CALLBACK(menu_storage_cb)
+static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
 {
   (void)item;
+  if(b){
+    if (data == 0 && setting.show_stored)
+      b->icon = BUTTON_ICON_CHECK;
+    if (setting.subtract_stored){
+      if (data == 2 && setting.show_stored)
+        b->icon = BUTTON_ICON_CHECK;
+      if (data == 3 && !setting.show_stored)
+        b->icon = BUTTON_ICON_CHECK;
+    }
+    return;
+  }
   switch(data) {
     case 0:
       set_storage();
@@ -1181,10 +1201,14 @@ static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
 //  draw_cal_status();
 }
 
-static UI_FUNCTION_CALLBACK(menu_outputmode_cb)
+static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
 {
   (void) data;
   (void) item;
+  if(b){
+    b->param_1.text = setting.mute ? "OFF" : "ON";
+    return;
+  }
   toggle_mute();
   draw_menu();
 }
@@ -1201,27 +1225,27 @@ static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
 }
 
 // ===[MENU DEFINITION]=========================================================
-
+#if 0
 static const menuitem_t menu_store_preset_high[8] =
 {
-  { MT_CALLBACK, 0,     "STORE\nSTARTUP",menu_store_preset_cb},
-  { MT_CALLBACK, 5,     "STORE 5"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 6,     "STORE 6"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 7,     "STORE 7"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 8,     "STORE 8"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 100,   "FACTORY\nDEFAULTS",menu_store_preset_cb},
+  { MT_ADV_CALLBACK, 0,  "STORE\nSTARTUP",   menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 5,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 6,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 7,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 8,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
-#if 0
+
 static const menuitem_t menu_load_preset_high[] =
 {
-  { MT_CALLBACK, 0,     "LOAD\nSTARTUP",menu_load_preset_cb},
-  { MT_CALLBACK, 5,     "LOAD 5"  ,      menu_load_preset_cb},
-  { MT_CALLBACK, 6,     "LOAD 6"  ,      menu_load_preset_cb},
-  { MT_CALLBACK, 7,     "LOAD 7"  ,      menu_load_preset_cb},
-  { MT_CALLBACK, 8,     "LOAD 8"  ,      menu_load_preset_cb},
-  { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset_high},
+  { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP",menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 5, "LOAD %d",      menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 6, "LOAD %d",      menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 7, "LOAD %d",      menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 8, "LOAD %s",      menu_load_preset_acb},
+  { MT_SUBMENU,  0,     "STORE"  ,      menu_store_preset_high},
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
@@ -1229,23 +1253,23 @@ static const menuitem_t menu_load_preset_high[] =
 
 static const menuitem_t menu_store_preset[] =
 {
-  { MT_CALLBACK, 0,     "STORE AS\nSTARTUP",menu_store_preset_cb},
-  { MT_CALLBACK, 1,     "STORE 1"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 2,     "STORE 2"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 3,     "STORE 3"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 4,     "STORE 4"  ,      menu_store_preset_cb},
-  { MT_CALLBACK, 100,   "FACTORY\nDEFAULTS",menu_store_preset_cb},
+  { MT_ADV_CALLBACK, 0,  "STORE AS\nSTARTUP",menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 1,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 2,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 3,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 4,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
 static const menuitem_t menu_load_preset[] =
 {
-  { MT_CALLBACK, 0,     "LOAD\nSTARTUP",menu_load_preset_cb},
-  { MT_CALLBACK, 1,     "LOAD 1"  ,      menu_load_preset_cb},
-  { MT_CALLBACK, 2,     "LOAD 2"  ,      menu_load_preset_cb},
-  { MT_CALLBACK, 3,     "LOAD 3"  ,      menu_load_preset_cb},
-  { MT_CALLBACK, 4,     "LOAD 4"  ,      menu_load_preset_cb},
+  { MT_ADV_CALLBACK, 0,     "LOAD\nSTARTUP",menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 1,     "LOAD %d"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 2,     "LOAD %d"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 3,     "LOAD %d"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 4,     "LOAD %d"  ,    menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset},
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
@@ -1306,7 +1330,7 @@ const menuitem_t  menu_modulation[] = {
 };
 
 const menuitem_t  menu_lowoutputmode[] = {
-  { MT_FORM | MT_CALLBACK, 0,                   "LOW OUTPUT            %s",       menu_outputmode_cb},
+  { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           "FREQ: %s",         "10kHz..350MHz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
   { MT_FORM | MT_SUBMENU,  0,                   "MODULATION: %s",   menu_modulation},
@@ -1318,7 +1342,7 @@ const menuitem_t  menu_lowoutputmode[] = {
 };
 
 const menuitem_t  menu_highoutputmode[] = {
-  { MT_FORM | MT_CALLBACK,  0,          "HIGH OUTPUT           %s",      menu_outputmode_cb},
+  { MT_FORM | MT_CALLBACK,  0,          "HIGH OUTPUT           %s",      menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  "FREQ: %s",         "240MHz..960MHz"},
   { MT_FORM | MT_SUBMENU,   0,          "LEVEL: %+ddBm",    menu_drive_wide},
   { MT_FORM | MT_SUBMENU,   0,          "MODULATION: %s",   menu_modulation},
@@ -1377,26 +1401,25 @@ static const menuitem_t menu_scale_per[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 #endif
-//                               0      1       2       3      4      5      6      7
-const char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
+
 #if 0
 static const menuitem_t menu_reffer2[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 5, "3MHz",  menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 6, "2MHz",  menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 7, "1MHz",  menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 5, "%s",  menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 6, "%s",  menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 7, "%s",  menu_reffer_acb},
   { MT_FORM | MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 #endif
 
 static const menuitem_t menu_reffer[] = {
-  { MT_FORM | MT_ADV_CALLBACK,  0,   "OFF", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  1, "30MHz", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  2, "15MHz", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  3, "10MHz", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  4,  "4MHz", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  6,  "2MHz", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  7,  "1MHz", menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0, "%s", menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  1, "%s", menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  2, "%s", menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  3, "%s", menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  4, "%s", menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  6, "%s", menu_reffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  7, "%s", menu_reffer_acb},
 //  { MT_FORM | MT_SUBMENU,  0, "\033 MORE", menu_reffer2},
   { MT_FORM | MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
@@ -1480,7 +1503,7 @@ const menuitem_t menu_marker_ops[] = {
 static const menuitem_t menu_marker[] = {
 //  { MT_SUBMENU,  0, "SELECT\nMARKER",     menu_marker_sel},
   { MT_SUBMENU,  0, "MODIFY\nMARKERS",    menu_marker_select},
-  { MT_SUBMENU,  0, "MARKER\nOPS",        menu_marker_ops},
+  { MT_SUBMENU,  0, "MARKER OPS",        menu_marker_ops},
   { MT_SUBMENU,  0, "SEARCH\nMARKER",     menu_marker_search},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -1517,10 +1540,10 @@ static const menuitem_t menu_scanning_speed[] =
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-const menuitem_t menu_sweep_points[] = {
-  { MT_ADV_CALLBACK, 0, "145p", menu_points_acb },
-  { MT_ADV_CALLBACK, 1, "290p", menu_points_acb },
-  { MT_CANCEL,  -1, S_LARROW" BACK", NULL },
+static const menuitem_t menu_sweep_points[] = {
+  { MT_ADV_CALLBACK, 0, "145 point", menu_points_acb },
+  { MT_ADV_CALLBACK, 1, "290 point", menu_points_acb },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
@@ -1535,7 +1558,6 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
-
 
 static const menuitem_t menu_settings2[] =
 {
@@ -1601,10 +1623,10 @@ static const menuitem_t menu_config[] = {
 
 static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,0,          "PAUSE\nSWEEP",   menu_pause_acb},
-  { MT_CALLBACK,0,              "STORE\nTRACE",   menu_storage_cb},
-  { MT_CALLBACK,1,              "CLEAR\nSTORED",  menu_storage_cb},
-  { MT_CALLBACK,2,              "SUBTRACT\nSTORED",menu_storage_cb},
-  { MT_CALLBACK,3,              "NORMALIZE",        menu_storage_cb},
+  { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
+  { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
+  { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
+  { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
   { MT_ADV_CALLBACK,4,          "WATER\nFALL",        menu_waterfall_acb},
   { MT_SUBMENU, 0,              "SWEEP\nSETTINGS",    menu_sweep_speed},
 //  { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",    NULL},
@@ -1655,7 +1677,7 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_STOP,    "STOP",             NULL},
   { MT_KEYPAD,  KM_CENTER,  "CENTER",           NULL},
   { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
-  { MT_KEYPAD,  KM_CW,      "ZERO\nSPAN",          NULL},
+  { MT_KEYPAD,  KM_CW,      "ZERO SPAN",        NULL},
   { MT_SUBMENU,0,           "RBW",              menu_rbw},
 #ifdef __SPUR__
   { MT_ADV_CALLBACK | MT_LOW,0,           "SPUR\nREMOVAL", menu_spur_acb},
@@ -1663,8 +1685,6 @@ static const menuitem_t menu_stimulus[] = {
   { MT_CANCEL,  0,          "\032 BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
 };
-
-
 
 static const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
@@ -1697,7 +1717,7 @@ const menuitem_t menu_topultra[] = {
 
 const menuitem_t menu_top[] = {
   { MT_SUBMENU, 0,  "PRESET",       menu_load_preset},
-  { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
+  { MT_SUBMENU,  0, "FREQUENCY",    menu_stimulus},
   { MT_SUBMENU,  0, "LEVEL",        menu_level},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
@@ -1727,22 +1747,13 @@ static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, ui_button_t *button)
 {
   if (menu == menu_mode) {
-    if (item == 4)
+    if (item == 4) // CAL OUTPUT menu
       button->param_1.text = menu_reffer_text[setting.refer+1];
-  } else if (menu == menu_highoutputmode && item == 2){
+  } else if (menu == menu_highoutputmode && item == 2){ // LEVEL mode
     button->param_1.i = menu_drive_value[setting.drive];
   } else if (menu == menu_lowoutputmode || menu == menu_highoutputmode) {
-    if (item == 0)
-      button->param_1.text = setting.mute ? "OFF" : "ON";
-    else if (item == 3)
+    if (item == 3)
       button->param_1.text = menu_modulation_text[setting.modulation];
-  } else if (menu == menu_display /* || menu == menu_displayhigh */) {
-    if (item ==1 && setting.show_stored)
-      button->icon = BUTTON_ICON_CHECK;
-    if (item == 3 && setting.subtract_stored && setting.show_stored)
-      button->icon = BUTTON_ICON_CHECK;
-    if (item == 4 && setting.subtract_stored && !setting.show_stored)
-      button->icon = BUTTON_ICON_CHECK;
   } else if (menu == menu_settings) {
     if (item == 2)
       button->icon = setting.auto_IF ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
@@ -1751,8 +1762,7 @@ static void menu_item_modify_attribute(
       button->icon = setting.step_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
     else if (item == 1)
       button->icon =setting.offset_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
-  }
-  else if (menu == menu_sweep_speed) {
+  } else if (menu == menu_sweep_speed) {
     if (item == 3)
       button->icon = setting.sweep_time_us != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
     else if (item == 5)

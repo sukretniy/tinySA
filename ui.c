@@ -1719,13 +1719,6 @@ draw_menu_buttons(const menuitem_t *menu)
       continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
-    // Change area update size for form and menu (not need, apply on menu back, or menu select)
-//    if (i == 0 && ui_mode == UI_MENU){
-//      if (menu[i].type & MT_FORM)
-//        area_width = 0;
-//      else
-//        area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
-//    }
     button.icon = BUTTON_ICON_NONE;
     // Border width
     button.border = MENU_BUTTON_BORDER;
