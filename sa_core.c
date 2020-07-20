@@ -2642,14 +2642,14 @@ static const struct {
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
  {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
  {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
- {TC_SIGNAL,    TP_10MHZ,       20,     7,      -37,    10,     -90 },      // 3
- {TC_SIGNAL,    TP_10MHZ,       30,     7,      -32,    10,     -90 },      // 4
+ {TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90 },      // 3
+ {TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90 },      // 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    7,     -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
- {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -38,    10,     -60 },      // 10 Switch isolation using high attenuation
+ {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_END,       0,              0,      0,      0,      0,      0},
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
