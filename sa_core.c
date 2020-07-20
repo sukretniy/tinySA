@@ -2816,7 +2816,7 @@ int test_validate(int i)
     goto common;
   case TC_MEASURE:
   case TC_SIGNAL:           // Validate signal
-  common: current_test_status = validate_signal_within(i, 5.0);
+  common: current_test_status = validate_signal_within(i, 10.0);
     if (current_test_status == TS_PASS) {            // Validate noise floor
       current_test_status = validate_below(i, 0, setting._sweep_points/2 - W2P(test_case[i].width));
       if (current_test_status == TS_PASS) {
