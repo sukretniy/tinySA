@@ -17,272 +17,198 @@
  * Boston, MA 02110-1301, USA.
  */
 
-const uint16_t left_icons [] =
+#define FORM_ICON_WIDTH      16
+#define FORM_ICON_HEIGHT     16
+
+static const uint16_t left_icons [] =
 {
-#define I_EMPTY 0*16
-        0x0000,
-        0x0000,
-        0x0000,
-        0x0001,
-        0x0001,
-        0x0001,
-        0x0000,
-        0x0000,
-        0x0000,
-        0x0000,
-        0x0001,
-        0x0001,
-        0x0001,
-        0x0000,
-        0x0000,
-        0x0000,
+#define I_EMPTY   (0*16)
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000001,
+  0b0000000000000001,
+  0b0000000000000001,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000001,
+  0b0000000000000001,
+  0b0000000000000001,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000000,
 
-#define I_HIGH_INPUT 1*16
-        /* +-----------------+
-           |                 |
-           |          **     |
-           |           ***   |
-           |    ************ |
-           |           ***   |
-           |          **     |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           +-----------------+ */
-        0x0000,
-        0x0000,
-        0x0060,
-        0x0039,
-        0x0fff,
-        0x0039,
-        0x0060,
-        0x0000,
-        0x0000,
-        0x0000,
-        0x0001,
-        0x0001,
-        0x0001,
-        0x0000,
-        0x0000,
-        0x0000,
+#define I_HIGH_INPUT (1*16)
+                      // +----------------+
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+  0b0000000001100000, // |         **     |
+  0b0000000000111001, // |          ***  *|
+  0b0000111111111111, // |   *************|
+  0b0000000000111001, // |          ***  *|
+  0b0000000001100000, // |         **     |
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+  0b0000000000000001, // |                |
+  0b0000000000000001, // |                |
+  0b0000000000000001, // |                |
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+                      // +----------------+
+#define I_LOW_INPUT (2*16)
+                      // +----------------+
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+  0b0000000000000001, // |                |
+  0b0000000000000001, // |                |
+  0b0000000000000001, // |                |
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+  0b0000000001100000, // |         **     |
+  0b0000000000111001, // |         ****  *|
+  0b0000111111111111, // |   *************|
+  0b0000000000111001, // |         ****  *|
+  0b0000000001100000, // |         **     |
+  0b0000000000000000, // |                |
+  0b0000000000000000, // |                |
+                      // +----------------+
+#define I_LOW_OUTPUT (3*16)
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000001,
+  0b0000000000000001,
+  0b0000000000000001,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000110000000,
+  0b0000011100000001,
+  0b0000111111111111,
+  0b0000011100000001,
+  0b0000000110000000,
+  0b0000000000000000,
+  0b0000000000000000,
 
-#define I_LOW_INPUT 2*16
-        /* +-----------------+
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |                 |
-           |          **     |
-           |          ****   |
-           |    ************ |
-           |          ****   |
-           |          **     |
-           |                 |
-           +-----------------+ */
-        0x0000,
-        0x0000,
-        0x0000,
-        0x0001,
-        0x0001,
-        0x0001,
-        0x0000,
-        0x0000,
-        0x0000,
-        0x0060,
-        0x0039,
-        0x0fff,
-        0x0039,
-        0x0060,
-        0x0000,
-        0x0000,
+#define I_HIGH_OUTPUT (4*16)
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000110000000,
+  0b0000011100000001,
+  0b0000111111111111,
+  0b0000011100000001,
+  0b0000000110000000,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000001,
+  0b0000000000000001,
+  0b0000000000000001,
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000000000,
 
-#define I_LOW_OUTPUT 3*16
-
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000000000001,
-        0b0000000000000001,
-        0b0000000000000001,
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000110000000,
-        0b0000011100000001,
-        0b0000111111111111,
-        0b0000011100000001,
-        0b0000000110000000,
-        0b0000000000000000,
-        0b0000000000000000,
-
-#define I_HIGH_OUTPUT 4*16
-
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000110000000,
-        0b0000011100000001,
-        0b0000111111111111,
-        0b0000011100000001,
-        0b0000000110000000,
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000000000001,
-        0b0000000000000001,
-        0b0000000000000001,
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000000000000,
-
-#define I_CONNECT 5*16
-
-        0b0000000000000000,
-        0b0000000000000000,
-        0b0000000000110000,
-        0b0000000000111101,
-        0b0000001111111111,
-        0b0000010000111101,
-        0b0000100000110000,
-        0b0001000000000000,
-        0b0001000000000000,
-        0b0000100000110000,
-        0b0000010000111101,
-        0b0000001111111111,
-        0b0000000000111101,
-        0b0000000000110000,
-        0b0000000000000000,
-        0b0000000000000000,
-
+#define I_CONNECT (5*16)
+  0b0000000000000000,
+  0b0000000000000000,
+  0b0000000000110000,
+  0b0000000000111101,
+  0b0000001111111111,
+  0b0000010000111101,
+  0b0000100000110000,
+  0b0001000000000000,
+  0b0001000000000000,
+  0b0000100000110000,
+  0b0000010000111101,
+  0b0000001111111111,
+  0b0000000000111101,
+  0b0000000000110000,
+  0b0000000000000000,
+  0b0000000000000000,
 };
 
 const uint16_t right_icons [] =
 {
 #define I_SA    0
- /* Character 0 (0x00):
-    width 16
-    +-----------------+
-    |                 |
-    | *************** |
-    | *             * |
-    |**             * |
-    | *  *          * |
-    | *  *          * |
-    | *  *   *      * |
-    | *  *   *      * |
-    | *  *   *   *  * |
-    | *  * * *   *  * |
-    | *  * * * * *  * |
-    | *  * * * * *  * |
-    |** *********** * |
-    | *             * |
-    | *************** |
-    |                 |
-    +-----------------+ */
- 0x0000,
- 0x7fff,
- 0x4001,
- 0xc001,
- 0xc001,
- 0xc001,
- 0x4801,
- 0x4801,
- 0x4a89,
- 0x4aa9,
- 0xcaa9,
- 0xdffd,
- 0xc001,
- 0x4001,
- 0x7fff,
- 0x0000,
+                      // +----------------+
+  0b0000000000000000, // |                |
+  0b0111111111111111, // | ***************|
+  0b0100000000000001, // | *             *|
+  0b1100000000000001, // |**             *|
+  0b1100000000000001, // |**  *          *|
+  0b1100000000000001, // |**  *          *|
+  0b0100100000000001, // | *  *   *      *|
+  0b0100100000000001, // | *  *   *      *|
+  0b0100101010001001, // | *  *   *   *  *|
+  0b0100101010101001, // | *  * * *   *  *|
+  0b1100101010101001, // |**  * * * * *  *|
+  0b1101111111111101, // |**  * * * * *  *|
+  0b1100000000000001, // |** *********** *|
+  0b0100000000000001, // | *             *|
+  0b0111111111111111, // | ***************|
+  0b0000000000000000, // |                |
+                      // +----------------+
 
 #define I_GEN   1
- /* Character 0 (0x00):
-    width 16
-    +-----------------+
-    |                 |
-    | *************** |
-    | *             * |
-    |**             * |
-    | *  *****   ** * |
-    | *  *   *   *  * |
-    | *  *   *   *  * |
-    | *  *   *   *  * |
-    | *  *   *   *  * |
-    | *  *   *   *  * |
-    | *  *   *   *  * |
-    | * **   *****  * |
-    |**             * |
-    | *             * |
-    | *************** |
-    |                 |
-    +-----------------+ */
- 0x0000,
- 0x7fff,
- 0x4001,
- 0xc001,
- 0xcf8d,
- 0xc889,
- 0x4889,
- 0x4889,
- 0x4889,
- 0x4889,
- 0xc889,
- 0xd8f9,
- 0xc001,
- 0x4001,
- 0x7fff,
- 0x0000,
-
+                      // +----------------+
+  0b0000000000000000, // |                |
+  0b0111111111111111, // | ***************|
+  0b0100000000000001, // | *             *|
+  0b1100000000000001, // |**             *|
+  0b1100111110001101, // |**  *****   ** *|
+  0b1100100010001001, // |**  *   *   *  *|
+  0b0100100010001001, // | *  *   *   *  *|
+  0b0100100010001001, // | *  *   *   *  *|
+  0b0100100010001001, // | *  *   *   *  *|
+  0b0100100010001001, // | *  *   *   *  *|
+  0b1100100010001001, // |**  *   *   *  *|
+  0b1101100011111001, // |** **   *****  *|
+  0b1100000000000001, // |**             *|
+  0b0100000000000001, // | *             *|
+  0b0111111111111111, // | ***************|
+  0b0000000000000000, // |                |
+                       // +----------------+
 #define I_CONFIG 2
-
-        0b0000000000000000,
-        0b0111111111111111,
-        0b0100000000000001,
-        0b1100000010000001,
-        0b1100001111000001,
-        0b1100011110001001,
-        0b0100011100011101,
-        0b0100011110111001,
-        0b0100001111111001,
-        0b0100011111110001,
-        0b1100111110000001,
-        0b1101111100000001,
-        0b1100111000000001,
-        0b0100000000000001,
-        0b0111111111111111,
-        0b0000000000000000,
+  0b0000000000000000,
+  0b0111111111111111,
+  0b0100000000000001,
+  0b1100000010000001,
+  0b1100001111000001,
+  0b1100011110001001,
+  0b0100011100011101,
+  0b0100011110111001,
+  0b0100001111111001,
+  0b0100011111110001,
+  0b1100111110000001,
+  0b1101111100000001,
+  0b1100111000000001,
+  0b0100000000000001,
+  0b0111111111111111,
+  0b0000000000000000,
 
 #define I_SINUS 3
-
-        0b0000000000000000,
-        0b0111111111111111,  // 1
-        0b0100000000000001,  // 2
-        0b1100000000000001,  // 3
-        0b1100000000110001,  // 4
-        0b1100000001001001,  // 5
-        0b0100000010000101,  // 6
-        0b0101000010000101,  // 7
-        0b0101000010000101,  // 8
-        0b0101000010000001,  // 9
-        0b1100100100000001,  //10
-        0b1100011000000001,  //11
-        0b1100000000000001,  //12
-        0b0100000000000001,  //13
-        0b0111111111111111,  //14
-        0b0000000000000000,
+  0b0000000000000000,
+  0b0111111111111111,  // 1
+  0b0100000000000001,  // 2
+  0b1100000000000001,  // 3
+  0b1100000000110001,  // 4
+  0b1100000001001001,  // 5
+  0b0100000010000101,  // 6
+  0b0101000010000101,  // 7
+  0b0101000010000101,  // 8
+  0b0101000010000001,  // 9
+  0b1100100100000001,  //10
+  0b1100011000000001,  //11
+  0b1100000000000001,  //12
+  0b0100000000000001,  //13
+  0b0111111111111111,  //14
+  0b0000000000000000,
 };
 
 enum {
@@ -510,16 +436,17 @@ static const struct {
 };
 
 // ===[MENU CALLBACKS]=========================================================
-
-
-int generator_enabled = false;
-
-extern const menuitem_t  menu_lowoutputmode[];
-extern const menuitem_t  menu_highoutputmode[];
-extern const menuitem_t  menu_modulation[];
-extern const menuitem_t  menu_top[];
-extern const menuitem_t  menu_tophigh[];
-extern const menuitem_t  menu_topultra[];
+static const menuitem_t  menu_lowoutputmode[];
+static const menuitem_t  menu_highoutputmode[];
+static const menuitem_t  menu_modulation[];
+static const menuitem_t  menu_top[];
+static const menuitem_t  menu_reffer[];
+static const menuitem_t  menu_modulation[];
+static const menuitem_t  menu_drive_wide[];
+#ifdef __ULTRA__
+static const menuitem_t  menu_tophigh[];
+static const menuitem_t  menu_topultra[];
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
 {
@@ -709,6 +636,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_modulation_acb)
 //  draw_cal_status();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    b->param_1.text = menu_modulation_text[setting.modulation];
+    return;
+  }
+  menu_push_submenu(menu_modulation);
+}
+
 //                               0      1       2       3      4      5      6      7
 const char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
 static UI_FUNCTION_ADV_CALLBACK(menu_reffer_acb)
@@ -726,6 +663,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_reffer_acb)
 //  draw_cal_status();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_sreffer_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    b->param_1.text = menu_reffer_text[setting.refer+1];
+    return;
+  }
+  menu_push_submenu(menu_reffer);
+}
+
 const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
 static UI_FUNCTION_ADV_CALLBACK(menu_drive_acb)
 {
@@ -740,6 +687,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_drive_acb)
   menu_move_back();
 //  ui_mode_normal();
 //  draw_cal_status();
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    b->param_1.i = menu_drive_value[setting.drive];
+    return;
+  }
+  menu_push_submenu(menu_drive_wide);
 }
 
 #ifdef __SPUR__
@@ -764,7 +721,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 {
   (void)item;
   if (b){
-	b->icon = data == setting.measurement ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->icon = data == setting.measurement ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
   menu_move_back();
@@ -1056,17 +1013,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_unit_acb)
   menu_move_back_and_leave_ui();
 }
 
+#if 0
 enum {
   S_20,S_10,S_5,S_2,S_1,S_P5,S_P2,S_P1,S_P05,S_P02,S_P01
 };
-//static const float menu_scale_per_value[11]={20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01};
+static const float menu_scale_per_value[11]={20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01};
 
-//static void menu_scale_per_cb(int item, uint8_t data)
-//{
-//  (void)item;
-//  set_scale(menu_scale_per_value[data]);
-//  menu_move_back_and_leave_ui();
-//}
+static UI_FUNCTION_ADV_CALLBACK(menu_scale_per_acb)
+{
+  (void)item;
+  if(b){
+    return;
+  }
+  set_scale(menu_scale_per_value[data]);
+  menu_move_back_and_leave_ui();
+}
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
 {
@@ -1265,11 +1227,11 @@ static const menuitem_t menu_store_preset[] =
 
 static const menuitem_t menu_load_preset[] =
 {
-  { MT_ADV_CALLBACK, 0,     "LOAD\nSTARTUP",menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 1,     "LOAD %d"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 2,     "LOAD %d"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 3,     "LOAD %d"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 4,     "LOAD %d"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP",menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 1, "LOAD %d"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 2, "LOAD %d"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 3, "LOAD %d"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 4, "LOAD %d"  ,    menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset},
   { MT_CANCEL,   255, "\032 BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
@@ -1317,7 +1279,7 @@ static const menuitem_t menu_drive_wide[] = {
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-const menuitem_t  menu_modulation[] = {
+static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
   { MT_FORM | MT_ADV_CALLBACK, MO_NONE,     "NONE",      menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_1kHz,  "AM 1kHz",   menu_modulation_acb},
@@ -1329,23 +1291,23 @@ const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
-const menuitem_t  menu_lowoutputmode[] = {
+static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           "FREQ: %s",         "10kHz..350MHz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
-  { MT_FORM | MT_SUBMENU,  0,                   "MODULATION: %s",   menu_modulation},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "MODULATION: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
-  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s",   "-70..70"},
+  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
-  { MT_FORM | MT_CANCEL,   0,           "MODE",                     NULL },
+  { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
-const menuitem_t  menu_highoutputmode[] = {
+static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_CALLBACK,  0,          "HIGH OUTPUT           %s",      menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  "FREQ: %s",         "240MHz..960MHz"},
-  { MT_FORM | MT_SUBMENU,   0,          "LEVEL: %+ddBm",    menu_drive_wide},
-  { MT_FORM | MT_SUBMENU,   0,          "MODULATION: %s",   menu_modulation},
+  { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
+  { MT_FORM | MT_ADV_CALLBACK,   0,     "MODULATION: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
@@ -1377,26 +1339,25 @@ static const menuitem_t menu_rbw[] = {
 
 #if 0
 static const menuitem_t menu_scale_per2[] = {
-  { MT_CALLBACK, 6, "0.1 /",   menu_scale_per_cb},
-  { MT_CALLBACK, 7, "0.2 /",   menu_scale_per_cb},
-  { MT_CALLBACK, 8, "0.05/",   menu_scale_per_cb},
-  { MT_CALLBACK, 9, "0.02/",   menu_scale_per_cb},
-  { MT_CALLBACK,10, "0.01/",   menu_scale_per_cb},
-//  { MT_CALLBACK,11, "0.005/",   menu_scale_per_cb},
-//  { MT_SUBMENU,  0, "\033 MORE",    menu_scale_per2},
+  { MT_ADV_CALLBACK, 6, "0.1 /",   menu_scale_per_acb},
+  { MT_ADV_CALLBACK, 7, "0.2 /",   menu_scale_per_acb},
+  { MT_ADV_CALLBACK, 8, "0.05/",   menu_scale_per_acb},
+  { MT_ADV_CALLBACK, 9, "0.02/",   menu_scale_per_acb},
+  { MT_ADV_CALLBACK,10, "0.01/",   menu_scale_per_acb},
+//{ MT_ADV_CALLBACK,11, "0.005/",  menu_scale_per_acb},
+//{ MT_SUBMENU,  0, "\033 MORE",   menu_scale_per2},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_scale_per[] = {
-  { MT_CALLBACK, 0, " 20/",   menu_scale_per_cb},
-  { MT_CALLBACK, 1, " 10/",   menu_scale_per_cb},
-  { MT_CALLBACK, 2, "  5/",   menu_scale_per_cb},
-  { MT_CALLBACK, 3, "  2/",   menu_scale_per_cb},
-  { MT_CALLBACK, 4, "  1/",   menu_scale_per_cb},
-  { MT_CALLBACK, 5, "0.5/",   menu_scale_per_cb},
-  { MT_SUBMENU,  0, "\033 MORE",    menu_scale_per2},
-
+  { MT_ADV_CALLBACK, 0, " 20/",   menu_scale_per_acb},
+  { MT_ADV_CALLBACK, 1, " 10/",   menu_scale_per_acb},
+  { MT_ADV_CALLBACK, 2, "  5/",   menu_scale_per_acb},
+  { MT_ADV_CALLBACK, 3, "  2/",   menu_scale_per_acb},
+  { M_ADVT_CALLBACK, 4, "  1/",   menu_scale_per_acb},
+  { MT_ADV_CALLBACK, 5, "0.5/",   menu_scale_per_acb},
+  { MT_SUBMENU,  0, "\033 MORE",  menu_scale_per2},
   { MT_CANCEL,   0, "\032 BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1426,17 +1387,17 @@ static const menuitem_t menu_reffer[] = {
 };
 
 static const menuitem_t menu_atten[] = {
-  { MT_ADV_CALLBACK | MT_LOW, 0,               "AUTO",    menu_atten_acb},
-  { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL",  "0..30"},
-  { MT_ADV_CALLBACK | MT_HIGH,0,               "0dB",     menu_atten_high_acb},
-  { MT_ADV_CALLBACK | MT_HIGH,30,              "22.5dB..\n40dB",    menu_atten_high_acb},
-  { MT_CANCEL, 0,               "\032 BACK", NULL },
+  { MT_ADV_CALLBACK | MT_LOW, 0,           "AUTO",    menu_atten_acb},
+  { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL",  "0 - 30dB"},
+  { MT_ADV_CALLBACK | MT_HIGH,0,           "0dB",     menu_atten_high_acb},
+  { MT_ADV_CALLBACK | MT_HIGH,30,          "22.5 - 40dB",    menu_atten_high_acb},
+  { MT_CANCEL, 0,                          "\032 BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_reflevel[] = {
   { MT_ADV_CALLBACK,0,        "AUTO",    menu_reflevel_acb},
-  { MT_KEYPAD,  KM_REFLEVEL,  "MANUAL",     NULL},
+  { MT_KEYPAD,  KM_REFLEVEL,  "MANUAL",  NULL},
   { MT_CANCEL, 0,           "\032 BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1453,11 +1414,11 @@ const menuitem_t menu_marker_search[] = {
 };
 
 const menuitem_t menu_marker_modify[] = {
-  { MT_ADV_CALLBACK, M_REFERENCE,   "REFER",        menu_marker_modify_acb},
-  { MT_ADV_CALLBACK, M_DELTA,       "DELTA",        menu_marker_modify_acb},
-  { MT_ADV_CALLBACK, M_NOISE,       "NOISE",        menu_marker_modify_acb},
-  { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING",     menu_marker_tracking_acb},
-  { MT_ADV_CALLBACK, M_NORMAL,      "NORMAL",       menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_REFERENCE,   "REFER",    menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_DELTA,       "DELTA",    menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_NOISE,       "NOISE",    menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING", menu_marker_tracking_acb},
+  { MT_ADV_CALLBACK, M_NORMAL,      "NORMAL",   menu_marker_modify_acb},
   { MT_SUBMENU,  0,             "SEARCH",       menu_marker_search},
   { MT_CALLBACK, M_DELETE,      "DELETE",       menu_marker_delete_cb},
   { MT_CANCEL,   0, "\032 BACK", NULL },
@@ -1490,11 +1451,11 @@ const menuitem_t menu_marker_select[] = {
 
 
 const menuitem_t menu_marker_ops[] = {
-  { MT_CALLBACK, ST_START, "\033 START", menu_marker_op_cb },
-  { MT_CALLBACK, ST_STOP, "\033 STOP", menu_marker_op_cb },
+  { MT_CALLBACK, ST_START,  "\033 START",  menu_marker_op_cb },
+  { MT_CALLBACK, ST_STOP,   "\033 STOP",   menu_marker_op_cb },
   { MT_CALLBACK, ST_CENTER, "\033 CENTER", menu_marker_op_cb },
-  { MT_CALLBACK, ST_SPAN, "\033 SPAN", menu_marker_op_cb },
-  { MT_CANCEL, 0, "\032 BACK", NULL },
+  { MT_CALLBACK, ST_SPAN,   "\033 SPAN",   menu_marker_op_cb },
+  { MT_CANCEL, 0,           "\032 BACK",   NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
@@ -1551,10 +1512,10 @@ static const menuitem_t menu_sweep_speed[] =
 {
  { MT_ADV_CALLBACK,     SD_NORMAL,     "NORMAL",          menu_scanning_speed_acb},    // order must match definition of enum
  { MT_ADV_CALLBACK,     SD_PRECISE,    "PRECISE",         menu_scanning_speed_acb},
- { MT_ADV_CALLBACK | MT_LOW,SD_FAST,       "FAST",        menu_scanning_speed_acb},
- { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},                   // This must be item 3 to match highlighting
+ { MT_ADV_CALLBACK | MT_LOW,SD_FAST,   "FAST",            menu_scanning_speed_acb},
+ { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
  { MT_SUBMENU,          0,             "SWEEP\nPOINTS",   menu_sweep_points},
- { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",   "2..20, 0=disable"},
+ { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
  { MT_CANCEL,   0,             "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1610,11 +1571,11 @@ static const menuitem_t menu_calibrate[] =
 };
 
 static const menuitem_t menu_config[] = {
-  { MT_CALLBACK, 0, "TOUCH CAL",     menu_config_cb},
-  { MT_CALLBACK, 0, "TOUCH TEST",    menu_config_cb},
-  { MT_CALLBACK, 0, "SELF TEST",     menu_config_cb},
-  { MT_SUBMENU,  0, "LEVEL CAL",     menu_calibrate},
-  { MT_CALLBACK, 0, "VERSION",          menu_config_cb},
+  { MT_CALLBACK, 0, "TOUCH CAL",      menu_config_cb},
+  { MT_CALLBACK, 0, "TOUCH TEST",     menu_config_cb},
+  { MT_CALLBACK, 0, "SELF TEST",      menu_config_cb},
+  { MT_SUBMENU,  0, "LEVEL CAL",      menu_calibrate},
+  { MT_CALLBACK, 0, "VERSION",        menu_config_cb},
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
   { MT_SUBMENU,  0, "\033 DFU",  menu_dfu},
   { MT_CANCEL,   0, "\032 BACK", NULL },
@@ -1622,13 +1583,13 @@ static const menuitem_t menu_config[] = {
 };
 
 static const menuitem_t menu_display[] = {
-  { MT_ADV_CALLBACK,0,          "PAUSE\nSWEEP",   menu_pause_acb},
+  { MT_ADV_CALLBACK,0,          "PAUSE\nSWEEP",    menu_pause_acb},
   { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
   { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
   { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
   { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
-  { MT_ADV_CALLBACK,4,          "WATER\nFALL",        menu_waterfall_acb},
-  { MT_SUBMENU, 0,              "SWEEP\nSETTINGS",    menu_sweep_speed},
+  { MT_ADV_CALLBACK,4,          "WATER\nFALL",     menu_waterfall_acb},
+  { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
 //  { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",    NULL},
 
   { MT_CANCEL, 0,           "\032 BACK", NULL },
@@ -1637,52 +1598,52 @@ static const menuitem_t menu_display[] = {
 
 static const menuitem_t menu_unit[] =
 {
- { MT_ADV_CALLBACK,U_DBM,       "dBm",              menu_unit_acb},
- { MT_ADV_CALLBACK,U_DBMV,      "dBmV",             menu_unit_acb},
- { MT_ADV_CALLBACK,U_DBUV,      "dB"S_MICRO"V",     menu_unit_acb},
- { MT_ADV_CALLBACK,U_VOLT,      "Volt",             menu_unit_acb},
-// { MT_ADV_CALLBACK,U_UVOLT,     S_MICRO"Volt",    menu_unit_acb},
- { MT_ADV_CALLBACK,U_WATT,      "Watt",             menu_unit_acb},
-// { MT_ADV_CALLBACK,U_UWATT,    S_MICRO"Watt",     menu_unit_acb},
-  { MT_CANCEL, 0,           "\032 BACK", NULL },
+  { MT_ADV_CALLBACK,U_DBM,   "dBm",             menu_unit_acb},
+  { MT_ADV_CALLBACK,U_DBMV,  "dBmV",            menu_unit_acb},
+  { MT_ADV_CALLBACK,U_DBUV,  "dB"S_MICRO"V",    menu_unit_acb},
+  { MT_ADV_CALLBACK,U_VOLT,  "Volt",            menu_unit_acb},
+//{ MT_ADV_CALLBACK,U_UVOLT, S_MICRO"Volt",     menu_unit_acb},
+  { MT_ADV_CALLBACK,U_WATT,  "Watt",            menu_unit_acb},
+//{ MT_ADV_CALLBACK,U_UWATT, S_MICRO"Watt",     menu_unit_acb},
+  { MT_CANCEL, 0,            "\032 BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_trigger[] = {
-  { MT_ADV_CALLBACK,T_AUTO,     "AUTO",             menu_trigger_acb},
-  { MT_ADV_CALLBACK,T_NORMAL,   "NORMAL",           menu_trigger_acb},
-  { MT_ADV_CALLBACK,T_SINGLE,   "SINGLE",           menu_trigger_acb},
-  { MT_KEYPAD,  KM_TRIGGER, "TRIGGER\nLEVEL", NULL},
-  { MT_ADV_CALLBACK,T_UP,       "UP\nEDGE",       menu_trigger_acb},
-  { MT_ADV_CALLBACK,T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
-  { MT_CANCEL, 0,           "\032 BACK",NULL },
+  { MT_ADV_CALLBACK, T_AUTO,     "AUTO",           menu_trigger_acb},
+  { MT_ADV_CALLBACK, T_NORMAL,   "NORMAL",         menu_trigger_acb},
+  { MT_ADV_CALLBACK, T_SINGLE,   "SINGLE",         menu_trigger_acb},
+  { MT_KEYPAD,       KM_TRIGGER, "TRIGGER\nLEVEL", NULL},
+  { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
+  { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
+  { MT_CANCEL, 0,                "\032 BACK",      NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_level[] = {
-  { MT_SUBMENU, 0,          "REF LEVEL", menu_reflevel},
-//  { MT_SUBMENU, 0,          "SCALE/\nDIV",menu_scale_per},
-  { MT_KEYPAD,  KM_SCALE,   "SCALE/DIV",NULL},
+  { MT_SUBMENU, 0,          "REF LEVEL",    menu_reflevel},
+//{ MT_SUBMENU, 0,          "SCALE/DIV",    menu_scale_per},
+  { MT_KEYPAD,  KM_SCALE,   "SCALE/DIV",    NULL},
   { MT_SUBMENU, 0,          "ATTENUATE",    menu_atten},
   { MT_SUBMENU,0,           "CALC",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,  "EXTERNAL\nAMP",NULL},
   { MT_SUBMENU,  0,         "TRIGGER",      menu_trigger},
-  { MT_CANCEL, 0,           "\032 BACK",NULL },
+  { MT_CANCEL, 0,           "\032 BACK",    NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_stimulus[] = {
-  { MT_KEYPAD,  KM_START,   "START",            NULL},
-  { MT_KEYPAD,  KM_STOP,    "STOP",             NULL},
-  { MT_KEYPAD,  KM_CENTER,  "CENTER",           NULL},
-  { MT_KEYPAD,  KM_SPAN,    "SPAN",             NULL},
-  { MT_KEYPAD,  KM_CW,      "ZERO SPAN",        NULL},
-  { MT_SUBMENU,0,           "RBW",              menu_rbw},
+  { MT_KEYPAD,  KM_START,       "START",       NULL},
+  { MT_KEYPAD,  KM_STOP,        "STOP",        NULL},
+  { MT_KEYPAD,  KM_CENTER,      "CENTER",      NULL},
+  { MT_KEYPAD,  KM_SPAN,        "SPAN",        NULL},
+  { MT_KEYPAD,  KM_CW,          "ZERO SPAN",   NULL},
+  { MT_SUBMENU,0,               "RBW",         menu_rbw},
 #ifdef __SPUR__
-  { MT_ADV_CALLBACK | MT_LOW,0,           "SPUR\nREMOVAL", menu_spur_acb},
+  { MT_ADV_CALLBACK | MT_LOW,0, "SPUR\nREMOVAL", menu_spur_acb},
 #endif
-  { MT_CANCEL,  0,          "\032 BACK", NULL },
+  { MT_CANCEL,  0,              "\032 BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
 };
 
@@ -1692,7 +1653,7 @@ static const menuitem_t menu_mode[] = {
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "%s TO HIGH INPUT",     menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "%s TO LOW OUTPUT",     menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s TO HIGH OUTPUT",    menu_mode_acb},
-  { MT_FORM | MT_SUBMENU  | MT_ICON,    I_CONNECT+I_GEN,        "CAL OUTPUT: %s", menu_reffer},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "CAL OUTPUT: %s",       menu_sreffer_acb},
 #ifdef __ULTRA__
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
 #endif
@@ -1715,8 +1676,8 @@ const menuitem_t menu_topultra[] = {
 };
 #endif
 
-const menuitem_t menu_top[] = {
-  { MT_SUBMENU, 0,  "PRESET",       menu_load_preset},
+static const menuitem_t menu_top[] = {
+  { MT_SUBMENU,  0, "PRESET",       menu_load_preset},
   { MT_SUBMENU,  0, "FREQUENCY",    menu_stimulus},
   { MT_SUBMENU,  0, "LEVEL",        menu_level},
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
@@ -1746,15 +1707,7 @@ static void fetch_numeric_target(void);
 static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, ui_button_t *button)
 {
-  if (menu == menu_mode) {
-    if (item == 4) // CAL OUTPUT menu
-      button->param_1.text = menu_reffer_text[setting.refer+1];
-  } else if (menu == menu_highoutputmode && item == 2){ // LEVEL mode
-    button->param_1.i = menu_drive_value[setting.drive];
-  } else if (menu == menu_lowoutputmode || menu == menu_highoutputmode) {
-    if (item == 3)
-      button->param_1.text = menu_modulation_text[setting.modulation];
-  } else if (menu == menu_settings) {
+  if (menu == menu_settings) {
     if (item == 2)
       button->icon = setting.auto_IF ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
   } else if (menu == menu_scanning_speed) {
