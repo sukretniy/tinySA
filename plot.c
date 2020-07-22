@@ -1709,8 +1709,8 @@ cell_blit_char_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *char_
   if (x <= -w)
     return w;
   uint8_t bits = 0;
-  int r;
-  for (; y < h+y; y++) {
+  int c = h+y, r;
+  for (; y < c; y++) {
     for (r = 0; r < w; r++) {
       if ((r&7)==0) bits = *char_buf++;
       if (y >= 0 && x+r >= 0 && y < CELLHEIGHT && x+r < CELLWIDTH && (0x80 & bits))
