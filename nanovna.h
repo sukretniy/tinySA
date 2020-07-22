@@ -364,15 +364,15 @@ extern const uint16_t numfont16x22[];
 #define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
 #endif
 
-#define S_DELTA "\004"
-#define S_DEGREE "\037"
-#define S_SARROW "\030"
-#define S_INFINITY "\031"
-#define S_LARROW "\032"
-#define S_RARROW "\033"
-#define S_PI    "\034"
-#define S_MICRO "\035"
-#define S_OHM   "\036"
+#define S_DELTA    "\029"  // 0x17
+#define S_SARROW   "\030"  // 0x18
+#define S_INFINITY "\031"  // 0x19
+#define S_LARROW   "\032"  // 0x1A
+#define S_RARROW   "\033"  // 0x1B
+#define S_PI       "\034"  // 0x1C
+#define S_MICRO    "\035"  // 0x1D
+#define S_OHM      "\036"  // 0x1E
+#define S_DEGREE   "\037"  // 0x1F
 // trace 
 
 #define MAX_TRACE_TYPE 12
