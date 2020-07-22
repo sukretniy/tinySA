@@ -617,7 +617,7 @@ static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 
 
 // const int menu_modulation_value[]={MO_NONE,MO_AM_1, MO_NFM, MO_WFM, MO_EXTERNAL};
-const char *menu_modulation_text[]={"NONE","AM 1kHz","AM 10Hz","NARROW FM","WIDE FM", "EXTERNAL"};
+const char *menu_modulation_text[]={"None", "AM 1kHz", "AM 10Hz", "Narrow FM", "Wide FM", "External"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_modulation_acb)
 {
@@ -1282,12 +1282,12 @@ static const menuitem_t menu_drive_wide[] = {
 
 static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
-  { MT_FORM | MT_ADV_CALLBACK, MO_NONE,              "NONE",      menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_NONE,              "None",      menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_1kHz,  "AM 1kHz",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_10Hz,  "AM 10Hz",   menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "NARROW FM", menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "WIDE FM",   menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "EXTERNAL",  menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "Narrow FM", menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "Wide FM",   menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "External",  menu_modulation_acb},
   { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1793,7 +1793,7 @@ static void fetch_numeric_target(void)
     if (end_level > -6)
       end_level = -6;
     if (setting.level_sweep != 0)
-      plot_printf(uistat.text, sizeof uistat.text, "%ddBm to %ddBm", ((int32_t)uistat.value), end_level);
+      plot_printf(uistat.text, sizeof uistat.text, "%d to %ddBm", ((int32_t)uistat.value), end_level);
     else
       plot_printf(uistat.text, sizeof uistat.text, "%ddBm", ((int32_t)uistat.value));
     break;
