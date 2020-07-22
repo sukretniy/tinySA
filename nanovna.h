@@ -345,8 +345,8 @@ extern const uint8_t x7x11b_bits [];
 #define bFONT_GET_HEIGHT     11
 #define bFONT_STR_HEIGHT     11
 
-extern const uint16_t numfont16x22[];
-#define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*22])
+extern const uint8_t numfont16x22[];
+#define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*2*22])
 #define NUM_FONT_GET_WIDTH      16
 #define NUM_FONT_GET_HEIGHT     22
 
@@ -557,6 +557,11 @@ extern uint16_t background_color;
 
 extern uint16_t spi_buffer[SPI_BUFFER_SIZE];
 
+// Used for easy define big Bitmap as 0bXXXXXXXXX image
+#define _BMP16(d)                                  ((d>>8)&0xFF), ((d)&0xFF)
+#define _BMP24(d)                  ((d>>16)&0xFF), ((d>>8)&0xFF), ((d)&0xFF)
+#define _BMP32(d)  ((d>>24)&0xFF), ((d>>16)&0xFF), ((d>>8)&0xFF), ((d)&0xFF)
+
 void ili9341_init(void);
 void ili9341_test(int mode);
 void ili9341_bulk(int x, int y, int w, int h);
@@ -571,7 +576,7 @@ void ili9341_set_background(uint16_t fg);
 #endif
 
 void ili9341_clear_screen(void);
-void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
+void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const void *bitmap);
 void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);

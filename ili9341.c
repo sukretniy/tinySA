@@ -598,13 +598,14 @@ void ili9341_set_rotation(uint8_t r)
 }
 
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
-                         const uint8_t *bitmap)
+                         const void *bitmap)
 {
   uint16_t *buf = spi_buffer;
   uint8_t bits = 0;
+  const uint8_t *b = bitmap;
   for (uint16_t c = 0; c < height; c++) {
     for (uint16_t r = 0; r < width; r++) {
-      if ((r&7) == 0) bits = *bitmap++;
+      if ((r&7) == 0) bits = *b++;
       *buf++ = (0x80 & bits) ? foreground_color : background_color;
       bits <<= 1;
     }
@@ -612,6 +613,7 @@ void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height
   ili9341_bulk(x, y, width, height);
 }
 
+#if 0
 void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
                                  const uint16_t *bitmap)
 {
@@ -625,6 +627,7 @@ void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t heigh
   }
   ili9341_bulk(x, y, width, height);
 }
+#endif
 
 void ili9341_drawchar(uint8_t ch, int x, int y)
 {
@@ -683,7 +686,7 @@ int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size)
 
 void ili9341_drawfont(uint8_t ch, int x, int y)
 {
-  blit16BitWidthBitmap(x, y, NUM_FONT_GET_WIDTH, NUM_FONT_GET_HEIGHT,
+  blit8BitWidthBitmap(x, y, NUM_FONT_GET_WIDTH, NUM_FONT_GET_HEIGHT,
                        NUM_FONT_GET_DATA(ch));
 }
 
