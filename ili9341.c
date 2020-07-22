@@ -601,9 +601,10 @@ void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height
                          const uint8_t *bitmap)
 {
   uint16_t *buf = spi_buffer;
+  uint8_t bits = 0;
   for (uint16_t c = 0; c < height; c++) {
-    uint8_t bits = *bitmap++;
     for (uint16_t r = 0; r < width; r++) {
+      if ((r&7) == 0) bits = *bitmap++;
       *buf++ = (0x80 & bits) ? foreground_color : background_color;
       bits <<= 1;
     }

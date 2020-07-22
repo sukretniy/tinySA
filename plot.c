@@ -1704,29 +1704,50 @@ request_to_draw_cells_behind_numeric_input(void)
 }
 
 static int
-cell_drawchar(uint8_t ch, int x, int y)
+cell_blit_char_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *char_buf)
 {
-  uint8_t bits;
-  int c, r, ch_size;
-  const uint8_t *char_buf = FONT_GET_DATA(ch);
-  ch_size = FONT_GET_WIDTH(ch);
-  //  if (y <= -FONT_GET_HEIGHT || y >= CELLHEIGHT || x <= -ch_size || x >= CELLWIDTH)
-  //    return ch_size;
-  if (x <= -ch_size)
-    return ch_size;
-  for (c = 0; c < FONT_GET_HEIGHT; c++) {
-    bits = *char_buf++;
-    if ((y + c) < 0 || (y + c) >= CELLHEIGHT)
-      continue;
-    for (r = 0; r < ch_size; r++) {
-      if ((x+r) >= 0 && (x+r) < CELLWIDTH && (0x80 & bits))
-        cell_buffer[(y+c)*CELLWIDTH + (x+r)] = foreground_color;
+  if (x <= -w)
+    return w;
+  uint8_t bits = 0;
+  int r;
+  for (; y < h+y; y++) {
+    for (r = 0; r < w; r++) {
+      if ((r&7)==0) bits = *char_buf++;
+      if (y >= 0 && x+r >= 0 && y < CELLHEIGHT && x+r < CELLWIDTH && (0x80 & bits))
+        cell_buffer[y*CELLWIDTH + x + r] = foreground_color;
       bits <<= 1;
     }
   }
-  return ch_size;
+  return w;
 }
 
+void
+cell_drawstring(char *str, int x, int y)
+{
+  if (y <= -FONT_GET_HEIGHT || y >= CELLHEIGHT)
+    return;
+  while (*str) {
+    if (x >= CELLWIDTH)
+      return;
+    uint8_t ch = *str++;
+    x += cell_blit_char_bitmap(x, y, FONT_GET_WIDTH(ch), FONT_GET_HEIGHT, FONT_GET_DATA(ch));
+  }
+}
+
+void
+cell_drawstring_7x13(char *str, int x, int y)
+{
+  if (y <= -bFONT_GET_HEIGHT || y >= CELLHEIGHT)
+    return;
+  while (*str) {
+    if (x >= CELLWIDTH)
+      return;
+    uint8_t ch = *str++;
+    x += cell_blit_char_bitmap(x, y, bFONT_GET_WIDTH(ch), bFONT_GET_HEIGHT, bFONT_GET_DATA(ch));
+  }
+}
+
+#if 0
 static int
 cell_drawchar_size(uint8_t ch, int x, int y, int size)
 {
@@ -1757,18 +1778,6 @@ cell_drawchar_size(uint8_t ch, int x, int y, int size)
 }
 
 void
-cell_drawstring(char *str, int x, int y)
-{
-  if (y <= -FONT_GET_HEIGHT || y >= CELLHEIGHT)
-    return;
-  while (*str) {
-    if (x >= CELLWIDTH)
-      return;
-    x += cell_drawchar(*str++, x, y);
-  }
-}
-
-void
 cell_drawstring_size(char *str, int x, int y, int size)
 {
   if (y <= -FONT_GET_HEIGHT*2 || y >= CELLHEIGHT)
@@ -1779,43 +1788,7 @@ cell_drawstring_size(char *str, int x, int y, int size)
     x += cell_drawchar_size(*str++, x, y, size);
   }
 }
-
-static int
-cell_draw_bchar(uint8_t ch, int x, int y)
-{
-  uint8_t bits;
-  int c, r, ch_size;
-  const uint8_t *char_buf = bFONT_GET_DATA(ch);
-  ch_size = bFONT_GET_WIDTH(ch);
-  //  if (y <= -FONT_GET_HEIGHT || y >= CELLHEIGHT || x <= -ch_size || x >= CELLWIDTH)
-  //    return ch_size;
-  if (x <= -ch_size)
-    return ch_size;
-  for (c = 0; c < bFONT_GET_HEIGHT; c++) {
-    bits = *char_buf++;
-    if ((y + c) < 0 || (y + c) >= CELLHEIGHT)
-      continue;
-    for (r = 0; r < ch_size; r++) {
-      if ((x+r) >= 0 && (x+r) < CELLWIDTH && (0x80 & bits))
-        cell_buffer[(y+c)*CELLWIDTH + (x+r)] = foreground_color;
-      bits <<= 1;
-    }
-  }
-  return ch_size;
-}
-
-
-void
-cell_drawstring_7x13(char *str, int x, int y)
-{
-  if (y <= -bFONT_GET_HEIGHT || y >= CELLHEIGHT)
-    return;
-  while (*str) {
-    if (x >= CELLWIDTH)
-      return;
-    x += cell_draw_bchar(*str++, x, y);
-  }
-}
+#endif
 
 #ifdef __VNA__
 static void
