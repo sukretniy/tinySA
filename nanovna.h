@@ -332,23 +332,36 @@ extern int16_t area_height;
 // font
 extern const uint8_t x5x7_bits [];
 extern const uint8_t x7x11b_bits [];
-#define FONT_GET_DATA(ch)   (&x5x7_bits[ch*7])
-#define FONT_GET_WIDTH(ch)  (8-(x5x7_bits[ch*7]&7))
-#define FONT_MAX_WIDTH      7
-#define FONT_GET_HEIGHT     7
-#define FONT_STR_HEIGHT     8
+extern const uint8_t x10x14_bits[];
+extern const uint8_t numfont16x22[];
 
-#define bFONT_GET_DATA(ch)   (&x7x11b_bits[ch*11])
-#define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[ch*11]&7))
+#define FONT_START_CHAR    0x17
+#define FONT_MAX_WIDTH        7
+#define FONT_WIDTH            5
+#define FONT_GET_HEIGHT       7
+#define FONT_STR_HEIGHT       8
+#define FONT_GET_DATA(ch)    (  &x5x7_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT])
+#define FONT_GET_WIDTH(ch)   (8-(x5x7_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT]&7))
+
+#define bFONT_START_CHAR   0x17
 #define bFONT_MAX_WIDTH       8
 #define bFONT_WIDTH           7
 #define bFONT_GET_HEIGHT     11
 #define bFONT_STR_HEIGHT     11
 
-extern const uint8_t numfont16x22[];
-#define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*2*22])
+#define bFONT_GET_DATA(ch)   (  &x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT])
+#define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT]&7))
+
+#define wFONT_START_CHAR   0x17
+#define wFONT_MAX_WIDTH      12
+#define wFONT_GET_HEIGHT     14
+#define wFONT_STR_HEIGHT     16
+#define wFONT_GET_DATA(ch)   (   &x10x14_bits[(ch-wFONT_START_CHAR)*2*wFONT_GET_HEIGHT  ])
+#define wFONT_GET_WIDTH(ch)  (14-(x10x14_bits[(ch-wFONT_START_CHAR)*2*wFONT_GET_HEIGHT+1]&0x7))
+
 #define NUM_FONT_GET_WIDTH      16
 #define NUM_FONT_GET_HEIGHT     22
+#define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*2*NUM_FONT_GET_HEIGHT])
 
 #if 1
 #define KP_WIDTH                  ((LCD_WIDTH) / 4)// numeric keypad button width
@@ -373,8 +386,8 @@ extern const uint8_t numfont16x22[];
 #define S_MICRO    "\035"  // 0x1D
 #define S_OHM      "\036"  // 0x1E
 #define S_DEGREE   "\037"  // 0x1F
-// trace 
 
+// trace 
 #define MAX_TRACE_TYPE 12
 enum trace_type {
   TRC_LOGMAG=0, TRC_PHASE, TRC_DELAY, TRC_SMITH, TRC_POLAR, TRC_LINEAR, TRC_SWR, TRC_REAL, TRC_IMAG, TRC_R, TRC_X, TRC_OFF
@@ -558,9 +571,10 @@ extern uint16_t background_color;
 extern uint16_t spi_buffer[SPI_BUFFER_SIZE];
 
 // Used for easy define big Bitmap as 0bXXXXXXXXX image
-#define _BMP16(d)                                  ((d>>8)&0xFF), ((d)&0xFF)
-#define _BMP24(d)                  ((d>>16)&0xFF), ((d>>8)&0xFF), ((d)&0xFF)
-#define _BMP32(d)  ((d>>24)&0xFF), ((d>>16)&0xFF), ((d>>8)&0xFF), ((d)&0xFF)
+#define _BMP8(d)                                                        ((d)&0xFF)
+#define _BMP16(d)                                      (((d)>>8)&0xFF), ((d)&0xFF)
+#define _BMP24(d)                    (((d)>>16)&0xFF), (((d)>>8)&0xFF), ((d)&0xFF)
+#define _BMP32(d)  (((d)>>24)&0xFF), (((d)>>16)&0xFF), (((d)>>8)&0xFF), ((d)&0xFF)
 
 void ili9341_init(void);
 void ili9341_test(int mode);
@@ -576,11 +590,12 @@ void ili9341_set_background(uint16_t fg);
 #endif
 
 void ili9341_clear_screen(void);
-void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const void *bitmap);
+void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
 void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
 void ili9341_drawstring_7x13(const char *str, int x, int y);
+void ili9341_drawstring_10x14(const char *str, int x, int y);
 void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size);
 void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size);

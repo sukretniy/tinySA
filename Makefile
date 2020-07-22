@@ -122,7 +122,7 @@ CSRC = $(STARTUPSRC) \
        $(BOARDSRC) \
        $(STREAMSSRC) \
        usbcfg.c \
-       main.c plot.c ui.c ili9341.c numfont20x22.c Font5x7.c flash.c adc.c  si4432.c  Font7x13b.c
+       main.c plot.c ui.c ili9341.c numfont20x22.c Font5x7.c Font10x14.c flash.c adc.c  si4432.c  Font7x13b.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.

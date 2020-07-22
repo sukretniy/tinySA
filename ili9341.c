@@ -597,18 +597,19 @@ void ili9341_set_rotation(uint8_t r)
   send_command(ILI9341_MEMORY_ACCESS_CONTROL, 1, &r);
 }
 
+static uint8_t bit_align = 0;
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
-                         const void *bitmap)
+                         const uint8_t *b)
 {
   uint16_t *buf = spi_buffer;
   uint8_t bits = 0;
-  const uint8_t *b = bitmap;
   for (uint16_t c = 0; c < height; c++) {
     for (uint16_t r = 0; r < width; r++) {
       if ((r&7) == 0) bits = *b++;
       *buf++ = (0x80 & bits) ? foreground_color : background_color;
       bits <<= 1;
     }
+    if (bit_align) b+=bit_align;
   }
   ili9341_bulk(x, y, width, height);
 }
@@ -658,6 +659,21 @@ void ili9341_drawstring_7x13(const char *str, int x, int y)
     blit8BitWidthBitmap(x, y, w, bFONT_GET_HEIGHT, char_buf);
     x += w;
   }
+}
+
+void ili9341_drawstring_10x14(const char *str, int x, int y)
+{
+  int x_pos = x;
+  while (*str) {
+    uint8_t ch = *str++;
+    if (ch == '\n') {x = x_pos; y+=wFONT_STR_HEIGHT; continue;}
+    const uint8_t *char_buf = wFONT_GET_DATA(ch);
+    uint16_t w = wFONT_GET_WIDTH(ch);
+    bit_align = (w<=8) ? 1 : 0;
+    blit8BitWidthBitmap(x, y, w, wFONT_GET_HEIGHT, char_buf);
+    x += w;
+  }
+  bit_align = 0;
 }
 
 void ili9341_drawstringV(const char *str, int x, int y)

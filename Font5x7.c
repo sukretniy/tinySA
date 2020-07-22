@@ -6,13 +6,18 @@
 #include <stdint.h>
 
 /*
- * Check 1 byte of char bitmap data for get width
+ * Check 0 byte of char bitmap data for get width
  */
 
-#define FONT_GET_DATA(ch)   (&x5x7_bits[ch*7])
-#define FONT_GET_WIDTH(ch)  (8-x5x7_bits[ch*7]&7)
+// Font definitions
+#define FONT_START_CHAR     0x17
 #define FONT_MAX_WIDTH      7
+#define FONT_WIDTH          5
 #define FONT_GET_HEIGHT     7
+#define FONT_STR_HEIGHT     8
+#define FONT_GET_DATA(ch)   (  &x5x7_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT])
+#define FONT_GET_WIDTH(ch)  (8-(x5x7_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT]&7))
+
 
 #define CHAR5x7_WIDTH_1px  0x07
 #define CHAR5x7_WIDTH_2px  0x06
@@ -24,8 +29,9 @@
 #define CHAR5x7_WIDTH_8px  0x00
 
 /* Font character bitmap data. */
-const uint8_t x5x7_bits[127*7] =
+const uint8_t x5x7_bits[] =
 {
+#if 0
   /* Character (0x00):
      width=5
      +--------+
@@ -103,23 +109,23 @@ const uint8_t x5x7_bits[127*7] =
   0b00100000,
 
   /* Character (0x04):
-     width=6
+     width=5
      +--------+
-     |        |
-     |**      |
-     |****    |
-     |******  |
-     |****    |
-     |**      |
-     |        |
+     |   **   |
+     |  ***   |
+     |  ***   |
+     |  ***   |
+     |  ***   |
+     |  ***   |
+     |   **   |
      +--------+ */
-  0b00000000|CHAR5x7_WIDTH_6px,
-  0b11000000,
-  0b11110000,
-  0b00011100,
-  0b11110000,
-  0b11000000,
-  0b00000000,
+  0b00100000|CHAR5x7_WIDTH_5px,
+  0b00100000,
+  0b00100000,
+  0b11100000,
+  0b00100000,
+  0b00100000,
+  0b00100000,
 
   /* Character (0x05):
      width=5
@@ -445,24 +451,25 @@ const uint8_t x5x7_bits[127*7] =
   0b00100000,
 
   /* Character (0x16):
-     width=5
+     width=6
      +--------+
-     |   **   |
-     |  ***   |
-     |  ***   |
-     |  ***   |
-     |  ***   |
-     |  ***   |
-     |   **   |
+     |        |
+     |**      |
+     |****    |
+     |******  |
+     |****    |
+     |**      |
+     |        |
      +--------+ */
-  0b00100000|CHAR5x7_WIDTH_5px,
-  0b00100000,
-  0b00100000,
-  0b11100000,
-  0b00100000,
-  0b00100000,
-  0b00100000,
-
+  0b00000000|CHAR5x7_WIDTH_6px,
+  0b11000000,
+  0b11110000,
+  0b00011100,
+  0b11110000,
+  0b11000000,
+  0b00000000,
+#endif
+// FONT_START_CHAR = 0x17
   /* Character (0x17):
      width=6
      +--------+

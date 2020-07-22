@@ -1703,11 +1703,11 @@ request_to_draw_cells_behind_numeric_input(void)
   redraw_request |= REDRAW_CELLS;
 }
 
-static int
-cell_blit_char_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *char_buf)
+static void
+cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *char_buf)
 {
   if (x <= -w)
-    return w;
+    return;
   uint8_t bits = 0;
   int c = h+y, r;
   for (; y < c; y++) {
@@ -1718,7 +1718,6 @@ cell_blit_char_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *char_
       bits <<= 1;
     }
   }
-  return w;
 }
 
 void
@@ -1730,7 +1729,9 @@ cell_drawstring(char *str, int x, int y)
     if (x >= CELLWIDTH)
       return;
     uint8_t ch = *str++;
-    x += cell_blit_char_bitmap(x, y, FONT_GET_WIDTH(ch), FONT_GET_HEIGHT, FONT_GET_DATA(ch));
+    uint16_t w = FONT_GET_WIDTH(ch);
+    cell_blit_bitmap(x, y, w, FONT_GET_HEIGHT, FONT_GET_DATA(ch));
+    x += w;
   }
 }
 
@@ -1743,7 +1744,24 @@ cell_drawstring_7x13(char *str, int x, int y)
     if (x >= CELLWIDTH)
       return;
     uint8_t ch = *str++;
-    x += cell_blit_char_bitmap(x, y, bFONT_GET_WIDTH(ch), bFONT_GET_HEIGHT, bFONT_GET_DATA(ch));
+    uint16_t w = bFONT_GET_WIDTH(ch);
+    cell_blit_bitmap(x, y, w, bFONT_GET_HEIGHT, bFONT_GET_DATA(ch));
+    x += w;
+  }
+}
+
+void
+cell_drawstring_10x14(char *str, int x, int y)
+{
+  if (y <= -wFONT_GET_HEIGHT || y >= CELLHEIGHT)
+    return;
+  while (*str) {
+    if (x >= CELLWIDTH)
+      return;
+    uint8_t ch = *str++;
+    uint16_t w = wFONT_GET_WIDTH(ch);
+    cell_blit_bitmap(x, y, w <=8 ? 9 : w, wFONT_GET_HEIGHT, wFONT_GET_DATA(ch));
+    x+=w;
   }
 }
 

@@ -414,7 +414,7 @@ show_version(void)
 
   ili9341_clear_screen();
   uint16_t shift = 0b0000010000111110;
-  ili9341_drawstring_size(info_about[i++], x , y, 4);
+  ili9341_drawstring_10x14(info_about[i++], x , y);
   while (info_about[i]) {
     do {shift>>=1; y+=5;} while (shift&1);
     ili9341_drawstring(info_about[i++], x, y+=5);
@@ -1420,7 +1420,7 @@ static const char * const keypad_mode_label[] = {
 };
 #endif
 
-static const char * const keypad_scale_text[] = { "1", "2", "5", "10", "20" , "50", "100", "200", "500"};
+static const char * const keypad_scale_text[] = {"0", "1", "2", "5", "10", "20" , "50", "100", "200", "500"};
 //static const int  keypad_scale_value[] = { 1, 2, 5, 10, 20 , 50, 100, 200, 500};
 
 static void
@@ -1457,15 +1457,15 @@ draw_keypad(void)
     int x = KP_GET_X(keypads[i].x);
     int y = KP_GET_Y(keypads[i].y);
     draw_button(x, y, KP_WIDTH, KP_HEIGHT, &button);
-    if (keypads[i].c < 32) { // KP_1
+    if (keypads[i].c < KP_0) { // KP_0
       ili9341_drawfont(keypads[i].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
                      y + (KP_HEIGHT - NUM_FONT_GET_HEIGHT) / 2);
     } else {
-      const char *t = keypad_scale_text[keypads[i].c - KP_1];
-      ili9341_drawstring_size(t,
-                     x + (KP_WIDTH - 5*strlen(t)*2) / 2,
-                     y + (KP_HEIGHT - 13) / 2,2);
+      const char *t = keypad_scale_text[keypads[i].c - KP_0];
+      ili9341_drawstring_10x14(t,
+                     x + (KP_WIDTH  - wFONT_MAX_WIDTH*strlen(t)) / 2,
+                     y + (KP_HEIGHT - wFONT_GET_HEIGHT) / 2);
     }
     i++;
   }
@@ -1770,8 +1770,8 @@ draw_menu_buttons(const menuitem_t *menu)
         blit8BitWidthBitmap(button_start+3, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
         text_offs = button_start+6+ICON_WIDTH+1;
       }
-      ili9341_drawstring_size(button.text, text_offs, y+(button_height-2*FONT_GET_HEIGHT)/2, 2);
-//      ili9341_drawstring_7x13(button.text, text_offs, y+(button_height-bFONT_GET_HEIGHT)/2);
+//      ili9341_drawstring_size(button.text, text_offs, y+(button_height-2*FONT_GET_HEIGHT)/2, 2);
+      ili9341_drawstring_10x14(button.text, text_offs, y+(button_height-wFONT_GET_HEIGHT)/2);
 #ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
         blit8BitWidthBitmap(button_start+MENU_FORM_WIDTH-2*FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,& left_icons[((menu[i].data >>4)&0xf)*2*FORM_ICON_HEIGHT]);
@@ -2305,8 +2305,8 @@ keypad_click(int key)
     return KP_DONE;
   } else if (c <= 9 && kp_index < NUMINPUT_LEN) {
     kp_buf[kp_index++] = '0' + c;
-  } else if (c>=KP_1) {
-    kp_buf[kp_index++] = keypad_scale_text[c-KP_1][0];
+  } else if (c>=KP_0) {
+    kp_buf[kp_index++] = keypad_scale_text[c-KP_0][0];
     if (c >=KP_10)
       kp_buf[kp_index++] = '0';
     if (c >=KP_100)

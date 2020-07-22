@@ -240,6 +240,7 @@ enum {
 #define KP_n 23
 #define KP_p 24
 
+#define KP_0    31
 #define KP_1    32
 #define KP_2    33
 #define KP_5    34
@@ -316,9 +317,9 @@ static const keypads_t keypads_positive[] = {
 static const keypads_t keypads_pos_unit[] = {
   { 1, 3, KP_PERIOD },
   { 0, 3, 0 },
-  { 0, 2, KP_1 },
-  { 1, 2, KP_2 },
-  { 2, 2, KP_5 },
+  { 0, 2, 1 },
+  { 1, 2, 2 },
+  { 2, 2, 5 },
   { 0, 1, KP_10 },
   { 1, 1, KP_20 },
   { 2, 1, KP_50 },
@@ -453,12 +454,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
   (void)data;
   if (b){
     if (item == setting.mode)  {
-      b->param_1.text = "RETURN";
+      b->param_1.text = "Return";
       b->bg = RGB565(200,200,200);//config.menu_active_color;
       b->border = BUTTON_BORDER_FALLING | MENU_BUTTON_BORDER;
     }
     else
-      b->param_1.text = "SWITCH";
+      b->param_1.text = "Switch";
     return;
   }
   set_mode(item);
@@ -1196,7 +1197,7 @@ static const menuitem_t menu_store_preset_high[8] =
   { MT_ADV_CALLBACK, 7,  "STORE %d",         menu_store_preset_acb},
   { MT_ADV_CALLBACK, 8,  "STORE %d",         menu_store_preset_acb},
   { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
-  { MT_CANCEL,   255, "\032 BACK", NULL },
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
@@ -1208,7 +1209,7 @@ static const menuitem_t menu_load_preset_high[] =
   { MT_ADV_CALLBACK, 7, "LOAD %d",      menu_load_preset_acb},
   { MT_ADV_CALLBACK, 8, "LOAD %s",      menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,      menu_store_preset_high},
-  { MT_CANCEL,   255, "\032 BACK", NULL },
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 #endif
@@ -1221,7 +1222,7 @@ static const menuitem_t menu_store_preset[] =
   { MT_ADV_CALLBACK, 3,  "STORE %d",         menu_store_preset_acb},
   { MT_ADV_CALLBACK, 4,  "STORE %d",         menu_store_preset_acb},
   { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
-  { MT_CANCEL,   255, "\032 BACK", NULL },
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
@@ -1233,7 +1234,7 @@ static const menuitem_t menu_load_preset[] =
   { MT_ADV_CALLBACK, 3, "LOAD %d"  ,    menu_load_preset_acb},
   { MT_ADV_CALLBACK, 4, "LOAD %d"  ,    menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset},
-  { MT_CANCEL,   255, "\032 BACK", NULL },
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
@@ -1242,7 +1243,7 @@ static const menuitem_t menu_drive[] = {
   { MT_ADV_CALLBACK, 14, "%+ddBm",   menu_drive_acb},
   { MT_ADV_CALLBACK, 13, "%+ddBm",   menu_drive_acb},
   { MT_ADV_CALLBACK, 12, "%+ddBm",   menu_drive_acb},
-  { MT_CANCEL,   255, "\032 BACK", NULL },
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1253,7 +1254,7 @@ static const menuitem_t menu_drive_wide3[] = {
  { MT_FORM | MT_ADV_CALLBACK, 2, "%+ddBm",   menu_drive_acb},
  { MT_FORM | MT_ADV_CALLBACK, 1, "%+ddBm",   menu_drive_acb},
  { MT_FORM | MT_ADV_CALLBACK, 0, "%+ddBm",   menu_drive_acb},
-  { MT_FORM | MT_CANCEL,   255, "\032 BACK", NULL },
+  { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1263,8 +1264,8 @@ static const menuitem_t menu_drive_wide2[] = {
  { MT_FORM | MT_ADV_CALLBACK,  8, "%+ddBm",   menu_drive_acb},
  { MT_FORM | MT_ADV_CALLBACK,  7, "%+ddBm",   menu_drive_acb},
  { MT_FORM | MT_ADV_CALLBACK,  6, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_SUBMENU,  255, "\033 MORE", menu_drive_wide3},
- { MT_FORM | MT_CANCEL,   255, "\032 BACK", NULL },
+ { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide3},
+ { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1274,20 +1275,20 @@ static const menuitem_t menu_drive_wide[] = {
   { MT_FORM | MT_ADV_CALLBACK, 13, "%+ddBm",   menu_drive_acb},
   { MT_FORM | MT_ADV_CALLBACK, 12, "%+ddBm",   menu_drive_acb},
   { MT_FORM | MT_ADV_CALLBACK, 11, "%+ddBm",   menu_drive_acb},
-  { MT_FORM | MT_SUBMENU,  255, "\033 MORE", menu_drive_wide2},
-  { MT_FORM | MT_CANCEL,   255, "\032 BACK", NULL },
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide2},
+  { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
-  { MT_FORM | MT_ADV_CALLBACK, MO_NONE,     "NONE",      menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_NONE,              "NONE",      menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_1kHz,  "AM 1kHz",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_10Hz,  "AM 10Hz",   menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK, MO_NFM,      "NARROW FM", menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK, MO_WFM,      "WIDE FM",   menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "NARROW FM", menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "WIDE FM",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "EXTERNAL",  menu_modulation_acb},
-  { MT_FORM | MT_CANCEL,   0,             "\032 BACK",NULL },
+  { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
@@ -1304,7 +1305,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 };
 
 static const menuitem_t  menu_highoutputmode[] = {
-  { MT_FORM | MT_ADV_CALLBACK,  0,          "HIGH OUTPUT           %s", menu_outputmode_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  "FREQ: %s",         "240MHz..960MHz"},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MODULATION: %s",   menu_smodulation_acb},
@@ -1321,7 +1322,7 @@ static const menuitem_t  menu_average[] = {
   { MT_ADV_CALLBACK, 3, "MAX\nDECAY",   menu_average_acb},
   { MT_ADV_CALLBACK, 4, "AVER 4",       menu_average_acb},
   { MT_ADV_CALLBACK, 5, "AVER 16",      menu_average_acb},
-  { MT_CANCEL,   0, "\032 BACK", NULL },
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
@@ -1333,7 +1334,7 @@ static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 4, "%4dkHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 5, "%4dkHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 6, "%4dkHz",   menu_rbw_acb},
-  { MT_CANCEL,  -1, "\032 BACK", NULL },
+  { MT_CANCEL,  -1, S_LARROW" BACK", NULL },
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
 
@@ -1345,8 +1346,8 @@ static const menuitem_t menu_scale_per2[] = {
   { MT_ADV_CALLBACK, 9, "0.02/",   menu_scale_per_acb},
   { MT_ADV_CALLBACK,10, "0.01/",   menu_scale_per_acb},
 //{ MT_ADV_CALLBACK,11, "0.005/",  menu_scale_per_acb},
-//{ MT_SUBMENU,  0, "\033 MORE",   menu_scale_per2},
-  { MT_CANCEL,   0, "\032 BACK", NULL },
+//{ MT_SUBMENU,  0, S_RARROW" MORE",   menu_scale_per2},
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1357,8 +1358,8 @@ static const menuitem_t menu_scale_per[] = {
   { MT_ADV_CALLBACK, 3, "  2/",   menu_scale_per_acb},
   { M_ADVT_CALLBACK, 4, "  1/",   menu_scale_per_acb},
   { MT_ADV_CALLBACK, 5, "0.5/",   menu_scale_per_acb},
-  { MT_SUBMENU,  0, "\033 MORE",  menu_scale_per2},
-  { MT_CANCEL,   0, "\032 BACK", NULL },
+  { MT_SUBMENU,  0, S_RARROW" MORE",  menu_scale_per2},
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 #endif
@@ -1368,7 +1369,7 @@ static const menuitem_t menu_reffer2[] = {
   { MT_FORM | MT_ADV_CALLBACK, 5, "%s",  menu_reffer_acb},
   { MT_FORM | MT_ADV_CALLBACK, 6, "%s",  menu_reffer_acb},
   { MT_FORM | MT_ADV_CALLBACK, 7, "%s",  menu_reffer_acb},
-  { MT_FORM | MT_CANCEL,   0, "\032 BACK", NULL },
+  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 #endif
@@ -1381,8 +1382,8 @@ static const menuitem_t menu_reffer[] = {
   { MT_FORM | MT_ADV_CALLBACK,  4, "%s", menu_reffer_acb},
   { MT_FORM | MT_ADV_CALLBACK,  6, "%s", menu_reffer_acb},
   { MT_FORM | MT_ADV_CALLBACK,  7, "%s", menu_reffer_acb},
-//  { MT_FORM | MT_SUBMENU,  0, "\033 MORE", menu_reffer2},
-  { MT_FORM | MT_CANCEL,   0, "\032 BACK", NULL },
+//{ MT_FORM | MT_SUBMENU,  0, S_RARROW" MORE", menu_reffer2},
+  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1391,25 +1392,25 @@ static const menuitem_t menu_atten[] = {
   { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL",  "0 - 30dB"},
   { MT_ADV_CALLBACK | MT_HIGH,0,           "0dB",     menu_atten_high_acb},
   { MT_ADV_CALLBACK | MT_HIGH,30,          "22.5 - 40dB",    menu_atten_high_acb},
-  { MT_CANCEL, 0,                          "\032 BACK", NULL },
+  { MT_CANCEL, 0,                   S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_reflevel[] = {
   { MT_ADV_CALLBACK,0,        "AUTO",    menu_reflevel_acb},
   { MT_KEYPAD,  KM_REFLEVEL,  "MANUAL",  NULL},
-  { MT_CANCEL, 0,           "\032 BACK", NULL },
+  { MT_CANCEL, 0,      S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 const menuitem_t menu_marker_search[] = {
   //{ MT_CALLBACK, "OFF", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "MIN\n" "\032 LEFT",  menu_marker_search_cb },
-  { MT_CALLBACK, 1, "MIN\n" "\033 RIGHT", menu_marker_search_cb },
-  { MT_CALLBACK, 2, "MAX\n" "\032 LEFT",  menu_marker_search_cb },
-  { MT_CALLBACK, 3, "MAX\n" "\033 RIGHT", menu_marker_search_cb },
-  { MT_ADV_CALLBACK, 0, "TRACKING",       menu_marker_tracking_acb },
-  { MT_CANCEL, 0, "\032 BACK", NULL },
+  { MT_CALLBACK, 0, "MIN\n" S_LARROW" LEFT",  menu_marker_search_cb },
+  { MT_CALLBACK, 1, "MIN\n" S_RARROW" RIGHT", menu_marker_search_cb },
+  { MT_CALLBACK, 2, "MAX\n" S_LARROW" LEFT",  menu_marker_search_cb },
+  { MT_CALLBACK, 3, "MAX\n" S_RARROW" RIGHT", menu_marker_search_cb },
+  { MT_ADV_CALLBACK, 0,            "TRACKING",menu_marker_tracking_acb },
+  { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
@@ -1419,9 +1420,9 @@ const menuitem_t menu_marker_modify[] = {
   { MT_ADV_CALLBACK, M_NOISE,       "NOISE",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING", menu_marker_tracking_acb},
   { MT_ADV_CALLBACK, M_NORMAL,      "NORMAL",   menu_marker_modify_acb},
-  { MT_SUBMENU,  0,             "SEARCH",       menu_marker_search},
-  { MT_CALLBACK, M_DELETE,      "DELETE",       menu_marker_delete_cb},
-  { MT_CANCEL,   0, "\032 BACK", NULL },
+  { MT_SUBMENU,  0,                 "SEARCH",   menu_marker_search},
+  { MT_CALLBACK, M_DELETE,          "DELETE",   menu_marker_delete_cb},
+  { MT_CANCEL,   0,          S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1435,7 +1436,7 @@ const menuitem_t menu_marker_sel[] = {
   { MT_CALLBACK, 0, "DELTA", menu_marker_sel_cb },
   { MT_CALLBACK, 0, "NOISE", menu_marker_sel_cb },
   { MT_CALLBACK, 0, "TRACKING", menu_marker_sel_cb },
-  { MT_CANCEL, 0, "\032 BACK", NULL },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 #endif
@@ -1445,17 +1446,17 @@ const menuitem_t menu_marker_select[] = {
   { MT_ADV_CALLBACK, 2, "MARKER %d", menu_marker_select_acb },
   { MT_ADV_CALLBACK, 3, "MARKER %d", menu_marker_select_acb },
   { MT_ADV_CALLBACK, 4, "MARKER %d", menu_marker_select_acb },
-  { MT_CANCEL, 0, "\032 BACK", NULL },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 
 const menuitem_t menu_marker_ops[] = {
-  { MT_CALLBACK, ST_START,  "\033 START",  menu_marker_op_cb },
-  { MT_CALLBACK, ST_STOP,   "\033 STOP",   menu_marker_op_cb },
-  { MT_CALLBACK, ST_CENTER, "\033 CENTER", menu_marker_op_cb },
-  { MT_CALLBACK, ST_SPAN,   "\033 SPAN",   menu_marker_op_cb },
-  { MT_CANCEL, 0,           "\032 BACK",   NULL },
+  { MT_CALLBACK, ST_START,  S_RARROW" START",  menu_marker_op_cb },
+  { MT_CALLBACK, ST_STOP,   S_RARROW" STOP",   menu_marker_op_cb },
+  { MT_CALLBACK, ST_CENTER, S_RARROW" CENTER", menu_marker_op_cb },
+  { MT_CALLBACK, ST_SPAN,   S_RARROW" SPAN",   menu_marker_op_cb },
+  { MT_CANCEL, 0,           S_LARROW" BACK",   NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
@@ -1466,13 +1467,13 @@ static const menuitem_t menu_marker[] = {
   { MT_SUBMENU,  0, "MODIFY\nMARKERS",    menu_marker_select},
   { MT_SUBMENU,  0, "MARKER OPS",        menu_marker_ops},
   { MT_SUBMENU,  0, "SEARCH\nMARKER",     menu_marker_search},
-  { MT_CANCEL,   0, "\032 BACK", NULL },
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_dfu[] = {
   { MT_FORM | MT_CALLBACK, 0, "ENTER DFU",      menu_dfu_cb},
-  { MT_FORM | MT_CANCEL,   0, "\032 BACK",  NULL },
+  { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK",  NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1483,7 +1484,7 @@ static const menuitem_t menu_harmonic[] =
   { MT_ADV_CALLBACK, 3,     "3",              menu_harmonic_acb},
   { MT_ADV_CALLBACK, 4,     "4",              menu_harmonic_acb},
   { MT_ADV_CALLBACK, 5,     "5",              menu_harmonic_acb},
-  { MT_CANCEL,   0, "\032 BACK", NULL },
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 #endif
@@ -1497,7 +1498,7 @@ static const menuitem_t menu_scanning_speed[] =
 // { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20"},
  { MT_KEYPAD, KM_SAMPLETIME,        "SAMPLE\nDELAY",   "300..30000"},              // This must be item 4 to match highlighting
  { MT_KEYPAD, KM_OFFSET_DELAY,      "OFFSET\nDELAY",   "300..30000"},              // This must be item 5 to match highlighting
- { MT_CANCEL,   0,                  "\032 BACK", NULL },
+ { MT_CANCEL,   0,                  S_LARROW" BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1516,7 +1517,7 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
  { MT_SUBMENU,          0,             "SWEEP\nPOINTS",   menu_sweep_points},
  { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
- { MT_CANCEL,   0,             "\032 BACK", NULL },
+ { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1532,7 +1533,7 @@ static const menuitem_t menu_settings2[] =
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
-  { MT_CANCEL,   0, "\032 BACK", NULL },
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1544,8 +1545,8 @@ static const menuitem_t menu_settings[] =
   { MT_SUBMENU,0,               "SCAN SPEED",         menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",          "1..100"},
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_drive},
-  { MT_SUBMENU,  0,             "\033 MORE",    menu_settings2},
-  { MT_CANCEL,   0,             "\032 BACK", NULL },
+  { MT_SUBMENU,  0,             S_RARROW" MORE",    menu_settings2},
+  { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1557,7 +1558,7 @@ static const menuitem_t menu_measure[] = {
 //  { MT_ADV_CALLBACK,            M_STOP_BAND,  "STOP\nBAND",     menu_measure_acb},
 //  { MT_ADV_CALLBACK,            M_PASS_BAND,  "PASS\nBAND",     menu_measure_acb},
 //  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",           menu_measure_acb},
-  { MT_CANCEL, 0,               "\032 BACK", NULL },
+  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
@@ -1566,7 +1567,7 @@ static const menuitem_t menu_calibrate[] =
  { MT_FORM | MT_TITLE,      0, "CONNECT INPUT AND OUTPUT",  NULL},
  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
  { MT_FORM | MT_CALLBACK,   0, "RESET CALBRATION",          menu_calibrate_cb},
- { MT_FORM | MT_CANCEL,     0, "\032 BACK",             NULL },
+ { MT_FORM | MT_CANCEL,     0, S_LARROW" BACK",             NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1577,8 +1578,8 @@ static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0, "LEVEL CAL",      menu_calibrate},
   { MT_CALLBACK, 0, "VERSION",        menu_config_cb},
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
-  { MT_SUBMENU,  0, "\033 DFU",  menu_dfu},
-  { MT_CANCEL,   0, "\032 BACK", NULL },
+  { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -1592,7 +1593,7 @@ static const menuitem_t menu_display[] = {
   { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
 //  { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",    NULL},
 
-  { MT_CANCEL, 0,           "\032 BACK", NULL },
+  { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
@@ -1605,7 +1606,7 @@ static const menuitem_t menu_unit[] =
 //{ MT_ADV_CALLBACK,U_UVOLT, S_MICRO"Volt",     menu_unit_acb},
   { MT_ADV_CALLBACK,U_WATT,  "Watt",            menu_unit_acb},
 //{ MT_ADV_CALLBACK,U_UWATT, S_MICRO"Watt",     menu_unit_acb},
-  { MT_CANCEL, 0,            "\032 BACK", NULL },
+  { MT_CANCEL, 0,            S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
@@ -1616,7 +1617,7 @@ static const menuitem_t menu_trigger[] = {
   { MT_KEYPAD,       KM_TRIGGER, "TRIGGER\nLEVEL", NULL},
   { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
   { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
-  { MT_CANCEL, 0,                "\032 BACK",      NULL },
+  { MT_CANCEL, 0,                S_LARROW" BACK",      NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
@@ -1629,7 +1630,7 @@ static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,  "EXTERNAL\nAMP",NULL},
   { MT_SUBMENU,  0,         "TRIGGER",      menu_trigger},
-  { MT_CANCEL, 0,           "\032 BACK",    NULL },
+  { MT_CANCEL, 0,           S_LARROW" BACK",    NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
@@ -1643,21 +1644,21 @@ static const menuitem_t menu_stimulus[] = {
 #ifdef __SPUR__
   { MT_ADV_CALLBACK | MT_LOW,0, "SPUR\nREMOVAL", menu_spur_acb},
 #endif
-  { MT_CANCEL,  0,              "\032 BACK", NULL },
+  { MT_CANCEL,  0,              S_LARROW" BACK", NULL },
   { MT_NONE,    0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
-  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "%s TO LOW INPUT",      menu_mode_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "%s TO HIGH INPUT",     menu_mode_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "%s TO LOW OUTPUT",     menu_mode_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s TO HIGH OUTPUT",    menu_mode_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "CAL OUTPUT: %s",       menu_sreffer_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "%s to LOW in",      menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "%s to HIGH in",     menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "%s to LOW out",     menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Cal. output: %s",   menu_sreffer_acb},
 #ifdef __ULTRA__
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
 #endif
-//  { MT_FORM | MT_CANCEL,   0, "\032 BACK", NULL },
+//  { MT_FORM | MT_CANCEL,   0, S_RARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 

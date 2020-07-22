@@ -6,15 +6,17 @@
 #include <stdint.h>
 
 /*
- * Check 1 byte of char bitmap data for get width
+ * Check 0 byte of char bitmap data for get width
  */
 // Font definitions
-#define FONT_GET_DATA(ch)   (&x7x11b_bits[ch*11])
-#define FONT_GET_WIDTH(ch)  (8-(x7x11b_bits[ch*11]&7))
+#define FONT_START_CHAR     0x17
 #define FONT_MAX_WIDTH       8
 #define FONT_WIDTH           7
 #define FONT_GET_HEIGHT	    11
 #define FONT_STR_HEIGHT	    11
+
+#define FONT_GET_DATA(ch)   (  &x7x11b_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT])
+#define FONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT]&7))
 
 #define CHAR7x11_WIDTH_MASK 0x07
 #define CHAR7x11_WIDTH_4px  0x04
@@ -24,8 +26,9 @@
 #define CHAR7x11_WIDTH_8px  0x00
 
 /* Font character bitmap data. */
-const uint8_t x7x11b_bits[127*11] =
+const uint8_t x7x11b_bits[] =
 {
+#if 0
 		/* Character 0 (0x00):
 		   width 7
 		   +-------+
@@ -646,7 +649,8 @@ const uint8_t x7x11b_bits[127*11] =
 		0b00110000,
 		0b00110000,
 		0b00110000,
-
+#endif
+// FONT_START_CHAR = 23
 		/* Character 23 (0x17):
 		   width 8
 		   +-------+
