@@ -329,6 +329,8 @@ extern  uint16_t _grid_y;
 extern int16_t area_width;
 extern int16_t area_height;
 
+// Define marker size (can be 0 or 1)
+#define _MARKER_SIZE_         0
 // font
 extern const uint8_t x5x7_bits [];
 extern const uint8_t x7x11b_bits [];
@@ -377,7 +379,7 @@ extern const uint8_t numfont16x22[];
 #define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
 #endif
 
-#define S_DELTA    "\029"  // 0x17
+#define S_DELTA    "\027"  // 0x17
 #define S_SARROW   "\030"  // 0x18
 #define S_INFINITY "\031"  // 0x19
 #define S_LARROW   "\032"  // 0x1A

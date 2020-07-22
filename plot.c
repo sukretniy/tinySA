@@ -34,6 +34,7 @@ static int waterfall = false;
 #endif
 static void cell_draw_marker_info(int x0, int y0);
 static void cell_grid_line_info(int x0, int y0);
+static void cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *bitmap);
 static void draw_battery_status(void);
 static void update_waterfall(void);
 void cell_draw_test_info(int x0, int y0);
@@ -854,21 +855,22 @@ static void trace_get_value_string(
   float v;
   char buf2[16];
   char buf3[8];
-  buf2[0]=' ';
+  char *ptr2 = buf2;
   uint32_t dfreq = 0;
   float rlevel = 0;
   int ii = i;
   int unit_index = setting.unit;
   if (mtype & M_DELTA) {
+    *ptr2++ = S_DELTA[0];
     unit_index = setting.unit+5;
     if (ri > i) {
       dfreq = frequencies[ri] - frequencies[i];
       ii = ri - i;
-      buf2[0] = '-';
+      *ptr2++ = '-';
     } else {
       dfreq = frequencies[i] - frequencies[ri];
       ii = i - ri;
-      buf2[0] = '+';
+      *ptr2++ = '+';
     }
     rlevel = value(coeff[ri]);
   } else {
@@ -877,38 +879,38 @@ static void trace_get_value_string(
   if (FREQ_IS_CW()) {
     float t = ii*(setting.actual_sweep_time_us)/(sweep_points - 1);
 #if 1
-    plot_printf(&buf2[1], sizeof(buf2) -1, "%.3Fs" , t/ONE_SECOND_TIME);
+    plot_printf(ptr2, sizeof(buf2) - 2, "%.3Fs" , t/ONE_SECOND_TIME);
 #else
     if (t>ONE_SECOND_TIME){
-      plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/ONE_SECOND_TIME);
-      buf2[5] = 'S';
-      buf2[6]=0;
+      ptr2+=plot_printf(ptr2, sizeof(buf2) - 2, "%4f" , t/ONE_SECOND_TIME);
+      *ptr2++= 'S';
+      *ptr2++=0;
     }
     else if (t>1000.0) {
-        plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t/ONE_MS_TIME);
-        buf2[5] = 'm';
-        buf2[6] = 'S';
-        buf2[7]=0;
+        ptr2+=plot_printf(ptr2, sizeof(buf2) - 2, "%4f" , t/ONE_MS_TIME);
+        *ptr2++= 'm';
+        *ptr2++= 'S';
+        *ptr2++= 0;
     }
     else {
-        plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t);
-        buf2[5] = 'u';
-        buf2[6] = 'S';
-        buf2[7]=0;
+        ptr2+=plot_printf(&buf2[1], sizeof(buf2) -1, "%4f" , t);
+        *ptr2++= 'u';
+        *ptr2++= 'S';
+        *ptr2++= 0;
     }
 #endif
   } else {
 #if 0
   uint32_t resolution = get_sweep_frequency(ST_SPAN);
   if (resolution  <= 2000*POINTS_COUNT)
-    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.3f" , (dfreq + 500) / 1000000.0);
+    plot_printf(ptr2, sizeof(buf2) - 2, "%3.3f" , (dfreq + 500) / 1000000.0);
   else if (resolution  <= 20000*POINTS_COUNT)
-    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.2f" , (dfreq + 5000) / 1000000.0);
+    plot_printf(ptr2, sizeof(buf2) - 2, "%3.2f" , (dfreq + 5000) / 1000000.0);
   else
-    plot_printf(&buf2[1], sizeof(buf2) -1, "%3.1f" , (dfreq + 50000) / 1000000.0);
+    plot_printf(ptr2, sizeof(buf2) - 2, "%3.1f" , (dfreq + 50000) / 1000000.0);
   }
 #else
-  plot_printf(&buf2[1], sizeof(buf2) -1, "%8.3qHz" , dfreq);
+    plot_printf(ptr2, sizeof(buf2) - 2, "%8.3qHz" , dfreq);
   }
 #endif
     v = value(coeff[i]);
@@ -1119,7 +1121,6 @@ search_index_range_x(int x1, int x2, index_t index[POINTS_COUNT], int *i0, int *
   return TRUE;
 }
 #if 0       // Not used as refpos is always at top of screen
-
 #define REFERENCE_WIDTH    6
 #define REFERENCE_HEIGHT   5
 #define REFERENCE_X_OFFSET 5
@@ -1127,103 +1128,156 @@ search_index_range_x(int x1, int x2, index_t index[POINTS_COUNT], int *i0, int *
 
 // Reference bitmap
 static const uint8_t reference_bitmap[]={
-  0b11000000,
-  0b11110000,
-  0b11111100,
-  0b11110000,
-  0b11000000,
-};
-
-static void
-draw_refpos(int x, int y, int c)
-{
-  int y0 = y, j;
-  for (j = 0; j < REFERENCE_HEIGHT; j++, y0++) {
-    if (y0 < 0 || y0 >= CELLHEIGHT) continue;
-    int x0 = x;
-    uint8_t bits = reference_bitmap[j];
-    while (bits) {
-      if (x0 >= 0 && x0 < CELLWIDTH)
-        cell_buffer[y0 * CELLWIDTH + x0] = (bits & 0x80) ? c : DEFAULT_BG_COLOR;
-      x0++;
-      bits <<= 1;
-    }
-  }
-}
+  _BMP8(0b11000000),
+  _BMP8(0b11110000),
+  _BMP8(0b11111100),
+  _BMP8(0b11110000),
+  _BMP8(0b11000000),
 #endif
 
-#define MARKER_WIDTH  7
-#define MARKER_HEIGHT 10
-#define X_MARKER_OFFSET 3
-#define Y_MARKER_OFFSET 10
+#if _MARKER_SIZE_ == 0
+#define MARKER_WIDTH       7
+#define MARKER_HEIGHT     10
+#define X_MARKER_OFFSET    3
+#define Y_MARKER_OFFSET   10
+#define MARKER_BITMAP(i)  (&marker_bitmap[(i)*MARKER_HEIGHT])
 static const uint8_t marker_bitmap[]={
+// Marker Back plate
+  _BMP8(0b11111110),
+  _BMP8(0b11111110),
+  _BMP8(0b11111110),
+  _BMP8(0b11111110),
+  _BMP8(0b11111110),
+  _BMP8(0b11111110),
+  _BMP8(0b11111110),
+  _BMP8(0b01111100),
+  _BMP8(0b00111000),
+  _BMP8(0b00010000),
   // Marker 1
-  0b11111110,
-  0b11101110,
-  0b11001110,
-  0b11101110,
-  0b11101110,
-  0b11101110,
-  0b11000110,
-  0b01111100,
-  0b00111000,
-  0b00010000,
+  _BMP8(0b00000000),
+  _BMP8(0b00010000),
+  _BMP8(0b00110000),
+  _BMP8(0b00010000),
+  _BMP8(0b00010000),
+  _BMP8(0b00010000),
+  _BMP8(0b00111000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
   // Marker 2
-  0b11111110,
-  0b11000110,
-  0b10111010,
-  0b11111010,
-  0b11000110,
-  0b10111110,
-  0b10000010,
-  0b01111100,
-  0b00111000,
-  0b00010000,
+  _BMP8(0b00000000),
+  _BMP8(0b00111000),
+  _BMP8(0b01000100),
+  _BMP8(0b00000100),
+  _BMP8(0b00111000),
+  _BMP8(0b01000000),
+  _BMP8(0b01111100),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
   // Marker 3
-  0b11111110,
-  0b11000110,
-  0b10111010,
-  0b11100110,
-  0b11111010,
-  0b10111010,
-  0b11000110,
-  0b01111100,
-  0b00111000,
-  0b00010000,
+  _BMP8(0b00000000),
+  _BMP8(0b00111000),
+  _BMP8(0b01000100),
+  _BMP8(0b00011000),
+  _BMP8(0b00000100),
+  _BMP8(0b01000100),
+  _BMP8(0b00111000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
   // Marker 4
-  0b11111110,
-  0b11110110,
-  0b11100110,
-  0b11010110,
-  0b10110110,
-  0b10110110,
-  0b10000010,
-  0b01110100,
-  0b00111000,
-  0b00010000,
+  _BMP8(0b00000000),
+  _BMP8(0b00001000),
+  _BMP8(0b00011000),
+  _BMP8(0b00101000),
+  _BMP8(0b01001000),
+  _BMP8(0b01001000),
+  _BMP8(0b01111100),
+  _BMP8(0b00001000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
 };
 
-static void
-draw_marker(int x, int y, int c, int ch)
-{
-  int y0 = y, j;
-  for (j = 0; j < MARKER_HEIGHT; j++, y0++) {
-    int x0 = x;
-    uint8_t bits = marker_bitmap[ch * MARKER_HEIGHT + j];
-    bool force_color = false;
-    while (bits) {
-      if (bits & 0x80) force_color = true;
-      if (x0 >= 0 && x0 < CELLWIDTH && y0 >= 0 && y0 < CELLHEIGHT) {
-        if (bits & 0x80)
-          cell_buffer[y0 * CELLWIDTH + x0] = c;
-        else if (force_color)
-          cell_buffer[y0 * CELLWIDTH + x0] = DEFAULT_BG_COLOR;
-      }
-      x0++;
-      bits <<= 1;
-    }
-  }
-}
+#elif _MARKER_SIZE_ == 1
+#define MARKER_WIDTH       10
+#define MARKER_HEIGHT      13
+#define X_MARKER_OFFSET     4
+#define Y_MARKER_OFFSET    13
+#define MARKER_BITMAP(i)   (&marker_bitmap[(i)*2*MARKER_HEIGHT])
+static const uint8_t marker_bitmap[]={
+  // Marker Back plate
+  _BMP16(0b1111111110000000),
+  _BMP16(0b1111111110000000),
+  _BMP16(0b1111111110000000),
+  _BMP16(0b1111111110000000),
+  _BMP16(0b1111111110000000),
+  _BMP16(0b1111111110000000),
+  _BMP16(0b1111111110000000),
+  _BMP16(0b1111111110000000),
+  _BMP16(0b1111111110000000),
+  _BMP16(0b0111111100000000),
+  _BMP16(0b0011111000000000),
+  _BMP16(0b0001110000000000),
+  _BMP16(0b0000100000000000),
+  // Marker 1
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000110000000000),
+  _BMP16(0b0001110000000000),
+  _BMP16(0b0010110000000000),
+  _BMP16(0b0000110000000000),
+  _BMP16(0b0000110000000000),
+  _BMP16(0b0000110000000000),
+  _BMP16(0b0000110000000000),
+  _BMP16(0b0000110000000000),
+  _BMP16(0b0001111000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  // Marker 2
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0001111000000000),
+  _BMP16(0b0011001100000000),
+  _BMP16(0b0011001100000000),
+  _BMP16(0b0000011000000000),
+  _BMP16(0b0000110000000000),
+  _BMP16(0b0001100000000000),
+  _BMP16(0b0011000000000000),
+  _BMP16(0b0011111100000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  // Marker 3
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0011111000000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0000001100000000),
+  _BMP16(0b0000111000000000),
+  _BMP16(0b0000001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0011111000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  // Marker 4
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000011000000000),
+  _BMP16(0b0000111000000000),
+  _BMP16(0b0001111000000000),
+  _BMP16(0b0011011000000000),
+  _BMP16(0b0110011000000000),
+  _BMP16(0b0110011000000000),
+  _BMP16(0b0111111100000000),
+  _BMP16(0b0000011000000000),
+  _BMP16(0b0000011000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+};
+#endif
 
 static void
 markmap_marker(int marker)
@@ -1555,18 +1609,15 @@ draw_cell(int m, int n)
       int x = CELL_X(index) - x0 - X_MARKER_OFFSET;
       int y = CELL_Y(index) - y0 - Y_MARKER_OFFSET;
       // Check marker icon on cell
-#if 1
-
-      if (x + MARKER_WIDTH >= 0 && x < CELLWIDTH &&
-          y + MARKER_HEIGHT >= 0 && y < CELLHEIGHT)
-        draw_marker(x, y, marker_color(markers[i].mtype), i);
-#else
-
       if (x + MARKER_WIDTH >= 0 && x - MARKER_WIDTH < CELLWIDTH &&
-          y + MARKER_HEIGHT >= 0 && y - MARKER_HEIGHT < CELLHEIGHT)
-        draw_marker(x, y, marker_color(markers[i].mtype), i);
-#endif
-      //      draw_marker(x, y, config.trace_color[t], i);
+          y + MARKER_HEIGHT >= 0 && y - MARKER_HEIGHT < CELLHEIGHT){
+          // Draw marker plate
+          ili9341_set_foreground(config.trace_color[t]);
+          cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, MARKER_BITMAP(0));
+          // Draw marker number
+          ili9341_set_foreground(DEFAULT_BG_COLOR);
+          cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, MARKER_BITMAP(i+1));
+      }
 //    }
   }
 #endif
@@ -1590,8 +1641,10 @@ draw_cell(int m, int n)
     int x = 0 - x0 + CELLOFFSETX - REFERENCE_X_OFFSET;
     if (x + REFERENCE_WIDTH >= 0 && x - REFERENCE_WIDTH < CELLWIDTH) {
       int y = HEIGHT - float2int((get_trace_refpos(t) * GRIDY)) - y0 - REFERENCE_Y_OFFSET;
-      if (y + REFERENCE_HEIGHT >= 0 && y - REFERENCE_HEIGHT < CELLHEIGHT)
-        draw_refpos(x, y, config.trace_color[t]);
+      if (y + REFERENCE_HEIGHT >= 0 && y - REFERENCE_HEIGHT < CELLHEIGHT){
+        ili9341_set_foreground(config.trace_color[t]);
+        cell_blit_bitmap(x , y, REFERENCE_WIDTH, REFERENCE_HEIGHT, reference_bitmap);
+      }
     }
   }
 #endif
@@ -1704,7 +1757,7 @@ request_to_draw_cells_behind_numeric_input(void)
 }
 
 static void
-cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *char_buf)
+cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *bitmap)
 {
   if (x <= -w)
     return;
@@ -1712,7 +1765,7 @@ cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *char_buf)
   int c = h+y, r;
   for (; y < c; y++) {
     for (r = 0; r < w; r++) {
-      if ((r&7)==0) bits = *char_buf++;
+      if ((r&7)==0) bits = *bitmap++;
       if (y >= 0 && x+r >= 0 && y < CELLHEIGHT && x+r < CELLWIDTH && (0x80 & bits))
         cell_buffer[y*CELLWIDTH + x + r] = foreground_color;
       bits <<= 1;
