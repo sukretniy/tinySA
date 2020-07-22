@@ -1304,7 +1304,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 };
 
 static const menuitem_t  menu_highoutputmode[] = {
-  { MT_FORM | MT_CALLBACK,  0,          "HIGH OUTPUT           %s",      menu_outputmode_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,          "HIGH OUTPUT           %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  "FREQ: %s",         "240MHz..960MHz"},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MODULATION: %s",   menu_smodulation_acb},
