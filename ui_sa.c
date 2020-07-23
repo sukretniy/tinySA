@@ -988,9 +988,8 @@ static UI_FUNCTION_CALLBACK(menu_marker_delete_cb)
     menu_move_back();
   }
 }
-// last index - for item back button!!
-static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000, -1};
 
+static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
 {
   (void)item;
@@ -1176,11 +1175,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
   draw_menu();
 }
 
-static const uint16_t points_setting[] = {51, 101, 145, 290, -1};
+static const uint16_t points_setting[] = {51, 101, 145, 290};
 static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
   (void)item;
   if(b){
     b->icon = points_setting[data] == sweep_points ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->param_1.i = points_setting[data];
     return;
   }
   set_sweep_points(points_setting[data]);
@@ -1334,7 +1334,7 @@ static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 4, "%4dkHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 5, "%4dkHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 6, "%4dkHz",   menu_rbw_acb},
-  { MT_CANCEL,  -1, S_LARROW" BACK", NULL },
+  { MT_CANCEL,  0, S_LARROW" BACK", NULL },
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
 
@@ -1503,10 +1503,10 @@ static const menuitem_t menu_scanning_speed[] =
 };
 
 static const menuitem_t menu_sweep_points[] = {
-  { MT_ADV_CALLBACK, 0, " 51 point", menu_points_acb },
-  { MT_ADV_CALLBACK, 1, "101 point", menu_points_acb },
-  { MT_ADV_CALLBACK, 2, "145 point", menu_points_acb },
-  { MT_ADV_CALLBACK, 3, "290 point", menu_points_acb },
+  { MT_ADV_CALLBACK, 0, "%3d point", menu_points_acb },
+  { MT_ADV_CALLBACK, 1, "%3d point", menu_points_acb },
+  { MT_ADV_CALLBACK, 2, "%3d point", menu_points_acb },
+  { MT_ADV_CALLBACK, 3, "%3d point", menu_points_acb },
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1541,13 +1541,13 @@ static const menuitem_t menu_settings2[] =
 
 static const menuitem_t menu_settings[] =
 {
-  { MT_ADV_CALLBACK | MT_LOW, 0, "LO OUTPUT", menu_lo_output_acb},
+  { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
   { MT_KEYPAD, KM_ACTUALPOWER,  "ACTUAL\nPOWER",  NULL},
-  { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",       "Set to zero for auto IF"},
-  { MT_SUBMENU,0,               "SCAN SPEED",         menu_scanning_speed},
-  { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",          "1..100"},
+  { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "Set to zero for auto IF"},
+  { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
+  { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_drive},
-  { MT_SUBMENU,  0,             S_RARROW" MORE",    menu_settings2},
+  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings2},
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1556,17 +1556,17 @@ static const menuitem_t menu_measure[] = {
   { MT_ADV_CALLBACK,            M_OFF,        "OFF",              menu_measure_acb},
   { MT_ADV_CALLBACK,            M_IMD,        "HARMONIC",         menu_measure_acb},
   { MT_ADV_CALLBACK,            M_OIP3,       "OIP3",             menu_measure_acb},
-  { MT_ADV_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",   menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",     menu_measure_acb},
 //  { MT_ADV_CALLBACK,            M_STOP_BAND,  "STOP\nBAND",     menu_measure_acb},
 //  { MT_ADV_CALLBACK,            M_PASS_BAND,  "PASS\nBAND",     menu_measure_acb},
-//  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",           menu_measure_acb},
+//  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_calibrate[] =
 {
- { MT_FORM | MT_TITLE,      0, "CONNECT INPUT AND OUTPUT",  NULL},
+ { MT_FORM | MT_TITLE,      0, "Connect IN and OUT",  NULL},
  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
  { MT_FORM | MT_CALLBACK,   0, "RESET CALBRATION",          menu_calibrate_cb},
  { MT_FORM | MT_CANCEL,     0, S_LARROW" BACK",             NULL },
