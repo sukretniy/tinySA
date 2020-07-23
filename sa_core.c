@@ -551,7 +551,7 @@ void set_harmonic(int h)
 void set_step_delay(int d)                  // override RSSI measurement delay or set to one of three auto modes
 {
 
-  if ((3 <= d && d < 300) || d > 30000)         // values 0 (normal scan), 1 (precise scan) and 2(fast scan) have special meaning and are auto calculated
+  if ((3 <= d && d < 250) || d > 30000)         // values 0 (normal scan), 1 (precise scan) and 2(fast scan) have special meaning and are auto calculated
     return;
   if (d <3) {
     setting.step_delay_mode = d;
@@ -809,7 +809,7 @@ void calculate_step_delay(void)
       SI4432_step_delay = 0;
     } else {
 #if 1       // Table for double offset delay
-      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  280; SI4432_offset_delay = 100; }
+      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  300; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 100; }
@@ -3215,12 +3215,14 @@ void calibrate(void)
 {
 #ifdef __CALIBRATE__
   int local_test_status;
+  int old_sweep_points = setting._sweep_points;
   in_selftest = true;
   reset_calibration();
   reset_settings(M_LOW);
   int i = 11;       // calibrate low mode power on 30 MHz;
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
-    set_RBW(power_rbw[j]);
+//    set_RBW(power_rbw[j]);
+//    set_sweep_points(21);
     test_prepare(i);
     setting.step_delay_mode = SD_PRECISE;
     setting.agc = S_OFF;
@@ -3273,6 +3275,7 @@ quit:
   ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
   wait_user();
   ili9341_clear_screen();
+  set_sweep_points(old_sweep_points);
 
   in_selftest = false;
   sweep_mode = SWEEP_ENABLE;

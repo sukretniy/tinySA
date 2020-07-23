@@ -1176,7 +1176,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
   draw_menu();
 }
 
-static const uint16_t points_setting[] = {145, 290, -1};
+static const uint16_t points_setting[] = {51, 101, 145, 290, -1};
 static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
   (void)item;
   if(b){
@@ -1496,15 +1496,17 @@ static const menuitem_t menu_scanning_speed[] =
 // { MT_ADV_CALLBACK,     SD_PRECISE, PRECISE",           menu_scanning_speed_acb},
 // { MT_ADV_CALLBACK | MT_LOW,SD_FAST,  "FAST",           menu_scanning_speed_acb},
 // { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20"},
- { MT_KEYPAD, KM_SAMPLETIME,        "SAMPLE\nDELAY",   "300..30000"},              // This must be item 4 to match highlighting
- { MT_KEYPAD, KM_OFFSET_DELAY,      "OFFSET\nDELAY",   "300..30000"},              // This must be item 5 to match highlighting
- { MT_CANCEL,   0,                  S_LARROW" BACK", NULL },
+ { MT_KEYPAD, KM_SAMPLETIME,        "SAMPLE\nDELAY",   "250..10000, 0=auto"},              // This must be item 4 to match highlighting
+ { MT_KEYPAD, KM_OFFSET_DELAY,      "OFFSET\nDELAY",   "250..10000, 0=auto"},              // This must be item 5 to match highlighting
+ { MT_CANCEL,   0,                  "\032 BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_sweep_points[] = {
-  { MT_ADV_CALLBACK, 0, "145 point", menu_points_acb },
-  { MT_ADV_CALLBACK, 1, "290 point", menu_points_acb },
+  { MT_ADV_CALLBACK, 0, " 51 point", menu_points_acb },
+  { MT_ADV_CALLBACK, 1, "101 point", menu_points_acb },
+  { MT_ADV_CALLBACK, 2, "145 point", menu_points_acb },
+  { MT_ADV_CALLBACK, 3, "290 point", menu_points_acb },
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
