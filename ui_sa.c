@@ -1176,7 +1176,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
   draw_menu();
 }
 
-static const uint16_t points_setting[] = {51,101, 145, 290, -1};
+static const uint16_t points_setting[] = {145, 290, -1};
 static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
   (void)item;
   if(b){
@@ -1503,10 +1503,8 @@ static const menuitem_t menu_scanning_speed[] =
 };
 
 static const menuitem_t menu_sweep_points[] = {
-  { MT_ADV_CALLBACK, 0, "51 point", menu_points_acb },
-  { MT_ADV_CALLBACK, 1, "101 point", menu_points_acb },
-  { MT_ADV_CALLBACK, 2, "145 point", menu_points_acb },
-  { MT_ADV_CALLBACK, 3, "290 point", menu_points_acb },
+  { MT_ADV_CALLBACK, 0, "145 point", menu_points_acb },
+  { MT_ADV_CALLBACK, 1, "290 point", menu_points_acb },
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
