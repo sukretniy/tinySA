@@ -1705,8 +1705,6 @@ int menu_is_form(const menuitem_t *menu)
   return(false);
 }
 
-static void fetch_numeric_target(void);
-
 static void menu_item_modify_attribute(
     const menuitem_t *menu, int item, ui_button_t *button)
 {
