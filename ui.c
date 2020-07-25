@@ -1524,14 +1524,14 @@ draw_numeric_input(const char *buf)
       ili9341_drawfont(c, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
     else if (focused) // c not number, but focused
       ili9341_drawfont(0, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
-    else // erase
-      ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_WIDTH+2+8, bg);
+//    else // erase
+//      ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_WIDTH+2+8, bg);
 
     x += xsim&0x8000 ? NUM_FONT_GET_WIDTH+2+8 : NUM_FONT_GET_WIDTH+2;
   }
   // erase last
 //  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
-  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-64, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-x-1, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
   if (buf[0] == 0 && kp_help_text != NULL) {
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
