@@ -281,7 +281,7 @@ extern void tlv320aic3204_select(int channel);
 #ifdef __SCROLL__
 extern  uint16_t _grid_y;
 #define GRIDY  _grid_y
-#define HEIGHT_SCROLL     180
+#define HEIGHT_SCROLL     260
 #define HEIGHT_NOSCROLL   310
 #define SCROLL_GRIDY      (HEIGHT_SCROLL / NGRIDY)
 #define NOSCROLL_GRIDY    (HEIGHT_NOSCROLL / NGRIDY)
