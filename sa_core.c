@@ -20,6 +20,10 @@
 #include "SI4432.h"		// comment out for simulation
 #include "stdlib.h"
 
+#pragma GCC push_options
+#pragma GCC optimize ("Og")
+
+
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
 #ifdef __DEBUG_AGC__
 #ifdef __FAST_SWEEP__
@@ -3295,4 +3299,5 @@ quit:
 #endif
 }
 
+#pragma GCC pop_options
 
