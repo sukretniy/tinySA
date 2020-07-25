@@ -282,11 +282,11 @@ extern void tlv320aic3204_select(int channel);
 extern  uint16_t _grid_y;
 #define GRIDY  _grid_y
 #define HEIGHT_SCROLL     180
-#define HEIGHT_NOSCROLL   230
+#define HEIGHT_NOSCROLL   310
 #define SCROLL_GRIDY      (HEIGHT_SCROLL / NGRIDY)
 #define NOSCROLL_GRIDY    (HEIGHT_NOSCROLL / NGRIDY)
 #else
-#define GRIDY             (230 / NGRIDY)
+#define GRIDY             (310 / NGRIDY)
 #endif
 
 #define WIDTH  (LCD_WIDTH - 1 - OFFSETX)
@@ -296,8 +296,8 @@ extern  uint16_t _grid_y;
 #define CELLHEIGHT (32)
 
 #define FREQUENCIES_XPOS1 OFFSETX
-#define FREQUENCIES_XPOS2 200
-#define FREQUENCIES_YPOS  (LCD_HEIGHT-7)
+#define FREQUENCIES_XPOS2 320
+#define FREQUENCIES_YPOS  (LCD_HEIGHT-8)
 
 //
 #define CELLOFFSETX 0
@@ -307,15 +307,15 @@ extern  uint16_t _grid_y;
 #define GRID_X_TEXT       (AREA_WIDTH_NORMAL - 7*5)
 
 // Smith/polar chart
-#define P_CENTER_X (CELLOFFSETX + WIDTH/2)
-#define P_CENTER_Y (HEIGHT/2)
-#define P_RADIUS   (HEIGHT/2)
+//#define P_CENTER_X (CELLOFFSETX + WIDTH/2)
+//#define P_CENTER_Y (HEIGHT/2)
+//#define P_RADIUS   (HEIGHT/2)
 
 // Menu Button
 // Maximum menu buttons count
 #define MENU_BUTTON_MAX         8
 #define MENU_BUTTON_WIDTH      80
-#define MENU_BUTTON_HEIGHT     28
+#define MENU_BUTTON_HEIGHT     38
 #define MENU_BUTTON_BORDER      1
 #define KEYBOARD_BUTTON_BORDER  2
 #define FORM_BUTTON_BORDER      2
@@ -330,7 +330,7 @@ extern int16_t area_width;
 extern int16_t area_height;
 
 // Define marker size (can be 0 or 1)
-#define _MARKER_SIZE_         0
+#define _MARKER_SIZE_         1
 // font
 extern const uint8_t x5x7_bits [];
 extern const uint8_t x7x11b_bits [];
@@ -543,8 +543,8 @@ extern volatile uint8_t redraw_request;
 // Define size of screen buffer in pixels (one pixel 16bit size)
 #define SPI_BUFFER_SIZE             (CELLWIDTH*CELLHEIGHT)
 
-#define LCD_WIDTH                   320
-#define LCD_HEIGHT                  240
+#define LCD_WIDTH                   480
+#define LCD_HEIGHT                  320
 
 #define DEFAULT_FG_COLOR            RGB565(255,255,255)
 #define DEFAULT_BG_COLOR            RGB565(  0,  0,  0)
@@ -889,14 +889,14 @@ void enter_dfu(void);
 /*
  * adc.c
  */
-#define ADC_TOUCH_X  ADC_CHSELR_CHSEL6
-#define ADC_TOUCH_Y  ADC_CHSELR_CHSEL7
+#define rccEnableWWDG(lp) rccEnableAPB1(RCC_APB1ENR_WWDGEN, lp)
+#define ADC_TOUCH_X  ADC_CHANNEL_IN3
+#define ADC_TOUCH_Y  ADC_CHANNEL_IN4
 
 void adc_init(void);
 uint16_t adc_single_read(uint32_t chsel);
-void adc_start_analog_watchdogd(uint32_t chsel);
+void adc_start_analog_watchdogd(void);
 void adc_stop(void);
-void adc_interrupt(void);
 int16_t adc_vbat_read(void);
 
 /*

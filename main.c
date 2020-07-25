@@ -790,7 +790,7 @@ VNA_SHELL_FUNCTION(cmd_capture)
   (void)argc;
   (void)argv;
   int i, y;
-#if SPI_BUFFER_SIZE < (3*LCD_WIDTH + 1)
+#if SPI_BUFFER_SIZE < (2*LCD_WIDTH)
 #error "Low size of spi_buffer for cmd_capture"
 #endif
   // read 2 row pixel time (read buffer limit by 2/3 + 1 from spi_buffer size)
@@ -853,7 +853,8 @@ config_t config = {
   .menu_active_color = DEFAULT_MENU_ACTIVE_COLOR,
   .trace_color =       { DEFAULT_TRACE_1_COLOR, DEFAULT_TRACE_2_COLOR, DEFAULT_TRACE_3_COLOR},
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
-  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+//  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+  .touch_cal =         { 272, 521, 114, 153 },  //4.0" LCD
   .freq_mode = FREQ_MODE_START_STOP,
 #ifdef __VNA__
   .harmonic_freq_threshold = 300000000,
@@ -2501,40 +2502,31 @@ THD_FUNCTION(myshellThread, p)
 }
 #endif
 
-#ifdef __VNA__
+#if 0
 // I2C clock bus setting: depend from STM32_I2C1SW in mcuconf.h
 static const I2CConfig i2ccfg = {
-  .timingr =     // TIMINGR register initialization. (use I2C timing configuration tool for STM32F3xx and STM32F0xx microcontrollers (AN4235))
-#if STM32_I2C1SW == STM32_I2C1SW_HSI
-  // STM32_I2C1SW == STM32_I2C1SW_HSI     (HSI=8MHz)
-  // 400kHz @ HSI 8MHz (Use 26.4.10 I2C_TIMINGR register configuration examples from STM32 RM0091 Reference manual)
-  STM32_TIMINGR_PRESC(0U)  |
-  STM32_TIMINGR_SCLDEL(3U) | STM32_TIMINGR_SDADEL(1U) |
-  STM32_TIMINGR_SCLH(3U)   | STM32_TIMINGR_SCLL(9U),
-  // Old values voodoo magic 400kHz @ HSI 8MHz
-  //0x00300506,
-#elif  STM32_I2C1SW == STM32_I2C1SW_SYSCLK
-  // STM32_I2C1SW == STM32_I2C1SW_SYSCLK  (SYSCLK = 48MHz)
-  // 400kHz @ SYSCLK 48MHz (Use 26.4.10 I2C_TIMINGR register configuration examples from STM32 RM0091 Reference manual)
-  STM32_TIMINGR_PRESC(5U)  |
-  STM32_TIMINGR_SCLDEL(3U) | STM32_TIMINGR_SDADEL(3U) |
-  STM32_TIMINGR_SCLH(3U)   | STM32_TIMINGR_SCLL(9U),
-  // 600kHz @ SYSCLK 48MHz, manually get values, x1.5 I2C speed, but need calc timings
-//  STM32_TIMINGR_PRESC(3U)  |
-//  STM32_TIMINGR_SCLDEL(2U) | STM32_TIMINGR_SDADEL(2U) |
-//  STM32_TIMINGR_SCLH(4U)   | STM32_TIMINGR_SCLL(4U),
-#else
-#error "Need Define STM32_I2C1SW and set correct TIMINGR settings"
-#endif
-  .cr1 = 0,     // CR1 register initialization.
-  .cr2 = 0      // CR2 register initialization.
+  .timingr  = STM32_TIMINGR_PRESC(0U)  |            /* 72MHz I2CCLK. ~ 600kHz i2c   */
+//  STM32_TIMINGR_SCLDEL(10U) | STM32_TIMINGR_SDADEL(4U) |
+//  STM32_TIMINGR_SCLH(31U)   | STM32_TIMINGR_SCLL(79U),
+
+  STM32_TIMINGR_SCLDEL(15U) | STM32_TIMINGR_SDADEL(15U) |
+  STM32_TIMINGR_SCLH(35U)   | STM32_TIMINGR_SCLL(85U),
+
+//  STM32_TIMINGR_SCLDEL(15U) | STM32_TIMINGR_SDADEL(15U) |
+//  STM32_TIMINGR_SCLH(35U)   | STM32_TIMINGR_SCLL(55U),
+
+//  STM32_TIMINGR_SCLDEL(10U) | STM32_TIMINGR_SDADEL(4U) |
+//  STM32_TIMINGR_SCLH(48U)   | STM32_TIMINGR_SCLL(90U),
+  .cr1      = 0,
+  .cr2      = 0
 };
+#endif
+
 static DACConfig dac1cfg1 = {
   //init:         2047U,
   init:         1922U,
   datamode:     DAC_DHRM_12BIT_RIGHT
 };
-#endif
 
 
 static const GPTConfig gpt4cfg = {
@@ -2545,7 +2537,7 @@ static const GPTConfig gpt4cfg = {
 
 void my_microsecond_delay(int t)
 {
-  if (t>1) gptPolledDelay(&GPTD14, t); // t us delay
+  if (t>1) gptPolledDelay(&GPTD4, t); // t us delay
 }
 #if 0
 /*
@@ -2640,10 +2632,10 @@ int main(void)
   */
 
 #if 0
-  palClearPad(GPIOB, GPIO_RF_PWR);
+  palClearPad(GPIOB, GPIOA_RF_PWR);
   chThdSleepMilliseconds(200);
 #endif
-  palSetPad(GPIOB, GPIO_RF_PWR);
+  palSetPad(GPIOB, GPIOA_RF_PWR);
   chThdSleepMilliseconds(500);
 
 
@@ -2690,8 +2682,8 @@ int main(void)
 /*
  *  Initiate 1 micro second timer
  */
-  gptStart(&GPTD14, &gpt4cfg);
-  gptPolledDelay(&GPTD14, 10); // 10 us delay
+  gptStart(&GPTD4, &gpt4cfg);
+  gptPolledDelay(&GPTD4, 10); // 10 us delay
 
 /* restore config */
   config_recall();
@@ -2699,14 +2691,14 @@ int main(void)
     load_default_properties();
   }
 /* restore frequencies and calibration 0 slot properties from flash memory */
-#ifdef __VNA__
+
   dac1cfg1.init = config.dac_value;
 /*
  * Starting DAC1 driver, setting up the output pin as analog as suggested
  * by the Reference Manual.
  */
   dacStart(&DACD2, &dac1cfg1);
-#endif
+
   setupSA();
   set_sweep_points(POINTS_COUNT);
 

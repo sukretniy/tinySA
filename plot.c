@@ -93,7 +93,7 @@ char marker_letter[5] =
  'T'
 };
 
-map_t   markmap[2][MAX_MARKMAP_Y];
+map_t   markmap[2][MAX_MARKMAP_Y+1];
 uint8_t current_mappage = 0;
 
 // Trace data cache, for faster redraw cells
