@@ -104,6 +104,11 @@ void stop_SI4432_SPI_mode(void){
 
 static void shiftOut(uint8_t val)
 {
+#ifdef USE_HARDWARE_SPI_MODE
+  SPI_WRITE_8BIT(SI4432_SPI, val);
+  while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+    (void)SPI_READ_8BIT(SI4432_SPI);
+#else
   SI4432_log(SI4432_Sel);
   SI4432_log(val);
   uint8_t i = 0;
@@ -114,10 +119,16 @@ static void shiftOut(uint8_t val)
     SPI1_RESET;
     val<<=1;
   }while((++i) & 0x07);
+#endif
 }
 
 static uint8_t shiftIn(void)
 {
+#ifdef USE_HARDWARE_SPI_MODE
+  SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
+  while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
+  return SPI_READ_8BIT(SI4432_SPI);
+#else
   uint32_t value = 0;
   uint8_t i = 0;
   do {
@@ -127,13 +138,30 @@ static uint8_t shiftIn(void)
     SPI1_CLK_LOW;
   }while((++i) & 0x07);
   return value>>GPIOB_SPI_MISO;
+#endif
 }
 
 static inline void shiftInBuf(uint16_t sel, uint8_t addr, deviceRSSI_t *buf, uint16_t size, uint16_t delay) {
+#ifdef USE_HARDWARE_SPI_MODE
+  do{
+    palClearPad(GPIOB, sel);
+    SPI_WRITE_8BIT(SI4432_SPI, addr);
+    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+      (void)SPI_READ_8BIT(SI4432_SPI);
+
+    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
+    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+      (void)SPI_READ_8BIT(SI4432_SPI);
+    *buf++=SPI_READ_8BIT(SI4432_SPI);
+    palSetPad(GPIOB, sel);
+    if (delay)
+      my_microsecond_delay(delay);
+  }while(--size);
+#else
   uint8_t i = 0;
   do{
     uint32_t value = addr;
-    palClearPad(GPIOC, sel);
+    palClearPad(GPIOB, sel);
     do {
       if (value & 0x80)
         SPI1_SDI_HIGH;
@@ -148,11 +176,12 @@ static inline void shiftInBuf(uint16_t sel, uint8_t addr, deviceRSSI_t *buf, uin
       value|=SPI1_portSDO;
       SPI1_CLK_LOW;
     }while((++i) & 0x07);
-    palSetPad(GPIOC, sel);
+    palSetPad(GPIOB, sel);
     *buf++=value>>GPIOB_SPI_MISO;
     if (delay)
       my_microsecond_delay(delay);
   }while(--size);
+#endif
 }
 #if 0
 static void shiftOutBuf(uint8_t *buf, uint16_t size) {
