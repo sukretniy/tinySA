@@ -760,9 +760,13 @@ void set_trigger(int trigger)
 {
   if (trigger == T_UP || trigger == T_DOWN){
     setting.trigger_direction = trigger;
-  } else {
+  } else if (trigger == T_DONE) {
+    pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
+    redraw_request |= REDRAW_CAL_STATUS;        // Show status change    setting.trigger = trigger;
     setting.trigger = trigger;
+  } else {
     sweep_mode = SWEEP_ENABLE;
+    setting.trigger = trigger;
   }
   redraw_request|=REDRAW_TRIGGER | REDRAW_CAL_STATUS;
   //dirty = true;             // No HW update required, only status panel refresh
@@ -1685,8 +1689,9 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
         SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
 #endif
-      if (setting.trigger == T_SINGLE)
-        pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
+      if (setting.trigger == T_SINGLE) {
+        set_trigger(T_DONE);
+      }
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
     else
@@ -1892,8 +1897,9 @@ sweep_again:                                // stay in sweep loop when output mo
     if (actual_t[max_index[0]] < setting.trigger_level) {
       goto again;                                                   // not yet, sweep again
     } else {
-      if (setting.trigger == T_SINGLE)
-        pause_sweep();                    // Stop scanning after completing this sweep if above trigger
+      if (setting.trigger == T_SINGLE) {
+        set_trigger(T_DONE);
+      }
     }
 //    scandirty = true;                // To show trigger happened
   }
@@ -2382,7 +2388,12 @@ void draw_cal_status(void)
     ili9341_set_foreground(color);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("PAUSED", x, y);
-
+  }
+  if (setting.trigger == T_SINGLE || setting.trigger == T_NORMAL ) {
+    color = BRIGHT_COLOR_GREEN;
+    ili9341_set_foreground(color);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("ARMED", x, y);
   }
 
 //  if (setting.mode == M_LOW) {

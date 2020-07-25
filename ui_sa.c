@@ -1040,10 +1040,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
       b->icon = setting.trigger == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
-  set_trigger(data);
+  if (data != T_DONE) {
+    set_trigger(data);
 //  menu_move_back();
-  ui_mode_normal();
-  completed = true;
+    ui_mode_normal();
+    completed = true;
+  }
 }
 
 #if 0
@@ -1566,7 +1568,7 @@ static const menuitem_t menu_measure[] = {
 
 static const menuitem_t menu_calibrate[] =
 {
- { MT_FORM | MT_TITLE,      0, "Connect IN and OUT",  NULL},
+ { MT_FORM | MT_TITLE,      0, "Connect HIGH and LOW",  NULL},
  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
  { MT_FORM | MT_CALLBACK,   0, "RESET CALBRATION",          menu_calibrate_cb},
  { MT_FORM | MT_CANCEL,     0, S_LARROW" BACK",             NULL },
@@ -1616,6 +1618,7 @@ static const menuitem_t menu_trigger[] = {
   { MT_ADV_CALLBACK, T_AUTO,     "AUTO",           menu_trigger_acb},
   { MT_ADV_CALLBACK, T_NORMAL,   "NORMAL",         menu_trigger_acb},
   { MT_ADV_CALLBACK, T_SINGLE,   "SINGLE",         menu_trigger_acb},
+//  { MT_ADV_CALLBACK, T_DONE,     "READY",          menu_trigger_acb},
   { MT_KEYPAD,       KM_TRIGGER, "TRIGGER\nLEVEL", NULL},
   { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
   { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
