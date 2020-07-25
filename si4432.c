@@ -146,12 +146,11 @@ static inline void shiftInBuf(uint16_t sel, uint8_t addr, deviceRSSI_t *buf, uin
   do{
     palClearPad(GPIOB, sel);
     SPI_WRITE_8BIT(SI4432_SPI, addr);
-    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+    while (SPI_IS_BUSY(SI4432_SPI))      // drop rx and wait tx
       (void)SPI_READ_8BIT(SI4432_SPI);
 
     SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
-    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-      (void)SPI_READ_8BIT(SI4432_SPI);
+    while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
     *buf++=SPI_READ_8BIT(SI4432_SPI);
     palSetPad(GPIOB, sel);
     if (delay)
