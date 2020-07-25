@@ -1532,7 +1532,7 @@ draw_numeric_input(const char *buf)
   }
   // erase last
 //  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
-  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-64, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-x-1, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
   if (buf[0] == 0 && kp_help_text != NULL) {
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
