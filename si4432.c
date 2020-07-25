@@ -23,11 +23,31 @@
 #include "nanovna.h"
 #include <math.h>
 #include "si4432.h"
+#include "spi.h"
 
 #pragma GCC push_options
 #pragma GCC optimize ("O2")
 
-#define LCD_CS_HIGH       palSetPad(GPIOB, GPIOB_LCD_CS)
+// Define for use hardware SPI mode
+#define USE_HARDWARE_SPI_MODE
+
+// 10MHz clock
+#define SI4432_10MHZ 10000000U
+// !!!! FROM ili9341.c for disable it !!!!
+#define LCD_CS_HIGH    palSetPad(GPIOB, GPIOB_LCD_CS)
+#define SI_CS_LOW      palClearPad(GPIOA, GPIOA_SI_SEL)
+#define SI_CS_HIGH     palSetPad(GPIOA, GPIOA_SI_SEL)
+
+
+// Hardware or software SPI use
+#ifdef USE_HARDWARE_SPI_MODE
+#define SI4432_SPI         SPI1
+#define SI4432_SPI_SPEED   SPI_BR_DIV8
+static uint32_t old_spi_settings;
+#else
+static uint32_t old_port_moder;
+static uint32_t new_port_moder;
+#endif
 
 
 #define CS_SI0_HIGH     palSetPad(GPIOB, GPIOB_RX_SEL)
@@ -36,20 +56,19 @@
 
 #define RF_POWER_HIGH   palSetPad(GPIOB, GPIOB_RF_PWR)
 
+#define CS_SI0_LOW      palClearPad(GPIOB, GPIOB_RX_SEL)
+#define CS_SI1_LOW      palClearPad(GPIOB, GPIOB_LO_SEL)
+#define CS_PE_LOW       palClearPad(GPIOA, GPIOA_PE_SEL)
 
-#define CS_SI0_LOW     palClearPad(GPIOB, GPIOB_RX_SEL)
-#define CS_SI1_LOW     palClearPad(GPIOB, GPIOB_LO_SEL)
-#define CS_PE_LOW      palClearPad(GPIOA, GPIOA_PE_SEL)
+#define SPI1_CLK_HIGH   palSetPad(GPIOB, GPIOB_SPI_SCLK)
+#define SPI1_CLK_LOW    palClearPad(GPIOB, GPIOB_SPI_SCLK)
 
-#define SPI2_CLK_HIGH   palSetPad(GPIOB, GPIOB_SPI_SCLK)
-#define SPI2_CLK_LOW    palClearPad(GPIOB, GPIOB_SPI_SCLK)
+#define SPI1_SDI_HIGH   palSetPad(GPIOB, GPIOB_SPI_MOSI)
+#define SPI1_SDI_LOW    palClearPad(GPIOB, GPIOB_SPI_MOSI)
+#define SPI1_RESET      palClearPort(GPIOB, (1<<GPIOB_SPI_SCLK)|(1<<GPIOB_SPI_MOSI))
 
-#define SPI2_SDI_HIGH   palSetPad(GPIOB, GPIOB_SPI_MOSI)
-#define SPI2_SDI_LOW    palClearPad(GPIOB, GPIOB_SPI_MOSI)
-#define SPI2_RESET      palClearPort(GPIOB, (1<<GPIOB_SPI_SCLK)|(1<<GPIOB_SPI_MOSI))
-
-#define SPI2_SDO       ((palReadPort(GPIOB)>>GPIOB_SPI_MISO)&1)
-#define SPI2_portSDO   (palReadPort(GPIOB)&(1<<GPIOB_SPI_MISO))
+#define SPI1_SDO       ((palReadPort(GPIOB)>>GPIOB_SPI_MISO)&1)
+#define SPI1_portSDO   (palReadPort(GPIOB)&(1<<GPIOB_SPI_MISO))
 
 //#define MAXLOG 1024
 //unsigned char SI4432_logging[MAXLOG];
@@ -58,8 +77,29 @@
 //#define SI4432_log(X)   { if (log_index < MAXLOG)  SI4432_logging[log_index++] = X; }
 #define SI4432_log(X)
 
-void startSPI(void){
-  LCD_CS_HIGH;
+void start_SI4432_SPI_mode(void){
+#ifdef USE_HARDWARE_SPI_MODE
+  old_spi_settings = SI4432_SPI->CR1;
+  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+#else
+  // Init legs mode for software bitbang
+  old_port_moder = GPIOB->MODER;
+  new_port_moder = old_port_moder & ~(PIN_MODE_ANALOG(GPIOB_SPI_SCLK)|PIN_MODE_ANALOG(GPIOB_SPI_MISO)|PIN_MODE_ANALOG(GPIOB_SPI_MOSI));
+  new_port_moder|= PIN_MODE_OUTPUT(GPIOB_SPI_SCLK)|PIN_MODE_INPUT(GPIOB_SPI_MISO)|PIN_MODE_OUTPUT(GPIOB_SPI_MOSI);
+  GPIOB->MODER = new_port_moder;
+  // Pull down SPI
+  SPI_SDI_LOW;
+  SPI_CLK_LOW;
+#endif
+}
+
+void stop_SI4432_SPI_mode(void){
+#ifdef USE_HARDWARE_SPI_MODE
+  SI4432_SPI->CR1 = old_spi_settings;
+#else
+  // Restore hardware SPI
+  GPIOB->MODER = old_port_moder;
+#endif
 }
 
 static void shiftOut(uint8_t val)
@@ -69,9 +109,9 @@ static void shiftOut(uint8_t val)
   uint8_t i = 0;
   do {
     if (val & 0x80)
-      SPI2_SDI_HIGH;
-    SPI2_CLK_HIGH;
-    SPI2_RESET;
+      SPI1_SDI_HIGH;
+    SPI1_CLK_HIGH;
+    SPI1_RESET;
     val<<=1;
   }while((++i) & 0x07);
 }
@@ -82,9 +122,9 @@ static uint8_t shiftIn(void)
   uint8_t i = 0;
   do {
     value<<=1;
-    SPI2_CLK_HIGH;
-    value|=SPI2_portSDO;
-    SPI2_CLK_LOW;
+    SPI1_CLK_HIGH;
+    value|=SPI1_portSDO;
+    SPI1_CLK_LOW;
   }while((++i) & 0x07);
   return value>>GPIOB_SPI_MISO;
 }
@@ -96,17 +136,17 @@ static inline void shiftInBuf(uint16_t sel, uint8_t addr, deviceRSSI_t *buf, uin
     palClearPad(GPIOC, sel);
     do {
       if (value & 0x80)
-        SPI2_SDI_HIGH;
-      SPI2_CLK_HIGH;
-      SPI2_RESET;
+        SPI1_SDI_HIGH;
+      SPI1_CLK_HIGH;
+      SPI1_RESET;
       value<<=1;
     }while((++i) & 0x07);
     value = 0;
     do {
-      SPI2_CLK_HIGH;
+      SPI1_CLK_HIGH;
       value<<=1;
-      value|=SPI2_portSDO;
-      SPI2_CLK_LOW;
+      value|=SPI1_portSDO;
+      SPI1_CLK_LOW;
     }while((++i) & 0x07);
     palSetPad(GPIOC, sel);
     *buf++=value>>GPIOB_SPI_MISO;
@@ -121,12 +161,12 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
     uint8_t val = *buf++;
     do{
       if (val & 0x80)
-        SPI2_SDI_HIGH;
+        SPI1_SDI_HIGH;
       else
-        SPI2_SDI_LOW;
+        SPI1_SDI_LOW;
       val<<=1;
-      SPI2_CLK_HIGH;
-      SPI2_CLK_LOW;
+      SPI1_CLK_HIGH;
+      SPI1_CLK_LOW;
     }while((++i) & 0x07);
   }while(--size);
 }
@@ -141,11 +181,11 @@ volatile int SI4432_Sel = 0;         // currently selected SI4432
 #define SELECT_DELAY 10
 void SI4432_Write_Byte(byte ADR, byte DATA )
 {
-  startSPI();
+  set_SPI_mode(SPI_MODE_SI);
 //  if (SI4432_guard)
 //    while(1) ;
 //  SI4432_guard = 1;
-//  SPI2_CLK_LOW;
+//  SPI1_CLK_LOW;
   palClearPad(GPIOB, SI_nSEL[SI4432_Sel]);
 //  chThdSleepMicroseconds(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
@@ -157,11 +197,11 @@ void SI4432_Write_Byte(byte ADR, byte DATA )
 
 void SI4432_Write_3_Byte(byte ADR, byte DATA1, byte DATA2, byte DATA3 )
 {
-  startSPI();
+  set_SPI_mode(SPI_MODE_SI);
 //  if (SI4432_guard)
 //    while(1) ;
 //  SI4432_guard = 1;
-//  SPI2_CLK_LOW;
+//  SPI1_CLK_LOW;
   palClearPad(GPIOB, SI_nSEL[SI4432_Sel]);
 //  chThdSleepMicroseconds(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
@@ -175,12 +215,12 @@ void SI4432_Write_3_Byte(byte ADR, byte DATA1, byte DATA2, byte DATA3 )
 
 byte SI4432_Read_Byte( byte ADR )
 {
-  startSPI();
+  set_SPI_mode(SPI_MODE_SI);
   byte DATA ;
 //  if (SI4432_guard)
 //    while(1) ;
 //  SI4432_guard = 1;
-//  SPI2_CLK_LOW;
+//  SPI1_CLK_LOW;
   palClearPad(GPIOB, SI_nSEL[SI4432_Sel]);
   shiftOut( ADR );
   DATA = shiftIn();
@@ -418,7 +458,7 @@ int SI4432_is_fast_mode(void)
 
 void SI4432_Fill(int s, int start)
 {
-  startSPI();
+  set_SPI_mode(SPI_MODE_SI);
   SI4432_Sel = s;
   uint16_t sel = SI_nSEL[SI4432_Sel];
 #if 0
@@ -434,7 +474,7 @@ void SI4432_Fill(int s, int start)
   systime_t measure = chVTGetSystemTimeX();
 //  __disable_irq();
 #if 0
-  SPI2_CLK_LOW;
+  SPI1_CLK_LOW;
   int i = start;
   do {
     palClearPad(GPIOC, sel);
@@ -612,8 +652,8 @@ void SI4432_Init()
   CS_SI0_LOW;                       // Drop CS so power can be removed
   CS_SI1_LOW;                       // Drop CS so power can be removed
   CS_PE_LOW;                        // low is the default safe state
-  SPI2_CLK_LOW;                     // low is the default safe state
-  SPI2_SDI_LOW;                     // will be set with any data out
+  SPI1_CLK_LOW;                     // low is the default safe state
+  SPI1_SDI_LOW;                     // will be set with any data out
 
   palClearPad(GPIOA, GPIOA_RF_PWR);  // Drop power
   chThdSleepMilliseconds(10);      // Wait
@@ -622,7 +662,7 @@ void SI4432_Init()
   CS_SI1_HIGH;
   chThdSleepMilliseconds(10);      // Wait
 #endif
-  SPI2_CLK_LOW;
+  SPI1_CLK_LOW;
   //DebugLine("IO set");
   SI4432_Sel = SI4432_RX;
   SI4432_Sub_Init();
@@ -680,13 +720,13 @@ void PE4302_shiftOut(uint8_t val)
      SI4432_log(val);
      for (i = 0; i < 8; i++)  {
            if (val & (1 << (7 - i)))
-             SPI2_SDI_HIGH;
+             SPI1_SDI_HIGH;
            else
-             SPI2_SDI_LOW;
+             SPI1_SDI_LOW;
 //           chThdSleepMicroseconds(PE4302_DELAY);
-           SPI2_CLK_HIGH;
+           SPI1_CLK_HIGH;
 //           chThdSleepMicroseconds(PE4302_DELAY);
-           SPI2_CLK_LOW;
+           SPI1_CLK_LOW;
 //           chThdSleepMicroseconds(PE4302_DELAY);
      }
 }
@@ -698,7 +738,7 @@ bool PE4302_Write_Byte(unsigned char DATA )
   if (old_attenuation == DATA)
     return false;
 //  chThdSleepMicroseconds(PE4302_DELAY);
-//  SPI2_CLK_LOW;
+//  SPI1_CLK_LOW;
 //  chThdSleepMicroseconds(PE4302_DELAY);
 //  PE4302_shiftOut(DATA);
 

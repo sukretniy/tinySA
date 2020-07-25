@@ -20,6 +20,7 @@
 #include "ch.h"
 #include "hal.h"
 #include "nanovna.h"
+#include "si4432.h"
 
 #include "spi.h"
 // Allow enable DMA for read display data
@@ -305,11 +306,37 @@ static void spi_init(void)
   LCD_SPI->CR1|= SPI_CR1_SPE;       //SPI enable
 }
 
+static uint16_t current_spi_mode;
+void set_SPI_mode(uint16_t mode){
+  if (current_spi_mode == mode) return;
+  switch(current_spi_mode){
+    case SPI_MODE_LCD:
+    break;
+    case SPI_MODE_SD_CARD:
+    break;
+    case SPI_MODE_SI:
+      stop_SI4432_SPI_mode();
+    break;
+  }
+  switch(mode){
+    case SPI_MODE_LCD:
+    break;
+    case SPI_MODE_SD_CARD:
+    break;
+    case SPI_MODE_SI:
+      LCD_CS_HIGH;
+      start_SI4432_SPI_mode();
+    break;
+  }
+  current_spi_mode = mode;
+}
+
 // Disable inline for this function
 static void send_command(uint8_t cmd, uint8_t len, const uint8_t *data)
 {
 // Uncomment on low speed SPI (possible get here before previous tx complete)
 //  while (SPI_IN_TX_RX);
+  set_SPI_mode(SPI_MODE_LCD);
   LCD_CS_LOW;
   LCD_DC_CMD;
   SPI_WRITE_8BIT(LCD_SPI, cmd);

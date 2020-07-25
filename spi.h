@@ -78,3 +78,8 @@
 #define SPI_READ_8BIT(spi)       *(__IO uint8_t*)(&spi->DR)
 #define SPI_READ_16BIT(spi)      *(__IO uint16_t*)(&spi->DR)
 
+#define SPI_MODE_LCD     0x00
+#define SPI_MODE_SD_CARD 0x01
+#define SPI_MODE_SI      0x02
+
+void set_SPI_mode(uint16_t mode);

@@ -106,6 +106,10 @@
 
 typedef uint8_t byte;
 extern volatile int SI4432_Sel;         // currently selected SI4432
+
+void start_SI4432_SPI_mode(void);
+void stop_SI4432_SPI_mode(void);
+
 void SI4432_Write_Byte(byte ADR, byte DATA );
 byte SI4432_Read_Byte( byte ADR );
 

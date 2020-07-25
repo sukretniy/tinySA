@@ -102,7 +102,7 @@ static void transform_domain(void);
 
 static int8_t drive_strength = DRIVE_STRENGTH_AUTO;
 #endif
-int8_t sweep_mode = SWEEP_ENABLE;
+uint8_t sweep_mode = SWEEP_ENABLE;
 volatile uint8_t redraw_request = 0; // contains REDRAW_XXX flags
 
 // Version text, displayed in Config->Version menu, also send by info command
@@ -124,13 +124,13 @@ extern int dirty;
 
 bool completed = false;
 
-static THD_WORKING_AREA(waThread1, 768);
+static THD_WORKING_AREA(waThread1, 1024);
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
   chRegSetThreadName("sweep");
 
-  ui_process();
+//  ui_process();
 
   while (1) {
 //  START_PROFILE
