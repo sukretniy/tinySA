@@ -42,7 +42,8 @@
 // Hardware or software SPI use
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
-#define SI4432_SPI_SPEED   SPI_BR_DIV8
+//#define SI4432_SPI_SPEED   SPI_BR_DIV8
+#define SI4432_SPI_SPEED   SPI_BR_DIV64
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -88,8 +89,8 @@ void start_SI4432_SPI_mode(void){
   new_port_moder|= PIN_MODE_OUTPUT(GPIOB_SPI_SCLK)|PIN_MODE_INPUT(GPIOB_SPI_MISO)|PIN_MODE_OUTPUT(GPIOB_SPI_MOSI);
   GPIOB->MODER = new_port_moder;
   // Pull down SPI
-  SPI_SDI_LOW;
-  SPI_CLK_LOW;
+  SPI1_SDI_LOW;
+  SPI1_CLK_LOW;
 #endif
 }
 

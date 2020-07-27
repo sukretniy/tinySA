@@ -270,7 +270,7 @@
                                      PIN_OTYPE_PUSHPULL(GPIOB_I2S2_MOSI))
 #define VAL_GPIOB_OSPEEDR           (PIN_PUPDR_FLOATING(GPIOB_XN) | \
                                      PIN_PUPDR_FLOATING(GPIOB_YN) | \
-                                     PIN_OSPEED_100M(GPIOB_RX_SEL) |          \
+                                     PIN_OSPEED_2M(GPIOB_RX_SEL) |          \
                                      PIN_OSPEED_100M(3) | \
                                      PIN_OSPEED_100M(4) |          \
                                      PIN_OSPEED_100M(5) |          \
@@ -278,7 +278,7 @@
                                      PIN_OSPEED_100M(7) |          \
                                      PIN_OSPEED_100M(GPIOB_I2C1_SCL) | \
                                      PIN_OSPEED_100M(GPIOB_I2C1_SDA) | \
-                                     PIN_OSPEED_100M(GPIOB_LO_SEL) |         \
+                                     PIN_OSPEED_2M(GPIOB_LO_SEL) |         \
                                      PIN_OSPEED_100M(11) |         \
                                      PIN_OSPEED_100M(GPIOB_I2S2_WCLK) | \
                                      PIN_OSPEED_100M(GPIOB_I2S2_BCLK) | \

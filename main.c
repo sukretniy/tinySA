@@ -1,6 +1,5 @@
 /*
  *
- * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
@@ -124,7 +123,7 @@ extern int dirty;
 
 bool completed = false;
 
-static THD_WORKING_AREA(waThread1, 1024);
+static THD_WORKING_AREA(waThread1, 1124);
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
@@ -2352,7 +2351,8 @@ static const VNAShellCommand commands[] =
  #ifdef ENABLE_THREADS_COMMAND
      {"threads"     , cmd_threads     , 0},
  #endif
-    { "y", cmd_y,    0 },
+     { "y", cmd_y,    CMD_WAIT_MUTEX },
+     { "z", cmd_z,    CMD_WAIT_MUTEX },
    { "i", cmd_i,	0 },
    { "v", cmd_v,	0 },
    { "a", cmd_a,	0 },

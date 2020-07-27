@@ -301,6 +301,31 @@ VNA_SHELL_FUNCTION(cmd_y)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_z)
+{
+  static const char cmd_z_list[] = "t|r|i";
+  if (argc != 1) {
+    shell_printf("usage: z %s\r\n", cmd_z_list);
+    return;
+  }
+  if (argc == 1) {
+    SI4432_Sel = VFO;
+    int type = get_str_index(argv[0], cmd_z_list);
+    switch(type) {
+    case 0:
+      SI4432_Transmit(3);
+      break;
+    case 1:
+      SI4432_Receive();
+      break;
+    case 2:
+      SI4432_Reset();
+      break;
+    }
+  }
+}
+
+
 VNA_SHELL_FUNCTION(cmd_selftest)
 {
   if (argc < 1 || argc > 2) {
