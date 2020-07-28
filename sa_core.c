@@ -491,6 +491,7 @@ void set_actual_power(float o)              // Set peak level to known value
     config.low_level_offset = new_offset;
 #endif
   }
+  config_save();
   // dirty = true;             // No HW update required, only status panel refresh
 }
 
