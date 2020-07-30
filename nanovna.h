@@ -705,21 +705,20 @@ extern const float unit_scale_value[];
 extern const char * const unit_scale_text[];
 
 #if 1
+// Flash save area - flash7  : org = 0x0801B000, len = 20k in *.ld file
+// 2k - for config save
+// 9 * 2k for setting_t + stored trace
 #define SAVEAREA_MAX 9
-// config save area
+// STM32 minimum page size for write
+#define FLASH_PAGESIZE          0x800
+// config save area (flash7 addr)
 #define SAVE_CONFIG_ADDR        0x0801B000
-// setting_t save area
-#define SAVE_PROP_CONFIG_0_ADDR 0x0801B800
-#define SAVE_PROP_CONFIG_1_ADDR 0x0801C000
-#define SAVE_PROP_CONFIG_2_ADDR 0x0801C800
-#define SAVE_PROP_CONFIG_3_ADDR 0x0801D000
-#define SAVE_PROP_CONFIG_4_ADDR 0x0801D800
-#define SAVE_PROP_CONFIG_5_ADDR 0x0801E000
-#define SAVE_PROP_CONFIG_6_ADDR 0x0801E800
-#define SAVE_PROP_CONFIG_7_ADDR 0x0801F000
-#define SAVE_PROP_CONFIG_8_ADDR 0x0801F800
-
-#define SAVE_CONFIG_AREA_SIZE   (0x0801F800 -  SAVE_CONFIG_ADDR)     // Should include all save slots
+#define SAVE_CONFIG_SIZE        0x00000800
+// setting_t save area (save area + config size)
+#define SAVE_PROP_CONFIG_ADDR   (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE)
+#define SAVE_PROP_CONFIG_SIZE   0x00000800
+// Should include all save slots
+#define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX * SAVE_PROP_CONFIG_SIZE)
 
 #else
 #define SAVEAREA_MAX 4
@@ -804,8 +803,8 @@ extern int16_t lastsaveid;
 #define FREQ_IS_STARTSTOP() (!(setting.freq_mode&FREQ_MODE_CENTER_SPAN))
 #define FREQ_IS_CENTERSPAN() (setting.freq_mode&FREQ_MODE_CENTER_SPAN)
 #define FREQ_IS_CW() (setting.frequency0 == setting.frequency1)
-int caldata_recall(int id);
-int caldata_save(int id);
+int caldata_recall(uint16_t id);
+int caldata_save(uint16_t id);
 //const properties_t *caldata_ref(int id);
 int config_save(void);
 int config_recall(void);
