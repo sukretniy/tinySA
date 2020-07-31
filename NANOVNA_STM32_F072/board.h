@@ -123,7 +123,7 @@
  * PA14 - SWCLK                     (alternate 0).
  */
 #define VAL_GPIOA_MODER             (PIN_MODE_ANALOG(0U) | \
-                                     PIN_MODE_ANALOG(1U) |           \
+                                     PIN_MODE_INPUT(1U) |           \
                                      PIN_MODE_INPUT(2U) |  			\
                                      PIN_MODE_INPUT(3U) |   		\
                                      PIN_MODE_INPUT(4U) | \
@@ -171,7 +171,7 @@
                                      PIN_OSPEED_100M(GPIOA_JTCK) |         \
                                      PIN_OSPEED_100M(GPIOA_LCD_RESET))
 #define VAL_GPIOA_PUPDR           (  PIN_PUPDR_FLOATING(0) | \
-                                     PIN_PUPDR_FLOATING(1) | \
+                                     PIN_PUPDR_PULLDOWN(1) | \
                                      PIN_PUPDR_PULLDOWN(2) | \
                                      PIN_PUPDR_PULLDOWN(3) | \
                                      PIN_PUPDR_PULLDOWN(4) |         \
