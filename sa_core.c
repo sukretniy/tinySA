@@ -2135,10 +2135,10 @@ sweep_again:                                // stay in sweep loop when output mo
   }
   //  } while (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE);      // Never exit sweep loop while in output mode with modulation
 
-#if 0
+#if 1
   extern int16_t adc_buf_read(uint32_t chsel, uint16_t *result, uint32_t count);
   trace[TRACE_STORED].enabled = true;
-  adc_buf_read(ADC_CHSELR_CHSEL10, spi_buffer, 290);
+  adc_buf_read(ADC_CHSELR_CHSEL4, spi_buffer, 290);
   for (int i=0;i<290;i++)
     stored_t[i] = (spi_buffer[i]/44.0) - 100.0;
 #endif
