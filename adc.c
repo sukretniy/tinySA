@@ -179,3 +179,59 @@ OSAL_IRQ_HANDLER(STM32_ADC2_HANDLER)
 
   OSAL_IRQ_EPILOGUE();
 }
+
+#if 1
+uint16_t adc_multi_read(uint32_t chsel, uint16_t *result, uint32_t count)
+{
+  /* ADC setup */
+  VNA_ADC->ISR    = VNA_ADC->ISR;
+  VNA_ADC->IER    = 0;
+  VNA_ADC->TR     = ADC_TR(0, 0);
+  VNA_ADC->SMPR   = ADC_SMPR_SMP_1P5;
+  VNA_ADC->CFGR1  = ADC_CFGR1_RES_12BIT;
+  VNA_ADC->CHSELR = chsel;
+
+
+//  palSetPadMode(GPIOA, 10, PAL_MODE_OUTPUT_PUSHPULL);
+
+  do{
+#if 0
+    if (count < 145)
+      palSetPad(GPIOA, 10);
+    else
+      palClearPad(GPIOA, 10);
+#endif
+    VNA_ADC->CR |= ADC_CR_ADSTART; // ADC conversion start.
+//    while (VNA_ADC->CR & ADC_CR_ADSTART)
+    while(!(VNA_ADC->ISR & ADC_ISR_EOC));
+      ;
+    *(result++) =VNA_ADC->DR;
+  }while(--count);
+  return count;
+}
+
+int16_t adc_buf_read(uint32_t chsel, uint16_t *result, uint32_t count)
+{
+
+  adc_stop();
+
+#if 0
+  // drive high to low on Y line (coordinates from left to right)
+  palSetPad(GPIOB, GPIOB_YN);
+  palClearPad(GPIOA, GPIOA_YP);
+  // Set Y line as output
+  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_OUTPUT_PUSHPULL);
+  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_OUTPUT_PUSHPULL);
+  // Set X line as input
+  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_INPUT);        // Hi-z mode
+  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_INPUT_ANALOG); // <- ADC_TOUCH_X channel
+    uint16_t res = adc_multi_read(ADC_TOUCH_X, result, count);
+#else
+//  palSetPadMode(GPIOA, 9, PAL_MODE_INPUT_ANALOG);
+  uint16_t res = adc_multi_read(chsel, result, count); // ADC_CHSELR_CHSEL9
+#endif
+  touch_start_watchdog();
+  return res;
+}
+
+#endif

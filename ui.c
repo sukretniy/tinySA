@@ -23,6 +23,7 @@
 #include "nanovna.h"
 //#include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 uistat_t uistat = {
  digit: 6,
@@ -1803,15 +1804,63 @@ draw_menu_buttons(const menuitem_t *menu)
     ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT, DEFAULT_BG_COLOR);
 }
 
+static systime_t prev_touch_time = 0;
+static int prev_touch_button = -1;
+
+
 static void
 menu_select_touch(int i)
 {
   selection = i;
   draw_menu();
+#if 1               // drag values
+  const menuitem_t *menu = menu_stack[menu_current_level];
+
+  if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD){
+    int touch_x, touch_y;
+    touch_position(&touch_x, &touch_y);
+    systime_t dt = 0;
+    while (touch_check() != EVT_TOUCH_RELEASED) {
+      systime_t ticks = chVTGetSystemTimeX();
+      if (prev_touch_button != i) {         // new button, initialize
+        prev_touch_time = ticks;
+        prev_touch_button = i;
+      }
+      dt = ticks - prev_touch_time;
+
+      if (dt > BUTTON_DOWN_LONG_TICKS) {
+        int v = menu[i].data;
+        int old_keypad_mode = keypad_mode;
+        keypad_mode = v;
+        fetch_numeric_target();
+        float m = 1.0;
+        if (touch_x < LCD_WIDTH/2 - 10) {
+          m = 1/pow(10, ((LCD_WIDTH/2 - 10) - touch_x)/1000.0);
+        } else if (touch_x > LCD_WIDTH/2 + 10) {
+          m = pow(10, (touch_x - (LCD_WIDTH/2 + 10))/1000.0);
+        }
+        uistat.value *= m;
+        set_numeric_value();
+//        selection = -1;
+        draw_menu();
+        keypad_mode = old_keypad_mode;
+        return;
+      }
+    }
+    if (dt > BUTTON_DOWN_LONG_TICKS) {
+      selection = -1;
+      draw_menu();
+      return;
+    }
+    prev_touch_button = -1;
+  } else
+#endif
+
   touch_wait_release();
   selection = -1;
   menu_invoke(i);
 }
+
 
 static void
 menu_apply_touch(void)
@@ -1829,14 +1878,18 @@ menu_apply_touch(void)
       continue;
     }
     int active_button_start;
-    if (menu[i].type & MT_FORM)
+    if (menu[i].type & MT_FORM) {
       active_button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2;
-    else
+//      active_button_stop = LCD_WIDTH - active_button_start;
+    } else {
       active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
-
-    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT && active_button_start < touch_x) {
-      menu_select_touch(i);
-      return;
+//      active_button_stop = LCD_WIDTH;
+    }
+    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT) {
+      if (touch_x > active_button_start) {
+        menu_select_touch(i);
+        return;
+      }
     }
     y += MENU_BUTTON_HEIGHT;
   }

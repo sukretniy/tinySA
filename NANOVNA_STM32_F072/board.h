@@ -122,7 +122,7 @@
  * PA13 - SWDIO                     (alternate 0).
  * PA14 - SWCLK                     (alternate 0).
  */
-#define VAL_GPIOA_MODER             (PIN_MODE_INPUT(0U) | \
+#define VAL_GPIOA_MODER             (PIN_MODE_ANALOG(0U) | \
                                      PIN_MODE_INPUT(1U) |           \
                                      PIN_MODE_INPUT(2U) |  			\
                                      PIN_MODE_INPUT(3U) |   		\
@@ -131,8 +131,8 @@
                                      PIN_MODE_ANALOG(GPIOA_XP) |    \
                                      PIN_MODE_ANALOG(GPIOA_YP) |    \
                                      PIN_MODE_ALTERNATE(GPIOA_MCO) | \
-                                     PIN_MODE_INPUT(9U) |           \
-                                     PIN_MODE_OUTPUT(GPIOA_USB_DISC) | \
+                                     PIN_MODE_ANALOG(9U) |           \
+                                     PIN_MODE_ANALOG(GPIOA_USB_DISC) | \
                                      PIN_MODE_INPUT(GPIOA_USB_DM) |  \
                                      PIN_MODE_INPUT(GPIOA_USB_DP) |  \
                                      PIN_MODE_ALTERNATE(GPIOA_JTMS) |    \
@@ -163,14 +163,14 @@
                                      PIN_OSPEED_2M(6) |          \
                                      PIN_OSPEED_2M(7) |          \
                                      PIN_OSPEED_100M(GPIOA_MCO) | \
-                                     PIN_OSPEED_100M(9) |          \
-                                     PIN_OSPEED_100M(10) |         \
+                                     PIN_OSPEED_2M(9) |          \
+                                     PIN_OSPEED_2M(10) |         \
                                      PIN_OSPEED_100M(GPIOA_USB_DM) |     \
                                      PIN_OSPEED_100M(GPIOA_USB_DP) |     \
                                      PIN_OSPEED_100M(GPIOA_JTMS) |         \
                                      PIN_OSPEED_100M(GPIOA_JTCK) |         \
                                      PIN_OSPEED_100M(GPIOA_LCD_RESET))
-#define VAL_GPIOA_PUPDR           (  PIN_PUPDR_PULLDOWN(0) | \
+#define VAL_GPIOA_PUPDR           (  PIN_PUPDR_FLOATING(0) | \
                                      PIN_PUPDR_PULLDOWN(1) | \
                                      PIN_PUPDR_PULLDOWN(2) | \
                                      PIN_PUPDR_PULLDOWN(3) | \
@@ -179,8 +179,8 @@
                                      PIN_PUPDR_FLOATING(6) |         \
                                      PIN_PUPDR_FLOATING(7) |         \
                                      PIN_PUPDR_PULLUP(GPIOA_MCO) | \
-                                     PIN_PUPDR_PULLUP(9) |         \
-                                     PIN_PUPDR_PULLUP(GPIOA_USB_DISC) | \
+                                     PIN_PUPDR_FLOATING(9) |         \
+                                     PIN_PUPDR_FLOATING(GPIOA_USB_DISC) | \
                                      PIN_PUPDR_FLOATING(GPIOA_USB_DM) | \
                                      PIN_PUPDR_FLOATING(GPIOA_USB_DP) | \
                                      PIN_PUPDR_PULLDOWN(GPIOA_JTMS) |   \

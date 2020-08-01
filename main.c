@@ -2365,6 +2365,7 @@ static const VNAShellCommand commands[] =
    { "o", cmd_o,    0 },
    { "d", cmd_d,    0 },
    { "f", cmd_f,    0 },
+//   { "g", cmd_g,    0 },
 #ifdef __ULTRA_SA__
     { "x", cmd_x,    0 },
 #endif
@@ -2637,18 +2638,50 @@ int main(void)
 
 
 #if 0
+  palSetPadMode(GPIOA, 9, PAL_MODE_INPUT_ANALOG);
+  palSetPadMode(GPIOA, 10, PAL_MODE_OUTPUT_PUSHPULL);
+  int s;
+
+  adc_stop();
+
+  // drive high to low on Y line (coordinates from left to right)
+  palSetPad(GPIOB, GPIOB_YN);
+  palClearPad(GPIOA, GPIOA_YP);
+  // Set Y line as output
+  palSetPadMode(GPIOB, GPIOB_YN, PAL_MODE_OUTPUT_PUSHPULL);
+  palSetPadMode(GPIOA, GPIOA_YP, PAL_MODE_OUTPUT_PUSHPULL);
+  // Set X line as input
+  palSetPadMode(GPIOB, GPIOB_XN, PAL_MODE_INPUT);        // Hi-z mode
+  palSetPadMode(GPIOA, GPIOA_XP, PAL_MODE_INPUT_ANALOG); // <- ADC_TOUCH_X channel
+
+
+  while (1) {
+//      palSetPad(GPIOA, 10);
+//      shell_printf("%d\n\r", adc_single_read(ADC_CHSELR_CHSEL9));
+//      palClearPad(GPIOA, 10);
+      shell_printf("%d\n\r", adc_single_read(ADC_TOUCH_X));
+  }
+#endif
+
+
+#if 0
  /*
   * UART initialize
   */
   uartStart(&UARTD1, &uart_cfg_1);
-
+again:
   uartStartSend(&UARTD1, 1, "H");
+  uint8_t buf[10];
   uartStartReceive(&UARTD1, 1, buf);
+goto again;
 #endif
 
 #if 0
+  again:
+
   palSetPadMode(GPIOA, 9, PAL_MODE_ALTERNATE(1));  // USART1 TX.
   palSetPadMode(GPIOA,10, PAL_MODE_ALTERNATE(1)); // USART1 RX.
+
 
   uint8_t buf[10];
   sdStart(&SD1,&default_config);
@@ -2666,7 +2699,7 @@ int main(void)
   sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
   sdReadTimeout(&SD1,buf,10, 10);
   int i = sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
-
+goto again;
 #endif
 #ifdef __ULTRA_SA__
   ADF4351_Setup();
