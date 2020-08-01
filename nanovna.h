@@ -33,7 +33,7 @@
 #define __SELFTEST__
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
-
+#define __AUDIO__
 //#define __ULTRA__             // Add harmonics mode on low input.
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
@@ -234,14 +234,14 @@ void set_measurement(int);
 // extern int settingSpeed;
 //extern int setting.step_delay;
 void sweep_remote(void);
-#ifdef __VNA__
+#ifdef __AUDIO__
 /*
  * dsp.c
  */
 // 5ms @ 48kHz
 #define AUDIO_BUFFER_LEN 96
 
-extern int16_t rx_buffer[];
+extern int16_t rx_buffer[AUDIO_BUFFER_LEN * 2];
 
 #define STATE_LEN 32
 #define SAMPLE_LEN 48
@@ -250,7 +250,8 @@ extern int16_t rx_buffer[];
 extern int16_t ref_buf[];
 extern int16_t samp_buf[];
 #endif
-
+#endif
+#ifdef __VNA__
 void dsp_process(int16_t *src, size_t len);
 void reset_dsp_accumerator(void);
 void calculate_gamma(float *gamma);
@@ -258,7 +259,7 @@ void fetch_amplitude(float *gamma);
 void fetch_amplitude_ref(float *gamma);
 #endif
 
-#ifdef __VNA__
+#ifdef __AUDIO__
 /*
  * tlv320aic3204.c
  */

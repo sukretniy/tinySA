@@ -23,9 +23,7 @@
 //#include "hal_serial.h"
 
 #include "usbcfg.h"
-#ifdef __VNA__
 #include "si5351.h"
-#endif
 #include "nanovna.h"
 #ifdef __VNA__
 #include "fft.h"
@@ -654,29 +652,29 @@ VNA_SHELL_FUNCTION(cmd_clearconfig)
                "Do reset manually to take effect. Then do touch cal and save.\r\n");
 }
 
-#ifdef __VNA__
+#ifdef __AUDIO__
 static struct {
   int16_t rms[2];
   int16_t ave[2];
   int callback_count;
 
-#if 0
+#if 1
   int32_t last_counter_value;
   int32_t interval_cycles;
   int32_t busy_cycles;
 #endif
 } stat;
-
 int16_t rx_buffer[AUDIO_BUFFER_LEN * 2];
 
 #ifdef ENABLED_DUMP
 int16_t dump_buffer[AUDIO_BUFFER_LEN];
 int16_t dump_selection = 0;
 #endif
-
 volatile uint8_t wait_count = 0;
 volatile uint8_t accumerate_count = 0;
+#endif
 
+#ifdef __VNA__
 const int8_t bandwidth_accumerate_count[] = {
   1, // 1kHz
   3, // 300Hz
@@ -688,7 +686,7 @@ const int8_t bandwidth_accumerate_count[] = {
 float measured[2][POINTS_COUNT][2];
 #endif
 measurement_t measured;
-#ifdef __VNA__
+#ifdef __AUDIO__
 #ifdef ENABLED_DUMP
 static void
 duplicate_buffer_to_dump(int16_t *p)
@@ -715,7 +713,7 @@ void i2s_end_callback(I2SDriver *i2sp, size_t offset, size_t n)
     --wait_count;
   } else if (wait_count > 0) {
     if (accumerate_count > 0) {
-      dsp_process(p, n);
+ //     dsp_process(p, n);
       accumerate_count--;
     }
 #ifdef ENABLED_DUMP
@@ -930,10 +928,11 @@ ensure_edit_config(void)
 }
 
 #include "sa_core.c"
-#ifdef __VNA__
+#ifdef __AUDIO__
 #define DSP_START(delay) wait_count = delay;
 #define DSP_WAIT_READY   while (wait_count) __WFI();
-
+#endif
+#ifdef __VNA__
 #define DELAY_CHANNEL_CHANGE 2
 
 // main loop for measurement
@@ -2502,7 +2501,7 @@ THD_FUNCTION(myshellThread, p)
 }
 #endif
 
-#if 0
+#if 1
 // I2C clock bus setting: depend from STM32_I2C1SW in mcuconf.h
 static const I2CConfig i2ccfg = {
   .timingr  = STM32_TIMINGR_PRESC(0U)  |            /* 72MHz I2CCLK. ~ 600kHz i2c   */
@@ -2605,10 +2604,8 @@ int main(void)
 
   //palSetPadMode(GPIOB, 8, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
   //palSetPadMode(GPIOB, 9, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
-#ifdef __VNA__
   i2cStart(&I2CD1, &i2ccfg);
   si5351_init();
-#endif
 
   // MCO on PA8
   //palSetPadMode(GPIOA, 8, PAL_MODE_ALTERNATE(0));
@@ -2702,7 +2699,7 @@ int main(void)
   setupSA();
   set_sweep_points(POINTS_COUNT);
 
-#ifdef __VNA__
+#ifdef __AUDIO__
 /*
  * I2S Initialize
  */
