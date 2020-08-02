@@ -1834,10 +1834,11 @@ menu_select_touch(int i)
         keypad_mode = v;
         fetch_numeric_target();
         float m = 1.0;
-        if (touch_x < LCD_WIDTH/2 - 10) {
-          m = 1/pow(10, ((LCD_WIDTH/2 - 10) - touch_x)/1000.0);
+#define TOUCH_DEAD_ZONE 5
+        if (touch_x < LCD_WIDTH/2 - TOUCH_DEAD_ZONE) {
+          m = 1 / (1 + pow(10, -6 + ((LCD_WIDTH/2 - TOUCH_DEAD_ZONE) - touch_x)/20.0));
         } else if (touch_x > LCD_WIDTH/2 + 10) {
-          m = pow(10, (touch_x - (LCD_WIDTH/2 + 10))/1000.0);
+          m = 1 + pow(10, -6 + (touch_x - (LCD_WIDTH/2 + TOUCH_DEAD_ZONE))/20.0);
         }
         uistat.value *= m;
         set_numeric_value();
