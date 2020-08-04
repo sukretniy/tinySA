@@ -442,8 +442,8 @@ typedef struct config {
   uint32_t harmonic_freq_threshold;
 #endif
   uint16_t vbat_offset;
-  int16_t low_level_offset;
-  int16_t high_level_offset;
+  float low_level_offset;
+  float high_level_offset;
   uint32_t correction_frequency[CORRECTION_POINTS];
   float    correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
@@ -453,7 +453,7 @@ typedef struct config {
 
 extern config_t config;
 //#define settingLevelOffset config.level_offset
-int get_level_offset(void);
+float get_level_offset(void);
 
 void set_trace_type(int t, int type);
 void set_trace_channel(int t, int channel);

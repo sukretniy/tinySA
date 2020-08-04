@@ -175,8 +175,8 @@ VNA_SHELL_FUNCTION(cmd_levelchange)
 VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   if (argc == 0) {
-    shell_printf("leveloffset low %.1f\r\n", (float) config.low_level_offset);
-    shell_printf("leveloffset high %.1f\r\n", (float)config.high_level_offset);
+    shell_printf("leveloffset low %.1f\r\n", config.low_level_offset);
+    shell_printf("leveloffset high %.1f\r\n", config.high_level_offset);
     return;
   } else if (argc == 2) {
     float v = my_atof(argv[1]);

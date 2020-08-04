@@ -491,11 +491,12 @@ void set_actual_power(float o)              // Set peak level to known value
     config.low_level_offset = new_offset;
 #endif
   }
+  dirty = true;
   config_save();
   // dirty = true;             // No HW update required, only status panel refresh
 }
 
-int get_level_offset(void)
+float get_level_offset(void)
 {
   if (setting.mode == M_HIGH) {
     if (config.high_level_offset == 100)        // Offset of 100 means not calibrated
