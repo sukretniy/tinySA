@@ -619,6 +619,21 @@ void toggle_AGC(void)
   dirty = true;
 }
 
+void auto_set_AGC_LNA(int auto_set)                                                                    // Adapt the AGC setting if needed
+{
+  static unsigned char old_v;
+  unsigned char v;
+  if (auto_set)
+    v = 0x60; // Enable AGC and disable LNA
+  else
+    v = 0x40; // Disable AGC and enable LNA
+  if (old_v != v) {
+    SI4432_Sel = SI4432_RX ;
+    SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
+    old_v = v;
+  }
+}
+
 void set_unit(int u)
 {
   if (setting.unit == u)
@@ -1477,16 +1492,10 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   }
 
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
-    unsigned char v;                                                                    // Adapt the AGC setting if needed
-    static unsigned char old_v;
     if (f < 500000)
-      v = 0x50; // Disable AGC and enable LNA
+      auto_set_AGC_LNA(false);
     else
-      v = 0x60; // Enable AGC and disable LNA
-    if (old_v != v) {
-      SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-      old_v = v;
-    }
+      auto_set_AGC_LNA(true);
   }
 
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
@@ -1999,18 +2008,11 @@ sweep_again:                                // stay in sweep loop when output mo
   // ----------------------------------  auto AGC ----------------------------------
 
   if (!in_selftest && MODE_INPUT(setting.mode) && S_IS_AUTO(setting.agc) && UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
-    unsigned char v;
-    static unsigned char old_v;
     float actual_max_level = actual_t[max_index[0]] - get_attenuation();
     if (actual_max_level > - 45)
-      v = 0x50; // Disable AGC and enable LNA
+      auto_set_AGC_LNA(false);
     else
-      v = 0x60; // Enable AGC and disable LNA
-    if (old_v != v) {
-      SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-      old_v = v;
-    }
-
+      auto_set_AGC_LNA(TRUE);
   }
 
 
