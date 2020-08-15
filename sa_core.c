@@ -2073,6 +2073,19 @@ sweep_again:                                // stay in sweep loop when output mo
         if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
           markers[m].frequency = frequencies[markers[m].index];
+#if 1                                                        // Hyperbolic interpolation, can be removed to save memory
+          const int idx          = markers[m].index;
+          if (idx > 0 && idx < sweep_points-1)
+          {
+            const float y1         = actual_t[idx - 1];
+            const float y2         = actual_t[idx + 0];
+            const float y3         = actual_t[idx + 1];
+            const float d          = 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
+            //const float bin      = (float)idx + d;
+            const int32_t delta_Hz = abs((int64_t)frequencies[idx + 0] - frequencies[idx + 1]);
+            markers[m].frequency   += (int32_t)(delta_Hz * d);
+          }
+#endif
           m++;
           break;                          // Next maximum
         }

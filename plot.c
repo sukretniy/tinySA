@@ -845,13 +845,10 @@ extern const char *unit_string[];
 static void trace_get_value_string(
     int t, char *buf, int len,
     int i, float coeff[POINTS_COUNT],
-    uint32_t freq[POINTS_COUNT],
-    int point_count,
-    int ri, int mtype)
+    int ri, int mtype,
+    uint32_t i_freq, uint32_t ref_freq)
 {
   (void) t;
-  (void)freq;
-  (void) point_count;
   float v;
   char buf2[16];
   char buf3[8];
@@ -864,17 +861,17 @@ static void trace_get_value_string(
     *ptr2++ = S_DELTA[0];
     unit_index = setting.unit+5;
     if (ri > i) {
-      dfreq = frequencies[ri] - frequencies[i];
+      dfreq = ref_freq - i_freq;
       ii = ri - i;
       *ptr2++ = '-';
     } else {
-      dfreq = frequencies[i] - frequencies[ri];
+      dfreq = i_freq - ref_freq;
       ii = i - ri;
       *ptr2++ = '+';
     }
     rlevel = value(coeff[ri]);
   } else {
-    dfreq = frequencies[i];
+    dfreq = i_freq;
   }
   if (FREQ_IS_CW()) {
     float t = ii*(setting.actual_sweep_time_us)/(sweep_points - 1);
@@ -2112,7 +2109,7 @@ static void cell_draw_marker_info(int x0, int y0)
 //        cell_drawstring_7x13(buf, xpos, ypos);
       trace_get_value_string(
           t, &buf[k], (sizeof buf) - k,
-          idx, measured[trace[t].channel], frequencies, sweep_points, ridx, markers[i].mtype);
+          idx, measured[trace[t].channel], ridx, markers[i].mtype,markers[i].frequency, markers[ref_marker].frequency);
       if (/* strlen(buf)*7> WIDTH/2 && */active > 1)
         cell_drawstring(buf, xpos, ypos);
       else
