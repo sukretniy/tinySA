@@ -640,7 +640,7 @@ void SI4432_Sub_Init(void)
 //  SI4432_Write_3_Byte(SI4432_IF_FILTER_BW, 0x81, 0x3C, 0x02) ;    // <----------
 //  SI4432_Write_Byte(SI4432_IF_FILTER_BW, 0x81) ;    // <----------
   SI4432_Write_Byte(SI4432_AFC_LOOP_GEARSHIFT_OVERRIDE, 0x00) ;
-//  SI4432_Write_Byte(SI4432_AFC_TIMING_CONTROL, 0x02) ;    // <----------
+  SI4432_Write_Byte(SI4432_AFC_TIMING_CONTROL, 0x02) ;
   SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_GEARSHIFT, 0x03) ;
 //  SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_OVERSAMPLING, 0x78) ;    // <----------
 //  SI4432_Write_3_Byte(SI4432_CLOCK_RECOVERY_OFFSET2, 0x01, 0x11, 0x11) ;    // <----------

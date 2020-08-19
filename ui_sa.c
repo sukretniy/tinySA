@@ -1587,11 +1587,21 @@ static const menuitem_t menu_config[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_display[] = {
-  { MT_ADV_CALLBACK,0,          "PAUSE\nSWEEP",    menu_pause_acb},
+static const menuitem_t menu_storage[] = {
   { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
   { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
   { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
+  { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_display[] = {
+  { MT_ADV_CALLBACK,0,          "PAUSE\nSWEEP",    menu_pause_acb},
+  { MT_SUBMENU,     0,          "CALC",            menu_average},
+  { MT_SUBMENU,     0,          "STORAGE",         menu_storage},
+//  { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
+//  { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
+//  { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
   { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
   { MT_ADV_CALLBACK,4,          "WATER\nFALL",     menu_waterfall_acb},
   { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
@@ -1631,7 +1641,7 @@ static const menuitem_t menu_level[] = {
 //{ MT_SUBMENU, 0,          "SCALE/DIV",    menu_scale_per},
   { MT_KEYPAD,  KM_SCALE,   "SCALE/DIV",    NULL},
   { MT_SUBMENU, 0,          "ATTENUATE",    menu_atten},
-  { MT_SUBMENU,0,           "CALC",         menu_average},
+//  { MT_SUBMENU,0,           "CALC",         menu_average},
   { MT_SUBMENU, 0,          "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,  "EXTERNAL\nAMP",NULL},
   { MT_SUBMENU,  0,         "TRIGGER",      menu_trigger},

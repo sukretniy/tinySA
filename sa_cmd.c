@@ -175,8 +175,8 @@ VNA_SHELL_FUNCTION(cmd_levelchange)
 VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   if (argc == 0) {
-    shell_printf("leveloffset low %.1f\r\n", (float) config.low_level_offset);
-    shell_printf("leveloffset high %.1f\r\n", (float)config.high_level_offset);
+    shell_printf("leveloffset low %.1f\r\n", config.low_level_offset);
+    shell_printf("leveloffset high %.1f\r\n", config.high_level_offset);
     return;
   } else if (argc == 2) {
     float v = my_atof(argv[1]);
@@ -612,6 +612,8 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
     old_points = points;
   }
   operation_requested = false;
+  dirty = true;
+
   for (uint32_t i = 0; i<points; i++) {
     int val = perform(false, i, start +(uint32_t)(f_step * i), false) + float_TO_PURE_RSSI(EXT_ZERO_LEVEL);
     if (operation_requested) // break on operation in perform

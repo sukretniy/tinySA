@@ -75,16 +75,11 @@ checksum(const void *start, size_t len)
   return value;
 }
 
-
-#define FLASH_PAGESIZE 0x800
-
-const uint32_t save_config_area = SAVE_CONFIG_ADDR;
-
 int
 config_save(void)
 {
   uint16_t *src = (uint16_t*)&config;
-  uint16_t *dst = (uint16_t*)save_config_area;
+  uint16_t *dst = (uint16_t*)SAVE_CONFIG_ADDR;
   int count = sizeof(config_t) / sizeof(uint16_t);
 
   config.magic = CONFIG_MAGIC;
@@ -107,7 +102,7 @@ config_save(void)
 int
 config_recall(void)
 {
-  const config_t *src = (const config_t*)save_config_area;
+  const config_t *src = (const config_t*)SAVE_CONFIG_ADDR;
   void *dst = &config;
 
   if (src->magic != CONFIG_MAGIC)
@@ -120,31 +115,19 @@ config_recall(void)
   return 0;
 }
 
-const uint32_t saveareas[SAVEAREA_MAX] =
-{
-  SAVE_PROP_CONFIG_0_ADDR,
-  SAVE_PROP_CONFIG_1_ADDR,
-  SAVE_PROP_CONFIG_2_ADDR,
-  SAVE_PROP_CONFIG_3_ADDR,
-  SAVE_PROP_CONFIG_4_ADDR,
-  SAVE_PROP_CONFIG_5_ADDR,
-  SAVE_PROP_CONFIG_6_ADDR,
-  SAVE_PROP_CONFIG_7_ADDR,
-  SAVE_PROP_CONFIG_8_ADDR,
-};
 
-int16_t lastsaveid = 0;
+//int16_t lastsaveid = 0;
 
 int
-caldata_save(int id)
+caldata_save(uint16_t id)
 {
+  if (id >= SAVEAREA_MAX)
+    return -1;
   uint16_t *src = (uint16_t*)&setting;
   uint16_t *dst;
   int count = sizeof(setting_t) / sizeof(uint16_t);
 
-  if (id < 0 || id >= SAVEAREA_MAX)
-    return -1;
-  dst = (uint16_t*)saveareas[id];
+  dst = (uint16_t*)(SAVE_PROP_CONFIG_ADDR + id * SAVE_PROP_CONFIG_SIZE);
 
   setting.magic = CONFIG_MAGIC;
   setting.checksum = checksum(
@@ -160,13 +143,12 @@ caldata_save(int id)
     p += FLASH_PAGESIZE;
   }
 
-  /* write to flash */
+  /* write settings to flash */
   while (count-- > 0) {
     flash_program_half_word((uint32_t)dst, *src++);
     dst++;
   }
-
-  // Flash stored trace
+  // Flash stored trace to flash
   count = sizeof(stored_t) /  sizeof(uint16_t);
   src = (uint16_t*)&stored_t[0];
   while (count-- > 0) {
@@ -176,22 +158,22 @@ caldata_save(int id)
 
   /* after saving data, make active configuration points to flash */
 //  active_props = (setting_t*)saveareas[id];
-  lastsaveid = id;
+//  lastsaveid = id;
 
   return 0;
 }
 
 int
-caldata_recall(int id)
+caldata_recall(uint16_t id)
 {
   setting_t *src;
   void *dst = &setting;
 
-  if (id < 0 || id >= SAVEAREA_MAX)
+  if (id >= SAVEAREA_MAX)
     return -1;
 
   // point to saved area on the flash memory
-  src = (setting_t*)saveareas[id];
+  src = (setting_t*)(SAVE_PROP_CONFIG_ADDR + id * SAVE_PROP_CONFIG_SIZE);
 
   if (src->magic != CONFIG_MAGIC)
     return -1;
@@ -200,7 +182,7 @@ caldata_recall(int id)
 
   /* active configuration points to save data on flash memory */
 //  active_props = src;
-  lastsaveid = id;
+//  lastsaveid = id;
 
   /* duplicated saved data onto sram to be able to modify marker/trace */
   memcpy(dst, src, sizeof(setting_t));
@@ -229,16 +211,14 @@ caldata_ref(int id)
 }
 #endif
 
-const uint32_t save_config_prop_area_size = SAVE_CONFIG_AREA_SIZE;
-
 void
 clear_all_config_prop_data(void)
 {
   flash_unlock();
 
   /* erase flash pages */
-  void *p = (void*)save_config_area;
-  void *tail = p + save_config_prop_area_size;
+  void *p = (void*)SAVE_CONFIG_ADDR;
+  void *tail = p + SAVE_CONFIG_AREA_SIZE;
   while (p < tail) {
     flash_erase_page((uint32_t)p);
     p += FLASH_PAGESIZE;

@@ -491,11 +491,12 @@ void set_actual_power(float o)              // Set peak level to known value
     config.low_level_offset = new_offset;
 #endif
   }
+  dirty = true;
   config_save();
   // dirty = true;             // No HW update required, only status panel refresh
 }
 
-int get_level_offset(void)
+float get_level_offset(void)
 {
   if (setting.mode == M_HIGH) {
     if (config.high_level_offset == 100)        // Offset of 100 means not calibrated
@@ -616,6 +617,21 @@ void toggle_AGC(void)
   else
     setting.agc = true;
   dirty = true;
+}
+
+void auto_set_AGC_LNA(int auto_set)                                                                    // Adapt the AGC setting if needed
+{
+  static unsigned char old_v;
+  unsigned char v;
+  if (auto_set)
+    v = 0x60; // Enable AGC and disable LNA
+  else
+    v = 0x40; // Disable AGC and enable LNA
+  if (old_v != v) {
+    SI4432_Sel = SI4432_RX ;
+    SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
+    old_v = v;
+  }
 }
 
 void set_unit(int u)
@@ -1476,16 +1492,10 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   }
 
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
-    unsigned char v;                                                                    // Adapt the AGC setting if needed
-    static unsigned char old_v;
     if (f < 500000)
-      v = 0x50; // Disable AGC and enable LNA
+      auto_set_AGC_LNA(false);
     else
-      v = 0x60; // Enable AGC and disable LNA
-    if (old_v != v) {
-      SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-      old_v = v;
-    }
+      auto_set_AGC_LNA(true);
   }
 
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
@@ -1998,18 +2008,11 @@ sweep_again:                                // stay in sweep loop when output mo
   // ----------------------------------  auto AGC ----------------------------------
 
   if (!in_selftest && MODE_INPUT(setting.mode) && S_IS_AUTO(setting.agc) && UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
-    unsigned char v;
-    static unsigned char old_v;
     float actual_max_level = actual_t[max_index[0]] - get_attenuation();
     if (actual_max_level > - 45)
-      v = 0x50; // Disable AGC and enable LNA
+      auto_set_AGC_LNA(false);
     else
-      v = 0x60; // Enable AGC and disable LNA
-    if (old_v != v) {
-      SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-      old_v = v;
-    }
-
+      auto_set_AGC_LNA(TRUE);
   }
 
 
@@ -2070,6 +2073,19 @@ sweep_again:                                // stay in sweep loop when output mo
         if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
           markers[m].frequency = frequencies[markers[m].index];
+#if 1                                                        // Hyperbolic interpolation, can be removed to save memory
+          const int idx          = markers[m].index;
+          if (idx > 0 && idx < sweep_points-1)
+          {
+            const float y1         = actual_t[idx - 1];
+            const float y2         = actual_t[idx + 0];
+            const float y3         = actual_t[idx + 1];
+            const float d          = 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
+            //const float bin      = (float)idx + d;
+            const int32_t delta_Hz = abs((int64_t)frequencies[idx + 0] - frequencies[idx + 1]);
+            markers[m].frequency   += (int32_t)(delta_Hz * d);
+          }
+#endif
           m++;
           break;                          // Next maximum
         }

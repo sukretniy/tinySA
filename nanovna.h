@@ -443,8 +443,8 @@ typedef struct config {
   uint32_t harmonic_freq_threshold;
 #endif
   uint16_t vbat_offset;
-  int16_t low_level_offset;
-  int16_t high_level_offset;
+  float low_level_offset;
+  float high_level_offset;
   uint32_t correction_frequency[CORRECTION_POINTS];
   float    correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
@@ -454,7 +454,7 @@ typedef struct config {
 
 extern config_t config;
 //#define settingLevelOffset config.level_offset
-int get_level_offset(void);
+float get_level_offset(void);
 
 void set_trace_type(int t, int type);
 void set_trace_channel(int t, int channel);
@@ -706,6 +706,9 @@ extern const float unit_scale_value[];
 extern const char * const unit_scale_text[];
 
 #if 1
+// Flash save area - flash7  : org = 0x0801B000, len = 20k in *.ld file
+// 2k - for config save
+// 9 * 2k for setting_t + stored trace
 #define SAVEAREA_MAX 9
 // config save area (see flash7 area start)
 #define SAVE_CONFIG_ADDR        0x0803B000
@@ -725,6 +728,7 @@ extern const char * const unit_scale_text[];
 #define SAVE_PROP_CONFIG_8_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 8*SAVE_PROP_SIZE)
 // Used for erase all config/prop data see flash7 area size
 #define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX*SAVE_PROP_SIZE)     // Should include all save slots
+
 
 #else
 #define SAVEAREA_MAX 4
@@ -809,8 +813,8 @@ extern int16_t lastsaveid;
 #define FREQ_IS_STARTSTOP() (!(setting.freq_mode&FREQ_MODE_CENTER_SPAN))
 #define FREQ_IS_CENTERSPAN() (setting.freq_mode&FREQ_MODE_CENTER_SPAN)
 #define FREQ_IS_CW() (setting.frequency0 == setting.frequency1)
-int caldata_recall(int id);
-int caldata_save(int id);
+int caldata_recall(uint16_t id);
+int caldata_save(uint16_t id);
 //const properties_t *caldata_ref(int id);
 int config_save(void);
 int config_recall(void);
