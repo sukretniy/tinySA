@@ -710,24 +710,16 @@ extern const char * const unit_scale_text[];
 // 2k - for config save
 // 9 * 2k for setting_t + stored trace
 #define SAVEAREA_MAX 9
-// config save area (see flash7 area start)
-#define SAVE_CONFIG_ADDR        0x0803B000
-// Minimum for save slot
-#define SAVE_CONFIG_SIZE        0x800
-// Minimum for save slot
-#define SAVE_PROP_SIZE          0x800
-// setting_t save area
-#define SAVE_PROP_CONFIG_0_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 0*SAVE_PROP_SIZE)
-#define SAVE_PROP_CONFIG_1_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 1*SAVE_PROP_SIZE)
-#define SAVE_PROP_CONFIG_2_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 2*SAVE_PROP_SIZE)
-#define SAVE_PROP_CONFIG_3_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 3*SAVE_PROP_SIZE)
-#define SAVE_PROP_CONFIG_4_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 4*SAVE_PROP_SIZE)
-#define SAVE_PROP_CONFIG_5_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 5*SAVE_PROP_SIZE)
-#define SAVE_PROP_CONFIG_6_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 6*SAVE_PROP_SIZE)
-#define SAVE_PROP_CONFIG_7_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 7*SAVE_PROP_SIZE)
-#define SAVE_PROP_CONFIG_8_ADDR (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE + 8*SAVE_PROP_SIZE)
-// Used for erase all config/prop data see flash7 area size
-#define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX*SAVE_PROP_SIZE)     // Should include all save slots
+// STM32 minimum page size for write
+#define FLASH_PAGESIZE          0x800
+// config save area (flash7 addr)
+#define SAVE_CONFIG_ADDR        0x0801B000
+#define SAVE_CONFIG_SIZE        0x00000800
+// setting_t save area (save area + config size)
+#define SAVE_PROP_CONFIG_ADDR   (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE)
+#define SAVE_PROP_CONFIG_SIZE   0x00000800
+// Should include all save slots
+#define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX * SAVE_PROP_CONFIG_SIZE)
 
 
 #else
