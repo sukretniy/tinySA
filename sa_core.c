@@ -16,8 +16,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-
+#ifdef __SI4432__
 #include "SI4432.h"		// comment out for simulation
+#endif
 #include "stdlib.h"
 
 #pragma GCC push_options
@@ -32,8 +33,6 @@
 #endif
 int dirty = true;
 int scandirty = true;
-
-extern int SI4432_step_delay;
 
 setting_t setting;
 uint32_t frequencies[POINTS_COUNT];
@@ -185,7 +184,10 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
   if (MODE_OUTPUT(setting.mode))
     t = 200*sweep_points;                   // 200 microseconds is the delay set in perform when sweeping in output mode
   else {
-    uint32_t bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
+    uint32_t bare_sweep_time;
+#ifdef __SI4432__
+    bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
+#endif
     if (FREQ_IS_CW()) {
       bare_sweep_time = MINIMUM_SWEEP_TIME;       // minimum sweep time in fast CW mode
       if (setting.repeat != 1 || setting.sweep_time_us >= 100*ONE_MS_TIME || setting.spur != 0) // if no fast CW sweep possible
@@ -621,6 +623,7 @@ void toggle_AGC(void)
 
 void auto_set_AGC_LNA(int auto_set)                                                                    // Adapt the AGC setting if needed
 {
+#ifdef __SI4432__
   static unsigned char old_v;
   unsigned char v;
   if (auto_set)
@@ -632,6 +635,7 @@ void auto_set_AGC_LNA(int auto_set)                                             
     SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
     old_v = v;
   }
+#endif
 }
 
 void set_unit(int u)
@@ -814,8 +818,6 @@ void set_mode(int m)
 //  dirty = true;
 }
 
-extern int SI4432_offset_delay;
-
 void set_fast_speedup(int s)
 {
   setting.fast_speedup = s;
@@ -824,6 +826,7 @@ void set_fast_speedup(int s)
 
 void calculate_step_delay(void)
 {
+#ifdef __SI4432__
   if (setting.step_delay_mode == SD_MANUAL || setting.step_delay != 0) {        // The latter part required for selftest 3
     SI4432_step_delay = setting.step_delay;
     if (setting.offset_delay != 0)      // Override if set
@@ -862,6 +865,7 @@ void calculate_step_delay(void)
     if (setting.offset_delay != 0)      // Override if set
       SI4432_offset_delay = setting.offset_delay;
   }
+#endif
 }
 
 void apply_settings(void)       // Ensure all settings in the setting structure are translated to the right HW setup
@@ -874,7 +878,9 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
   if (setting.mode == M_LOW) {
 
   }
+#ifdef __SI4432__
   SI4432_SetReference(setting.refer);
+#endif
   update_rbw();
   calculate_step_delay();
 }
@@ -954,19 +960,22 @@ static unsigned long real_old_freq[4] = { 0, 0, 0, 0};
 
 void setupSA(void)
 {
+#ifdef __SI4432__
   SI4432_Init();
+#endif
   old_freq[0] = 0;
   old_freq[1] = 0;
   real_old_freq[0] = 0;
   real_old_freq[1] = 0;
+#ifdef __SI4432__
   SI4432_Sel = SI4432_RX ;
   SI4432_Receive();
 
   SI4432_Sel = SI4432_LO ;
   SI4432_Transmit(0);
+#endif
   PE4302_init();
   PE4302_Write_Byte(0);
-
 #if 0           // Measure fast scan time
   setting.sweep_time_us = 0;
   setting.additional_step_delay_us = 0;
@@ -979,8 +988,6 @@ void setupSA(void)
   int t = (t2 - t1) * 100 * (sweep_points) / 200; // And calculate real time excluding overhead for all points
 #endif
 }
-extern int SI4432_frequency_changed;
-extern int SI4432_offset_changed;
 
 #define __WIDE_OFFSET__
 #ifdef __WIDE_OFFSET__
@@ -994,6 +1001,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
   if (old_freq[V] == freq)             // Do not change HW if not needed
     return;
   if (V <= 1) {
+#ifdef __SI4432__
     SI4432_Sel = V;
     if (freq < 240000000 || freq > 960000000) {   // Impossible frequency, simply ignore, should never happen.
       real_old_freq[V] = freq + 1; // No idea why this is done........
@@ -1053,14 +1061,17 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       SI4432_Set_Frequency(freq);           // Not in fast mode
       real_old_freq[V] = freq;
     }
-#ifdef __ULTRA_SA__
-  } else {
-    ADF4351_set_frequency(V-2,freq,3);
 #endif
   }
+#ifdef __ULTRA_SA__
+  else {
+    ADF4351_set_frequency(V-2,freq,3);
+  }
+#endif
   old_freq[V] = freq;
 }
 
+#ifdef __SI4432__
 void set_switch_transmit(void) {
   SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x1f);// Set switch to transmit
   SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1d);
@@ -1082,9 +1093,11 @@ void set_AGC_LNA(void) {
   if (S_STATE(setting.lna)) v |= 0x10;
   SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
 }
+#endif
 
 void set_switches(int m)
 {
+#ifdef __SI4432__
   SI4432_Init();
   old_freq[0] = 0;
   old_freq[1] = 0;
@@ -1093,12 +1106,13 @@ void set_switches(int m)
   SI4432_Sel = SI4432_LO ;
   SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);  // Back to nominal offset
   SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
-
+#endif
   switch(m) {
 case M_LOW:     // Mixed into 0
 #ifdef __ULTRA__
 case M_ULTRA:
 #endif
+#ifdef __SI4432__
     SI4432_Sel = SI4432_RX ;
     SI4432_Receive();
     if (setting.atten_step) {   // use switch as attenuator
@@ -1116,9 +1130,11 @@ case M_ULTRA:
 //    SI4432_Receive(); For noise testing only
     SI4432_Transmit(setting.drive);
     // SI4432_SetReference(setting.refer);
+#endif
     break;
 case M_HIGH:    // Direct into 1
 mute:
+#ifdef __SI4432__
     // SI4432_SetReference(-1); // Stop reference output
     SI4432_Sel = SI4432_RX ; // both as receiver to avoid spurs
     set_switch_receive();
@@ -1132,11 +1148,13 @@ mute:
        set_switch_receive();
      }
     set_AGC_LNA();
+#endif
 
     break;
 case M_GENLOW:  // Mixed output from 0
     if (setting.mute)
       goto mute;
+#ifdef __SI4432__
     SI4432_Sel = SI4432_RX ;
     if (setting.atten_step) { // use switch as attenuator
       set_switch_off();
@@ -1153,10 +1171,12 @@ case M_GENLOW:  // Mixed output from 0
       set_switch_off();
       SI4432_Transmit(12);                 // Fix LO drive a 10dBm
     }
+#endif
     break;
 case M_GENHIGH: // Direct output from 1
     if (setting.mute)
       goto mute;
+#ifdef __SI4432__
     SI4432_Sel = SI4432_RX ;
     SI4432_Receive();
     set_switch_receive();
@@ -1168,7 +1188,7 @@ case M_GENHIGH: // Direct output from 1
       set_switch_transmit();
     }
     SI4432_Transmit(setting.drive);
-
+#endif
     break;
   }
 
@@ -1199,9 +1219,10 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   if (setting.spur && actual_rbw_x10 > 3000)
     actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
 
+#ifdef __SI4432__
   SI4432_Sel =  MODE_SELECT(setting.mode);
   actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
-
+#endif
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
     vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
     if (setting.step_delay_mode==SD_PRECISE)    // if in Precise scanning
@@ -1427,15 +1448,18 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     }
     else{ // not add additional correction, apply recommend time
       setting.additional_step_delay_us = 0;
-//      setting.sweep_time_us = setting.actual_sweep_time_us;
+      //      setting.sweep_time_us = setting.actual_sweep_time_us;
     }
     if (MODE_INPUT(setting.mode)) {
-      correct_RSSI = getSI4432_RSSI_correction()
-                     -  get_signal_path_loss()
-                     + float_TO_PURE_RSSI(
-                      + get_level_offset()
-                      +  get_attenuation()
-                      -  setting.offset);
+      correct_RSSI =
+#ifdef __SI4432__
+          getSI4432_RSSI_correction()
+#endif
+          - get_signal_path_loss()
+          + float_TO_PURE_RSSI(
+              + get_level_offset()
+              + get_attenuation()
+              - setting.offset);
     }
 
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
@@ -1459,6 +1483,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     a += PURE_TO_float(get_frequency_correction(f));
     if (a != old_a) {
       old_a = a;
+#ifdef __SI4432__
       int d = 0;              // Start at lowest drive level;
       a = a + POWER_OFFSET;
       if (a > 0) {
@@ -1484,13 +1509,13 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
         a = a + SWITCH_ATTENUATION;
         set_switch_receive();
       }
+#endif
       if (a < -31)
         a = -31;
       a = -a;
       PE4302_Write_Byte((int)(a * 2) );
     }
   }
-
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
     if (f < 500000)
       auto_set_AGC_LNA(false);
@@ -1510,15 +1535,17 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       my_microsecond_delay(setting.modulation == MO_AM_10Hz ? 20000 : 180);
     }
     else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
+#ifdef __SI4432__
       SI4432_Sel = SI4432_LO ;
       int offset = setting.modulation == MO_NFM ? nfm_modulation[modulation_counter] : wfm_modulation[modulation_counter] ;
       SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
       SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+#endif
       modulation_counter++;
       if (modulation_counter == 5)  // 3dB modulation depth
         modulation_counter = 0;
       my_microsecond_delay(200);
-//      chThdSleepMicroseconds(200);
+      //      chThdSleepMicroseconds(200);
     }
   }
 
@@ -1528,7 +1555,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       correct_RSSI_freq = get_frequency_correction(f);
   }
 
-// -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
+  // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
   int t = 0;
   do {
@@ -1549,7 +1576,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 
     long local_IF;
 
- again:                                                              // Spur reduction jumps to here for second measurement
+    again:                                                              // Spur reduction jumps to here for second measurement
 
     if (MODE_HIGH(setting.mode))
       local_IF = 0;
@@ -1560,7 +1587,9 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
         local_IF = setting.frequency_IF;
     }
     if (setting.mode == M_LOW && tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
+#ifdef __SI4432__
       set_freq (SI4432_RX , local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
+#endif
     } else if (MODE_LOW(setting.mode)) {
       if (setting.mode == M_LOW && !in_selftest && avoid_spur(f)) {         // check is alternate IF is needed to avoid spur.
         local_IF = spur_alternate_IF;
@@ -1586,21 +1615,24 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 
       // --------------------- IF know, set the RX SI4432 frequency ------------------------
 
+#ifdef __SI4432__
       set_freq (SI4432_RX , local_IF);
-
+#endif
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
       local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
+#ifdef __SI4432__
       set_freq (SI4432_RX , local_IF);
- //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?setting.spur * 1000 * actual_rbw:0);
+#endif
+      //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?setting.spur * 1000 * actual_rbw:0);
 #endif
     } else          // This must be high mode
       local_IF= 0;
 #ifdef __ULTRA__
     if (setting.mode == M_ULTRA) {      // Set LO to correct harmonic in Ultra mode
-//      if (lf > 3406000000 )
-//        setFreq (1, local_IF/5 + lf/5);
-//      else
+      //      if (lf > 3406000000 )
+      //        setFreq (1, local_IF/5 + lf/5);
+      //      else
       if (setting.spur != 1) {  // Left of tables
         if (lf > 3250000000 )
           set_freq (SI4432_LO , lf/5 - local_IF/5);
@@ -1619,28 +1651,32 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #endif
     {                                           // Else set LO ('s)
 #ifdef __ULTRA_SA__
-//#define IF_1    2550000000
+      //#define IF_1    2550000000
 #define IF_2    2025000000                      // First IF in Ultra SA mode
 
-       set_freq (2, IF_2 + lf);                 // Scanning LO up to IF2
-       set_freq (3, IF_2 - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
-       set_freq (SI4432_LO, 433800000);                 // Second IF fixe in Ultra SA mode
+      set_freq (2, IF_2 + lf);                 // Scanning LO up to IF2
+      set_freq (3, IF_2 - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
+      set_freq (SI4432_LO, 433800000);                 // Second IF fixe in Ultra SA mode
 #else
-       if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
-         set_freq (SI4432_LO, local_IF-lf);                                                 // set LO SI4432 to below IF frequency
-       else
-         set_freq (SI4432_LO, local_IF+lf);                                                 // otherwise to above IF
+#ifdef __SI4432__
+      if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
+        set_freq (SI4432_LO, local_IF-lf);                                                 // set LO SI4432 to below IF frequency
+      else
+        set_freq (SI4432_LO, local_IF+lf);                                                 // otherwise to above IF
+#endif
 #endif
     }
 
     if (MODE_OUTPUT(setting.mode)) {
+#ifdef __SI4432__
       my_microsecond_delay(200);                 // To prevent lockup of SI4432
+#endif
     }
 
 
     // ------------------------- end of processing when in output mode ------------------------------------------------
 
- skip_LO_setting:
+    skip_LO_setting:
     if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
       start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
 
@@ -1649,25 +1685,27 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     }
     // ---------------- Prepare RSSI ----------------------
 
-                          // jump here if in zero span mode and all HW frequency setup is done.
+    // jump here if in zero span mode and all HW frequency setup is done.
 
+#ifdef __SI4432__
 #ifdef __FAST_SWEEP__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
+#endif
     pureRSSI_t pureRSSI;
     //    if ( i < 3)
     //      shell_printf("%d %.3f %.3f %.1f\r\n", i, local_IF/1000000.0, lf/1000000.0, subRSSI);
 
     // ************** trigger mode if need
-// trigger on measure 4 point
+    // trigger on measure 4 point
 #define T_POINTS            4
 #define T_LEVEL_UNDEF       (1<<(16-T_POINTS)) // should drop after 4 shifts left
 #define T_LEVEL_BELOW       1
 #define T_LEVEL_ABOVE       0
-// Trigger mask, should have width T_POINTS bit
+    // Trigger mask, should have width T_POINTS bit
 #define T_DOWN_MASK         (0b0011)           // 2 from up 2 to bottom
 #define T_UP_MASK           (0b1100)           // 2 from bottom 2 to up
 #define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
@@ -1685,9 +1723,13 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
         t_mode = T_DOWN_MASK;
       uint32_t additional_delay = 0;// reduce noise
       if (setting.sweep_time_us >= 100*ONE_MS_TIME) additional_delay = 20;
+#ifdef __SI4432__
       SI4432_Sel =  MODE_SELECT(setting.mode);
+#endif
       do{                                                 // wait for trigger to happen
+#ifdef __SI4432__
         pureRSSI = DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
+#endif
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
           return 0;                                                           // abort
 
@@ -1700,27 +1742,31 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
           my_microsecond_delay(additional_delay);
       }while(1);
 #ifdef __FAST_SWEEP__
+#ifdef __SI4432__
       if (setting.spur == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
         SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
+#endif
 #endif
       if (setting.trigger == T_SINGLE) {
         set_trigger(T_DONE);
       }
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
-    else
-//      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
-    pureRSSI = Si446x_RSSI();            // Get RSSI, either from pre-filled buffer
+    else {
+#ifdef __SI4432__
+      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
+#endif
+    }
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
     if (setting.spur == 1) {                                        // If first spur pass
-        spur_RSSI = pureRSSI;                                       // remember measure RSSI
-        setting.spur = -1;
-        goto again;                                                 // Skip all other processing
+      spur_RSSI = pureRSSI;                                       // remember measure RSSI
+      setting.spur = -1;
+      goto again;                                                 // Skip all other processing
     } else if (setting.spur == -1) {                              // If second  spur pass
-        pureRSSI = ( pureRSSI < spur_RSSI ? pureRSSI : spur_RSSI);  // Take minimum of two
-        setting.spur = 1;                                           // and prepare for next call of perform.
+      pureRSSI = ( pureRSSI < spur_RSSI ? pureRSSI : spur_RSSI);  // Take minimum of two
+      setting.spur = 1;                                           // and prepare for next call of perform.
     }
 #endif
 
@@ -1995,12 +2041,14 @@ sweep_again:                                // stay in sweep loop when output mo
     if (changed){
       PE4302_Write_Byte((int) get_attenuation() * 2);
       redraw_request |= REDRAW_CAL_STATUS;
+#ifdef __SI4432__
       SI4432_Sel = SI4432_RX ;
       if (setting.atten_step) {
         set_switch_transmit();          // This should never happen
       } else {
         set_switch_receive();
       }
+#endif
       dirty = true;                               // Needed to recalculate the correction factor
     }
   }
@@ -3156,7 +3204,9 @@ void self_test(int test)
 #endif
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.offset_delay = setting.step_delay / 2;
+#ifdef __SI4432__
       setting.rbw_x10 = SI4432_force_RBW(j);
+#endif
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
 #if 0
       set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 1000));     // Wide

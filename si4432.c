@@ -59,6 +59,8 @@ static uint32_t new_port_moder;
 #define CS_PE_HIGH      palSetPad(GPIOA, GPIOA_PE_SEL)
 
 #define RF_POWER_HIGH   palSetPad(GPIOB, GPIOB_RF_PWR)
+//#define SPI2_CLK_HIGH   palSetPad(GPIOB, GPIO_SPI2_CLK)
+//#define SPI2_CLK_LOW    palClearPad(GPIOB, GPIO_SPI2_CLK)
 
 #define CS_SI0_LOW      palClearPad(GPIOB, GPIOB_RX_SEL)
 #define CS_SI1_LOW      palClearPad(GPIOB, GPIOB_LO_SEL)
@@ -73,6 +75,10 @@ static uint32_t new_port_moder;
 
 #define SPI1_SDO       ((palReadPort(GPIOB)>>GPIOB_SPI_MISO)&1)
 #define SPI1_portSDO   (palReadPort(GPIOB)&(1<<GPIOB_SPI_MISO))
+
+#define CS_PE_HIGH      palSetPad(GPIOC, GPIO_PE_SEL)
+#define CS_PE_LOW      palClearPad(GPIOC, GPIO_PE_SEL)
+
 
 //#define MAXLOG 1024
 //unsigned char SI4432_logging[MAXLOG];
@@ -204,14 +210,32 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
 }
 #endif
 
-const uint16_t SI_nSEL[MAX_SI4432+1] = { GPIOB_LO_SEL, GPIOB_LO_SEL, 0}; // #3 is dummy!!!!!!
+int setting_frequency_10mhz = 10000000;
+
+void set_10mhz(uint32_t f)
+{
+  setting_frequency_10mhz = f;
+}
+
+#ifdef __SI4432__
+#define CS_SI0_HIGH     palSetPad(GPIOC, GPIO_RX_SEL)
+#define CS_SI1_HIGH     palSetPad(GPIOC, GPIO_LO_SEL)
+
+#define RF_POWER_HIGH   palSetPad(GPIOB, GPIO_RF_PWR)
+
+
+#define CS_SI0_LOW     palClearPad(GPIOC, GPIO_RX_SEL)
+#define CS_SI1_LOW     palClearPad(GPIOC, GPIO_LO_SEL)
+
+
+const uint16_t SI_nSEL[MAX_SI4432+1] = { GPIO_RX_SEL, GPIO_LO_SEL, 0}; // #3 is dummy!!!!!!
 
 volatile int SI4432_Sel = 0;         // currently selected SI4432
 // volatile int SI4432_guard = 0;
 
 #ifdef __SI4432_H__
 #define SELECT_DELAY 10
-void SI4432_Write_Byte(byte ADR, byte DATA )
+void SI4432_Write_Byte(uint8_t ADR, uint8_t DATA )
 {
   set_SPI_mode(SPI_MODE_SI);
 //  if (SI4432_guard)
@@ -227,7 +251,7 @@ void SI4432_Write_Byte(byte ADR, byte DATA )
 //  SI4432_guard = 0;
 }
 
-void SI4432_Write_3_Byte(byte ADR, byte DATA1, byte DATA2, byte DATA3 )
+void SI4432_Write_3_Byte(uint8_t ADR, uint8_t DATA1, uint8_t DATA2, uint8_t DATA3 )
 {
   set_SPI_mode(SPI_MODE_SI);
 //  if (SI4432_guard)
@@ -245,10 +269,10 @@ void SI4432_Write_3_Byte(byte ADR, byte DATA1, byte DATA2, byte DATA3 )
 //  SI4432_guard = 0;
 }
 
-byte SI4432_Read_Byte( byte ADR )
+uint8_t SI4432_Read_Byte( uint8_t ADR )
 {
   set_SPI_mode(SPI_MODE_SI);
-  byte DATA ;
+  uint8_t DATA ;
 //  if (SI4432_guard)
 //    while(1) ;
 //  SI4432_guard = 1;
@@ -279,13 +303,13 @@ void SI4432_Reset(void)
 
 void SI4432_Drive(int d)
 {
-  SI4432_Write_Byte(SI4432_TX_POWER, (byte) (0x18+(d & 7)));
+  SI4432_Write_Byte(SI4432_TX_POWER, (uint8_t) (0x18+(d & 7)));
 }
 
 void SI4432_Transmit(int d)
 {
   int count = 0;
-  SI4432_Write_Byte(SI4432_TX_POWER, (byte) (0x18+(d & 7)));
+  SI4432_Write_Byte(SI4432_TX_POWER, (uint8_t) (0x18+(d & 7)));
   if (( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) == 2)
     return; // Already in transmit mode
   chThdSleepMilliseconds(3);
@@ -404,12 +428,6 @@ uint16_t SI4432_SET_RBW(uint16_t WISH)  {
   return SI4432_force_RBW(i);
 }
 
-int setting_frequency_10mhz = 10000000;
-
-void set_10mhz(uint32_t f)
-{
-  setting_frequency_10mhz = f;
-}
 
 int SI4432_frequency_changed = false;
 int SI4432_offset_changed = false;
@@ -626,10 +644,10 @@ void SI4432_Sub_Init(void)
   // IF Filter Bandwidth
   SI4432_SET_RBW(100) ;
 //  // Register 0x75 Frequency Band Select
-//  byte sbsel = 1 ;  // recommended setting
-//  byte hbsel = 0 ;  // low bands
-//  byte fb = 19 ;    // 430�439.9 MHz
-//  byte FBS = (sbsel << 6 ) | (hbsel << 5 ) | fb ;
+//  uint8_t sbsel = 1 ;  // recommended setting
+//  uint8_t hbsel = 0 ;  // low bands
+//  uint8_t fb = 19 ;    // 430�439.9 MHz
+//  uint8_t FBS = (sbsel << 6 ) | (hbsel << 5 ) | fb ;
 //  SI4432_Write_Byte(SI4432_FREQBAND, FBS) ;
 //  SI4432_Write_Byte(SI4432_FREQBAND, 0x46) ;
   // Register 0x76 Nominal Carrier Frequency
@@ -733,6 +751,8 @@ void SI4432_SetReference(int freq)
     SI4432_Write_Byte(Si4432_UC_OUTPUT_CLOCK, freq & 0x07) ; // Set GPIO2 frequency
   }
 }
+#endif
+#endif
 
 //------------PE4302 -----------------------------------------------
 
@@ -783,8 +803,6 @@ bool PE4302_Write_Byte(unsigned char DATA )
 //  chThdSleepMicroseconds(PE4302_DELAY);
   return true;
 }
-
-#endif
 
 
 
@@ -918,8 +936,8 @@ unsigned int long RFint,  // Output freq/10Hz
   MOD, //Temp
   FRAC; //Temp
 
-byte OutputDivider; // Temp
-byte lock=2; //Not used
+uint8_t OutputDivider; // Temp
+uint8_t lock=2; //Not used
 
 // Lock = A4
 
