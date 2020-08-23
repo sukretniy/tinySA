@@ -658,6 +658,7 @@ void SI4432_SetReference(int freq)
 #endif
 
 //------------PE4302 -----------------------------------------------
+#ifdef __PE4302__
 
 // Comment out this define to use parallel mode PE4302
 
@@ -707,7 +708,7 @@ bool PE4302_Write_Byte(unsigned char DATA )
   return true;
 }
 
-
+#endif
 
 #if 0
 //-----------------SI4432 dummy------------------
