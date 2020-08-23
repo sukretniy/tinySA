@@ -1738,6 +1738,9 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #ifdef __SI4432__
         pureRSSI = DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
 #endif
+#ifdef __SI4463__
+        pureRSSI = DEVICE_TO_PURE_RSSI((deviceRSSI_t)Si446x_RSSI());
+#endif
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
           return 0;                                                           // abort
 
@@ -1764,6 +1767,9 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     else {
 #ifdef __SI4432__
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
+#endif
+#ifdef __SI4463__
+        pureRSSI = Si446x_RSSI();
 #endif
     }
 #ifdef __SPUR__

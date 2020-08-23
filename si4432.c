@@ -1490,8 +1490,8 @@ int16_t Si446x_RSSI(void)
 //  volatile si446x_state_t s = getState();
 
   SI4463_do_api(data, 2, data, 3);
-  int16_t rssi = 16 * data[2];
-  return rssi;
+  int16_t rssi = data[2] - 120 * 2;
+  return DEVICE_TO_PURE_RSSI(rssi);
 }
 
 
