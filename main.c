@@ -2636,6 +2636,7 @@ int main(void)
   usbStart(serusbcfg.usbp, &usbcfg);
   usbConnectBus(serusbcfg.usbp);
 
+#ifdef __SI4432__
  /*
   * Powercycle the RF part to reset SI4432
   */
@@ -2646,7 +2647,7 @@ int main(void)
 #endif
   palSetPad(GPIOB, GPIO_RF_PWR);
   chThdSleepMilliseconds(500);
-
+#endif
 
 #if 0
   palSetPadMode(GPIOA, 9, PAL_MODE_INPUT_ANALOG);
