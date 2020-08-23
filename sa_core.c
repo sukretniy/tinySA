@@ -871,10 +871,12 @@ void calculate_step_delay(void)
 void apply_settings(void)       // Ensure all settings in the setting structure are translated to the right HW setup
 {
   set_switches(setting.mode);
+#ifdef __PE4302__
   if (setting.mode == M_HIGH)
     PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
     PE4302_Write_Byte((int)(setting.attenuate * 2));
+#endif
   if (setting.mode == M_LOW) {
 
   }
@@ -974,8 +976,10 @@ void setupSA(void)
   SI4432_Sel = SI4432_LO ;
   SI4432_Transmit(0);
 #endif
+#ifdef __PE4302__
   PE4302_init();
   PE4302_Write_Byte(0);
+#endif
 #if 0           // Measure fast scan time
   setting.sweep_time_us = 0;
   setting.additional_step_delay_us = 0;
@@ -1513,7 +1517,9 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       if (a < -31)
         a = -31;
       a = -a;
+#ifdef __PE4302__
       PE4302_Write_Byte((int)(a * 2) );
+#endif
     }
   }
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
@@ -1529,7 +1535,9 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       int p = setting.attenuate * 2 + am_modulation[modulation_counter++];
       if      (p>63) p = 63;
       else if (p< 0) p =  0;
+#ifdef __PE4302__
       PE4302_Write_Byte(p);
+#endif
       if (modulation_counter == 5)  // 3dB modulation depth
         modulation_counter = 0;
       my_microsecond_delay(setting.modulation == MO_AM_10Hz ? 20000 : 180);
@@ -2039,7 +2047,9 @@ sweep_again:                                // stay in sweep loop when output mo
 
     // Try update settings
     if (changed){
+#ifdef __PE4302__
       PE4302_Write_Byte((int) get_attenuation() * 2);
+#endif
       redraw_request |= REDRAW_CAL_STATUS;
 #ifdef __SI4432__
       SI4432_Sel = SI4432_RX ;
