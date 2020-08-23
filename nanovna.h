@@ -25,7 +25,7 @@
 #define __USE_DISPLAY_DMA__
 
 #define __SA__
-#define __SI4432__
+//#define __SI4432__
 //#define __SIMULATION__
 //#define __PIPELINE__
 #define __SCROLL__

@@ -311,6 +311,7 @@ VNA_SHELL_FUNCTION(cmd_z)
     return;
   }
   if (argc == 1) {
+#ifdef __SI4432__
     SI4432_Sel = VFO;
     int type = get_str_index(argv[0], cmd_z_list);
     switch(type) {
@@ -324,6 +325,7 @@ VNA_SHELL_FUNCTION(cmd_z)
       SI4432_Reset();
       break;
     }
+#endif
   }
 }
 

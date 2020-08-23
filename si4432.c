@@ -75,10 +75,10 @@ static uint32_t new_port_moder;
 
 #define SPI1_SDO       ((palReadPort(GPIOB)>>GPIOB_SPI_MISO)&1)
 #define SPI1_portSDO   (palReadPort(GPIOB)&(1<<GPIOB_SPI_MISO))
-
+#ifdef __PE4302__
 #define CS_PE_HIGH      palSetPad(GPIOC, GPIO_PE_SEL)
 #define CS_PE_LOW      palClearPad(GPIOC, GPIO_PE_SEL)
-
+#endif
 
 //#define MAXLOG 1024
 //unsigned char SI4432_logging[MAXLOG];
@@ -755,6 +755,7 @@ void SI4432_SetReference(int freq)
 #endif
 
 //------------PE4302 -----------------------------------------------
+#ifdef __PE4302__
 
 // Comment out this define to use parallel mode PE4302
 
@@ -804,7 +805,7 @@ bool PE4302_Write_Byte(unsigned char DATA )
   return true;
 }
 
-
+#endif
 
 #if 0
 //-----------------SI4432 dummy------------------
@@ -1227,7 +1228,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 
 #include <string.h>
 
-void SI4463_write_byte(byte ADR, byte DATA)
+void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 {
   set_SPI_mode(SPI_MODE_SI);
 //  if (SI4432_guard)
@@ -1246,7 +1247,7 @@ void SI4463_write_byte(byte ADR, byte DATA)
 //  SI4432_guard = 0;
 }
 
-void SI4463_write_buffer(byte ADR, byte *DATA, int len)
+void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 {
   set_SPI_mode(SPI_MODE_SI);
 //  if (SI4432_guard)
@@ -1267,10 +1268,10 @@ void SI4463_write_buffer(byte ADR, byte *DATA, int len)
 }
 
 
-byte SI4463_read_byte( byte ADR )
+uint8_t SI4463_read_byte( uint8_t ADR )
 {
 //  set_SPI_mode(SPI_MODE_SI);
-  byte DATA ;
+  uint8_t DATA ;
 //  if (SI4432_guard)
 //    while(1) ;
 //  SI4432_guard = 1;
