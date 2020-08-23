@@ -26,7 +26,7 @@
 #include "spi.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("O2")
+#pragma GCC optimize ("Og")
 
 // Define for use hardware SPI mode
 #define USE_HARDWARE_SPI_MODE
@@ -38,12 +38,15 @@
 #define SI_CS_LOW      palClearPad(GPIOA, GPIOA_SI_SEL)
 #define SI_CS_HIGH     palSetPad(GPIOA, GPIOA_SI_SEL)
 
+#define SI_SDN_LOW      palClearPad(GPIOC, 15)
+#define SI_SDN_HIGH     palSetPad(GPIOC, 15)
+
 
 // Hardware or software SPI use
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV8
-#define SI4432_SPI_SPEED   SPI_BR_DIV64
+#define SI4432_SPI_SPEED   SPI_BR_DIV32
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -201,7 +204,7 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
 }
 #endif
 
-const uint16_t SI_nSEL[MAX_SI4432+1] = { GPIOB_RX_SEL, GPIOB_LO_SEL, 0}; // #3 is dummy!!!!!!
+const uint16_t SI_nSEL[MAX_SI4432+1] = { GPIOB_LO_SEL, GPIOB_LO_SEL, 0}; // #3 is dummy!!!!!!
 
 volatile int SI4432_Sel = 0;         // currently selected SI4432
 // volatile int SI4432_guard = 0;
@@ -676,6 +679,7 @@ void SI4432_Sub_Init(void)
 
 void SI4432_Init()
 {
+  return;
 #if 1
 
   CS_SI0_LOW;                       // Drop CS so power can be removed
@@ -1199,5 +1203,333 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 
 
 #endif
+
+// ------------------------------ SI4463 -------------------------------------
+
+
+#include <string.h>
+
+void SI4463_write_byte(byte ADR, byte DATA)
+{
+  set_SPI_mode(SPI_MODE_SI);
+//  if (SI4432_guard)
+//    while(1) ;
+//  SI4432_guard = 1;
+//  SPI1_CLK_LOW;
+  palClearPad(GPIOB, GPIOB_RX_SEL);
+  my_microsecond_delay(2);
+//  chThdSleepMicroseconds(SELECT_DELAY);
+  ADR |= 0x80 ; // RW = 1
+  shiftOut( ADR );
+  shiftOut( DATA );
+  my_microsecond_delay(2);
+  palSetPad(GPIOB, GPIOB_RX_SEL);
+  my_microsecond_delay(2);
+//  SI4432_guard = 0;
+}
+
+void SI4463_write_buffer(byte ADR, byte *DATA, int len)
+{
+  set_SPI_mode(SPI_MODE_SI);
+//  if (SI4432_guard)
+//    while(1) ;
+//  SI4432_guard = 1;
+//  SPI1_CLK_LOW;
+  palClearPad(GPIOB, GPIOB_RX_SEL);
+  my_microsecond_delay(2);
+//  chThdSleepMicroseconds(SELECT_DELAY);
+  ADR |= 0x80 ; // RW = 1
+  shiftOut( ADR );
+  while (len-- > 0)
+    shiftOut( *(DATA++) );
+  my_microsecond_delay(2);
+  palSetPad(GPIOB, GPIOB_RX_SEL);
+  my_microsecond_delay(2);
+//  SI4432_guard = 0;
+}
+
+
+byte SI4463_read_byte( byte ADR )
+{
+//  set_SPI_mode(SPI_MODE_SI);
+  byte DATA ;
+//  if (SI4432_guard)
+//    while(1) ;
+//  SI4432_guard = 1;
+//  SPI1_CLK_LOW;
+  palClearPad(GPIOB, GPIOB_RX_SEL);
+  my_microsecond_delay(2);
+  shiftOut( ADR );
+  my_microsecond_delay(2);
+  DATA = shiftIn();
+  my_microsecond_delay(2);
+  palSetPad(GPIOB, GPIOB_RX_SEL);
+  my_microsecond_delay(2);
+//  SI4432_guard = 0;
+  return DATA ;
+}
+
+uint8_t SI4463_get_response(void* buff, uint8_t len)
+{
+    uint8_t cts = 0;
+    set_SPI_mode(SPI_MODE_SI);
+  //  if (SI4432_guard)
+  //    while(1) ;
+  //  SI4432_guard = 1;
+  //  SPI1_CLK_LOW;
+    palClearPad(GPIOB, GPIOB_RX_SEL);
+    my_microsecond_delay(2);
+    shiftOut( SI446X_CMD_READ_CMD_BUFF );
+    my_microsecond_delay(2);
+    cts = (shiftIn() == 0xFF);
+    my_microsecond_delay(2);
+    if (cts)
+    {
+        // Get response data
+        for(uint8_t i=0;i<len;i++) {
+            ((uint8_t*)buff)[i] = shiftIn();
+            my_microsecond_delay(2);
+        }
+    }
+    palSetPad(GPIOB, GPIOB_RX_SEL);
+    my_microsecond_delay(2);
+    return cts;
+}
+
+uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout)
+{
+  uint16_t timeout = 40000;
+  while(!SI4463_get_response(buff, len))
+  {
+    my_microsecond_delay(5);
+    if(use_timeout && !--timeout)
+    {
+        return 0;
+    }
+  }
+  return 1;
+}
+
+void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
+{
+  if(SI4463_wait_response(NULL, 0, true)) // Make sure it's ok to send a command
+  {
+//    set_SPI_mode(SPI_MODE_SI);
+    palClearPad(GPIOB, GPIOB_RX_SEL);
+    my_microsecond_delay(2);
+    for(uint8_t i=0;i<len;i++) {
+      shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
+      my_microsecond_delay(2);
+    }
+    my_microsecond_delay(2);
+    palSetPad(GPIOB, GPIOB_RX_SEL);
+    my_microsecond_delay(2);
+    if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
+      SI4463_wait_response(NULL, 0, false);
+    else if(out != NULL) // If we have an output buffer then read command response into it
+      SI4463_wait_response(out, outLen, true);
+  }
+}
+
+static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
+{
+    // len must not be greater than 12
+
+    uint8_t data[16] = {
+        SI446X_CMD_SET_PROPERTY,
+        (uint8_t)(prop>>8),
+        len,
+        (uint8_t)prop
+    };
+
+    // Copy values into data, starting at index 4
+    memcpy(data + 4, values, len);
+
+    SI4463_do_api(data, len + 4, NULL, 0);
+}
+
+#include "SI4463_radio_config.h"
+#include "SI446x_cmd.h"
+
+static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
+
+// Set new state
+static void SI4463_set_state(si446x_state_t newState)
+{
+  uint8_t data[] = {
+        SI446X_CMD_CHANGE_STATE,
+        newState
+  };
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+}
+
+static void SI4463_clear_FIFO(void)
+{
+    // 'static const' saves 20 bytes of flash here, but uses 2 bytes of RAM
+  static const uint8_t clearFifo[] = {
+        SI446X_CMD_FIFO_INFO,
+        SI446X_FIFO_CLEAR_RX | SI446X_FIFO_CLEAR_TX
+  };
+  SI4463_do_api((uint8_t*)clearFifo, sizeof(clearFifo), NULL, 0);
+}
+
+void SI4463_start_rx(uint8_t CHANNEL)
+{
+  uint8_t data[] = {
+    SI446X_CMD_ID_START_RX,
+    CHANNEL,
+    0,
+    0,
+    0,
+    SI446X_CMD_START_RX_ARG_NEXT_STATE1_RXTIMEOUT_STATE_ENUM_NOCHANGE,
+    SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
+    SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
+  };
+//retry:
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+#if 0
+  //  my_microsecond_delay(15000);
+//  si446x_state_t s = getState();
+  if (s != SI446X_STATE_RX) {
+    my_microsecond_delay(10);
+    goto retry;
+  }
+#endif
+}
+
+si446x_info_t SI4463_info;
+
+void Si446x_getInfo(si446x_info_t* info)
+{
+    uint8_t data[8] = {
+        SI446X_CMD_PART_INFO
+    };
+    SI4463_do_api(data, 1, data, 8);
+
+    info->chipRev   = data[0];
+    info->part      = (data[1]<<8) | data[2];
+    info->partBuild = data[3];
+    info->id        = (data[4]<<8) | data[5];
+    info->customer  = data[6];
+    info->romId     = data[7];
+
+
+    data[0] = SI446X_CMD_FUNC_INFO;
+    SI4463_do_api(data, 1, data, 6);
+
+    info->revExternal   = data[0];
+    info->revBranch     = data[1];
+    info->revInternal   = data[2];
+    info->patch         = (data[3]<<8) | data[4];
+    info->func          = data[5];
+}
+
+
+
+// Read a fast response register
+uint8_t getFRR(uint8_t reg)
+{
+    return SI4463_read_byte(reg);
+}
+
+// Get current radio state
+ si446x_state_t getState(void)
+{
+    uint8_t state = getFRR(SI446X_CMD_READ_FRR_B);
+    if(state == SI446X_STATE_TX_TUNE)
+        state = SI446X_STATE_TX;
+    else if(state == SI446X_STATE_RX_TUNE)
+        state = SI446X_STATE_RX;
+    else if(state == SI446X_STATE_READY2)
+        state = SI446X_STATE_READY;
+    return (si446x_state_t)state;
+}
+
+// Set new state
+void setState(si446x_state_t newState)
+{
+    uint8_t data[] = {
+        SI446X_CMD_CHANGE_STATE,
+        newState
+    };
+    SI4463_do_api(data, sizeof(data), NULL, 0);
+}
+
+
+int16_t Si446x_RSSI(void)
+{
+//  Si446x_getInfo(&SI4463_info);
+
+//  if (s != SI446X_STATE_RX)
+//    SI4463_start_rx(90);
+//  SI4463_start_rx(90);
+
+  uint8_t data[3] = {
+        SI446X_CMD_GET_MODEM_STATUS,
+        0xFF
+  };
+//  volatile si446x_state_t s = getState();
+
+  SI4463_do_api(data, 2, data, 3);
+  int16_t rssi = 16 * data[2];
+  return rssi;
+}
+
+
+// Do an ADC conversion
+static uint16_t getADC(uint8_t adc_en, uint8_t adc_cfg, uint8_t part)
+{
+    uint8_t data[6] = {
+        SI446X_CMD_GET_ADC_READING,
+        adc_en,
+        adc_cfg
+    };
+    SI4463_do_api(data, 3, data, 6);
+    return (data[part]<<8 | data[part + 1]);
+}
+
+
+
+void SI4463_init(void)
+{
+  volatile int16_t RSSI;
+reset:
+  SI_SDN_LOW;
+  my_microsecond_delay(1000);
+  SI_SDN_HIGH;
+  my_microsecond_delay(10000);
+  SI_SDN_LOW;
+  my_microsecond_delay(10000);
+
+
+#if 1
+for(uint16_t i=0;i<sizeof(SI4463_config);i++)
+{
+  SI4463_do_api((void *)&SI4463_config[i+1], SI4463_config[i], NULL, 0);
+  i += SI4463_config[i];
+  my_microsecond_delay(100);
+
+}
+#endif
+//  SI4463_do_api((void *)&SI4463_config[1], SI4463_config[0], NULL, 0);
+
+
+//#define SI446X_ADC_SPEED 10
+//  RSSI = getADC(SI446X_ADC_CONV_BATT, (SI446X_ADC_SPEED<<4), 2);
+volatile si446x_state_t s ;
+again:
+  Si446x_getInfo(&SI4463_info);
+// s = getState();
+  SI4463_start_rx(90);
+  my_microsecond_delay(15000);
+  s = getState();
+  if (s != SI446X_STATE_RX)
+    goto reset;
+  RSSI = Si446x_RSSI();
+// goto again;
+
+
+}
+
 
 #pragma GCC pop_options

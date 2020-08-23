@@ -2742,6 +2742,9 @@ goto again;
   i2sStart(&I2SD2, &i2sconfig);
   i2sStartExchange(&I2SD2);
 #endif
+#ifdef __SI4463__
+  SI4463_init();
+#endif
   area_height = AREA_HEIGHT_NORMAL;
   ui_init();
   //Initialize graph plotting

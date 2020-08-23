@@ -1710,8 +1710,8 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
     else
-      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
-
+//      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
+    pureRSSI = Si446x_RSSI();            // Get RSSI, either from pre-filled buffer
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
     if (setting.spur == 1) {                                        // If first spur pass

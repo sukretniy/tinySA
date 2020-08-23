@@ -160,5 +160,17 @@ void ADF4351_level(int p);
 int ADF4351_locked(void);
 #endif
 
+#ifdef __SI4463__
+#include "si446x_defs.h"
+#include "si446x.h"
+int16_t Si446x_RSSI(void);
+uint8_t getFRR(uint8_t reg);
+si446x_state_t getState(void);
+void setState(si446x_state_t newState);
+extern si446x_info_t SI4463_info;
+void Si446x_getInfo(si446x_info_t* info);
+void SI4463_init(void);
+
+#endif
 
 #endif //__SI4432_H__
