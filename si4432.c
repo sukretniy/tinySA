@@ -1276,6 +1276,7 @@ uint8_t SI4463_read_byte( uint8_t ADR )
 //    while(1) ;
 //  SI4432_guard = 1;
 //  SPI1_CLK_LOW;
+  set_SPI_mode(SPI_MODE_SI);
   palClearPad(GPIOB, GPIOB_RX_SEL);
   my_microsecond_delay(2);
   shiftOut( ADR );
@@ -1448,7 +1449,8 @@ void Si446x_getInfo(si446x_info_t* info)
 // Read a fast response register
 uint8_t getFRR(uint8_t reg)
 {
-    return SI4463_read_byte(reg);
+  set_SPI_mode(SPI_MODE_SI);
+  return SI4463_read_byte(reg);
 }
 
 // Get current radio state
