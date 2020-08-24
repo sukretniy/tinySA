@@ -809,8 +809,8 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   int i = -1;
   if (active_marker == -1)
     return;
-  if (data < 4)
-    markers[active_marker].mtype &= ~M_TRACKING;
+//  if (data < 4)
+//    markers[active_marker].mtype &= ~M_TRACKING;
   switch (data) {
   case 0: /* search Left */
     i = marker_search_left_min(markers[active_marker].index);
@@ -831,12 +831,14 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   case 3: /* search right */
     i = marker_search_right_max(markers[active_marker].index);
     break;
-  case 4: /* tracking */
-    markers[active_marker].mtype ^= M_TRACKING;
+  case 4: /* peak search */
+    i = marker_search_max();
     break;
   }
-  if (i != -1)
+  if (i != -1) {
     markers[active_marker].index = i;
+    markers[active_marker].frequency = frequencies[i];
+  }
   draw_menu();
   redraw_marker(active_marker);
   select_lever_mode(LM_SEARCH);
@@ -2091,8 +2093,10 @@ lever_search_marker(int status)
       i = marker_search_left(markers[active_marker].index);
     else if (status & EVT_UP)
       i = marker_search_right(markers[active_marker].index);
-    if (i != -1)
+    if (i != -1) {
       markers[active_marker].index = i;
+      markers[active_marker].frequency = frequencies[i];
+    }
     redraw_marker(active_marker);
   }
 }

@@ -1406,7 +1406,7 @@ static const menuitem_t menu_reflevel[] = {
 };
 
 const menuitem_t menu_marker_search[] = {
-  //{ MT_CALLBACK, "OFF", menu_marker_search_cb },
+  { MT_CALLBACK, 4, "PEAK\n SEARCH",          menu_marker_search_cb },
   { MT_CALLBACK, 0, "MIN\n" S_LARROW" LEFT",  menu_marker_search_cb },
   { MT_CALLBACK, 1, "MIN\n" S_RARROW" RIGHT", menu_marker_search_cb },
   { MT_CALLBACK, 2, "MAX\n" S_LARROW" LEFT",  menu_marker_search_cb },

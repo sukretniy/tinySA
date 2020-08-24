@@ -2277,9 +2277,9 @@ marker_search_left_max(int from)
   if (uistat.current_trace == -1)
     return -1;
 
-  int value = actual_t[from];
+  float value = actual_t[from];
   for (i = from - 1; i >= 0; i--) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value < value) {
       value = new_value;
       found = i;
@@ -2288,7 +2288,7 @@ marker_search_left_max(int from)
   }
 
   for (; i >= 0; i--) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value > value) {
       value = new_value;
       found = i;
@@ -2306,9 +2306,9 @@ marker_search_right_max(int from)
 
   if (uistat.current_trace == -1)
     return -1;
-  int value = actual_t[from];
+  float value = actual_t[from];
   for (i = from + 1; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value < value) {    // follow down
       value = new_value;
       found = i;
@@ -2316,12 +2316,28 @@ marker_search_right_max(int from)
       break;    //  past the minimum
   }
   for (; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value > value) {    // follow up
       value = new_value;
       found = i;
     } else if (new_value < value - setting.noise)
       break;
+  }
+  return found;
+}
+
+int marker_search_max(void)
+{
+  int i = 0;
+  int found = 0;
+
+  float value = actual_t[i];
+  for (; i < sweep_points; i++) {
+    int new_value = actual_t[i];
+    if (new_value > value) {    // follow up
+      value = new_value;
+      found = i;
+    }
   }
   return found;
 }
@@ -2337,9 +2353,9 @@ marker_search_left_min(int from)
   if (uistat.current_trace == -1)
     return -1;
 
-  int value = actual_t[from];
+  float value = actual_t[from];
   for (i = from - 1; i >= 0; i--) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value > value) {
       value = new_value;        // follow up
 //      found = i;
@@ -2348,7 +2364,7 @@ marker_search_left_min(int from)
   }
 
   for (; i >= 0; i--) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value < value) {
       value = new_value;        // follow down
       found = i;
@@ -2366,9 +2382,9 @@ marker_search_right_min(int from)
 
   if (uistat.current_trace == -1)
     return -1;
-  int value = actual_t[from];
+  float value = actual_t[from];
   for (i = from + 1; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value > value) {    // follow up
       value = new_value;
 //      found = i;
@@ -2376,7 +2392,7 @@ marker_search_right_min(int from)
       break;    // past the maximum
   }
   for (; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value < value) {    // follow down
       value = new_value;
       found = i;
