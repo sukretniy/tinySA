@@ -989,7 +989,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_delete_cb)
   }
 }
 
-static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
+static const uint16_t rbwsel_x10[]={0,10,30,100,300,1000,3000};
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
 {
   (void)item;

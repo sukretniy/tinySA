@@ -28,6 +28,7 @@
 //#define __SI4432__
 //#define __PE4302__
 #define __SI4463__
+#define __ADF4351__
 //#define __SIMULATION__
 //#define __PIPELINE__
 #define __SCROLL__

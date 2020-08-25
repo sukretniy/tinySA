@@ -22,6 +22,13 @@
 
 #define __SI4432_H__
 
+void start_SI4432_SPI_mode(void);
+void stop_SI4432_SPI_mode(void);
+
+extern int SI4432_step_delay;
+extern int SI4432_offset_delay;
+
+
 #ifdef __SI4432__
 
 //
@@ -109,11 +116,6 @@
 
 extern volatile int SI4432_Sel;         // currently selected SI4432
 
-void start_SI4432_SPI_mode(void);
-void stop_SI4432_SPI_mode(void);
-
-extern int SI4432_step_delay;
-extern int SI4432_offset_delay;
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
 
@@ -148,7 +150,7 @@ int SI4432_is_fast_mode(void);
 bool PE4302_Write_Byte(unsigned char DATA );
 void PE4302_init(void);
 
-#ifdef __ULTRA_SA__
+#ifdef __ADF4351__
 extern int ADF4351_LE[];
 extern int debug;
 void   ADF4351_Setup(void);
@@ -179,6 +181,7 @@ void setState(si446x_state_t newState);
 extern si446x_info_t SI4463_info;
 void Si446x_getInfo(si446x_info_t* info);
 void SI4463_init(void);
+#define ADF4351_LO                         2
 
 #endif
 

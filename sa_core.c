@@ -16,9 +16,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifdef __SI4432__
+//#ifdef __SI4432__
 #include "SI4432.h"		// comment out for simulation
-#endif
+//#endif
 #include "stdlib.h"
 
 #pragma GCC push_options
@@ -184,10 +184,8 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
   if (MODE_OUTPUT(setting.mode))
     t = 200*sweep_points;                   // 200 microseconds is the delay set in perform when sweeping in output mode
   else {
-    uint32_t bare_sweep_time;
-#ifdef __SI4432__
+    uint32_t bare_sweep_time=0;
     bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
-#endif
     if (FREQ_IS_CW()) {
       bare_sweep_time = MINIMUM_SWEEP_TIME;       // minimum sweep time in fast CW mode
       if (setting.repeat != 1 || setting.sweep_time_us >= 100*ONE_MS_TIME || setting.spur != 0) // if no fast CW sweep possible
@@ -826,7 +824,6 @@ void set_fast_speedup(int s)
 
 void calculate_step_delay(void)
 {
-#ifdef __SI4432__
   if (setting.step_delay_mode == SD_MANUAL || setting.step_delay != 0) {        // The latter part required for selftest 3
     SI4432_step_delay = setting.step_delay;
     if (setting.offset_delay != 0)      // Override if set
@@ -836,6 +833,7 @@ void calculate_step_delay(void)
     if (setting.frequency_step == 0) {            // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
+#ifdef __SI4432__
 #if 1       // Table for double offset delay
       if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  300; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
@@ -857,6 +855,19 @@ void calculate_step_delay(void)
       else if (actual_rbw_x10 >=  50)  { SI4432_step_delay = 3300; SI4432_offset_delay = 400; }
       else                             { SI4432_step_delay = 6400; SI4432_offset_delay =1600; }
 #endif
+#endif
+#ifdef __SI4463__
+      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  300; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 200; }
+      else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 300; }
+      else if (actual_rbw_x10 >=  90)  { SI4432_step_delay = 1700; SI4432_offset_delay = 400; }
+      else if (actual_rbw_x10 >=  50)  { SI4432_step_delay = 3300; SI4432_offset_delay = 800; }
+      else if (actual_rbw_x10 >=  20)  { SI4432_step_delay = 7000; SI4432_offset_delay = 800; }
+      else                             { SI4432_step_delay = 20000; SI4432_offset_delay =1600; }
+#endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
       if (setting.fast_speedup >0)
@@ -865,7 +876,6 @@ void calculate_step_delay(void)
     if (setting.offset_delay != 0)      // Override if set
       SI4432_offset_delay = setting.offset_delay;
   }
-#endif
 }
 
 void apply_settings(void)       // Ensure all settings in the setting structure are translated to the right HW setup
@@ -980,6 +990,7 @@ void setupSA(void)
   PE4302_init();
   PE4302_Write_Byte(0);
 #endif
+  ADF4351_Setup();
 #if 0           // Measure fast scan time
   setting.sweep_time_us = 0;
   setting.additional_step_delay_us = 0;
@@ -1004,8 +1015,8 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
 {
   if (old_freq[V] == freq)             // Do not change HW if not needed
     return;
-  if (V <= 1) {
 #ifdef __SI4432__
+  if (V <= 1) {
     SI4432_Sel = V;
     if (freq < 240000000 || freq > 960000000) {   // Impossible frequency, simply ignore, should never happen.
       real_old_freq[V] = freq + 1; // No idea why this is done........
@@ -1065,7 +1076,10 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       SI4432_Set_Frequency(freq);           // Not in fast mode
       real_old_freq[V] = freq;
     }
+  } else
 #endif
+  if (V==2){
+    ADF4351_set_frequency(V-2,freq,3);
   }
 #ifdef __ULTRA_SA__
   else {
@@ -1215,10 +1229,18 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
     } else
       actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
   }
+#ifdef __SI4432__
   if (actual_rbw_x10 < 26)
     actual_rbw_x10 = 26;
   if (actual_rbw_x10 > 6000)
     actual_rbw_x10 = 6000;
+#endif
+#ifdef __SI4463__
+  if (actual_rbw_x10 < 11)
+    actual_rbw_x10 = 11;
+  if (actual_rbw_x10 > 8500)
+    actual_rbw_x10 = 8500;
+#endif
 
   if (setting.spur && actual_rbw_x10 > 3000)
     actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
@@ -1671,6 +1693,17 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
         set_freq (SI4432_LO, local_IF-lf);                                                 // set LO SI4432 to below IF frequency
       else
         set_freq (SI4432_LO, local_IF+lf);                                                 // otherwise to above IF
+#endif
+#ifdef __ADF4351__
+      if (setting.mode == M_LOW) {
+        if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
+          if (lf > local_IF)
+            set_freq (ADF4351_LO, lf - local_IF); // set LO SI4432 to below IF frequency
+          else
+            set_freq (ADF4351_LO, local_IF-lf); // set LO SI4432 to below IF frequency
+        } else
+          set_freq (ADF4351_LO, local_IF+lf); // otherwise to above IF
+      }
 #endif
 #endif
     }
