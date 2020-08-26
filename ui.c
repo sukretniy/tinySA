@@ -840,7 +840,10 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   }
   draw_menu();
   redraw_marker(active_marker);
-  select_lever_mode(LM_SEARCH);
+//  if (data == 4)
+    select_lever_mode(LM_MARKER);   // Allow any position with level
+//  else
+//    select_lever_mode(LM_SEARCH); // Jump from maximum to maximum
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb){
@@ -2089,9 +2092,9 @@ lever_search_marker(int status)
   int i = -1;
   if (active_marker >= 0) {
     if (status & EVT_DOWN)
-      i = marker_search_left(markers[active_marker].index);
+      i = marker_search_left_max(markers[active_marker].index);
     else if (status & EVT_UP)
-      i = marker_search_right(markers[active_marker].index);
+      i = marker_search_right_max(markers[active_marker].index);
     if (i != -1) {
       markers[active_marker].index = i;
       markers[active_marker].frequency = frequencies[i];
