@@ -2539,6 +2539,7 @@ touch_marker_select(void)
     if (markers[i].enabled) {
       if (selected_marker == 0) {
         active_marker = i;
+        redraw_marker(active_marker);
         break;
       }
       selected_marker --;
