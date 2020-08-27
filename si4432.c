@@ -46,7 +46,7 @@
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV8
-#define SI4432_SPI_SPEED   SPI_BR_DIV32
+#define SI4432_SPI_SPEED   SPI_BR_DIV16
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -951,21 +951,24 @@ void ADF4351_Setup(void)
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
-  set_SPI_mode(SPI_MODE_SI);
-  chThdSleepMicroseconds(2);
-  palClearPad(GPIOB, ADF4351_LE[channel]);
-  chThdSleepMicroseconds(2);
   for (int i = 3; i >= 0; i--) shiftOut((value >> (8 * i)) & 0xFF);
-//  chThdSleepMicroseconds(10);
+//  chThdSleepMicroseconds(1);
   palSetPad(GPIOB, ADF4351_LE[channel]);
-  chThdSleepMicroseconds(2);
+  chThdSleepMicroseconds(1);        // Must
   palClearPad(GPIOB, ADF4351_LE[channel]);
-  chThdSleepMicroseconds(2);
+//  chThdSleepMicroseconds(1);      // Not needed
 }
 
 void ADF4351_Set(int channel)
-{ for (int i = 5; i >= 0; i--) {
+{
+  set_SPI_mode(SPI_MODE_SI);
+  chThdSleepMicroseconds(1);
+  palClearPad(GPIOB, ADF4351_LE[channel]);
+  chThdSleepMicroseconds(1);
+
+  for (int i = 5; i >= 0; i--) {
     ADF4351_WriteRegister32(channel, registers[i]);
+
 //    if (debug)  Serial.println(registers[i],HEX);
 }
 }
@@ -984,10 +987,11 @@ void ADF4351_enable_output(void)
 
 void ADF4351_set_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
 {
+  freq -= 76000;
   ADF4351_prep_frequency(channel,freq, drive);
+//START_PROFILE;
   ADF4351_Set(channel);
-  if (SI4432_step_delay>10)
-    my_microsecond_delay(SI4432_step_delay);
+//STOP_PROFILE;
 }
 
 void ADF4351_spur_mode(int S)
@@ -1055,6 +1059,7 @@ static uint32_t gcd(uint32_t x, uint32_t y)
 void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
 {
   (void)drive;
+//  START_PROFILE;
 //  if (channel == 0)
     RFout=freq/1000000.0;  // To MHz
 //  else
@@ -1198,8 +1203,8 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
  #endif
 //   bitSet (registers[4], 10); // Mute till lock
 //    ADF4351_Set(channel);
+//    STOP_PROFILE;
 }
-
 
 #endif
 
@@ -1301,7 +1306,7 @@ uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout)
   uint16_t timeout = 40000;
   while(!SI4463_get_response(buff, len))
   {
-    my_microsecond_delay(5);
+    my_microsecond_delay(2);
     if(use_timeout && !--timeout)
     {
         return 0;
@@ -1470,12 +1475,15 @@ int16_t Si446x_RSSI(void)
         0xFF
   };
 //  volatile si446x_state_t s = getState();
-  chThdSleepMicroseconds(SI4432_step_delay);
+START_PROFILE;
+  if (SI4432_step_delay)
+    my_microsecond_delay(SI4432_step_delay);
 again:
   SI4463_do_api(data, 2, data, 3);
   if (data[2] == 255)
      goto again;
   int16_t rssi = data[2] - 120 * 2;
+STOP_PROFILE;
   return DEVICE_TO_PURE_RSSI(rssi);
 }
 
@@ -1514,19 +1522,104 @@ uint8_t SI4463_RBW_1kHz[] =
  0x00
 };
 
-// -------------- kHz ----------------------------
+// -------------- 3 kHz ----------------------------
 
 #undef RF_MODEM_TX_RAMP_DELAY_8_1
 #undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
 #undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
 #undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
 
-#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0x00, 0x30
+#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0xF0, 0x11
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00
+
+uint8_t SI4463_RBW_3kHz[] =
+{
+ 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
+ 0x00
+};
+
+// -------------- 10 kHz ----------------------------
+
+#undef RF_MODEM_TX_RAMP_DELAY_8_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
+#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
+
+#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0xB0, 0x20
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00
+
+
+uint8_t SI4463_RBW_10kHz[] =
+{
+ 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
+ 0x00
+};
+
+// -------------- 30 kHz ----------------------------
+
+#undef RF_MODEM_TX_RAMP_DELAY_8_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
+#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
+
+#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0x30, 0x10
 #define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01
 #define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9
 #define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F
 
-uint8_t SI4463_RBW_kHz[] =
+uint8_t SI4463_RBW_30kHz[] =
+{
+ 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
+ 0x00
+};
+
+// -------------- 100kHz ----------------------------
+
+#undef RF_MODEM_TX_RAMP_DELAY_8_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
+#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
+
+#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0x20, 0x20
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F
+
+uint8_t SI4463_RBW_100kHz[] =
+{
+ 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
+ 0x00
+};
+
+// -------------- 300kHz ----------------------------
+
+#undef RF_MODEM_TX_RAMP_DELAY_8_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
+#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
+
+#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0x00, 0x20
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00
+
+uint8_t SI4463_RBW_300kHz[] =
 {
  0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
  0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
@@ -1557,6 +1650,58 @@ uint8_t SI4463_RBW_850kHz[] =
  0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
  0x00
 };
+
+// User asks for an RBW of WISH, go through table finding the last triple
+// for which WISH is greater than the first entry, use those values,
+// Return the first entry of the following triple for the RBW actually achieved
+#define IF_BW(dwn3, ndec, filset) (((dwn3)<<7)|((ndec)<<4)|(filset))
+typedef struct {
+  uint8_t  *reg;                   // IF_BW(dwn3, ndec, filset)
+  int16_t   RSSI_correction_x_10;  // Correction * 10
+  int16_t RBWx10;                // RBW in kHz
+}RBW_t; // sizeof(RBW_t) = 8 bytes
+
+static RBW_t RBW_choices[] =
+{
+// BW register    corr  freq
+ {SI4463_RBW_1kHz,  0,10},
+ {SI4463_RBW_3kHz,  0,30},
+ {SI4463_RBW_10kHz, 0,100},
+ {SI4463_RBW_30kHz, 0,300},
+ {SI4463_RBW_100kHz,0,1000},
+ {SI4463_RBW_300kHz,0,3000},
+ {SI4463_RBW_850kHz,0,8500},
+};
+
+static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
+
+uint16_t SI4463_force_RBW(int i)
+{
+  setState(SI446X_STATE_TX_TUNE);
+  my_microsecond_delay(200);
+
+  uint8_t *config = RBW_choices[i].reg;
+  for(uint16_t i=0;i<sizeof(SI4463_RBW_850kHz);i++)
+  {
+    SI4463_do_api((void *)&config[i+1], config[i], NULL, 0);
+    i += config[i];
+    my_microsecond_delay(100);
+
+  }
+  SI4463_start_rx(0);
+  my_microsecond_delay(1000);
+  SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[i].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
+  return RBW_choices[i].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
+}
+
+uint16_t SI4463_SET_RBW(uint16_t WISH)  {
+  int i;
+  for (i=0; i < (int)(sizeof(RBW_choices)/sizeof(RBW_t)) - 1; i++)
+    if (WISH <= RBW_choices[i].RBWx10 * 15/10)
+      break;
+  return SI4463_force_RBW(i);
+}
+
 
 
 void SI4463_set_freq(uint32_t freq, uint32_t step_size)

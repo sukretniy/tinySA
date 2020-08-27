@@ -857,16 +857,10 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  300; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 750)  { SI4432_step_delay =  450; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 560)  { SI4432_step_delay =  650; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 370)  { SI4432_step_delay =  700; SI4432_offset_delay = 200; }
-      else if (actual_rbw_x10 >= 180)  { SI4432_step_delay = 1100; SI4432_offset_delay = 300; }
-      else if (actual_rbw_x10 >=  90)  { SI4432_step_delay = 1700; SI4432_offset_delay = 400; }
-      else if (actual_rbw_x10 >=  50)  { SI4432_step_delay = 3300; SI4432_offset_delay = 800; }
-      else if (actual_rbw_x10 >=  20)  { SI4432_step_delay = 7000; SI4432_offset_delay = 800; }
-      else                             { SI4432_step_delay = 20000; SI4432_offset_delay =1600; }
+      if (actual_rbw_x10 >= 2700)      { SI4432_step_delay = 200; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 800)  { SI4432_step_delay = 250; 150; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 250)  { SI4432_step_delay = 600; 450; SI4432_offset_delay = 100; }
+      else                             { SI4432_step_delay = 2000; SI4432_offset_delay =1600; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
@@ -1251,6 +1245,9 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 #ifdef __SI4432__
   SI4432_Sel =  MODE_SELECT(setting.mode);
   actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
+#endif
+#ifdef __SI4463__
+  actual_rbw_x10 = SI4463_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
     vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
@@ -1707,6 +1704,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
         set_freq (SI4432_LO, local_IF+lf);                                                 // otherwise to above IF
 #endif
 #ifdef __ADF4351__
+//      START_PROFILE;
       if (setting.mode == M_LOW) {
         if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
           if (lf > local_IF)
@@ -1718,6 +1716,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, local_IF+lf); // sweep RX
       }
+//      STOP_PROFILE;
 #endif
 #endif
     }
@@ -3252,7 +3251,13 @@ void self_test(int test)
     int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
     setting.step_delay = 8000;
-    for (int j= 0; j < 57; j++ ) {
+#ifdef __SI4432__
+#define RBW_COUNT 57
+#endif
+#ifdef __SI4463__
+#define RBW_COUNT 7
+#endif
+    for (int j= 0; j < RBW_COUNT; j++ ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
 // do_again:
@@ -3269,6 +3274,9 @@ void self_test(int test)
       setting.offset_delay = setting.step_delay / 2;
 #ifdef __SI4432__
       setting.rbw_x10 = SI4432_force_RBW(j);
+#endif
+#ifdef __SI4463__
+      setting.rbw_x10 = SI4463_force_RBW(j);
 #endif
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
 #if 0
@@ -3315,7 +3323,7 @@ void self_test(int test)
 
 #endif
       setting.offset_delay = 1600;
-#if 1                       // Enable for offset tuning stepping
+#if 0                       // Enable for offset tuning stepping
       test_value = saved_peakLevel;
       if ((uint32_t)(setting.rbw_x10 * 1000) / (sweep_points) < 8000) {           // fast mode possible
         while (setting.offset_delay > 0 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
