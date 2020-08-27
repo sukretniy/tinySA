@@ -45,8 +45,8 @@
 // Hardware or software SPI use
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
-//#define SI4432_SPI_SPEED   SPI_BR_DIV8
-#define SI4432_SPI_SPEED   SPI_BR_DIV16
+#define SI4432_SPI_SPEED   SPI_BR_DIV8
+//#define SI4432_SPI_SPEED   SPI_BR_DIV64
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -1475,7 +1475,7 @@ int16_t Si446x_RSSI(void)
         0xFF
   };
 //  volatile si446x_state_t s = getState();
-START_PROFILE;
+//START_PROFILE;
   if (SI4432_step_delay)
     my_microsecond_delay(SI4432_step_delay);
 again:
@@ -1483,7 +1483,7 @@ again:
   if (data[2] == 255)
      goto again;
   int16_t rssi = data[2] - 120 * 2;
-STOP_PROFILE;
+//STOP_PROFILE;
   return DEVICE_TO_PURE_RSSI(rssi);
 }
 
