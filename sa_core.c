@@ -116,11 +116,11 @@ void reset_settings(int m)
   switch(m) {
   case M_LOW:
     minFreq = 0;
-    maxFreq = 350000000;
+    maxFreq = 4000000000;
     set_sweep_frequency(ST_START, (uint32_t) 0);
     set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
-    setting.attenuate = 30.0;
-    setting.auto_attenuation = true;
+    setting.attenuate = 0.0;    // <---------------- WARNING -----------------
+    setting.auto_attenuation = false;   // <---------------- WARNING -----------------
     setting.sweep_time_us = 0;
     break;
 #ifdef __ULTRA__
@@ -146,8 +146,8 @@ void reset_settings(int m)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 24*setting_frequency_10mhz;
-    maxFreq = 96*setting_frequency_10mhz;
+    minFreq = 13*setting_frequency_10mhz;
+    maxFreq = 120*setting_frequency_10mhz;
 #endif
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
@@ -1078,8 +1078,11 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
     }
   } else
 #endif
-  if (V==2){
+  if (V==ADF4351_LO){
     ADF4351_set_frequency(V-2,freq,3);
+  }
+  if (V==SI4463_RX) {
+    SI4463_set_freq(freq,1000);
   }
 #ifdef __ULTRA_SA__
   else {
@@ -1620,6 +1623,9 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #ifdef __SI4432__
       set_freq (SI4432_RX , local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
 #endif
+#ifdef __SI4463__
+      set_freq (SI4463_RX , local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
+#endif
     } else if (MODE_LOW(setting.mode)) {
       if (setting.mode == M_LOW && !in_selftest && avoid_spur(f)) {         // check is alternate IF is needed to avoid spur.
         local_IF = spur_alternate_IF;
@@ -1648,11 +1654,17 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #ifdef __SI4432__
       set_freq (SI4432_RX , local_IF);
 #endif
+#ifdef __SI4463__
+      set_freq (SI4463_RX , local_IF);
+#endif
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
       local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur*300000 : 0 );
 #ifdef __SI4432__
       set_freq (SI4432_RX , local_IF);
+#endif
+#ifdef __SI4463__
+      set_freq (SI4463_RX , local_IF);
 #endif
       //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?setting.spur * 1000 * actual_rbw:0);
 #endif
@@ -1703,6 +1715,8 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
             set_freq (ADF4351_LO, local_IF-lf); // set LO SI4432 to below IF frequency
         } else
           set_freq (ADF4351_LO, local_IF+lf); // otherwise to above IF
+      } else if (setting.mode == M_HIGH) {
+        set_freq (SI4463_RX, local_IF+lf); // sweep RX
       }
 #endif
 #endif

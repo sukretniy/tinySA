@@ -951,16 +951,16 @@ void ADF4351_Setup(void)
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
-  //  set_SPI_mode(SPI_MODE_SI);
-  //  chThdSleepMicroseconds(10);
+  set_SPI_mode(SPI_MODE_SI);
+  chThdSleepMicroseconds(2);
   palClearPad(GPIOB, ADF4351_LE[channel]);
-//  chThdSleepMicroseconds(10);
+  chThdSleepMicroseconds(2);
   for (int i = 3; i >= 0; i--) shiftOut((value >> (8 * i)) & 0xFF);
 //  chThdSleepMicroseconds(10);
   palSetPad(GPIOB, ADF4351_LE[channel]);
-//  chThdSleepMicroseconds(10);
+  chThdSleepMicroseconds(2);
   palClearPad(GPIOB, ADF4351_LE[channel]);
-//  chThdSleepMicroseconds(10);
+  chThdSleepMicroseconds(2);
 }
 
 void ADF4351_Set(int channel)
@@ -1476,8 +1476,6 @@ again:
   if (data[2] == 255)
      goto again;
   int16_t rssi = data[2] - 120 * 2;
-  if (rssi > 0)
-    rssi = -150*2;
   return DEVICE_TO_PURE_RSSI(rssi);
 }
 
@@ -1494,6 +1492,148 @@ static uint16_t getADC(uint8_t adc_en, uint8_t adc_cfg, uint8_t part)
     return (data[part]<<8 | data[part + 1]);
 }
 
+
+// -------------- 1kHz ----------------------------
+
+#undef RF_MODEM_TX_RAMP_DELAY_8_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
+#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
+
+#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0xF0, 0x11
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xC6, 0xC1, 0xB2, 0x9C, 0x80, 0x63, 0x47, 0x2F, 0x1B, 0x0E, 0x05, 0x00
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x0F, 0xC6, 0xC1, 0xB2, 0x9C, 0x80, 0x63
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0x47, 0x2F, 0x1B, 0x0E, 0x05, 0x00, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x0F
+
+uint8_t SI4463_RBW_1kHz[] =
+{
+ 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
+ 0x00
+};
+
+// -------------- kHz ----------------------------
+
+#undef RF_MODEM_TX_RAMP_DELAY_8_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
+#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
+
+#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0x00, 0x30
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F
+
+uint8_t SI4463_RBW_kHz[] =
+{
+ 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
+ 0x00
+};
+
+
+
+// -------------- 850kHz ----------------------------
+
+#undef RF_MODEM_TX_RAMP_DELAY_8_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
+#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
+
+#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0x00, 0x30
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F
+
+uint8_t SI4463_RBW_850kHz[] =
+{
+ 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
+ 0x00
+};
+
+
+void SI4463_set_freq(uint32_t freq, uint32_t step_size)
+{
+  int Odiv;
+  int D;
+  float RFout=freq/1000000.0;  // To MHz
+  if (RFout >= 820) {       // till 1140MHz
+    Odiv = 8;
+    D = 2;
+  } else if (RFout >= 410) {    // works till 570MHz
+    Odiv = 10;
+    D = 4;
+  } else if (RFout >= 272) {    // to 380
+    Odiv = 11;
+    D = 6;
+  } else { // 136 { // To 190
+    Odiv = 13;
+    D = 12;
+  }
+  int32_t R = (RFout * D) / 26.0 - 1;
+  float MOD = 520251.0;
+  int32_t  F = (((RFout * D) / 26.0) - R) * MOD;
+
+  int   S = (int)(step_size / 14.305);
+  if (S == 0) S = 1;
+
+  /*
+  // Set properties:           RF_FREQ_CONTROL_INTE_8
+  // Number of properties:     8
+  // Group ID:                 0x40
+  // Start ID:                 0x00
+  // Default values:           0x3C, 0x08, 0x00, 0x00, 0x00, 0x00, 0x20, 0xFF,
+  // Descriptions:
+  //   FREQ_CONTROL_INTE - Frac-N PLL Synthesizer integer divide number.
+  //   FREQ_CONTROL_FRAC_2 - Frac-N PLL fraction number.
+  //   FREQ_CONTROL_FRAC_1 - Frac-N PLL fraction number.
+  //   FREQ_CONTROL_FRAC_0 - Frac-N PLL fraction number.
+  //   FREQ_CONTROL_CHANNEL_STEP_SIZE_1 - EZ Frequency Programming channel step size.
+  //   FREQ_CONTROL_CHANNEL_STEP_SIZE_0 - EZ Frequency Programming channel step size.
+  //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
+  //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
+  */
+  // #define RF_FREQ_CONTROL_INTE_8 0x11, 0x40, 0x08, 0x00, 0x4B, 0x08, 0x00, 0x00, 0x00, 0x51, 0x20, 0xFE
+
+  uint8_t data[] = {
+    0x11, 0x40, 0x08, 0x00,
+    (uint8_t) R,                   //  R data[4]
+    (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
+    (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
+    (uint8_t) ((F    ) & 255),     //  F2,F1,F0 data[5] .. data[7]
+    (uint8_t) ((S>> 8) & 255),     //  Step size data[8] .. data[9]
+    (uint8_t) ((S    ) & 255),     //  Step size data[8] .. data[9]
+    0x20,                   // Window gate
+    0xFE                    // Adj count
+  };
+  setState(SI446X_STATE_TX_TUNE);
+  my_microsecond_delay(200);
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+  /*
+  // Set properties:           RF_MODEM_CLKGEN_BAND_1
+  // Number of properties:     1
+  // Group ID:                 0x20
+  // Start ID:                 0x51
+  // Default values:           0x08,
+  // Descriptions:
+  //   MODEM_CLKGEN_BAND - Select PLL Synthesizer output divider ratio as a function of frequency band.
+  */
+  #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
+  uint8_t data2[] = {
+     0x11, 0x20, 0x01, 0x51,
+     (uint8_t)Odiv
+  };
+  SI4463_do_api(data2, sizeof(data2), NULL, 0);
+  SI4463_start_rx(0);
+  my_microsecond_delay(1000);
+}
 
 
 void SI4463_init(void)
@@ -1519,6 +1659,7 @@ for(uint16_t i=0;i<sizeof(SI4463_config);i++)
 #endif
 //  SI4463_do_api((void *)&SI4463_config[1], SI4463_config[0], NULL, 0);
 
+  SI4463_set_freq(433800000,1000);
 
 //#define SI446X_ADC_SPEED 10
 //  RSSI = getADC(SI446X_ADC_CONV_BATT, (SI446X_ADC_SPEED<<4), 2);
@@ -1526,7 +1667,7 @@ volatile si446x_state_t s ;
 again:
   Si446x_getInfo(&SI4463_info);
 // s = getState();
-  SI4463_start_rx(90);
+  SI4463_start_rx(0);
   my_microsecond_delay(15000);
   s = getState();
   if (s != SI446X_STATE_RX)
