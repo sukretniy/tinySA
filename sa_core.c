@@ -1239,14 +1239,16 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
     actual_rbw_x10 = 8500;
 #endif
 
-  if (setting.spur && actual_rbw_x10 > 3000)
-    actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
 
 #ifdef __SI4432__
+  if (setting.spur && actual_rbw_x10 > 3000)
+    actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
   SI4432_Sel =  MODE_SELECT(setting.mode);
   actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
 #ifdef __SI4463__
+//  if (setting.spur && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
+//    actual_rbw_x10 = 2500;                         // if spur suppression reduce max rbw to fit within BPF
   actual_rbw_x10 = SI4463_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
@@ -1628,7 +1630,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
         local_IF = spur_alternate_IF;
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur){         // If in low input mode and spur reduction is on
-        if (S_IS_AUTO(setting.below_IF) && lf < 150000000) // if below 150MHz and auto_below_IF
+        if (S_IS_AUTO(setting.below_IF) /* && lf < 150000000 */ ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
         {              // else low/above IF
           if (setting.spur == 1)
             setting.below_IF = S_AUTO_ON;               // use below IF in first pass
@@ -1636,7 +1638,12 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
             setting.below_IF = S_AUTO_OFF;              // and above IF in second pass
         }
         else {
+#ifdef __SI4432__
           int32_t spur_offset = actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
+#endif
+#ifdef __SI4463__
+          int32_t spur_offset = 4* actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
+#endif
           if (setting.spur == -1)                       // If second spur pass
             spur_offset = - spur_offset;                // IF shift in the other direction
           local_IF  = local_IF + spur_offset;           // apply IF spur shift

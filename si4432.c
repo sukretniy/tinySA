@@ -123,8 +123,7 @@ static void shiftOut(uint8_t val)
   SI4432_log(val);
   uint8_t i = 0;
   do {
-    if (val & 0x80)
-      SPI1_SDI_HIGH;
+    SPI1_SDI_HIGH;
     SPI1_CLK_HIGH;
     SPI1_RESET;
     val<<=1;
@@ -987,7 +986,7 @@ void ADF4351_enable_output(void)
 
 void ADF4351_set_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
 {
-  freq -= 76000;
+  freq -= 71000;
   ADF4351_prep_frequency(channel,freq, drive);
 //START_PROFILE;
   ADF4351_Set(channel);
@@ -1479,10 +1478,18 @@ int16_t Si446x_RSSI(void)
   if (SI4432_step_delay)
     my_microsecond_delay(SI4432_step_delay);
 again:
-  SI4463_do_api(data, 2, data, 3);
+  data[0] = SI446X_CMD_GET_MODEM_STATUS;
+  data[1] = 0xFF;
+
+SI4463_do_api(data, 2, data, 3);
   if (data[2] == 255)
      goto again;
-  int16_t rssi = data[2] - 120 * 2;
+  if (data[2] == 0)
+     goto again;
+  volatile int16_t rssi = data[2] - 120 * 2;
+  if (rssi < -238)
+    while(1)
+      rssi = rssi;
 //STOP_PROFILE;
   return DEVICE_TO_PURE_RSSI(rssi);
 }
