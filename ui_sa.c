@@ -894,6 +894,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
       break;
     case 3:
       toggle_normalize();
+      if (setting.subtract_stored) {
+        kp_help_text = "Ref level";
+        ui_mode_keypad(KM_REFLEVEL);
+        ui_process_keypad();
+//        setting.normalize_level = uistat.value;
+      } else
+        set_auto_reflevel(true);
       break;
   }
   ui_mode_normal();

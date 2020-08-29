@@ -1785,7 +1785,7 @@ VNA_SHELL_FUNCTION(cmd_trace)
       set_unit(type);
       goto update;
     }
-    goto usage;
+//    goto usage;
   }
   static const char cmd_store_list[] = "store|clear|subtract";
   if (argc == 1) {
@@ -1803,7 +1803,7 @@ VNA_SHELL_FUNCTION(cmd_trace)
         goto update;
       }
     }
-    goto usage;
+//    goto usage;
   }
   //                                            0      1
   static const char cmd_scale_ref_list[] = "scale|reflevel";
