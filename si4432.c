@@ -984,10 +984,12 @@ void ADF4351_enable_output(void)
     ADF4351_Set(0);
 }
 
-void ADF4351_set_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
+void ADF4351_set_frequency(int channel, uint32_t freq, int drive)  // freq / 10Hz
 {
-  freq -= 71000;
-  ADF4351_prep_frequency(channel,freq, drive);
+//  freq -= 71000;
+
+  uint32_t offs = ((freq / 1000)* 39) / 1000;
+  ADF4351_prep_frequency(channel,freq + offs, drive);
 //START_PROFILE;
   ADF4351_Set(channel);
 //STOP_PROFILE;
@@ -1463,11 +1465,11 @@ void setState(si446x_state_t newState)
 
 int16_t Si446x_RSSI(void)
 {
-//  Si446x_getInfo(&SI4463_info);
+
+//  int s = Si446x_getInfo(&SI4463_info);
 
 //  if (s != SI446X_STATE_RX)
-//    SI4463_start_rx(90);
-//  SI4463_start_rx(90);
+//    SI4463_start_rx(0);
 
   uint8_t data[3] = {
         SI446X_CMD_GET_MODEM_STATUS,
@@ -1715,7 +1717,9 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
   int Odiv;
   int D;
-  float RFout=freq/1000000.0;  // To MHz
+  uint32_t offs = ((freq / 1000)* 195) / 1000;
+
+  float RFout=(freq+offs)/1000000.0;  // To MHz
   if (RFout >= 820) {       // till 1140MHz
     Odiv = 8;
     D = 2;

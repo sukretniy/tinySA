@@ -79,6 +79,7 @@ void reset_settings(int m)
   setting.show_stored = 0;
   setting.auto_attenuation = false;
   setting.subtract_stored = 0;
+  setting.normalize_level = 0.0;
   setting.drive=13;
   setting.atten_step = 0;       // Only used in low output mode
   setting.agc = S_AUTO_ON;
@@ -455,6 +456,7 @@ void set_subtract_storage(void)
     if (!setting.show_stored)
       set_storage();
     setting.subtract_stored = true;
+    setting.normalize_level = 0.0;
 //    setting.auto_attenuation = false;
   } else {
     setting.subtract_stored = false;
@@ -470,6 +472,7 @@ void toggle_normalize(void)
       stored_t[i] = actual_t[i];
     setting.subtract_stored = true;
     setting.auto_attenuation = false;       // Otherwise noise level may move leading to strange measurements
+    setting.normalize_level = 0.0;
   } else {
     setting.subtract_stored = false;
   }
@@ -1630,7 +1633,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
         local_IF = spur_alternate_IF;
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur){         // If in low input mode and spur reduction is on
-        if (S_IS_AUTO(setting.below_IF) /* && lf < 150000000 */ ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
+        if (S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
         {              // else low/above IF
           if (setting.spur == 1)
             setting.below_IF = S_AUTO_ON;               // use below IF in first pass
@@ -1928,7 +1931,7 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.average != AV_OFF)
         temp_t[i] = RSSI;
       if (setting.subtract_stored) {
-        RSSI = RSSI - stored_t[i] ;
+        RSSI = RSSI - stored_t[i] + setting.normalize_level;
       }
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in the stored trace

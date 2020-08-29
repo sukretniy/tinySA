@@ -679,6 +679,7 @@ typedef struct setting
   int step_delay_mode;
   int offset_delay;
   int fast_speedup;
+  float normalize_level;     // Level to set normalize to, zero if not doing anything
   uint32_t checksum;
 }setting_t;
 
