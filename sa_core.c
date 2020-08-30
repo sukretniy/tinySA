@@ -2091,18 +2091,18 @@ sweep_again:                                // stay in sweep loop when output mo
 
 
   // -------------------------- auto attenuate ----------------------------------
-
+#define AUTO_TARGET_LEVEL   -30
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     float actual_max_level = actual_t[max_index[0]] - get_attenuation();
-    if (actual_max_level < - 31 && setting.attenuate >= 10) {
+    if (actual_max_level < AUTO_TARGET_LEVEL - 11 && setting.attenuate >= 10) {
       setting.attenuate -= 10.0;
       changed = true;
-    } else if (actual_max_level < - 26 && setting.attenuate >= 5) {
+    } else if (actual_max_level < AUTO_TARGET_LEVEL - 6 && setting.attenuate >= 5) {
       setting.attenuate -= 5.0;
       changed = true;
-    } else if (actual_max_level > - 19 && setting.attenuate <= 20) {
+    } else if (actual_max_level > AUTO_TARGET_LEVEL + 2 && setting.attenuate <= 20) {
       setting.attenuate += 10.0;
       changed = true;
     }
@@ -2339,9 +2339,9 @@ marker_search_left_max(int from)
   if (uistat.current_trace == -1)
     return -1;
 
-  int value = actual_t[from];
+  float value = actual_t[from];
   for (i = from - 1; i >= 0; i--) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value < value) {
       value = new_value;
       found = i;
@@ -2350,7 +2350,7 @@ marker_search_left_max(int from)
   }
 
   for (; i >= 0; i--) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value > value) {
       value = new_value;
       found = i;
@@ -2368,9 +2368,9 @@ marker_search_right_max(int from)
 
   if (uistat.current_trace == -1)
     return -1;
-  int value = actual_t[from];
+  float value = actual_t[from];
   for (i = from + 1; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value < value) {    // follow down
       value = new_value;
       found = i;
@@ -2378,12 +2378,28 @@ marker_search_right_max(int from)
       break;    //  past the minimum
   }
   for (; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value > value) {    // follow up
       value = new_value;
       found = i;
     } else if (new_value < value - setting.noise)
       break;
+  }
+  return found;
+}
+
+int marker_search_max(void)
+{
+  int i = 0;
+  int found = 0;
+
+  float value = actual_t[i];
+  for (; i < sweep_points; i++) {
+    int new_value = actual_t[i];
+    if (new_value > value) {    // follow up
+      value = new_value;
+      found = i;
+    }
   }
   return found;
 }
@@ -2399,9 +2415,9 @@ marker_search_left_min(int from)
   if (uistat.current_trace == -1)
     return -1;
 
-  int value = actual_t[from];
+  float value = actual_t[from];
   for (i = from - 1; i >= 0; i--) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value > value) {
       value = new_value;        // follow up
 //      found = i;
@@ -2410,7 +2426,7 @@ marker_search_left_min(int from)
   }
 
   for (; i >= 0; i--) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value < value) {
       value = new_value;        // follow down
       found = i;
@@ -2428,9 +2444,9 @@ marker_search_right_min(int from)
 
   if (uistat.current_trace == -1)
     return -1;
-  int value = actual_t[from];
+  float value = actual_t[from];
   for (i = from + 1; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value > value) {    // follow up
       value = new_value;
 //      found = i;
@@ -2438,7 +2454,7 @@ marker_search_right_min(int from)
       break;    // past the maximum
   }
   for (; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    float new_value = actual_t[i];
     if (new_value < value) {    // follow down
       value = new_value;
       found = i;

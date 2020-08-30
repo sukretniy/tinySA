@@ -899,7 +899,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
         ui_mode_keypad(KM_REFLEVEL);
         ui_process_keypad();
 //        setting.normalize_level = uistat.value;
-      }
+      } else
+        set_auto_reflevel(true);
       break;
   }
   ui_mode_normal();
@@ -1412,7 +1413,7 @@ static const menuitem_t menu_reflevel[] = {
 };
 
 const menuitem_t menu_marker_search[] = {
-  //{ MT_CALLBACK, "OFF", menu_marker_search_cb },
+  { MT_CALLBACK, 4, "PEAK\n SEARCH",          menu_marker_search_cb },
   { MT_CALLBACK, 0, "MIN\n" S_LARROW" LEFT",  menu_marker_search_cb },
   { MT_CALLBACK, 1, "MIN\n" S_RARROW" RIGHT", menu_marker_search_cb },
   { MT_CALLBACK, 2, "MAX\n" S_LARROW" LEFT",  menu_marker_search_cb },

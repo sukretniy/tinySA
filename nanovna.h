@@ -518,6 +518,7 @@ void marker_position(int m, int t, int *x, int *y);
 int search_nearest_index(int x, int y, int t);
 void set_marker_search(int mode);
 int marker_search(void);
+int marker_search_max(void);
 int marker_search_left(int from);
 int marker_search_right(int from);
 int marker_search_left_max(int from);
