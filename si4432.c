@@ -251,11 +251,10 @@ typedef struct {
   int8_t   RSSI_correction_x_10;  // Correction * 10
   uint16_t RBWx10;                // RBW * 10 in kHz
 }RBW_t; // sizeof(RBW_t) = 4 bytes
-
-static RBW_t RBW_choices[] = {
+RBW_t RBW_choices[] = {
 // BW register    corr  freq
-                              {IF_BW(0,5,1),0,26},
-                              {IF_BW(0,5,2),0,28},
+//                              {IF_BW(0,5,1),0,26},
+//                              {IF_BW(0,5,2),0,28},
                               {IF_BW(0,5,3),3,31},
                               {IF_BW(0,5,4),-3,32},
                               {IF_BW(0,5,5),6,37},
@@ -315,6 +314,8 @@ static RBW_t RBW_choices[] = {
 
 };
 
+const int SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
+
 static pureRSSI_t SI4432_RSSI_correction = float_TO_PURE_RSSI(-120);
 
 uint16_t SI4432_force_RBW(int i)
@@ -327,7 +328,7 @@ uint16_t SI4432_force_RBW(int i)
 
 uint16_t SI4432_SET_RBW(uint16_t WISH)  {
   int i;
-  for (i=0; i < (int)(sizeof(RBW_choices)/sizeof(RBW_t)) - 1; i++)
+  for (i=0; i < SI4432_RBW_count - 1; i++)
     if (WISH <= RBW_choices[i].RBWx10) 
       break; 
   return SI4432_force_RBW(i);

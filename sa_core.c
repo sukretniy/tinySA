@@ -3215,7 +3215,7 @@ void self_test(int test)
     int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
     setting.step_delay = 8000;
-    for (int j= 0; j < 57; j++ ) {
+    for (int j= 0; j < SI4432_RBW_count; j++ ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
 // do_again:
