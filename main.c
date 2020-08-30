@@ -1620,6 +1620,7 @@ VNA_SHELL_FUNCTION(cmd_cal)
   }
   shell_printf("usage: cal [%s]\r\n", cmd_cal_list);
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_save)
 {
@@ -1654,7 +1655,6 @@ VNA_SHELL_FUNCTION(cmd_recall)
  usage:
   shell_printf("recall {id}\r\n");
 }
-#endif
 
 static const struct {
   const char *name;
@@ -2308,9 +2308,9 @@ static const VNAShellCommand commands[] =
     {"resume"      , cmd_resume      , 0},
 #ifdef __VNA__
     {"cal"         , cmd_cal         , CMD_WAIT_MUTEX},
+#endif
     {"save"        , cmd_save        , 0},
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX},
-#endif
     {"trace"       , cmd_trace       , CMD_WAIT_MUTEX},
     {"trigger"     , cmd_trigger     , 0},
     {"marker"      , cmd_marker      , 0},

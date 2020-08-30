@@ -2029,18 +2029,18 @@ sweep_again:                                // stay in sweep loop when output mo
 
 
   // -------------------------- auto attenuate ----------------------------------
-
+#define AUTO_TARGET_LEVEL   -30
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     float actual_max_level = actual_t[max_index[0]] - get_attenuation();
-    if (actual_max_level < - 31 && setting.attenuate >= 10) {
+    if (actual_max_level < AUTO_TARGET_LEVEL - 11 && setting.attenuate >= 10) {
       setting.attenuate -= 10.0;
       changed = true;
-    } else if (actual_max_level < - 26 && setting.attenuate >= 5) {
+    } else if (actual_max_level < AUTO_TARGET_LEVEL - 6 && setting.attenuate >= 5) {
       setting.attenuate -= 5.0;
       changed = true;
-    } else if (actual_max_level > - 19 && setting.attenuate <= 20) {
+    } else if (actual_max_level > AUTO_TARGET_LEVEL + 2 && setting.attenuate <= 20) {
       setting.attenuate += 10.0;
       changed = true;
     }
