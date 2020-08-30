@@ -1510,6 +1510,36 @@ static uint16_t getADC(uint8_t adc_en, uint8_t adc_cfg, uint8_t part)
 }
 
 
+// -------------- 0.2 kHz ----------------------------
+
+#undef RF_MODEM_TX_RAMP_DELAY_8_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
+#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
+#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
+
+#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0xF0, 0x10, 0x74, 0xE8, 0x00, 0xA9
+// #define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0xF0, 0x11
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0x0C, 0x01, 0xE4, 0xB9, 0x86, 0x55, 0x2B, 0x0B, 0xF8, 0xEF, 0xEF, 0xF2
+//#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xC6, 0xC1, 0xB2, 0x9C, 0x80, 0x63, 0x47, 0x2F, 0x1B, 0x0E, 0x05, 0x00
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xF8, 0xFC, 0x05, 0x00, 0xFF, 0x0F, 0x0C, 0x01, 0xE4, 0xB9, 0x86, 0x55
+//#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x0F, 0xC6, 0xC1, 0xB2, 0x9C, 0x80, 0x63
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0x2B, 0x0B, 0xF8, 0xEF, 0xEF, 0xF2, 0xF8, 0xFC, 0x05, 0x00, 0xFF, 0x0F
+//#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0x47, 0x2F, 0x1B, 0x0E, 0x05, 0x00, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x0F
+
+#define RF_MODEM_RAW_SEARCH2_2_1 0x11, 0x20, 0x02, 0x50, 0x94, 0x0A
+
+#define RF_GLOBAL_CONFIG_1_1 0x11, 0x00, 0x01, 0x03, 0x20
+
+uint8_t SI4463_RBW_02kHz[] =
+{
+ 6, RF_MODEM_RAW_SEARCH2_2_1, \
+ 5, RF_GLOBAL_CONFIG_1_1, \
+ 0x0C, RF_MODEM_TX_RAMP_DELAY_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
+ 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
+ 0x00
+};
 // -------------- 1kHz ----------------------------
 
 #undef RF_MODEM_TX_RAMP_DELAY_8_1
@@ -1673,6 +1703,7 @@ typedef struct {
 static RBW_t RBW_choices[] =
 {
 // BW register    corr  freq
+ {SI4463_RBW_02kHz, 0,2},
  {SI4463_RBW_1kHz,  0,10},
  {SI4463_RBW_3kHz,  0,30},
  {SI4463_RBW_10kHz, 0,100},
@@ -1684,18 +1715,18 @@ static RBW_t RBW_choices[] =
 
 static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
 
-uint16_t SI4463_force_RBW(int i)
+uint16_t SI4463_force_RBW(int f)
 {
   setState(SI446X_STATE_TX_TUNE);
   my_microsecond_delay(200);
 
-  uint8_t *config = RBW_choices[i].reg;
-  for(uint16_t i=0;i<sizeof(SI4463_RBW_850kHz);i++)
+  uint8_t *config = RBW_choices[f].reg;
+  uint16_t i=0;
+  while(config[i] != 0)
   {
     SI4463_do_api((void *)&config[i+1], config[i], NULL, 0);
-    i += config[i];
+    i += config[i]+1;
     my_microsecond_delay(100);
-
   }
   SI4463_start_rx(0);
   my_microsecond_delay(1000);

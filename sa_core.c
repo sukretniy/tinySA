@@ -1236,8 +1236,8 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
     actual_rbw_x10 = 6000;
 #endif
 #ifdef __SI4463__
-  if (actual_rbw_x10 < 11)
-    actual_rbw_x10 = 11;
+  if (actual_rbw_x10 < 1)
+    actual_rbw_x10 = 1;
   if (actual_rbw_x10 > 8500)
     actual_rbw_x10 = 8500;
 #endif
