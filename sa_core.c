@@ -2091,19 +2091,22 @@ sweep_again:                                // stay in sweep loop when output mo
 
 
   // -------------------------- auto attenuate ----------------------------------
-#define AUTO_TARGET_LEVEL   -30
+#define AUTO_TARGET_LEVEL   -25
+#define AUTO_TARGET_WINDOW  2
+
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
-    float actual_max_level = actual_t[max_index[0]] - get_attenuation();
-    if (actual_max_level < AUTO_TARGET_LEVEL - 11 && setting.attenuate >= 10) {
-      setting.attenuate -= 10.0;
+    int actual_max_level = (int) (actual_t[max_index[0]] - get_attenuation());
+    if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate > 0) {
+      setting.attenuate -= AUTO_TARGET_LEVEL - actual_max_level;
+      if (setting.attenuate < 0)
+        setting.attenuate= 0;
       changed = true;
-    } else if (actual_max_level < AUTO_TARGET_LEVEL - 6 && setting.attenuate >= 5) {
-      setting.attenuate -= 5.0;
-      changed = true;
-    } else if (actual_max_level > AUTO_TARGET_LEVEL + 2 && setting.attenuate <= 20) {
-      setting.attenuate += 10.0;
+    } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate < 30) {
+      setting.attenuate += actual_max_level - AUTO_TARGET_LEVEL;
+      if (setting.attenuate > 30)
+        setting.attenuate = 30;
       changed = true;
     }
 
@@ -3277,13 +3280,7 @@ void self_test(int test)
     int i = 15;       // calibrate low mode power on 30 MHz;
     test_prepare(i);
     setting.step_delay = 8000;
-#ifdef __SI4432__
-#define RBW_COUNT 57
-#endif
-#ifdef __SI4463__
-#define RBW_COUNT 7
-#endif
-    for (int j= 0; j < RBW_COUNT; j++ ) {
+    for (int j= 0; j < SI4432_RBW_count; j++ ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
 // do_again:
