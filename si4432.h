@@ -179,6 +179,7 @@ int16_t Si446x_RSSI(void);
 uint8_t getFRR(uint8_t reg);
 si446x_state_t getState(void);
 void setState(si446x_state_t newState);
+extern const int SI4432_RBW_count;
 extern si446x_info_t SI4463_info;
 void Si446x_getInfo(si446x_info_t* info);
 void SI4463_init(void);

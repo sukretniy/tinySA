@@ -1008,9 +1008,11 @@ void setupSA(void)
 #define OFFSET_LOWER_BOUND 0
 #endif
 
+static uint32_t old_frequency_step;
+
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
-  if (old_freq[V] == freq)             // Do not change HW if not needed
+  if (old_freq[V] == freq && setting.frequency_step == old_frequency_step)             // Do not change HW if not needed
     return;
 #ifdef __SI4432__
   if (V <= 1) {
@@ -1076,10 +1078,26 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
   } else
 #endif
   if (V==ADF4351_LO){
-    ADF4351_set_frequency(V-2,freq,3);
+    if (setting.step_delay_mode == SD_FAST) {        // If in fast scanning mode and NOT SI4432_RX !!!!!!
+      int delta = - (freq - real_old_freq[V]);           // delta grows with increasing freq
+      if (setting.frequency_step < 100000 && 0 < delta && delta < 100000) {
+        SI4463_start_rx(delta / setting.frequency_step); // with increasing delta, set smaller offset
+        freq = 0;
+      } else {
+        SI4463_start_rx(0 / setting.frequency_step);   // Start at maximum positive offset
+      }
+    }
+    if (freq) {
+      ADF4351_set_frequency(V-2,freq,3);
+      real_old_freq[V] = freq;
+    }
   }
   if (V==SI4463_RX) {
-    SI4463_set_freq(freq,1000);
+    if (setting.frequency_step<930000)                  // maximum step size is 937.49kHz
+      SI4463_set_freq(freq,setting.frequency_step);
+    else
+      SI4463_set_freq(freq,1000);
+    old_frequency_step = setting.frequency_step;
   }
 #ifdef __ULTRA_SA__
   else {

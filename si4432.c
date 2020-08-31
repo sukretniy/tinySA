@@ -1213,6 +1213,8 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 // ------------------------------ SI4463 -------------------------------------
 
 
+#define Npresc 0    // No High performance mode
+
 #include <string.h>
 
 void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
@@ -1394,6 +1396,8 @@ void SI4463_start_rx(uint8_t CHANNEL)
   };
 //retry:
   SI4463_do_api(data, sizeof(data), NULL, 0);
+  my_microsecond_delay(SI4432_offset_delay);
+
 #if 0
   //  my_microsecond_delay(15000);
 //  si446x_state_t s = getState();
@@ -1714,6 +1718,8 @@ static RBW_t RBW_choices[] =
  {SI4463_RBW_850kHz,0,8500},
 };
 
+const int SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
+
 static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
 
 uint16_t SI4463_force_RBW(int f)
@@ -1731,8 +1737,8 @@ uint16_t SI4463_force_RBW(int f)
   }
   SI4463_start_rx(0);
   my_microsecond_delay(1000);
-  SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[i].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
-  return RBW_choices[i].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
+  SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
+  return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }
 
 uint16_t SI4463_SET_RBW(uint16_t WISH)  {
@@ -1765,9 +1771,9 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
     Odiv = 13;
     D = 12;
   }
-  int32_t R = (RFout * D) / 26.0 - 1;
+  int32_t R = (RFout * D) / ((Npresc+1)*26.0) - 1;
   float MOD = 520251.0;
-  int32_t  F = (((RFout * D) / 26.0) - R) * MOD;
+  int32_t  F = (((RFout * D) / ((Npresc+1)*26.0)) - R) * MOD;
 
   int   S = (int)(step_size / 14.305);
   if (S == 0) S = 1;
@@ -1816,7 +1822,7 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
   uint8_t data2[] = {
      0x11, 0x20, 0x01, 0x51,
-     (uint8_t)Odiv
+     (uint8_t)Odiv + (Npresc*0x08)           // 0x08 for high performance mode
   };
   SI4463_do_api(data2, sizeof(data2), NULL, 0);
   SI4463_start_rx(0);
