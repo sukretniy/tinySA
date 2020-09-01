@@ -1424,6 +1424,7 @@ static float old_a = -150;          // cached value to reduce writes to level re
 static pureRSSI_t correct_RSSI;
 static pureRSSI_t correct_RSSI_freq;
 systime_t start_of_sweep_timestamp;
+static systime_t sweep_elapsed = 0;                             // Time since first start of sweeping, used only for auto attenuate
 
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
@@ -1432,7 +1433,8 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     apply_settings();                                                       // Initialize HW
     scandirty = true;                                                       // This is the first pass with new settings
     dirty = false;
-    if (setting.spur == -1) setting.spur = 1;                              // ensure spur processing starts in right phase
+    sweep_elapsed = chVTGetSystemTimeX();                              // for measuring accumulated time
+    if (setting.spur == -1) setting.spur = 1;                               // ensure spur processing starts in right phase
     // Set for actual time pre calculated value (update after sweep)
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
     // Change actual sweep time as user input if it greater minimum
@@ -1792,7 +1794,8 @@ int16_t max_index[MAX_MAX];
 int16_t cur_max = 0;
 
 static int low_count = 0;
-static int sweep_counter = 0;
+static int sweep_counter = 0;           // Only used for HW refresh
+
 // main loop for measurement
 static bool sweep(bool break_on_operation)
 {
@@ -2035,17 +2038,21 @@ sweep_again:                                // stay in sweep loop when output mo
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
+    int delta = 0;
     int actual_max_level = (int) (actual_t[max_index[0]] - get_attenuation());
     if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate > 0) {
-      setting.attenuate -= AUTO_TARGET_LEVEL - actual_max_level;
+      delta = - (AUTO_TARGET_LEVEL - actual_max_level);
+    } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate < 30) {
+      delta = actual_max_level - AUTO_TARGET_LEVEL;
+    }
+    if ((chVTGetSystemTimeX() - sweep_elapsed > 10000 && delta != 0) || delta > 5 ) {
+      setting.attenuate += delta;
       if (setting.attenuate < 0)
         setting.attenuate= 0;
-      changed = true;
-    } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate < 30) {
-      setting.attenuate += actual_max_level - AUTO_TARGET_LEVEL;
       if (setting.attenuate > 30)
         setting.attenuate = 30;
       changed = true;
+      sweep_elapsed = chVTGetSystemTimeX();
     }
 
     // Try update settings
