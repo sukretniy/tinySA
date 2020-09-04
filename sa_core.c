@@ -1326,31 +1326,41 @@ search_maximum(int m, int center, int span)
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433800000;       // The IF frequency for which the spur table is value
-static const unsigned int spur_alternate_IF =  433900000;       // if the frequency is found in the spur table use this IF frequency
+static const unsigned int spur_alternate_IF =  434000000;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
- 580000,            // 433.8 MHz table
- 961000,
+// 580000,            // 433.8 MHz table
+ 960000,
  1600000,
- 1837000,           // Real signal
- 2755000,           // Real signal
- 2760000,
- 2961000,
+// 1837000,           // Real signal
+// 2755000,           // Real signal
+// 2760000,
+ 2960000,
  4933000,
  4960000,
- 6961000,
- 6980000,
+ 6960000,
+// 6980000,
  8267000,
- 8961000,
- 10000000,
+ 8960000,
+// 10000000,
  10960000,
  11600000,
+ 12960000,
+ 14960000,
  16960000,
- 22960000,
+ 18960000,
+ 21600000,
+// 22960000,
+ 24960000,
  28960000,
- 29800000,
- 38105000,
- 49500000,
+// 29800000,
+ 31600000,
+ 34960000,
+ 33930000,
+// 38105000,
+ 40960000,
+ 41600000,
+ 49650000,
 #ifdef IF_AT_4339
   780000,           // 433.9MHz table
    830000,
@@ -1530,7 +1540,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     else
       auto_set_AGC_LNA(true);
   }
-
+modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
     if (setting.modulation == MO_AM_1kHz || setting.modulation == MO_AM_10Hz) {               // AM modulation
@@ -1691,6 +1701,11 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
 
     if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
+      if (break_on_operation && operation_requested)          // break subscanning if requested
+        return(0);         // abort
+      if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) // if in output mode with modulation
+        goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
+
       return(0);
     }
     // ---------------- Prepare RSSI ----------------------
@@ -3150,43 +3165,41 @@ void self_test(int test)
     ili9341_clear_screen();
     reset_settings(M_LOW);
     set_refer_output(-1);
-  } else if (test ==1) {
+  } else if (test == 1) {
+    float p2, p1, p;
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
     test_prepare(4);
+    setting.auto_IF = false;
+    setting.frequency_IF=433850000;
+    setting.frequency_step = 30000;
+    if (setting.test_argument > 0)
+      setting.frequency_step=setting.test_argument;
     int f = 400000;           // Start search at 400kHz
     //  int i = 0;                     // Index in spur table (temp_t)
-    pureRSSI_t p2, p1, p;
-
-#define FREQ_STEP   3000
-
-    set_RBW(FREQ_STEP/100);
+    set_RBW(setting.frequency_step/100);
     last_spur = 0;
-    for (int j = 0; j < 10; j++) {
+    for (int j = 0; j < 4; j++) {
 
-      p2 = perform(false, 0, f, false);
+      p2 = PURE_TO_float(perform(false, 0, f, false));
       vbwSteps = 1;
-      f += FREQ_STEP;
-      p1 = perform(false, 1, f, false);
-      f += FREQ_STEP;
-      shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d\n\r", p2, p1, setting.frequency_IF);
-
+      f += setting.frequency_step;
+      p1 = PURE_TO_float(perform(false, 1, f, false));
+      f += setting.frequency_step;
+      shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d and step of %d\n\r", p2, p1, setting.frequency_IF, setting.frequency_step );
       f = 400000;
       while (f < 100000000) {
-        p = perform(false, 1, f, false);
-#define SPUR_DELTA  float_TO_PURE_RSSI(6)
+        p = PURE_TO_float(perform(false, 1, f, false));
+#define SPUR_DELTA  6
         if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
-          //        temp_t[i++] = f - FREQ_STEP;
-          shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - FREQ_STEP)/1000, add_spur(f - FREQ_STEP));
+          shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - setting.frequency_step)/1000, add_spur(f - setting.frequency_step));
         }
-        //    else
-        //      shell_printf("%f at %d\n\r", p1,f - FREQ_STEP);
         p2 = p1;
         p1 = p;
-        f += FREQ_STEP;
+        f += setting.frequency_step;
       }
     }
-    shell_printf("\n\rTable for IF at %d\n\r", setting.frequency_IF);
+    shell_printf("\n\rTable for IF at %d and step of %d\n\r", setting.frequency_IF, setting.frequency_step);
     for (int j = 0; j < last_spur; j++) {
       if ((int)stored_t[j] > 1)
         shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
