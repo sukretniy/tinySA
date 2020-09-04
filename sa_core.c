@@ -1540,7 +1540,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     else
       auto_set_AGC_LNA(true);
   }
-
+modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
     if (setting.modulation == MO_AM_1kHz || setting.modulation == MO_AM_10Hz) {               // AM modulation
@@ -1701,6 +1701,11 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       start_of_sweep_timestamp = chVTGetSystemTimeX();                      // initialize start sweep time
 
     if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
+      if (break_on_operation && operation_requested)          // break subscanning if requested
+        return(0);         // abort
+      if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE ) // if in output mode with modulation
+        goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
+
       return(0);
     }
     // ---------------- Prepare RSSI ----------------------
