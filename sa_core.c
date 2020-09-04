@@ -1703,7 +1703,7 @@ modulation_again:
     if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
       if (break_on_operation && operation_requested)          // break subscanning if requested
         return(0);         // abort
-      if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE ) // if in output mode with modulation
+      if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) // if in output mode with modulation
         goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
 
       return(0);
