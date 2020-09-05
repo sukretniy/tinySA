@@ -1370,11 +1370,45 @@ search_maximum(int m, int center, int span)
 }
 
 //static int spur_old_stepdelay = 0;
-static const unsigned int spur_IF =            433800000;       // The IF frequency for which the spur table is value
-static const unsigned int spur_alternate_IF =  434000000;       // if the frequency is found in the spur table use this IF frequency
+static const unsigned int spur_IF =            433000000;       // The IF frequency for which the spur table is value
+static const unsigned int spur_alternate_IF =  435000000;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
-// 580000,            // 433.8 MHz table
+ 10005000,
+ 42815000,
+ 71630000,
+ 80215000,
+ 81830000,
+ 84210000,
+ 88630000,
+ 92200000,
+ 95685000,
+ 100020000,
+ 107415000,
+ 119896000,
+ 123140000,
+ 127162000,
+ 130025000,
+ 150000000,
+ 151275000,
+ 155270000,
+ 166320000,
+ 171250000,
+ 191904000,
+ 199384000,
+ 215570000,
+ 215700000,
+ 215960000,
+ 246730000,
+ 261520000,
+ 270020000,
+ 287870000,
+ 288235000,
+ 345755000
+
+
+ #ifdef IF_AT_433800kHz
+ // 580000,            // 433.8 MHz table
  960000,
  1600000,
 // 1837000,           // Real signal
@@ -1406,6 +1440,7 @@ static const int spur_table[] =                                 // Frequencies t
  40960000,
  41600000,
  49650000,
+#endif
 #ifdef IF_AT_4339
   780000,           // 433.9MHz table
    830000,
@@ -1647,7 +1682,7 @@ modulation_again:
       local_IF = 0;
     else {
       if (setting.auto_IF)
-        local_IF = setting.spur ? 433900000 : 433800000;
+        local_IF = setting.spur ? 433900000 : spur_IF;
       else
         local_IF = setting.frequency_IF;
     }
@@ -3251,7 +3286,7 @@ void self_test(int test)
     reset_settings(M_LOW);
     test_prepare(4);
     setting.auto_IF = false;
-    setting.frequency_IF=433850000;
+    setting.frequency_IF=433000000;
     setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
@@ -3268,7 +3303,7 @@ void self_test(int test)
       f += setting.frequency_step;
       shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d and step of %d\n\r", p2, p1, setting.frequency_IF, setting.frequency_step );
       f = 400000;
-      while (f < 100000000) {
+      while (f < 350000000) {
         p = PURE_TO_float(perform(false, 1, f, false));
 #define SPUR_DELTA  6
         if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
