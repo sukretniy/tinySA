@@ -1890,7 +1890,7 @@ sweep_again:                                // stay in sweep loop when output mo
         RSSI = RSSI - stored_t[i] ;
       }
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
-      stored_t[i] = (SI4432_Read_Byte(0x69) & 0x0f) * 3.0 - 90.0; // Display the AGC value in the stored trace
+      stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
       stored_t[i] = (avoid_spur(frequencies[i]) ? -60.0 :  - 90.0); // Display when to do spur shift in the stored trace
