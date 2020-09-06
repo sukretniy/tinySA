@@ -621,7 +621,7 @@ void toggle_AGC(void)
   dirty = true;
 }
 
-void auto_set_AGC_LNA(int auto_set)                                                                    // Adapt the AGC setting if needed
+void auto_set_AGC_LNA(int auto_set, int agc)                                                                    // Adapt the AGC setting if needed
 {
 #ifdef __SI4432__
   static unsigned char old_v[2];
@@ -629,7 +629,7 @@ void auto_set_AGC_LNA(int auto_set)                                             
   if (auto_set)
     v = 0x60; // Enable AGC and disable LNA
   else
-    v = 0x50; // Disable AGC and enable LNA
+    v = 0x40+agc; // Disable AGC and enable LNA
   if (old_v[MODE_SELECT(setting.mode)] != v) {
     SI4432_Sel = MODE_SELECT(setting.mode);
     SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
@@ -1326,7 +1326,7 @@ search_maximum(int m, int center, int span)
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433800000;       // The IF frequency for which the spur table is value
-static const unsigned int spur_alternate_IF =  434000000;       // if the frequency is found in the spur table use this IF frequency
+static const unsigned int spur_alternate_IF =  433900000;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
 // 580000,            // 433.8 MHz table
@@ -1535,10 +1535,10 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     }
   }
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
-    if (f < 500000)
-      auto_set_AGC_LNA(false);
+    if (f < 1500000)
+      auto_set_AGC_LNA(false, f*9/1500000);
     else
-      auto_set_AGC_LNA(true);
+      auto_set_AGC_LNA(true, 0);
   }
 modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
@@ -1816,7 +1816,9 @@ static bool sweep(bool break_on_operation)
 {
   float RSSI;
   int16_t downslope;
-  uint32_t peak_freq = 0;
+  uint32_t agc_peak_freq = 0;
+  float agc_peak_rssi = -150;
+  float agc_prev_rssi = -150;
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
@@ -1868,13 +1870,20 @@ sweep_again:                                // stay in sweep loop when output mo
     // ----------------------- in loop AGC ---------------------------------
 
     if (!in_selftest && setting.mode == M_HIGH && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {
-      if (RSSI > -55) {
-        peak_freq = frequencies[i];
+#define AGC_RSSI_THRESHOLD  -55
+      if (RSSI > AGC_RSSI_THRESHOLD && RSSI > agc_prev_rssi) {
+        agc_peak_freq = frequencies[i];
+        agc_peak_rssi = agc_prev_rssi = RSSI;
       }
-      if (peak_freq != 0 && frequencies[i] - peak_freq < 1700000)
-        auto_set_AGC_LNA(false);
+      if (RSSI < AGC_RSSI_THRESHOLD)
+        agc_prev_rssi = -150;
+      uint32_t delta_freq = frequencies[i] - agc_peak_freq;
+      if (agc_peak_freq != 0 &&  delta_freq < 2000000) {
+        int max_gain = (-25 - agc_peak_rssi ) / 4;
+        auto_set_AGC_LNA(false, 16 + delta_freq * max_gain / 2000000 );    // enable LNA   and stepwise gain
+      }
       else
-        auto_set_AGC_LNA(TRUE);
+        auto_set_AGC_LNA(TRUE, 0);
     }
 
 
@@ -1903,6 +1912,7 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
       }
+// #define __DEBUG_AGC__
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
@@ -2109,9 +2119,9 @@ sweep_again:                                // stay in sweep loop when output mo
     float actual_max_level = actual_t[max_index[0]] - get_attenuation();
     if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
       if (actual_max_level > - 45)
-        auto_set_AGC_LNA(false);
+        auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
       else
-        auto_set_AGC_LNA(TRUE);
+        auto_set_AGC_LNA(TRUE, 0);
     }
   }
 
