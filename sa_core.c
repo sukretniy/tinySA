@@ -624,16 +624,16 @@ void toggle_AGC(void)
 void auto_set_AGC_LNA(int auto_set)                                                                    // Adapt the AGC setting if needed
 {
 #ifdef __SI4432__
-  static unsigned char old_v;
+  static unsigned char old_v[2];
   unsigned char v;
   if (auto_set)
     v = 0x60; // Enable AGC and disable LNA
   else
-    v = 0x40; // Disable AGC and enable LNA
-  if (old_v != v) {
-    SI4432_Sel = SI4432_RX ;
+    v = 0x50; // Disable AGC and enable LNA
+  if (old_v[MODE_SELECT(setting.mode)] != v) {
+    SI4432_Sel = MODE_SELECT(setting.mode);
     SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-    old_v = v;
+    old_v[MODE_SELECT(setting.mode)] = v;
   }
 #endif
 }
@@ -1676,7 +1676,7 @@ modulation_again:
 
       set_freq (2, IF_2 + lf);                 // Scanning LO up to IF2
       set_freq (3, IF_2 - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
-      set_freq (SI4432_LO, 433800000);                 // Second IF fixe in Ultra SA mode
+      set_freq (SI4432_LO, 433800000);                 // Second IF fixed in Ultra SA mode
 #else
 #ifdef __SI4432__
       if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
@@ -1816,6 +1816,7 @@ static bool sweep(bool break_on_operation)
 {
   float RSSI;
   int16_t downslope;
+  uint32_t peak_freq = 0;
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
@@ -1863,6 +1864,19 @@ sweep_again:                                // stay in sweep loop when output mo
       }
       return false;
     }
+
+    // ----------------------- in loop AGC ---------------------------------
+
+    if (!in_selftest && setting.mode == M_HIGH && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {
+      if (RSSI > -55) {
+        peak_freq = frequencies[i];
+      }
+      if (peak_freq != 0 && frequencies[i] - peak_freq < 1700000)
+        auto_set_AGC_LNA(false);
+      else
+        auto_set_AGC_LNA(TRUE);
+    }
+
 
     // Delay between points if needed, (all delays can apply in SI4432 fill)
     if (setting.measure_sweep_time_us == 0){                                    // If not already in buffer
@@ -2090,12 +2104,15 @@ sweep_again:                                // stay in sweep loop when output mo
 
   // ----------------------------------  auto AGC ----------------------------------
 
-  if (!in_selftest && MODE_INPUT(setting.mode) && S_IS_AUTO(setting.agc) && UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
+
+  if (!in_selftest && MODE_INPUT(setting.mode) && S_IS_AUTO(setting.agc)) {
     float actual_max_level = actual_t[max_index[0]] - get_attenuation();
-    if (actual_max_level > - 45)
-      auto_set_AGC_LNA(false);
-    else
-      auto_set_AGC_LNA(TRUE);
+    if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
+      if (actual_max_level > - 45)
+        auto_set_AGC_LNA(false);
+      else
+        auto_set_AGC_LNA(TRUE);
+    }
   }
 
 
