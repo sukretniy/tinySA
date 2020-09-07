@@ -1333,11 +1333,13 @@ search_maximum(int m, int center, int span)
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433800000;       // The IF frequency for which the spur table is value
-static const unsigned int spur_alternate_IF =  433900000;       // if the frequency is found in the spur table use this IF frequency
+static const unsigned int spur_alternate_IF =  434000000;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
 // 580000,            // 433.8 MHz table
+// 880000,    //?
  960000,
+// 1487000,   //?
  1600000,
 // 1837000,           // Real signal
 // 2755000,           // Real signal
@@ -1404,8 +1406,8 @@ int binary_search(int f)
 {
   int L = 0;
   int R =  (sizeof spur_table)/sizeof(int) - 1;
-  int fmin =  f - actual_rbw_x10 * 100;
-  int fplus = f + actual_rbw_x10 * 100;
+  int fmin =  f - actual_rbw_x10 * (100 / 2);
+  int fplus = f + actual_rbw_x10 * (100 / 2);
   while (L <= R) {
     int m = (L + R) / 2;
     if (spur_table[m] < fmin)
@@ -1584,6 +1586,10 @@ modulation_again:
 
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
+#define __DEBUG_SPUR__
+#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
+  stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
+#endif
   int t = 0;
   do {
     uint32_t lf = f;
@@ -1609,7 +1615,7 @@ modulation_again:
       local_IF = 0;
     else {
       if (setting.auto_IF)
-        local_IF = setting.spur_removal ? 433900000 : 433800000;
+        local_IF = setting.spur_removal ? 433900000 : spur_IF;
       else
         local_IF = setting.frequency_IF;
     }
@@ -1618,8 +1624,11 @@ modulation_again:
       set_freq (SI4432_RX , local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
 #endif
     } else if (MODE_LOW(setting.mode)) {
-      if (setting.mode == M_LOW && !in_selftest && avoid_spur(f)) {         // check is alternate IF is needed to avoid spur.
+      if (setting.mode == M_LOW && !in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
         local_IF = spur_alternate_IF;
+#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
+        stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
+#endif
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur_removal){         // If in low input mode and spur reduction is on
         if (S_IS_AUTO(setting.below_IF) && lf < 150000000) // if below 150MHz and auto_below_IF
@@ -1829,6 +1838,7 @@ static bool sweep(bool break_on_operation)
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
+  START_PROFILE;
 
   palClearPad(GPIOB, GPIOB_LED);
 
@@ -1922,9 +1932,6 @@ sweep_again:                                // stay in sweep loop when output mo
 // #define __DEBUG_AGC__
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
-#endif
-#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-      stored_t[i] = (avoid_spur(frequencies[i]) ? -60.0 :  - 90.0); // Display when to do spur shift in the stored trace
 #endif
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
@@ -2338,6 +2345,7 @@ sweep_again:                                // stay in sweep loop when output mo
   ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
 
   palSetPad(GPIOB, GPIOB_LED);
+  STOP_PROFILE;
   return true;
 }
 
