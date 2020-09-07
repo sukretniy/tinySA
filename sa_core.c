@@ -860,10 +860,10 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if (actual_rbw_x10 >= 2700)      { SI4432_step_delay = 200; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 800)  { SI4432_step_delay = 250; 150; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 250)  { SI4432_step_delay = 600; 450; SI4432_offset_delay = 100; }
-      else                             { SI4432_step_delay = 4000; SI4432_offset_delay =1600; }
+      if (actual_rbw_x10 >= 2700)      { SI4432_step_delay = 400; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 800)  { SI4432_step_delay = 400; 150; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 250)  { SI4432_step_delay = 1000; 450; SI4432_offset_delay = 100; }
+      else                             { SI4432_step_delay = 5000; SI4432_offset_delay =1600; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
@@ -1370,8 +1370,8 @@ search_maximum(int m, int center, int span)
 }
 
 //static int spur_old_stepdelay = 0;
-static const unsigned int spur_IF =            433000000;       // The IF frequency for which the spur table is value
-static const unsigned int spur_alternate_IF =  435000000;       // if the frequency is found in the spur table use this IF frequency
+static const unsigned int spur_IF =            433800000;       // The IF frequency for which the spur table is value
+static const unsigned int spur_alternate_IF =  433900000;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
  10005000,

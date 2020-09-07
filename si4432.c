@@ -246,7 +246,7 @@ void SI4432_Write_Byte(uint8_t ADR, uint8_t DATA )
 //  SI4432_guard = 1;
 //  SPI1_CLK_LOW;
   palClearPad(GPIOB, SI_nSEL[SI4432_Sel]);
-//  chThdSleepMicroseconds(SELECT_DELAY);
+//  my_microsecond_delay(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   shiftOut( DATA );
@@ -262,7 +262,7 @@ void SI4432_Write_3_Byte(uint8_t ADR, uint8_t DATA1, uint8_t DATA2, uint8_t DATA
 //  SI4432_guard = 1;
 //  SPI1_CLK_LOW;
   palClearPad(GPIOB, SI_nSEL[SI4432_Sel]);
-//  chThdSleepMicroseconds(SELECT_DELAY);
+//  my_microsecond_delay(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   shiftOut( DATA1 );
@@ -589,7 +589,7 @@ pureRSSI_t SI4432_RSSI(uint32_t i, int s)
   }
   if (stepdelay)
     my_microsecond_delay(stepdelay);
-    // chThdSleepMicroseconds(SI4432_step_delay);
+    // my_microsecond_delay(SI4432_step_delay);
   i = setting.repeat;
   RSSI_RAW  = 0;
   do{
@@ -781,11 +781,11 @@ void PE4302_shiftOut(uint8_t val)
              SPI1_SDI_HIGH;
            else
              SPI1_SDI_LOW;
-//           chThdSleepMicroseconds(PE4302_DELAY);
+//           my_microsecond_delay(PE4302_DELAY);
            SPI1_CLK_HIGH;
-//           chThdSleepMicroseconds(PE4302_DELAY);
+//           my_microsecond_delay(PE4302_DELAY);
            SPI1_CLK_LOW;
-//           chThdSleepMicroseconds(PE4302_DELAY);
+//           my_microsecond_delay(PE4302_DELAY);
      }
 }
 #endif
@@ -795,17 +795,17 @@ bool PE4302_Write_Byte(unsigned char DATA )
 {
   if (old_attenuation == DATA)
     return false;
-//  chThdSleepMicroseconds(PE4302_DELAY);
+//  my_microsecond_delay(PE4302_DELAY);
 //  SPI1_CLK_LOW;
-//  chThdSleepMicroseconds(PE4302_DELAY);
+//  my_microsecond_delay(PE4302_DELAY);
 //  PE4302_shiftOut(DATA);
 
   shiftOut(DATA);
-//  chThdSleepMicroseconds(PE4302_DELAY);
+//  my_microsecond_delay(PE4302_DELAY);
   CS_PE_HIGH;
-//  chThdSleepMicroseconds(PE4302_DELAY);
+//  my_microsecond_delay(PE4302_DELAY);
   CS_PE_LOW;
-//  chThdSleepMicroseconds(PE4302_DELAY);
+//  my_microsecond_delay(PE4302_DELAY);
   return true;
 }
 
@@ -955,19 +955,19 @@ void ADF4351_Setup(void)
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
   for (int i = 3; i >= 0; i--) shiftOut((value >> (8 * i)) & 0xFF);
-//  chThdSleepMicroseconds(1);
+//  my_microsecond_delay(1);
   palSetPad(GPIOB, ADF4351_LE[channel]);
-  chThdSleepMicroseconds(1);        // Must
+  my_microsecond_delay(1);        // Must
   palClearPad(GPIOB, ADF4351_LE[channel]);
-//  chThdSleepMicroseconds(1);      // Not needed
+//  my_microsecond_delay(1);      // Not needed
 }
 
 void ADF4351_Set(int channel)
 {
   set_SPI_mode(SPI_MODE_SI);
-  chThdSleepMicroseconds(1);
+  my_microsecond_delay(1);
   palClearPad(GPIOB, ADF4351_LE[channel]);
-  chThdSleepMicroseconds(1);
+  my_microsecond_delay(1);
 
   for (int i = 5; i >= 0; i--) {
     ADF4351_WriteRegister32(channel, registers[i]);
@@ -1229,7 +1229,7 @@ void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 //  SPI1_CLK_LOW;
   palClearPad(GPIOB, GPIOB_RX_SEL);
   my_microsecond_delay(2);
-//  chThdSleepMicroseconds(SELECT_DELAY);
+//  my_microsecond_delay(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   shiftOut( DATA );
@@ -1248,7 +1248,7 @@ void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 //  SPI1_CLK_LOW;
   palClearPad(GPIOB, GPIOB_RX_SEL);
   my_microsecond_delay(2);
-//  chThdSleepMicroseconds(SELECT_DELAY);
+//  my_microsecond_delay(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   while (len-- > 0)
