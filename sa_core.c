@@ -1586,7 +1586,7 @@ modulation_again:
 
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
-#define __DEBUG_SPUR__
+//#define __DEBUG_SPUR__
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
   stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
 #endif
@@ -1838,8 +1838,6 @@ static bool sweep(bool break_on_operation)
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
-  START_PROFILE;
-
   palClearPad(GPIOB, GPIOB_LED);
 
   downslope = true;             // Initialize the peak search algorithm
@@ -1887,7 +1885,8 @@ sweep_again:                                // stay in sweep loop when output mo
     // ----------------------- in loop AGC ---------------------------------
 
     if (!in_selftest && setting.mode == M_HIGH && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {
-#define AGC_RSSI_THRESHOLD  -55
+#define AGC_RSSI_THRESHOLD  (-55+get_attenuation())
+
       if (RSSI > AGC_RSSI_THRESHOLD && RSSI > agc_prev_rssi) {
         agc_peak_freq = frequencies[i];
         agc_peak_rssi = agc_prev_rssi = RSSI;
@@ -2087,12 +2086,22 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __MIRROR_MASKING__
   if (setting.mode == M_HIGH && setting.mirror_masking) {
     int mirror_offset = 2 * 937000 / setting.frequency_step;
+//    int mask_start = 0;
+//    int mask_end = 0;
     if (mirror_offset > 3) {
       for (int i = 1; i < sweep_points - mirror_offset; i++) {
-        if (actual_t[i] > -80 && actual_t[i+mirror_offset] < actual_t[i] - 25) {
-          actual_t[i+mirror_offset] = actual_t[i+mirror_offset-1];
-          actual_t[i+mirror_offset+1] = actual_t[i+mirror_offset-1];
+        int m = i+mirror_offset;
+        if (actual_t[i] > -80 && actual_t[m] < actual_t[i] - 25 && ( actual_t[m] > actual_t[m-1] || actual_t[m+1] > actual_t[m-1] ) /* && (i < mask_start || mask_start == 0) */ ) {
+//          if (mask_start == 0)
+//            mask_start = m;
+          actual_t[m] = actual_t[m-1];
+          actual_t[m+1] = actual_t[m-1];
         }
+//        else {
+//          if (i == mask_start)
+//            i += mirror_offset;
+//          mask_start =0;
+//        }
       }
     }
   }
@@ -2345,7 +2354,6 @@ sweep_again:                                // stay in sweep loop when output mo
   ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
 
   palSetPad(GPIOB, GPIOB_LED);
-  STOP_PROFILE;
   return true;
 }
 
@@ -2641,6 +2649,15 @@ void draw_cal_status(void)
     ili9341_set_foreground(BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Spur:", x, y);
+
+    y += YSTEP;
+    plot_printf(buf, BLEN, "ON");
+    ili9341_drawstring(buf, x, y);
+  }
+  if (setting.mirror_masking) {
+    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("Mask:", x, y);
 
     y += YSTEP;
     plot_printf(buf, BLEN, "ON");
