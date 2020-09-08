@@ -447,7 +447,7 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
 //  int mode = SI4432_Read_Byte(0x02) & 0x03;           // Disabled as unreliable
 //  SI4432_Write_Byte(0x07, 0x02);    // Switch to tune mode
 
-  Freq = (Freq / 1000 ) * 1000; // force freq to 1000 grid
+//  Freq = (Freq / 1000 ) * 1000; // force freq to 1000 grid
 
   uint8_t hbsel;
   if (0) shell_printf("%d: Freq %q\r\n", SI4432_Sel, Freq);

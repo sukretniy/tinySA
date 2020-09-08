@@ -2755,6 +2755,7 @@ goto again;
 //    menu_mode_cb(setting.mode,0);
 //  }
   redraw_frame();
+#if 0
   set_mode(M_HIGH);
   set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
   sweep(false);
@@ -2764,6 +2765,7 @@ goto again;
   set_sweep_frequency(ST_STOP, (uint32_t) 4000000);
   sweep(false);
   set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
+#endif
 
   set_refer_output(-1);
 //  ui_mode_menu();       // Show menu when autostarting mode
