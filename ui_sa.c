@@ -857,7 +857,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_atten_high_acb)
 {
   (void)item;
   if(b){
-    b->icon = (setting.atten_step && data) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->icon = (setting.atten_step*30 == data) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
   setting.auto_attenuation = false;

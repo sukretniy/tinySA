@@ -2171,18 +2171,18 @@ sweep_again:                                // stay in sweep loop when output mo
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel) {  // Auto reflevel
 
     float r = value(temppeakLevel);
-    float s_r = r / setting.scale;                  // Peak level normalized to /div
+    float s_max = r / setting.scale;                  // Peak level normalized to /div
 
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
       if (setting.reflevel > REFLEVEL_MIN)  {
-        if (s_r <  2)
+        if (s_max <  2)
           low_count = 5;
-        else if (s_r < 4)
+        else if (s_max < 4)
           low_count++;
         else
           low_count = 0;
       }
-      if ((low_count > 4) || (setting.reflevel < REFLEVEL_MAX && s_r > NGRIDY) ) { // ensure minimum and maximum reflevel
+      if ((low_count > 4) || (setting.reflevel < REFLEVEL_MAX && s_max > NGRIDY) ) { // ensure minimum and maximum reflevel
         if (r < REFLEVEL_MIN)
           r = REFLEVEL_MIN;
         if (r > REFLEVEL_MAX)
@@ -2195,15 +2195,19 @@ sweep_again:                                // stay in sweep loop when output mo
         }
       }
     } else {
+#define MAX_FIT (NGRIDY-1.2)
       float s_min = value(temp_min_level)/setting.scale;
       float s_ref = setting.reflevel/setting.scale;
-      if (s_r < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
-        set_reflevel(setting.scale*(floor(s_r)+1));
+      if (s_max < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
+        if (s_max - s_min < NGRIDY - 2)
+          set_reflevel(setting.scale*(floor(s_min+8.8+ 1)));
+        else
+          set_reflevel(setting.scale*(floor(s_max)+1));
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
-      }else if (s_r > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
+      }else if (s_max > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
         set_reflevel(setting.reflevel + setting.scale);
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
-      } else if (s_min < s_ref - 10.1 && s_r < s_ref -  1.5) { // minimum to low and maximum can move up
+      } else if (s_min < s_ref - 10.1 && s_max < s_ref -  1.5) { // minimum too low and maximum can move up
         set_reflevel(setting.reflevel - setting.scale);
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }
