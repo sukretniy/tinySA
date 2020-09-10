@@ -185,6 +185,8 @@ static THD_FUNCTION(Thread1, arg)
         int i = marker_search();
         if (i != -1 && active_marker != -1) {
           markers[active_marker].index = i;
+          markers[active_marker].frequency = frequencies[i];
+
           redraw_request |= REDRAW_MARKER;
         }
       }
@@ -1054,6 +1056,7 @@ update_marker_index(void)
       for (i = 0; i < sweep_points-1; i++) {
         if (frequencies[i] <= f && f < frequencies[i+1]) {
           markers[m].index = f < (frequencies[i] / 2 + frequencies[i + 1] / 2) ? i : i + 1;
+          markers[m].frequency = frequencies[markers[m].index ];
           break;
         }
       }      

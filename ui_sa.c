@@ -948,6 +948,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
     return;
   }
   markers[data-1].enabled = true;
+  markers[data-1].frequency = frequencies[markers[data-1].index];
   active_marker_select(data-1);
   menu_push_submenu(menu_marker_modify);
   redraw_marker(active_marker);

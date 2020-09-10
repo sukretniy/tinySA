@@ -1328,6 +1328,7 @@ search_maximum(int m, int center, int span)
     }
   }
   markers[m].index = max_index[0];
+  markers[m].frequency = frequencies[markers[m].index];
   return found;
 }
 
@@ -2272,10 +2273,14 @@ sweep_again:                                // stay in sweep loop when output mo
       }
       uint32_t lf = frequencies[l];
       uint32_t rf = frequencies[r];
+      markers[0].frequency = lf;
+      markers[1].frequency = rf;
+
       markers[2].enabled = search_maximum(2, lf - (rf - lf), 12);
       markers[3].enabled = search_maximum(3, rf + (rf - lf), 12);
     } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
       markers[1].index =  markers[0].index + (setting.mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
+      markers[1].frequency = frequencies[markers[1].index];
     } else if (setting.measurement == M_STOP_BAND  && markers[0].index > 10) {      // -------------Stop band measurement
       markers[1].index =  marker_search_left_min(markers[0].index);
       if (markers[1].index < 0) markers[1].index = 0;
