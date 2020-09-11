@@ -499,7 +499,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_load_preset_acb)
   }
   if (caldata_recall(data) == -1) {
     if (data == 0)
-      reset_settings(setting.mode);  // Restore all defaults
+      reset_settings(setting.mode);  // Restore factory defaults
     else {
       draw_menu();
       return;

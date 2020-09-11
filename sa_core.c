@@ -62,10 +62,44 @@ this is a very long string only used to fill memory so I know when the memory is
 ;
 #endif
 
+void update_min_max_freq(void)
+{
+  switch(setting.mode) {
+  case M_LOW:
+    minFreq = 0;
+    maxFreq = 350000000;
+    break;
+#ifdef __ULTRA__
+  case M_ULTRA:
+    minFreq = 674000000;
+    maxFreq = 4300000000;
+    break;
+#endif
+  case M_GENLOW:
+    minFreq = 0;
+    maxFreq = 350000000;
+    break;
+  case M_HIGH:
+#ifdef __ULTRA_SA__
+    minFreq = 00000000;
+    maxFreq = 2000000000;
+#else
+    minFreq = 24*setting_frequency_10mhz;
+    maxFreq = 96*setting_frequency_10mhz;
+#endif
+    break;
+  case M_GENHIGH:
+    minFreq = 240000000;
+    maxFreq = 960000000;
+    break;
+  }
+}
+
 void reset_settings(int m)
 {
 //  strcpy((char *)spi_buffer, dummy);
   setting.mode = m;
+  update_min_max_freq();
   sweep_mode |= SWEEP_ENABLE;
   setting.unit_scale_index = 0;
   setting.unit_scale = 1;
@@ -116,48 +150,33 @@ void reset_settings(int m)
 #endif
   switch(m) {
   case M_LOW:
-    minFreq = 0;
-    maxFreq = 350000000;
-    set_sweep_frequency(ST_START, (uint32_t) 0);
-    set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
+    set_sweep_frequency(ST_START, minFreq);
+    set_sweep_frequency(ST_STOP, maxFreq);
     setting.attenuate = 30.0;
     setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
-    minFreq = 674000000;
-    maxFreq = 4300000000;
-    set_sweep_frequency(ST_START, (uint32_t) minFreq);
-    set_sweep_frequency(ST_STOP, (uint32_t) maxFreq);
+    set_sweep_frequency(ST_START, minFreq);
+    set_sweep_frequency(ST_STOP, maxFreq);
     setting.attenuate = 0;
     setting.sweep_time_us = 0;
     break;
 #endif
   case M_GENLOW:
     setting.drive=8;
-    minFreq = 0;
-    maxFreq = 350000000;
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     break;
   case M_HIGH:
-#ifdef __ULTRA_SA__
-    minFreq = 00000000;
-    maxFreq = 2000000000;
-#else
-    minFreq = 24*setting_frequency_10mhz;
-    maxFreq = 96*setting_frequency_10mhz;
-#endif
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
     setting.sweep_time_us = 0;
     break;
   case M_GENHIGH:
     setting.drive=8;
-    minFreq = 240000000;
-    maxFreq = 960000000;
     set_sweep_frequency(ST_CENTER, 300000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;

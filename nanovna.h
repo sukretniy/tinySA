@@ -172,6 +172,7 @@ extern const char *info_about[];
 
 // ------------------------------- sa_core.c ----------------------------------
 void reset_settings(int);
+void update_min_max_freq(void);
 //void ui_process_touch(void);
 void SetPowerGrid(int);
 void SetRefLevel(float);
