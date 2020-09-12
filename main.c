@@ -1026,9 +1026,9 @@ VNA_SHELL_FUNCTION(cmd_scan)
     if (mask) {
       for (i = 0; i < points; i++) {
         if (mask & 1) shell_printf("%u ", frequencies[i]);
-        if (mask & 2) shell_printf("%f ", value(measured[0][i]));
-        if (mask & 4) shell_printf("%f ", value(measured[1][i]));
-        if (mask & 8) shell_printf("%f ", value(measured[2][i]));
+        if (mask & 2) shell_printf("%f %f ", value(measured[2][i]), 0.0);
+        if (mask & 4) shell_printf("%f %f ", value(measured[1][i]), 0.0);
+        if (mask & 8) shell_printf("%f %f ", value(measured[0][i]), 0.0);
         shell_printf("\r\n");
       }
     }
@@ -2766,7 +2766,7 @@ goto again;
 //    menu_mode_cb(setting.mode,0);
 //  }
   redraw_frame();
-#if 0
+#if 1
   set_mode(M_HIGH);
   set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
   sweep(false);
@@ -2775,8 +2775,11 @@ goto again;
   set_mode(M_LOW);
   set_sweep_frequency(ST_STOP, (uint32_t) 4000000);
   sweep(false);
-  set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
 #endif
+
+  if (caldata_recall(0) == -1) {
+    load_default_properties();
+  }
 
   set_refer_output(-1);
 //  ui_mode_menu();       // Show menu when autostarting mode
