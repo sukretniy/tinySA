@@ -17,7 +17,7 @@
  */
 
 #ifdef __SI4432__
-#include "SI4432.h"		// comment out for simulation
+#include "si4432.h"		// comment out for simulation
 #endif
 #include "stdlib.h"
 
@@ -2317,6 +2317,20 @@ sweep_again:                                // stay in sweep loop when output mo
         t ++;
       if (t < setting._sweep_points - 1 )
         markers[2].index = t;
+    } else if (setting.measurement == M_AM) {      // ----------------AM measurement
+      if (S_IS_AUTO(setting.agc )) {
+        if (actual_t[max_index[0]]  - get_attenuation() > -20 ) {
+          setting.agc = S_AUTO_OFF;
+          setting.lna = S_AUTO_OFF;
+        } else if (actual_t[max_index[0]]  - get_attenuation() < -45 ) {
+          setting.agc = S_AUTO_ON;
+          setting.lna = S_AUTO_ON;
+        } else {
+          setting.agc = S_AUTO_OFF;
+          setting.lna = S_AUTO_ON;
+        }
+        set_AGC_LNA();
+      }
     }
 
 #endif
