@@ -41,6 +41,7 @@ void cell_draw_test_info(int x0, int y0);
 
 static int16_t grid_offset;
 static int16_t grid_width;
+static int32_t grid_span;
 
 int16_t area_width  = AREA_WIDTH_NORMAL;
 int16_t area_height; // initialized in main()  = AREA_HEIGHT_NORMAL;
@@ -127,19 +128,22 @@ void update_grid(void)
     fstart = 0;
   }
 
+#define GRIDLINE_MINIMUM 7
+
   while (gdigit > 100) {
     grid = 5 * gdigit;
-    if (fspan / grid >= 4)
+    if (fspan / grid >= GRIDLINE_MINIMUM)
       break;
     grid = 2 * gdigit;
-    if (fspan / grid >= 4)
+    if (fspan / grid >= GRIDLINE_MINIMUM)
       break;
     grid = gdigit;
-    if (fspan / grid >= 4)
+    if (fspan / grid >= GRIDLINE_MINIMUM)
       break;
     gdigit /= 10;
   }
 
+  grid_span = grid;
   grid_offset = (WIDTH) * ((fstart % grid) / 100) / (fspan / 100);
   grid_width = (WIDTH) * (grid / 100) / (fspan / 1000);
 
@@ -2140,11 +2144,11 @@ draw_frequencies(void)
       plot_printf(buf2, sizeof(buf2), " TIME %.3Fs", (float)t/ONE_SECOND_TIME);
 
     } else if (FREQ_IS_STARTSTOP()) {
-      plot_printf(buf1, sizeof(buf1), " START %qHz", get_sweep_frequency(ST_START));
-      plot_printf(buf2, sizeof(buf2), " STOP %qHz", get_sweep_frequency(ST_STOP));
+      plot_printf(buf1, sizeof(buf1), " START %.3qHz    %5.1qHz/", get_sweep_frequency(ST_START), grid_span);
+      plot_printf(buf2, sizeof(buf2), " STOP %.3qHz", get_sweep_frequency(ST_STOP));
     } else if (FREQ_IS_CENTERSPAN()) {
-      plot_printf(buf1, sizeof(buf1), " CENTER %qHz", get_sweep_frequency(ST_CENTER));
-      plot_printf(buf2, sizeof(buf2), " SPAN %qHz", get_sweep_frequency(ST_SPAN));
+      plot_printf(buf1, sizeof(buf1), " CENTER %.3qHz    %5.1qHz/", get_sweep_frequency(ST_CENTER), grid_span);
+      plot_printf(buf2, sizeof(buf2), " SPAN %.3qHz", get_sweep_frequency(ST_SPAN));
     }
 #ifdef __VNA__
   } else {
@@ -2159,12 +2163,12 @@ draw_frequencies(void)
     buf1[0] = S_SARROW[0];
   if (uistat.lever_mode == LM_SPAN)
     buf2[0] = S_SARROW[0];
-  int p2 = FREQUENCIES_XPOS2;
-  if (FREQ_IS_CW()) {
-    p2 = LCD_WIDTH - FONT_MAX_WIDTH*strlen(buf2);
-  }
-  ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
+//  int p2 = FREQUENCIES_XPOS2;
+//  if (FREQ_IS_CW()) {
+    int p2 = LCD_WIDTH - FONT_MAX_WIDTH*strlen(buf2);
+//  }
   ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);
+  ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
 }
 #ifdef __VNA__
 void
