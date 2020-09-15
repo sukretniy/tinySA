@@ -466,30 +466,31 @@ draw_on_strut(int v0, int d, int color)
 #define SQRT_50 ((float)7.0710678118654)
 #define LOG_10_SQRT_50 ((float)0.84948500216800)
 #define POW_30_20   ((float) 0.215443469)
-#define POW_SQRT    1.5234153789
+#define POW_SQRT    ((float)1.5234153789)
 /*
- * calculate log10(abs(gamma))
+ * calculate log10f(abs(gamma))
  */ 
+
 float
 value(const float v)
 {
   switch(setting.unit)
   {
   case U_DBMV:
-//    return v + 30.0 + 20.0*log10(sqrt(50));
+//    return v + 30.0 + 20.0*log10f(sqrt(50));
     return v + 30.0 + 20.0*LOG_10_SQRT_50;     //TODO convert constants to single float number as GCC compiler does runtime calculation
     break;
   case U_DBUV:
-//    return v + 90.0 + 20.0*log10(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
+//    return v + 90.0 + 20.0*log10f(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
     return v + 90.0 + 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
-//  return pow(10, (v-30.0)/20.0) * sqrt(50.0);
-    return pow(10, (v-30.0)/20.0)*SQRT_50;
+//  return pow(10, (v-30.0)/20.0) * sqrt((float)50.0);
+    return pow((float)10.0, (v-(float)30.0)/(float)20.0)*SQRT_50;  // Do NOT change pow to powf as this will increase the size
 //    return pow(10, v/20.0) * POW_SQRT;      //TODO there is an error in this calculation as the outcome is different from the not optimized version
     break;
   case U_WATT:
-    return pow(10, v/10.0)/1000.0;
+    return pow((float)10.0, v/10.0)/1000.0;  // Do NOT change pow to powf as this will increase the size
     break;
   }
 //  case U_DBM:
@@ -503,19 +504,19 @@ to_dBm(const float v)
   switch(setting.unit)
   {
   case U_DBMV:
-//  return v - 30.0 - 20.0*log10(sqrt(50));
+//  return v - 30.0 - 20.0*log10f(sqrt(50));
     return v - 30.0 - 20.0*LOG_10_SQRT_50;
     break;
   case U_DBUV:
-//  return v - 90.0 - 20.0*log10(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
+//  return v - 90.0 - 20.0*log10f(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
     return v - 90.0 - 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
-//  return log10( v / (sqrt(50.0))) * 20.0 + 30.0 ;
-    return log10( v / (SQRT_50)) * 20.0 + 30.0 ;
+//  return log10f( v / (sqrt(50.0))) * 20.0 + 30.0 ;
+    return log10f( v / (SQRT_50)) * 20.0 + 30.0 ;
     break;
   case U_WATT:
-    return log10(v*1000.0)*10.0;
+    return log10f(v*1000.0)*10.0;
     break;
   }
 //  case U_DBM:
@@ -846,7 +847,7 @@ trace_get_value_string_delta(int t, char *buf, int len, float array[POINTS_COUNT
 
 extern const char *unit_string[];
 
-static void trace_get_value_string(
+void  trace_get_value_string(
     int t, char *buf, int len,
     int i, float coeff[POINTS_COUNT],
     int ri, int mtype,
@@ -916,7 +917,7 @@ static void trace_get_value_string(
 #endif
     v = value(coeff[i]);
     if (mtype & M_NOISE)
-      v = v - 10*log10(actual_rbw_x10*100.0);
+      v = v - 10*log10f(actual_rbw_x10*100.0);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else {

@@ -130,7 +130,7 @@ void update_frequencies(void);
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
 void my_microsecond_delay(int t);
-double my_atof(const char *p);
+float my_atof(const char *p);
 int shell_printf(const char *fmt, ...);
 
 void toggle_sweep(void);
@@ -710,7 +710,7 @@ extern uint32_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
 extern const char * const unit_scale_text[];
 
-#if 1
+#if 1   // Still sufficient flash
 // Flash save area - flash7  : org = 0x0801B000, len = 20k in *.ld file
 // 2k - for config save
 // 9 * 2k for setting_t + stored trace
@@ -725,20 +725,23 @@ extern const char * const unit_scale_text[];
 #define SAVE_PROP_CONFIG_SIZE   0x00000800
 // Should include all save slots
 #define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX * SAVE_PROP_CONFIG_SIZE)
-
-#else
-#define SAVEAREA_MAX 4
-// Begin addr                   0x0801C000
-#define SAVE_CONFIG_AREA_SIZE   0x00004000
-// config save area
-#define SAVE_CONFIG_ADDR        0x0801C000
-// properties_t save area
-#define SAVE_PROP_CONFIG_0_ADDR 0x0801C800
-#define SAVE_PROP_CONFIG_1_ADDR 0x0801D000
-#define SAVE_PROP_CONFIG_2_ADDR 0x0801D800
-#define SAVE_PROP_CONFIG_3_ADDR 0x0801E000
-#define SAVE_PROP_CONFIG_4_ADDR 0x0801e800
+#else           // Just in case flash runs out
+// Flash save area - flash7  : org = 0x0801D000, len = 12k in *.ld file
+// 2k - for config save
+// 9 * 2k for setting_t + stored trace
+#define SAVEAREA_MAX 5
+// STM32 minimum page size for write
+#define FLASH_PAGESIZE          0x800
+// config save area (flash7 addr)
+#define SAVE_CONFIG_ADDR        0x0801D000
+#define SAVE_CONFIG_SIZE        0x00000800
+// setting_t save area (save area + config size)
+#define SAVE_PROP_CONFIG_ADDR   (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE)
+#define SAVE_PROP_CONFIG_SIZE   0x00000800
+// Should include all save slots
+#define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX * SAVE_PROP_CONFIG_SIZE)
 #endif
+
 #if 0
 typedef struct properties {
   uint32_t magic;

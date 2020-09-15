@@ -16,6 +16,9 @@
  * the Free Software Foundation, Inc., 51 Franklin Street,
  * Boston, MA 02110-1301, USA.
  */
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
 
 #define FORM_ICON_WIDTH      16
 #define FORM_ICON_HEIGHT     16
@@ -1998,3 +2001,4 @@ menu_move_top(void)
     menu_move_back();
 }
 
+#pragma GCC pop_options

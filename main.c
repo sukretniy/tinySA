@@ -476,7 +476,7 @@ calculate:
   return value;
 }
 
-double
+float
 my_atof(const char *p)
 {
   int neg = FALSE;
@@ -484,11 +484,11 @@ my_atof(const char *p)
     neg = TRUE;
   if (*p == '-' || *p == '+')
     p++;
-  double x = my_atoi(p);
+  float x = my_atoi(p);
   while (_isdigit((int)*p))
     p++;
   if (*p == '.') {
-    double d = 1.0f;
+    float d = 1.0f;
     p++;
     while (_isdigit((int)*p)) {
       d /= 10;
