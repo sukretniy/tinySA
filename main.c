@@ -851,6 +851,7 @@ config_t config = {
   .magic =             CONFIG_MAGIC,
   .dac_value =         1922,
   .grid_color =        DEFAULT_GRID_COLOR,
+  .ham_color =         DEFAULT_HAM_COLOR,
   .menu_normal_color = DEFAULT_MENU_COLOR,
   .menu_active_color = DEFAULT_MENU_ACTIVE_COLOR,
   .trace_color =       { DEFAULT_TRACE_1_COLOR, DEFAULT_TRACE_2_COLOR, DEFAULT_TRACE_3_COLOR},

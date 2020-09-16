@@ -35,7 +35,7 @@
 #define __SELFTEST__
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
-
+#define __HAM_BAND__
 //#define __ULTRA__             // Add harmonics mode on low input.
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
@@ -451,6 +451,7 @@ typedef struct config {
   uint32_t correction_frequency[CORRECTION_POINTS];
   float    correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
+  uint16_t ham_color;
 //  uint8_t _reserved[22];
   uint32_t checksum;
 } config_t;
@@ -556,6 +557,7 @@ extern volatile uint8_t redraw_request;
 #define DARK_GREY                   RGB565(140,140,140)
 #define LIGHT_GREY                  RGB565(220,220,220)
 #define DEFAULT_GRID_COLOR          RGB565(128,128,128)
+#define DEFAULT_HAM_COLOR           RGB565(80,80,80)
 #define DEFAULT_GRID_VALUE_COLOR    RGB565(196,196,196)
 #define DEFAULT_MENU_COLOR          RGB565(255,255,255)
 #define DEFAULT_MENU_TEXT_COLOR     RGB565(  0,  0,  0)

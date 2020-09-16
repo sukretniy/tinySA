@@ -405,6 +405,49 @@ rectangular_grid(int x, int y)
 }
 #endif
 
+#ifdef __HAM_BAND__
+typedef const struct {
+  uint32_t start;
+  uint32_t stop;
+} ham_bands_t;
+
+const ham_bands_t ham_bands[] =
+{
+  {135700, 137800},
+  {472000, 479000},
+  {1800000, 2000000},
+  {3500000, 3800000},
+  {5250000, 5450000},
+  {7000000, 7200000},
+  {10100000, 10150000},
+  {14000000, 14350000},
+  {18068000, 18168000},
+  {21000000, 21450000},
+  {24890000, 24990000},
+  {28000000, 29700000},
+  {50000000, 52000000},
+  {70000000, 70500000},
+  {144000000, 146000000}
+};
+
+int ham_band(int x)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
+{
+  uint32_t f = frequencies[x];
+  int L = 0;
+  int R =  (sizeof ham_bands)/sizeof(uint32_t) - 1;
+  while (L <= R) {
+    int m = (L + R) / 2;
+    if (ham_bands[m].stop < f)
+      L = m + 1;
+    else if (ham_bands[m].start > f)
+      R = m - 1;
+    else
+       return true; // index is m
+  }
+  return false;
+}
+#endif
+
 static int
 rectangular_grid_x(int x)
 {
@@ -847,7 +890,7 @@ trace_get_value_string_delta(int t, char *buf, int len, float array[POINTS_COUNT
 
 extern const char *unit_string[];
 
-void  trace_get_value_string(
+inline void trace_get_value_string(     // Only used at one place
     int t, char *buf, int len,
     int i, float coeff[POINTS_COUNT],
     int ri, int mtype,
@@ -1515,6 +1558,11 @@ draw_cell(int m, int n)
   // Draw rectangular plot (40 system ticks for all screen calls)
   if (trace_type & RECTANGULAR_GRID_MASK) {
     for (x = 0; x < w; x++) {
+#ifdef __HAM_BAND__
+      if (ham_band(x+x0)) {
+        for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = config.ham_color;
+      }
+#endif
       if (rectangular_grid_x(x + x0)) {
         for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = c;
       }
