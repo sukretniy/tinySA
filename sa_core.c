@@ -22,7 +22,7 @@
 #include "stdlib.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("Os")
+#pragma GCC optimize ("Og")
 
 
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
@@ -223,7 +223,10 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
 void set_refer_output(int v)
 {
   setting.refer = v;
-  dirty = true;
+#ifdef __SI4432__
+  SI4432_SetReference(setting.refer);
+#endif
+//  dirty = true;
 }
 
 void set_decay(int d)
@@ -3188,10 +3191,12 @@ common_silent:
     set_mode(M_LOW);
     maxFreq = 520000000;            // needed to measure the LPF rejection
     set_refer_output(0);
+    dirty = true;
  //   set_step_delay(1);                      // Do not set !!!!!
 #ifdef __SPUR__
     setting.spur_removal = 1;
 #endif
+
     goto common;
   case TPH_30MHZ:
     set_mode(M_HIGH);
