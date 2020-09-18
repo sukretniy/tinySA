@@ -1603,6 +1603,14 @@ static const menuitem_t menu_settings[] =
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_measure2[] = {
+//  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
+  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_measure[] = {
   { MT_ADV_CALLBACK,            M_OFF,        "OFF",            menu_measure_acb},
   { MT_ADV_CALLBACK,            M_IMD,        "HARMONIC",       menu_measure_acb},
@@ -1610,9 +1618,7 @@ static const menuitem_t menu_measure[] = {
   { MT_ADV_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",   menu_measure_acb},
   { MT_ADV_CALLBACK,            M_STOP_BAND,  "SNR",            menu_measure_acb},
   { MT_ADV_CALLBACK,            M_PASS_BAND,  "-6dB\nWIDTH",     menu_measure_acb},
-//  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
-  { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
-  { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
+  { MT_SUBMENU,  0,             S_RARROW" MORE",                menu_measure2},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
