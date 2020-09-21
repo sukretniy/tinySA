@@ -406,7 +406,7 @@ static const keypads_t keypads_time[] = {
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
-  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY, KM_FAST_SPEEDUP,
+  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY, KM_FAST_SPEEDUP, KM_GRIDLINES,
   KM_NONE // always at enum end
 };
 
@@ -428,7 +428,7 @@ static const struct {
   {keypads_positive    , "DRIVE"}, // drive
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "SCANS"},    // KM_DECAY
-  {keypads_positive    , "LEVEL"},    // KM_NOISE
+  {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
   {keypads_freq        , "FREQ"},    // KM_10MHz
   {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA
   {keypads_plusmin     , "OFFSET"},    // KM_OFFSET
@@ -437,6 +437,7 @@ static const struct {
   {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
   {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY
   {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
+  {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
 };
 
 // ===[MENU CALLBACKS]=========================================================
@@ -1174,6 +1175,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_bpf_acb){
   draw_menu();
 }
 
+#ifdef __HAM_BAND__
+static UI_FUNCTION_ADV_CALLBACK(menu_settings_ham_bands){
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = config.hambands ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  toggle_hambands();
+  draw_menu();
+}
+#endif
+
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_below_if_acb){
   (void)item;
   (void)data;
@@ -1574,6 +1588,21 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_settings3[] =
+{
+  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
+  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+#ifdef __HAM_BAND__
+  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
+#endif
+#ifdef __ULTRA__
+  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
+#endif
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+
 static const menuitem_t menu_settings2[] =
 {
   { MT_ADV_CALLBACK, 0,             "AGC",           menu_settings_agc_acb},
@@ -1582,10 +1611,10 @@ static const menuitem_t menu_settings2[] =
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BELOW IF",      menu_settings_below_if_acb},
   { MT_KEYPAD,   KM_DECAY,      "HOLD\nSWEEPS",   "1..1000 sweeps"},
   { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
-  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
+  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1991,6 +2020,10 @@ set_numeric_value(void)
     completed = true;
 
     break;
+  case KM_GRIDLINES:
+    set_gridlines(uistat.value);
+    break;
+
   }
 }
 

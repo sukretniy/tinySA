@@ -127,18 +127,18 @@ void update_grid(void)
     fspan = setting.actual_sweep_time_us; // Time in uS
     fstart = 0;
   }
-
-#define GRIDLINE_MINIMUM 7
+  if (config.gridlines < 3)
+    config.gridlines = 6;
 
   while (gdigit > 100) {
     grid = 5 * gdigit;
-    if (fspan / grid >= GRIDLINE_MINIMUM)
+    if (fspan / grid >= config.gridlines)
       break;
     grid = 2 * gdigit;
-    if (fspan / grid >= GRIDLINE_MINIMUM)
+    if (fspan / grid >= config.gridlines)
       break;
     grid = gdigit;
-    if (fspan / grid >= GRIDLINE_MINIMUM)
+    if (fspan / grid >= config.gridlines)
       break;
     gdigit /= 10;
   }
@@ -432,6 +432,8 @@ const ham_bands_t ham_bands[] =
 
 int ham_band(int x)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
+  if (!config.hambands)
+    return false;
   uint32_t f = frequencies[x];
   int L = 0;
   int R =  (sizeof ham_bands)/sizeof(uint32_t) - 1;

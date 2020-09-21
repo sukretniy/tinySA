@@ -242,6 +242,16 @@ void set_noise(int d)
   dirty = true;
 }
 
+void set_gridlines(int d)
+{
+  if (d < 3 || d > 20)
+    return;
+  config.gridlines = d;
+  config_save();
+  dirty = true;
+  update_grid();
+}
+
 void set_measurement(int m)
 {
   setting.measurement = m;
@@ -309,6 +319,12 @@ void toggle_mirror_masking(void)
 void toggle_mute(void)
 {
   setting.mute = !setting.mute;
+  dirty = true;
+}
+
+void toggle_hambands(void)
+{
+  config.hambands = !config.hambands;
   dirty = true;
 }
 
