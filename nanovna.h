@@ -285,10 +285,13 @@ extern void tlv320aic3204_select(int channel);
 #ifdef __SCROLL__
 extern  uint16_t _grid_y;
 #define GRIDY  _grid_y
-#define HEIGHT_SCROLL     180
-#define HEIGHT_NOSCROLL   230
+extern uint16_t graph_bottom;
+#define BIG_WATERFALL   90
+#define SMALL_WATERFALL 180
+#define NO_WATERFALL    CHART_BOTTOM
+#define CHART_BOTTOM   230
 #define SCROLL_GRIDY      (HEIGHT_SCROLL / NGRIDY)
-#define NOSCROLL_GRIDY    (HEIGHT_NOSCROLL / NGRIDY)
+#define NOSCROLL_GRIDY    (CHART_BOTTOM / NGRIDY)
 #else
 #define GRIDY             (230 / NGRIDY)
 #endif

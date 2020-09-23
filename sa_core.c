@@ -1913,7 +1913,7 @@ sweep_again:                                // stay in sweep loop when output mo
       scandirty = false;
     if (break_on_operation && operation_requested) {                        // break loop if needed
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
+        ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);              // Erase progress bar
       }
       return false;
     }
@@ -1953,8 +1953,8 @@ sweep_again:                                // stay in sweep loop when output mo
 
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
     	int pos = i * (WIDTH+1) / sweep_points;
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, pos, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
-        ili9341_fill(OFFSETX+pos, HEIGHT_NOSCROLL+1, WIDTH-pos, 1, 0);
+        ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
+        ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1, 0);
       }
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------
@@ -2409,7 +2409,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
-  ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
+  ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);
 
   palSetPad(GPIOB, GPIOB_LED);
   return true;
@@ -2604,7 +2604,7 @@ void draw_cal_status(void)
     rounding  = true;
   const char * const unit = unit_string[setting.unit];
 
-  ili9341_fill(0, 0, OFFSETX, HEIGHT_NOSCROLL, 0x0000);
+  ili9341_fill(0, 0, OFFSETX, CHART_BOTTOM, 0x0000);
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
     return;
   }

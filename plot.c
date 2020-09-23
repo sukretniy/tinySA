@@ -29,7 +29,8 @@
 
 
 #ifdef __SCROLL__
-uint16_t _grid_y = NOSCROLL_GRIDY;
+uint16_t _grid_y = (CHART_BOTTOM / NGRIDY);
+uint16_t graph_bottom = CHART_BOTTOM;
 static int waterfall = false;
 #endif
 static void cell_draw_marker_info(int x0, int y0);
@@ -2316,7 +2317,7 @@ static void update_waterfall(void){
   // Waterfall only in 290 or 145 points
   if (!(sweep_points == 290 || sweep_points == 145))
     return;
-  for (i = HEIGHT_NOSCROLL-1; i >=HEIGHT_SCROLL+2; i--) {		// Scroll down
+  for (i = CHART_BOTTOM-1; i >=graph_bottom+1; i--) {		// Scroll down
     ili9341_read_memory(OFFSETX, i  , w_width, 1, w_width*1, spi_buffer);
            ili9341_bulk(OFFSETX, i+1, w_width, 1);
   }
@@ -2324,12 +2325,12 @@ static void update_waterfall(void){
   for (i=0; i< w_width; i++) {			// Add new topline
     uint16_t color;
 #ifdef _USE_WATERFALL_PALETTE
-    uint16_t y = _PALETTE_ALIGN(CELL_Y(index[i])); // should be always in range 0 - HEIGHT_SCROLL
+    uint16_t y = _PALETTE_ALIGN(CELL_Y(index[i])); // should be always in range 0 - graph_bottom
 //    y = (uint8_t)i;  // for test
     color = waterfall_palette[y];
 #elif 0
-    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
-    uint16_t ratio = (HEIGHT_SCROLL - y)*2;
+    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - graph_bottom
+    uint16_t ratio = (graph_bottom - y)*2;
 //    ratio = (i*2);    // Uncomment for testing the waterfall colors
     int16_t b = 255 - ratio;
     if (b > 255) b = 255;
@@ -2344,7 +2345,7 @@ static void update_waterfall(void){
     gamma_correct(b);
     color = RGB565(r, g, b);
 #else
-    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
+    uint16_t y = CELL_Y(index[i])* (graph_bottom == BIG_WATERFALL ? 2 : 1); // should be always in range 0 - graph_bottom *2 depends on height of scroll
     // Calculate gradient palette for range 0 .. 192
     // idx     r   g   b
     //   0 - 127   0   0
@@ -2371,30 +2372,34 @@ static void update_waterfall(void){
       spi_buffer[2*i+1] = color;
     }
   }
-  ili9341_bulk(OFFSETX, HEIGHT_SCROLL+2, w_width, 1);
+  ili9341_bulk(OFFSETX, graph_bottom+1, w_width, 1);
 }
 
 int get_waterfall(void)
 {
   return(waterfall);
 }
+enum {W_OFF, W_SMALL, W_BIG};
 
 void
 toggle_waterfall(void)
 {
-  if (!waterfall) {
-    _grid_y = SCROLL_GRIDY;
-    ili9341_fill(OFFSETX, HEIGHT_SCROLL, LCD_WIDTH - OFFSETX, HEIGHT_NOSCROLL - HEIGHT_SCROLL, 0);
-    waterfall = true;
+  if (waterfall == W_OFF) {
     w_min = (int)min_level;
     w_max = (int)peakLevel;
     if (w_max < w_min + 20)
       w_max = w_min + 20;
-
+    graph_bottom = SMALL_WATERFALL;
+    waterfall = W_SMALL;
+  } else if (waterfall == W_SMALL) {
+    graph_bottom = BIG_WATERFALL;
+    waterfall = W_BIG;
   } else {
-    _grid_y = NOSCROLL_GRIDY;
-    waterfall = false;
+    graph_bottom = NO_WATERFALL;
+    waterfall = W_OFF;
   }
+  _grid_y = graph_bottom / NGRIDY;
+  ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
   request_to_redraw_grid();
 }
 void
