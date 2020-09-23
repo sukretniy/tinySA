@@ -35,7 +35,7 @@
 #define __SELFTEST__
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
-//#define __HAM_BAND__
+#define __HAM_BAND__
 //#define __ULTRA__             // Add harmonics mode on low input.
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
@@ -285,10 +285,13 @@ extern void tlv320aic3204_select(int channel);
 #ifdef __SCROLL__
 extern  uint16_t _grid_y;
 #define GRIDY  _grid_y
-#define HEIGHT_SCROLL     180
-#define HEIGHT_NOSCROLL   230
+extern uint16_t graph_bottom;
+#define BIG_WATERFALL   90
+#define SMALL_WATERFALL 180
+#define NO_WATERFALL    CHART_BOTTOM
+#define CHART_BOTTOM   230
 #define SCROLL_GRIDY      (HEIGHT_SCROLL / NGRIDY)
-#define NOSCROLL_GRIDY    (HEIGHT_NOSCROLL / NGRIDY)
+#define NOSCROLL_GRIDY    (CHART_BOTTOM / NGRIDY)
 #else
 #define GRIDY             (230 / NGRIDY)
 #endif
@@ -452,6 +455,8 @@ typedef struct config {
   float    correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
   uint16_t ham_color;
+  uint16_t gridlines;
+  uint16_t hambands;
 //  uint8_t _reserved[22];
   uint32_t checksum;
 } config_t;
@@ -945,11 +950,13 @@ extern uint16_t actual_rbw_x10;
 
 int get_waterfall(void);
 void toggle_tracking(void);
+void toggle_hambands(void);
 void reset_calibration(void);
 void set_reflevel(float);
 void set_offset(float);
 void set_unit(int);
 void set_switches(int);
+void set_gridlines(int);
 void set_trigger_level(float);
 void set_trigger(int);
 void update_rbw(void);

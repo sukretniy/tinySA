@@ -2081,6 +2081,7 @@ lever_move_marker(int status)
       }
       markers[active_marker].frequency = frequencies[markers[active_marker].index];
       redraw_marker(active_marker);
+      markers[active_marker].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
       step++;
     }
     status = btn_wait_release();
@@ -2492,7 +2493,7 @@ touch_pickup_marker(void)
         // select trace
         uistat.current_trace = t;
         select_lever_mode(LM_MARKER);
-
+        markers[m].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
         // drag marker until release
         drag_marker(t, m);
         return TRUE;
