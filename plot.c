@@ -2315,14 +2315,15 @@ static void update_waterfall(void){
   int i;
   int w_width = area_width < POINTS_COUNT ? area_width : POINTS_COUNT;
   // Waterfall only in 290 or 145 points
-  if (!(sweep_points == 290 || sweep_points == 145))
-    return;
+//  if (!(sweep_points == 290 || sweep_points == 145))
+//    return;
   for (i = CHART_BOTTOM-1; i >=graph_bottom+1; i--) {		// Scroll down
     ili9341_read_memory(OFFSETX, i  , w_width, 1, w_width*1, spi_buffer);
            ili9341_bulk(OFFSETX, i+1, w_width, 1);
   }
   index_t *index = trace_index[TRACE_ACTUAL];
-  for (i=0; i< w_width; i++) {			// Add new topline
+  int j = 0;
+  for (i=0; i< sweep_points; i++) {			// Add new topline
     uint16_t color;
 #ifdef _USE_WATERFALL_PALETTE
     uint16_t y = _PALETTE_ALIGN(CELL_Y(index[i])); // should be always in range 0 - graph_bottom
@@ -2365,11 +2366,8 @@ static void update_waterfall(void){
     else              color = RGB565(               0, 124-((y-160)*4), 252-((y-160)*4));
 
 #endif
-    if (sweep_points == 290)
-      spi_buffer[i] = color;
-    else {
-      spi_buffer[2*i  ] = color;
-      spi_buffer[2*i+1] = color;
+    while (j * sweep_points  < (i+1) * 290) {   // Scale waterfall to 290 points
+      spi_buffer[j++] = color;
     }
   }
   ili9341_bulk(OFFSETX, graph_bottom+1, w_width, 1);

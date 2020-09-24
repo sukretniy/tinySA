@@ -2900,24 +2900,24 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
 //  ili9341_set_background(DEFAULT_BG_COLOR);
-
-  // Bottom level
-  y = area_height - 8 + OFFSETY;
-  if (rounding)
-    plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
-  else
-    plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
-//  buf[5]=0;
-  if (level_is_calibrated())
-    if (setting.auto_reflevel)
-      color = DEFAULT_FG_COLOR;
+  if (!get_waterfall()) {               // Do not draw bottom level if in waterfall mode
+    // Bottom level
+    y = area_height - 8 + OFFSETY;
+    if (rounding)
+      plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
     else
-      color = BRIGHT_COLOR_GREEN;
-  else
-    color = BRIGHT_COLOR_RED;
-  ili9341_set_foreground(color);
-  ili9341_drawstring(buf, x, y);
-
+      plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
+    //  buf[5]=0;
+    if (level_is_calibrated())
+      if (setting.auto_reflevel)
+        color = DEFAULT_FG_COLOR;
+      else
+        color = BRIGHT_COLOR_GREEN;
+    else
+      color = BRIGHT_COLOR_RED;
+    ili9341_set_foreground(color);
+    ili9341_drawstring(buf, x, y);
+  }
 }
 
 // -------------------- Self testing -------------------------------------------------
