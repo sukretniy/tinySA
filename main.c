@@ -1065,6 +1065,22 @@ update_marker_index(void)
   }
 }
 
+void set_marker_frequency(int m, uint32_t f)
+{
+  if (m < 0 || !markers[m].enabled)
+    return;
+  int i = 1;
+  uint32_t s = (frequencies[1] - frequencies[0])/2;
+  while (i< sweep_points - 1){
+    if (frequencies[i]-s  <= f && f < frequencies[i]+s) {
+      markers[m].index = i;
+      markers[m].frequency = f;
+      return;
+    }
+    i++;
+  }
+}
+
 static void
 set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
 {

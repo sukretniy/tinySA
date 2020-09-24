@@ -133,6 +133,7 @@ void my_microsecond_delay(int t);
 float my_atof(const char *p);
 int shell_printf(const char *fmt, ...);
 
+void set_marker_frequency(int m, uint32_t f);
 void toggle_sweep(void);
 void toggle_mute(void);
 void load_default_properties(void);

@@ -406,7 +406,8 @@ static const keypads_t keypads_time[] = {
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
-  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY, KM_FAST_SPEEDUP, KM_GRIDLINES,
+  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
+  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER,
   KM_NONE // always at enum end
 };
 
@@ -438,6 +439,7 @@ static const struct {
   {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY
   {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
   {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
+  {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
 };
 
 // ===[MENU CALLBACKS]=========================================================
@@ -1474,6 +1476,7 @@ const menuitem_t menu_marker_search[] = {
   { MT_CALLBACK, 1, "MIN\n" S_RARROW" RIGHT", menu_marker_search_cb },
   { MT_CALLBACK, 2, "MAX\n" S_LARROW" LEFT",  menu_marker_search_cb },
   { MT_CALLBACK, 3, "MAX\n" S_RARROW" RIGHT", menu_marker_search_cb },
+  { MT_KEYPAD,  KM_MARKER,          "ENTER\nFREQUENCY",         NULL},
   { MT_ADV_CALLBACK, 0,            "TRACKING",menu_marker_tracking_acb },
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
@@ -1928,6 +1931,12 @@ static void fetch_numeric_target(void)
     uistat.value = setting.trigger_level;
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
+  case KM_MARKER:
+    if (active_marker >=0) {
+      uistat.value = markers[active_marker].frequency;
+      plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    }
+    break;
 
   }
   
@@ -2028,6 +2037,9 @@ set_numeric_value(void)
     break;
   case KM_GRIDLINES:
     set_gridlines(uistat.value);
+    break;
+  case KM_MARKER:
+    set_marker_frequency(active_marker, (uint32_t)uistat.value);
     break;
 
   }
