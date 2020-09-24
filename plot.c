@@ -149,6 +149,8 @@ void update_grid(void)
   grid_width = (WIDTH) * (grid / 100) / (fspan / 1000);
 
   force_set_markmap();
+  if (get_waterfall())
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
   redraw_request |= REDRAW_FREQUENCY;
 }
 

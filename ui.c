@@ -1928,6 +1928,8 @@ leave_ui_mode()
   // Erase bottom area (not redraw on area update)
   if (MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height > 0)
     ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height, DEFAULT_BG_COLOR);
+  if (get_waterfall())
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
   redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
 }
 
