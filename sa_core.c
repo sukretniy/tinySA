@@ -119,6 +119,7 @@ void reset_settings(int m)
   setting.lna = S_AUTO_OFF;
   setting.tracking = false;
   setting.modulation = MO_NONE;
+  setting.modulation_frequency = 1000;
   setting.step_delay = 0;
   setting.offset_delay = 0;
   setting.step_delay_mode = SD_NORMAL;
@@ -346,6 +347,14 @@ void set_modulation(int m)
 {
   setting.modulation = m;
   dirty = true;
+}
+
+void set_modulation_frequency(int f)
+{
+  if (20 <= f && f <= 20000) {
+    setting.modulation_frequency = f;
+    dirty = true;
+  }
 }
 
 void set_repeat(int r)
@@ -1486,6 +1495,7 @@ static systime_t sweep_elapsed = 0;                             // Time since fi
 
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
+  int modulation_delay = 0;
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
     calculate_correction();                                                 // pre-calculate correction factor dividers to avoid float division
     apply_settings();                                                       // Initialize HW
@@ -1524,6 +1534,9 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
               + get_level_offset()
               + get_attenuation()
               - setting.offset);
+    }
+    if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
+      modulation_delay = 1000 * 200 / setting.modulation_frequency - 20;
     }
 
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
@@ -1591,7 +1604,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
-    if (setting.modulation == MO_AM_1kHz || setting.modulation == MO_AM_10Hz) {               // AM modulation
+    if (setting.modulation == MO_AM) {               // AM modulation
       int p = setting.attenuate * 2 + am_modulation[modulation_counter++];
       if      (p>63) p = 63;
       else if (p< 0) p =  0;
@@ -1600,7 +1613,7 @@ modulation_again:
 #endif
       if (modulation_counter == 5)  // 3dB modulation depth
         modulation_counter = 0;
-      my_microsecond_delay(setting.modulation == MO_AM_10Hz ? 20000 : 180);
+//      my_microsecond_delay(setting.modulation == MO_AM_10Hz ? 20000 : 180);
     }
     else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
 #ifdef __SI4432__
@@ -1612,8 +1625,11 @@ modulation_again:
       modulation_counter++;
       if (modulation_counter == 5)  // 3dB modulation depth
         modulation_counter = 0;
-      my_microsecond_delay(200);
+//      my_microsecond_delay(200);
       //      chThdSleepMicroseconds(200);
+    }
+    if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) {
+      my_microsecond_delay(modulation_delay);
     }
   }
 

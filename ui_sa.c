@@ -407,7 +407,7 @@ enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
-  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER,
+  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
   KM_NONE // always at enum end
 };
 
@@ -440,6 +440,7 @@ static const struct {
   {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
   {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
   {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
+  {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
 };
 
 // ===[MENU CALLBACKS]=========================================================
@@ -622,8 +623,8 @@ static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 }
 
 
-// const int menu_modulation_value[]={MO_NONE,MO_AM_1, MO_NFM, MO_WFM, MO_EXTERNAL};
-const char *menu_modulation_text[]={"None", "AM 1kHz", "AM 10Hz", "Narrow FM", "Wide FM", "External"};
+// const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
+const char *menu_modulation_text[]={"None", "AM", "Narrow FM", "Wide FM", "External"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_modulation_acb)
 {
@@ -1350,11 +1351,11 @@ static const menuitem_t menu_drive_wide[] = {
 static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
   { MT_FORM | MT_ADV_CALLBACK, MO_NONE,              "None",      menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_1kHz,  "AM 1kHz",   menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_10Hz,  "AM 10Hz",   menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,  "AM",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "Narrow FM", menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "Wide FM",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "External",  menu_modulation_acb},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "10Hz..10kHz"},
   { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1937,7 +1938,12 @@ static void fetch_numeric_target(void)
       plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     }
     break;
-
+  case KM_MODULATION:
+    if (active_marker >=0) {
+      uistat.value = setting.modulation_frequency;
+      plot_printf(uistat.text, sizeof uistat.text, "%7.0fHz", uistat.value);
+    }
+    break;
   }
   
   {
@@ -2040,6 +2046,9 @@ set_numeric_value(void)
     break;
   case KM_MARKER:
     set_marker_frequency(active_marker, (uint32_t)uistat.value);
+    break;
+  case KM_MODULATION:
+    set_modulation_frequency((int)uistat.value);
     break;
 
   }

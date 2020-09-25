@@ -64,7 +64,7 @@ VNA_SHELL_FUNCTION(cmd_modulation )
     shell_printf("usage: modulation %s\r\n", cmd_mod);
     return;
   }
-  static const int cmd_mod_val[] = { MO_NONE, MO_AM_1kHz, MO_AM_10Hz, MO_NFM, MO_WFM, MO_EXTERNAL};
+  static const int cmd_mod_val[] = { MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
   int m = get_str_index(argv[1], cmd_mod);
   if (m<0)
      goto usage;

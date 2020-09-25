@@ -146,7 +146,7 @@ enum {
 };
 
 enum {
-  MO_NONE, MO_AM_1kHz, MO_AM_10Hz, MO_NFM, MO_WFM, MO_EXTERNAL,
+  MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL,
 };
 
 #define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
@@ -234,6 +234,7 @@ void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
 void set_10mhz(uint32_t);
 void set_modulation(int);
+void set_modulation_frequency(int);
 //extern int setting.modulation;
 void set_measurement(int);
 // extern int settingSpeed;
@@ -687,6 +688,7 @@ typedef struct setting
   int step_delay_mode;
   int offset_delay;
   int fast_speedup;
+  int modulation_frequency;
   uint32_t checksum;
 }setting_t;
 
