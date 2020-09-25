@@ -2338,20 +2338,26 @@ sweep_again:                                // stay in sweep loop when output mo
     } else if (setting.measurement == M_STOP_BAND  && markers[0].index > 10) {      // -------------Stop band measurement
       markers[1].index =  marker_search_left_min(markers[0].index);
       if (markers[1].index < 0) markers[1].index = 0;
+      markers[1].frequency = frequencies[markers[1].index];
       markers[2].index =  marker_search_right_min(markers[0].index);
       if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
+      markers[2].frequency = frequencies[markers[2].index];
     } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {      // ----------------Pass band measurement
       int t = markers[0].index;
       float v = actual_t[t];
       while (t > 0 && actual_t[t] > v - 6.0)                                        // Find left -3dB point
         t --;
-      if (t > 0)
+      if (t > 0) {
         markers[1].index = t;
+        markers[1].frequency = frequencies[t];
+      }
       t = markers[0].index;
       while (t < setting._sweep_points - 1 && actual_t[t] > v - 6.0)                // find right -3dB point
         t ++;
-      if (t < setting._sweep_points - 1 )
+      if (t < setting._sweep_points - 1 ) {
         markers[2].index = t;
+        markers[2].frequency = frequencies[t];
+      }
     } else if (setting.measurement == M_AM) {      // ----------------AM measurement
       if (S_IS_AUTO(setting.agc )) {
         if (actual_t[max_index[0]]  - get_attenuation() > -20 ) {
