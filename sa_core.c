@@ -1535,10 +1535,6 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
               + get_attenuation()
               - setting.offset);
     }
-    if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
-      modulation_delay = 1000 * 200 / setting.modulation_frequency - 20;
-    }
-
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
     // Update grid and status after
@@ -1601,6 +1597,17 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     else
       auto_set_AGC_LNA(true, 0);
   }
+  // Calculate the RSSI correction for later use
+  if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
+    if (i == 0 || setting.frequency_step != 0)
+      correct_RSSI_freq = get_frequency_correction(f);
+  }
+  if (MODE_OUTPUT(setting.mode)) {
+    if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
+      modulation_delay = 1000 * 200 / setting.modulation_frequency - 20;
+      modulation_counter = 0;
+    }
+  }
 modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
@@ -1631,12 +1638,6 @@ modulation_again:
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) {
       my_microsecond_delay(modulation_delay);
     }
-  }
-
-  // Calculate the RSSI correction for later use
-  if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
-    if (i == 0 || setting.frequency_step != 0)
-      correct_RSSI_freq = get_frequency_correction(f);
   }
 
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
@@ -1774,9 +1775,10 @@ modulation_again:
     if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
       if (break_on_operation && operation_requested)          // break subscanning if requested
         return(0);         // abort
-      if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) // if in output mode with modulation
+      if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) { // if in output mode with modulation
+        i = 1;              // Everything set so skip LO setting
         goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
-
+      }
       return(0);
     }
     // ---------------- Prepare RSSI ----------------------
