@@ -1606,6 +1606,12 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
       modulation_delay = 1000 * 200 / setting.modulation_frequency - 20;
       modulation_counter = 0;
+      if (setting.modulation == MO_AM)
+        modulation_delay += 49;
+      if (setting.modulation == MO_NFM)
+        modulation_delay += -22;
+      if (setting.modulation == MO_WFM)
+        modulation_delay += -18;
     }
   }
 modulation_again:
