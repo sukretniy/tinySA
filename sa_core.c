@@ -1604,29 +1604,26 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   }
   if (MODE_OUTPUT(setting.mode)) {
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
-      modulation_delay = 1000 * 200 / setting.modulation_frequency - 20;
+      modulation_delay = 1000 * 200 / setting.modulation_frequency;     // 5 steps so 1MHz/5
       modulation_counter = 0;
-      if (setting.modulation == MO_AM)
-        modulation_delay += 49;
-      if (setting.modulation == MO_NFM)
-        modulation_delay += -22;
-      if (setting.modulation == MO_WFM)
-        modulation_delay += -18;
+      if (setting.modulation == MO_AM)          // -14 default
+        modulation_delay += config.cor_am;
+      if (setting.modulation == MO_WFM)         // -21 default
+        modulation_delay += config.cor_wfm;
+      if (setting.modulation == MO_NFM)         // -23 default
+        modulation_delay += config.cor_nfm;
     }
   }
 modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
     if (setting.modulation == MO_AM) {               // AM modulation
-      int p = setting.attenuate * 2 + am_modulation[modulation_counter++];
+      int p = setting.attenuate * 2 + am_modulation[modulation_counter];
       if      (p>63) p = 63;
       else if (p< 0) p =  0;
 #ifdef __PE4302__
       PE4302_Write_Byte(p);
 #endif
-      if (modulation_counter == 5)  // 3dB modulation depth
-        modulation_counter = 0;
-//      my_microsecond_delay(setting.modulation == MO_AM_10Hz ? 20000 : 180);
     }
     else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
 #ifdef __SI4432__
@@ -1635,12 +1632,10 @@ modulation_again:
       SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
       SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
 #endif
-      modulation_counter++;
-      if (modulation_counter == 5)  // 3dB modulation depth
-        modulation_counter = 0;
-//      my_microsecond_delay(200);
-      //      chThdSleepMicroseconds(200);
     }
+    modulation_counter++;
+    if (modulation_counter == 5)  // 3dB modulation depth
+      modulation_counter = 0;
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) {
       my_microsecond_delay(modulation_delay);
     }
@@ -2179,7 +2174,7 @@ sweep_again:                                // stay in sweep loop when output mo
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     int delta = 0;
-    int actual_max_level = (int) (actual_t[max_index[0]] - get_attenuation());
+    int actual_max_level = (max_index[0] == 0 ? -100 :(int) (actual_t[max_index[0]] - get_attenuation()) ); // If no max found reduce attenuation
     if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate > 0) {
       delta = - (AUTO_TARGET_LEVEL - actual_max_level);
     } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate < 30) {

@@ -407,7 +407,7 @@ enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
-  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
+  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
   KM_NONE // always at enum end
 };
 
@@ -441,6 +441,9 @@ static const struct {
   {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
   {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
   {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
+  {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
+  {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
+  {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
 };
 
 // ===[MENU CALLBACKS]=========================================================
@@ -648,7 +651,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
   (void)item;
   (void)data;
   if(b){
-    b->param_1.text = menu_modulation_text[setting.modulation];
+    if (setting.modulation == MO_NONE)
+      b->param_1.text = menu_modulation_text[setting.modulation];
+    else {
+      plot_printf(uistat.text, sizeof uistat.text, "%5.3fkHz %s", setting.modulation_frequency / 1000.0, menu_modulation_text[setting.modulation]);
+      b->param_1.text = uistat.text;
+    }
     return;
   }
   menu_push_submenu(menu_modulation);
@@ -1364,7 +1372,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           "FREQ: %s",         "10kHz..350MHz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "MODULATION: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
@@ -1376,7 +1384,7 @@ static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  "FREQ: %s",         "240MHz..960MHz"},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
-  { MT_FORM | MT_ADV_CALLBACK,   0,     "MODULATION: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
@@ -1596,6 +1604,9 @@ static const menuitem_t menu_settings3[] =
 {
   { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
   { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+  { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
+  { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
+  { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
@@ -1760,6 +1771,8 @@ static const menuitem_t menu_mode[] = {
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "%s to LOW out",     menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Cal. output: %s",   menu_sreffer_acb},
+//  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings3},
+
 #ifdef __ULTRA__
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
 #endif
@@ -2049,6 +2062,18 @@ set_numeric_value(void)
     break;
   case KM_MODULATION:
     set_modulation_frequency((int)uistat.value);
+    break;
+  case KM_COR_AM:
+    config.cor_am =(int)uistat.value;
+    config_save();
+    break;
+  case KM_COR_WFM:
+    config.cor_wfm =(int)uistat.value;
+    config_save();
+    break;
+  case KM_COR_NFM:
+    config.cor_nfm =(int)uistat.value;
+    config_save();
     break;
 
   }

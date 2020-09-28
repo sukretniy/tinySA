@@ -459,6 +459,10 @@ typedef struct config {
   uint16_t ham_color;
   uint16_t gridlines;
   uint16_t hambands;
+  int8_t    cor_am;
+  int8_t    cor_wfm;
+  int8_t    cor_nfm;
+  int8_t    dummy;
 //  uint8_t _reserved[22];
   uint32_t checksum;
 } config_t;
