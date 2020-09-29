@@ -1073,6 +1073,7 @@ void set_marker_frequency(int m, uint32_t f)
   if (m < 0 || !markers[m].enabled)
     return;
   int i = 1;
+  markers[m].mtype &= ~M_TRACKING;
   uint32_t s = (frequencies[1] - frequencies[0])/2;
   while (i< sweep_points - 1){
     if (frequencies[i]-s  <= f && f < frequencies[i]+s) {
@@ -1928,16 +1929,21 @@ VNA_SHELL_FUNCTION(cmd_marker)
       markers[active_marker].frequency = frequencies[i];
       goto display_marker;
     default:
-      // select active marker and move to index
+      // select active marker and move to index or frequency
       markers[t].enabled = TRUE;
-      int index = my_atoi(argv[1]);
-      markers[t].index = index;
-      markers[t].frequency = frequencies[index];
+      uint32_t value = my_atoui(argv[1]);
+      markers[t].mtype &= ~M_TRACKING;
       active_marker = t;
+      if (value > sweep_points)
+        set_marker_frequency(active_marker, value);
+      else {
+        markers[t].index = value;
+        markers[t].frequency = frequencies[value];
+      }
       return;
   }
  usage:
-  shell_printf("marker [n] [%s|{index}]\r\n", cmd_marker_list);
+  shell_printf("marker [n] [%s|{freq}|{index}]\r\n", cmd_marker_list);
 }
 
 VNA_SHELL_FUNCTION(cmd_touchcal)
