@@ -627,7 +627,7 @@ static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 
 
 // const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
-const char *menu_modulation_text[]={"None", "AM", "Narrow FM", "Wide FM", "External"};
+const char *menu_modulation_text[]={"None", "AM", "NFM", "WFM", "External"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_modulation_acb)
 {
@@ -651,7 +651,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
   (void)item;
   (void)data;
   if(b){
-    if (setting.modulation == MO_NONE)
+    if (setting.modulation == MO_NONE || setting.modulation == MO_EXTERNAL)
       b->param_1.text = menu_modulation_text[setting.modulation];
     else {
       plot_printf(uistat.text, sizeof uistat.text, "%5.3fkHz %s", setting.modulation_frequency / 1000.0, menu_modulation_text[setting.modulation]);
@@ -1363,7 +1363,7 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "Narrow FM", menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "Wide FM",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "External",  menu_modulation_acb},
-  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "10Hz..10kHz"},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "100Hz..6kHz"},
   { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };

@@ -351,7 +351,7 @@ void set_modulation(int m)
 
 void set_modulation_frequency(int f)
 {
-  if (20 <= f && f <= 20000) {
+  if (100 <= f && f <= 6000) {
     setting.modulation_frequency = f;
     dirty = true;
   }
@@ -1481,9 +1481,12 @@ int avoid_spur(int f)                   // find if this frequency should be avoi
 
 static int modulation_counter = 0;
 
-static const int am_modulation[5] =  { 4,0,1,5,7 };         // 5 step AM modulation
-static const int nfm_modulation[5] = { 0, 2, 1, -1, -2};    // 5 step narrow FM modulation
-static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wide FM modulation
+#define MODULATION_STEPS    8
+static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };         // AM modulation
+#define ND  4
+//static const int nfm_modulation[MODULATION_STEPS] = { 2*ND, 3*ND, 4*ND, 3*ND, 2*ND, ND, 0, ND};    // narrow FM modulation avoid sign changes
+static const int nfm_modulation[MODULATION_STEPS] = { 2*ND,(int)( 3.5*ND ), 4*ND, (int)(3.5*ND), 2*ND, (int)(0.5*ND), 0, (int)(0.5*ND)};    // narrow FM modulation avoid sign changes
+static const int wfm_modulation[MODULATION_STEPS] = { 0, 140, 190, 140, 0, -140, -190, -140 };   // wide FM modulation
 
 deviceRSSI_t age[POINTS_COUNT];     // Array used for 1: calculating the age of any max and 2: buffer for fast sweep RSSI values;
 
@@ -1604,7 +1607,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   }
   if (MODE_OUTPUT(setting.mode)) {
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
-      modulation_delay = 1000 * 200 / setting.modulation_frequency;     // 5 steps so 1MHz/5
+      modulation_delay = (1000000/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
       modulation_counter = 0;
       if (setting.modulation == MO_AM)          // -14 default
         modulation_delay += config.cor_am;
@@ -1634,7 +1637,7 @@ modulation_again:
 #endif
     }
     modulation_counter++;
-    if (modulation_counter == 5)  // 3dB modulation depth
+    if (modulation_counter == MODULATION_STEPS)  // 3dB modulation depth
       modulation_counter = 0;
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) {
       my_microsecond_delay(modulation_delay);
@@ -2952,10 +2955,10 @@ enum {
 };
 
 enum {
-  TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ
+  TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH
 };
 
-#define TEST_COUNT  17
+#define TEST_COUNT  19
 
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
@@ -2973,6 +2976,7 @@ static const struct {
  {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
  {TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90 },      // 3
  {TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90 },      // 4
+#define TEST_SILENCE 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
@@ -2980,13 +2984,19 @@ static const struct {
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_END,       0,              0,      0,      0,      0,      0},
+#define TEST_POWER  11
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,      0,      0},
+#define TEST_RBW    15
  {TC_MEASURE,   TP_30MHZ,       30,     1,      -20,    10,     -60 },      // 16 Measure RBW step time
  {TC_END,       0,              0,      0,      0,      0,      0},
+ {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
+ {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
 };
+
+
 
 enum {
   TS_WAITING, TS_PASS, TS_FAIL, TS_CRITICAL
@@ -3239,6 +3249,7 @@ common_silent:
 #endif
 
     goto common;
+  case TPH_30MHZ_SWITCH:
   case TPH_30MHZ:
     set_mode(M_HIGH);
     set_refer_output(0);
@@ -3247,6 +3258,10 @@ common_silent:
   switch(test_case[i].setup) {                // Prepare test conditions
   case TP_10MHZ_SWITCH:
     set_attenuation(32);                        // This forces the switch to transmit so isolation can be tested
+    break;
+  case TPH_30MHZ_SWITCH:
+    set_attenuation(0);
+    setting.atten_step = true;               // test high switch isolation
     break;
   default:
     set_attenuation(0.0);
@@ -3331,7 +3346,7 @@ void self_test(int test)
     float p2, p1, p;
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
-    test_prepare(4);
+    test_prepare(TEST_SILENCE);
     setting.auto_IF = false;
     setting.frequency_IF=433850000;
     setting.frequency_step = 30000;
@@ -3370,18 +3385,17 @@ void self_test(int test)
   } else if (test == 2) {                                   // Attenuator test
     in_selftest = true;
     reset_settings(M_LOW);
-    int i = 15;       // calibrate attenuator at 30 MHz;
     float reference_peak_level = 0;
-    test_prepare(i);
+    test_prepare(TEST_RBW);
     for (int j= 0; j < 50; j++ ) {
-      test_prepare(i);
+      test_prepare(TEST_RBW);
       set_RBW(300);
 
       set_attenuation((float)j);
       float summed_peak_level = 0;
       for (int k=0; k<10; k++) {
-        test_acquire(i);                        // Acquire test
-        test_validate(i);                       // Validate test
+        test_acquire(TEST_RBW);                        // Acquire test
+        test_validate(TEST_RBW);                       // Validate test
         summed_peak_level += peakLevel;
       }
       peakLevel = summed_peak_level / 10;
@@ -3396,15 +3410,13 @@ void self_test(int test)
     setting.auto_IF = false;
     setting.frequency_IF=433900000;
     ui_mode_normal();
-//    int i = 13;       // calibrate low mode power on 30 MHz;
-    int i = 15;       // calibrate low mode power on 30 MHz;
-    test_prepare(i);
+    test_prepare(TEST_RBW);
     setting.step_delay = 8000;
     for (int j= 0; j < SI4432_RBW_count; j++ ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
 // do_again:
-      test_prepare(i);
+      test_prepare(TEST_RBW);
       setting.spur_removal = 0;
 #if 1               // Disable for offset baseline scanning
       setting.step_delay_mode = SD_NORMAL;
@@ -3427,8 +3439,8 @@ void self_test(int test)
       else
         set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
 #endif
-      test_acquire(i);                        // Acquire test
-      test_validate(i);                       // Validate test
+      test_acquire(TEST_RBW);                        // Acquire test
+      test_validate(TEST_RBW);                       // Validate test
 //      if (test_value == 0) {
 //        setting.step_delay = setting.step_delay * 4 / 5;
 //        goto do_again;
@@ -3442,7 +3454,7 @@ void self_test(int test)
       shell_printf("Start level = %f, ",peakLevel);
 #if 1                                                                       // Enable for step delay tuning
       while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 0.5) {
-        test_prepare(i);
+        test_prepare(TEST_RBW);
         setting.spur_removal = 0;
         setting.step_delay_mode = SD_NORMAL;
         setting.step_delay = setting.step_delay * 4 / 5;
@@ -3452,8 +3464,8 @@ void self_test(int test)
           set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
 
 //        setting.repeat = 10;
-        test_acquire(i);                        // Acquire test
-        test_validate(i);                       // Validate test
+        test_acquire(TEST_RBW);                        // Acquire test
+        test_validate(TEST_RBW);                       // Validate test
         //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
       }
 
@@ -3467,7 +3479,7 @@ void self_test(int test)
       test_value = saved_peakLevel;
       if ((uint32_t)(setting.rbw_x10 * 1000) / (sweep_points) < 8000) {           // fast mode possible
         while (setting.offset_delay > 0 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
-          test_prepare(i);
+          test_prepare(TEST_RBW);
           setting.step_delay_mode = SD_FAST;
           setting.offset_delay /= 2;
           setting.spur_removal = 0;
@@ -3476,8 +3488,8 @@ void self_test(int test)
           else
             set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));     // Limit to 18MHz
 //          setting.repeat = 10;
-          test_acquire(i);                        // Acquire test
-          test_validate(i);                       // Validate test
+          test_acquire(TEST_RBW);                        // Acquire test
+          test_validate(TEST_RBW);                       // Validate test
           //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
         }
       }
@@ -3550,16 +3562,15 @@ void calibrate(void)
   in_selftest = true;
   reset_calibration();
   reset_settings(M_LOW);
-  int i = 11;       // calibrate low mode power on 30 MHz;
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
 //    set_RBW(power_rbw[j]);
 //    set_sweep_points(21);
-    test_prepare(i);
+    test_prepare(TEST_POWER);
     setting.step_delay_mode = SD_PRECISE;
     setting.agc = S_OFF;
     setting.lna = S_OFF;
-    test_acquire(i);                        // Acquire test
-    local_test_status = test_validate(i);                       // Validate test
+    test_acquire(TEST_POWER);                        // Acquire test
+    local_test_status = test_validate(TEST_POWER);                       // Validate test
 //    chThdSleepMilliseconds(1000);
     if (local_test_status != TS_PASS) {
       ili9341_set_foreground(BRIGHT_COLOR_RED);
@@ -3572,22 +3583,20 @@ void calibrate(void)
   }
 #if 0               // No high input calibration as CAL OUTPUT is unreliable
 
-  i = 12;           // Measure 270MHz in low mode
   set_RBW(100);
-  test_prepare(i);
-  test_acquire(i);                        // Acquire test
+  test_prepare(TEST_POWER+1);
+  test_acquire(TEST_POWER+1);                        // Acquire test
   float last_peak_level = peakLevel;
-  local_test_status = test_validate(i);                       // Validate test
+  local_test_status = test_validate(TEST_POWER+1);                       // Validate test
   chThdSleepMilliseconds(1000);
 
   config.high_level_offset = 0;           /// Preliminary setting
 
-  i = 13;           // Calibrate 270MHz in high mode
   for (int j = 0; j < CALIBRATE_RBWS; j++) {
     set_RBW(power_rbw[j]);
-    test_prepare(i);
-    test_acquire(i);                        // Acquire test
-    local_test_status = test_validate(i);                       // Validate test
+    test_prepare(TEST_POWER+2);
+    test_acquire(TEST_POWER+2);                        // Acquire test
+    local_test_status = test_validate(TEST_POWER+2);                       // Validate test
 //    if (local_test_status != TS_PASS) {                       // Do not validate due to variations in SI4432
 //      ili9341_set_foreground(BRIGHT_COLOR_RED);
 //      ili9341_drawstring_7x13("Calibration failed", 30, 120);
