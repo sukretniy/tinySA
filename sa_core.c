@@ -1483,7 +1483,7 @@ static int modulation_counter = 0;
 
 #define MODULATION_STEPS    8
 static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };         // AM modulation
-#define ND  4
+#define ND  12
 //static const int nfm_modulation[MODULATION_STEPS] = { 2*ND, 3*ND, 4*ND, 3*ND, 2*ND, ND, 0, ND};    // narrow FM modulation avoid sign changes
 static const int nfm_modulation[MODULATION_STEPS] = { 2*ND,(int)( 3.5*ND ), 4*ND, (int)(3.5*ND), 2*ND, (int)(0.5*ND), 0, (int)(0.5*ND)};    // narrow FM modulation avoid sign changes
 static const int wfm_modulation[MODULATION_STEPS] = { 0, 140, 190, 140, 0, -140, -190, -140 };   // wide FM modulation
