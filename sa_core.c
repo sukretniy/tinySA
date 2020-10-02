@@ -1483,10 +1483,23 @@ static int modulation_counter = 0;
 
 #define MODULATION_STEPS    8
 static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };         // AM modulation
-#define ND  12
-//static const int nfm_modulation[MODULATION_STEPS] = { 2*ND, 3*ND, 4*ND, 3*ND, 2*ND, ND, 0, ND};    // narrow FM modulation avoid sign changes
-static const int nfm_modulation[MODULATION_STEPS] = { 2*ND,(int)( 3.5*ND ), 4*ND, (int)(3.5*ND), 2*ND, (int)(0.5*ND), 0, (int)(0.5*ND)};    // narrow FM modulation avoid sign changes
-static const int wfm_modulation[MODULATION_STEPS] = { 0, 140, 190, 140, 0, -140, -190, -140 };   // wide FM modulation
+//
+//  Offset is 156.25Hz when below 600MHz and 312.5 when above.
+//
+#define LND  16   // Total NFM deviation is LND * 4 * 156.25 = 5kHz when below 600MHz or 600MHz - 434MHz
+#define HND  8
+#define LWD  96 // Total WFM deviation is LWD * 4 * 156.25 = 30kHz when below 600MHz
+#define HWD  48
+static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in NFM
+{
+ { 2*LND,(int)( 3.5*LND ), 4*LND, (int)(3.5*LND), 2*LND, (int)(0.5*LND), 0, (int)(0.5*LND)},
+ { 0*LWD,(int)( 1.5*LWD ), 2*LWD, (int)(1.5*LWD), 0*LWD, (int)(-1.5*LWD), (int)-2*LWD, (int)(-1.5*LWD)},
+ { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},
+ { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},
+};    // narrow FM modulation avoid sign changes
+
+static const int fm_modulation_offset[4] = { LND*625/2, 0, LND*625/2, 0};
+
 
 deviceRSSI_t age[POINTS_COUNT];     // Array used for 1: calculating the age of any max and 2: buffer for fast sweep RSSI values;
 
@@ -1499,6 +1512,7 @@ static systime_t sweep_elapsed = 0;                             // Time since fi
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
+  int modulation_index = 0;
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
     calculate_correction();                                                 // pre-calculate correction factor dividers to avoid float division
     apply_settings();                                                       // Initialize HW
@@ -1605,16 +1619,27 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     if (i == 0 || setting.frequency_step != 0)
       correct_RSSI_freq = get_frequency_correction(f);
   }
+  int *current_fm_modulation;
   if (MODE_OUTPUT(setting.mode)) {
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
       modulation_delay = (1000000/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
       modulation_counter = 0;
       if (setting.modulation == MO_AM)          // -14 default
         modulation_delay += config.cor_am;
-      if (setting.modulation == MO_WFM)         // -21 default
-        modulation_delay += config.cor_wfm;
-      if (setting.modulation == MO_NFM)         // -23 default
-        modulation_delay += config.cor_nfm;
+      else  {                               // must be FM
+        if (setting.modulation == MO_WFM) {         // -17 default
+          modulation_delay += config.cor_wfm;
+          modulation_index = 1;
+        } else {                                // must be NFM
+          modulation_delay += config.cor_nfm;  // -17 default
+          // modulation_index = 0; // default value
+        }
+        if ((setting.mode == M_GENLOW  && f > 480000000 - 433000000) ||
+            (setting.mode == M_GENHIGH  && f > 480000000) )
+          modulation_index += 2;
+        current_fm_modulation = (int *)fm_modulation[modulation_index];
+        f -= fm_modulation_offset[modulation_index];           // Shift output frequency
+      }
     }
   }
 modulation_again:
@@ -1631,9 +1656,9 @@ modulation_again:
     else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
 #ifdef __SI4432__
       SI4432_Sel = SI4432_LO ;
-      int offset = setting.modulation == MO_NFM ? nfm_modulation[modulation_counter] : wfm_modulation[modulation_counter] ;
-      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
-      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+      int offset = current_fm_modulation[modulation_counter];
+      SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ), ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+//      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, );  // Use frequency hopping channel for FM modulation
 #endif
     }
     modulation_counter++;

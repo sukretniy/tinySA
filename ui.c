@@ -190,9 +190,12 @@ static int btn_wait_release(void)
     uint16_t changed = last_button ^ cur_button;
     if (dt >= BUTTON_DOWN_LONG_TICKS && (cur_button & (1<<BIT_PUSH)))
       return EVT_BUTTON_DOWN_LONG;
-    else if (changed & (1<<BIT_PUSH)) // release
+    else if (changed & (1<<BIT_PUSH)) { // release
+      last_button = cur_button;
+      last_button_down_ticks = ticks;
       return EVT_BUTTON_SINGLE_CLICK;
-	    if (changed) {
+    }
+    if (changed) {
       // finished
       last_button = cur_button;
       last_button_down_ticks = ticks;
@@ -2229,7 +2232,7 @@ ui_process_menu(void)
   const menuitem_t *menu = menu_stack[menu_current_level];
   int status = btn_check();
   if (status != 0) {
-    if (status & EVT_BUTTON_SINGLE_CLICK) {
+    if (selection >=0 && status & EVT_BUTTON_SINGLE_CLICK) {
       menu_invoke(selection);
     } else {
       do {
@@ -2245,7 +2248,7 @@ ui_process_menu(void)
         }
         if (status & EVT_DOWN) {
           // skip menu item if disabled
-          while (menuDisabled(menu[selection-1].type))
+          while (selection > 0 && menuDisabled(menu[selection-1].type))
             selection--;
           // close menu if item is 0, else step down
           if (selection > 0)

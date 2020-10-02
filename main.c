@@ -867,8 +867,8 @@ config_t config = {
   .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
   .cor_am = -14,
-  .cor_wfm = -21,
-  .cor_nfm = -23,
+  .cor_wfm = -17,
+  .cor_nfm = -17,
 };
 
 //properties_t current_props;
