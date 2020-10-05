@@ -14,6 +14,8 @@
  * the Free Software Foundation, Inc., 51 Franklin Street,
  * Boston, MA 02110-1301, USA.
  */
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
 
 
 static int VFO = 0;
@@ -62,7 +64,7 @@ VNA_SHELL_FUNCTION(cmd_modulation )
     shell_printf("usage: modulation %s\r\n", cmd_mod);
     return;
   }
-  static const int cmd_mod_val[] = { MO_NONE, MO_AM_1kHz, MO_AM_10Hz, MO_NFM, MO_WFM, MO_EXTERNAL};
+  static const int cmd_mod_val[] = { MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
   int m = get_str_index(argv[1], cmd_mod);
   if (m<0)
      goto usage;
@@ -632,5 +634,21 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   setting.frequency_step = old_step;
   redraw_request = 0; // disable screen update in this mode
 }
+
+VNA_SHELL_FUNCTION(cmd_caloutput)
+{
+  static const char cmd[] = "off|30|15|10|4|3|2|1";
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: caloutput %s\r\n", cmd);
+    return;
+  }
+  int m = get_str_index(argv[0], cmd);
+  if (m != -1)
+    set_refer_output(m - 1);
+}
+
+
+#pragma GCC pop_options
 
 

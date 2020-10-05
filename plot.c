@@ -29,7 +29,8 @@
 
 
 #ifdef __SCROLL__
-uint16_t _grid_y = NOSCROLL_GRIDY;
+uint16_t _grid_y = (CHART_BOTTOM / NGRIDY);
+uint16_t graph_bottom = CHART_BOTTOM;
 static int waterfall = false;
 #endif
 static void cell_draw_marker_info(int x0, int y0);
@@ -41,6 +42,7 @@ void cell_draw_test_info(int x0, int y0);
 
 static int16_t grid_offset;
 static int16_t grid_width;
+static int32_t grid_span;
 
 int16_t area_width  = AREA_WIDTH_NORMAL;
 int16_t area_height; // initialized in main()  = AREA_HEIGHT_NORMAL;
@@ -126,24 +128,29 @@ void update_grid(void)
     fspan = setting.actual_sweep_time_us; // Time in uS
     fstart = 0;
   }
+  if (config.gridlines < 3)
+    config.gridlines = 6;
 
   while (gdigit > 100) {
     grid = 5 * gdigit;
-    if (fspan / grid >= 4)
+    if (fspan / grid >= config.gridlines)
       break;
     grid = 2 * gdigit;
-    if (fspan / grid >= 4)
+    if (fspan / grid >= config.gridlines)
       break;
     grid = gdigit;
-    if (fspan / grid >= 4)
+    if (fspan / grid >= config.gridlines)
       break;
     gdigit /= 10;
   }
 
+  grid_span = grid;
   grid_offset = (WIDTH) * ((fstart % grid) / 100) / (fspan / 100);
   grid_width = (WIDTH) * (grid / 100) / (fspan / 1000);
 
   force_set_markmap();
+  if (get_waterfall())
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
   redraw_request |= REDRAW_FREQUENCY;
 }
 
@@ -401,6 +408,51 @@ rectangular_grid(int x, int y)
 }
 #endif
 
+#ifdef __HAM_BAND__
+typedef const struct {
+  uint32_t start;
+  uint32_t stop;
+} ham_bands_t;
+
+const ham_bands_t ham_bands[] =
+{
+  {135700, 137800},
+  {472000, 479000},
+  {1800000, 2000000},
+  {3500000, 3800000},
+  {5250000, 5450000},
+  {7000000, 7200000},
+  {10100000, 10150000},
+  {14000000, 14350000},
+  {18068000, 18168000},
+  {21000000, 21450000},
+  {24890000, 24990000},
+  {28000000, 29700000},
+  {50000000, 52000000},
+  {70000000, 70500000},
+  {144000000, 146000000}
+};
+
+int ham_band(int x)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
+{
+  if (!config.hambands)
+    return false;
+  uint32_t f = frequencies[x];
+  int L = 0;
+  int R =  (sizeof ham_bands)/sizeof(uint32_t) - 1;
+  while (L <= R) {
+    int m = (L + R) / 2;
+    if (ham_bands[m].stop < f)
+      L = m + 1;
+    else if (ham_bands[m].start > f)
+      R = m - 1;
+    else
+       return true; // index is m
+  }
+  return false;
+}
+#endif
+
 static int
 rectangular_grid_x(int x)
 {
@@ -462,30 +514,31 @@ draw_on_strut(int v0, int d, int color)
 #define SQRT_50 ((float)7.0710678118654)
 #define LOG_10_SQRT_50 ((float)0.84948500216800)
 #define POW_30_20   ((float) 0.215443469)
-#define POW_SQRT    1.5234153789
+#define POW_SQRT    ((float)1.5234153789)
 /*
- * calculate log10(abs(gamma))
+ * calculate log10f(abs(gamma))
  */ 
+
 float
 value(const float v)
 {
   switch(setting.unit)
   {
   case U_DBMV:
-//    return v + 30.0 + 20.0*log10(sqrt(50));
+//    return v + 30.0 + 20.0*log10f(sqrt(50));
     return v + 30.0 + 20.0*LOG_10_SQRT_50;     //TODO convert constants to single float number as GCC compiler does runtime calculation
     break;
   case U_DBUV:
-//    return v + 90.0 + 20.0*log10(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
+//    return v + 90.0 + 20.0*log10f(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
     return v + 90.0 + 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
-//  return pow(10, (v-30.0)/20.0) * sqrt(50.0);
-    return pow(10, (v-30.0)/20.0)*SQRT_50;
+//  return pow(10, (v-30.0)/20.0) * sqrt((float)50.0);
+    return pow((float)10.0, (v-(float)30.0)/(float)20.0)*SQRT_50;  // Do NOT change pow to powf as this will increase the size
 //    return pow(10, v/20.0) * POW_SQRT;      //TODO there is an error in this calculation as the outcome is different from the not optimized version
     break;
   case U_WATT:
-    return pow(10, v/10.0)/1000.0;
+    return pow((float)10.0, v/10.0)/1000.0;  // Do NOT change pow to powf as this will increase the size
     break;
   }
 //  case U_DBM:
@@ -499,19 +552,19 @@ to_dBm(const float v)
   switch(setting.unit)
   {
   case U_DBMV:
-//  return v - 30.0 - 20.0*log10(sqrt(50));
+//  return v - 30.0 - 20.0*log10f(sqrt(50));
     return v - 30.0 - 20.0*LOG_10_SQRT_50;
     break;
   case U_DBUV:
-//  return v - 90.0 - 20.0*log10(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
+//  return v - 90.0 - 20.0*log10f(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
     return v - 90.0 - 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
-//  return log10( v / (sqrt(50.0))) * 20.0 + 30.0 ;
-    return log10( v / (SQRT_50)) * 20.0 + 30.0 ;
+//  return log10f( v / (sqrt(50.0))) * 20.0 + 30.0 ;
+    return log10f( v / (SQRT_50)) * 20.0 + 30.0 ;
     break;
   case U_WATT:
-    return log10(v*1000.0)*10.0;
+    return log10f(v*1000.0)*10.0;
     break;
   }
 //  case U_DBM:
@@ -842,7 +895,7 @@ trace_get_value_string_delta(int t, char *buf, int len, float array[POINTS_COUNT
 
 extern const char *unit_string[];
 
-static void trace_get_value_string(
+inline void trace_get_value_string(     // Only used at one place
     int t, char *buf, int len,
     int i, float coeff[POINTS_COUNT],
     int ri, int mtype,
@@ -912,7 +965,7 @@ static void trace_get_value_string(
 #endif
     v = value(coeff[i]);
     if (mtype & M_NOISE)
-      v = v - 10*log10(actual_rbw_x10*100.0);
+      v = v - 10*log10f(actual_rbw_x10*100.0);
     if (v == -INFINITY)
       plot_printf(buf, len, "-INF");
     else {
@@ -1510,6 +1563,11 @@ draw_cell(int m, int n)
   // Draw rectangular plot (40 system ticks for all screen calls)
   if (trace_type & RECTANGULAR_GRID_MASK) {
     for (x = 0; x < w; x++) {
+#ifdef __HAM_BAND__
+      if (ham_band(x+x0)) {
+        for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = config.ham_color;
+      }
+#endif
       if (rectangular_grid_x(x + x0)) {
         for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = c;
       }
@@ -2140,11 +2198,11 @@ draw_frequencies(void)
       plot_printf(buf2, sizeof(buf2), " TIME %.3Fs", (float)t/ONE_SECOND_TIME);
 
     } else if (FREQ_IS_STARTSTOP()) {
-      plot_printf(buf1, sizeof(buf1), " START %qHz", get_sweep_frequency(ST_START));
-      plot_printf(buf2, sizeof(buf2), " STOP %qHz", get_sweep_frequency(ST_STOP));
+      plot_printf(buf1, sizeof(buf1), " START %.3qHz    %5.1qHz/", get_sweep_frequency(ST_START), grid_span);
+      plot_printf(buf2, sizeof(buf2), " STOP %.3qHz", get_sweep_frequency(ST_STOP));
     } else if (FREQ_IS_CENTERSPAN()) {
-      plot_printf(buf1, sizeof(buf1), " CENTER %qHz", get_sweep_frequency(ST_CENTER));
-      plot_printf(buf2, sizeof(buf2), " SPAN %qHz", get_sweep_frequency(ST_SPAN));
+      plot_printf(buf1, sizeof(buf1), " CENTER %.3qHz    %5.1qHz/", get_sweep_frequency(ST_CENTER), grid_span);
+      plot_printf(buf2, sizeof(buf2), " SPAN %.3qHz", get_sweep_frequency(ST_SPAN));
     }
 #ifdef __VNA__
   } else {
@@ -2159,12 +2217,12 @@ draw_frequencies(void)
     buf1[0] = S_SARROW[0];
   if (uistat.lever_mode == LM_SPAN)
     buf2[0] = S_SARROW[0];
-  int p2 = FREQUENCIES_XPOS2;
-  if (FREQ_IS_CW()) {
-    p2 = LCD_WIDTH - FONT_MAX_WIDTH*strlen(buf2);
-  }
-  ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
+//  int p2 = FREQUENCIES_XPOS2;
+//  if (FREQ_IS_CW()) {
+    int p2 = LCD_WIDTH - FONT_MAX_WIDTH*strlen(buf2);
+//  }
   ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);
+  ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
 }
 #ifdef __VNA__
 void
@@ -2259,22 +2317,23 @@ static void update_waterfall(void){
   int i;
   int w_width = area_width < POINTS_COUNT ? area_width : POINTS_COUNT;
   // Waterfall only in 290 or 145 points
-  if (!(sweep_points == 290 || sweep_points == 145))
-    return;
-  for (i = HEIGHT_NOSCROLL-1; i >=HEIGHT_SCROLL+2; i--) {		// Scroll down
+//  if (!(sweep_points == 290 || sweep_points == 145))
+//    return;
+  for (i = CHART_BOTTOM-1; i >=graph_bottom+1; i--) {		// Scroll down
     ili9341_read_memory(OFFSETX, i  , w_width, 1, w_width*1, spi_buffer);
            ili9341_bulk(OFFSETX, i+1, w_width, 1);
   }
   index_t *index = trace_index[TRACE_ACTUAL];
-  for (i=0; i< w_width; i++) {			// Add new topline
+  int j = 0;
+  for (i=0; i< sweep_points; i++) {			// Add new topline
     uint16_t color;
 #ifdef _USE_WATERFALL_PALETTE
-    uint16_t y = _PALETTE_ALIGN(CELL_Y(index[i])); // should be always in range 0 - HEIGHT_SCROLL
+    uint16_t y = _PALETTE_ALIGN(CELL_Y(index[i])); // should be always in range 0 - graph_bottom
 //    y = (uint8_t)i;  // for test
     color = waterfall_palette[y];
 #elif 0
-    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
-    uint16_t ratio = (HEIGHT_SCROLL - y)*2;
+    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - graph_bottom
+    uint16_t ratio = (graph_bottom - y)*2;
 //    ratio = (i*2);    // Uncomment for testing the waterfall colors
     int16_t b = 255 - ratio;
     if (b > 255) b = 255;
@@ -2289,7 +2348,7 @@ static void update_waterfall(void){
     gamma_correct(b);
     color = RGB565(r, g, b);
 #else
-    uint16_t y = CELL_Y(index[i]); // should be always in range 0 - HEIGHT_SCROLL
+    uint16_t y = CELL_Y(index[i])* (graph_bottom == BIG_WATERFALL ? 2 : 1); // should be always in range 0 - graph_bottom *2 depends on height of scroll
     // Calculate gradient palette for range 0 .. 192
     // idx     r   g   b
     //   0 - 127   0   0
@@ -2309,37 +2368,38 @@ static void update_waterfall(void){
     else              color = RGB565(               0, 124-((y-160)*4), 252-((y-160)*4));
 
 #endif
-    if (sweep_points == 290)
-      spi_buffer[i] = color;
-    else {
-      spi_buffer[2*i  ] = color;
-      spi_buffer[2*i+1] = color;
+    while (j * sweep_points  < (i+1) * 290) {   // Scale waterfall to 290 points
+      spi_buffer[j++] = color;
     }
   }
-  ili9341_bulk(OFFSETX, HEIGHT_SCROLL+2, w_width, 1);
+  ili9341_bulk(OFFSETX, graph_bottom+1, w_width, 1);
 }
 
 int get_waterfall(void)
 {
   return(waterfall);
 }
+enum {W_OFF, W_SMALL, W_BIG};
 
 void
 toggle_waterfall(void)
 {
-  if (!waterfall) {
-    _grid_y = SCROLL_GRIDY;
-    ili9341_fill(OFFSETX, HEIGHT_SCROLL, LCD_WIDTH - OFFSETX, HEIGHT_NOSCROLL - HEIGHT_SCROLL, 0);
-    waterfall = true;
+  if (waterfall == W_OFF) {
     w_min = (int)min_level;
     w_max = (int)peakLevel;
     if (w_max < w_min + 20)
       w_max = w_min + 20;
-
+    graph_bottom = SMALL_WATERFALL;
+    waterfall = W_SMALL;
+  } else if (waterfall == W_SMALL) {
+    graph_bottom = BIG_WATERFALL;
+    waterfall = W_BIG;
   } else {
-    _grid_y = NOSCROLL_GRIDY;
-    waterfall = false;
+    graph_bottom = NO_WATERFALL;
+    waterfall = W_OFF;
   }
+  _grid_y = graph_bottom / NGRIDY;
+  ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
   request_to_redraw_grid();
 }
 void

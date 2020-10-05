@@ -190,9 +190,12 @@ static int btn_wait_release(void)
     uint16_t changed = last_button ^ cur_button;
     if (dt >= BUTTON_DOWN_LONG_TICKS && (cur_button & (1<<BIT_PUSH)))
       return EVT_BUTTON_DOWN_LONG;
-    else if (changed & (1<<BIT_PUSH)) // release
+    else if (changed & (1<<BIT_PUSH)) { // release
+      last_button = cur_button;
+      last_button_down_ticks = ticks;
       return EVT_BUTTON_SINGLE_CLICK;
-	    if (changed) {
+    }
+    if (changed) {
       // finished
       last_button = cur_button;
       last_button_down_ticks = ticks;
@@ -1928,6 +1931,8 @@ leave_ui_mode()
   // Erase bottom area (not redraw on area update)
   if (MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height > 0)
     ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height, DEFAULT_BG_COLOR);
+  if (get_waterfall())
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
   redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
 }
 
@@ -2081,6 +2086,7 @@ lever_move_marker(int status)
       }
       markers[active_marker].frequency = frequencies[markers[active_marker].index];
       redraw_marker(active_marker);
+      markers[active_marker].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
       step++;
     }
     status = btn_wait_release();
@@ -2226,7 +2232,7 @@ ui_process_menu(void)
   const menuitem_t *menu = menu_stack[menu_current_level];
   int status = btn_check();
   if (status != 0) {
-    if (status & EVT_BUTTON_SINGLE_CLICK) {
+    if (selection >=0 && status & EVT_BUTTON_SINGLE_CLICK) {
       menu_invoke(selection);
     } else {
       do {
@@ -2242,7 +2248,7 @@ ui_process_menu(void)
         }
         if (status & EVT_DOWN) {
           // skip menu item if disabled
-          while (menuDisabled(menu[selection-1].type))
+          while (selection > 0 && menuDisabled(menu[selection-1].type))
             selection--;
           // close menu if item is 0, else step down
           if (selection > 0)
@@ -2492,7 +2498,7 @@ touch_pickup_marker(void)
         // select trace
         uistat.current_trace = t;
         select_lever_mode(LM_MARKER);
-
+        markers[m].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
         // drag marker until release
         drag_marker(t, m);
         return TRUE;

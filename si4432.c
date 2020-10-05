@@ -254,6 +254,22 @@ void SI4432_Write_Byte(uint8_t ADR, uint8_t DATA )
 //  SI4432_guard = 0;
 }
 
+void SI4432_Write_2_Byte(uint8_t ADR, uint8_t DATA1, uint8_t DATA2)
+{
+//  if (SI4432_guard)
+//    while(1) ;
+//  SI4432_guard = 1;
+//  SPI2_CLK_LOW;
+  palClearPad(GPIOC, SI_nSEL[SI4432_Sel]);
+//  chThdSleepMicroseconds(SELECT_DELAY);
+  ADR |= 0x80 ; // RW = 1
+  shiftOut( ADR );
+  shiftOut( DATA1 );
+  shiftOut( DATA2 );
+  palSetPad(GPIOC, SI_nSEL[SI4432_Sel]);
+//  SI4432_guard = 0;
+}
+
 void SI4432_Write_3_Byte(uint8_t ADR, uint8_t DATA1, uint8_t DATA2, uint8_t DATA3 )
 {
   set_SPI_mode(SPI_MODE_SI);

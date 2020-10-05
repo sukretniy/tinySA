@@ -38,11 +38,12 @@
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
 #define __AUDIO__
+#define __HAM_BAND__
 //#define __ULTRA__             // Add harmonics mode on low input.
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
+#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 #define __SI4463__
-
 /*
  * main.c
  */
@@ -133,9 +134,10 @@ void update_frequencies(void);
 void set_sweep_frequency(int type, uint32_t frequency);
 uint32_t get_sweep_frequency(int type);
 void my_microsecond_delay(int t);
-double my_atof(const char *p);
+float my_atof(const char *p);
 int shell_printf(const char *fmt, ...);
 
+void set_marker_frequency(int m, uint32_t f);
 void toggle_sweep(void);
 void toggle_mute(void);
 void load_default_properties(void);
@@ -148,7 +150,7 @@ enum {
 };
 
 enum {
-  MO_NONE, MO_AM_1kHz, MO_AM_10Hz, MO_NFM, MO_WFM, MO_EXTERNAL,
+  MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL,
 };
 
 #define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
@@ -175,6 +177,7 @@ extern const char *info_about[];
 
 // ------------------------------- sa_core.c ----------------------------------
 void reset_settings(int);
+void update_min_max_freq(void);
 //void ui_process_touch(void);
 void SetPowerGrid(int);
 void SetRefLevel(float);
@@ -235,6 +238,7 @@ void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
 void set_10mhz(uint32_t);
 void set_modulation(int);
+void set_modulation_frequency(int);
 //extern int setting.modulation;
 void set_measurement(int);
 // extern int settingSpeed;
@@ -288,10 +292,13 @@ extern void tlv320aic3204_select(int channel);
 #ifdef __SCROLL__
 extern  uint16_t _grid_y;
 #define GRIDY  _grid_y
-#define HEIGHT_SCROLL     250
-#define HEIGHT_NOSCROLL   310
+extern uint16_t graph_bottom;
+#define BIG_WATERFALL   90
+#define SMALL_WATERFALL 180
+#define NO_WATERFALL    CHART_BOTTOM
+#define CHART_BOTTOM   310
 #define SCROLL_GRIDY      (HEIGHT_SCROLL / NGRIDY)
-#define NOSCROLL_GRIDY    (HEIGHT_NOSCROLL / NGRIDY)
+#define NOSCROLL_GRIDY    (CHART_BOTTOM / NGRIDY)
 #else
 #define GRIDY             (310 / NGRIDY)
 #endif
@@ -436,6 +443,11 @@ typedef struct trace {
 #define FREQ_MODE_CENTER_SPAN   0x1
 #define FREQ_MODE_DOTTED_GRID   0x2
 
+// Connection flag
+#define _MODE_CONNECTION_MASK  0x04
+#define _MODE_SERIAL           0x04
+#define _MODE_USB              0x00
+
 typedef struct config {
   int32_t magic;
   uint16_t dac_value;
@@ -444,7 +456,8 @@ typedef struct config {
   uint16_t menu_active_color;
   uint16_t trace_color[TRACES_MAX];
   int16_t  touch_cal[4];
-  int8_t   freq_mode;
+  int8_t   _mode;
+  uint32_t _serial_speed;
 #ifdef __VNA__
   uint32_t harmonic_freq_threshold;
 #endif
@@ -454,6 +467,13 @@ typedef struct config {
   uint32_t correction_frequency[CORRECTION_POINTS];
   float    correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
+  uint16_t ham_color;
+  uint16_t gridlines;
+  uint16_t hambands;
+  int8_t    cor_am;
+  int8_t    cor_wfm;
+  int8_t    cor_nfm;
+  int8_t    dummy;
 //  uint8_t _reserved[22];
   uint32_t checksum;
 } config_t;
@@ -470,6 +490,20 @@ float get_trace_scale(int t);
 float get_trace_refpos(int t);
 const char *get_trace_typename(int t);
 extern int in_selftest;
+
+//
+// Shell config functions and macros
+// Serial connect definitions not used if Serial mode disabled
+// Minimum speed - USART_SPEED_MULTIPLIER
+// Maximum speed - USART_SPEED_MULTIPLIER * 256
+// Can be: 19200, 38400, 57600, 76800, 115200, 230400, 460800, 921600, 1843200, 3686400
+#define USART_SPEED_MULTIPLIER          19200
+#define USART_SPEED_SETTING(speed)     ((speed)/USART_SPEED_MULTIPLIER - 1)
+#define USART_GET_SPEED(idx)           (((idx) + 1) * USART_SPEED_MULTIPLIER)
+void shell_update_speed(void);
+void shell_reset_console(void);
+int  shell_serial_printf(const char *fmt, ...);
+
 
 #ifdef __VNA
 void set_electrical_delay(float picoseconds);
@@ -559,6 +593,7 @@ extern volatile uint8_t redraw_request;
 #define DARK_GREY                   RGB565(140,140,140)
 #define LIGHT_GREY                  RGB565(220,220,220)
 #define DEFAULT_GRID_COLOR          RGB565(128,128,128)
+#define DEFAULT_HAM_COLOR           RGB565(80,80,80)
 #define DEFAULT_GRID_VALUE_COLOR    RGB565(196,196,196)
 #define DEFAULT_MENU_COLOR          RGB565(255,255,255)
 #define DEFAULT_MENU_TEXT_COLOR     RGB565(  0,  0,  0)
@@ -683,6 +718,7 @@ typedef struct setting
   int offset_delay;
   int fast_speedup;
   float normalize_level;     // Level to set normalize to, zero if not doing anything
+  int modulation_frequency;
   uint32_t checksum;
 }setting_t;
 
@@ -714,7 +750,7 @@ extern uint32_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
 extern const char * const unit_scale_text[];
 
-#if 1
+#if 1   // Still sufficient flash
 // Flash save area - flash7  : org = 0x0801B000, len = 20k in *.ld file
 // 2k - for config save
 // 9 * 2k for setting_t + stored trace
@@ -744,6 +780,7 @@ extern const char * const unit_scale_text[];
 #define SAVE_PROP_CONFIG_3_ADDR 0x0801E000
 #define SAVE_PROP_CONFIG_4_ADDR 0x0801e800
 #endif
+
 #if 0
 typedef struct properties {
   uint32_t magic;
@@ -945,11 +982,13 @@ extern uint16_t actual_rbw_x10;
 
 int get_waterfall(void);
 void toggle_tracking(void);
+void toggle_hambands(void);
 void reset_calibration(void);
 void set_reflevel(float);
 void set_offset(float);
 void set_unit(int);
 void set_switches(int);
+void set_gridlines(int);
 void set_trigger_level(float);
 void set_trigger(int);
 void update_rbw(void);
@@ -964,7 +1003,7 @@ uint32_t calc_min_sweep_time_us(void);
 pureRSSI_t perform(bool b, int i, uint32_t f, int e);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM
 };
 
 enum {

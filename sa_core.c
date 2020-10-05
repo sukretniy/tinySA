@@ -16,9 +16,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-//#ifdef __SI4432__
-#include "SI4432.h"		// comment out for simulation
-//#endif
+#ifdef __SI4432__
+#include "si4432.h"		// comment out for simulation
+#endif
 #include "stdlib.h"
 
 #pragma GCC push_options
@@ -62,10 +62,44 @@ this is a very long string only used to fill memory so I know when the memory is
 ;
 #endif
 
+void update_min_max_freq(void)
+{
+  switch(setting.mode) {
+  case M_LOW:
+    minFreq = 0;
+    maxFreq = 350000000;
+    break;
+#ifdef __ULTRA__
+  case M_ULTRA:
+    minFreq = 674000000;
+    maxFreq = 4300000000;
+    break;
+#endif
+  case M_GENLOW:
+    minFreq = 0;
+    maxFreq = 350000000;
+    break;
+  case M_HIGH:
+#ifdef __ULTRA_SA__
+    minFreq = 00000000;
+    maxFreq = 2000000000;
+#else
+    minFreq = 24*setting_frequency_10mhz;
+    maxFreq = 96*setting_frequency_10mhz;
+#endif
+    break;
+  case M_GENHIGH:
+    minFreq = 240000000;
+    maxFreq = 960000000;
+    break;
+  }
+}
+
 void reset_settings(int m)
 {
 //  strcpy((char *)spi_buffer, dummy);
   setting.mode = m;
+  update_min_max_freq();
   sweep_mode |= SWEEP_ENABLE;
   setting.unit_scale_index = 0;
   setting.unit_scale = 1;
@@ -86,6 +120,7 @@ void reset_settings(int m)
   setting.lna = S_AUTO_OFF;
   setting.tracking = false;
   setting.modulation = MO_NONE;
+  setting.modulation_frequency = 1000;
   setting.step_delay = 0;
   setting.offset_delay = 0;
   setting.step_delay_mode = SD_NORMAL;
@@ -127,18 +162,14 @@ void reset_settings(int m)
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
-    minFreq = 674000000;
-    maxFreq = 4300000000;
-    set_sweep_frequency(ST_START, (uint32_t) minFreq);
-    set_sweep_frequency(ST_STOP, (uint32_t) maxFreq);
+    set_sweep_frequency(ST_START, minFreq);
+    set_sweep_frequency(ST_STOP, maxFreq);
     setting.attenuate = 0;
     setting.sweep_time_us = 0;
     break;
 #endif
   case M_GENLOW:
     setting.drive=8;
-    minFreq = 0;
-    maxFreq = 350000000;
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
@@ -157,8 +188,6 @@ void reset_settings(int m)
     break;
   case M_GENHIGH:
     setting.drive=8;
-    minFreq = 240000000;
-    maxFreq = 960000000;
     set_sweep_frequency(ST_CENTER, 300000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
@@ -203,7 +232,10 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
 void set_refer_output(int v)
 {
   setting.refer = v;
-  dirty = true;
+#ifdef __SI4432__
+  SI4432_SetReference(setting.refer);
+#endif
+//  dirty = true;
 }
 
 void set_decay(int d)
@@ -220,6 +252,16 @@ void set_noise(int d)
     return;
   setting.noise = d;
   dirty = true;
+}
+
+void set_gridlines(int d)
+{
+  if (d < 3 || d > 20)
+    return;
+  config.gridlines = d;
+  config_save();
+  dirty = true;
+  update_grid();
 }
 
 void set_measurement(int m)
@@ -292,6 +334,12 @@ void toggle_mute(void)
   dirty = true;
 }
 
+void toggle_hambands(void)
+{
+  config.hambands = !config.hambands;
+  dirty = true;
+}
+
 void toggle_below_IF(void)
 {
   if (S_IS_AUTO(setting.below_IF ))
@@ -307,6 +355,14 @@ void set_modulation(int m)
 {
   setting.modulation = m;
   dirty = true;
+}
+
+void set_modulation_frequency(int f)
+{
+  if (100 <= f && f <= 6000) {
+    setting.modulation_frequency = f;
+    dirty = true;
+  }
 }
 
 void set_repeat(int r)
@@ -1373,6 +1429,7 @@ search_maximum(int m, int center, int span)
     }
   }
   markers[m].index = max_index[0];
+  markers[m].frequency = frequencies[markers[m].index];
   return found;
 }
 
@@ -1479,9 +1536,25 @@ int avoid_spur(int f)                   // find if this frequency should be avoi
 
 static int modulation_counter = 0;
 
-static const int am_modulation[5] =  { 4,0,1,5,7 };         // 5 step AM modulation
-static const int nfm_modulation[5] = { 0, 2, 1, -1, -2};    // 5 step narrow FM modulation
-static const int wfm_modulation[5] = { 0, 190, 118, -118, -190 };   // 5 step wide FM modulation
+#define MODULATION_STEPS    8
+static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };         // AM modulation
+//
+//  Offset is 156.25Hz when below 600MHz and 312.5 when above.
+//
+#define LND  16   // Total NFM deviation is LND * 4 * 156.25 = 5kHz when below 600MHz or 600MHz - 434MHz
+#define HND  8
+#define LWD  96 // Total WFM deviation is LWD * 4 * 156.25 = 30kHz when below 600MHz
+#define HWD  48
+static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in NFM
+{
+ { 2*LND,(int)( 3.5*LND ), 4*LND, (int)(3.5*LND), 2*LND, (int)(0.5*LND), 0, (int)(0.5*LND)},
+ { 0*LWD,(int)( 1.5*LWD ), 2*LWD, (int)(1.5*LWD), 0*LWD, (int)(-1.5*LWD), (int)-2*LWD, (int)(-1.5*LWD)},
+ { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},
+ { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},
+};    // narrow FM modulation avoid sign changes
+
+static const int fm_modulation_offset[4] = { LND*625/2, 0, LND*625/2, 0};
+
 
 deviceRSSI_t age[POINTS_COUNT];     // Array used for 1: calculating the age of any max and 2: buffer for fast sweep RSSI values;
 
@@ -1493,6 +1566,8 @@ static systime_t sweep_elapsed = 0;                             // Time since fi
 
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
+  int modulation_delay = 0;
+  int modulation_index = 0;
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
     calculate_correction();                                                 // pre-calculate correction factor dividers to avoid float division
     apply_settings();                                                       // Initialize HW
@@ -1532,7 +1607,6 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
               + get_attenuation()
               - setting.offset);
     }
-
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
     // Update grid and status after
@@ -1595,39 +1669,59 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     else
       auto_set_AGC_LNA(true, 0);
   }
+  // Calculate the RSSI correction for later use
+  if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
+    if (i == 0 || setting.frequency_step != 0)
+      correct_RSSI_freq = get_frequency_correction(f);
+  }
+  int *current_fm_modulation;
+  if (MODE_OUTPUT(setting.mode)) {
+    if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
+      modulation_delay = (1000000/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
+      modulation_counter = 0;
+      if (setting.modulation == MO_AM)          // -14 default
+        modulation_delay += config.cor_am;
+      else  {                               // must be FM
+        if (setting.modulation == MO_WFM) {         // -17 default
+          modulation_delay += config.cor_wfm;
+          modulation_index = 1;
+        } else {                                // must be NFM
+          modulation_delay += config.cor_nfm;  // -17 default
+          // modulation_index = 0; // default value
+        }
+        if ((setting.mode == M_GENLOW  && f > 480000000 - 433000000) ||
+            (setting.mode == M_GENHIGH  && f > 480000000) )
+          modulation_index += 2;
+        current_fm_modulation = (int *)fm_modulation[modulation_index];
+        f -= fm_modulation_offset[modulation_index];           // Shift output frequency
+      }
+    }
+  }
 modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
-    if (setting.modulation == MO_AM_1kHz || setting.modulation == MO_AM_10Hz) {               // AM modulation
-      int p = setting.attenuate * 2 + am_modulation[modulation_counter++];
+    if (setting.modulation == MO_AM) {               // AM modulation
+      int p = setting.attenuate * 2 + am_modulation[modulation_counter];
       if      (p>63) p = 63;
       else if (p< 0) p =  0;
 #ifdef __PE4302__
       PE4302_Write_Byte(p);
 #endif
-      if (modulation_counter == 5)  // 3dB modulation depth
-        modulation_counter = 0;
-      my_microsecond_delay(setting.modulation == MO_AM_10Hz ? 20000 : 180);
     }
     else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
 #ifdef __SI4432__
       SI4432_Sel = SI4432_LO ;
-      int offset = setting.modulation == MO_NFM ? nfm_modulation[modulation_counter] : wfm_modulation[modulation_counter] ;
-      SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ));  // Use frequency hopping channel for FM modulation
-      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+      int offset = current_fm_modulation[modulation_counter];
+      SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ), ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
+//      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, );  // Use frequency hopping channel for FM modulation
 #endif
-      modulation_counter++;
-      if (modulation_counter == 5)  // 3dB modulation depth
-        modulation_counter = 0;
-      my_microsecond_delay(200);
-      //      chThdSleepMicroseconds(200);
     }
-  }
-
-  // Calculate the RSSI correction for later use
-  if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
-    if (i == 0 || setting.frequency_step != 0)
-      correct_RSSI_freq = get_frequency_correction(f);
+    modulation_counter++;
+    if (modulation_counter == MODULATION_STEPS)  // 3dB modulation depth
+      modulation_counter = 0;
+    if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) {
+      my_microsecond_delay(modulation_delay);
+    }
   }
 
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
@@ -1794,9 +1888,10 @@ modulation_again:
     if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
       if (break_on_operation && operation_requested)          // break subscanning if requested
         return(0);         // abort
-      if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) // if in output mode with modulation
+      if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) { // if in output mode with modulation
+        i = 1;              // Everything set so skip LO setting
         goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
-
+      }
       return(0);
     }
     // ---------------- Prepare RSSI ----------------------
@@ -1959,7 +2054,7 @@ sweep_again:                                // stay in sweep loop when output mo
       scandirty = false;
     if (break_on_operation && operation_requested) {                        // break loop if needed
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);              // Erase progress bar
+        ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);              // Erase progress bar
       }
       return false;
     }
@@ -1999,8 +2094,8 @@ sweep_again:                                // stay in sweep loop when output mo
 
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
     	int pos = i * (WIDTH+1) / sweep_points;
-        ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, pos, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
-        ili9341_fill(OFFSETX+pos, HEIGHT_NOSCROLL+1, WIDTH-pos, 1, 0);
+        ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
+        ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1, 0);
       }
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------
@@ -2198,7 +2293,7 @@ sweep_again:                                // stay in sweep loop when output mo
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     int delta = 0;
-    int actual_max_level = (int) (actual_t[max_index[0]] - get_attenuation());
+    int actual_max_level = (max_index[0] == 0 ? -100 :(int) (actual_t[max_index[0]] - get_attenuation()) ); // If no max found reduce attenuation
     if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate > 0) {
       delta = - (AUTO_TARGET_LEVEL - actual_max_level);
     } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate < 30) {
@@ -2354,27 +2449,51 @@ sweep_again:                                // stay in sweep loop when output mo
       }
       uint32_t lf = frequencies[l];
       uint32_t rf = frequencies[r];
+      markers[0].frequency = lf;
+      markers[1].frequency = rf;
+
       markers[2].enabled = search_maximum(2, lf - (rf - lf), 12);
       markers[3].enabled = search_maximum(3, rf + (rf - lf), 12);
     } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
       markers[1].index =  markers[0].index + (setting.mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
+      markers[1].frequency = frequencies[markers[1].index];
     } else if (setting.measurement == M_STOP_BAND  && markers[0].index > 10) {      // -------------Stop band measurement
       markers[1].index =  marker_search_left_min(markers[0].index);
       if (markers[1].index < 0) markers[1].index = 0;
+      markers[1].frequency = frequencies[markers[1].index];
       markers[2].index =  marker_search_right_min(markers[0].index);
       if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
+      markers[2].frequency = frequencies[markers[2].index];
     } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {      // ----------------Pass band measurement
       int t = markers[0].index;
       float v = actual_t[t];
-      while (t > 0 && actual_t[t] > v - 3.0)                                        // Find left -3dB point
+      while (t > 0 && actual_t[t] > v - 6.0)                                        // Find left -3dB point
         t --;
-      if (t > 0)
+      if (t > 0) {
         markers[1].index = t;
+        markers[1].frequency = frequencies[t];
+      }
       t = markers[0].index;
-      while (t < setting._sweep_points - 1 && actual_t[t] > v - 3.0)                // find right -3dB point
+      while (t < setting._sweep_points - 1 && actual_t[t] > v - 6.0)                // find right -3dB point
         t ++;
-      if (t < setting._sweep_points - 1 )
+      if (t < setting._sweep_points - 1 ) {
         markers[2].index = t;
+        markers[2].frequency = frequencies[t];
+      }
+    } else if (setting.measurement == M_AM) {      // ----------------AM measurement
+      if (S_IS_AUTO(setting.agc )) {
+        if (actual_t[max_index[0]]  - get_attenuation() > -20 ) {
+          setting.agc = S_AUTO_OFF;
+          setting.lna = S_AUTO_OFF;
+        } else if (actual_t[max_index[0]]  - get_attenuation() < -45 ) {
+          setting.agc = S_AUTO_ON;
+          setting.lna = S_AUTO_ON;
+        } else {
+          setting.agc = S_AUTO_OFF;
+          setting.lna = S_AUTO_ON;
+        }
+        set_AGC_LNA();
+      }
     }
 
 #endif
@@ -2437,7 +2556,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
-  ili9341_fill(OFFSETX, HEIGHT_NOSCROLL+1, WIDTH, 1, 0);
+  ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);
 
   palSetPad(GPIOC, GPIOC_LED);
   return true;
@@ -2632,7 +2751,7 @@ void draw_cal_status(void)
     rounding  = true;
   const char * const unit = unit_string[setting.unit];
 
-  ili9341_fill(0, 0, OFFSETX, HEIGHT_NOSCROLL, 0x0000);
+  ili9341_fill(0, 0, OFFSETX, CHART_BOTTOM, 0x0000);
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
     return;
   }
@@ -2925,24 +3044,24 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
 //  ili9341_set_background(DEFAULT_BG_COLOR);
-
-  // Bottom level
-  y = area_height - 8 + OFFSETY;
-  if (rounding)
-    plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
-  else
-    plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
-//  buf[5]=0;
-  if (level_is_calibrated())
-    if (setting.auto_reflevel)
-      color = DEFAULT_FG_COLOR;
+  if (!get_waterfall()) {               // Do not draw bottom level if in waterfall mode
+    // Bottom level
+    y = area_height - 8 + OFFSETY;
+    if (rounding)
+      plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
     else
-      color = BRIGHT_COLOR_GREEN;
-  else
-    color = BRIGHT_COLOR_RED;
-  ili9341_set_foreground(color);
-  ili9341_drawstring(buf, x, y);
-
+      plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
+    //  buf[5]=0;
+    if (level_is_calibrated())
+      if (setting.auto_reflevel)
+        color = DEFAULT_FG_COLOR;
+      else
+        color = BRIGHT_COLOR_GREEN;
+    else
+      color = BRIGHT_COLOR_RED;
+    ili9341_set_foreground(color);
+    ili9341_drawstring(buf, x, y);
+  }
 }
 
 // -------------------- Self testing -------------------------------------------------
@@ -2952,10 +3071,10 @@ enum {
 };
 
 enum {
-  TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ
+  TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH
 };
 
-#define TEST_COUNT  17
+#define TEST_COUNT  19
 
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
@@ -2973,6 +3092,7 @@ static const struct {
  {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
  {TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90 },      // 3
  {TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90 },      // 4
+#define TEST_SILENCE 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
@@ -2980,13 +3100,19 @@ static const struct {
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_END,       0,              0,      0,      0,      0,      0},
+#define TEST_POWER  11
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,      0,      0},
+#define TEST_RBW    15
  {TC_MEASURE,   TP_30MHZ,       30,     1,      -20,    10,     -60 },      // 16 Measure RBW step time
  {TC_END,       0,              0,      0,      0,      0,      0},
+ {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
+ {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
 };
+
+
 
 enum {
   TS_WAITING, TS_PASS, TS_FAIL, TS_CRITICAL
@@ -3232,11 +3358,14 @@ common_silent:
     set_mode(M_LOW);
     maxFreq = 520000000;            // needed to measure the LPF rejection
     set_refer_output(0);
+    dirty = true;
  //   set_step_delay(1);                      // Do not set !!!!!
 #ifdef __SPUR__
     setting.spur_removal = 1;
 #endif
+
     goto common;
+  case TPH_30MHZ_SWITCH:
   case TPH_30MHZ:
     set_mode(M_HIGH);
     set_refer_output(0);
@@ -3245,6 +3374,10 @@ common_silent:
   switch(test_case[i].setup) {                // Prepare test conditions
   case TP_10MHZ_SWITCH:
     set_attenuation(32);                        // This forces the switch to transmit so isolation can be tested
+    break;
+  case TPH_30MHZ_SWITCH:
+    set_attenuation(0);
+    setting.atten_step = true;               // test high switch isolation
     break;
   default:
     set_attenuation(0.0);
@@ -3329,7 +3462,7 @@ void self_test(int test)
     float p2, p1, p;
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
-    test_prepare(4);
+    test_prepare(TEST_SILENCE);
     setting.auto_IF = false;
     setting.frequency_IF=433000000;
     setting.frequency_step = 30000;
@@ -3368,18 +3501,17 @@ void self_test(int test)
   } else if (test == 2) {                                   // Attenuator test
     in_selftest = true;
     reset_settings(M_LOW);
-    int i = 15;       // calibrate attenuator at 30 MHz;
     float reference_peak_level = 0;
-    test_prepare(i);
+    test_prepare(TEST_RBW);
     for (int j= 0; j < 50; j++ ) {
-      test_prepare(i);
+      test_prepare(TEST_RBW);
       set_RBW(300);
 
       set_attenuation((float)j);
       float summed_peak_level = 0;
       for (int k=0; k<10; k++) {
-        test_acquire(i);                        // Acquire test
-        test_validate(i);                       // Validate test
+        test_acquire(TEST_RBW);                        // Acquire test
+        test_validate(TEST_RBW);                       // Validate test
         summed_peak_level += peakLevel;
       }
       peakLevel = summed_peak_level / 10;
@@ -3394,15 +3526,13 @@ void self_test(int test)
     setting.auto_IF = false;
     setting.frequency_IF=433900000;
     ui_mode_normal();
-//    int i = 13;       // calibrate low mode power on 30 MHz;
-    int i = 15;       // calibrate low mode power on 30 MHz;
-    test_prepare(i);
+    test_prepare(TEST_RBW);
     setting.step_delay = 8000;
     for (int j= 0; j < SI4432_RBW_count; j++ ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
 // do_again:
-      test_prepare(i);
+      test_prepare(TEST_RBW);
       setting.spur_removal = 0;
 #if 1               // Disable for offset baseline scanning
       setting.step_delay_mode = SD_NORMAL;
@@ -3428,8 +3558,8 @@ void self_test(int test)
       else
         set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
 #endif
-      test_acquire(i);                        // Acquire test
-      test_validate(i);                       // Validate test
+      test_acquire(TEST_RBW);                        // Acquire test
+      test_validate(TEST_RBW);                       // Validate test
 //      if (test_value == 0) {
 //        setting.step_delay = setting.step_delay * 4 / 5;
 //        goto do_again;
@@ -3443,7 +3573,7 @@ void self_test(int test)
       shell_printf("Start level = %f, ",peakLevel);
 #if 1                                                                       // Enable for step delay tuning
       while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 0.5) {
-        test_prepare(i);
+        test_prepare(TEST_RBW);
         setting.spur_removal = 0;
         setting.step_delay_mode = SD_NORMAL;
         setting.step_delay = setting.step_delay * 4 / 5;
@@ -3453,8 +3583,8 @@ void self_test(int test)
           set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
 
 //        setting.repeat = 10;
-        test_acquire(i);                        // Acquire test
-        test_validate(i);                       // Validate test
+        test_acquire(TEST_RBW);                        // Acquire test
+        test_validate(TEST_RBW);                       // Validate test
         //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
       }
 
@@ -3468,7 +3598,7 @@ void self_test(int test)
       test_value = saved_peakLevel;
       if ((uint32_t)(setting.rbw_x10 * 1000) / (sweep_points) < 8000) {           // fast mode possible
         while (setting.offset_delay > 0 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
-          test_prepare(i);
+          test_prepare(TEST_RBW);
           setting.step_delay_mode = SD_FAST;
           setting.offset_delay /= 2;
           setting.spur_removal = 0;
@@ -3477,8 +3607,8 @@ void self_test(int test)
           else
             set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));     // Limit to 18MHz
 //          setting.repeat = 10;
-          test_acquire(i);                        // Acquire test
-          test_validate(i);                       // Validate test
+          test_acquire(TEST_RBW);                        // Acquire test
+          test_validate(TEST_RBW);                       // Validate test
           //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
         }
       }
@@ -3551,16 +3681,15 @@ void calibrate(void)
   in_selftest = true;
   reset_calibration();
   reset_settings(M_LOW);
-  int i = 11;       // calibrate low mode power on 30 MHz;
   for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
 //    set_RBW(power_rbw[j]);
 //    set_sweep_points(21);
-    test_prepare(i);
+    test_prepare(TEST_POWER);
     setting.step_delay_mode = SD_PRECISE;
     setting.agc = S_OFF;
     setting.lna = S_OFF;
-    test_acquire(i);                        // Acquire test
-    local_test_status = test_validate(i);                       // Validate test
+    test_acquire(TEST_POWER);                        // Acquire test
+    local_test_status = test_validate(TEST_POWER);                       // Validate test
 //    chThdSleepMilliseconds(1000);
     if (local_test_status != TS_PASS) {
       ili9341_set_foreground(BRIGHT_COLOR_RED);
@@ -3573,22 +3702,20 @@ void calibrate(void)
   }
 #if 0               // No high input calibration as CAL OUTPUT is unreliable
 
-  i = 12;           // Measure 270MHz in low mode
   set_RBW(100);
-  test_prepare(i);
-  test_acquire(i);                        // Acquire test
+  test_prepare(TEST_POWER+1);
+  test_acquire(TEST_POWER+1);                        // Acquire test
   float last_peak_level = peakLevel;
-  local_test_status = test_validate(i);                       // Validate test
+  local_test_status = test_validate(TEST_POWER+1);                       // Validate test
   chThdSleepMilliseconds(1000);
 
   config.high_level_offset = 0;           /// Preliminary setting
 
-  i = 13;           // Calibrate 270MHz in high mode
   for (int j = 0; j < CALIBRATE_RBWS; j++) {
     set_RBW(power_rbw[j]);
-    test_prepare(i);
-    test_acquire(i);                        // Acquire test
-    local_test_status = test_validate(i);                       // Validate test
+    test_prepare(TEST_POWER+2);
+    test_acquire(TEST_POWER+2);                        // Acquire test
+    local_test_status = test_validate(TEST_POWER+2);                       // Validate test
 //    if (local_test_status != TS_PASS) {                       // Do not validate due to variations in SI4432
 //      ili9341_set_foreground(BRIGHT_COLOR_RED);
 //      ili9341_drawstring_7x13("Calibration failed", 30, 120);

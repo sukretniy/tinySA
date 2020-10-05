@@ -120,6 +120,7 @@ extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
 
 void SI4432_Write_Byte(uint8_t ADR, uint8_t DATA );
+void SI4432_Write_2_Byte(uint8_t ADR, uint8_t DATA1, uint8_t DATA2);
 uint8_t SI4432_Read_Byte( uint8_t ADR );
 
 void SI4432_Transmit(int d);

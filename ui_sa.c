@@ -16,6 +16,9 @@
  * the Free Software Foundation, Inc., 51 Franklin Street,
  * Boston, MA 02110-1301, USA.
  */
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
 
 #define FORM_ICON_WIDTH      16
 #define FORM_ICON_HEIGHT     16
@@ -403,7 +406,8 @@ static const keypads_t keypads_time[] = {
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
-  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY, KM_FAST_SPEEDUP,
+  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
+  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
   KM_NONE // always at enum end
 };
 
@@ -425,7 +429,7 @@ static const struct {
   {keypads_positive    , "DRIVE"}, // drive
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "SCANS"},    // KM_DECAY
-  {keypads_positive    , "LEVEL"},    // KM_NOISE
+  {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
   {keypads_freq        , "FREQ"},    // KM_10MHz
   {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA
   {keypads_plusmin     , "OFFSET"},    // KM_OFFSET
@@ -434,6 +438,12 @@ static const struct {
   {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
   {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY
   {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
+  {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
+  {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
+  {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
+  {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
+  {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
+  {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
 };
 
 // ===[MENU CALLBACKS]=========================================================
@@ -499,7 +509,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_load_preset_acb)
   }
   if (caldata_recall(data) == -1) {
     if (data == 0)
-      reset_settings(setting.mode);  // Restore all defaults
+      reset_settings(setting.mode);  // Restore factory defaults
     else {
       draw_menu();
       return;
@@ -577,30 +587,34 @@ static UI_FUNCTION_ADV_CALLBACK(menu_scanning_speed_acb)
   ui_mode_normal();
 }
 
+#define CONFIG_MENUITEM_TOUCH_CAL   0
+#define CONFIG_MENUITEM_TOUCH_TEST  1
+#define CONFIG_MENUITEM_SELFTEST    2
+#define CONFIG_MENUITEM_VERSION     3
 static UI_FUNCTION_CALLBACK(menu_config_cb)
 {
-  (void)data;
-  switch (item) {
-  case 0:
+  (void)item;
+  switch (data) {
+  case CONFIG_MENUITEM_TOUCH_CAL:
     touch_cal_exec();
     redraw_frame();
     request_to_redraw_grid();
     draw_menu();
     break;
-  case 1:
+  case CONFIG_MENUITEM_TOUCH_TEST:
     touch_draw_test();
     redraw_frame();
     request_to_redraw_grid();
     draw_menu();
     break;
-  case 2:
+  case CONFIG_MENUITEM_SELFTEST:
     sweep_mode = 0;         // Suspend sweep to save time
     menu_move_back_and_leave_ui();
     setting.test = 0;
     setting.test_argument = 0;
     sweep_mode = SWEEP_SELFTEST;
     break;
-  case 4:
+  case CONFIG_MENUITEM_VERSION:
     show_version();
     redraw_frame();
     request_to_redraw_grid();
@@ -616,8 +630,8 @@ static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 }
 
 
-// const int menu_modulation_value[]={MO_NONE,MO_AM_1, MO_NFM, MO_WFM, MO_EXTERNAL};
-const char *menu_modulation_text[]={"None", "AM 1kHz", "AM 10Hz", "Narrow FM", "Wide FM", "External"};
+// const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
+const char *menu_modulation_text[]={"None", "AM", "NFM", "WFM", "External"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_modulation_acb)
 {
@@ -641,7 +655,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
   (void)item;
   (void)data;
   if(b){
-    b->param_1.text = menu_modulation_text[setting.modulation];
+    if (setting.modulation == MO_NONE || setting.modulation == MO_EXTERNAL)
+      b->param_1.text = menu_modulation_text[setting.modulation];
+    else {
+      plot_printf(uistat.text, sizeof uistat.text, "%5.3fkHz %s", setting.modulation_frequency / 1000.0, menu_modulation_text[setting.modulation]);
+      b->param_1.text = uistat.text;
+    }
     return;
   }
   menu_push_submenu(menu_modulation);
@@ -834,6 +853,35 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       set_measurement(M_LINEARITY);
       ui_mode_normal();
       break;
+    case M_AM:                                     // OIP3
+      reset_settings(setting.mode);
+      for (int i = 0; i< 3; i++) {
+        markers[i].enabled = M_ENABLED;
+        markers[i].mtype = M_DELTA | M_TRACKING;
+      }
+      markers[0].mtype = M_REFERENCE | M_TRACKING;
+      kp_help_text = "Frequency of signal";
+      ui_mode_keypad(KM_CENTER);
+      ui_process_keypad();
+      set_sweep_frequency(ST_SPAN, 100000);     // 100kHz
+      set_measurement(M_AM);
+      break;
+    case M_FM:                                     // OIP3
+      reset_settings(setting.mode);
+      for (int i = 0; i< 3; i++) {
+        markers[i].enabled = M_ENABLED;
+        markers[i].mtype = M_DELTA | M_TRACKING;
+      }
+      markers[0].mtype = M_REFERENCE | M_TRACKING;
+      kp_help_text = "Frequency of signal";
+      ui_mode_keypad(KM_CENTER);
+      ui_process_keypad();
+      kp_help_text = "Frequency deviation";
+      ui_mode_keypad(KM_SPAN);
+      ui_process_keypad();
+      set_sweep_frequency(ST_SPAN, uistat.value*30);
+      set_measurement(M_FM);
+      break;
   }
 #endif
 //  selection = -1;
@@ -948,6 +996,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
     return;
   }
   markers[data-1].enabled = true;
+  markers[data-1].frequency = frequencies[markers[data-1].index];
   active_marker_select(data-1);
   menu_push_submenu(menu_marker_modify);
   redraw_marker(active_marker);
@@ -1141,6 +1190,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_bpf_acb){
   draw_menu();
 }
 
+#ifdef __HAM_BAND__
+static UI_FUNCTION_ADV_CALLBACK(menu_settings_ham_bands){
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = config.hambands ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  toggle_hambands();
+  draw_menu();
+}
+#endif
+
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_below_if_acb){
   (void)item;
   (void)data;
@@ -1205,6 +1267,33 @@ static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
   draw_menu();
 }
 
+#ifdef __USE_SERIAL_CONSOLE__
+static UI_FUNCTION_ADV_CALLBACK(menu_serial_speed_acb)
+{
+  (void)item;
+  if (b){
+    b->icon = config._serial_speed == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->param_1.u = USART_GET_SPEED(data);
+    return;
+  }
+  config._serial_speed = data;
+  shell_update_speed();
+  draw_menu();
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_connection_acb)
+{
+  (void)item;
+  if (b){
+    b->icon = (config._mode&_MODE_CONNECTION_MASK) == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+  config._mode&=~_MODE_CONNECTION_MASK;
+  config._mode|=data;
+  shell_reset_console();
+  draw_menu();
+}
+#endif
 // ===[MENU DEFINITION]=========================================================
 #if 0
 static const menuitem_t menu_store_preset_high[8] =
@@ -1301,11 +1390,11 @@ static const menuitem_t menu_drive_wide[] = {
 static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
   { MT_FORM | MT_ADV_CALLBACK, MO_NONE,              "None",      menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_1kHz,  "AM 1kHz",   menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM_10Hz,  "AM 10Hz",   menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,  "AM",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "Narrow FM", menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "Wide FM",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "External",  menu_modulation_acb},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "100Hz..6kHz"},
   { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1314,7 +1403,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           "FREQ: %s",         "10kHz..350MHz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "MODULATION: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
@@ -1326,7 +1415,7 @@ static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  "FREQ: %s",         "240MHz..960MHz"},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
-  { MT_FORM | MT_ADV_CALLBACK,   0,     "MODULATION: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
@@ -1427,6 +1516,7 @@ const menuitem_t menu_marker_search[] = {
   { MT_CALLBACK, 1, "MIN\n" S_RARROW" RIGHT", menu_marker_search_cb },
   { MT_CALLBACK, 2, "MAX\n" S_LARROW" LEFT",  menu_marker_search_cb },
   { MT_CALLBACK, 3, "MAX\n" S_RARROW" RIGHT", menu_marker_search_cb },
+  { MT_KEYPAD,  KM_MARKER,          "ENTER\nFREQUENCY",         NULL},
   { MT_ADV_CALLBACK, 0,            "TRACKING",menu_marker_tracking_acb },
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
@@ -1541,6 +1631,24 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_settings3[] =
+{
+  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
+  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+//  { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
+  { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
+  { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
+#ifdef __HAM_BAND__
+  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
+#endif
+#ifdef __ULTRA__
+  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
+#endif
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+
 static const menuitem_t menu_settings2[] =
 {
   { MT_ADV_CALLBACK, 0,             "AGC",           menu_settings_agc_acb},
@@ -1549,10 +1657,10 @@ static const menuitem_t menu_settings2[] =
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BELOW IF",      menu_settings_below_if_acb},
   { MT_KEYPAD,   KM_DECAY,      "HOLD\nSWEEPS",   "1..1000 sweeps"},
   { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
-  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
+  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1570,14 +1678,22 @@ static const menuitem_t menu_settings[] =
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_measure[] = {
-  { MT_ADV_CALLBACK,            M_OFF,        "OFF",              menu_measure_acb},
-  { MT_ADV_CALLBACK,            M_IMD,        "HARMONIC",         menu_measure_acb},
-  { MT_ADV_CALLBACK,            M_OIP3,       "OIP3",             menu_measure_acb},
-  { MT_ADV_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",     menu_measure_acb},
-//  { MT_ADV_CALLBACK,            M_STOP_BAND,  "STOP\nBAND",     menu_measure_acb},
-//  { MT_ADV_CALLBACK,            M_PASS_BAND,  "PASS\nBAND",     menu_measure_acb},
+static const menuitem_t menu_measure2[] = {
 //  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
+  { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
+  { MT_NONE,   0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_measure[] = {
+  { MT_ADV_CALLBACK,            M_OFF,        "OFF",            menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_IMD,        "HARMONIC",       menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_OIP3,       "OIP3",           menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",   menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_STOP_BAND,  "SNR",            menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_PASS_BAND,  "-6dB\nWIDTH",     menu_measure_acb},
+  { MT_SUBMENU,  0,             S_RARROW" MORE",                menu_measure2},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1591,12 +1707,57 @@ static const menuitem_t menu_calibrate[] =
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+#ifdef __USE_SERIAL_CONSOLE__
+//19200, 38400, 57600, 74800, 115200, 230400, 460800, 921600, 1843200, 3686400
+#if 0
+const menuitem_t menu_serial_speed2[] = {
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 460800), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 921600), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING(1843200), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING(3686400), "%u", menu_serial_speed_acb },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+#endif
+
+const menuitem_t menu_serial_speed[] = {
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 19200), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 38400), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 57600), "%u", menu_serial_speed_acb },
+//  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 76800), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING(115200), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING(230400), "%u", menu_serial_speed_acb },
+//  { MT_SUBMENU, 0, S_RARROW" MORE", menu_serial_speed2 },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 460800), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 921600), "%u", menu_serial_speed_acb },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+const menuitem_t menu_connection[] = {
+  { MT_ADV_CALLBACK, _MODE_USB,    "USB",    menu_connection_acb },
+  { MT_ADV_CALLBACK, _MODE_SERIAL, "SERIAL", menu_connection_acb },
+  { MT_SUBMENU,  0, "SERIAL\nSPEED", menu_serial_speed },
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+#endif
+
+const menuitem_t menu_touch[] = {
+  { MT_CALLBACK, CONFIG_MENUITEM_TOUCH_CAL,  "TOUCH CAL",  menu_config_cb},
+  { MT_CALLBACK, CONFIG_MENUITEM_TOUCH_TEST, "TOUCH TEST", menu_config_cb},
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_config[] = {
-  { MT_CALLBACK, 0, "TOUCH CAL",      menu_config_cb},
-  { MT_CALLBACK, 0, "TOUCH TEST",     menu_config_cb},
-  { MT_CALLBACK, 0, "SELF TEST",      menu_config_cb},
-  { MT_SUBMENU,  0, "LEVEL CAL",      menu_calibrate},
-  { MT_CALLBACK, 0, "VERSION",        menu_config_cb},
+  { MT_SUBMENU,  0,                        "TOUCH",     menu_touch},
+  { MT_CALLBACK, CONFIG_MENUITEM_SELFTEST, "SELF TEST", menu_config_cb},
+  { MT_SUBMENU,  0,                        "LEVEL CAL", menu_calibrate},
+  { MT_CALLBACK, CONFIG_MENUITEM_VERSION,  "VERSION",   menu_config_cb},
+#ifdef __USE_SERIAL_CONSOLE__
+  { MT_SUBMENU,  0, "CONNECTION", menu_connection},
+#endif
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
@@ -1686,6 +1847,8 @@ static const menuitem_t menu_mode[] = {
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "%s to LOW out",     menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Cal. output: %s",   menu_sreffer_acb},
+//  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings3},
+
 #ifdef __ULTRA__
   { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
 #endif
@@ -1858,7 +2021,18 @@ static void fetch_numeric_target(void)
     uistat.value = setting.trigger_level;
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
-
+  case KM_MARKER:
+    if (active_marker >=0) {
+      uistat.value = markers[active_marker].frequency;
+      plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    }
+    break;
+  case KM_MODULATION:
+    if (active_marker >=0) {
+      uistat.value = setting.modulation_frequency;
+      plot_printf(uistat.text, sizeof uistat.text, "%7.0fHz", uistat.value);
+    }
+    break;
   }
   
   {
@@ -1956,6 +2130,28 @@ set_numeric_value(void)
     completed = true;
 
     break;
+  case KM_GRIDLINES:
+    set_gridlines(uistat.value);
+    break;
+  case KM_MARKER:
+    set_marker_frequency(active_marker, (uint32_t)uistat.value);
+    break;
+  case KM_MODULATION:
+    set_modulation_frequency((int)uistat.value);
+    break;
+  case KM_COR_AM:
+    config.cor_am =(int)uistat.value;
+    config_save();
+    break;
+  case KM_COR_WFM:
+    config.cor_wfm =(int)uistat.value;
+    config_save();
+    break;
+  case KM_COR_NFM:
+    config.cor_nfm =(int)uistat.value;
+    config_save();
+    break;
+
   }
 }
 
@@ -1966,3 +2162,4 @@ menu_move_top(void)
     menu_move_back();
 }
 
+#pragma GCC pop_options

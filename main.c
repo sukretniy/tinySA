@@ -47,7 +47,7 @@ int32_t frequencyExtra;
 // enable this need reduce spi_buffer size, by default shell run in main thread
 // #define VNA_SHELL_THREAD
 
-static BaseSequentialStream *shell_stream = (BaseSequentialStream *)&SDU1;
+static BaseSequentialStream *shell_stream;
 
 // Shell new line
 #define VNA_SHELL_NEWLINE_STR    "\r\n"
@@ -80,6 +80,7 @@ static volatile vna_shellcmd_t  shell_function = 0;
 #define ENABLE_INFO_COMMAND
 // Enable color command, allow change config color for traces, grid, menu
 #define ENABLE_COLOR_COMMAND
+#define ENABLE_USART_COMMAND
 #ifdef __VNA__
 static void apply_error_term_at(int i);
 static void apply_edelay_at(int i);
@@ -182,6 +183,8 @@ static THD_FUNCTION(Thread1, arg)
         int i = marker_search();
         if (i != -1 && active_marker != -1) {
           markers[active_marker].index = i;
+          markers[active_marker].frequency = frequencies[i];
+
           redraw_request |= REDRAW_MARKER;
         }
       }
@@ -327,6 +330,18 @@ int shell_printf(const char *fmt, ...)
   return formatted_bytes;
 }
 
+#ifdef __USE_SERIAL_CONSOLE__
+// Serial Shell commands output
+int shell_serial_printf(const char *fmt, ...)
+{
+  va_list ap;
+  int formatted_bytes;
+  va_start(ap, fmt);
+  formatted_bytes = chvprintf(&SD1, fmt, ap);
+  va_end(ap);
+  return formatted_bytes;
+}
+#endif
 VNA_SHELL_FUNCTION(cmd_pause)
 {
   (void)argc;
@@ -471,7 +486,7 @@ calculate:
   return value;
 }
 
-double
+float
 my_atof(const char *p)
 {
   int neg = FALSE;
@@ -479,11 +494,11 @@ my_atof(const char *p)
     neg = TRUE;
   if (*p == '-' || *p == '+')
     p++;
-  double x = my_atoi(p);
+  float x = my_atoi(p);
   while (_isdigit((int)*p))
     p++;
   if (*p == '.') {
-    double d = 1.0f;
+    float d = 1.0f;
     p++;
     while (_isdigit((int)*p)) {
       d /= 10;
@@ -846,13 +861,14 @@ config_t config = {
   .magic =             CONFIG_MAGIC,
   .dac_value =         1922,
   .grid_color =        DEFAULT_GRID_COLOR,
+  .ham_color =         DEFAULT_HAM_COLOR,
   .menu_normal_color = DEFAULT_MENU_COLOR,
   .menu_active_color = DEFAULT_MENU_ACTIVE_COLOR,
   .trace_color =       { DEFAULT_TRACE_1_COLOR, DEFAULT_TRACE_2_COLOR, DEFAULT_TRACE_3_COLOR},
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
-//  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
-  .touch_cal =         { 272, 521, 114, 153 },  //4.0" LCD
-  .freq_mode = FREQ_MODE_START_STOP,
+  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+  ._mode     = _MODE_USB,
+  ._serial_speed = USART_SPEED_SETTING(SERIAL_DEFAULT_BITRATE),
 #ifdef __VNA__
   .harmonic_freq_threshold = 300000000,
 #endif
@@ -861,6 +877,9 @@ config_t config = {
   .high_level_offset =      100,    // Uncalibrated
   .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
+  .cor_am = -14,
+  .cor_wfm = -17,
+  .cor_nfm = -17,
 };
 
 //properties_t current_props;
@@ -1023,9 +1042,9 @@ VNA_SHELL_FUNCTION(cmd_scan)
     if (mask) {
       for (i = 0; i < points; i++) {
         if (mask & 1) shell_printf("%u ", frequencies[i]);
-        if (mask & 2) shell_printf("%f ", value(measured[0][i]));
-        if (mask & 4) shell_printf("%f ", value(measured[1][i]));
-        if (mask & 8) shell_printf("%f ", value(measured[2][i]));
+        if (mask & 2) shell_printf("%f %f ", value(measured[2][i]), 0.0);
+        if (mask & 4) shell_printf("%f %f ", value(measured[1][i]), 0.0);
+        if (mask & 8) shell_printf("%f %f ", value(measured[0][i]), 0.0);
         shell_printf("\r\n");
       }
     }
@@ -1053,10 +1072,28 @@ update_marker_index(void)
       for (i = 0; i < sweep_points-1; i++) {
         if (frequencies[i] <= f && f < frequencies[i+1]) {
           markers[m].index = f < (frequencies[i] / 2 + frequencies[i + 1] / 2) ? i : i + 1;
+          markers[m].frequency = frequencies[markers[m].index ];
           break;
         }
       }      
     }
+  }
+}
+
+void set_marker_frequency(int m, uint32_t f)
+{
+  if (m < 0 || !markers[m].enabled)
+    return;
+  int i = 1;
+  markers[m].mtype &= ~M_TRACKING;
+  uint32_t s = (frequencies[1] - frequencies[0])/2;
+  while (i< sweep_points - 1){
+    if (frequencies[i]-s  <= f && f < frequencies[i]+s) {
+      markers[m].index = i;
+      markers[m].frequency = f;
+      return;
+    }
+    i++;
   }
 }
 
@@ -1886,27 +1923,39 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (t < 0 || t >= MARKERS_MAX)
     goto usage;
   if (argc == 1) {
+  display_marker:
     shell_printf("%d %d %d %.2f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
     active_marker = t;
     // select active marker
     markers[t].enabled = TRUE;
     return;
   }
-  static const char cmd_marker_list[] = "on|off";
+  static const char cmd_marker_list[] = "on|off|peak";
   switch (get_str_index(argv[1], cmd_marker_list)) {
     case 0: markers[t].enabled = TRUE; active_marker = t; return;
     case 1: markers[t].enabled =FALSE; if (active_marker == t) active_marker = -1; return;
+    case 2: markers[t].enabled = TRUE; active_marker = t;
+      int i = marker_search_max();
+      if (i == -1) i = 0;
+      markers[active_marker].index = i;
+      markers[active_marker].frequency = frequencies[i];
+      goto display_marker;
     default:
-      // select active marker and move to index
+      // select active marker and move to index or frequency
       markers[t].enabled = TRUE;
-      int index = my_atoi(argv[1]);
-      markers[t].index = index;
-      markers[t].frequency = frequencies[index];
+      uint32_t value = my_atoui(argv[1]);
+      markers[t].mtype &= ~M_TRACKING;
       active_marker = t;
+      if (value > sweep_points)
+        set_marker_frequency(active_marker, value);
+      else {
+        markers[t].index = value;
+        markers[t].frequency = frequencies[value];
+      }
       return;
   }
  usage:
-  shell_printf("marker [n] [%s|{index}]\r\n", cmd_marker_list);
+  shell_printf("marker [n] [%s|{freq}|{index}]\r\n", cmd_marker_list);
 }
 
 VNA_SHELL_FUNCTION(cmd_touchcal)
@@ -2255,6 +2304,20 @@ VNA_SHELL_FUNCTION(cmd_threads)
 }
 #endif
 
+#ifdef ENABLE_USART_COMMAND
+VNA_SHELL_FUNCTION(cmd_usart)
+{
+  uint32_t time = 2000; // 200ms wait answer by default
+  if (argc == 0 || argc > 2 || (config._mode & _MODE_SERIAL)) return;
+  if (argc == 2) time = my_atoui(argv[1])*10;
+  sdWriteTimeout(&SD1, (uint8_t *)argv[0], strlen(argv[0]), time);
+  sdWriteTimeout(&SD1, (uint8_t *)VNA_SHELL_NEWLINE_STR, sizeof(VNA_SHELL_NEWLINE_STR)-1, time);
+  uint32_t size;
+  uint8_t buffer[64];
+  while ((size = sdReadTimeout(&SD1, buffer, sizeof(buffer), time)))
+    streamWrite(&SDU1, buffer, size);
+}
+#endif
 #include "sa_cmd.c"
 
 //=============================================================================
@@ -2305,6 +2368,7 @@ static const VNAShellCommand commands[] =
     {"touchtest"   , cmd_touchtest   , CMD_WAIT_MUTEX},
     {"pause"       , cmd_pause       , 0},
     {"resume"      , cmd_resume      , 0},
+    {"caloutput"   , cmd_caloutput   , 0},
 #ifdef __VNA__
     {"cal"         , cmd_cal         , CMD_WAIT_MUTEX},
 #endif
@@ -2313,6 +2377,9 @@ static const VNAShellCommand commands[] =
     {"trace"       , cmd_trace       , CMD_WAIT_MUTEX},
     {"trigger"     , cmd_trigger     , 0},
     {"marker"      , cmd_marker      , 0},
+#ifdef ENABLE_USART_COMMAND
+    {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
+#endif
 #ifdef __VNA__
     {"edelay"      , cmd_edelay      , 0},
 #endif
@@ -2389,6 +2456,110 @@ VNA_SHELL_FUNCTION(cmd_help)
 /*
  * VNA shell functions
  */
+// Check Serial connection requirements
+#ifdef __USE_SERIAL_CONSOLE__
+#if HAL_USE_SERIAL == FALSE
+#error "For serial console need HAL_USE_SERIAL as TRUE in halconf.h"
+#endif
+
+// Before start process command from shell, need select input stream
+#define PREPARE_STREAM shell_stream = (config._mode&_MODE_SERIAL) ? (BaseSequentialStream *)&SD1 : (BaseSequentialStream *)&SDU1;
+
+// Update Serial connection speed and settings
+void shell_update_speed(void){
+  // Update Serial speed settings
+  SerialConfig s_config = {USART_GET_SPEED(config._serial_speed), 0, USART_CR2_STOP1_BITS, 0 };
+  sdStop(&SD1);
+  sdStart(&SD1, &s_config);  // USART config
+}
+
+// Check USB connection status
+static bool usb_IsActive(void){
+  return usbGetDriverStateI(&USBD1) == USB_ACTIVE;
+}
+void shell_reset_console(void){
+  // Reset I/O queue over USB (for USB need also connect/disconnect)
+  if (usb_IsActive()){
+    if (config._mode & _MODE_SERIAL)
+      sduDisconnectI(&SDU1);
+    else
+      sduConfigureHookI(&SDU1);
+  }
+  // Reset I/O queue over Serial
+  oqResetI(&SD1.oqueue);
+  iqResetI(&SD1.iqueue);
+}
+
+// Check active connection for Shell
+static bool shell_check_connect(void){
+  // Serial connection always active
+  if (config._mode & _MODE_SERIAL)
+    return true;
+  // USB connection can be USB_SUSPENDED
+  return usb_IsActive();
+}
+
+static void shell_init_connection(void){
+/*
+ * Initializes and start serial-over-USB CDC driver SDU1, connected to USBD1
+ */
+  sduObjectInit(&SDU1);
+  sduStart(&SDU1, &serusbcfg);
+
+/*
+ * Set Serial speed settings for SD1
+ */
+  shell_update_speed();
+
+/*
+ * Activates the USB driver and then the USB bus pull-up on D+.
+ * Note, a delay is inserted in order to not have to disconnect the cable
+ * after a reset.
+ */
+  usbDisconnectBus(&USBD1);
+  chThdSleepMilliseconds(100);
+  usbStart(&USBD1, &usbcfg);
+  usbConnectBus(&USBD1);
+
+/*
+ *  Set I/O stream (SDU1 or SD1) for shell
+ */
+  PREPARE_STREAM;
+}
+
+#else
+// Only USB console, shell_stream always on USB
+#define PREPARE_STREAM
+
+// Check connection as Active, if no suspend input
+static bool shell_check_connect(void){
+  return SDU1.config->usbp->state == USB_ACTIVE;
+}
+
+// Init shell I/O connection over USB
+static void shell_init_connection(void){
+/*
+ * Initializes and start serial-over-USB CDC driver SDU1, connected to USBD1
+ */
+  sduObjectInit(&SDU1);
+  sduStart(&SDU1, &serusbcfg);
+
+/*
+ * Activates the USB driver and then the USB bus pull-up on D+.
+ * Note, a delay is inserted in order to not have to disconnect the cable
+ * after a reset.
+ */
+  usbDisconnectBus(&USBD1);
+  chThdSleepMilliseconds(100);
+  usbStart(&USBD1, &usbcfg);
+  usbConnectBus(&USBD1);
+
+/*
+ *  Set I/O stream SDU1 for shell
+ */
+  shell_stream = (BaseSequentialStream *)&SDU1;
+}
+#endif
 
 //
 // Read command line from shell_stream
@@ -2398,6 +2569,8 @@ static int VNAShell_readLine(char *line, int max_size)
   // Read line from input stream
   uint8_t c;
   char *ptr = line;
+  // Prepare I/O for shell_stream
+  PREPARE_STREAM;
   while (1) {
     // Return 0 only if stream not active
     if (streamRead(shell_stream, &c, 1) == 0)
@@ -2608,23 +2781,6 @@ int main(void)
   i2cStart(&I2CD1, &i2ccfg);
   si5351_init();
 
-  // MCO on PA8
-  //palSetPadMode(GPIOA, 8, PAL_MODE_ALTERNATE(0));
-/*
- * Initializes a serial-over-USB CDC driver.
- */
-  sduObjectInit(&SDU1);
-  sduStart(&SDU1, &serusbcfg);
-/*
- * Activates the USB driver and then the USB bus pull-up on D+.
- * Note, a delay is inserted in order to not have to disconnect the cable
- * after a reset.
- */
-  usbDisconnectBus(serusbcfg.usbp);
-  chThdSleepMilliseconds(100);
-  usbStart(serusbcfg.usbp, &usbcfg);
-  usbConnectBus(serusbcfg.usbp);
-
 #ifdef __SI4432__
  /*
   * Powercycle the RF part to reset SI4432
@@ -2664,44 +2820,6 @@ int main(void)
   }
 #endif
 
-
-#if 0
- /*
-  * UART initialize
-  */
-  uartStart(&UARTD1, &uart_cfg_1);
-again:
-  uartStartSend(&UARTD1, 1, "H");
-  uint8_t buf[10];
-  uartStartReceive(&UARTD1, 1, buf);
-goto again;
-#endif
-
-#if 0
-  again:
-
-  palSetPadMode(GPIOA, 9, PAL_MODE_ALTERNATE(1));  // USART1 TX.
-  palSetPadMode(GPIOA,10, PAL_MODE_ALTERNATE(1)); // USART1 RX.
-
-
-  uint8_t buf[10];
-  sdStart(&SD1,&default_config);
-  osalThreadSleepMilliseconds(10);
-  mySerialWrite("Hallo!?\n");
-
-  osalThreadSleepMilliseconds(10);
-
-  mySerialReadline(buf, 10);
-
-  sdReadTimeout(&SD1,buf,10, 10);
-
-  sdWrite(&SD1,(const uint8_t *)"Test123",7);
-  osalThreadSleepMicroseconds(10);
-  sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
-  sdReadTimeout(&SD1,buf,10, 10);
-  int i = sdReadTimeout(&SD1,buf,10,TIME_IMMEDIATE);
-goto again;
-#endif
 #ifdef __ULTRA_SA__
   ADF4351_Setup();
 #endif
@@ -2721,6 +2839,12 @@ goto again;
   if (caldata_recall(0) == -1) {
     load_default_properties();
   }
+
+/*
+ * Init Shell console connection data (after load config for settings)
+ */
+  shell_init_connection();
+
 /* restore frequencies and calibration 0 slot properties from flash memory */
 
   dac1cfg1.init = config.dac_value;
@@ -2755,7 +2879,7 @@ goto again;
 //    menu_mode_cb(setting.mode,0);
 //  }
   redraw_frame();
-#if 0
+#if 1
   set_mode(M_HIGH);
   set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
   sweep(false);
@@ -2764,8 +2888,11 @@ goto again;
   set_mode(M_LOW);
   set_sweep_frequency(ST_STOP, (uint32_t) 4000000);
   sweep(false);
-  set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
 #endif
+
+  if (caldata_recall(0) == -1) {
+    load_default_properties();
+  }
 
   set_refer_output(-1);
 //  ui_mode_menu();       // Show menu when autostarting mode
