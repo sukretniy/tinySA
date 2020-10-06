@@ -163,6 +163,18 @@ VNA_SHELL_FUNCTION(cmd_sweeptime)
 
 
 
+VNA_SHELL_FUNCTION(cmd_offset)
+{
+  if (argc != 1) {
+    shell_printf("usage: offset -100.0..+100.0\r\n");
+    return;
+  }
+  float o = my_atof(argv[0]);
+  set_offset(o);
+}
+
+
+
 
 VNA_SHELL_FUNCTION(cmd_levelchange)
 {

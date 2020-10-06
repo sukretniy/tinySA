@@ -2412,6 +2412,7 @@ static const VNAShellCommand commands[] =
     { "mode", cmd_mode,    0 },
     { "spur", cmd_spur,    0 },
     { "load", cmd_load,    0 },
+    { "offset", cmd_offset, 0},
     { "output", cmd_output,    0 },
     { "deviceid", cmd_deviceid,    0 },
     { "selftest", cmd_selftest,    0 },
