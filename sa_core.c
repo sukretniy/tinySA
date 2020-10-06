@@ -16,9 +16,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifdef __SI4432__
+//#ifdef __SI4432__
 #include "si4432.h"		// comment out for simulation
-#endif
+//#endif
 #include "stdlib.h"
 
 #pragma GCC push_options
@@ -1438,7 +1438,8 @@ static const unsigned int spur_IF =            433800000;       // The IF freque
 static const unsigned int spur_alternate_IF =  433900000;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
-// 580000,            // 433.8 MHz table
+#if 1
+ // 580000,            // 433.8 MHz table
 // 880000,    //?
  960000,
 // 1487000,   //?
@@ -2492,7 +2493,9 @@ sweep_again:                                // stay in sweep loop when output mo
           setting.agc = S_AUTO_OFF;
           setting.lna = S_AUTO_ON;
         }
+#ifdef __SI4432__
         set_AGC_LNA();
+#endif
       }
     }
 
