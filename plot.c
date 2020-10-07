@@ -2085,7 +2085,7 @@ static void cell_draw_marker_info(int x0, int y0)
     active = 2;
   for (int i = 0; i < MARKER_COUNT; i++) {
     if (i >= 2 && setting.measurement == M_THD) {
-      if (i == 2) {
+      if (i == 2 && (markers[0].index << 5) > sweep_points ) {
         int old_unit = setting.unit;
         setting.unit = U_WATT;
         float p = value((actual_t[markers[0].index]));
