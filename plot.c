@@ -2081,7 +2081,35 @@ static void cell_draw_marker_info(int x0, int y0)
       active++;
     }
   }
+  if (setting.measurement == M_THD && active >= 1)
+    active = 2;
   for (int i = 0; i < MARKER_COUNT; i++) {
+    if (i >= 2 && setting.measurement == M_THD) {
+      if (i == 2) {
+        int old_unit = setting.unit;
+        setting.unit = U_WATT;
+        float p = value((actual_t[markers[0].index]));
+        int j = 2;
+        uint32_t f = markers[0].frequency;
+        float h = 0.0;
+        while (f * j < frequencies[sweep_points-1]) {
+          if (search_maximum(1, f*j, 4*j) )             // use marker 1 for searching harmonics
+            h += value((actual_t[markers[1].index]));
+          j++;
+        }
+        float thd = 100.0 * sqrt(h/p);
+        setting.unit = old_unit;
+
+        plot_printf(buf, sizeof buf, "THD: %4.1f%%", thd);
+        j = 1;
+        int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
+        int ypos = 1 + (j/2)*(16) - y0;
+        cell_drawstring_7x13(buf, xpos, ypos);
+//        cell_drawstring(buf, xpos, ypos);
+        break;
+      }
+      break;
+    } else
     if (i >= 2 && setting.measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
       float il = value((actual_t[markers[2].index]));
       float ir = value((actual_t[markers[3].index]));

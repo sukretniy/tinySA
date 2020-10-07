@@ -851,7 +851,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
     case M_LINEARITY:
       set_measurement(M_LINEARITY);
-      ui_mode_normal();
       break;
     case M_AM:                                     // OIP3
       reset_settings(setting.mode);
@@ -881,6 +880,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_process_keypad();
       set_sweep_frequency(ST_SPAN, uistat.value*30);
       set_measurement(M_FM);
+      break;
+    case M_THD:
+      set_measurement(M_THD);
       break;
   }
 #endif
@@ -1682,6 +1684,7 @@ static const menuitem_t menu_measure2[] = {
 //  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
   { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_THD,          "THD",           menu_measure_acb},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };

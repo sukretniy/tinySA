@@ -39,7 +39,7 @@
 //#define __ULTRA__             // Add harmonics mode on low input.
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
-#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
+//#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 /*
  * main.c
  */
@@ -235,6 +235,7 @@ extern int32_t frequencyExtra;
 void set_10mhz(uint32_t);
 void set_modulation(int);
 void set_modulation_frequency(int);
+int search_maximum(int m, int center, int span);
 //extern int setting.modulation;
 void set_measurement(int);
 // extern int settingSpeed;
@@ -998,7 +999,7 @@ uint32_t calc_min_sweep_time_us(void);
 pureRSSI_t perform(bool b, int i, uint32_t f, int e);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD
 };
 
 enum {
