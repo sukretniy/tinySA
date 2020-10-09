@@ -2084,6 +2084,20 @@ static void cell_draw_marker_info(int x0, int y0)
   if (setting.measurement == M_THD && active >= 1)
     active = 2;
   for (int i = 0; i < MARKER_COUNT; i++) {
+    if (i == 3 && setting.measurement == M_PASS_BAND) {
+        uint32_t f;
+        if (markers[2].frequency>markers[1].frequency)
+          f = markers[2].frequency-markers[1].frequency;
+        else
+          f = markers[1].frequency-markers[2].frequency;
+        plot_printf(buf, sizeof buf, "WIDTH: %8.3qHz", f);
+        j = 3;
+        int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
+        int ypos = 1 + (j/2)*(16) - y0;
+        cell_drawstring_7x13(buf, xpos, ypos);
+//        cell_drawstring(buf, xpos, ypos);
+        break;
+    } else
     if (i >= 2 && setting.measurement == M_THD) {
       if (i == 2 && (markers[0].index << 5) > sweep_points ) {
         int old_unit = setting.unit;
