@@ -833,25 +833,26 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 
       break;
     case M_PASS_BAND:                             // STop band measurement
-      reset_settings(setting.mode);
+//      reset_settings(setting.mode);
+      markers[0].enabled = M_ENABLED;
+      markers[0].mtype = M_REFERENCE | M_TRACKING;
       markers[1].enabled = M_ENABLED;
       markers[1].mtype = M_DELTA;
       markers[2].enabled = M_ENABLED;
       markers[2].mtype = M_DELTA;
-      kp_help_text = "Frequency of signal";
-      ui_mode_keypad(KM_CENTER);
-      ui_process_keypad();
-      kp_help_text = "Width of signal";
-      ui_mode_keypad(KM_SPAN);
-      ui_process_keypad();
-      set_sweep_frequency(ST_SPAN, uistat.value*2);
+//      kp_help_text = "Frequency of signal";
+//      ui_mode_keypad(KM_CENTER);
+//      ui_process_keypad();
+//      kp_help_text = "Width of signal";
+//      ui_mode_keypad(KM_SPAN);
+//      ui_process_keypad();
+//      set_sweep_frequency(ST_SPAN, uistat.value*2);
       set_measurement(M_PASS_BAND);
 //      SetAverage(4);
 
       break;
     case M_LINEARITY:
       set_measurement(M_LINEARITY);
-      ui_mode_normal();
       break;
     case M_AM:                                     // OIP3
       reset_settings(setting.mode);
@@ -881,6 +882,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_process_keypad();
       set_sweep_frequency(ST_SPAN, uistat.value*30);
       set_measurement(M_FM);
+      break;
+    case M_THD:
+      set_measurement(M_THD);
       break;
   }
 #endif
@@ -1682,6 +1686,7 @@ static const menuitem_t menu_measure2[] = {
 //  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
   { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_THD,          "THD",           menu_measure_acb},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -1692,7 +1697,7 @@ static const menuitem_t menu_measure[] = {
   { MT_ADV_CALLBACK,            M_OIP3,       "OIP3",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",   menu_measure_acb},
   { MT_ADV_CALLBACK,            M_STOP_BAND,  "SNR",            menu_measure_acb},
-  { MT_ADV_CALLBACK,            M_PASS_BAND,  "-6dB\nWIDTH",     menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_PASS_BAND,  "-3dB\nWIDTH",     menu_measure_acb},
   { MT_SUBMENU,  0,             S_RARROW" MORE",                menu_measure2},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel

@@ -239,6 +239,7 @@ extern int32_t frequencyExtra;
 void set_10mhz(uint32_t);
 void set_modulation(int);
 void set_modulation_frequency(int);
+int search_maximum(int m, int center, int span);
 //extern int setting.modulation;
 void set_measurement(int);
 // extern int settingSpeed;
@@ -1003,7 +1004,7 @@ uint32_t calc_min_sweep_time_us(void);
 pureRSSI_t perform(bool b, int i, uint32_t f, int e);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD
 };
 
 enum {
