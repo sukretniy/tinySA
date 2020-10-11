@@ -407,7 +407,7 @@ enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
-  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
+  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM, KM_IF2,
   KM_NONE // always at enum end
 };
 
@@ -1642,6 +1642,8 @@ static const menuitem_t menu_settings3[] =
 //  { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
   { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
+  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
+
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
@@ -1970,6 +1972,10 @@ static void fetch_numeric_target(void)
     uistat.value = setting.frequency_IF;
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
+  case KM_IF2:
+    uistat.value = config.frequency_IF2;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    break;
   case KM_SAMPLETIME:
     uistat.value = setting.step_delay;
     plot_printf(uistat.text, sizeof uistat.text, "%3dus", ((int32_t)uistat.value));
@@ -2087,6 +2093,10 @@ set_numeric_value(void)
   case KM_IF:
     setting.auto_IF = false;
     set_IF(uistat.value);
+//    config_save();
+    break;
+  case KM_IF2:
+    set_IF2(uistat.value);
 //    config_save();
     break;
   case KM_SAMPLETIME:

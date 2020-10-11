@@ -197,6 +197,7 @@ void SetGenerate(int);
 void set_RBW(uint32_t rbw_x10);
 void set_drive(int d);
 void set_IF(int f);
+void set_IF2(int f);
 void set_step_delay(int t);
 void set_offset_delay(int t);
 void set_repeat(int);
@@ -471,6 +472,7 @@ typedef struct config {
   uint16_t ham_color;
   uint16_t gridlines;
   uint16_t hambands;
+  uint32_t frequency_IF2;
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;

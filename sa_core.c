@@ -381,6 +381,13 @@ void set_IF(int f)
   dirty = true;
 }
 
+void set_IF2(int f)
+{
+
+  config.frequency_IF2 = f;
+  dirty = true;
+}
+
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
 #define POWER_OFFSET    15
 #define SWITCH_ATTENUATION  30
@@ -1154,18 +1161,20 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       ADF4351_set_frequency(V-2,freq,3);
       real_old_freq[V] = freq;
     }
-  }
-  if (V==SI4463_RX) {
-    if (setting.frequency_step<930000)                  // maximum step size is 937.49kHz
-      SI4463_set_freq(freq,setting.frequency_step);
-    else
-      SI4463_set_freq(freq,1000);
-    old_frequency_step = setting.frequency_step;
-  }
-#ifdef __ULTRA_SA__
-  else {
+  } else if (V==ADF4351_LO2){
     ADF4351_set_frequency(V-2,freq,3);
-  }
+  } else
+    if (V==SI4463_RX) {
+      if (setting.frequency_step<930000)                  // maximum step size is 937.49kHz
+        SI4463_set_freq(freq,setting.frequency_step);
+      else
+        SI4463_set_freq(freq,1000);
+      old_frequency_step = setting.frequency_step;
+    }
+#ifdef __ULTRA_SA__
+    else {
+      ADF4351_set_frequency(V-2,freq,3);
+    }
 #endif
   old_freq[V] = freq;
 }
@@ -1843,10 +1852,10 @@ modulation_again:
     {                                           // Else set LO ('s)
 #ifdef __ULTRA_SA__
       //#define IF_1    2550000000
-#define IF_2    2025000000                      // First IF in Ultra SA mode
+#define IF_2    config.frequency_IF2                      // First IF in Ultra SA mode
 
-      set_freq (2, IF_2 + lf);                 // Scanning LO up to IF2
-      set_freq (3, IF_2 - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
+      set_freq (2, config.frequency_IF2  + lf);                 // Scanning LO up to IF2
+      set_freq (3, config.frequency_IF2  - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
       set_freq (SI4432_LO, 433800000);                 // Second IF fixed in Ultra SA mode
 #else
 #ifdef __SI4432__
@@ -1858,15 +1867,20 @@ modulation_again:
 #ifdef __ADF4351__
 //      START_PROFILE;
       if (setting.mode == M_LOW) {
+        uint32_t extra_IF = local_IF;
+        if (config.frequency_IF2 != 0) {
+          extra_IF = config.frequency_IF2;
+          set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
+        }
         if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
-          if (lf > local_IF)
-            set_freq (ADF4351_LO, lf - local_IF); // set LO SI4432 to below IF frequency
+          if (lf > extra_IF)
+            set_freq (ADF4351_LO, lf - extra_IF); // set LO SI4432 to below IF frequency
           else
-            set_freq (ADF4351_LO, local_IF-lf); // set LO SI4432 to below IF frequency
+            set_freq (ADF4351_LO, extra_IF-lf); // set LO SI4432 to below IF frequency
         } else
-          set_freq (ADF4351_LO, local_IF+lf); // otherwise to above IF
+          set_freq (ADF4351_LO, extra_IF+lf); // otherwise to above IF
       } else if (setting.mode == M_HIGH) {
-        set_freq (SI4463_RX, local_IF+lf); // sweep RX
+        set_freq (SI4463_RX, local_IF+lf); // sweep RX, local_IF = 0 in high mode
       }
 //      STOP_PROFILE;
 #endif

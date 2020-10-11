@@ -185,6 +185,7 @@ extern si446x_info_t SI4463_info;
 void Si446x_getInfo(si446x_info_t* info);
 void SI4463_init(void);
 #define ADF4351_LO 2
+#define ADF4351_LO2 4
 #define SI4463_RX  3
 
 #endif

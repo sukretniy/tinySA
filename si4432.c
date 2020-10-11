@@ -1234,6 +1234,8 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 
 #define Npresc 0    // No High performance mode
 
+#define MIN_DELAY   1
+
 #include <string.h>
 
 void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
@@ -1244,14 +1246,14 @@ void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 //  SI4432_guard = 1;
 //  SPI1_CLK_LOW;
   palClearPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
 //  my_microsecond_delay(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   shiftOut( DATA );
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
   palSetPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
 //  SI4432_guard = 0;
 }
 
@@ -1263,15 +1265,15 @@ void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 //  SI4432_guard = 1;
 //  SPI1_CLK_LOW;
   palClearPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
 //  my_microsecond_delay(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   while (len-- > 0)
     shiftOut( *(DATA++) );
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
   palSetPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
 //  SI4432_guard = 0;
 }
 
@@ -1286,13 +1288,13 @@ uint8_t SI4463_read_byte( uint8_t ADR )
 //  SPI1_CLK_LOW;
   set_SPI_mode(SPI_MODE_SI);
   palClearPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
   shiftOut( ADR );
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
   DATA = shiftIn();
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
   palSetPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(2);
+  my_microsecond_delay(MIN_DELAY);
 //  SI4432_guard = 0;
   return DATA ;
 }
@@ -1306,21 +1308,21 @@ uint8_t SI4463_get_response(void* buff, uint8_t len)
   //  SI4432_guard = 1;
   //  SPI1_CLK_LOW;
     palClearPad(GPIOB, GPIOB_RX_SEL);
-    my_microsecond_delay(2);
+    my_microsecond_delay(MIN_DELAY);
     shiftOut( SI446X_CMD_READ_CMD_BUFF );
-    my_microsecond_delay(2);
+    my_microsecond_delay(MIN_DELAY);
     cts = (shiftIn() == 0xFF);
-    my_microsecond_delay(2);
+    my_microsecond_delay(MIN_DELAY);
     if (cts)
     {
         // Get response data
         for(uint8_t i=0;i<len;i++) {
             ((uint8_t*)buff)[i] = shiftIn();
-            my_microsecond_delay(2);
+            my_microsecond_delay(MIN_DELAY);
         }
     }
     palSetPad(GPIOB, GPIOB_RX_SEL);
-    my_microsecond_delay(2);
+    my_microsecond_delay(MIN_DELAY);
     return cts;
 }
 
@@ -1329,7 +1331,7 @@ uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout)
   uint16_t timeout = 40000;
   while(!SI4463_get_response(buff, len))
   {
-    my_microsecond_delay(2);
+    my_microsecond_delay(MIN_DELAY);
     if(use_timeout && !--timeout)
     {
         return 0;
@@ -1344,14 +1346,14 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   {
 //    set_SPI_mode(SPI_MODE_SI);
     palClearPad(GPIOB, GPIOB_RX_SEL);
-    my_microsecond_delay(2);
+    my_microsecond_delay(MIN_DELAY);
     for(uint8_t i=0;i<len;i++) {
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
-      my_microsecond_delay(2);
+      my_microsecond_delay(MIN_DELAY);
     }
-    my_microsecond_delay(2);
+//    my_microsecond_delay(MIN_DELAY);
     palSetPad(GPIOB, GPIOB_RX_SEL);
-    my_microsecond_delay(2);
+    my_microsecond_delay(MIN_DELAY);
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
       SI4463_wait_response(NULL, 0, false);
     else if(out != NULL) // If we have an output buffer then read command response into it
