@@ -444,6 +444,7 @@ static const struct {
   {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
   {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
+  {keypads_freq        , "IF2"}, // KM_IF2
 };
 
 // ===[MENU CALLBACKS]=========================================================

@@ -873,10 +873,11 @@ config_t config = {
   .harmonic_freq_threshold = 300000000,
 #endif
   .vbat_offset = 500,
+  .frequency_IF2 = 2048600000,
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
   .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
-  .correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
+  .correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
   .cor_am = -14,
   .cor_wfm = -17,
   .cor_nfm = -17,

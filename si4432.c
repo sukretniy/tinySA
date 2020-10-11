@@ -901,7 +901,7 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
 
 int debug = 0;
-int ADF4351_LE[2] = { 10, 10};
+int ADF4351_LE[2] = { 10, 11};
 int ADF4351_Mux = 7;
 
 

@@ -67,7 +67,10 @@ void update_min_max_freq(void)
   switch(setting.mode) {
   case M_LOW:
     minFreq = 0;
-    maxFreq = 350000000;
+    if (config.frequency_IF2 == 0)
+      maxFreq = 350000000;
+    else
+      maxFreq = config.frequency_IF2;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -132,7 +135,7 @@ void reset_settings(int m)
   setting.repeat = 1;
   setting.tracking_output = false;
   setting.measurement = M_OFF;
-  setting.frequency_IF = 433800000;
+  setting.frequency_IF = 433600000;
   setting.auto_IF = true;
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
@@ -386,6 +389,7 @@ void set_IF2(int f)
 
   config.frequency_IF2 = f;
   dirty = true;
+  config_save();
 }
 
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
@@ -931,8 +935,8 @@ void calculate_step_delay(void)
 #endif
 #ifdef __SI4463__
       if (actual_rbw_x10 >= 2700)      { SI4432_step_delay = 400; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 800)  { SI4432_step_delay = 400; 150; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 250)  { SI4432_step_delay = 1000; 450; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 800)  { SI4432_step_delay = 500; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 250)  { SI4432_step_delay = 1000; SI4432_offset_delay = 100; }
       else                             { SI4432_step_delay = 5000; SI4432_offset_delay =1600; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
@@ -1028,8 +1032,8 @@ uint32_t peakFreq;
 int peakIndex;
 float temppeakLevel;
 int temppeakIndex;
-static unsigned long old_freq[4] = { 0, 0, 0, 0};
-static unsigned long real_old_freq[4] = { 0, 0, 0, 0};
+static unsigned long old_freq[5] = { 0, 0, 0, 0,0};
+static unsigned long real_old_freq[5] = { 0, 0, 0, 0,0};
 // volatile int t;
 
 //static uint32_t extra_vbw_step_time = 0;
@@ -1042,10 +1046,10 @@ void setupSA(void)
 #ifdef __SI4432__
   SI4432_Init();
 #endif
-  old_freq[0] = 0;
-  old_freq[1] = 0;
-  real_old_freq[0] = 0;
-  real_old_freq[1] = 0;
+  for (int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
+    old_freq[i] = 0;
+    real_old_freq[i] = 0;
+  }
 #ifdef __SI4432__
   SI4432_Sel = SI4432_RX ;
   SI4432_Receive();
@@ -1158,11 +1162,11 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       }
     }
     if (freq) {
-      ADF4351_set_frequency(V-2,freq,3);
+      ADF4351_set_frequency(V-ADF4351_LO,freq,3);
       real_old_freq[V] = freq;
     }
   } else if (V==ADF4351_LO2){
-    ADF4351_set_frequency(V-2,freq,3);
+    ADF4351_set_frequency(V-ADF4351_LO,freq,3);
   } else
     if (V==SI4463_RX) {
       if (setting.frequency_step<930000)                  // maximum step size is 937.49kHz
@@ -1173,7 +1177,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
     }
 #ifdef __ULTRA_SA__
     else {
-      ADF4351_set_frequency(V-2,freq,3);
+      ADF4351_set_frequency(V-ADF4351_LO,freq,3);
     }
 #endif
   old_freq[V] = freq;
@@ -1443,11 +1447,11 @@ search_maximum(int m, int center, int span)
 }
 
 //static int spur_old_stepdelay = 0;
-static const unsigned int spur_IF =            433800000;       // The IF frequency for which the spur table is value
+static const unsigned int spur_IF =            433600000;       // The IF frequency for which the spur table is value
 static const unsigned int spur_alternate_IF =  433900000;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
-#if 1
+#if 0
  // 580000,            // 433.8 MHz table
 // 880000,    //?
  960000,
@@ -1765,7 +1769,7 @@ modulation_again:
       local_IF = 0;
     else {
       if (setting.auto_IF)
-        local_IF = setting.spur_removal ? 433900000 : spur_IF;
+        local_IF = setting.spur_removal ? 433600000 : spur_IF;
       else
         local_IF = setting.frequency_IF;
     }
@@ -3329,7 +3333,7 @@ void test_prepare(int i)
 {
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
-  setting.frequency_IF = 433800000;                // Default frequency
+  setting.frequency_IF = 433600000;                // Default frequency
   setting.auto_IF = true;
   setting.auto_attenuation = false;
   switch(test_case[i].setup) {                // Prepare test conditions
@@ -3481,7 +3485,7 @@ void self_test(int test)
     reset_settings(M_LOW);
     test_prepare(TEST_SILENCE);
     setting.auto_IF = false;
-    setting.frequency_IF=433000000;
+    setting.frequency_IF=433600000;
     setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
@@ -3541,7 +3545,7 @@ void self_test(int test)
     in_selftest = true;
 //    reset_settings(M_LOW);
     setting.auto_IF = false;
-    setting.frequency_IF=433900000;
+    setting.frequency_IF=433600000;
     ui_mode_normal();
     test_prepare(TEST_RBW);
     setting.step_delay = 8000;
