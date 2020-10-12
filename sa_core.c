@@ -87,8 +87,8 @@ void update_min_max_freq(void)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 24*setting_frequency_10mhz;
-    maxFreq = 96*setting_frequency_10mhz;
+    minFreq = 24*config.setting_frequency_10mhz;
+    maxFreq = 96*config.setting_frequency_10mhz;
 #endif
     break;
   case M_GENHIGH:
@@ -182,8 +182,8 @@ void reset_settings(int m)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 13*setting_frequency_10mhz;
-    maxFreq = 120*setting_frequency_10mhz;
+    minFreq = 13*config.setting_frequency_10mhz;
+    maxFreq = 120*config.setting_frequency_10mhz;
 #endif
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
@@ -1448,9 +1448,11 @@ search_maximum(int m, int center, int span)
 
 //static int spur_old_stepdelay = 0;
 static const unsigned int spur_IF =            433600000;       // The IF frequency for which the spur table is value
-static const unsigned int spur_alternate_IF =  433900000;       // if the frequency is found in the spur table use this IF frequency
+static const unsigned int spur_alternate_IF =  434100000;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
+ 117716000,
+ 746083000,
 #if 0
  // 580000,            // 433.8 MHz table
 // 880000,    //?
@@ -1871,6 +1873,9 @@ modulation_again:
 #ifdef __ADF4351__
 //      START_PROFILE;
       if (setting.mode == M_LOW) {
+        if (i > 0 && setting.frequency_step < 1000) {
+          set_freq (SI4463_RX, setting.frequency_IF -  setting.frequency_step*i); // sweep RX, local_IF = 0 in high mode
+        } else {
         uint32_t extra_IF = local_IF;
         if (config.frequency_IF2 != 0) {
           extra_IF = config.frequency_IF2;
@@ -1883,7 +1888,8 @@ modulation_again:
             set_freq (ADF4351_LO, extra_IF-lf); // set LO SI4432 to below IF frequency
         } else
           set_freq (ADF4351_LO, extra_IF+lf); // otherwise to above IF
-      } else if (setting.mode == M_HIGH) {
+        }
+        } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, local_IF+lf); // sweep RX, local_IF = 0 in high mode
       }
 //      STOP_PROFILE;

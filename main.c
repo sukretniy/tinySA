@@ -866,7 +866,8 @@ config_t config = {
   .menu_active_color = DEFAULT_MENU_ACTIVE_COLOR,
   .trace_color =       { DEFAULT_TRACE_1_COLOR, DEFAULT_TRACE_2_COLOR, DEFAULT_TRACE_3_COLOR},
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
-  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+//  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+  .touch_cal =          { 261, 605, 115, 146 }, // 4 inch panel
   ._mode     = _MODE_USB,
   ._serial_speed = USART_SPEED_SETTING(SERIAL_DEFAULT_BITRATE),
 #ifdef __VNA__
@@ -874,6 +875,7 @@ config_t config = {
 #endif
   .vbat_offset = 500,
   .frequency_IF2 = 2048600000,
+  .setting_frequency_10mhz = 1000015.0,
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
   .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
@@ -2278,7 +2280,7 @@ VNA_SHELL_FUNCTION(cmd_color)
 #if CH_CFG_USE_REGISTRY == FALSE
 #error "Threads Requite enabled CH_CFG_USE_REGISTRY in chconf.h"
 #endif
-static const char *states[] = {CH_STATE_NAMES};
+const char *states[] = {CH_STATE_NAMES};
 VNA_SHELL_FUNCTION(cmd_threads) 
 {
   thread_t *tp;

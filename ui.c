@@ -406,6 +406,7 @@ touch_position(int *x, int *y)
   *y = (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3];
 }
 
+
 void
 show_version(void)
 {
@@ -421,6 +422,36 @@ show_version(void)
     do {shift>>=1; y+=5;} while (shift&1);
     ili9341_drawstring(info_about[i++], x, y+=5);
   }
+
+  static  char buf[96];
+extern const char *states[];
+  #define ENABLE_THREADS_COMMAND
+
+#ifdef ENABLE_THREADS_COMMAND
+  thread_t *tp;
+  tp = chRegFirstThread();
+  do {
+    uint32_t max_stack_use = 0U;
+#if (CH_DBG_ENABLE_STACK_CHECK == TRUE) || (CH_CFG_USE_DYNAMIC == TRUE)
+    uint32_t stklimit = (uint32_t)tp->wabase;
+#if CH_DBG_FILL_THREADS == TRUE
+    uint8_t *p = (uint8_t *)tp->wabase; while(p[max_stack_use]==CH_DBG_STACK_FILL_VALUE) max_stack_use++;
+#endif
+#else
+    uint32_t stklimit = 0U;
+#endif
+    plot_printf(buf, sizeof(buf), "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
+             stklimit, (uint32_t)tp->ctx.sp, max_stack_use, (uint32_t)tp,
+             (uint32_t)tp->refs - 1, (uint32_t)tp->prio, states[tp->state],
+             tp->name == NULL ? "" : tp->name);
+    ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
+    tp = chRegNextThread(tp);
+  } while (tp != NULL);
+#endif
+
+
+
+
   while (true) {
     if (touch_check() == EVT_TOUCH_PRESSED)
       break;

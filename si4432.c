@@ -209,11 +209,12 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
 }
 #endif
 
-int setting_frequency_10mhz = 10000000;
+//float setting_frequency_10mhz = 1000000.0;
 
-void set_10mhz(uint32_t f)
+void set_10mhz(float f)
 {
-  setting_frequency_10mhz = f;
+  config.setting_frequency_10mhz = f;
+  config_save();
 }
 
 int SI4432_step_delay = 1500;
@@ -904,6 +905,7 @@ int debug = 0;
 int ADF4351_LE[2] = { 10, 11};
 int ADF4351_Mux = 7;
 
+int ADF4351_frequency_changed = false;
 
 //#define DEBUG(X) // Serial.print( X )
 //#define DEBUGLN(X) Serial.println( X )
@@ -1012,6 +1014,7 @@ void ADF4351_set_frequency(int channel, uint32_t freq, int drive)  // freq / 10H
   ADF4351_prep_frequency(channel,freq + offs, drive);
 //START_PROFILE;
   ADF4351_Set(channel);
+  ADF4351_frequency_changed = true;
 //STOP_PROFILE;
 }
 
@@ -1082,7 +1085,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
   (void)drive;
 //  START_PROFILE;
 //  if (channel == 0)
-    RFout=freq/1000000.0;  // To MHz
+    RFout=freq/config.setting_frequency_10mhz;  // To MHz
 //  else
  //   RFout=freq/1000002.764;  // To MHz
 
@@ -1234,7 +1237,8 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 
 #define Npresc 0    // No High performance mode
 
-#define MIN_DELAY   1
+int SI4463_frequency_changed = false;
+#define MIN_DELAY   2
 
 #include <string.h>
 
@@ -1497,29 +1501,63 @@ int16_t Si446x_RSSI(void)
 //  if (s != SI446X_STATE_RX)
 //    SI4463_start_rx(0);
 
-  uint8_t data[3] = {
+  volatile uint8_t data[3] = {
         SI446X_CMD_GET_MODEM_STATUS,
         0xFF
   };
 //  volatile si446x_state_t s = getState();
 //START_PROFILE;
-  if (SI4432_step_delay)
+  if (SI4432_step_delay && ADF4351_frequency_changed) {
     my_microsecond_delay(SI4432_step_delay);
-again:
-  data[0] = SI446X_CMD_GET_MODEM_STATUS;
-  data[1] = 0xFF;
+    ADF4351_frequency_changed = false;
+  }
 
-SI4463_do_api(data, 2, data, 3);
-  if (data[2] == 255)
-     goto again;
-  if (data[2] == 0)
-     goto again;
-  volatile int16_t rssi = data[2] - 120 * 2;
-  if (rssi < -238)
-    while(1)
-      rssi = rssi;
-//STOP_PROFILE;
-  return DEVICE_TO_PURE_RSSI(rssi);
+  int i = 3; //setting.repeat;
+  int RSSI_RAW[3];
+  do{
+
+
+
+    again:
+    data[0] = SI446X_CMD_GET_MODEM_STATUS;
+    data[1] = 0xFF;
+
+    SI4463_do_api(data, 2, data, 3);
+    if (data[2] == 255)
+      goto again;
+    if (data[2] == 0){
+      data[2] += 1;
+      goto again;
+    }
+    if (data[2] > 150)
+      data[2] = data[2]+1;
+    RSSI_RAW[--i] = data[2] - 120 * 2;
+    //  if (rssi < -238)
+    //    while(1)
+    //      rssi = rssi;
+    //STOP_PROFILE;
+
+    if (i == 0) break;
+    my_microsecond_delay(100);
+  }while(1);
+  int t;
+  if (RSSI_RAW[0] > RSSI_RAW[1]) {
+    t = RSSI_RAW[1];
+    RSSI_RAW[1] = RSSI_RAW[0];
+    RSSI_RAW[0] = t;
+  }
+  if (RSSI_RAW[1] > RSSI_RAW[2]) {
+    t = RSSI_RAW[2];
+    RSSI_RAW[2] = RSSI_RAW[1];
+    RSSI_RAW[1] = t;
+  }
+  if (RSSI_RAW[0] > RSSI_RAW[1]) {
+    t = RSSI_RAW[1];
+    RSSI_RAW[1] = RSSI_RAW[0];
+    RSSI_RAW[0] = t;
+  }
+
+  return DEVICE_TO_PURE_RSSI(RSSI_RAW[1]);
 }
 
 
@@ -1776,7 +1814,7 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
   int Odiv;
   int D;
-  uint32_t offs = ((freq / 1000)* 195) / 1000;
+  uint32_t offs = ((freq / 1000)* 0) / 1000;
 
   float RFout=(freq+offs)/1000000.0;  // To MHz
   if (RFout >= 820) {       // till 1140MHz
@@ -1847,7 +1885,7 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   };
   SI4463_do_api(data2, sizeof(data2), NULL, 0);
   SI4463_start_rx(0);
-  my_microsecond_delay(1000);
+  my_microsecond_delay(3000);
 }
 
 
