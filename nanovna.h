@@ -44,6 +44,7 @@
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 #define __SI4463__
+#define __SI4468__
 /*
  * main.c
  */
@@ -917,6 +918,7 @@ typedef struct ui_button {
   union {
     int32_t  i;
     uint32_t u;
+    float f;
     const char *text;
   } param_1, param_2;    // void data for label printf
   char text[32];
