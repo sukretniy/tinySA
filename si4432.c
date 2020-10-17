@@ -1238,8 +1238,6 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 // ------------------------------ SI4463 -------------------------------------
 
 
-#define Npresc 0    // No High performance mode
-
 int SI4463_frequency_changed = false;
 #define MIN_DELAY   2
 
@@ -1403,7 +1401,11 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#undef RF_MODEM_AGC_CONTROL_1
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+#undef RF_MODEM_RSSI_JUMP_THRESH_4
+#define RF_MODEM_RSSI_JUMP_THRESH_4 0x11, 0x20, 0x04, 0x4B, 0x06, 0x09, 0x10, 0x45  // Increase RSSI reported value with 2.5dB
+
 static const uint8_t SI4468_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #endif
 
@@ -1790,16 +1792,10 @@ uint8_t SI4463_RBW_850kHz[] =
 #else
 // -------------- 0.2 kHz ----------------------------
 
-#undef RF_MODEM_AFC_LIMITER_1_3_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_200Hz.h"
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#include "radio_config_Si4468_200Hz_fast.h"
+
+#include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_02kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
@@ -1810,7 +1806,9 @@ static const uint8_t SI4463_RBW_02kHz[] =
 #include "radio_config_Si4468_1kHz_fast.h"
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+
+#include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_1kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
@@ -1820,7 +1818,9 @@ static const uint8_t SI4463_RBW_1kHz[] =
 #include "radio_config_Si4468_3kHz_fast.h"
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+
+#include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_3kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
@@ -1830,7 +1830,9 @@ static const uint8_t SI4463_RBW_3kHz[] =
 #include "radio_config_Si4468_10kHz_fast.h"
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+
+#include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_10kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
@@ -1840,7 +1842,9 @@ static const uint8_t SI4463_RBW_10kHz[] =
 #include "radio_config_Si4468_30kHz_fast.h"
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+
+#include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_30kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
@@ -1850,7 +1854,9 @@ static const uint8_t SI4463_RBW_30kHz[] =
 #include "radio_config_Si4468_100kHz_fast.h"
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+
+#include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_100kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
@@ -1861,7 +1867,9 @@ static const uint8_t SI4463_RBW_100kHz[] =
 #include "radio_config_Si4468_300kHz_fast.h"
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+
+#include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_300kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
@@ -1872,7 +1880,9 @@ static const uint8_t SI4463_RBW_300kHz[] =
 #include "radio_config_Si4468_850kHz_fast.h"
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF0             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+
+#include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_850kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
@@ -1933,30 +1943,32 @@ uint16_t SI4463_SET_RBW(uint16_t WISH)  {
   return SI4463_force_RBW(i);
 }
 
+#define freq_xco    26.0
 
+#define Npresc 1    // 0=low / 1=High performance mode
 
 void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
-  int Odiv;
-  int D;
+  int band;
+  int outdiv;
   uint32_t offs = ((freq / 1000)* 0) / 1000;
   float RFout=(freq+offs)/1000000.0;  // To MHz
   if (RFout >= 820) {       // till 1140MHz
-    Odiv = 8;
-    D = 2;
+    band = 0;
+    outdiv = 4;
   } else if (RFout >= 410) {    // works till 570MHz
-    Odiv = 10;
-    D = 4;
+    band = 2;
+    outdiv = 8;
   } else if (RFout >= 272) {    // to 380
-    Odiv = 11;
-    D = 6;
+    band = 3;
+    outdiv = 12;
   } else { // 136 { // To 190
-    Odiv = 13;
-    D = 12;
+    band = 5;
+    outdiv = 24;
   }
-  int32_t R = (RFout * D) / ((Npresc+1)*26.0) - 1;
+  int32_t R = (RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;
   float MOD = 520251.0;
-  int32_t  F = (((RFout * D) / ((Npresc+1)*26.0)) - R) * MOD;
+  int32_t  F = (((RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R) * MOD;
 
   int   S = (int)(step_size / 14.305);
   if (S == 0) S = 1;
@@ -2005,16 +2017,16 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
   uint8_t data2[] = {
      0x11, 0x20, 0x01, 0x51,
-     (uint8_t)Odiv + (Npresc*0x08)           // 0x08 for high performance mode
+     (uint8_t)(band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode
   };
   SI4463_do_api(data2, sizeof(data2), NULL, 0);
 //  SI4463_clear_int_status();
 retry:
   SI4463_start_rx(0);
-  my_microsecond_delay(1000);
+  my_microsecond_delay(2000);
   si446x_state_t s = getState();
   if (s != SI446X_STATE_RX) {
-    my_microsecond_delay(15000);
+    my_microsecond_delay(100000);
     goto retry;
   }
 }
