@@ -3010,17 +3010,17 @@ static const struct {
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
  {TC_END,       0,              0,      0,      0,      0,      0},
-#define TEST_POWER  11
+#define TEST_POWER  12
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,      0,      0},
-#define TEST_RBW    15
+#define TEST_RBW    16
  {TC_MEASURE,   TP_30MHZ,       30,     1,      -20,    10,     -60 },      // 16 Measure RBW step time
  {TC_END,       0,              0,      0,      0,      0,      0},
  {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
  {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
-#define TEST_ATTEN    19
+#define TEST_ATTEN    20
  {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 }      // 20 Measure atten step accuracy
 };
 
