@@ -2976,14 +2976,14 @@ void draw_cal_status(void)
 // -------------------- Self testing -------------------------------------------------
 
 enum {
-  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END,
+  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN,
 };
 
 enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH
 };
 
-#define TEST_COUNT  19
+#define TEST_COUNT  21
 
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
@@ -3008,6 +3008,7 @@ static const struct {
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    7,     -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
+ {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
  {TC_END,       0,              0,      0,      0,      0,      0},
 #define TEST_POWER  11
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
@@ -3019,6 +3020,8 @@ static const struct {
  {TC_END,       0,              0,      0,      0,      0,      0},
  {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
  {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
+#define TEST_ATTEN    19
+ {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 }      // 20 Measure atten step accuracy
 };
 
 
@@ -3150,6 +3153,43 @@ int validate_flatness(int i) {
   return(TS_PASS);
 }
 
+
+const float atten_step[7] = { 0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0 };
+
+int validate_atten(int i) {
+  float reference_peak_level = 0.0;
+  test_fail_cause[i] = "Attenuator ";
+//  for (int j= 0; j < 64; j++ ) {
+  for (int j= 0; j < 7; j++ ) {
+//    set_attenuation(((float)j)/2.0);
+    set_attenuation(atten_step[j]);
+    float summed_peak_level = 0;
+#define ATTEN_TEST_SWEEPS    5
+    for (int k=0; k<ATTEN_TEST_SWEEPS; k++) {
+//        setting.sweep_time_us = 1000000;
+        test_acquire(TEST_ATTEN);                        // Acquire test
+//      test_validate(TEST_ATTEN);                       // Validate test
+        float peaklevel = 0.0;
+        for (int k = 0 ; k < sweep_points; k++)
+          peaklevel += actual_t[k];
+        peaklevel /= sweep_points;
+        summed_peak_level += peakLevel;
+      }
+      summed_peak_level /= ATTEN_TEST_SWEEPS;
+    if (j == 0)
+      reference_peak_level = summed_peak_level;
+    else {
+//      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, summed_peak_level, summed_peak_level - reference_peak_level);
+//     shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",atten_step[j], summed_peak_level, summed_peak_level - reference_peak_level);
+#define ATTEN_TEST_CRITERIA 3.0
+      if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA)
+        return(TS_FAIL);
+    }
+  }
+  test_fail_cause[i] = "";
+  return(TS_PASS);
+}
+
 int validate_above(int tc) {
   int status = TS_PASS;
   for (int j = 0; j < setting._sweep_points; j++) {
@@ -3203,7 +3243,9 @@ int test_validate(int i)
   case TC_FLAT:   // Validate passband flatness
     current_test_status = validate_flatness(i);
     break;
-
+  case TC_ATTEN:
+    current_test_status = validate_atten(i);
+    break;
   }
 
   // Report status
@@ -3411,23 +3453,28 @@ void self_test(int test)
     in_selftest = true;
     reset_settings(M_LOW);
     float reference_peak_level = 0;
-    test_prepare(TEST_RBW);
-    for (int j= 0; j < 50; j++ ) {
-      test_prepare(TEST_RBW);
-      set_RBW(300);
-
-      set_attenuation((float)j);
+    test_prepare(TEST_ATTEN);
+    test_acquire(TEST_ATTEN);                        // Acquire test
+    test_validate(TEST_ATTEN);                       // Validate test
+#if 0
+    for (int j= 0; j < 64; j++ ) {
+//      test_prepare(TEST_ATTEN);
+      set_attenuation(((float)j)/2.0);
       float summed_peak_level = 0;
-      for (int k=0; k<10; k++) {
-        test_acquire(TEST_RBW);                        // Acquire test
-        test_validate(TEST_RBW);                       // Validate test
-        summed_peak_level += peakLevel;
-      }
-      peakLevel = summed_peak_level / 10;
+//      for (int k=0; k<10; k++) {
+        test_acquire(TEST_ATTEN);                        // Acquire test
+        test_validate(TEST_ATTEN);                       // Validate test
+//        summed_peak_level += peakLevel;
+//      }
+        float peaklevel = 0.0;
+        for (int k = 0 ; k < sweep_points; k++)
+          peaklevel += actual_t[k];
+        peaklevel /= sweep_points;
       if (j == 0)
         reference_peak_level = peakLevel;
-      shell_printf("Attenuation %ddB, measured level %.2fdBm, delta %.2fdB\n\r",j, peakLevel, peakLevel - reference_peak_level);
+      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, peakLevel, peakLevel - reference_peak_level);
     }
+#endif
     reset_settings(M_LOW);
   } else if (test == 3) {                       // RBW step time search
     in_selftest = true;
