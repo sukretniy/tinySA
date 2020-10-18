@@ -87,8 +87,8 @@ void update_min_max_freq(void)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 24*config.setting_frequency_10mhz;
-    maxFreq = 96*config.setting_frequency_10mhz;
+    minFreq = 10*config.setting_frequency_10mhz;
+    maxFreq = 1200*config.setting_frequency_10mhz;
 #endif
     break;
   case M_GENHIGH:
@@ -182,8 +182,8 @@ void reset_settings(int m)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 13*config.setting_frequency_10mhz;
-    maxFreq = 120*config.setting_frequency_10mhz;
+    minFreq = 10*config.setting_frequency_10mhz;
+    maxFreq = 1200*config.setting_frequency_10mhz;
 #endif
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
@@ -1817,10 +1817,16 @@ modulation_again:
       // --------------------- IF know, set the RX SI4432 frequency ------------------------
 
 #ifdef __SI4432__
-      set_freq (SI4432_RX , local_IF);
+      if (setting.mode == M_LOW || setting.mode == M_GENLOW )
+      {
+        set_freq (SI4432_RX , local_IF);
+      }
 #endif
 #ifdef __SI4463__
-      set_freq (SI4463_RX , local_IF);
+      if (setting.mode == M_LOW || setting.mode == M_GENLOW)
+      {
+        set_freq (SI4463_RX , local_IF);
+      }
 #endif
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
@@ -1891,7 +1897,7 @@ modulation_again:
           set_freq (ADF4351_LO, extra_IF+lf); // otherwise to above IF
         }
         } else if (setting.mode == M_HIGH) {
-        set_freq (SI4463_RX, local_IF+lf); // sweep RX, local_IF = 0 in high mode
+        set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       }
 //      STOP_PROFILE;
 #endif
@@ -2287,6 +2293,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
 #define __MIRROR_MASKING__
 #ifdef __MIRROR_MASKING__
+#ifdef __SI4432__
   if (setting.mode == M_HIGH && setting.mirror_masking) {
     int mirror_offset = 2 * 937000 / setting.frequency_step;
 //    int mask_start = 0;
@@ -2310,7 +2317,7 @@ sweep_again:                                // stay in sweep loop when output mo
   }
 
 #endif
-
+#endif
   // -------------------------- auto attenuate ----------------------------------
 #define AUTO_TARGET_LEVEL   -25
 #define AUTO_TARGET_WINDOW  2

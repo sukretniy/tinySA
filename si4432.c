@@ -1947,21 +1947,29 @@ uint16_t SI4463_SET_RBW(uint16_t WISH)  {
 
 #define Npresc 1    // 0=low / 1=High performance mode
 
+
+
 void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
   int band;
   int outdiv;
   uint32_t offs = ((freq / 1000)* 0) / 1000;
   float RFout=(freq+offs)/1000000.0;  // To MHz
-  if (RFout >= 820) {       // till 1140MHz
+  if (RFout >= 822) {       // till 1140MHz
     band = 0;
     outdiv = 4;
+  } else if (RFout >= 548) {    // works till 760MHz
+    band = 1;
+    outdiv = 6;
   } else if (RFout >= 410) {    // works till 570MHz
     band = 2;
     outdiv = 8;
-  } else if (RFout >= 272) {    // to 380
+  } else if (RFout >= 274) {    // to 380
     band = 3;
     outdiv = 12;
+  } else if (RFout >= 272) {    // to 380
+    band = 4;
+    outdiv = 16;
   } else { // 136 { // To 190
     band = 5;
     outdiv = 24;
