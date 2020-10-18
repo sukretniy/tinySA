@@ -1955,25 +1955,27 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   int outdiv;
   uint32_t offs = ((freq / 1000)* 0) / 1000;
   float RFout=(freq+offs)/1000000.0;  // To MHz
-  if (RFout >= 822) {       // till 1140MHz
+  if (RFout >= 822)         {       // till 1140MHz
     band = 0;
     outdiv = 4;
-  } else if (RFout >= 548) {    // works till 760MHz
-    band = 1;
+#if 1       // band 4 does not function
+  } else if (RFout >= 568) {    // works till 758MHz
+    band = 6;
     outdiv = 6;
-  } else if (RFout >= 410) {    // works till 570MHz
+#endif
+  } else if (RFout >= 420) {    // works till 568MHz
     band = 2;
     outdiv = 8;
-  } else if (RFout >= 274) {    // to 380
+  } else if (RFout >= 329) {    // works till 454MHz
+    band = 1;
+    outdiv = 10;
+  } else if (RFout >= 274) {    // to 339
     band = 3;
     outdiv = 12;
-  } else if (RFout >= 272) {    // to 380
-    band = 4;
-    outdiv = 16;
   } else { // 136 { // To 190
     band = 5;
     outdiv = 24;
-  }
+ }
   int32_t R = (RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;
   float MOD = 520251.0;
   int32_t  F = (((RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R) * MOD;
@@ -2010,8 +2012,8 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
     0x20,                   // Window gate
     0xFE                    // Adj count
   };
-  setState(SI446X_STATE_TX_TUNE);
-  my_microsecond_delay(100);
+//  setState(SI446X_STATE_TX_TUNE);
+//  my_microsecond_delay(200);
   SI4463_do_api(data, sizeof(data), NULL, 0);
   /*
   // Set properties:           RF_MODEM_CLKGEN_BAND_1
@@ -2034,7 +2036,7 @@ retry:
   my_microsecond_delay(2000);
   si446x_state_t s = getState();
   if (s != SI446X_STATE_RX) {
-    my_microsecond_delay(100000);
+    my_microsecond_delay(1000000);
     goto retry;
   }
 }
@@ -2049,7 +2051,7 @@ reset:
   SI_SDN_HIGH;
   my_microsecond_delay(1000);
   SI_SDN_LOW;
-  my_microsecond_delay(1000);
+  my_microsecond_delay(6000);
 
 
 #if 0
@@ -2084,8 +2086,10 @@ again:
   SI4463_start_rx(0);
   my_microsecond_delay(15000);
   s = getState();
-  if (s != SI446X_STATE_RX)
+  if (s != SI446X_STATE_RX) {
+    my_microsecond_delay(1000000);
     goto reset;
+  }
   RSSI = Si446x_RSSI();
 // goto again;
 
