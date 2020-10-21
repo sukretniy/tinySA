@@ -45,6 +45,11 @@
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 #define __SI4463__
 #define __SI4468__
+
+#define DEFAULT_IF  978000000
+#define DEFAULT_SPUR_IF 978000000
+#define DEFAULT_MAX_FREQ    800000000
+
 /*
  * main.c
  */

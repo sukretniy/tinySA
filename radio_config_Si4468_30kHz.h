@@ -21,7 +21,7 @@
 /*
 // Crys_freq(Hz): 26000000    Crys_tol(ppm): 1    IF_mode: 2    High_perf_Ch_Fil: 1    OSRtune: 0    Ch_Fil_Bw_AFC: 0    ANT_DIV: 0    PM_pattern: 0    
 // MOD_type: 2    Rsymb(sps): 60000    Fdev(Hz): 1    RXBW(Hz): 30000    Manchester: 0    AFC_en: 0    Rsymb_error: 0.0    Chip-Version: 2    
-// RF Freq.(MHz): 433.6    API_TC: 29    fhst: 250000    inputBW: 1    BERT: 1    RAW_dout: 0    D_source: 1    Hi_pfm_div: 1    
+// RF Freq.(MHz): 978    API_TC: 29    fhst: 250000    inputBW: 1    BERT: 1    RAW_dout: 0    D_source: 1    Hi_pfm_div: 1    
 // API_ARR_Det_en: 0    Fdev_error: 0    API_ETSI: 2    
 // 
 // # RX IF frequency is  -406250 Hz
@@ -51,7 +51,7 @@
 // Command:                  RF_GPIO_PIN_CFG
 // Description:              Configures the GPIO pins.
 */
-#define RF_GPIO_PIN_CFG 0x13, 0x21, 0x0C, 0x0A, 0x08, 0x00, 0x00, 0x00
+#define RF_GPIO_PIN_CFG 0x13, 0x08, 0x08, 0x0A, 0x21, 0x00, 0x00, 0x00
 
 /*
 // Set properties:           RF_GLOBAL_XO_TUNE_1
@@ -117,7 +117,7 @@
 // Descriptions:
 //   MODEM_FREQ_DEV_0 - 17-bit unsigned TX frequency deviation word.
 */
-#define RF_MODEM_FREQ_DEV_0_1 0x11, 0x20, 0x01, 0x0C, 0x51
+#define RF_MODEM_FREQ_DEV_0_1 0x11, 0x20, 0x01, 0x0C, 0x28
 
 /*
 // Set properties:           RF_MODEM_TX_RAMP_DELAY_12
@@ -139,7 +139,7 @@
 //   MODEM_BCR_OSR_1 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 //   MODEM_BCR_OSR_0 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 */
-#define RF_MODEM_TX_RAMP_DELAY_12 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x0A, 0x03, 0x80, 0x00, 0xB0, 0x10, 0x0C, 0xF9, 0x00, 0x44
+#define RF_MODEM_TX_RAMP_DELAY_12 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x0A, 0x03, 0xC0, 0x00, 0xB0, 0x10, 0x0C, 0xF9, 0x00, 0x44
 
 /*
 // Set properties:           RF_MODEM_BCR_NCO_OFFSET_2_12
@@ -161,7 +161,7 @@
 //   MODEM_AFC_GAIN_1 - Sets the gain of the PLL-based AFC acquisition loop, and provides miscellaneous control bits for AFC functionality.
 //   MODEM_AFC_GAIN_0 - Sets the gain of the PLL-based AFC acquisition loop, and provides miscellaneous control bits for AFC functionality.
 */
-#define RF_MODEM_BCR_NCO_OFFSET_2_12 0x11, 0x20, 0x0C, 0x24, 0x07, 0x8F, 0xD5, 0x00, 0x00, 0x02, 0xC0, 0x08, 0x00, 0x12, 0x00, 0x28
+#define RF_MODEM_BCR_NCO_OFFSET_2_12 0x11, 0x20, 0x0C, 0x24, 0x07, 0x8F, 0xD5, 0x00, 0x00, 0x02, 0xC0, 0x08, 0x00, 0x12, 0x00, 0x14
 
 /*
 // Set properties:           RF_MODEM_AFC_LIMITER_1_3
@@ -248,7 +248,7 @@
 //   MODEM_RAW_SEARCH2 - Defines and controls the search period length for the Moving Average and Min-Max detectors.
 //   MODEM_CLKGEN_BAND - Select PLL Synthesizer output divider ratio as a function of frequency band.
 */
-#define RF_MODEM_RAW_SEARCH2_2 0x11, 0x20, 0x02, 0x50, 0x94, 0x0A
+#define RF_MODEM_RAW_SEARCH2_2 0x11, 0x20, 0x02, 0x50, 0x94, 0x08
 
 /*
 // Set properties:           RF_MODEM_SPIKE_DET_2
@@ -398,7 +398,7 @@
 //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
 //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
 */
-#define RF_FREQ_CONTROL_INTE_8 0x11, 0x40, 0x08, 0x00, 0x43, 0x09, 0x00, 0x00, 0x4E, 0xC5, 0x20, 0xFE
+#define RF_FREQ_CONTROL_INTE_8 0x11, 0x40, 0x08, 0x00, 0x4B, 0x08, 0x80, 0x00, 0x27, 0x62, 0x20, 0xFF
 
 /*
 // Command:                  RF_START_RX
@@ -410,13 +410,13 @@
 // Command:                  RF_IRCAL
 // Description:              Image rejection calibration.
 */
-#define RF_IRCAL 0x17, 0x56, 0x10, 0xCA, 0xF0
+#define RF_IRCAL 0x17, 0x56, 0x10, 0xFA, 0xF0
 
 /*
 // Command:                  RF_IRCAL_1
 // Description:              Image rejection calibration.
 */
-#define RF_IRCAL_1 0x17, 0x13, 0x10, 0xCA, 0xF0
+#define RF_IRCAL_1 0x17, 0x13, 0x10, 0xFA, 0xF0
 
 /*
 // Set properties:           RF_GLOBAL_CLK_CFG_1
@@ -540,7 +540,7 @@
 //   MODEM_BCR_OSR_1 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 //   MODEM_BCR_OSR_0 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 */
-#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x0A, 0x03, 0x80, 0x00, 0x10, 0x10, 0x00, 0xF9, 0x00, 0x48
+#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x0A, 0x03, 0xC0, 0x00, 0x10, 0x10, 0x00, 0xF9, 0x00, 0x48
 
 /*
 // Set properties:           RF_MODEM_BCR_NCO_OFFSET_2_12_1
@@ -562,7 +562,7 @@
 //   MODEM_AFC_GAIN_1 - Sets the gain of the PLL-based AFC acquisition loop, and provides miscellaneous control bits for AFC functionality.
 //   MODEM_AFC_GAIN_0 - Sets the gain of the PLL-based AFC acquisition loop, and provides miscellaneous control bits for AFC functionality.
 */
-#define RF_MODEM_BCR_NCO_OFFSET_2_12_1 0x11, 0x20, 0x0C, 0x24, 0x07, 0x16, 0xD8, 0x07, 0xFF, 0x02, 0xC0, 0x08, 0x00, 0x12, 0x02, 0x5D
+#define RF_MODEM_BCR_NCO_OFFSET_2_12_1 0x11, 0x20, 0x0C, 0x24, 0x07, 0x16, 0xD8, 0x07, 0xFF, 0x02, 0xC0, 0x08, 0x00, 0x12, 0x01, 0x2E
 
 /*
 // Set properties:           RF_MODEM_AFC_LIMITER_1_3_1
@@ -575,7 +575,7 @@
 //   MODEM_AFC_LIMITER_0 - Set the AFC limiter value.
 //   MODEM_AFC_MISC - Specifies miscellaneous AFC control bits.
 */
-#define RF_MODEM_AFC_LIMITER_1_3_1 0x11, 0x20, 0x03, 0x30, 0x00, 0x7C, 0xA0
+#define RF_MODEM_AFC_LIMITER_1_3_1 0x11, 0x20, 0x03, 0x30, 0x00, 0x7D, 0xA0
 
 /*
 // Set properties:           RF_MODEM_AGC_CONTROL_1_1
@@ -640,7 +640,7 @@
 //   MODEM_RAW_SEARCH2 - Defines and controls the search period length for the Moving Average and Min-Max detectors.
 //   MODEM_CLKGEN_BAND - Select PLL Synthesizer output divider ratio as a function of frequency band.
 */
-#define RF_MODEM_RAW_SEARCH2_2_1 0x11, 0x20, 0x02, 0x50, 0x94, 0x0A
+#define RF_MODEM_RAW_SEARCH2_2_1 0x11, 0x20, 0x02, 0x50, 0x94, 0x08
 
 /*
 // Set properties:           RF_MODEM_SPIKE_DET_2_1
@@ -790,7 +790,7 @@
 //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
 //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
 */
-#define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x41, 0x0D, 0xA9, 0x5A, 0x4E, 0xC5, 0x20, 0xFE
+#define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x4A, 0x09, 0xD8, 0x9D, 0x27, 0x62, 0x20, 0xFF
 
 
 // AUTOMATICALLY GENERATED CODE! 

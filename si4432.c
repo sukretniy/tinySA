@@ -1090,7 +1090,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 //  if (channel == 0)
     RFout=freq/config.setting_frequency_10mhz;  // To MHz
 //  else
- //   RFout=freq/1000002.764;  // To MHz
+//    RFout=freq/1000210;  // To MHz
 
     if (RFout >= 2200) {
       OutputDivider = 1;
@@ -1243,6 +1243,21 @@ int SI4463_frequency_changed = false;
 
 #include <string.h>
 
+#define SI4463_READ_CTS       ((palReadPort(GPIOC)>>14)&1)
+
+int SI4463_wait_for_cts(void)
+{
+  if (SI4463_READ_CTS)
+    return 1;
+  while (!SI4463_READ_CTS) {
+//    ili9341_drawstring_7x13("Waiting               ", 50, 200);
+    my_microsecond_delay(10);
+  }
+//  ili9341_drawstring_7x13("Proceed                 ", 50, 200);
+  return 1;
+}
+
+
 void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 {
   set_SPI_mode(SPI_MODE_SI);
@@ -1307,6 +1322,14 @@ uint8_t SI4463_read_byte( uint8_t ADR )
 uint8_t SI4463_get_response(void* buff, uint8_t len)
 {
     uint8_t cts = 0;
+#if 1
+    cts = SI4463_READ_CTS;
+    if (!cts) {
+      return false;
+    }
+//    if (len == 0)
+//      return true;
+#endif
     set_SPI_mode(SPI_MODE_SI);
   //  if (SI4432_guard)
   //    while(1) ;
@@ -1348,8 +1371,12 @@ uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout)
 
 void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 {
+#if 0
   if(SI4463_wait_response(NULL, 0, true)) // Make sure it's ok to send a command
-  {
+#else
+  if (SI4463_wait_for_cts())
+#endif
+    {
 //    set_SPI_mode(SPI_MODE_SI);
     palClearPad(GPIOB, GPIOB_RX_SEL);
     my_microsecond_delay(MIN_DELAY);
@@ -1360,11 +1387,21 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 //    my_microsecond_delay(MIN_DELAY);
     palSetPad(GPIOB, GPIOB_RX_SEL);
     my_microsecond_delay(MIN_DELAY);
+#if 0
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
+#if 0
       SI4463_wait_response(NULL, 0, false);
-    else if(out != NULL) { // If we have an output buffer then read command response into it
-      if (((uint8_t*)data)[0] == SI446X_CMD_GET_MODEM_STATUS)
-        my_microsecond_delay(18);   // Prevent extra wait cycles
+#else
+      SI4463_wait_for_cts();
+#endif
+    else
+#endif
+#if 1
+    SI4463_wait_for_cts();
+#endif
+    if(out != NULL) { // If we have an output buffer then read command response into it
+//      if (((uint8_t*)data)[0] == SI446X_CMD_GET_MODEM_STATUS)
+//        my_microsecond_delay(18);   // Prevent extra wait cycles
       SI4463_wait_response(out, outLen, true);
     }
   }
@@ -1397,14 +1434,15 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #ifdef __SI4468__
 #undef RADIO_CONFIG_H_
 #undef RADIO_CONFIGURATION_DATA_ARRAY
-#include "radio_config_Si4468_850kHz_fast.h"
+#include "radio_config_Si4468_850kHz.h"
 
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#undef RF_MODEM_AGC_CONTROL_1
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-#undef RF_MODEM_RSSI_JUMP_THRESH_4
-#define RF_MODEM_RSSI_JUMP_THRESH_4 0x11, 0x20, 0x04, 0x4B, 0x06, 0x09, 0x10, 0x45  // Increase RSSI reported value with 2.5dB
+//#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
+//#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x18, 0x10, 0x40
+
+//#undef RF_MODEM_AGC_CONTROL_1
+//#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+//#undef RF_MODEM_RSSI_JUMP_THRESH_4
+//#define RF_MODEM_RSSI_JUMP_THRESH_4 0x11, 0x20, 0x04, 0x4B, 0x06, 0x09, 0x10, 0x45  // Increase RSSI reported value with 2.5dB
 
 static const uint8_t SI4468_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #endif
@@ -1437,7 +1475,7 @@ void SI4463_start_rx(uint8_t CHANNEL)
     0,
     0,
     0,
-    SI446X_CMD_START_RX_ARG_NEXT_STATE1_RXTIMEOUT_STATE_ENUM_NOCHANGE,
+    8,
     SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
     SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
   };
@@ -1491,6 +1529,16 @@ void Si446x_getInfo(si446x_info_t* info)
     info->func          = data[5];
 }
 
+uint8_t SI4463_get_device_status()
+{
+  uint8_t data[2] =
+  {
+    SI446X_CMD_ID_REQUEST_DEVICE_STATE, 0, 0
+  };
+  SI4463_do_api(data, 1, data, SI446X_CMD_REPLY_COUNT_REQUEST_DEVICE_STATE);
+  return(data[0]);
+}
+
 
 
 // Read a fast response register
@@ -1503,7 +1551,8 @@ uint8_t getFRR(uint8_t reg)
 // Get current radio state
  si446x_state_t getState(void)
 {
-    uint8_t state = getFRR(SI446X_CMD_READ_FRR_B);
+   SI4463_wait_for_cts();
+   uint8_t state = getFRR(SI446X_CMD_READ_FRR_B);
     if(state == SI446X_STATE_TX_TUNE)
         state = SI446X_STATE_TX;
     else if(state == SI446X_STATE_RX_TUNE)
@@ -1538,9 +1587,10 @@ int16_t Si446x_RSSI(void)
   };
 //  volatile si446x_state_t s = getState();
 //START_PROFILE;
-  if (SI4432_step_delay /* && ADF4351_frequency_changed */) {
+  if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed) ) {
     my_microsecond_delay(SI4432_step_delay);
     ADF4351_frequency_changed = false;
+    SI4463_frequency_changed = false;
   }
 
   int i = 3; //setting.repeat;
@@ -1793,8 +1843,7 @@ uint8_t SI4463_RBW_850kHz[] =
 // -------------- 0.2 kHz ----------------------------
 
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_200Hz_fast.h"
-
+#include "radio_config_Si4468_200Hz.h"
 #include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_02kHz[] =
@@ -1803,11 +1852,7 @@ static const uint8_t SI4463_RBW_02kHz[] =
 // -------------- 1kHz ----------------------------
 
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_1kHz_fast.h"
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-
+#include "radio_config_Si4468_1kHz.h"
 #include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_1kHz[] =
@@ -1815,11 +1860,7 @@ static const uint8_t SI4463_RBW_1kHz[] =
 
 // -------------- 3 kHz ----------------------------
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_3kHz_fast.h"
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-
+#include "radio_config_Si4468_3kHz.h"
 #include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_3kHz[] =
@@ -1827,11 +1868,7 @@ static const uint8_t SI4463_RBW_3kHz[] =
 
 // -------------- 10 kHz ----------------------------
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_10kHz_fast.h"
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-
+#include "radio_config_Si4468_10kHz.h"
 #include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_10kHz[] =
@@ -1839,11 +1876,7 @@ static const uint8_t SI4463_RBW_10kHz[] =
 
 // -------------- 30 kHz ----------------------------
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_30kHz_fast.h"
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-
+#include "radio_config_Si4468_30kHz.h"
 #include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_30kHz[] =
@@ -1851,11 +1884,7 @@ static const uint8_t SI4463_RBW_30kHz[] =
 
 // -------------- 100kHz ----------------------------
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_100kHz_fast.h"
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-
+#include "radio_config_Si4468_100kHz.h"
 #include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_100kHz[] =
@@ -1864,11 +1893,7 @@ static const uint8_t SI4463_RBW_100kHz[] =
 // -------------- 300kHz ----------------------------
 
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_300kHz_fast.h"
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-
+#include "radio_config_Si4468_300kHz.h"
 #include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_300kHz[] =
@@ -1877,11 +1902,7 @@ static const uint8_t SI4463_RBW_300kHz[] =
 // -------------- 850kHz ----------------------------
 
 #undef RADIO_CONFIG_H_
-#include "radio_config_Si4468_850kHz_fast.h"
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x04, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x10, 0x40
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-
+#include "radio_config_Si4468_850kHz.h"
 #include "radio_config_Si4468_short.h"
 
 static const uint8_t SI4463_RBW_850kHz[] =
@@ -1917,20 +1938,42 @@ static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
 
 uint16_t SI4463_force_RBW(int f)
 {
+#if 0
+  SI_SDN_LOW;
+  my_microsecond_delay(1000);
+  SI_SDN_HIGH;
+  my_microsecond_delay(1000);
+  SI_SDN_LOW;
+  my_microsecond_delay(14000);
+#else
   setState(SI446X_STATE_READY);
   my_microsecond_delay(200);
-
+#endif
   uint8_t *config = RBW_choices[f].reg;
   uint16_t i=0;
   while(config[i] != 0)
   {
     SI4463_do_api((void *)&config[i+1], config[i], NULL, 0);
     i += config[i]+1;
-    my_microsecond_delay(100);
+    my_microsecond_delay(200);
   }
   SI4463_clear_int_status();
+retry:
   SI4463_start_rx(0);
-  my_microsecond_delay(1000);
+  my_microsecond_delay(15000);
+  si446x_state_t s = getState();
+  if (s != SI446X_STATE_RX) {
+
+    SI4463_start_rx(0);
+    my_microsecond_delay(1000000);
+    si446x_state_t s = getState();
+    if (s != SI446X_STATE_RX) {
+      ili9341_drawstring_7x13("Waiting for RX", 50, 200);
+      my_microsecond_delay(3000000);
+      goto retry;
+    }
+    ili9341_drawstring_7x13("Waiting done     ", 50, 200);
+  }
   SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }
@@ -1947,41 +1990,45 @@ uint16_t SI4463_SET_RBW(uint16_t WISH)  {
 
 #define Npresc 1    // 0=low / 1=High performance mode
 
-
+static int prev_band = -1;
 
 void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
-  int band;
+  int band = -1;
   int outdiv;
   uint32_t offs = ((freq / 1000)* 0) / 1000;
   float RFout=(freq+offs)/1000000.0;  // To MHz
-  if (RFout >= 822)         {       // till 1140MHz
+  if (RFout >= 822 && RFout <= 1140)         {       // till 1140MHz
     band = 0;
     outdiv = 4;
-#if 1       // band 4 does not function
-  } else if (RFout >= 568) {    // works till 758MHz
-    band = 6;
+#if 0       // band 4 does not function
+  } else if (RFout >= 568 && RFout <= 758 ) {    // works till 758MHz
+    band = 4;
     outdiv = 6;
 #endif
-  } else if (RFout >= 420) {    // works till 568MHz
+  } else if (RFout >= 420 && RFout <= 568) {    // works till 568MHz
     band = 2;
     outdiv = 8;
-  } else if (RFout >= 329) {    // works till 454MHz
+  } else if (RFout >= 329 && RFout <= 454) {    // works till 454MHz
     band = 1;
     outdiv = 10;
-  } else if (RFout >= 274) {    // to 339
+  } else if (RFout >= 274 && RFout <= 339) {    // to 339
     band = 3;
     outdiv = 12;
-  } else { // 136 { // To 190
+  } else if (RFout >= 136 && RFout <= 190){ // 136 { // To 190
     band = 5;
     outdiv = 24;
  }
-  int32_t R = (RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;
+  if (band == -1)
+    return;
+  int32_t R = (RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
   float MOD = 520251.0;
   int32_t  F = (((RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R) * MOD;
 
   int   S = (int)(step_size / 14.305);
   if (S == 0) S = 1;
+  setState(SI446X_STATE_READY);
+  my_microsecond_delay(100);
 
   /*
   // Set properties:           RF_FREQ_CONTROL_INTE_8
@@ -1999,8 +2046,7 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
   //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
   */
-  // #define RF_FREQ_CONTROL_INTE_8 0x11, 0x40, 0x08, 0x00, 0x4B, 0x08, 0x00, 0x00, 0x00, 0x51, 0x20, 0xFE
-
+  // #define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x41, 0x0D, 0xA9, 0x5A, 0x4E, 0xC5, 0x20, 0xFE
   uint8_t data[] = {
     0x11, 0x40, 0x08, 0x00,
     (uint8_t) R,                   //  R data[4]
@@ -2010,11 +2056,14 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
     (uint8_t) ((S>> 8) & 255),     //  Step size data[8] .. data[9]
     (uint8_t) ((S    ) & 255),     //  Step size data[8] .. data[9]
     0x20,                   // Window gate
-    0xFE                    // Adj count
+    0xFF                    // Adj count
   };
-//  setState(SI446X_STATE_TX_TUNE);
-//  my_microsecond_delay(200);
+
+
+
   SI4463_do_api(data, sizeof(data), NULL, 0);
+
+  if (band != prev_band) {
   /*
   // Set properties:           RF_MODEM_CLKGEN_BAND_1
   // Number of properties:     1
@@ -2024,34 +2073,49 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   // Descriptions:
   //   MODEM_CLKGEN_BAND - Select PLL Synthesizer output divider ratio as a function of frequency band.
   */
-  #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
+  // #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
   uint8_t data2[] = {
      0x11, 0x20, 0x01, 0x51,
-     (uint8_t)(band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode
+     0x10 + (uint8_t)(band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
   };
-  SI4463_do_api(data2, sizeof(data2), NULL, 0);
+    SI4463_do_api(data2, sizeof(data2), NULL, 0);
+    my_microsecond_delay(30000);
+    prev_band = band;
+  }
+
 //  SI4463_clear_int_status();
 retry:
   SI4463_start_rx(0);
-  my_microsecond_delay(2000);
+  my_microsecond_delay(200);
   si446x_state_t s = getState();
   if (s != SI446X_STATE_RX) {
+    SI4463_start_rx(0);
     my_microsecond_delay(1000000);
-    goto retry;
+    si446x_state_t s = getState();
+    if (s != SI446X_STATE_RX) {
+      my_microsecond_delay(3000000);
+      goto retry;
+    }
   }
+  SI4463_frequency_changed = true;
 }
 
 
 void SI4463_init(void)
 {
-  volatile int16_t RSSI;
 reset:
   SI_SDN_LOW;
-  my_microsecond_delay(1000);
+  my_microsecond_delay(100);
   SI_SDN_HIGH;
   my_microsecond_delay(1000);
   SI_SDN_LOW;
-  my_microsecond_delay(6000);
+  my_microsecond_delay(1000);
+  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+  while (!SI4463_READ_CTS) {
+    ili9341_drawstring_7x13("Waiting", 50, 200);
+    my_microsecond_delay(100);
+  }
+  ili9341_drawstring_7x13("Proceed", 50, 200);
 
 
 #if 0
@@ -2064,12 +2128,23 @@ for(uint16_t i=0;i<sizeof(SI4463_config);i++)
 }
 #endif
 #ifdef __SI4468__
-for(uint16_t i=0;i<sizeof(SI4468_config);i++)
+uint16_t i=0;
+SI4463_do_api((void *)&SI4468_config[i+1], SI4468_config[i], NULL, 0);
+i += SI4468_config[i]+1;
+my_microsecond_delay(2000000);
+#if 0
+SI4463_do_api((void *)&SI4468_config[i+1], SI4468_config[i], NULL, 0);
+i += SI4468_config[i]+1;
+//my_microsecond_delay(2000000);
+SI4463_do_api((void *)&SI4468_config[i+1], SI4468_config[i], NULL, 0);
+i += SI4468_config[i]+1;
+//my_microsecond_delay(1000000);
+#endif
+for(;i<sizeof(SI4468_config);i++)
 {
   SI4463_do_api((void *)&SI4468_config[i+1], SI4468_config[i], NULL, 0);
   i += SI4468_config[i];
-  my_microsecond_delay(200);
-
+  my_microsecond_delay(2000);
 }
 #endif
 //  SI4463_do_api((void *)&SI4463_config[1], SI4463_config[0], NULL, 0);
@@ -2087,13 +2162,15 @@ again:
   my_microsecond_delay(15000);
   s = getState();
   if (s != SI446X_STATE_RX) {
+    ili9341_drawstring_7x13("Waiting for RX", 50, 200);
     my_microsecond_delay(1000000);
-    goto reset;
+    goto again;
   }
-  RSSI = Si446x_RSSI();
+  ili9341_drawstring_7x13("Waiting ready     ", 50, 200);
+  // Si446x_RSSI();
 // goto again;
 
-
+  prev_band = -1; // 433MHz
 }
 
 

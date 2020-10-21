@@ -68,7 +68,7 @@ void update_min_max_freq(void)
   case M_LOW:
     minFreq = 0;
     if (config.frequency_IF2 == 0)
-      maxFreq = 350000000;
+      maxFreq = DEFAULT_MAX_FREQ;
     else
       maxFreq = config.frequency_IF2;
     break;
@@ -80,7 +80,7 @@ void update_min_max_freq(void)
 #endif
   case M_GENLOW:
     minFreq = 0;
-    maxFreq = 350000000;
+    maxFreq = DEFAULT_MAX_FREQ;
     break;
   case M_HIGH:
 #ifdef __ULTRA_SA__
@@ -135,7 +135,7 @@ void reset_settings(int m)
   setting.repeat = 1;
   setting.tracking_output = false;
   setting.measurement = M_OFF;
-  setting.frequency_IF = 433600000;
+  setting.frequency_IF = DEFAULT_IF;
   setting.auto_IF = true;
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
@@ -158,7 +158,7 @@ void reset_settings(int m)
     minFreq = 0;
     maxFreq = 4000000000;
     set_sweep_frequency(ST_START, (uint32_t) 0);
-    set_sweep_frequency(ST_STOP, (uint32_t) 350000000);
+    set_sweep_frequency(ST_STOP, (uint32_t) DEFAULT_MAX_FREQ);
     setting.attenuate = 0.0;    // <---------------- WARNING -----------------
     setting.auto_attenuation = false;   // <---------------- WARNING -----------------
     setting.sweep_time_us = 0;
@@ -182,8 +182,8 @@ void reset_settings(int m)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 10*config.setting_frequency_10mhz;
-    maxFreq = 1200*config.setting_frequency_10mhz;
+    minFreq =  136*config.setting_frequency_10mhz;
+    maxFreq = 1150*config.setting_frequency_10mhz;
 #endif
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
@@ -937,7 +937,7 @@ void calculate_step_delay(void)
       if (actual_rbw_x10 >= 2700)      { SI4432_step_delay = 400; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 800)  { SI4432_step_delay = 500; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 250)  { SI4432_step_delay = 1000; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 5000; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 15000; SI4432_offset_delay = 100; }
       else                             { SI4432_step_delay = 20000; SI4432_offset_delay =1600; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
@@ -1448,8 +1448,8 @@ search_maximum(int m, int center, int span)
 }
 
 //static int spur_old_stepdelay = 0;
-static const unsigned int spur_IF =            433600000;       // The IF frequency for which the spur table is value
-static const unsigned int spur_alternate_IF =  434100000;       // if the frequency is found in the spur table use this IF frequency
+static const unsigned int spur_IF =            DEFAULT_IF;       // The IF frequency for which the spur table is value
+static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
  117716000,
@@ -1706,7 +1706,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
           modulation_delay += config.cor_nfm;  // -17 default
           // modulation_index = 0; // default value
         }
-        if ((setting.mode == M_GENLOW  && f > 480000000 - 433000000) ||
+        if ((setting.mode == M_GENLOW  && f > 480000000 - DEFAULT_IF) ||
             (setting.mode == M_GENHIGH  && f > 480000000) )
           modulation_index += 2;
         current_fm_modulation = (int *)fm_modulation[modulation_index];
@@ -1772,7 +1772,7 @@ modulation_again:
       local_IF = 0;
     else {
       if (setting.auto_IF)
-        local_IF = setting.spur_removal ? 433600000 : spur_IF;
+        local_IF = setting.spur_removal ? DEFAULT_IF : spur_IF;
       else
         local_IF = setting.frequency_IF;
     }
@@ -1868,8 +1868,8 @@ modulation_again:
 #define IF_2    config.frequency_IF2                      // First IF in Ultra SA mode
 
       set_freq (2, config.frequency_IF2  + lf);                 // Scanning LO up to IF2
-      set_freq (3, config.frequency_IF2  - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
-      set_freq (SI4432_LO, 433800000);                 // Second IF fixed in Ultra SA mode
+      set_freq (3, config.frequency_IF2  - DEFAULT_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
+      set_freq (SI4432_LO, DEFAULT_IF);                 // Second IF fixed in Ultra SA mode
 #else
 #ifdef __SI4432__
       if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
@@ -1880,23 +1880,26 @@ modulation_again:
 #ifdef __ADF4351__
 //      START_PROFILE;
       if (setting.mode == M_LOW) {
-        if (i > 0 && setting.frequency_step < 1000) {
-          set_freq (SI4463_RX, setting.frequency_IF -  setting.frequency_step*i); // sweep RX, local_IF = 0 in high mode
-        } else {
-        uint32_t extra_IF = local_IF;
-        if (config.frequency_IF2 != 0) {
-          extra_IF = config.frequency_IF2;
-          set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
-        }
-        if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
-          if (lf > extra_IF)
-            set_freq (ADF4351_LO, lf - extra_IF); // set LO SI4432 to below IF frequency
+        if (i > 0 && setting.frequency_step < 3500) {
+          if (S_STATE(setting.below_IF))
+            set_freq (SI4463_RX, setting.frequency_IF +  setting.frequency_step*i); // sweep RX, local_IF = 0 in high mode
           else
-            set_freq (ADF4351_LO, extra_IF-lf); // set LO SI4432 to below IF frequency
-        } else
-          set_freq (ADF4351_LO, extra_IF+lf); // otherwise to above IF
+            set_freq (SI4463_RX, setting.frequency_IF -  setting.frequency_step*i); // sweep RX, local_IF = 0 in high mode
+        } else {
+          uint32_t extra_IF = local_IF;
+          if (config.frequency_IF2 != 0) {
+            extra_IF = config.frequency_IF2;
+            set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
+          }
+          if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
+            if (lf > extra_IF)
+              set_freq (ADF4351_LO, lf - extra_IF); // set LO SI4432 to below IF frequency
+            else
+              set_freq (ADF4351_LO, extra_IF-lf); // set LO SI4432 to below IF frequency
+          } else
+            set_freq (ADF4351_LO, extra_IF+lf); // otherwise to above IF
         }
-        } else if (setting.mode == M_HIGH) {
+      } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       }
 //      STOP_PROFILE;
@@ -3347,7 +3350,7 @@ void test_prepare(int i)
 {
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
-  setting.frequency_IF = 433600000;                // Default frequency
+  setting.frequency_IF = DEFAULT_IF;                // Default frequency
   setting.auto_IF = true;
   setting.auto_attenuation = false;
   switch(test_case[i].setup) {                // Prepare test conditions
@@ -3369,7 +3372,7 @@ common_silent:
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
-    setting.frequency_IF = 433900000;                // Center on SAW filters
+    setting.frequency_IF = DEFAULT_IF;                // Center on SAW filters
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input
@@ -3499,7 +3502,7 @@ void self_test(int test)
     reset_settings(M_LOW);
     test_prepare(TEST_SILENCE);
     setting.auto_IF = false;
-    setting.frequency_IF=433600000;
+    setting.frequency_IF=DEFAULT_IF;
     setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
@@ -3516,7 +3519,7 @@ void self_test(int test)
       f += setting.frequency_step;
       shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d and step of %d\n\r", p2, p1, setting.frequency_IF, setting.frequency_step );
       f = 400000;
-      while (f < 350000000) {
+      while (f < DEFAULT_MAX_FREQ) {
         p = PURE_TO_float(perform(false, 1, f, false));
 #define SPUR_DELTA  6
         if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
@@ -3559,7 +3562,7 @@ void self_test(int test)
     in_selftest = true;
 //    reset_settings(M_LOW);
     setting.auto_IF = false;
-    setting.frequency_IF=433600000;
+    setting.frequency_IF=DEFAULT_IF;
     ui_mode_normal();
     test_prepare(TEST_RBW);
     setting.step_delay = 8000;
@@ -3672,12 +3675,12 @@ void self_test(int test)
     case 2:
       reset_settings(M_LOW);
       set_sweep_frequency(ST_START, 300000000);
-      set_sweep_frequency(ST_STOP, 350000000);
+      set_sweep_frequency(ST_STOP, DEFAULT_MAX_FREQ);
       break;
     case 3:
       reset_settings(M_HIGH);
       set_sweep_frequency(ST_START, 300000000);
-      set_sweep_frequency(ST_STOP, 350000000);
+      set_sweep_frequency(ST_STOP, DEFAULT_MAX_FREQ);
       break;
     case 4:
       reset_settings(M_GENLOW);

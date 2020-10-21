@@ -2883,7 +2883,7 @@ int main(void)
 //    menu_mode_cb(setting.mode,0);
 //  }
   redraw_frame();
-#if 1
+#if 0
   set_mode(M_HIGH);
   set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
   sweep(false);
