@@ -1880,7 +1880,7 @@ modulation_again:
 #ifdef __ADF4351__
 //      START_PROFILE;
       if (setting.mode == M_LOW) {
-        if (i > 0 && setting.frequency_step < 3500) {
+        if (i > 0 && setting.frequency_step < 2000) {
           if (S_STATE(setting.below_IF))
             set_freq (SI4463_RX, setting.frequency_IF +  setting.frequency_step*i); // sweep RX, local_IF = 0 in high mode
           else
