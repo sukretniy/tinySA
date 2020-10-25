@@ -204,6 +204,7 @@ void set_RBW(uint32_t rbw_x10);
 void set_drive(int d);
 void set_IF(int f);
 void set_IF2(int f);
+void set_R(int f);
 void set_step_delay(int t);
 void set_offset_delay(int t);
 void set_repeat(int);
@@ -1020,4 +1021,10 @@ enum {
 enum {
   T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN
 };
+
+
+// -------------------- Si4432.c ---------------
+extern int SI4463_R;
+void Si4463_set_refer(int ref);
+
 /*EOF*/

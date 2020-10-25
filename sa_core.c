@@ -238,7 +238,10 @@ void set_refer_output(int v)
 #ifdef __SI4432__
   SI4432_SetReference(setting.refer);
 #endif
-//  dirty = true;
+#ifdef __SI4463__
+  Si4463_set_refer(setting.refer);
+#endif
+  //  dirty = true;
 }
 
 void set_decay(int d)
@@ -390,6 +393,12 @@ void set_IF2(int f)
   config.frequency_IF2 = f;
   dirty = true;
   config_save();
+}
+
+void set_R(int f)
+{
+  ADF4351_R_counter(f);
+  dirty = true;
 }
 
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
@@ -936,9 +945,10 @@ void calculate_step_delay(void)
 #ifdef __SI4463__
       if (actual_rbw_x10 >= 2700)      { SI4432_step_delay = 400; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 800)  { SI4432_step_delay = 500; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 250)  { SI4432_step_delay = 1000; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 15000; SI4432_offset_delay = 100; }
-      else                             { SI4432_step_delay = 20000; SI4432_offset_delay =1600; }
+      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 700; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 800; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 100; }
+      else                             { SI4432_step_delay = 12000; SI4432_offset_delay =1600; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
@@ -1314,29 +1324,29 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   } else {
     setting.vbw_x10 = 3000; // trick to get right default rbw in zero span mode
   }
-  actual_rbw_x10 = setting.rbw_x10;     // requested rbw
-  if (actual_rbw_x10 == 0) {        // if auto rbw
+  uint32_t temp_actual_rbw_x10 = setting.rbw_x10;     // requested rbw , 32 bit !!!!!!
+  if (temp_actual_rbw_x10 == 0) {        // if auto rbw
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
       if (setting.fast_speedup > 2)
-        actual_rbw_x10 = 6*setting.vbw_x10; // rbw is four the frequency step to ensure no gaps in coverage as there are some weird jumps
+        temp_actual_rbw_x10 = 6*setting.vbw_x10; // rbw is six times the frequency step to ensure no gaps in coverage as there are some weird jumps
       else
-        actual_rbw_x10 = 4*setting.vbw_x10; // rbw is four the frequency step to ensure no gaps in coverage as there are some weird jumps
+        temp_actual_rbw_x10 = 4*setting.vbw_x10; // rbw is four times the frequency step to ensure no gaps in coverage as there are some weird jumps
     } else
-      actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
+      temp_actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
   }
 #ifdef __SI4432__
-  if (actual_rbw_x10 < 26)
-    actual_rbw_x10 = 26;
-  if (actual_rbw_x10 > 6000)
-    actual_rbw_x10 = 6000;
+  if (temp_actual_rbw_x10 < 26)
+    temp_actual_rbw_x10 = 26;
+  if (temp_actual_rbw_x10 > 6000)
+    temp_actual_rbw_x10 = 6000;
 #endif
 #ifdef __SI4463__
-  if (actual_rbw_x10 < 1)
-    actual_rbw_x10 = 1;
-  if (actual_rbw_x10 > 8500)
-    actual_rbw_x10 = 8500;
+  if (temp_actual_rbw_x10 < 1)
+    temp_actual_rbw_x10 = 1;
+  if (temp_actual_rbw_x10 > 8500)
+    temp_actual_rbw_x10 = 8500;
 #endif
-
+  actual_rbw_x10 = temp_actual_rbw_x10;         // Now it fits in 16 bit
 
 #ifdef __SI4432__
   if (setting.spur_removal && actual_rbw_x10 > 3000)
@@ -1345,8 +1355,8 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
 #ifdef __SI4463__
-//  if (setting.spur_removal && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
-//    actual_rbw_x10 = 2500;                         // if spur suppression reduce max rbw to fit within BPF
+  if (setting.spur_removal && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
+    actual_rbw_x10 = 3000;                         // if spur suppression reduce max rbw to fit within BPF
   actual_rbw_x10 = SI4463_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
@@ -1823,7 +1833,7 @@ modulation_again:
       }
 #endif
 #ifdef __SI4463__
-      if (setting.mode == M_LOW || setting.mode == M_GENLOW)
+      if ((setting.mode == M_LOW || setting.mode == M_GENLOW ) && i == 0)
       {
         set_freq (SI4463_RX , local_IF);
       }

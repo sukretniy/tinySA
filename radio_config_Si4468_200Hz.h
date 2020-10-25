@@ -22,7 +22,7 @@
 // Crys_freq(Hz): 26000000    Crys_tol(ppm): 1    IF_mode: 2    High_perf_Ch_Fil: 1    OSRtune: 0    Ch_Fil_Bw_AFC: 0    ANT_DIV: 0    PM_pattern: 0    
 // MOD_type: 2    Rsymb(sps): 400    Fdev(Hz): 1    RXBW(Hz): 200    Manchester: 0    AFC_en: 0    Rsymb_error: 0.0    Chip-Version: 2    
 // RF Freq.(MHz): 978    API_TC: 29    fhst: 250000    inputBW: 1    BERT: 1    RAW_dout: 0    D_source: 1    Hi_pfm_div: 1    
-// API_ARR_Det_en: 0    Fdev_error: 0    API_ETSI: 2    
+// API_ARR_Det_en: 0    Fdev_error: 0    API_ETSI: 0    
 // 
 // # RX IF frequency is  -406250 Hz
 // # WB filter 15 (BW =   0.23 kHz);  NB-filter 15 (BW = 0.23 kHz)
@@ -51,7 +51,7 @@
 // Command:                  RF_GPIO_PIN_CFG
 // Description:              Configures the GPIO pins.
 */
-#define RF_GPIO_PIN_CFG 0x13, 0x08, 0x08, 0x0A, 0x21, 0x00, 0x00, 0x00
+#define RF_GPIO_PIN_CFG 0x13, 0x08, 0x08, 0x07, 0x21, 0x00, 0x00, 0x00
 
 /*
 // Set properties:           RF_GLOBAL_XO_TUNE_1
@@ -139,7 +139,7 @@
 //   MODEM_BCR_OSR_1 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 //   MODEM_BCR_OSR_0 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 */
-#define RF_MODEM_TX_RAMP_DELAY_12 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x0A, 0x03, 0xC0, 0x00, 0xB0, 0x10, 0x0C, 0xF9, 0x00, 0x44
+#define RF_MODEM_TX_RAMP_DELAY_12 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x08, 0x03, 0xC0, 0x00, 0xB0, 0x10, 0x0C, 0xE8, 0x00, 0x44
 
 /*
 // Set properties:           RF_MODEM_BCR_NCO_OFFSET_2_12
@@ -427,7 +427,7 @@
 // Descriptions:
 //   GLOBAL_CLK_CFG - Clock configuration options.
 */
-#define RF_GLOBAL_CLK_CFG_1 0x11, 0x00, 0x01, 0x01, 0x00
+#define RF_GLOBAL_CLK_CFG_1 0x11, 0x00, 0x01, 0x01, 0x40
 
 /*
 // Set properties:           RF_GLOBAL_CONFIG_1_1
@@ -540,7 +540,7 @@
 //   MODEM_BCR_OSR_1 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 //   MODEM_BCR_OSR_0 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 */
-#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x0A, 0x03, 0xC0, 0x00, 0xF0, 0x10, 0x54, 0xF9, 0x00, 0x55
+#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x08, 0x03, 0xC0, 0x00, 0xF0, 0x10, 0x54, 0xE8, 0x00, 0x55
 
 /*
 // Set properties:           RF_MODEM_BCR_NCO_OFFSET_2_12_1

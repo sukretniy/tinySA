@@ -953,9 +953,11 @@ void ADF4351_Setup(void)
 //  while(1) {
 //
 
-  ADF4351_R_counter(2);
+  ADF4351_R_counter(3);
 
   ADF4351_set_frequency(0,2000000000,0);
+
+
 //  ADF4351_set_frequency(1,150000000,0);
 //  ADF4351_Set(0);
 //  ADF4351_Set(1);
@@ -1239,6 +1241,14 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 
 
 int SI4463_frequency_changed = false;
+static int SI4463_band = -1;
+static int SI4463_outdiv = -1;
+static uint32_t SI4463_prev_freq = 0;
+float SI4463_step_size = 0;
+uint8_t SI4463_channel = 0;
+int SI4463_R = 5;
+
+
 #define MIN_DELAY   2
 
 #include <string.h>
@@ -1441,6 +1451,7 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 
 //#undef RF_MODEM_AGC_CONTROL_1
 //#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE0 + 0x10
 //#undef RF_MODEM_RSSI_JUMP_THRESH_4
 //#define RF_MODEM_RSSI_JUMP_THRESH_4 0x11, 0x20, 0x04, 0x4B, 0x06, 0x09, 0x10, 0x45  // Increase RSSI reported value with 2.5dB
 
@@ -1481,7 +1492,7 @@ void SI4463_start_rx(uint8_t CHANNEL)
   };
 retry:
   SI4463_do_api(data, sizeof(data), NULL, 0);
-  my_microsecond_delay(SI4432_offset_delay);
+//  my_microsecond_delay(SI4432_offset_delay);
 
 #if 0
   //  my_microsecond_delay(15000);
@@ -1500,6 +1511,28 @@ void SI4463_clear_int_status()
   };
   SI4463_do_api(data, 1, data, SI446X_CMD_REPLY_COUNT_GET_INT_STATUS);
 
+}
+
+void Si4463_set_refer(int ref)
+{
+    if (ref >= 0) {
+    uint8_t data[8] = {
+      0x13, 0x08, 0x08, 0x07, 0x12, 0x00, 0x00, 0x00    // GPIO_PIN_CFG GPIO 0 input ,1 CTS, clock div out
+    };
+    SI4463_do_api(data, 8, NULL, 0);
+
+    uint8_t data2[5] = {
+      0x11, 0x00, 0x01, 0x01, 0x40                      // GLOBAL_CLK_CFG Clock config
+    };
+    data2[4] |= ref<<3;
+    SI4463_do_api(data2, 5, NULL, 0);
+    } else {
+      uint8_t data[8] = {
+        0x13, 0x01, 0x08, 0x01, 0x12, 0x00, 0x00, 0x00    //  GPIO_PIN_CFG GLOBAL_CLK_CFG  GPIO 0,1 CTS, GPIO 2 clock div out
+      };
+      SI4463_do_api(data, 8, NULL, 0);
+
+    }
 }
 
 si446x_info_t SI4463_info;
@@ -1959,17 +1992,17 @@ uint16_t SI4463_force_RBW(int f)
   }
   SI4463_clear_int_status();
 retry:
-  SI4463_start_rx(0);
+  SI4463_start_rx(SI4463_channel);
   my_microsecond_delay(15000);
   si446x_state_t s = getState();
   if (s != SI446X_STATE_RX) {
 
-    SI4463_start_rx(0);
-    my_microsecond_delay(1000000);
+    SI4463_start_rx(SI4463_channel);
+    osalThreadSleepMilliseconds(1000);
     si446x_state_t s = getState();
     if (s != SI446X_STATE_RX) {
       ili9341_drawstring_7x13("Waiting for RX", 50, 200);
-      my_microsecond_delay(3000000);
+      osalThreadSleepMilliseconds(3000);
       goto retry;
     }
     ili9341_drawstring_7x13("Waiting done     ", 50, 200);
@@ -1994,43 +2027,51 @@ static int prev_band = -1;
 
 void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
-  int band = -1;
-  int outdiv;
   uint32_t offs = ((freq / 1000)* 0) / 1000;
   float RFout=(freq+offs)/1000000.0;  // To MHz
   if (RFout >= 822 && RFout <= 1140)         {       // till 1140MHz
-    band = 0;
-    outdiv = 4;
+    SI4463_band = 0;
+    SI4463_outdiv = 4;
 #if 0       // band 4 does not function
   } else if (RFout >= 568 && RFout <= 758 ) {    // works till 758MHz
-    band = 4;
-    outdiv = 6;
+    SI4463_band = 4;
+    SI4463_outdiv = 6;
 #endif
   } else if (RFout >= 420 && RFout <= 568) {    // works till 568MHz
-    band = 2;
-    outdiv = 8;
+    SI4463_band = 2;
+    SI4463_outdiv = 8;
   } else if (RFout >= 329 && RFout <= 454) {    // works till 454MHz
-    band = 1;
-    outdiv = 10;
+    SI4463_band = 1;
+    SI4463_outdiv = 10;
   } else if (RFout >= 274 && RFout <= 339) {    // to 339
-    band = 3;
-    outdiv = 12;
+    SI4463_band = 3;
+    SI4463_outdiv = 12;
   } else if (RFout >= 136 && RFout <= 190){ // 136 { // To 190
-    band = 5;
-    outdiv = 24;
+    SI4463_band = 5;
+    SI4463_outdiv = 24;
  }
-  if (band == -1)
+  if (SI4463_band == -1)
     return;
-  int32_t R = (RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
-  float MOD = 520251.0;
-  int32_t  F = (((RFout * outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R) * MOD;
 
-  int   S = (int)(step_size / 14.305);
-  if (S == 0) S = 1;
-  setState(SI446X_STATE_READY);
-  my_microsecond_delay(100);
+  int S = 4 ;               // Aprox 100 Hz channels
+  SI4463_step_size = S * (Npresc ? 2000000*freq_xco : 4000000*freq_xco) /  ((2<<18) * SI4463_outdiv);
 
-  /*
+
+  if (freq < SI4463_prev_freq || freq > SI4463_prev_freq + 255 * SI4463_step_size ) {
+
+    SI4463_channel = 128;
+    SI4463_prev_freq = freq - SI4463_channel * SI4463_step_size;
+
+    RFout -=  SI4463_channel * SI4463_step_size / 1000000.0;       // shift for channel 128
+
+    int32_t R = (RFout * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
+    float MOD = 520251.0;
+    int32_t  F = (((RFout * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R) * MOD;
+
+    setState(SI446X_STATE_READY);
+    my_microsecond_delay(100);
+
+    /*
   // Set properties:           RF_FREQ_CONTROL_INTE_8
   // Number of properties:     8
   // Group ID:                 0x40
@@ -2045,26 +2086,26 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   //   FREQ_CONTROL_CHANNEL_STEP_SIZE_0 - EZ Frequency Programming channel step size.
   //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
   //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
-  */
-  // #define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x41, 0x0D, 0xA9, 0x5A, 0x4E, 0xC5, 0x20, 0xFE
-  uint8_t data[] = {
-    0x11, 0x40, 0x08, 0x00,
-    (uint8_t) R,                   //  R data[4]
-    (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
-    (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
-    (uint8_t) ((F    ) & 255),     //  F2,F1,F0 data[5] .. data[7]
-    (uint8_t) ((S>> 8) & 255),     //  Step size data[8] .. data[9]
-    (uint8_t) ((S    ) & 255),     //  Step size data[8] .. data[9]
-    0x20,                   // Window gate
-    0xFF                    // Adj count
-  };
+     */
+    // #define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x41, 0x0D, 0xA9, 0x5A, 0x4E, 0xC5, 0x20, 0xFE
+    uint8_t data[] = {
+                      0x11, 0x40, 0x08, 0x00,
+                      (uint8_t) R,                   //  R data[4]
+                      (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      (uint8_t) ((F    ) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      (uint8_t) ((S>> 8) & 255),     //  Step size data[8] .. data[9]
+                      (uint8_t) ((S    ) & 255),     //  Step size data[8] .. data[9]
+                      0x20,                   // Window gate
+                      0xFF                    // Adj count
+    };
 
 
 
-  SI4463_do_api(data, sizeof(data), NULL, 0);
+    SI4463_do_api(data, sizeof(data), NULL, 0);
 
-  if (band != prev_band) {
-  /*
+    if (SI4463_band != prev_band) {
+    /*
   // Set properties:           RF_MODEM_CLKGEN_BAND_1
   // Number of properties:     1
   // Group ID:                 0x20
@@ -2072,31 +2113,50 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   // Default values:           0x08,
   // Descriptions:
   //   MODEM_CLKGEN_BAND - Select PLL Synthesizer output divider ratio as a function of frequency band.
-  */
-  // #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
-  uint8_t data2[] = {
-     0x11, 0x20, 0x01, 0x51,
-     0x10 + (uint8_t)(band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
-  };
+     */
+    // #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
+    uint8_t data2[] = {
+                       0x11, 0x20, 0x01, 0x51,
+                       0x10 + (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
+    };
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
     my_microsecond_delay(30000);
-    prev_band = band;
-  }
-
-//  SI4463_clear_int_status();
-retry:
-  SI4463_start_rx(0);
-  my_microsecond_delay(200);
-  si446x_state_t s = getState();
-  if (s != SI446X_STATE_RX) {
-    SI4463_start_rx(0);
-    my_microsecond_delay(1000000);
+    prev_band = SI4463_band;
+    }
+    //  SI4463_clear_int_status();
+    retry:
+    SI4463_start_rx(SI4463_channel);
+    my_microsecond_delay(200);
     si446x_state_t s = getState();
     if (s != SI446X_STATE_RX) {
-      my_microsecond_delay(3000000);
-      goto retry;
+      SI4463_start_rx(SI4463_channel);
+      osalThreadSleepMilliseconds(1000);
+      si446x_state_t s = getState();
+      if (s != SI446X_STATE_RX) {
+        osalThreadSleepMilliseconds(3000);
+        goto retry;
+      }
     }
+  } else
+  {
+    SI4463_channel = (freq - SI4463_prev_freq)/SI4463_step_size;
+    SI4463_start_rx(SI4463_channel);
+
+/*
+    uint8_t data[] = {
+                      0x36,
+                      (uint8_t) R,                   //  R data[4]
+                      (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      (uint8_t) ((F    ) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      0x00,
+                      0xFF
+    };
+    SI4463_do_api(data, sizeof(data), NULL, 0);
+    my_microsecond_delay(200);
+    */
   }
+
   SI4463_frequency_changed = true;
 }
 
@@ -2158,12 +2218,12 @@ again:
   Si446x_getInfo(&SI4463_info);
 // s = getState();
 //  SI4463_clear_int_status();
-  SI4463_start_rx(0);
+  SI4463_start_rx(SI4463_channel);
   my_microsecond_delay(15000);
   s = getState();
   if (s != SI446X_STATE_RX) {
     ili9341_drawstring_7x13("Waiting for RX", 50, 200);
-    my_microsecond_delay(1000000);
+    osalThreadSleepMilliseconds(3000);
     goto again;
   }
   ili9341_drawstring_7x13("Waiting ready     ", 50, 200);

@@ -408,6 +408,7 @@ enum {
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM, KM_IF2,
+  KM_R,
   KM_NONE // always at enum end
 };
 
@@ -445,7 +446,9 @@ static const struct {
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
   {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
   {keypads_freq        , "IF2"}, // KM_IF2
+  {keypads_positive    , "R"}, // KM_R
 };
+
 
 // ===[MENU CALLBACKS]=========================================================
 static const menuitem_t  menu_lowoutputmode[];
@@ -1645,6 +1648,7 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
   { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
   { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
+  { MT_KEYPAD,  KM_R,  "R",           "Set R"},
 
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
@@ -1978,6 +1982,10 @@ static void fetch_numeric_target(void)
     uistat.value = config.frequency_IF2;
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
+  case KM_R:
+    uistat.value = SI4463_R;
+    plot_printf(uistat.text, sizeof uistat.text, "%3d", uistat.value);
+    break;
   case KM_SAMPLETIME:
     uistat.value = setting.step_delay;
     plot_printf(uistat.text, sizeof uistat.text, "%3dus", ((int32_t)uistat.value));
@@ -2099,6 +2107,10 @@ set_numeric_value(void)
     break;
   case KM_IF2:
     set_IF2(uistat.value);
+//    config_save();
+    break;
+  case KM_R:
+    set_R(uistat.value);
 //    config_save();
     break;
   case KM_SAMPLETIME:

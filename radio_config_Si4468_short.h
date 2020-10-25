@@ -4,7 +4,7 @@
 
 
 #undef RF_MODEM_AGC_CONTROL_1
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF1             // Override AGC gain increase
 
 #undef RADIO_CONFIGURATION_DATA_ARRAY
 #define RADIO_CONFIGURATION_DATA_ARRAY { \
