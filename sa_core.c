@@ -3009,6 +3009,7 @@ static const struct {
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
+#define TEST_END 11
  {TC_END,       0,              0,      0,      0,      0,      0},
 #define TEST_POWER  12
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
@@ -3389,6 +3390,16 @@ void self_test(int test)
       test_prepare(test_step);
       test_acquire(test_step);                        // Acquire test
       test_status[test_step] = test_validate(test_step);                       // Validate test
+      if (test_step == 2) {
+        if (peakLevel < -60) {
+          test_step = TEST_END;
+          ili9341_set_foreground(BRIGHT_COLOR_RED);
+          ili9341_drawstring_7x13("Signal level too low", 30, 140);
+          ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
+          goto resume2;
+        }
+
+      }
       if (test_status[test_step] != TS_PASS) {
         resume:
         test_wait = true;
@@ -3643,10 +3654,16 @@ void calibrate(void)
     setting.lna = S_OFF;
     test_acquire(TEST_POWER);                        // Acquire test
     local_test_status = test_validate(TEST_POWER);                       // Validate test
+    if (peakLevel < -50) {
+      ili9341_set_foreground(BRIGHT_COLOR_RED);
+      ili9341_drawstring_7x13("Signal level too low", 30, 140);
+      ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
+      goto quit;
+    }
 //    chThdSleepMilliseconds(1000);
     if (local_test_status != TS_PASS) {
       ili9341_set_foreground(BRIGHT_COLOR_RED);
-      ili9341_drawstring_7x13("Calibration failed", 30, 120);
+      ili9341_drawstring_7x13("Calibration failed", 30, 140);
       goto quit;
     } else {
       set_actual_power(-25.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
@@ -3682,9 +3699,9 @@ void calibrate(void)
 
   config_save();
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Calibration complete", 30, 120);
+  ili9341_drawstring_7x13("Calibration complete", 30, 140);
 quit:
-  ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
+  ili9341_drawstring_7x13("Touch screen to continue", 30, 200);
   wait_user();
   ili9341_clear_screen();
   set_sweep_points(old_sweep_points);
