@@ -1079,8 +1079,8 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
           shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
 #endif
         delta = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff));
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((delta >> 8) & 0x03));
+        SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff), (uint8_t)((delta >> 8) & 0x03));
+ //       SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((delta >> 8) & 0x03));
         SI4432_offset_changed = true;                 // Signal offset changed so RSSI retrieval is delayed for frequency settling
         old_freq[V] = freq;
       } else {
@@ -1093,8 +1093,8 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
             target_f = freq - 80000;
           }
           SI4432_Set_Frequency(target_f);
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0xff);           // set offset to most positive
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x01);
+          SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0xff, 0x01);           // set offset to most positive
+ //         SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x01);
           real_old_freq[V] = target_f;
         } else {                                                // sweeping up
           if (freq + 80000 >= 480000000) {
@@ -1103,14 +1103,14 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
             target_f = freq + 80000;
           }
           SI4432_Set_Frequency(target_f);
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
+          SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0, 0x02);           // set offset to most negative
+//          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
           real_old_freq[V] = target_f;
         }
 #else
         SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
+        SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0, 0);           // set offset to zero
+//        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
         real_old_freq[V] = freq;
 #endif
       }
