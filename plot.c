@@ -2113,8 +2113,8 @@ static void cell_draw_marker_info(int x0, int y0)
         setting.unit = old_unit;
         int depth = (int)( level * 2.0 * 80.0) + 20;
 #else
-        float level = actual_t[markers[0].index] - (actual_t[markers[1].index] + actual_t[markers[2].index])/2.0 ;
-        int depth = (int)( (15.0 - level) / 9.0 * 50) + 50;
+        float level =  actual_t[markers[0].index] - (actual_t[markers[1].index] + actual_t[markers[2].index])/2.0;
+        int depth =(int) (pow((float)10.0, 2.0 + (-level + 6.0) / 31.0));
 #endif
         plot_printf(buf, sizeof buf, "DEPTH: %3d%%", depth);
         goto show_computed;
