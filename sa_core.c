@@ -2014,7 +2014,7 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] ;
       }
-// #define __DEBUG_AGC__
+//#define __DEBUG_AGC__
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
@@ -2374,18 +2374,18 @@ sweep_again:                                // stay in sweep loop when output mo
       if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
       markers[2].frequency = frequencies[markers[2].index];
     } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {      // ----------------Pass band measurement
-      int t = markers[0].index;
-      float v = actual_t[t];
-      while (t > 0 && actual_t[t] > v - 4.0)                                        // Find left -3dB point
-        t --;
-      if (t > 0) {
+      int t = 0;
+      float v = actual_t[markers[0].index] - 3.0;
+      while (t < markers[0].index && actual_t[t+1] < v)                                        // Find left -3dB point
+        t++;
+      if (t< markers[0].index) {
         markers[1].index = t;
         markers[1].frequency = frequencies[t];
       }
-      t = markers[0].index;
-      while (t < setting._sweep_points - 1 && actual_t[t] > v - 4.0)                // find right -3dB point
-        t ++;
-      if (t < setting._sweep_points - 1 ) {
+      t = setting._sweep_points-1;;
+      while (t > markers[0].index && actual_t[t-1] < v)                // find right -3dB point
+        t--;
+      if (t > markers[0].index) {
         markers[2].index = t;
         markers[2].frequency = frequencies[t];
       }
@@ -3584,7 +3584,9 @@ void self_test(int test)
     reset_settings(M_LOW);
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
-  } else if (test == 5) {
+  }
+#ifdef DOESNOTFIT
+  else if (test == 5) {
 //    reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     switch (setting.test_argument) {
@@ -3622,6 +3624,7 @@ void self_test(int test)
     }
     in_selftest = false;
   }
+#endif
   show_test_info = FALSE;
   in_selftest = false;
   test_wait = false;
