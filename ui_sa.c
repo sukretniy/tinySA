@@ -832,7 +832,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //      SetAverage(4);
 
       break;
-    case M_PASS_BAND:                             // STop band measurement
+    case M_PASS_BAND:                             // Stop band measurement
 //      reset_settings(setting.mode);
       markers[0].enabled = M_ENABLED;
       markers[0].mtype = M_REFERENCE | M_TRACKING;
@@ -866,17 +866,18 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
       center = uistat.value;
-      kp_help_text = "Modulation frequency, 2 .. 10 kHz";
+      kp_help_text = "Modulation frequency, 3 .. 10 kHz";
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
-      if (uistat.value < 2000)
+      if (uistat.value < 3000)
         break;
-      span = uistat.value + 1500;   // Enlarge span for RBW width
+      span = uistat.value;
       set_sweep_frequency(ST_SPAN, 100000);     // 100kHz
       set_measurement(M_AM);
       set_marker_frequency(0, center);
       set_marker_frequency(1, center-span);
       set_marker_frequency(2, center+span);
+      set_average(5);
       break;
     case M_FM:                                     // FM
       reset_settings(setting.mode);

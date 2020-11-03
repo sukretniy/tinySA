@@ -2117,7 +2117,7 @@ static void cell_draw_marker_info(int x0, int y0)
         if (delta < -5 || delta > 5)
           break;
         float level = (actual_t[markers[1].index] + actual_t[markers[2].index])/2.0 -  actual_t[markers[0].index];
-        if (level < -40 || level > 0)
+        if (level < -70 || level > 0)
           break;
         int depth =(int) (pow((float)10.0, 2.0 + (level + 6.02) /20.0));
 #endif
