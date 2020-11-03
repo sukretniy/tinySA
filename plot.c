@@ -519,6 +519,13 @@ draw_on_strut(int v0, int d, int color)
  * calculate log10f(abs(gamma))
  */ 
 
+
+float
+index_to_value(const int i)
+{
+  return(value(actual_t[i]));
+}
+
 float
 value(const float v)
 {
@@ -2084,31 +2091,51 @@ static void cell_draw_marker_info(int x0, int y0)
   if (setting.measurement == M_THD && active >= 1)
     active = 2;
   for (int i = 0; i < MARKER_COUNT; i++) {
-    if (i == 3 && setting.measurement == M_PASS_BAND) {
+    if (i == 3) {
+      if (setting.measurement == M_PASS_BAND) {
         uint32_t f;
         if (markers[2].frequency>markers[1].frequency)
           f = markers[2].frequency-markers[1].frequency;
         else
           f = markers[1].frequency-markers[2].frequency;
         plot_printf(buf, sizeof buf, "WIDTH: %8.3qHz", f);
+    show_computed:
         j = 3;
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
         cell_drawstring_7x13(buf, xpos, ypos);
-//        cell_drawstring(buf, xpos, ypos);
-        break;
-    } else
+        //        cell_drawstring(buf, xpos, ypos);
+      } else if (setting.measurement == M_AM){
+#ifdef AM_IN_VOLT
+        int old_unit = setting.unit;
+        setting.unit = U_VOLT;
+        float level = (index_to_value(markers[1].index) + index_to_value(markers[2].index))/2 / index_to_value(markers[0].index);
+        setting.unit = old_unit;
+        int depth = (int)( level * 2.0 * 80.0) + 20;
+#else
+        float delta = actual_t[markers[1].index] - actual_t[markers[2].index];
+        if (delta < -5 || delta > 5)
+          break;
+        float level = (actual_t[markers[1].index] + actual_t[markers[2].index])/2.0 -  actual_t[markers[0].index];
+        if (level < -40 || level > 0)
+          break;
+        int depth =(int) (pow((float)10.0, 2.0 + (level + 6.02) /20.0));
+#endif
+        plot_printf(buf, sizeof buf, "DEPTH: %3d%%", depth);
+        goto show_computed;
+      }
+    }
     if (i >= 2 && setting.measurement == M_THD) {
       if (i == 2 && (markers[0].index << 5) > sweep_points ) {
         int old_unit = setting.unit;
         setting.unit = U_WATT;
-        float p = value((actual_t[markers[0].index]));
+        float p = index_to_value(markers[0].index);
         int j = 2;
         uint32_t f = markers[0].frequency;
         float h = 0.0;
         while (f * j < frequencies[sweep_points-1]) {
           if (search_maximum(1, f*j, 4*j) )             // use marker 1 for searching harmonics
-            h += value((actual_t[markers[1].index]));
+            h += index_to_value(markers[1].index);
           j++;
         }
         float thd = 100.0 * sqrt(h/p);
@@ -2125,10 +2152,10 @@ static void cell_draw_marker_info(int x0, int y0)
       break;
     } else
     if (i >= 2 && setting.measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
-      float il = value((actual_t[markers[2].index]));
-      float ir = value((actual_t[markers[3].index]));
-      float sl = value((actual_t[markers[0].index]));
-      float sr = value((actual_t[markers[1].index]));
+      float il = index_to_value(markers[2].index);
+      float ir = index_to_value(markers[3].index);
+      float sl = index_to_value(markers[0].index);
+      float sr = index_to_value(markers[1].index);
 
       float ip = sl+ (sr - il)/2;
       plot_printf(buf, sizeof buf, "OIP3: %4.1fdB", ip);

@@ -1120,8 +1120,8 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
           shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
 #endif
         delta = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff));
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((delta >> 8) & 0x03));
+        SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff), (uint8_t)((delta >> 8) & 0x03));
+ //       SI4432_Write_Byte(SI4432_FREQ_OFFSET2, (uint8_t)((delta >> 8) & 0x03));
         SI4432_offset_changed = true;                 // Signal offset changed so RSSI retrieval is delayed for frequency settling
         old_freq[V] = freq;
       } else {
@@ -1134,8 +1134,8 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
             target_f = freq - 80000;
           }
           SI4432_Set_Frequency(target_f);
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0xff);           // set offset to most positive
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x01);
+          SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0xff, 0x01);           // set offset to most positive
+ //         SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x01);
           real_old_freq[V] = target_f;
         } else {                                                // sweeping up
           if (freq + 80000 >= 480000000) {
@@ -1144,14 +1144,14 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
             target_f = freq + 80000;
           }
           SI4432_Set_Frequency(target_f);
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to most negative
-          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
+          SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0, 0x02);           // set offset to most negative
+//          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
           real_old_freq[V] = target_f;
         }
 #else
         SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);           // set offset to zero
-        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
+        SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0, 0);           // set offset to zero
+//        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
         real_old_freq[V] = freq;
 #endif
       }
@@ -2150,7 +2150,7 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] + setting.normalize_level;
       }
-// #define __DEBUG_AGC__
+//#define __DEBUG_AGC__
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
@@ -2448,6 +2448,27 @@ sweep_again:                                // stay in sweep loop when output mo
         if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
           markers[m].frequency = frequencies[markers[m].index];
+#if 0
+          float v = actual_t[markers[m].index] - 10.0;              // -10dB points
+          int index = markers[m].index;
+          uint32_t f = markers[m].frequency;
+          uint32_t s = actual_rbw_x10 * 200;                        // twice the selected RBW
+          int left = index, right = index;
+          while (t > 0 && actual_t[t+1] > v && markers[t].frequency > f - s)                                        // Find left point
+            t--;
+          if (t > 0) {
+            left = t;
+          }
+          t = setting._sweep_points-1;;
+          while (t > setting._sweep_points-1 && actual_t[t+1] > v)                // find right -3dB point
+            t++;
+          if (t > index) {
+            right = t;
+            markers[2].frequency = frequencies[t];
+          }
+
+#endif
+
 #if 1                                                        // Hyperbolic interpolation, can be removed to save memory
           const int idx          = markers[m].index;
           if (idx > 0 && idx < sweep_points-1)
@@ -2511,18 +2532,18 @@ sweep_again:                                // stay in sweep loop when output mo
       if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
       markers[2].frequency = frequencies[markers[2].index];
     } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {      // ----------------Pass band measurement
-      int t = markers[0].index;
-      float v = actual_t[t];
-      while (t > 0 && actual_t[t] > v - 4.0)                                        // Find left -3dB point
-        t --;
-      if (t > 0) {
+      int t = 0;
+      float v = actual_t[markers[0].index] - 3.0;
+      while (t < markers[0].index && actual_t[t+1] < v)                                        // Find left -3dB point
+        t++;
+      if (t< markers[0].index) {
         markers[1].index = t;
         markers[1].frequency = frequencies[t];
       }
-      t = markers[0].index;
-      while (t < setting._sweep_points - 1 && actual_t[t] > v - 4.0)                // find right -3dB point
-        t ++;
-      if (t < setting._sweep_points - 1 ) {
+      t = setting._sweep_points-1;;
+      while (t > markers[0].index && actual_t[t-1] < v)                // find right -3dB point
+        t--;
+      if (t > markers[0].index) {
         markers[2].index = t;
         markers[2].frequency = frequencies[t];
       }
@@ -3148,6 +3169,7 @@ static const struct {
  {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
+#define TEST_END 11
  {TC_END,       0,              0,      0,      0,      0,      0},
 #define TEST_POWER  12
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
@@ -3528,6 +3550,16 @@ void self_test(int test)
       test_prepare(test_step);
       test_acquire(test_step);                        // Acquire test
       test_status[test_step] = test_validate(test_step);                       // Validate test
+      if (test_step == 2) {
+        if (peakLevel < -60) {
+          test_step = TEST_END;
+          ili9341_set_foreground(BRIGHT_COLOR_RED);
+          ili9341_drawstring_7x13("Signal level too low", 30, 140);
+          ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
+          goto resume2;
+        }
+
+      }
       if (test_status[test_step] != TS_PASS) {
         resume:
         test_wait = true;
@@ -3715,7 +3747,9 @@ void self_test(int test)
     reset_settings(M_LOW);
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
-  } else if (test == 5) {
+  }
+#ifdef DOESNOTFIT
+  else if (test == 5) {
 //    reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     switch (setting.test_argument) {
@@ -3753,6 +3787,7 @@ void self_test(int test)
     }
     in_selftest = false;
   }
+#endif
   show_test_info = FALSE;
   in_selftest = false;
   test_wait = false;
@@ -3785,10 +3820,16 @@ void calibrate(void)
     setting.lna = S_OFF;
     test_acquire(TEST_POWER);                        // Acquire test
     local_test_status = test_validate(TEST_POWER);                       // Validate test
+    if (peakLevel < -50) {
+      ili9341_set_foreground(BRIGHT_COLOR_RED);
+      ili9341_drawstring_7x13("Signal level too low", 30, 140);
+      ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
+      goto quit;
+    }
 //    chThdSleepMilliseconds(1000);
     if (local_test_status != TS_PASS) {
       ili9341_set_foreground(BRIGHT_COLOR_RED);
-      ili9341_drawstring_7x13("Calibration failed", 30, 120);
+      ili9341_drawstring_7x13("Calibration failed", 30, 140);
       goto quit;
     } else {
       set_actual_power(-25.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
@@ -3824,9 +3865,9 @@ void calibrate(void)
 
   config_save();
   ili9341_set_foreground(BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Calibration complete", 30, 120);
+  ili9341_drawstring_7x13("Calibration complete", 30, 140);
 quit:
-  ili9341_drawstring_7x13("Touch screen to continue", 30, 140);
+  ili9341_drawstring_7x13("Touch screen to continue", 30, 200);
   wait_user();
   ili9341_clear_screen();
   set_sweep_points(old_sweep_points);
