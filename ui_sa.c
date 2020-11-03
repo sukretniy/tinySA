@@ -854,20 +854,31 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     case M_LINEARITY:
       set_measurement(M_LINEARITY);
       break;
-    case M_AM:                                     // OIP3
+    case M_AM:                                     // AM
       reset_settings(setting.mode);
       for (int i = 0; i< 3; i++) {
         markers[i].enabled = M_ENABLED;
-        markers[i].mtype = M_DELTA | M_TRACKING;
+        markers[i].mtype = M_DELTA;// | M_TRACKING;
       }
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
+      uint32_t center, span;
+      markers[0].mtype = M_REFERENCE;// | M_TRACKING;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
+      center = uistat.value;
+      kp_help_text = "Modulation frequency, 2 .. 10 kHz";
+      ui_mode_keypad(KM_SPAN);
+      ui_process_keypad();
+      if (uistat.value < 2000)
+        break;
+      span = uistat.value + 1500;   // Enlarge span for RBW width
       set_sweep_frequency(ST_SPAN, 100000);     // 100kHz
       set_measurement(M_AM);
+      set_marker_frequency(0, center);
+      set_marker_frequency(1, center-span);
+      set_marker_frequency(2, center+span);
       break;
-    case M_FM:                                     // OIP3
+    case M_FM:                                     // FM
       reset_settings(setting.mode);
       for (int i = 0; i< 3; i++) {
         markers[i].enabled = M_ENABLED;

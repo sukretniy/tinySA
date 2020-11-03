@@ -2311,6 +2311,27 @@ sweep_again:                                // stay in sweep loop when output mo
         if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
           markers[m].frequency = frequencies[markers[m].index];
+#if 0
+          float v = actual_t[markers[m].index] - 10.0;              // -10dB points
+          int index = markers[m].index;
+          uint32_t f = markers[m].frequency;
+          uint32_t s = actual_rbw_x10 * 200;                        // twice the selected RBW
+          int left = index, right = index;
+          while (t > 0 && actual_t[t+1] > v && markers[t].frequency > f - s)                                        // Find left point
+            t--;
+          if (t > 0) {
+            left = t;
+          }
+          t = setting._sweep_points-1;;
+          while (t > setting._sweep_points-1 && actual_t[t+1] > v)                // find right -3dB point
+            t++;
+          if (t > index) {
+            right = t;
+            markers[2].frequency = frequencies[t];
+          }
+
+#endif
+
 #if 1                                                        // Hyperbolic interpolation, can be removed to save memory
           const int idx          = markers[m].index;
           if (idx > 0 && idx < sweep_points-1)
