@@ -1089,8 +1089,8 @@ void set_marker_frequency(int m, uint32_t f)
   int i = 1;
   markers[m].mtype &= ~M_TRACKING;
   uint32_t s = (frequencies[1] - frequencies[0])/2;
-  while (i< sweep_points - 1){
-    if (frequencies[i]-s  <= f && f < frequencies[i]+s) {
+  while (i< sweep_points - 2){
+    if (frequencies[i]-s  <= f && f < frequencies[i+1]-s) {     // Avoid rounding error in s!!!!!!!
       markers[m].index = i;
       markers[m].frequency = f;
       return;

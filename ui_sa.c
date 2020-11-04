@@ -872,12 +872,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       if (uistat.value < 3000)
         break;
       span = uistat.value;
-      set_sweep_frequency(ST_SPAN, 100000);     // 100kHz
+      set_sweep_frequency(ST_SPAN, 50000);     // 100kHz
+//      update_frequencies();                     // To ensure markers are positioned right!!!!!!
       set_measurement(M_AM);
       set_marker_frequency(0, center);
       set_marker_frequency(1, center-span);
       set_marker_frequency(2, center+span);
-      set_average(5);
+      set_average(4);
       break;
     case M_FM:                                     // FM
       reset_settings(setting.mode);

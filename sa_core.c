@@ -3441,6 +3441,7 @@ void self_test(int test)
     ili9341_clear_screen();
     reset_settings(M_LOW);
     set_refer_output(-1);
+#ifdef DOESNOTFIT
   } else if (test == 1) {
     float p2, p1, p;
     in_selftest = true;               // Spur search
@@ -3605,9 +3606,7 @@ void self_test(int test)
     reset_settings(M_LOW);
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
-  }
-#ifdef DOESNOTFIT
-  else if (test == 5) {
+  } else if (test == 5) {
 //    reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     switch (setting.test_argument) {
@@ -3644,8 +3643,8 @@ void self_test(int test)
       break;
     }
     in_selftest = false;
-  }
 #endif
+  }
   show_test_info = FALSE;
   in_selftest = false;
   test_wait = false;
