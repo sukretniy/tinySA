@@ -675,22 +675,35 @@ void toggle_AGC(void)
   dirty = true;
 }
 
+#ifdef __SI4432__
+static unsigned char SI4432_old_v[2];
+#endif
+
 void auto_set_AGC_LNA(int auto_set, int agc)                                                                    // Adapt the AGC setting if needed
 {
 #ifdef __SI4432__
-  static unsigned char old_v[2];
   unsigned char v;
   if (auto_set)
     v = 0x60; // Enable AGC and disable LNA
   else
     v = 0x40+agc; // Disable AGC and enable LNA
-  if (old_v[MODE_SELECT(setting.mode)] != v) {
+  if (SI4432_old_v[MODE_SELECT(setting.mode)] != v) {
     SI4432_Sel = MODE_SELECT(setting.mode);
     SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-    old_v[MODE_SELECT(setting.mode)] = v;
+    SI4432_old_v[MODE_SELECT(setting.mode)] = v;
   }
 #endif
 }
+
+#ifdef __SI4432__
+void set_AGC_LNA(void) {
+  unsigned char v = 0x40;
+  if (S_STATE(setting.agc)) v |= 0x20;
+  if (S_STATE(setting.lna)) v |= 0x10;
+  SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
+  SI4432_old_v[MODE_SELECT(setting.mode)] = v;
+}
+#endif
 
 void set_unit(int u)
 {
@@ -1145,12 +1158,6 @@ void set_switch_off(void) {
   SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1f);
 }
 
-void set_AGC_LNA(void) {
-  unsigned char v = 0x40;
-  if (S_STATE(setting.agc)) v |= 0x20;
-  if (S_STATE(setting.lna)) v |= 0x10;
-  SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-}
 #endif
 
 void set_switches(int m)
@@ -1610,7 +1617,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #endif
     }
   }
-  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !signal_is_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
+  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !check_for_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
     if (f < 1500000)
       auto_set_AGC_LNA(false, f*9/1500000);
     else
