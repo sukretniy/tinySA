@@ -1508,6 +1508,8 @@ static pureRSSI_t correct_RSSI;
 static pureRSSI_t correct_RSSI_freq;
 systime_t start_of_sweep_timestamp;
 static systime_t sweep_elapsed = 0;                             // Time since first start of sweeping, used only for auto attenuate
+static uint8_t signal_is_AM = false;
+static uint8_t check_for_AM = false;
 
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
@@ -1608,7 +1610,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #endif
     }
   }
-  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
+  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !signal_is_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
     if (f < 1500000)
       auto_set_AGC_LNA(false, f*9/1500000);
     else
@@ -1921,6 +1923,10 @@ static bool sweep(bool break_on_operation)
   uint32_t agc_peak_freq = 0;
   float agc_peak_rssi = -150;
   float agc_prev_rssi = -150;
+  int last_AGC_value = 0;
+  uint8_t last_AGC_direction_up = false;
+  int AGC_flip_count = 0;
+
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
@@ -1936,9 +1942,15 @@ static bool sweep(bool break_on_operation)
   modulation_counter = 0;                                             // init modulation counter in case needed
   int refreshing = false;
 
-  if (dirty)                    // Calculate new scanning solution
+  if (dirty) {                    // Calculate new scanning solution
     sweep_counter = 0;
-  else if ( MODE_INPUT(setting.mode) && setting.frequency_step > 0) {
+    if (get_sweep_frequency(ST_SPAN) < 300000)  // Check if AM signal
+      check_for_AM = true;
+    else {
+      signal_is_AM = false;
+      check_for_AM = false;
+    }
+  } else if ( MODE_INPUT(setting.mode) && setting.frequency_step > 0) {
     sweep_counter++;
     if (sweep_counter > 50 ) {     // refresh HW after 50 sweeps
       dirty = true;
@@ -2018,6 +2030,16 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
+
+      if (check_for_AM) {
+        int AGC_value = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0;
+        if (AGC_value < last_AGC_value &&  last_AGC_direction_up ) {
+          AGC_flip_count++;
+        } else if (AGC_value > last_AGC_value &&  !last_AGC_direction_up ) {
+          AGC_flip_count++;
+        }
+        last_AGC_value = AGC_value;
+      }
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;
@@ -2246,6 +2268,20 @@ sweep_again:                                // stay in sweep loop when output mo
         auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
       else
         auto_set_AGC_LNA(TRUE, 0);
+    }
+    if (check_for_AM) {
+      if (signal_is_AM) {
+        if (actual_max_level < - 40)
+          signal_is_AM = false;
+      } else {
+        if (AGC_flip_count > 20 && actual_max_level >= - 40)
+          signal_is_AM = true;
+      }
+      if (signal_is_AM) {      // if log mode and AM signal
+        auto_set_AGC_LNA(false, 16); // LNA on and no AGC
+      } else {
+        auto_set_AGC_LNA(TRUE, 0);
+      }
     }
   }
 
@@ -2752,6 +2788,13 @@ void draw_cal_status(void)
     ili9341_set_foreground(color);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("ARMED", x, y);
+  }
+
+  if (signal_is_AM) {
+    color = BRIGHT_COLOR_RED;
+    ili9341_set_foreground(color);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("AM", x, y);
   }
 
 //  if (setting.mode == M_LOW) {
