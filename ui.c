@@ -32,6 +32,7 @@ uistat_t uistat = {
  marker_delta: FALSE,
  marker_noise: FALSE,
  marker_tracking : FALSE,
+ auto_center_marker : FALSE,
  text : "",
 };
 
@@ -767,6 +768,10 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
   case 1: /* MARKER->STOP */
   case 2: /* MARKER->CENTER */
     set_sweep_frequency(data, freq);
+    if (data == 2) {
+      uistat.lever_mode = LM_SPAN;
+      uistat.auto_center_marker = true;
+    }
     break;
   case 3: /* MARKERS->SPAN */
     {
@@ -1275,6 +1280,7 @@ menu_invoke(int item)
     break;
 
   case MT_CALLBACK: {
+    uistat.auto_center_marker = false;
     menuaction_cb_t cb = (menuaction_cb_t)menu->reference;
     if (cb) (*cb)(item, menu->data);
 //    if (!(menu->type & MT_FORM))
@@ -1282,6 +1288,7 @@ menu_invoke(int item)
     break;
   }
   case MT_ADV_CALLBACK: {
+    uistat.auto_center_marker = false;
     menuaction_acb_t cb = (menuaction_acb_t)menu->reference;
     if (cb) (*cb)(item, menu->data, NULL);
 //    if (!(menu->type & MT_FORM))
@@ -1293,6 +1300,7 @@ menu_invoke(int item)
     break;
 
   case MT_KEYPAD:
+    uistat.auto_center_marker = false;
     if (menu->type & MT_FORM) {
       area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
       redraw_frame();         // Remove form numbers
@@ -2136,6 +2144,11 @@ static void
 lever_zoom_span(int status)
 {
   uint32_t span = get_sweep_frequency(ST_SPAN);
+  if (uistat.auto_center_marker) {
+    uint32_t freq = get_marker_frequency(active_marker);
+    if (freq != 0)
+      set_sweep_frequency(ST_CENTER, freq);
+  }
   if (status & EVT_UP) {
     span = step_round(span - 1);
   } else if (status & EVT_DOWN) {
@@ -2198,7 +2211,7 @@ ui_process_normal(void)
     if (status & EVT_BUTTON_SINGLE_CLICK) {
       ui_mode_menu();
     } else {
-    switch (uistat.lever_mode) {
+      switch (uistat.lever_mode) {
       case LM_MARKER: lever_move_marker(status);   break;
       case LM_SEARCH: lever_search_marker(status); break;
       case LM_CENTER:

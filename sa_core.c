@@ -2281,7 +2281,7 @@ sweep_again:                                // stay in sweep loop when output mo
         if (actual_max_level < - 40)
           signal_is_AM = false;
       } else {
-        if (AGC_flip_count > 20 && actual_max_level >= - 40)
+        if (AGC_flip_count > 20 && actual_max_level >= - 40 && S_IS_AUTO(setting.agc))
           signal_is_AM = true;
       }
       if (signal_is_AM) {      // if log mode and AM signal
