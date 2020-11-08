@@ -208,14 +208,6 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
 }
 #endif
 
-//float setting_frequency_10mhz = 1000000.0;
-
-void set_10mhz(float f)
-{
-  config.setting_frequency_10mhz = f;
-  config_save();
-}
-
 int SI4432_step_delay = 1500;
 int SI4432_offset_delay = 1500;
 #define MINIMUM_WAIT_FOR_RSSI   280
@@ -474,8 +466,8 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
     hbsel = 0;
   }
   uint8_t sbsel = 1 << 6;
-  uint32_t N = (Freq / setting_frequency_10mhz - 24)&0x1F;
-  uint32_t K = Freq % setting_frequency_10mhz;
+  uint32_t N = (Freq / config.setting_frequency_10mhz - 24)&0x1F;
+  uint32_t K = Freq % config.setting_frequency_10mhz;
   uint32_t Carrier = (K<<2) / 625;
   uint8_t Freq_Band = N | hbsel | sbsel;
 //  int count = 0;

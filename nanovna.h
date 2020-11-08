@@ -484,6 +484,7 @@ typedef struct config {
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
+  uint32_t  setting_frequency_10mhz;
   int8_t    dummy;
 //  uint8_t _reserved[22];
   uint32_t checksum;
@@ -913,6 +914,7 @@ typedef struct uistat {
   uint8_t marker_delta;
   uint8_t marker_noise;
   uint8_t marker_tracking;
+  uint8_t auto_center_marker;
   char text[20];
 } uistat_t;
 

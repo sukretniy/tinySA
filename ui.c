@@ -32,6 +32,7 @@ uistat_t uistat = {
  marker_delta: FALSE,
  marker_noise: FALSE,
  marker_tracking : FALSE,
+ auto_center_marker : FALSE,
  text : "",
 };
 
@@ -332,7 +333,8 @@ touch_cal_exec(void)
   ili9341_clear_screen();
   ili9341_line(0, 0, 0, 32);
   ili9341_line(0, 0, 32, 0);
-  ili9341_drawstring("TOUCH UPPER LEFT", 10, 10);
+  ili9341_line(0, 0, 32, 32);
+  ili9341_drawstring("TOUCH UPPER LEFT", 40, 40);
 
   touch_wait_release();
   x1 = last_touch_x;
@@ -341,7 +343,8 @@ touch_cal_exec(void)
   ili9341_clear_screen();
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-1, LCD_HEIGHT-32);
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-1);
-  ili9341_drawstring("TOUCH LOWER RIGHT", 230, 220);
+  ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-32);
+  ili9341_drawstring("TOUCH LOWER RIGHT", 210, 200);
 
   touch_wait_release();
   x2 = last_touch_x;
@@ -798,6 +801,10 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
   case 1: /* MARKER->STOP */
   case 2: /* MARKER->CENTER */
     set_sweep_frequency(data, freq);
+    if (data == 2) {
+      uistat.lever_mode = LM_SPAN;
+      uistat.auto_center_marker = true;
+    }
     break;
   case 3: /* MARKERS->SPAN */
     {
@@ -870,7 +877,10 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   }
   if (i != -1) {
     markers[active_marker].index = i;
-    markers[active_marker].frequency = frequencies[i];
+    if (data > 1) // Maximum related
+      interpolate_maximum(active_marker);
+    else
+      markers[active_marker].frequency = frequencies[i];
   }
   draw_menu();
   redraw_marker(active_marker);
@@ -1306,6 +1316,7 @@ menu_invoke(int item)
     break;
 
   case MT_CALLBACK: {
+    uistat.auto_center_marker = false;
     menuaction_cb_t cb = (menuaction_cb_t)menu->reference;
     if (cb) (*cb)(item, menu->data);
 //    if (!(menu->type & MT_FORM))
@@ -1313,6 +1324,7 @@ menu_invoke(int item)
     break;
   }
   case MT_ADV_CALLBACK: {
+    uistat.auto_center_marker = false;
     menuaction_acb_t cb = (menuaction_acb_t)menu->reference;
     if (cb) (*cb)(item, menu->data, NULL);
 //    if (!(menu->type & MT_FORM))
@@ -1324,6 +1336,7 @@ menu_invoke(int item)
     break;
 
   case MT_KEYPAD:
+    uistat.auto_center_marker = false;
     if (menu->type & MT_FORM) {
       area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
       redraw_frame();         // Remove form numbers
@@ -2137,7 +2150,8 @@ lever_search_marker(int status)
       i = marker_search_right_max(markers[active_marker].index);
     if (i != -1) {
       markers[active_marker].index = i;
-      markers[active_marker].frequency = frequencies[i];
+      interpolate_maximum(active_marker);
+//      markers[active_marker].frequency = frequencies[i];
     }
     redraw_marker(active_marker);
   }
@@ -2167,6 +2181,12 @@ static void
 lever_zoom_span(int status)
 {
   uint32_t span = get_sweep_frequency(ST_SPAN);
+  if (uistat.auto_center_marker) {
+    uint32_t freq = get_marker_frequency(active_marker);
+    search_maximum(active_marker, freq, 10 );
+    if (freq != 0)
+      set_sweep_frequency(ST_CENTER, freq);
+  }
   if (status & EVT_UP) {
     span = step_round(span - 1);
   } else if (status & EVT_DOWN) {
@@ -2229,7 +2249,7 @@ ui_process_normal(void)
     if (status & EVT_BUTTON_SINGLE_CLICK) {
       ui_mode_menu();
     } else {
-    switch (uistat.lever_mode) {
+      switch (uistat.lever_mode) {
       case LM_MARKER: lever_move_marker(status);   break;
       case LM_SEARCH: lever_search_marker(status); break;
       case LM_CENTER:

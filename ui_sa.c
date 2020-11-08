@@ -761,7 +761,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 #ifdef __MEASURE__
   switch(data) {
     case M_OFF:                                     // Off
-      reset_settings(setting.mode);
+//      reset_settings(setting.mode);
       set_measurement(M_OFF);
       break;
     case M_IMD:                                     // IMD
@@ -836,7 +836,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //      SetAverage(4);
 
       break;
-    case M_PASS_BAND:                             // STop band measurement
+    case M_PASS_BAND:                             // Stop band measurement
 //      reset_settings(setting.mode);
       markers[0].enabled = M_ENABLED;
       markers[0].mtype = M_REFERENCE | M_TRACKING;
@@ -870,32 +870,44 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
       center = uistat.value;
-      kp_help_text = "Modulation frequency, 2 .. 10 kHz";
+      kp_help_text = "Modulation frequency, 3 .. 10 kHz";
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
-      if (uistat.value < 2000)
+      if (uistat.value < 3000)
         break;
-      span = uistat.value + 1500;   // Enlarge span for RBW width
-      set_sweep_frequency(ST_SPAN, 100000);     // 100kHz
+      span = uistat.value;
+      set_sweep_frequency(ST_SPAN, 50000);     // 100kHz
+//      update_frequencies();                     // To ensure markers are positioned right!!!!!!
       set_measurement(M_AM);
       set_marker_frequency(0, center);
       set_marker_frequency(1, center-span);
       set_marker_frequency(2, center+span);
+      set_average(4);
       break;
     case M_FM:                                     // FM
       reset_settings(setting.mode);
       for (int i = 0; i< 3; i++) {
         markers[i].enabled = M_ENABLED;
-        markers[i].mtype = M_DELTA | M_TRACKING;
+        markers[i].mtype = M_DELTA;
       }
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
+      markers[0].mtype = M_REFERENCE;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
-      kp_help_text = "Frequency deviation";
+      set_marker_frequency(0, uistat.value);
+      kp_help_text = "Modulation frequency: 1 .. 2.5kHz";
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
-      set_sweep_frequency(ST_SPAN, uistat.value*30);
+      if (uistat.value < 1000 || uistat.value > 2500)
+        break;
+      set_RBW(uistat.value/100);
+      // actual_rbw_x10
+      kp_help_text = "Frequency deviation: 3 .. 500kHz";
+      ui_mode_keypad(KM_SPAN);
+      ui_process_keypad();
+      if (uistat.value < 12000)
+        uistat.value = 12000;   // minimum span
+      set_sweep_frequency(ST_SPAN, uistat.value*4);
       set_measurement(M_FM);
       break;
     case M_THD:
@@ -1015,6 +1027,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
     return;
   }
   markers[data-1].enabled = true;
+//  interpolate_maximum(data-1);        // possibly not a maximum
   markers[data-1].frequency = frequencies[markers[data-1].index];
   active_marker_select(data-1);
   menu_push_submenu(menu_marker_modify);
@@ -2150,7 +2163,6 @@ set_numeric_value(void)
     break;
   case KM_10MHZ:
     set_10mhz(uistat.value);
-    dirty = true;
     break;
   case KM_OFFSET:
     set_offset(uistat.value);

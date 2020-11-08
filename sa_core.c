@@ -270,6 +270,19 @@ void set_gridlines(int d)
   update_grid();
 }
 
+//int setting_frequency_10mhz = 10000000;
+
+void set_10mhz(uint32_t f)
+{
+  if (f < 9000000 || f > 11000000)
+    return;
+  config.setting_frequency_10mhz = f;
+  config_save();
+  dirty = true;
+  update_grid();
+}
+
+
 void set_measurement(int m)
 {
   setting.measurement = m;
@@ -705,22 +718,35 @@ void toggle_AGC(void)
   dirty = true;
 }
 
+#ifdef __SI4432__
+static unsigned char SI4432_old_v[2];
+#endif
+
 void auto_set_AGC_LNA(int auto_set, int agc)                                                                    // Adapt the AGC setting if needed
 {
 #ifdef __SI4432__
-  static unsigned char old_v[2];
   unsigned char v;
   if (auto_set)
     v = 0x60; // Enable AGC and disable LNA
   else
     v = 0x40+agc; // Disable AGC and enable LNA
-  if (old_v[MODE_SELECT(setting.mode)] != v) {
+  if (SI4432_old_v[MODE_SELECT(setting.mode)] != v) {
     SI4432_Sel = MODE_SELECT(setting.mode);
     SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-    old_v[MODE_SELECT(setting.mode)] = v;
+    SI4432_old_v[MODE_SELECT(setting.mode)] = v;
   }
 #endif
 }
+
+#ifdef __SI4432__
+void set_AGC_LNA(void) {
+  unsigned char v = 0x40;
+  if (S_STATE(setting.agc)) v |= 0x20;
+  if (S_STATE(setting.lna)) v |= 0x10;
+  SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
+  SI4432_old_v[MODE_SELECT(setting.mode)] = v;
+}
+#endif
 
 void set_unit(int u)
 {
@@ -1210,12 +1236,6 @@ void set_switch_off(void) {
   SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1f);
 }
 
-void set_AGC_LNA(void) {
-  unsigned char v = 0x40;
-  if (S_STATE(setting.agc)) v |= 0x20;
-  if (S_STATE(setting.lna)) v |= 0x10;
-  SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
-}
 #endif
 
 void set_switches(int m)
@@ -1389,6 +1409,21 @@ int binary_search_frequency(int f)      // Search which index in the frequency t
   return -1;
 }
 
+uint32_t interpolate_maximum(int m)
+{
+  const int idx          = markers[m].index;
+  markers[m].frequency = frequencies[idx];
+  if (idx > 0 && idx < sweep_points-1)
+  {
+    const float y1         = actual_t[idx - 1];
+    const float y2         = actual_t[idx + 0];
+    const float y3         = actual_t[idx + 1];
+    const float d          = 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
+    //const float bin      = (float)idx + d;
+    const int32_t delta_Hz = abs((int64_t)frequencies[idx + 0] - frequencies[idx + 1]);
+    markers[m].frequency   += (int32_t)(delta_Hz * d);
+  }
+}
 
 #define MAX_MAX 4
 int
@@ -1453,7 +1488,8 @@ search_maximum(int m, int center, int span)
     }
   }
   markers[m].index = max_index[0];
-  markers[m].frequency = frequencies[markers[m].index];
+  interpolate_maximum(m);
+//  markers[m].frequency = frequencies[markers[m].index];
   return found;
 }
 
@@ -1590,6 +1626,22 @@ static pureRSSI_t correct_RSSI;
 static pureRSSI_t correct_RSSI_freq;
 systime_t start_of_sweep_timestamp;
 static systime_t sweep_elapsed = 0;                             // Time since first start of sweeping, used only for auto attenuate
+static uint8_t signal_is_AM = false;
+static uint8_t check_for_AM = false;
+
+static void calculate_static_correction(void)                   // Calculate the static part of the RSSI correction
+{
+  correct_RSSI =
+#ifdef __SI4432__
+      getSI4432_RSSI_correction()
+#endif
+      - get_signal_path_loss()
+      + float_TO_PURE_RSSI(
+          + get_level_offset()
+          + get_attenuation()
+          - setting.offset);
+}
+
 
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
@@ -1624,15 +1676,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       //      setting.sweep_time_us = setting.actual_sweep_time_us;
     }
     if (MODE_INPUT(setting.mode)) {
-      correct_RSSI =
-#ifdef __SI4432__
-          getSI4432_RSSI_correction()
-#endif
-          - get_signal_path_loss()
-          + float_TO_PURE_RSSI(
-              + get_level_offset()
-              + get_attenuation()
-              - setting.offset);
+      calculate_static_correction();
     }
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
@@ -1690,7 +1734,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #endif
     }
   }
-  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
+  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !check_for_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
     if (f < 1500000)
       auto_set_AGC_LNA(false, f*9/1500000);
     else
@@ -2056,6 +2100,10 @@ static bool sweep(bool break_on_operation)
   uint32_t agc_peak_freq = 0;
   float agc_peak_rssi = -150;
   float agc_prev_rssi = -150;
+  int last_AGC_value = 0;
+  uint8_t last_AGC_direction_up = false;
+  int AGC_flip_count = 0;
+
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
@@ -2072,9 +2120,15 @@ static bool sweep(bool break_on_operation)
   modulation_counter = 0;                                             // init modulation counter in case needed
   int refreshing = false;
 
-  if (dirty)                    // Calculate new scanning solution
+  if (dirty) {                    // Calculate new scanning solution
     sweep_counter = 0;
-  else if ( MODE_INPUT(setting.mode) && setting.frequency_step > 0) {
+    if (get_sweep_frequency(ST_SPAN) < 300000)  // Check if AM signal
+      check_for_AM = true;
+    else {
+      signal_is_AM = false;
+      check_for_AM = false;
+    }
+  } else if ( MODE_INPUT(setting.mode) && setting.frequency_step > 0) {
     sweep_counter++;
     if (sweep_counter > 50 ) {     // refresh HW after 50 sweeps
       dirty = true;
@@ -2154,6 +2208,16 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
+
+      if (check_for_AM) {
+        int AGC_value = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0;
+        if (AGC_value < last_AGC_value &&  last_AGC_direction_up ) {
+          AGC_flip_count++;
+        } else if (AGC_value > last_AGC_value &&  !last_AGC_direction_up ) {
+          AGC_flip_count++;
+        }
+        last_AGC_value = AGC_value;
+      }
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;
@@ -2363,27 +2427,47 @@ sweep_again:                                // stay in sweep loop when output mo
       redraw_request |= REDRAW_CAL_STATUS;
 #ifdef __SI4432__
       SI4432_Sel = SI4432_RX ;
+#if 0                               // this should never happen
       if (setting.atten_step) {
         set_switch_transmit();          // This should never happen
       } else {
         set_switch_receive();
       }
 #endif
-      dirty = true;                               // Needed to recalculate the correction factor
+#endif
+      calculate_static_correction();            // Update correction
+//      dirty = true;                               // Needed to recalculate the correction factor
     }
   }
 
   // ----------------------------------  auto AGC ----------------------------------
 
 
-  if (!in_selftest && MODE_INPUT(setting.mode) && S_IS_AUTO(setting.agc)) {
-    float actual_max_level = actual_t[max_index[0]] - get_attenuation();
-    if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
-      if (actual_max_level > - 45)
-        auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
-      else
-        auto_set_AGC_LNA(TRUE, 0);
-    }
+  if (!in_selftest && MODE_INPUT(setting.mode)) {
+    if (S_IS_AUTO(setting.agc)) {
+      float actual_max_level = actual_t[max_index[0]] - get_attenuation();
+      if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
+        if (actual_max_level > - 45)
+          auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
+        else
+          auto_set_AGC_LNA(TRUE, 0);
+      }
+      if (check_for_AM) {
+        if (signal_is_AM) {
+          if (actual_max_level < - 40 )
+            signal_is_AM = false;
+        } else {
+          if (AGC_flip_count > 20 && actual_max_level >= - 40)
+            signal_is_AM = true;
+        }
+        if (signal_is_AM) {      // if log mode and AM signal
+          auto_set_AGC_LNA(false, 16); // LNA on and no AGC
+        } else {
+          auto_set_AGC_LNA(TRUE, 0);
+        }
+      }
+    } else
+      signal_is_AM = false;
   }
 
 
@@ -2447,7 +2531,8 @@ sweep_again:                                // stay in sweep loop when output mo
       while (m < MARKERS_MAX) {
         if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
-          markers[m].frequency = frequencies[markers[m].index];
+          interpolate_maximum(m);
+          // markers[m].frequency = frequencies[markers[m].index];
 #if 0
           float v = actual_t[markers[m].index] - 10.0;              // -10dB points
           int index = markers[m].index;
@@ -2469,19 +2554,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
 #endif
 
-#if 1                                                        // Hyperbolic interpolation, can be removed to save memory
-          const int idx          = markers[m].index;
-          if (idx > 0 && idx < sweep_points-1)
-          {
-            const float y1         = actual_t[idx - 1];
-            const float y2         = actual_t[idx + 0];
-            const float y3         = actual_t[idx + 1];
-            const float d          = 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
-            //const float bin      = (float)idx + d;
-            const int32_t delta_Hz = abs((int64_t)frequencies[idx + 0] - frequencies[idx + 1]);
-            markers[m].frequency   += (int32_t)(delta_Hz * d);
-          }
-#endif
+          interpolate_maximum(m);
           m++;
           break;                          // Next maximum
         }
@@ -2492,7 +2565,7 @@ sweep_again:                                // stay in sweep loop when output mo
     while (m < MARKERS_MAX) {                  // Insufficient maxima found
       if (markers[m].enabled && markers[m].mtype & M_TRACKING) {    // More available markers found
         markers[m].index = 0;                             // Enabled but no max so set to left most frequency
-        markers[m].frequency = frequencies[markers[m].index];
+        markers[m].frequency = frequencies[0];
       }
       m++;                              // Try next marker
     }
@@ -2531,7 +2604,7 @@ sweep_again:                                // stay in sweep loop when output mo
       markers[2].index =  marker_search_right_min(markers[0].index);
       if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
       markers[2].frequency = frequencies[markers[2].index];
-    } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {      // ----------------Pass band measurement
+    } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
       int t = 0;
       float v = actual_t[markers[0].index] - 3.0;
       while (t < markers[0].index && actual_t[t+1] < v)                                        // Find left -3dB point
@@ -2891,6 +2964,13 @@ void draw_cal_status(void)
     ili9341_set_foreground(color);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("ARMED", x, y);
+  }
+
+  if (signal_is_AM) {
+    color = BRIGHT_COLOR_RED;
+    ili9341_set_foreground(color);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("AM", x, y);
   }
 
 //  if (setting.mode == M_LOW) {
@@ -3580,6 +3660,7 @@ void self_test(int test)
     ili9341_clear_screen();
     reset_settings(M_LOW);
     set_refer_output(-1);
+#ifdef DOESNOTFIT
   } else if (test == 1) {
     float p2, p1, p;
     in_selftest = true;               // Spur search
@@ -3747,9 +3828,7 @@ void self_test(int test)
     reset_settings(M_LOW);
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
-  }
-#ifdef DOESNOTFIT
-  else if (test == 5) {
+  } else if (test == 5) {
 //    reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     switch (setting.test_argument) {
@@ -3786,8 +3865,8 @@ void self_test(int test)
       break;
     }
     in_selftest = false;
-  }
 #endif
+  }
   show_test_info = FALSE;
   in_selftest = false;
   test_wait = false;

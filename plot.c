@@ -2117,11 +2117,17 @@ static void cell_draw_marker_info(int x0, int y0)
         if (delta < -5 || delta > 5)
           break;
         float level = (actual_t[markers[1].index] + actual_t[markers[2].index])/2.0 -  actual_t[markers[0].index];
-        if (level < -40 || level > 0)
+        if (level < -70 || level > 0)
           break;
         int depth =(int) (pow((float)10.0, 2.0 + (level + 6.02) /20.0));
 #endif
         plot_printf(buf, sizeof buf, "DEPTH: %3d%%", depth);
+        goto show_computed;
+      } else if (setting.measurement == M_FM){
+        int32_t dev = ( markers[2].frequency - markers[1].frequency - actual_rbw_x10 * 100 ) >> 1;
+        if (dev < 0 )
+          break;
+        plot_printf(buf, sizeof buf, "DEVIATION:%6.1qHz", dev);
         goto show_computed;
       }
     }
