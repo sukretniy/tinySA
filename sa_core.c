@@ -1547,6 +1547,20 @@ static systime_t sweep_elapsed = 0;                             // Time since fi
 static uint8_t signal_is_AM = false;
 static uint8_t check_for_AM = false;
 
+static void calculate_static_correction(void)                   // Calculate the static part of the RSSI correction
+{
+  correct_RSSI =
+#ifdef __SI4432__
+      getSI4432_RSSI_correction()
+#endif
+      - get_signal_path_loss()
+      + float_TO_PURE_RSSI(
+          + get_level_offset()
+          + get_attenuation()
+          - setting.offset);
+}
+
+
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
@@ -1580,15 +1594,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
       //      setting.sweep_time_us = setting.actual_sweep_time_us;
     }
     if (MODE_INPUT(setting.mode)) {
-      correct_RSSI =
-#ifdef __SI4432__
-          getSI4432_RSSI_correction()
-#endif
-          - get_signal_path_loss()
-          + float_TO_PURE_RSSI(
-              + get_level_offset()
-              + get_attenuation()
-              - setting.offset);
+      calculate_static_correction();
     }
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
@@ -2284,41 +2290,47 @@ sweep_again:                                // stay in sweep loop when output mo
       redraw_request |= REDRAW_CAL_STATUS;
 #ifdef __SI4432__
       SI4432_Sel = SI4432_RX ;
+#if 0                               // this should never happen
       if (setting.atten_step) {
         set_switch_transmit();          // This should never happen
       } else {
         set_switch_receive();
       }
 #endif
-      dirty = true;                               // Needed to recalculate the correction factor
+#endif
+      calculate_static_correction();            // Update correction
+//      dirty = true;                               // Needed to recalculate the correction factor
     }
   }
 
   // ----------------------------------  auto AGC ----------------------------------
 
 
-  if (!in_selftest && MODE_INPUT(setting.mode) && S_IS_AUTO(setting.agc)) {
-    float actual_max_level = actual_t[max_index[0]] - get_attenuation();
-    if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
-      if (actual_max_level > - 45)
-        auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
-      else
-        auto_set_AGC_LNA(TRUE, 0);
-    }
-    if (check_for_AM) {
-      if (signal_is_AM) {
-        if (actual_max_level < - 40)
-          signal_is_AM = false;
-      } else {
-        if (AGC_flip_count > 20 && actual_max_level >= - 40 && S_IS_AUTO(setting.agc))
-          signal_is_AM = true;
+  if (!in_selftest && MODE_INPUT(setting.mode)) {
+    if (S_IS_AUTO(setting.agc)) {
+      float actual_max_level = actual_t[max_index[0]] - get_attenuation();
+      if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
+        if (actual_max_level > - 45)
+          auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
+        else
+          auto_set_AGC_LNA(TRUE, 0);
       }
-      if (signal_is_AM) {      // if log mode and AM signal
-        auto_set_AGC_LNA(false, 16); // LNA on and no AGC
-      } else {
-        auto_set_AGC_LNA(TRUE, 0);
+      if (check_for_AM) {
+        if (signal_is_AM) {
+          if (actual_max_level < - 40 )
+            signal_is_AM = false;
+        } else {
+          if (AGC_flip_count > 20 && actual_max_level >= - 40)
+            signal_is_AM = true;
+        }
+        if (signal_is_AM) {      // if log mode and AM signal
+          auto_set_AGC_LNA(false, 16); // LNA on and no AGC
+        } else {
+          auto_set_AGC_LNA(TRUE, 0);
+        }
       }
-    }
+    } else
+      signal_is_AM = false;
   }
 
 
