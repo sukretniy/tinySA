@@ -2123,6 +2123,12 @@ static void cell_draw_marker_info(int x0, int y0)
 #endif
         plot_printf(buf, sizeof buf, "DEPTH: %3d%%", depth);
         goto show_computed;
+      } else if (setting.measurement == M_FM){
+        int32_t dev = ( markers[2].frequency - markers[1].frequency - actual_rbw_x10 * 100 ) >> 1;
+        if (dev < 0 )
+          break;
+        plot_printf(buf, sizeof buf, "DEVIATION:%6.1qHz", dev);
+        goto show_computed;
       }
     }
     if (i >= 2 && setting.measurement == M_THD) {

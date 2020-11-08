@@ -469,6 +469,7 @@ typedef struct config {
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
+  uint32_t  setting_frequency_10mhz;
   int8_t    dummy;
 //  uint8_t _reserved[22];
   uint32_t checksum;

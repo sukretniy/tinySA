@@ -118,13 +118,6 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
 }
 #endif
 
-int setting_frequency_10mhz = 10000000;
-
-void set_10mhz(uint32_t f)
-{
-  setting_frequency_10mhz = f;
-}
-
 #ifdef __SI4432__
 #define CS_SI0_HIGH     palSetPad(GPIOC, GPIO_RX_SEL)
 #define CS_SI1_HIGH     palSetPad(GPIOC, GPIO_LO_SEL)
@@ -376,8 +369,8 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
     hbsel = 0;
   }
   uint8_t sbsel = 1 << 6;
-  uint32_t N = (Freq / setting_frequency_10mhz - 24)&0x1F;
-  uint32_t K = Freq % setting_frequency_10mhz;
+  uint32_t N = (Freq / config.setting_frequency_10mhz - 24)&0x1F;
+  uint32_t K = Freq % config.setting_frequency_10mhz;
   uint32_t Carrier = (K<<2) / 625;
   uint8_t Freq_Band = N | hbsel | sbsel;
 //  int count = 0;

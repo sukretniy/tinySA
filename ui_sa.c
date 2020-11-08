@@ -757,7 +757,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 #ifdef __MEASURE__
   switch(data) {
     case M_OFF:                                     // Off
-      reset_settings(setting.mode);
+//      reset_settings(setting.mode);
       set_measurement(M_OFF);
       break;
     case M_IMD:                                     // IMD
@@ -884,16 +884,26 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       reset_settings(setting.mode);
       for (int i = 0; i< 3; i++) {
         markers[i].enabled = M_ENABLED;
-        markers[i].mtype = M_DELTA | M_TRACKING;
+        markers[i].mtype = M_DELTA;
       }
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
+      markers[0].mtype = M_REFERENCE;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
       ui_process_keypad();
-      kp_help_text = "Frequency deviation";
+      set_marker_frequency(0, uistat.value);
+      kp_help_text = "Modulation frequency: 1 .. 2.5kHz";
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
-      set_sweep_frequency(ST_SPAN, uistat.value*30);
+      if (uistat.value < 1000 || uistat.value > 2500)
+        break;
+      set_RBW(uistat.value/100);
+      // actual_rbw_x10
+      kp_help_text = "Frequency deviation: 3 .. 500kHz";
+      ui_mode_keypad(KM_SPAN);
+      ui_process_keypad();
+      if (uistat.value < 12000)
+        uistat.value = 12000;   // minimum span
+      set_sweep_frequency(ST_SPAN, uistat.value*4);
       set_measurement(M_FM);
       break;
     case M_THD:
@@ -1013,6 +1023,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
     return;
   }
   markers[data-1].enabled = true;
+//  interpolate_maximum(data-1);        // possibly not a maximum
   markers[data-1].frequency = frequencies[markers[data-1].index];
   active_marker_select(data-1);
   menu_push_submenu(menu_marker_modify);
@@ -2016,7 +2027,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
   case KM_10MHZ:
-    uistat.value = setting_frequency_10mhz;
+    uistat.value = config.setting_frequency_10mhz;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
   case KM_OFFSET:
@@ -2128,7 +2139,6 @@ set_numeric_value(void)
     break;
   case KM_10MHZ:
     set_10mhz(uistat.value);
-    dirty = true;
     break;
   case KM_OFFSET:
     set_offset(uistat.value);

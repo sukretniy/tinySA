@@ -333,7 +333,8 @@ touch_cal_exec(void)
   ili9341_clear_screen();
   ili9341_line(0, 0, 0, 32);
   ili9341_line(0, 0, 32, 0);
-  ili9341_drawstring("TOUCH UPPER LEFT", 10, 10);
+  ili9341_line(0, 0, 32, 32);
+  ili9341_drawstring("TOUCH UPPER LEFT", 40, 40);
 
   touch_wait_release();
   x1 = last_touch_x;
@@ -342,7 +343,8 @@ touch_cal_exec(void)
   ili9341_clear_screen();
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-1, LCD_HEIGHT-32);
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-1);
-  ili9341_drawstring("TOUCH LOWER RIGHT", 230, 220);
+  ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-32);
+  ili9341_drawstring("TOUCH LOWER RIGHT", 210, 200);
 
   touch_wait_release();
   x2 = last_touch_x;
@@ -844,7 +846,10 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   }
   if (i != -1) {
     markers[active_marker].index = i;
-    markers[active_marker].frequency = frequencies[i];
+    if (data > 1) // Maximum related
+      interpolate_maximum(active_marker);
+    else
+      markers[active_marker].frequency = frequencies[i];
   }
   draw_menu();
   redraw_marker(active_marker);
@@ -2114,7 +2119,8 @@ lever_search_marker(int status)
       i = marker_search_right_max(markers[active_marker].index);
     if (i != -1) {
       markers[active_marker].index = i;
-      markers[active_marker].frequency = frequencies[i];
+      interpolate_maximum(active_marker);
+//      markers[active_marker].frequency = frequencies[i];
     }
     redraw_marker(active_marker);
   }
@@ -2146,6 +2152,7 @@ lever_zoom_span(int status)
   uint32_t span = get_sweep_frequency(ST_SPAN);
   if (uistat.auto_center_marker) {
     uint32_t freq = get_marker_frequency(active_marker);
+    search_maximum(active_marker, freq, 10 );
     if (freq != 0)
       set_sweep_frequency(ST_CENTER, freq);
   }

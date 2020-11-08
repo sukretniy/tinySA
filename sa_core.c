@@ -84,8 +84,8 @@ void update_min_max_freq(void)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 24*setting_frequency_10mhz;
-    maxFreq = 96*setting_frequency_10mhz;
+    minFreq = 24*config.setting_frequency_10mhz;
+    maxFreq = 96*config.setting_frequency_10mhz;
 #endif
     break;
   case M_GENHIGH:
@@ -255,6 +255,19 @@ void set_gridlines(int d)
   dirty = true;
   update_grid();
 }
+
+//int setting_frequency_10mhz = 10000000;
+
+void set_10mhz(uint32_t f)
+{
+  if (f < 9000000 || f > 11000000)
+    return;
+  config.setting_frequency_10mhz = f;
+  config_save();
+  dirty = true;
+  update_grid();
+}
+
 
 void set_measurement(int m)
 {
@@ -1318,6 +1331,21 @@ int binary_search_frequency(int f)      // Search which index in the frequency t
   return -1;
 }
 
+uint32_t interpolate_maximum(int m)
+{
+  const int idx          = markers[m].index;
+  markers[m].frequency = frequencies[idx];
+  if (idx > 0 && idx < sweep_points-1)
+  {
+    const float y1         = actual_t[idx - 1];
+    const float y2         = actual_t[idx + 0];
+    const float y3         = actual_t[idx + 1];
+    const float d          = 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
+    //const float bin      = (float)idx + d;
+    const int32_t delta_Hz = abs((int64_t)frequencies[idx + 0] - frequencies[idx + 1]);
+    markers[m].frequency   += (int32_t)(delta_Hz * d);
+  }
+}
 
 #define MAX_MAX 4
 int
@@ -1382,7 +1410,8 @@ search_maximum(int m, int center, int span)
     }
   }
   markers[m].index = max_index[0];
-  markers[m].frequency = frequencies[markers[m].index];
+  interpolate_maximum(m);
+//  markers[m].frequency = frequencies[markers[m].index];
   return found;
 }
 
@@ -2353,7 +2382,8 @@ sweep_again:                                // stay in sweep loop when output mo
       while (m < MARKERS_MAX) {
         if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
-          markers[m].frequency = frequencies[markers[m].index];
+          interpolate_maximum(m);
+          // markers[m].frequency = frequencies[markers[m].index];
 #if 0
           float v = actual_t[markers[m].index] - 10.0;              // -10dB points
           int index = markers[m].index;
@@ -2375,19 +2405,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
 #endif
 
-#if 1                                                        // Hyperbolic interpolation, can be removed to save memory
-          const int idx          = markers[m].index;
-          if (idx > 0 && idx < sweep_points-1)
-          {
-            const float y1         = actual_t[idx - 1];
-            const float y2         = actual_t[idx + 0];
-            const float y3         = actual_t[idx + 1];
-            const float d          = 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
-            //const float bin      = (float)idx + d;
-            const int32_t delta_Hz = abs((int64_t)frequencies[idx + 0] - frequencies[idx + 1]);
-            markers[m].frequency   += (int32_t)(delta_Hz * d);
-          }
-#endif
+          interpolate_maximum(m);
           m++;
           break;                          // Next maximum
         }
@@ -2398,7 +2416,7 @@ sweep_again:                                // stay in sweep loop when output mo
     while (m < MARKERS_MAX) {                  // Insufficient maxima found
       if (markers[m].enabled && markers[m].mtype & M_TRACKING) {    // More available markers found
         markers[m].index = 0;                             // Enabled but no max so set to left most frequency
-        markers[m].frequency = frequencies[markers[m].index];
+        markers[m].frequency = frequencies[0];
       }
       m++;                              // Try next marker
     }
@@ -2437,7 +2455,7 @@ sweep_again:                                // stay in sweep loop when output mo
       markers[2].index =  marker_search_right_min(markers[0].index);
       if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
       markers[2].frequency = frequencies[markers[2].index];
-    } else if (setting.measurement == M_PASS_BAND  && markers[0].index > 10) {      // ----------------Pass band measurement
+    } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
       int t = 0;
       float v = actual_t[markers[0].index] - 3.0;
       while (t < markers[0].index && actual_t[t+1] < v)                                        // Find left -3dB point
