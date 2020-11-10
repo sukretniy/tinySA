@@ -122,7 +122,7 @@ void cal_done(void);
 #endif
 #define MAX_FREQ_TYPE 5
 enum stimulus_type {
-  ST_START=0, ST_STOP, ST_CENTER, ST_SPAN, ST_CW
+  ST_START=0, ST_STOP, ST_CENTER, ST_SPAN, ST_CW, ST_DUMMY      // Last is used in marker ops
 };
 
 void set_sweep_points(uint16_t points);

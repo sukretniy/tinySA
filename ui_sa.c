@@ -1588,20 +1588,19 @@ const menuitem_t menu_marker_select[] = {
 
 
 const menuitem_t menu_marker_ops[] = {
-  { MT_CALLBACK, ST_START,  S_RARROW" START",  menu_marker_op_cb },
-  { MT_CALLBACK, ST_STOP,   S_RARROW" STOP",   menu_marker_op_cb },
-  { MT_CALLBACK, ST_CENTER, S_RARROW" CENTER", menu_marker_op_cb },
-  { MT_CALLBACK, ST_SPAN,   S_RARROW" SPAN",   menu_marker_op_cb },
+  { MT_CALLBACK, ST_START,  S_RARROW" START",    menu_marker_op_cb },
+  { MT_CALLBACK, ST_STOP,   S_RARROW" STOP",     menu_marker_op_cb },
+  { MT_CALLBACK, ST_CENTER, S_RARROW" CENTER",   menu_marker_op_cb },
+  { MT_CALLBACK, ST_SPAN,   S_RARROW" SPAN",     menu_marker_op_cb },
+  { MT_CALLBACK, 4,         S_RARROW" REF LEVEL",menu_marker_op_cb },
   { MT_CANCEL, 0,           S_LARROW" BACK",   NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
-
-
 static const menuitem_t menu_marker[] = {
 //  { MT_SUBMENU,  0, "SELECT\nMARKER",     menu_marker_sel},
   { MT_SUBMENU,  0, "MODIFY\nMARKERS",    menu_marker_select},
-  { MT_SUBMENU,  0, "MARKER OPS",        menu_marker_ops},
+  { MT_SUBMENU,  0, "MARKER\nOPS", menu_marker_ops},
   { MT_SUBMENU,  0, "SEARCH\nMARKER",     menu_marker_search},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel

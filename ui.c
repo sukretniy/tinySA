@@ -796,6 +796,13 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
       }
     }
     break;
+  case 4: // marker -> ref level
+    {
+    float l = actual_t[markers[active_marker].index];
+    float s_max = value(l)/setting.scale;
+    user_set_reflevel(setting.scale*(floor(s_max)+2));
+    }
+    break;
 #ifdef __VNA__
   case 4: /* MARKERS->EDELAY */
     { 
