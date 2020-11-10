@@ -1,5 +1,4 @@
-/* All rights reserved.
- *
+/*
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
@@ -87,8 +86,8 @@ void update_min_max_freq(void)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 10*config.setting_frequency_10mhz;
-    maxFreq = 1200*config.setting_frequency_10mhz;
+    minFreq = HIGH_MIN_FREQ_MHZ * 1000000;
+    maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
 #endif
     break;
   case M_GENHIGH:
@@ -182,8 +181,8 @@ void reset_settings(int m)
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq =  136*config.setting_frequency_10mhz;
-    maxFreq = 1150*config.setting_frequency_10mhz;
+    minFreq = HIGH_MIN_FREQ_MHZ*(config.setting_frequency_10mhz/10);
+    maxFreq = HIGH_MAX_FREQ_MHZ*(config.setting_frequency_10mhz/10);
 #endif
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
@@ -1199,11 +1198,11 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       }
     }
     if (freq) {
-      ADF4351_set_frequency(V-ADF4351_LO,freq,3);
+      ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
       real_old_freq[V] = freq;
     }
   } else if (V==ADF4351_LO2){
-    ADF4351_set_frequency(V-ADF4351_LO,freq,3);
+    ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
   } else
     if (V==SI4463_RX) {
       if (setting.frequency_step<930000)                  // maximum step size is 937.49kHz
@@ -1214,7 +1213,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
     }
 #ifdef __ULTRA_SA__
     else {
-      ADF4351_set_frequency(V-ADF4351_LO,freq,3);
+      ADF4351_set_frequency(V-ADF4351_LO,freq,(setting.drive-4)/3);
     }
 #endif
   old_freq[V] = freq;
@@ -1845,6 +1844,7 @@ modulation_again:
 #endif
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur_removal){         // If in low input mode and spur reduction is on
+#ifndef __SI4463__
         if (S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
         {              // else low/above IF
           if (setting.spur_removal == 1)
@@ -1852,12 +1852,14 @@ modulation_again:
           else
             setting.below_IF = S_AUTO_OFF;              // and above IF in second pass
         }
-        else {
+        else
+#endif
+        {
 #ifdef __SI4432__
           int32_t spur_offset = actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
 #endif
 #ifdef __SI4463__
-          int32_t spur_offset = 4* actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
+          int32_t spur_offset = 2* actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
 #endif
           if (setting.spur_removal == -1)                       // If second spur pass
             spur_offset = - spur_offset;                // IF shift in the other direction
@@ -2209,6 +2211,7 @@ sweep_again:                                // stay in sweep loop when output mo
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
 
+#ifdef __SI4432__
       if (check_for_AM) {
         int AGC_value = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0;
         if (AGC_value < last_AGC_value &&  last_AGC_direction_up ) {
@@ -2218,6 +2221,7 @@ sweep_again:                                // stay in sweep loop when output mo
         }
         last_AGC_value = AGC_value;
       }
+#endif
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;

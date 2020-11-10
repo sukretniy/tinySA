@@ -945,7 +945,7 @@ void ADF4351_Setup(void)
 //  while(1) {
 //
 
-  ADF4351_R_counter(3);
+  ADF4351_R_counter(8);
 
   ADF4351_set_frequency(0,2000000000,0);
 
@@ -1006,8 +1006,8 @@ void ADF4351_set_frequency(int channel, uint32_t freq, int drive)  // freq / 10H
 {
 //  freq -= 71000;
 
-//  uint32_t offs = ((freq / 1000)* 39) / 1000;
-  uint32_t offs = 0;
+  uint32_t offs = ((freq / 1000)* 4) / 1000;
+//  uint32_t offs = 0;
   ADF4351_prep_frequency(channel,freq + offs, drive);
 //START_PROFILE;
   ADF4351_Set(channel);
@@ -1079,10 +1079,9 @@ static uint32_t gcd(uint32_t x, uint32_t y)
 
 void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
 {
-  (void)drive;
 //  START_PROFILE;
 //  if (channel == 0)
-    RFout=freq/config.setting_frequency_10mhz;  // To MHz
+    RFout=freq/1000000.0; // config.setting_frequency_10mhz;  // To MHz
 //  else
 //    RFout=freq/1000210;  // To MHz
 
@@ -1111,6 +1110,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
       bitWrite (registers[4], 22, 1);
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 0);
+#if 0       // does not work on ADF4350
     } else if (RFout >= 68.75) {
       OutputDivider = 32;
       bitWrite (registers[4], 22, 1);
@@ -1121,6 +1121,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
       bitWrite (registers[4], 22, 1);
       bitWrite (registers[4], 21, 1);
       bitWrite (registers[4], 20, 0);
+#endif
     }
 
     INTA = (RFout * OutputDivider) / PFDRFout[channel];
@@ -1180,8 +1181,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
     registers[1] = MOD << 3;
     registers[1] = registers[1] + 1 ; // restore address "001"
     bitSet (registers[1], 27); // Prescaler at 8/9
-/*
-    drive = 1;
+
     if (drive == 0) {
       bitClear (registers[4], 3); // +5dBm + out
       bitClear (registers[4], 4); // +5dBm
@@ -1204,7 +1204,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
       bitSet (registers[4], 3); // +5dBm + out
       bitSet (registers[4], 4); // +5dBm
     }
-*/
+
 //    bitSet (registers[4], 5); // enable + output
 //    bitClear (registers[4], 8); // enable B output
 
@@ -2019,7 +2019,7 @@ static int prev_band = -1;
 
 void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
-  uint32_t offs = ((freq / 1000)* 0) / 1000;
+  uint32_t offs = ((freq / 1000)* 147) / 1000;
   float RFout=(freq+offs)/1000000.0;  // To MHz
   if (RFout >= 822 && RFout <= 1140)         {       // till 1140MHz
     SI4463_band = 0;

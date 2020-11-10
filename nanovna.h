@@ -49,7 +49,8 @@
 #define DEFAULT_IF  978000000
 #define DEFAULT_SPUR_IF 978000000
 #define DEFAULT_MAX_FREQ    800000000
-
+#define HIGH_MIN_FREQ_MHZ   110
+#define HIGH_MAX_FREQ_MHZ   1200
 /*
  * main.c
  */
@@ -244,7 +245,7 @@ void set_decay(int);
 void set_noise(int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
-void set_10mhz(float);
+void set_10mhz(uint32_t f);
 void set_modulation(int);
 void set_modulation_frequency(int);
 int search_maximum(int m, int center, int span);
@@ -480,7 +481,6 @@ typedef struct config {
   uint16_t gridlines;
   uint16_t hambands;
   uint32_t frequency_IF2;
-  float setting_frequency_10mhz;
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
