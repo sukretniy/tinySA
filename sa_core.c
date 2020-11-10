@@ -968,12 +968,14 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if (actual_rbw_x10 >= 2700)      { SI4432_step_delay = 400; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 800)  { SI4432_step_delay = 500; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 700; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 800; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 100; }
-      else                             { SI4432_step_delay = 12000; SI4432_offset_delay =1600; }
+      if (actual_rbw_x10 >= 8500)      { SI4432_step_delay = 500; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 500; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 800; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 1400; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 2500; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 7000; SI4432_offset_delay = 100; }
+      else                             { SI4432_step_delay = 15000; SI4432_offset_delay =1600; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;

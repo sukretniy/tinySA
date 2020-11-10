@@ -1436,14 +1436,14 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #ifdef __SI4468__
 #undef RADIO_CONFIG_H_
 #undef RADIO_CONFIGURATION_DATA_ARRAY
-#include "radio_config_Si4468_850kHz.h"
+#include "radio_config_Si4468_default.h"
 
 //#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 //#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x18, 0x10, 0x40
 
 //#undef RF_MODEM_AGC_CONTROL_1
 //#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE0 + 0x10
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE0 + 0x10 + 0x08 // slow AGC
 //#undef RF_MODEM_RSSI_JUMP_THRESH_4
 //#define RF_MODEM_RSSI_JUMP_THRESH_4 0x11, 0x20, 0x04, 0x4B, 0x06, 0x09, 0x10, 0x45  // Increase RSSI reported value with 2.5dB
 
@@ -1595,6 +1595,32 @@ void setState(si446x_state_t newState)
         newState
     };
     SI4463_do_api(data, sizeof(data), NULL, 0);
+}
+
+void set_RSSI_comp(void)
+{
+  // Set properties:           RF_MODEM_RSSI_COMP_1
+  // Number of properties:     1
+  // Group ID:                 0x20
+  // Start ID:                 0x4E
+  // Default values:           0x40,
+  // Descriptions:
+  //   MODEM_RSSI_JUMP_THRESH - Configures the RSSI Jump Detection threshold.
+  //   MODEM_RSSI_CONTROL - Control of the averaging modes and latching time for reporting RSSI value(s).
+  //   MODEM_RSSI_CONTROL2 - RSSI Jump Detection control.
+  //   MODEM_RSSI_COMP - RSSI compensation value.
+  //
+  // #define RF_MODEM_RSSI_COMP_1 0x11, 0x20, 0x01, 0x4E, 0x40
+
+  uint8_t data[5] = {
+      0x11,
+      0x20,
+      0x01,
+      0x4E,
+      0x40
+  };
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+
 }
 
 
@@ -1999,6 +2025,7 @@ retry:
     }
     ili9341_drawstring_7x13("Waiting done     ", 50, 200);
   }
+  set_RSSI_comp();
   SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }
@@ -2216,7 +2243,7 @@ again:
   if (s != SI446X_STATE_RX) {
     ili9341_drawstring_7x13("Waiting for RX", 50, 200);
     osalThreadSleepMilliseconds(3000);
-    goto again;
+    goto reset;
   }
   ili9341_drawstring_7x13("Waiting ready     ", 50, 200);
   // Si446x_RSSI();
