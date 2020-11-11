@@ -2477,6 +2477,18 @@ toggle_waterfall(void)
   ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
   request_to_redraw_grid();
 }
+
+void
+disable_waterfall(void)
+{
+  graph_bottom = NO_WATERFALL;
+  waterfall = W_OFF;
+  _grid_y = graph_bottom / NGRIDY;
+  ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
+  request_to_redraw_grid();
+}
+
+
 void
 plot_init(void)
 {

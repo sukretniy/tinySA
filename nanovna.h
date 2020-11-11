@@ -214,6 +214,7 @@ void  set_clear_storage(void);
 void  set_subtract_storage(void);
 void  toggle_normalize(void);
 void toggle_waterfall(void);
+void disable_waterfall(void);
 void set_mode(int);
 int GetMode(void);
 void set_reflevel(float);

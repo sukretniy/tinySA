@@ -592,13 +592,17 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   if (argc == 3) {
     points = my_atoi(argv[2]);
   }
+
+//  if (get_waterfall())
+//    disable_waterfall();            // display dma hangs when waterfall is enabled
+
   uint32_t old_step = setting.frequency_step;
   float f_step = (stop-start)/ points;
   setting.frequency_step = (uint32_t)f_step;
 
   streamPut(shell_stream, '{');
   static  uint32_t old_start=0, old_stop=0, old_points=0;
-  if (old_start != start || old_stop != stop || old_points != points) {
+  if (old_start != start || old_stop != stop || old_points != points) {     // To prevent dirty for every sweep
     dirty = true;
     old_start = start;
     old_stop = stop;

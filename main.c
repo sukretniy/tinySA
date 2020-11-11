@@ -2369,8 +2369,8 @@ static const VNAShellCommand commands[] =
     {"test"        , cmd_test        , 0},
     {"touchcal"    , cmd_touchcal    , CMD_WAIT_MUTEX},
     {"touchtest"   , cmd_touchtest   , CMD_WAIT_MUTEX},
-    {"pause"       , cmd_pause       , 0},
-    {"resume"      , cmd_resume      , 0},
+    {"pause"       , cmd_pause       , CMD_WAIT_MUTEX},
+    {"resume"      , cmd_resume      , CMD_WAIT_MUTEX},
     {"caloutput"   , cmd_caloutput   , 0},
 #ifdef __VNA__
     {"cal"         , cmd_cal         , CMD_WAIT_MUTEX},

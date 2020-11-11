@@ -1331,7 +1331,7 @@ int binary_search_frequency(int f)      // Search which index in the frequency t
   return -1;
 }
 
-uint32_t interpolate_maximum(int m)
+void interpolate_maximum(int m)
 {
   const int idx          = markers[m].index;
   markers[m].frequency = frequencies[idx];
@@ -2177,6 +2177,9 @@ sweep_again:                                // stay in sweep loop when output mo
     }
 //    scandirty = true;                // To show trigger happened
   }
+  if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode))
+    ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);     // Erase progress bar before updating actual_sweep_time
+
 
   // ---------------------- process measured actual sweep time -----------------
   // For CW mode value calculated in SI4432_Fill
@@ -2559,7 +2562,6 @@ sweep_again:                                // stay in sweep loop when output mo
 
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
-  ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);
 
   palSetPad(GPIOB, GPIOB_LED);
   return true;
