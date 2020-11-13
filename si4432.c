@@ -1006,7 +1006,7 @@ void ADF4351_set_frequency(int channel, uint32_t freq, int drive)  // freq / 10H
 {
 //  freq -= 71000;
 
-  uint32_t offs = ((freq / 1000)* 4) / 1000;
+  uint32_t offs = ((freq / 1000)* ( 0) )/ 1000;
 //  uint32_t offs = 0;
   ADF4351_prep_frequency(channel,freq + offs, drive);
 //START_PROFILE;

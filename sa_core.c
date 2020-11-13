@@ -1501,6 +1501,7 @@ static const int spur_table[] =                                 // Frequencies t
 {
  117716000,
  746083000,
+ 1956000000,
 #if 0
  // 580000,            // 433.8 MHz table
 // 880000,    //?
@@ -1593,7 +1594,7 @@ int avoid_spur(int f)                   // find if this frequency should be avoi
 //  int window = ((int)actual_rbw ) * 1000*2;
 //  if (window < 50000)
 //    window = 50000;
-  if (setting.mode != M_LOW || !setting.auto_IF || actual_rbw_x10 > 3000)
+  if (setting.mode != M_LOW || !setting.auto_IF)
     return(false);
   return binary_search(f);
 }
@@ -1950,7 +1951,7 @@ modulation_again:
             set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
           }
           if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
-            if (lf > extra_IF)
+            if (lf > extra_IF + 138000000)
               set_freq (ADF4351_LO, lf - extra_IF); // set LO SI4432 to below IF frequency
             else
               set_freq (ADF4351_LO, extra_IF-lf); // set LO SI4432 to below IF frequency
