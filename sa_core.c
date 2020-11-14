@@ -1200,17 +1200,16 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       }
     }
     if (freq) {
-      ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
-      real_old_freq[V] = freq;
+      real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
     }
   } else if (V==ADF4351_LO2){
-    ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
+    real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
   } else
     if (V==SI4463_RX) {
       if (setting.frequency_step<930000)                  // maximum step size is 937.49kHz
         SI4463_set_freq(freq,setting.frequency_step);
       else
-        SI4463_set_freq(freq,1000);
+        SI4463_set_freq(freq,100);
       old_frequency_step = setting.frequency_step;
     }
 #ifdef __ULTRA_SA__
@@ -1501,7 +1500,7 @@ static const int spur_table[] =                                 // Frequencies t
 {
  117716000,
  746083000,
- 1956000000,
+// 1956000000,
 #if 0
  // 580000,            // 433.8 MHz table
 // 880000,    //?
@@ -1882,10 +1881,10 @@ modulation_again:
       }
 #endif
 #ifdef __SI4463__
-      if ((setting.mode == M_LOW || setting.mode == M_GENLOW ) && i == 0)
-      {
-        set_freq (SI4463_RX , local_IF);
-      }
+//      if ((setting.mode == M_LOW || setting.mode == M_GENLOW ) && i == 0)
+//      {
+//        set_freq (SI4463_RX , local_IF);
+//      }
 #endif
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
@@ -1939,25 +1938,31 @@ modulation_again:
 #ifdef __ADF4351__
 //      START_PROFILE;
       if (setting.mode == M_LOW) {
-        if (i > 0 && setting.frequency_step < 2000) {
-          if (S_STATE(setting.below_IF))
-            set_freq (SI4463_RX, setting.frequency_IF +  setting.frequency_step*i); // sweep RX, local_IF = 0 in high mode
-          else
-            set_freq (SI4463_RX, setting.frequency_IF -  setting.frequency_step*i); // sweep RX, local_IF = 0 in high mode
-        } else {
-          uint32_t extra_IF = local_IF;
-          if (config.frequency_IF2 != 0) {
-            extra_IF = config.frequency_IF2;
-            set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
-          }
-          if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
-            if (lf > extra_IF + 138000000)
-              set_freq (ADF4351_LO, lf - extra_IF); // set LO SI4432 to below IF frequency
-            else
-              set_freq (ADF4351_LO, extra_IF-lf); // set LO SI4432 to below IF frequency
-          } else
-            set_freq (ADF4351_LO, extra_IF+lf); // otherwise to above IF
+        if (config.frequency_IF2 != 0) {
+          set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
+          local_IF = config.frequency_IF2;
         }
+       uint32_t target_f;
+        if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
+          if (lf > local_IF + 138000000)
+            target_f = lf - local_IF; // set LO SI4432 to below IF frequency
+          else
+            target_f = local_IF-lf; // set LO SI4432 to below IF frequency
+        } else
+          target_f = local_IF+lf; // otherwise to above IF
+        set_freq(ADF4351_LO, target_f);
+        int32_t error_f = 0;
+        if (real_old_freq[ADF4351_LO] > target_f) {
+          error_f = real_old_freq[ADF4351_LO] - target_f;
+          if (error_f > actual_rbw_x10 * 100)
+            local_IF += error_f;
+        }
+        if (target_f > real_old_freq[ADF4351_LO]) {
+          error_f = - (target_f - real_old_freq[ADF4351_LO]);
+          if ( error_f < - actual_rbw_x10 * 100)
+            local_IF += error_f;
+        }
+        set_freq (SI4463_RX, local_IF);   // compensate ADF error with SI446x
       } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       }

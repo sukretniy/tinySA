@@ -906,14 +906,10 @@ int ADF4351_frequency_changed = false;
 #define DEBUGLN(X)
 
 
+#define XTAL    26.0
 double RFout, //Output freq in MHz
-#if 1   //Black modules
-  PFDRFout[6] = {50.0,50.0,50.0,10.0,10.0,10.0}, //Reference freq in MHz
-  Chrystal[6] = {50.0,50.0,50.0,10.0,10.0,10.0},
-#else // Green modules
-  PFDRFout[6] = {10.0,10.0,10.0,10.0,10.0,10.0}, //Reference freq in MHz
-  Chrystal[6] = {10.0,10.0,10.0,10.0,10.0,10.0},
-#endif
+  PFDRFout[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0}, //Reference freq in MHz
+  Chrystal[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0},
 
   OutputChannelSpacing = 0.001, // = 0.01
   FRACF; // Temp
@@ -945,7 +941,7 @@ void ADF4351_Setup(void)
 //  while(1) {
 //
 
-  ADF4351_R_counter(8);
+  ADF4351_R_counter(2);
 
   ADF4351_set_frequency(0,2000000000,0);
 
@@ -1002,17 +998,18 @@ void ADF4351_enable_output(void)
     ADF4351_Set(0);
 }
 
-void ADF4351_set_frequency(int channel, uint32_t freq, int drive)  // freq / 10Hz
+uint32_t ADF4351_set_frequency(int channel, uint32_t freq, int drive)  // freq / 10Hz
 {
 //  freq -= 71000;
 
-  uint32_t offs = ((freq / 1000)* ( 0) )/ 1000;
-//  uint32_t offs = 0;
-  ADF4351_prep_frequency(channel,freq + offs, drive);
+//  uint32_t offs = ((freq / 1000)* ( 0) )/ 1000;
+  uint32_t offs = 0;
+  uint32_t actual_freq = ADF4351_prep_frequency(channel,freq + offs, drive);
 //START_PROFILE;
-  ADF4351_Set(channel);
   ADF4351_frequency_changed = true;
+  ADF4351_Set(channel);
 //STOP_PROFILE;
+  return actual_freq;
 }
 
 void ADF4351_spur_mode(int S)
@@ -1077,7 +1074,7 @@ static uint32_t gcd(uint32_t x, uint32_t y)
   return x;
 }
 
-void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
+uint32_t ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
 {
 //  START_PROFILE;
 //  if (channel == 0)
@@ -1125,8 +1122,8 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
     }
 
     INTA = (RFout * OutputDivider) / PFDRFout[channel];
-    MOD = (PFDRFout[channel] / OutputChannelSpacing) + 0.01;
-//    MOD = 3125;
+//    MOD = (PFDRFout[channel] / OutputChannelSpacing) + 0.01;
+    MOD = 3125;
     FRACF = (((RFout * OutputDivider) / PFDRFout[channel]) - INTA) * MOD;
     FRAC = round(FRACF);
 
@@ -1135,13 +1132,14 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
     MOD = MOD >> 1;
  //   Serial.println( "MOD/FRAC reduced");
   }
-
+#if 0               // Don't reduce for now <-----------------------------------------------------
     int32_t k = gcd(FRAC, MOD);
     if (k > 1) {
       FRAC /= k;
       MOD /= k;
 //      Serial.print( "MOD/FRAC gcd reduced");
     }
+#endif
 //    while (denom >= (1<<20)) {
 //      num >>= 1;
 //      denom >>= 1;
@@ -1172,6 +1170,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 //  DEBUG("  FRACF=");
 //  DEBUGF(FRACF,6);
   }
+    uint32_t actual_freq = 1000000 * PFDRFout[channel] *(INTA + ((double)FRAC)/MOD)/OutputDivider;
     registers[0] = 0;
     registers[0] = INTA << 15; // OK
     FRAC = FRAC << 3;
@@ -1225,6 +1224,7 @@ void ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq
 //   bitSet (registers[4], 10); // Mute till lock
 //    ADF4351_Set(channel);
 //    STOP_PROFILE;
+    return actual_freq;
 }
 
 #endif
@@ -1438,6 +1438,9 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #undef RADIO_CONFIGURATION_DATA_ARRAY
 #include "radio_config_Si4468_default.h"
 
+#define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
+#define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
+
 //#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 //#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x18, 0x10, 0x40
 
@@ -1446,6 +1449,11 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE0 + 0x10 + 0x08 // slow AGC
 //#undef RF_MODEM_RSSI_JUMP_THRESH_4
 //#define RF_MODEM_RSSI_JUMP_THRESH_4 0x11, 0x20, 0x04, 0x4B, 0x06, 0x09, 0x10, 0x45  // Increase RSSI reported value with 2.5dB
+
+#undef RF_GPIO_PIN_CFG
+#define RF_GPIO_PIN_CFG GLOBAL_GPIO_PIN_CFG
+#undef RF_GLOBAL_CLK_CFG_1
+#define RF_GLOBAL_CLK_CFG_1 GLOBAL_CLK_CFG
 
 static const uint8_t SI4468_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #endif
@@ -1507,9 +1515,13 @@ void SI4463_clear_int_status()
 
 void Si4463_set_refer(int ref)
 {
+
+  ref = 0;   // <--------------------- DISABLED FOR PROTOTYPE!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
     if (ref >= 0) {
     uint8_t data[8] = {
-      0x13, 0x08, 0x08, 0x07, 0x12, 0x00, 0x00, 0x00    // GPIO_PIN_CFG GPIO 0 input ,1 CTS, clock div out
+      0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00    // GPIO_PIN_CFG GPIO 0 input ,1 CTS, clock div out
     };
     SI4463_do_api(data, 8, NULL, 0);
 
@@ -2046,7 +2058,8 @@ static int prev_band = -1;
 
 void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
-  uint32_t offs = ((freq / 1000)* 147) / 1000;
+//  uint32_t offs = ((freq / 1000)* 147) / 1000;
+  uint32_t offs = 0;
   float RFout=(freq+offs)/1000000.0;  // To MHz
   if (RFout >= 822 && RFout <= 1140)         {       // till 1140MHz
     SI4463_band = 0;
@@ -2078,13 +2091,13 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 
   if (freq < SI4463_prev_freq || freq > SI4463_prev_freq + 255 * SI4463_step_size ) {
 
-    SI4463_channel = 128;
+    SI4463_channel = 0;         // 128 <--------------------------BUG!!!!!!!!!!!!!!!!!!!!!!!!!!
     SI4463_prev_freq = freq - SI4463_channel * SI4463_step_size;
 
     RFout -=  SI4463_channel * SI4463_step_size / 1000000.0;       // shift for channel 128
 
     int32_t R = (RFout * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
-    float MOD = 520251.0;
+    float MOD = 524288.0;
     int32_t  F = (((RFout * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R) * MOD;
 
     setState(SI446X_STATE_READY);
