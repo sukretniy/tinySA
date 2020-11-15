@@ -863,11 +863,6 @@ usage:
 config_t config = {
   .magic =             CONFIG_MAGIC,
   .dac_value =         1922,
-  .grid_color =        DEFAULT_GRID_COLOR,
-  .ham_color =         DEFAULT_HAM_COLOR,
-  .menu_normal_color = DEFAULT_MENU_COLOR,
-  .menu_active_color = DEFAULT_MENU_ACTIVE_COLOR,
-  .trace_color =       { DEFAULT_TRACE_1_COLOR, DEFAULT_TRACE_2_COLOR, DEFAULT_TRACE_3_COLOR},
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
   .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
   ._mode     = _MODE_USB,
@@ -875,6 +870,7 @@ config_t config = {
 #ifdef __VNA__
   .harmonic_freq_threshold = 300000000,
 #endif
+  .lcd_palette = LCD_DEFAULT_PALETTE,
   .vbat_offset = 500,
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
@@ -904,7 +900,7 @@ static const marker_t def_markers[MARKERS_MAX] = {
 };
 
 // Load propeties default settings
-void load_default_properties(void)
+void load_LCD_properties(void)
 {
 //Magic add on caldata_save
 //current_props.magic = CONFIG_MAGIC;
@@ -2234,43 +2230,19 @@ VNA_SHELL_FUNCTION(cmd_color)
   int i;
   if (argc != 2) {
     shell_printf("usage: color {id} {rgb24}\r\n");
-    for (i=-3; i < TRACES_MAX; i++) {
-#if 0
-      switch(i) {
-        case -3: color = config.grid_color; break;
-        case -2: color = config.menu_normal_color; break;
-        case -1: color = config.menu_active_color; break;
-        default: color = config.trace_color[i];break;
-      }
-#else
-      // WARNING!!! Dirty hack for size, depend from config struct
-      color = config.trace_color[i];
-#endif
-      color = ((color >>  3) & 0x001c00) |
-              ((color >>  5) & 0x0000f8) |
-              ((color << 16) & 0xf80000) |
-              ((color << 13) & 0x00e000);
-//    color = (color>>8)|(color<<8);
-//    color = ((color<<8)&0xF80000)|((color<<5)&0x00FC00)|((color<<3)&0x0000F8);
-      shell_printf("   %d: 0x%06x\r\n", i, color);
+    for (i=0; i < MAX_PALETTE; i++) {
+      color = GET_PALTETTE_COLOR(i);
+      color = HEXRGB(color);
+      shell_printf(" %2d: 0x%06x\r\n", i, color);
     }
     return;
   }
   i = my_atoi(argv[0]);
-  if (i < -3 && i >= TRACES_MAX)
+  if (i >= MAX_PALETTE)
     return;
   color = RGBHEX(my_atoui(argv[1]));
-#if 0
-  switch(i) {
-    case -3: config.grid_color = color; break;
-    case -2: config.menu_normal_color = color; break;
-    case -1: config.menu_active_color = color; break;
-    default: config.trace_color[i] = color;break;
-  }
-#else
-  // WARNING!!! Dirty hack for size, depend from config struct
-  config.trace_color[i] = color;
-#endif
+  config.lcd_palette[i] = color;
+
   // Redraw all
   redraw_request|= REDRAW_AREA;
 }
@@ -2742,7 +2714,7 @@ static UARTConfig uart_cfg_1 = {
 #endif
 
 #if 0
-static const SerialConfig default_config =
+static const SerialConfig LCD_config =
 {
   9600,
   0,
@@ -2851,7 +2823,7 @@ int main(void)
 /* restore config */
   config_recall();
   if (caldata_recall(0) == -1) {
-    load_default_properties();
+    load_LCD_properties();
   }
 
 /*
@@ -2902,7 +2874,7 @@ int main(void)
 #endif
 
   if (caldata_recall(0) == -1) {
-    load_default_properties();
+    load_LCD_properties();
   }
 
   set_refer_output(-1);
@@ -2973,8 +2945,8 @@ void hard_fault_handler_c(uint32_t *sp)
   int y = 0;
   int x = OFFSETX + 1;
   static  char buf[96];
-  ili9341_set_background(DEFAULT_BG_COLOR);
-  ili9341_set_foreground(DEFAULT_FG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
 
   plot_printf(buf, sizeof(buf), "SP  0x%08x",  (uint32_t)sp);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
   plot_printf(buf, sizeof(buf), "R0  0x%08x",  r0);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);

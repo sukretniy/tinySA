@@ -328,8 +328,8 @@ touch_cal_exec(void)
   int x1, x2, y1, y2;
 
   adc_stop();
-  ili9341_set_foreground(DEFAULT_FG_COLOR);
-  ili9341_set_background(DEFAULT_BG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
   ili9341_clear_screen();
   ili9341_line(0, 0, 0, 32);
   ili9341_line(0, 0, 32, 0);
@@ -369,8 +369,8 @@ touch_draw_test(void)
   
   adc_stop();
 
-  ili9341_set_foreground(DEFAULT_FG_COLOR);
-  ili9341_set_background(DEFAULT_BG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
   ili9341_clear_screen();
   ili9341_drawstring("TOUCH TEST: DRAG PANEL, PRESS BUTTON TO FINISH", OFFSETX, LCD_HEIGHT - FONT_GET_HEIGHT);
 
@@ -414,8 +414,8 @@ show_version(void)
 {
   int x = 5, y = 5, i = 0;
   adc_stop();
-  ili9341_set_foreground(DEFAULT_FG_COLOR);
-  ili9341_set_background(DEFAULT_BG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
 
   ili9341_clear_screen();
   uint16_t shift = 0b0000010000111110;
@@ -440,8 +440,8 @@ enter_dfu(void)
   adc_stop();
 
   int x = 5, y = 5;
-  ili9341_set_foreground(DEFAULT_FG_COLOR);
-  ili9341_set_background(DEFAULT_BG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
   // leave a last message 
   ili9341_clear_screen();
   ili9341_drawstring_7x13("DFU: Device Firmware Update Mode\n"
@@ -1446,15 +1446,15 @@ static void
 draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
 {
   uint16_t bw = b->border&BUTTON_BORDER_WIDTH_MASK;
-  ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2), b->bg);
+  ili9341_set_background(b->bg);ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2));
   if (bw==0) return;
-  uint16_t br = RGB565(255,255,255);
-  uint16_t bd = RGB565(196,196,196);
+  uint16_t br = LCD_RISE_EDGE_COLOR;
+  uint16_t bd = LCD_FALLEN_EDGE_COLOR;
   uint16_t type = b->border;
-  ili9341_fill(x,          y,           w, bw, type&BUTTON_BORDER_TOP    ? br : bd); // top
-  ili9341_fill(x + w - bw, y,          bw,  h, type&BUTTON_BORDER_RIGHT  ? br : bd); // right
-  ili9341_fill(x,          y,          bw,  h, type&BUTTON_BORDER_LEFT   ? br : bd); // left
-  ili9341_fill(x,          y + h - bw,  w, bw, type&BUTTON_BORDER_BOTTOM ? br : bd); // bottom
+  ili9341_set_background(type&BUTTON_BORDER_TOP    ? br : bd);ili9341_fill(x,          y,           w, bw); // top
+  ili9341_set_background(type&BUTTON_BORDER_RIGHT  ? br : bd);ili9341_fill(x + w - bw, y,          bw,  h); // right
+  ili9341_set_background(type&BUTTON_BORDER_LEFT   ? br : bd);ili9341_fill(x,          y,          bw,  h); // left
+  ili9341_set_background(type&BUTTON_BORDER_BOTTOM ? br : bd);ili9341_fill(x,          y + h - bw,  w, bw); // bottom
 }
 
 static void
@@ -1462,20 +1462,20 @@ draw_keypad(void)
 {
   int i = 0;
   ui_button_t button;
-  button.fg = DEFAULT_MENU_TEXT_COLOR;
+  button.fg = LCD_MENU_TEXT_COLOR;
   while (keypads[i].c >= 0) {
-    button.bg = RGB565(230,230,230);//config.menu_normal_color;
+    button.bg = LCD_MENU_COLOR;
     if (i == selection){
-      button.bg = RGB565(210,210,210);//config.menu_active_color;
+      button.bg = LCD_MENU_ACTIVE_COLOR;
       button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_FALLING;
     }
     else
       button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_RISE;
-    ili9341_set_foreground(button.fg);
-    ili9341_set_background(button.bg);
     int x = KP_GET_X(keypads[i].x);
     int y = KP_GET_Y(keypads[i].y);
     draw_button(x, y, KP_WIDTH, KP_HEIGHT, &button);
+    ili9341_set_foreground(button.fg);
+    ili9341_set_background(button.bg);
     if (keypads[i].c < KP_0) { // KP_0
       ili9341_drawfont(keypads[i].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
@@ -1503,9 +1503,10 @@ menu_is_multiline(const char *label)
 static void
 draw_numeric_area_frame(void)
 {
-  ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT, config.menu_normal_color);
-  ili9341_set_foreground(DEFAULT_MENU_TEXT_COLOR);
-  ili9341_set_background(config.menu_normal_color);
+  ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
+  ili9341_set_background(LCD_INPUT_BG_COLOR);
+
+  ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT);
   char *name = keypads_mode_tbl[keypad_mode].name;
   int lines = menu_is_multiline(name);
   ili9341_drawstring_7x13(name, 10, LCD_HEIGHT-NUM_INPUT_HEIGHT + (NUM_INPUT_HEIGHT-lines*bFONT_STR_HEIGHT)/2);
@@ -1520,8 +1521,8 @@ draw_numeric_input(const char *buf)
   int focused = FALSE;
   uint16_t xsim = 0b0010010000000000;
 
-  uint16_t fg = DEFAULT_MENU_TEXT_COLOR;
-  uint16_t bg = config.menu_normal_color;
+  uint16_t fg = LCD_INPUT_TEXT_COLOR;
+  uint16_t bg = LCD_INPUT_BG_COLOR;
   for (i = 0, x = 64; i < 10 && buf[i]; i++, xsim<<=1) {
     int c = buf[i];
     if (c == '.')
@@ -1538,13 +1539,13 @@ draw_numeric_input(const char *buf)
     else if (focused) // c not number, but focused
       ili9341_drawfont(0, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
     else // erase
-      ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_WIDTH+2+8, bg);
+      ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_WIDTH+2+8);
 
     x += xsim&0x8000 ? NUM_FONT_GET_WIDTH+2+8 : NUM_FONT_GET_WIDTH+2;
   }
   // erase last
 //  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
-  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-x-1, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
+  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-x-1, NUM_FONT_GET_WIDTH+2+8);
   if (buf[0] == 0 && kp_help_text != NULL) {
     ili9341_set_foreground(fg);
     ili9341_set_background(bg);
@@ -1564,24 +1565,24 @@ menu_item_modify_attribute(const menuitem_t *menu, int item,
   } else if (menu == menu_marker_sel) {
     if (item < 4) {
       if (markers[item].enabled) {
-        *bg = DEFAULT_MENU_TEXT_COLOR;
+        *bg = LCD_MENU_TEXT_COLOR;
         *fg = config.menu_normal_color;
       }
     } else if (item == 5) {
       if (uistat.marker_delta) {
-        *bg = DEFAULT_MENU_TEXT_COLOR;
+        *bg = LCD_MENU_TEXT_COLOR;
         *fg = config.menu_normal_color;
       }
     }
   } else if (menu == menu_marker_search) {
     if (item == 4 && uistat.marker_tracking) {
-      *bg = DEFAULT_MENU_TEXT_COLOR;
+      *bg = LCD_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
   } else if (menu == menu_marker_smith) {
 
     if (marker_smith_format == item) {
-      *bg = DEFAULT_MENU_TEXT_COLOR;
+      *bg = LCD_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
   } else if (menu == menu_calop) {
@@ -1591,17 +1592,17 @@ menu_item_modify_attribute(const menuitem_t *menu, int item,
         || (item == 3 && (cal_status & CALSTAT_ISOLN))
         || (item == 4 && (cal_status & CALSTAT_THRU))) {
       domain_mode = (domain_mode & ~DOMAIN_MODE) | DOMAIN_FREQ;
-      *bg = DEFAULT_MENU_TEXT_COLOR;
+      *bg = LCD_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
   } else if (menu == menu_stimulus) {
     if (item == 5 /* PAUSE */ && !(sweep_mode&SWEEP_ENABLE)) {
-      *bg = DEFAULT_MENU_TEXT_COLOR;
+      *bg = LCD_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
   } else if (menu == menu_cal) {
     if (item == 3 /* CORRECTION */ && (cal_status & CALSTAT_APPLY)) {
-      *bg = DEFAULT_MENU_TEXT_COLOR;
+      *bg = LCD_MENU_TEXT_COLOR;
       *fg = config.menu_normal_color;
     }
   } else if (menu == menu_bandwidth) {
@@ -1615,7 +1616,7 @@ menu_item_modify_attribute(const menuitem_t *menu, int item,
        || (item == 2 && (domain_mode & TD_FUNC) == TD_FUNC_LOWPASS_STEP)
        || (item == 3 && (domain_mode & TD_FUNC) == TD_FUNC_BANDPASS)
        ) {
-        *bg = DEFAULT_MENU_TEXT_COLOR;
+        *bg = LCD_MENU_TEXT_COLOR;
         *fg = config.menu_normal_color;
       }
   } else if (menu == menu_transform_window) {
@@ -1623,7 +1624,7 @@ menu_item_modify_attribute(const menuitem_t *menu, int item,
        || (item == 1 && (domain_mode & TD_WINDOW) == TD_WINDOW_NORMAL)
        || (item == 2 && (domain_mode & TD_WINDOW) == TD_WINDOW_MAXIMUM)
        ) {
-        *bg = DEFAULT_MENU_TEXT_COLOR;
+        *bg = LCD_MENU_TEXT_COLOR;
         *fg = config.menu_normal_color;
       }
   }
@@ -1738,16 +1739,16 @@ draw_menu_buttons(const menuitem_t *menu)
     button.border = MENU_BUTTON_BORDER;
 
     if (MT_MASK(menu[i].type) == MT_TITLE) {
-      button.fg = RGB565(255,255,255);//config.menu_normal_color;
-      button.bg = DEFAULT_MENU_TEXT_COLOR;
+      button.fg = LCD_FG_COLOR;
+      button.bg = LCD_BG_COLOR;
       button.border = 0; // no border for title
     } else {
-      button.bg = RGB565(230,230,230);
-      button.fg = DEFAULT_MENU_TEXT_COLOR;
+      button.bg = LCD_MENU_COLOR;
+      button.fg = LCD_MENU_TEXT_COLOR;
     }
 
     if (i == selection){
-      button.bg = RGB565(210,210,210);//config.menu_active_color;
+      button.bg = LCD_MENU_ACTIVE_COLOR;
       button.border|= BUTTON_BORDER_FALLING;
     }
     else
@@ -1771,13 +1772,14 @@ draw_menu_buttons(const menuitem_t *menu)
     // Prepare button label
     plot_printf(button.text, sizeof button.text, menu[i].label, button.param_1.u, button.param_2.u);
 
-    ili9341_set_foreground(button.fg);
-    ili9341_set_background(button.bg);
     if (menu[i].type & MT_FORM) {
       int button_width = MENU_FORM_WIDTH;
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen
       int button_height = MENU_BUTTON_HEIGHT;
       draw_button(button_start, y, button_width, button_height, &button);
+
+      ili9341_set_foreground(button.fg);
+      ili9341_set_background(button.bg);
       uint16_t text_offs = button_start + 6;
       if (button.icon >=0){
         blit8BitWidthBitmap(button_start+3, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
@@ -1796,6 +1798,8 @@ draw_menu_buttons(const menuitem_t *menu)
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
       int button_height = MENU_BUTTON_HEIGHT;
       draw_button(button_start, y, button_width, button_height, &button);
+      ili9341_set_foreground(button.fg);
+      ili9341_set_background(button.bg);
       uint16_t text_offs = button_start + 7;
       if (button.icon >=0){
         blit8BitWidthBitmap(button_start+2, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
@@ -1812,8 +1816,9 @@ draw_menu_buttons(const menuitem_t *menu)
     y += MENU_BUTTON_HEIGHT;
   }
   // Cleanup other buttons (less flicker)
+  ili9341_set_background(LCD_BG_COLOR);
   for (; y < MENU_BUTTON_MAX*MENU_BUTTON_HEIGHT; y+=MENU_BUTTON_HEIGHT)
-    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT, DEFAULT_BG_COLOR);
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT);
 }
 
 static systime_t prev_touch_time = 0;
@@ -1925,11 +1930,11 @@ static void
 erase_menu_buttons(void)
 {
 // Not need, screen redraw in all cases
-//  ili9341_fill(area_width, 0, LCD_WIDTH - area_width, area_height, DEFAULT_BG_COLOR);
+//  ili9341_fill(area_width, 0, LCD_WIDTH - area_width, area_height, LCD_BG_COLOR);
  // if (current_menu_is_form())
- //   ili9341_fill(OFFSETX, 0,LCD_WIDTH-OFFSETX, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
+ //   ili9341_fill(OFFSETX, 0,LCD_WIDTH-OFFSETX, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, LCD_BG_COLOR);
  // else
- //   ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, DEFAULT_BG_COLOR);
+ //   ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, LCD_BG_COLOR);
   draw_frequencies();
 }
 
@@ -1937,7 +1942,8 @@ erase_menu_buttons(void)
 static void
 erase_numeric_input(void)
 {
-  ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT, DEFAULT_BG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_fill(0, LCD_HEIGHT-NUM_INPUT_HEIGHT, LCD_WIDTH, NUM_INPUT_HEIGHT);
 }
 #endif
 
@@ -1948,11 +1954,12 @@ leave_ui_mode()
 //    request_to_draw_cells_behind_menu();
 //    erase_menu_buttons();
 //  }
+  ili9341_set_background(LCD_BG_COLOR);
   // Erase bottom area (not redraw on area update)
   if (MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height > 0)
-    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height, DEFAULT_BG_COLOR);
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height);
   if (get_waterfall())
-    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom, 0);
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
   redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
 }
 

@@ -2017,7 +2017,8 @@ sweep_again:                                // stay in sweep loop when output mo
       scandirty = false;
     if (break_on_operation && operation_requested) {                        // break loop if needed
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
-        ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);              // Erase progress bar
+        ili9341_set_background(LCD_BG_COLOR);
+        ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);                    // Erase progress bar
       }
       return false;
     }
@@ -2057,8 +2058,10 @@ sweep_again:                                // stay in sweep loop when output mo
 
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
     	int pos = i * (WIDTH+1) / sweep_points;
-        ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1, BRIGHT_COLOR_GREEN);     // update sweep progress bar
-        ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1, 0);
+    	ili9341_set_background(LCD_SWEEP_LINE_COLOR);
+        ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
+        ili9341_set_background(LCD_BG_COLOR);
+        ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
       }
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------
@@ -2559,7 +2562,8 @@ sweep_again:                                // stay in sweep loop when output mo
 
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
-  ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);
 
   palSetPad(GPIOB, GPIOB_LED);
   return true;
@@ -2753,8 +2757,8 @@ void draw_cal_status(void)
   if (!UNIT_IS_LINEAR(setting.unit))
     rounding  = true;
   const char * const unit = unit_string[setting.unit];
-
-  ili9341_fill(0, 0, OFFSETX, CHART_BOTTOM, 0x0000);
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_fill(0, 0, OFFSETX, CHART_BOTTOM);
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
     return;
   }
@@ -2762,7 +2766,7 @@ void draw_cal_status(void)
     //  if (current_menu_is_form() && !in_selftest)
 //    return;
 
-  ili9341_set_background(DEFAULT_BG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
 
   float yMax = setting.reflevel;
   // Top level
@@ -2771,20 +2775,16 @@ void draw_cal_status(void)
   else
     plot_printf(buf, BLEN, "%+4.3F", (yMax/setting.unit_scale));
 
-  if (level_is_calibrated()) {
-    if (setting.auto_reflevel)
-      color = DEFAULT_FG_COLOR;
-    else
-      color = BRIGHT_COLOR_GREEN;
-  }
+  if (level_is_calibrated())
+    color = setting.auto_reflevel ? LCD_FG_COLOR : LCD_BRIGHT_COLOR_GREEN;
   else
-    color = BRIGHT_COLOR_RED;
+    color = LCD_BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
   ili9341_drawstring(buf, x, y);
 
   // Unit
 #if 0
-  color = DEFAULT_FG_COLOR;
+  color = LCD_FG_COLOR;
   ili9341_set_foreground(color);
   if (setting.auto_reflevel){
     y += YSTEP + YSTEP/2 ;
@@ -2796,7 +2796,7 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
   // Scale
-  color = DEFAULT_FG_COLOR;
+  color = LCD_FG_COLOR;
   ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2;
 #if 1
@@ -2815,20 +2815,20 @@ void draw_cal_status(void)
   ili9341_drawstring(buf, x, y);
 
   if (is_paused()) {
-    color = BRIGHT_COLOR_GREEN;
+    color = LCD_BRIGHT_COLOR_GREEN;
     ili9341_set_foreground(color);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("PAUSED", x, y);
   }
   if (setting.trigger == T_SINGLE || setting.trigger == T_NORMAL ) {
-    color = BRIGHT_COLOR_GREEN;
+    color = LCD_BRIGHT_COLOR_GREEN;
     ili9341_set_foreground(color);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("ARMED", x, y);
   }
 
   if (signal_is_AM) {
-    color = BRIGHT_COLOR_RED;
+    color = LCD_BRIGHT_COLOR_RED;
     ili9341_set_foreground(color);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("AM", x, y);
@@ -2837,9 +2837,9 @@ void draw_cal_status(void)
 //  if (setting.mode == M_LOW) {
     // Attenuation
     if (setting.auto_attenuation)
-      color = DEFAULT_FG_COLOR;
+      color = LCD_FG_COLOR;
     else
-      color = BRIGHT_COLOR_GREEN;
+      color = LCD_BRIGHT_COLOR_GREEN;
     ili9341_set_foreground(color);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Atten:", x, y);
@@ -2850,7 +2850,7 @@ void draw_cal_status(void)
 
   // Average
   if (setting.average>0) {
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Calc:", x, y);
 
@@ -2861,7 +2861,7 @@ void draw_cal_status(void)
   // Spur
 #ifdef __SPUR__
   if (setting.spur_removal) {
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Spur:", x, y);
 
@@ -2870,7 +2870,7 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
   if (setting.mirror_masking) {
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Mask:", x, y);
 
@@ -2881,16 +2881,16 @@ void draw_cal_status(void)
 #endif
 
   if (setting.subtract_stored) {
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Norm.", x, y);
   }
 
   // RBW
   if (setting.rbw_x10)
-    color = BRIGHT_COLOR_GREEN;
+    color = LCD_BRIGHT_COLOR_GREEN;
   else
-    color = DEFAULT_FG_COLOR;
+    color = LCD_FG_COLOR;
   ili9341_set_foreground(color);
 
   y += YSTEP + YSTEP/2 ;
@@ -2903,7 +2903,7 @@ void draw_cal_status(void)
 #if 0
   // VBW
   if (setting.frequency_step > 0) {
-    ili9341_set_foreground(DEFAULT_FG_COLOR);
+    ili9341_set_foreground(LCD_FG_COLOR);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("VBW:", x, y);
 
@@ -2915,9 +2915,9 @@ void draw_cal_status(void)
 #endif
   // Sweep time
   if (setting.step_delay != 0)
-    color = BRIGHT_COLOR_GREEN;
+    color = LCD_BRIGHT_COLOR_GREEN;
   else
-    color = DEFAULT_FG_COLOR;
+    color = LCD_FG_COLOR;
 
   ili9341_set_foreground(color);
 
@@ -2956,7 +2956,7 @@ void draw_cal_status(void)
 
    // Cal output
   if (setting.refer >= 0) {
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Ref:", x, y);
 
@@ -2968,7 +2968,7 @@ void draw_cal_status(void)
 
   // Offset
   if (setting.offset != 0.0) {
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Amp:", x, y);
 
@@ -2979,7 +2979,7 @@ void draw_cal_status(void)
 
   // Repeat
   if (setting.repeat != 1) {
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("Repeat:", x, y);
 
@@ -2992,9 +2992,9 @@ void draw_cal_status(void)
   // Trigger
   if (setting.trigger != T_AUTO) {
     if (is_paused() || setting.trigger == T_NORMAL) {
-      ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     } else {
-      ili9341_set_foreground(BRIGHT_COLOR_RED);
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
     }
     y += YSTEP + YSTEP/2 ;
     ili9341_drawstring("TRIG:", x, y);
@@ -3010,16 +3010,16 @@ void draw_cal_status(void)
 
   // Mode
   if (level_is_calibrated())
-    color = BRIGHT_COLOR_GREEN;
+    color = LCD_BRIGHT_COLOR_GREEN;
   else
-    color = BRIGHT_COLOR_RED;
+    color = LCD_BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
   y += YSTEP + YSTEP/2 ;
   ili9341_drawstring_7x13(MODE_LOW(setting.mode) ? "LOW" : "HIGH", x, y);
 
   // Compact status string
-//  ili9341_set_background(DEFAULT_FG_COLOR);
-  ili9341_set_foreground(DEFAULT_FG_COLOR);
+//  ili9341_set_background(LCD_FG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
   y += YSTEP + YSTEP/2 ;
   strncpy(buf,"     ",BLEN-1);
   if (setting.auto_attenuation)
@@ -3053,7 +3053,7 @@ void draw_cal_status(void)
   strncpy(buf,&VERSION[8], BLEN-1);
   ili9341_drawstring(buf, x, y);
 
-//  ili9341_set_background(DEFAULT_BG_COLOR);
+//  ili9341_set_background(LCD_BG_COLOR);
   if (!get_waterfall()) {               // Do not draw bottom level if in waterfall mode
     // Bottom level
     y = area_height - 8 + OFFSETY;
@@ -3064,11 +3064,11 @@ void draw_cal_status(void)
     //  buf[5]=0;
     if (level_is_calibrated())
       if (setting.auto_reflevel)
-        color = DEFAULT_FG_COLOR;
+        color = LCD_FG_COLOR;
       else
-        color = BRIGHT_COLOR_GREEN;
+        color = LCD_BRIGHT_COLOR_GREEN;
     else
-      color = BRIGHT_COLOR_RED;
+      color = LCD_BRIGHT_COLOR_RED;
     ili9341_set_foreground(color);
     ili9341_drawstring(buf, x, y);
   }
@@ -3494,7 +3494,7 @@ void self_test(int test)
       if (test_step == 2) {
         if (peakLevel < -60) {
           test_step = TEST_END;
-          ili9341_set_foreground(BRIGHT_COLOR_RED);
+          ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
           ili9341_drawstring_7x13("Signal level too low", 30, 140);
           ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
           goto resume2;
@@ -3510,7 +3510,7 @@ void self_test(int test)
       }
       test_step++;
     } while (test_case[test_step].kind != TC_END && setting.test_argument == 0 );
-    ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring_7x13("Self test complete", 50, 200);
     ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
    resume2:
@@ -3758,14 +3758,14 @@ void calibrate(void)
     test_acquire(TEST_POWER);                        // Acquire test
     local_test_status = test_validate(TEST_POWER);                       // Validate test
     if (peakLevel < -50) {
-      ili9341_set_foreground(BRIGHT_COLOR_RED);
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
       ili9341_drawstring_7x13("Signal level too low", 30, 140);
       ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
       goto quit;
     }
 //    chThdSleepMilliseconds(1000);
     if (local_test_status != TS_PASS) {
-      ili9341_set_foreground(BRIGHT_COLOR_RED);
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
       ili9341_drawstring_7x13("Calibration failed", 30, 140);
       goto quit;
     } else {
@@ -3801,7 +3801,7 @@ void calibrate(void)
 #endif
 
   config_save();
-  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+  ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 30, 140);
 quit:
   ili9341_drawstring_7x13("Touch screen to continue", 30, 200);
