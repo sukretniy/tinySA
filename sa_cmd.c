@@ -628,7 +628,6 @@ VNA_SHELL_FUNCTION(cmd_caloutput)
 {
   static const char cmd[] = "off|30|15|10|4|3|2|1";
   if (argc != 1) {
-  usage:
     shell_printf("usage: caloutput %s\r\n", cmd);
     return;
   }

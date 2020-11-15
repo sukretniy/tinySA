@@ -400,6 +400,9 @@ extern const uint8_t numfont16x22[];
 #define S_OHM      "\036"  // 0x1E
 #define S_DEGREE   "\037"  // 0x1F
 
+// Max palette indexes in config
+#define MAX_PALETTE     32
+
 // trace 
 #define MAX_TRACE_TYPE 12
 enum trace_type {
@@ -447,30 +450,27 @@ typedef struct trace {
 
 typedef struct config {
   int32_t magic;
-  uint16_t dac_value;
-  uint16_t grid_color;
-  uint16_t menu_normal_color;
-  uint16_t menu_active_color;
-  uint16_t trace_color[TRACES_MAX];
+  uint16_t lcd_palette[MAX_PALETTE];
   int16_t  touch_cal[4];
-  int8_t   _mode;
   uint32_t _serial_speed;
 #ifdef __VNA__
   uint32_t harmonic_freq_threshold;
 #endif
+  uint16_t dac_value;
   uint16_t vbat_offset;
   float low_level_offset;
   float high_level_offset;
   uint32_t correction_frequency[CORRECTION_POINTS];
   float    correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
-  uint16_t ham_color;
+  uint32_t  setting_frequency_10mhz;
+
   uint16_t gridlines;
   uint16_t hambands;
-  int8_t    cor_am;
+
+  int8_t   _mode;  int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
-  uint32_t  setting_frequency_10mhz;
   int8_t    dummy;
 //  uint8_t _reserved[22];
   uint32_t checksum;
@@ -573,12 +573,10 @@ extern volatile uint8_t redraw_request;
  * ili9341.c
  */
 // SPI bus revert byte order
-//gggBBBbb RRRrrGGG
-#define byteReverse16(x) (uint16_t)(((x) << 8) & 0xff00) | (((x) >> 8) & 0xff)
-#define RGB565(r,g,b)     byteReverse16( ((((uint16_t)(r))<<8)&0b1111100000000000) | ((((uint16_t)(g))<<3)&0b0000011111100000) | ((((uint16_t)(b))>>3)&0b0000000000011111) )
-
-//#define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
+// 16-bit gggBBBbb RRRrrGGG
+#define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
 #define RGBHEX(hex) ( (((hex)&0x001c00)<<3) | (((hex)&0x0000f8)<<5) | (((hex)&0xf80000)>>16) | (((hex)&0x00e000)>>13) )
+#define HEXRGB(hex) ( (((hex)>>3)&0x001c00) | (((hex)>>5)&0x0000f8) | (((hex)<<16)&0xf80000) | (((hex)<<13)&0x00e000) )
 
 // Define size of screen buffer in pixels (one pixel 16bit size)
 #define SPI_BUFFER_SIZE             (CELLWIDTH*CELLHEIGHT)
@@ -586,27 +584,71 @@ extern volatile uint8_t redraw_request;
 #define LCD_WIDTH                   320
 #define LCD_HEIGHT                  240
 
-#define DEFAULT_FG_COLOR            RGB565(255,255,255)
-#define DEFAULT_BG_COLOR            RGB565(  0,  0,  0)
-#define DARK_GREY                   RGB565(140,140,140)
-#define LIGHT_GREY                  RGB565(220,220,220)
-#define DEFAULT_GRID_COLOR          RGB565(128,128,128)
-#define DEFAULT_HAM_COLOR           RGB565(80,80,80)
-#define DEFAULT_GRID_VALUE_COLOR    RGB565(196,196,196)
-#define DEFAULT_MENU_COLOR          RGB565(255,255,255)
-#define DEFAULT_MENU_TEXT_COLOR     RGB565(  0,  0,  0)
-#define DEFAULT_MENU_ACTIVE_COLOR   RGB565(180,255,180)
-#define DEFAULT_TRACE_1_COLOR       RGB565(255,  0,  0)  /* RGB565(255,255,  0) */
-#define DEFAULT_TRACE_2_COLOR       RGB565(  0,255,  0)/* RGB565(  0,255,255) */
-#define DEFAULT_TRACE_3_COLOR       RGB565(255,255,  0)/* RGB565(  0,255,  0) */
-#define DEFAULT_TRIGGER_COLOR       RGB565(  0,  0,255)/* RGB565(  0   0,255) */
-//#define DEFAULT_TRACE_4_COLOR       RGB565(255,  0,255)
-#define DEFAULT_NORMAL_BAT_COLOR    RGB565( 31,227,  0)
-#define DEFAULT_LOW_BAT_COLOR       RGB565(255,  0,  0)
-#define DEFAULT_SPEC_INPUT_COLOR    RGB565(128,255,128);
-#define BRIGHT_COLOR_BLUE  RGB565(0,0,255)
-#define BRIGHT_COLOR_RED  RGB565(255,128,128)
-#define BRIGHT_COLOR_GREEN  RGB565(0,255,0)
+#define LCD_BG_COLOR             0
+#define LCD_FG_COLOR             1
+#define LCD_GRID_COLOR           2
+#define LCD_MENU_COLOR           3
+#define LCD_MENU_TEXT_COLOR      4
+#define LCD_MENU_ACTIVE_COLOR    5
+#define LCD_TRACE_1_COLOR        6
+#define LCD_TRACE_2_COLOR        7
+#define LCD_TRACE_3_COLOR        8
+#define LCD_TRACE_4_COLOR        9
+#define LCD_NORMAL_BAT_COLOR    10
+#define LCD_LOW_BAT_COLOR       11
+#define LCD_TRIGGER_COLOR       12
+#define LCD_RISE_EDGE_COLOR     13
+#define LCD_FALLEN_EDGE_COLOR   14
+#define LCD_SWEEP_LINE_COLOR    15
+#define LCD_BW_TEXT_COLOR       16
+#define LCD_INPUT_TEXT_COLOR    17
+#define LCD_INPUT_BG_COLOR      18
+#define LCD_BRIGHT_COLOR_BLUE   19
+#define LCD_BRIGHT_COLOR_RED    20
+#define LCD_BRIGHT_COLOR_GREEN  21
+#define LCD_DARK_GREY           22
+#define LCD_LIGHT_GREY          23
+#define LCD_HAM_COLOR           24
+#define LCD_GRID_VALUE_COLOR    25
+#define LCD_M_REFERENCE         26
+#define LCD_M_DELTA             27
+#define LCD_M_NOISE             28
+#define LCD_M_DEFAULT           29
+
+#define LCD_DEFAULT_PALETTE {\
+[LCD_BG_COLOR         ] = RGB565(  0,  0,  0), \
+[LCD_FG_COLOR         ] = RGB565(255,255,255), \
+[LCD_GRID_COLOR       ] = RGB565(128,128,128), \
+[LCD_MENU_COLOR       ] = RGB565(230,230,230), \
+[LCD_MENU_TEXT_COLOR  ] = RGB565(  0,  0,  0), \
+[LCD_MENU_ACTIVE_COLOR] = RGB565(210,210,210), \
+[LCD_TRACE_1_COLOR    ] = RGB565(255,255,  0), \
+[LCD_TRACE_2_COLOR    ] = RGB565(  0,255,255), \
+[LCD_TRACE_3_COLOR    ] = RGB565(  0,255,  0), \
+[LCD_TRACE_4_COLOR    ] = RGB565(255,  0,255), \
+[LCD_NORMAL_BAT_COLOR ] = RGB565( 31,227,  0), \
+[LCD_LOW_BAT_COLOR    ] = RGB565(255,  0,  0), \
+[LCD_TRIGGER_COLOR    ] = RGB565(  0,  0,255), \
+[LCD_RISE_EDGE_COLOR  ] = RGB565(255,255,255), \
+[LCD_FALLEN_EDGE_COLOR] = RGB565(128,128,128), \
+[LCD_SWEEP_LINE_COLOR ] = RGB565(  0,255,  0), \
+[LCD_BW_TEXT_COLOR    ] = RGB565(128,128,128), \
+[LCD_INPUT_TEXT_COLOR ] = RGB565(  0,  0,  0), \
+[LCD_INPUT_BG_COLOR   ] = RGB565(255,255,255), \
+[LCD_BRIGHT_COLOR_BLUE] = RGB565(  0,  0,255), \
+[LCD_BRIGHT_COLOR_RED ] = RGB565(255,128,128), \
+[LCD_BRIGHT_COLOR_GREEN]= RGB565(  0,255,  0), \
+[LCD_DARK_GREY        ] = RGB565(140,140,140), \
+[LCD_LIGHT_GREY       ] = RGB565(220,220,220), \
+[LCD_HAM_COLOR        ] = RGB565( 80, 80, 80), \
+[LCD_GRID_VALUE_COLOR ] = RGB565(196,196,196), \
+[LCD_M_REFERENCE      ] = RGB565(255,255,255), \
+[LCD_M_DELTA          ] = RGB565(  0,255,  0), \
+[LCD_M_NOISE          ] = RGB565(  0,255,255), \
+[LCD_M_DEFAULT        ] = RGB565(255,255,  0), \
+}
+
+#define GET_PALTETTE_COLOR(idx)  config.lcd_palette[idx]
 
 extern uint16_t foreground_color;
 extern uint16_t background_color;
@@ -622,15 +664,10 @@ extern uint16_t spi_buffer[SPI_BUFFER_SIZE];
 void ili9341_init(void);
 void ili9341_test(int mode);
 void ili9341_bulk(int x, int y, int w, int h);
-void ili9341_fill(int x, int y, int w, int h, uint16_t color);
+void ili9341_fill(int x, int y, int w, int h);
 
-#if 1
-void ili9341_set_foreground(uint16_t fg);
-void ili9341_set_background(uint16_t fg);
-#else
-#define ili9341_set_foreground(fg) {  foreground_color = fg; }
-#define ili9341_set_background(bg) {  background_color = bg;}
-#endif
+void ili9341_set_foreground(uint16_t fg_idx);
+void ili9341_set_background(uint16_t bg_idx);
 
 void ili9341_clear_screen(void);
 void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
@@ -815,7 +852,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e46 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e47 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

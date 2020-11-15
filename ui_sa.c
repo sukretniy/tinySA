@@ -465,7 +465,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
   if (b){
     if (item == setting.mode)  {
       b->param_1.text = "Return";
-      b->bg = RGB565(200,200,200);//config.menu_active_color;
+      b->bg = LCD_MENU_ACTIVE_COLOR;
       b->border = BUTTON_BORDER_FALLING | MENU_BUTTON_BORDER;
     }
     else
