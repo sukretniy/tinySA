@@ -941,7 +941,7 @@ void ADF4351_Setup(void)
 //  while(1) {
 //
 
-  ADF4351_R_counter(2);
+  ADF4351_R_counter(1);
 
   ADF4351_set_frequency(0,2000000000,0);
 
@@ -1027,7 +1027,11 @@ void ADF4351_spur_mode(int S)
 
 void ADF4351_R_counter(int R)
 {
-      int dbl = false;
+static int old_R;
+  if (R == old_R)
+    return;
+  old_R = R;
+  int dbl = false;
       if (R < 0) {
         dbl = true;
         R = -R;

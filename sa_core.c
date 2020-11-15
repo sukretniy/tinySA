@@ -1375,8 +1375,8 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
 #ifdef __SI4463__
-  if (setting.spur_removal && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
-    actual_rbw_x10 = 3000;                         // if spur suppression reduce max rbw to fit within BPF
+//  if (setting.spur_removal && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
+//    actual_rbw_x10 = 3000;                         // if spur suppression reduce max rbw to fit within BPF
   actual_rbw_x10 = SI4463_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
@@ -1819,7 +1819,7 @@ modulation_again:
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
-    long local_IF;
+    int32_t local_IF;
 
     again:                                                              // Spur reduction jumps to here for second measurement
 
@@ -1847,6 +1847,7 @@ modulation_again:
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur_removal){         // If in low input mode and spur reduction is on
 #ifndef __SI4463__
+#if 0                   // <------------------------- DISABLED !!!!!!!!!!!!!!!
         if (S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
         {              // else low/above IF
           if (setting.spur_removal == 1)
@@ -1856,16 +1857,18 @@ modulation_again:
         }
         else
 #endif
+#endif
         {
 #ifdef __SI4432__
           int32_t spur_offset = actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
-#endif
-#ifdef __SI4463__
-          int32_t spur_offset = 2* actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
-#endif
           if (setting.spur_removal == -1)                       // If second spur pass
             spur_offset = - spur_offset;                // IF shift in the other direction
           local_IF  = local_IF + spur_offset;           // apply IF spur shift
+#endif
+#ifdef __SI4463__
+          if (setting.spur_removal == -1)                       // If second spur pass
+            local_IF  = local_IF + 1000000;                    // apply IF spur shift
+#endif
         }
 #endif
       }
@@ -1942,6 +1945,16 @@ modulation_again:
           set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
           local_IF = config.frequency_IF2;
         }
+
+        if (lf < 500000000 && 0) {
+          uint32_t tf = ((lf + actual_rbw_x10*200) / 26000000) * 26000000;
+          if (tf >= lf && tf < lf + actual_rbw_x10*200)
+            ADF4351_R_counter(6);
+          else
+            ADF4351_R_counter(1);
+        }
+
+
        uint32_t target_f;
         if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
           if (lf > local_IF + 138000000)
