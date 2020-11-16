@@ -58,17 +58,24 @@ VNA_SHELL_FUNCTION(cmd_mode)
 
 VNA_SHELL_FUNCTION(cmd_modulation )
 {
-  static const char cmd_mod[] = "off|AM_1kHz|AM_10Hz|NFM|WFM|extern";
-  if (argc != 1) {
+  static const char cmd_mod[] = "off|AM|NFM|WFM|extern|freq;
+  if (argc < 1) {
   usage:
-    shell_printf("usage: modulation %s\r\n", cmd_mod);
+    shell_printf("usage: modulation %s 100..6000\r\n", cmd_mod);
     return;
   }
-  static const int cmd_mod_val[] = { MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
+  static const int cmd_mod_val[] = { MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL, -1};
   int m = get_str_index(argv[1], cmd_mod);
   if (m<0)
      goto usage;
-  set_modulation(cmd_mod_val[m]);
+  if (cmd_mod_val[m] >=0)
+    set_modulation(cmd_mod_val[m]);
+  else {
+    if (argc != 2)
+      goto usage;
+    int a = my_atoi(argv[1]);
+    set_modulation_frequency(a);
+  }
 }
 
 VNA_SHELL_FUNCTION(cmd_spur)
