@@ -78,24 +78,38 @@ VNA_SHELL_FUNCTION(cmd_modulation )
   }
 }
 
-VNA_SHELL_FUNCTION(cmd_spur)
+int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: spur on|off\r\n");
-    return;
+    shell_printf("usage: %s %s\r\n", cmd, cmd_list);
+    return -1;
   }
-  if (strcmp(argv[0],"on") == 0) {
-    set_spur(1);
-  } else if (strcmp(argv[0],"off") == 0) {
-    set_spur(0);
-  } else
+  int m = get_str_index(argv, cmd_list);
+  if (m < 0)
     goto usage;
-  redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+  return m;
+}
+
+
+VNA_SHELL_FUNCTION(cmd_spur)
+{
+//  static const char cmd[] = "off|on";
+//  if (argc != 1) {
+//  usage:
+//    shell_printf("usage: spur %s\r\n", cmd);
+//    return;
+//  }
+  int m = generic_option_cmd("spur", "off|on", argc, argv[0]);
+  if (m>=0) {
+    set_spur(m);
+    redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+  }
 }
 
 VNA_SHELL_FUNCTION(cmd_output)
 {
+#if 0
   if (argc != 1) {
   usage:
     shell_printf("usage: output on|off\r\n");
@@ -107,7 +121,12 @@ VNA_SHELL_FUNCTION(cmd_output)
     setting.mute = true;
   } else
     goto usage;
-  dirty = true;
+#endif
+  int m = generic_option_cmd("output", "off|on", argc, argv[0]);
+  if (m>=0) {
+    setting.mute = m;
+    dirty = true;
+  }
 }
 
 VNA_SHELL_FUNCTION(cmd_load)

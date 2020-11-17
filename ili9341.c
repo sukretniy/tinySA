@@ -555,8 +555,10 @@ void ili9341_clear_screen(void)
 #ifndef ili9341_set_foreground
 void ili9341_set_foreground(uint16_t fg_idx)
 {
-//  if (fg_idx >= 32) fg_idx = 0;
-  foreground_color = GET_PALTETTE_COLOR(fg_idx);
+  if (fg_idx >= 32)
+    foreground_color = fg_idx;
+  else
+    foreground_color = GET_PALTETTE_COLOR(fg_idx);
 }
 #endif
 

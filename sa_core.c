@@ -1663,7 +1663,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     if (i == 0 || setting.frequency_step != 0)
       correct_RSSI_freq = get_frequency_correction(f);
   }
-  int *current_fm_modulation;
+  int *current_fm_modulation = 0;
   if (MODE_OUTPUT(setting.mode)) {
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
       modulation_delay = (1000000/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
@@ -1697,7 +1697,7 @@ modulation_again:
       PE4302_Write_Byte(p);
 #endif
     }
-    else if (setting.modulation == MO_NFM || setting.modulation == MO_WFM ) { //FM modulation
+    else if (current_fm_modulation) { // setting.modulation == MO_NFM || setting.modulation == MO_WFM  //FM modulation
 #ifdef __SI4432__
       SI4432_Sel = SI4432_LO ;
       int offset = current_fm_modulation[modulation_counter];
@@ -3171,7 +3171,7 @@ void cell_draw_test_info(int x0, int y0)
     i++;
     int xpos = 25 - x0;
     int ypos = 50+i*INFO_SPACING - y0;
-    unsigned int color = RGBHEX(0xFFFFFF);
+    unsigned int color = LCD_FG_COLOR;
     if (i == -1) {
         plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Self test status:");
     } else if (test_case[i].kind == TC_END) {
@@ -3182,13 +3182,13 @@ void cell_draw_test_info(int x0, int y0)
       } else {
       plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Test %d: %s%s", i+1, test_fail_cause[i], test_text[test_status[i]] );
       if (test_status[i] == TS_PASS)
-        color = RGBHEX(0x00FF00);
+        color = LCD_BRIGHT_COLOR_GREEN;
       else if (test_status[i] == TS_CRITICAL)
-        color = RGBHEX(0xFFFF00);
+        color = LCD_TRACE_3_COLOR;          // Yellow
       else if (test_status[i] == TS_FAIL)
-        color = RGBHEX(0xFF7F7F);
+        color = LCD_BRIGHT_COLOR_RED;
       else
-        color = RGBHEX(0x0000FF);
+        color = LCD_BRIGHT_COLOR_BLUE;
     }
     ili9341_set_foreground(color);
     cell_drawstring(self_test_status_buf, xpos, ypos);
