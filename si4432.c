@@ -1713,6 +1713,23 @@ int16_t Si446x_RSSI(void)
 
 }
 
+void SI446x_set_AGC_LNA(uint8_t v)
+{
+
+  uint8_t data[2] = {
+      0xd0,                 // AGC_OVERRIDE
+      v
+  };
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+#if 0
+  if (v == 0) {
+    data[0] = 0xd1;     // Read AGC?????? NO
+    SI4463_do_api(data, 1, data, 1);
+  }
+#endif
+}
+
+
 
 // Do an ADC conversion
 static uint16_t getADC(uint8_t adc_en, uint8_t adc_cfg, uint8_t part)
@@ -2206,7 +2223,7 @@ reset:
   my_microsecond_delay(1000);
   SI_SDN_LOW;
   my_microsecond_delay(1000);
-  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+  ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
   while (!SI4463_READ_CTS) {
     ili9341_drawstring_7x13("Waiting", 50, 200);
     my_microsecond_delay(100);
