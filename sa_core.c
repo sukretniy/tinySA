@@ -760,7 +760,7 @@ void set_AGC_LNA(void) {
 void set_AGC_LNA(void) {
   uint8_t v = 0;
   if (!S_STATE(setting.agc))
-    v |= 0x80;     // Inverse!!!!
+    v |= 0x80 + 0x20;     // Inverse!!!!
   if (S_STATE(setting.lna))
     v |= 0x08;     // Inverse!!!!
   SI446x_set_AGC_LNA(v);
