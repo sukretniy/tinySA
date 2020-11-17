@@ -58,14 +58,14 @@ VNA_SHELL_FUNCTION(cmd_mode)
 
 VNA_SHELL_FUNCTION(cmd_modulation )
 {
-  static const char cmd_mod[] = "off|AM|NFM|WFM|extern|freq;
+  static const char cmd_mod[] = "off|am|nfm|wfm|extern|freq";
   if (argc < 1) {
   usage:
     shell_printf("usage: modulation %s 100..6000\r\n", cmd_mod);
     return;
   }
   static const int cmd_mod_val[] = { MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL, -1};
-  int m = get_str_index(argv[1], cmd_mod);
+  int m = get_str_index(argv[0], cmd_mod);
   if (m<0)
      goto usage;
   if (cmd_mod_val[m] >=0)
@@ -78,24 +78,38 @@ VNA_SHELL_FUNCTION(cmd_modulation )
   }
 }
 
-VNA_SHELL_FUNCTION(cmd_spur)
+int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: spur on|off\r\n");
-    return;
+    shell_printf("usage: %s %s\r\n", cmd, cmd_list);
+    return -1;
   }
-  if (strcmp(argv[0],"on") == 0) {
-    set_spur(1);
-  } else if (strcmp(argv[0],"off") == 0) {
-    set_spur(0);
-  } else
+  int m = get_str_index(argv, cmd_list);
+  if (m < 0)
     goto usage;
-  redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+  return m;
+}
+
+
+VNA_SHELL_FUNCTION(cmd_spur)
+{
+//  static const char cmd[] = "off|on";
+//  if (argc != 1) {
+//  usage:
+//    shell_printf("usage: spur %s\r\n", cmd);
+//    return;
+//  }
+  int m = generic_option_cmd("spur", "off|on", argc, argv[0]);
+  if (m>=0) {
+    set_spur(m);
+    redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+  }
 }
 
 VNA_SHELL_FUNCTION(cmd_output)
 {
+#if 0
   if (argc != 1) {
   usage:
     shell_printf("usage: output on|off\r\n");
@@ -107,7 +121,12 @@ VNA_SHELL_FUNCTION(cmd_output)
     setting.mute = true;
   } else
     goto usage;
-  dirty = true;
+#endif
+  int m = generic_option_cmd("output", "off|on", argc, argv[0]);
+  if (m>=0) {
+    setting.mute = m;
+    dirty = true;
+  }
 }
 
 VNA_SHELL_FUNCTION(cmd_load)
@@ -626,13 +645,17 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   if (argc == 3) {
     points = my_atoi(argv[2]);
   }
+
+//  if (get_waterfall())
+//    disable_waterfall();            // display dma hangs when waterfall is enabled
+
   uint32_t old_step = setting.frequency_step;
   float f_step = (stop-start)/ points;
   setting.frequency_step = (uint32_t)f_step;
 
   streamPut(shell_stream, '{');
   static  uint32_t old_start=0, old_stop=0, old_points=0;
-  if (old_start != start || old_stop != stop || old_points != points) {
+  if (old_start != start || old_stop != stop || old_points != points) {     // To prevent dirty for every sweep
     dirty = true;
     old_start = start;
     old_stop = stop;
@@ -658,7 +681,6 @@ VNA_SHELL_FUNCTION(cmd_caloutput)
 {
   static const char cmd[] = "off|30|15|10|4|3|2|1";
   if (argc != 1) {
-  usage:
     shell_printf("usage: caloutput %s\r\n", cmd);
     return;
   }
