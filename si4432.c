@@ -2206,7 +2206,7 @@ reset:
   my_microsecond_delay(1000);
   SI_SDN_LOW;
   my_microsecond_delay(1000);
-  ili9341_set_foreground(BRIGHT_COLOR_GREEN);
+  ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
   while (!SI4463_READ_CTS) {
     ili9341_drawstring_7x13("Waiting", 50, 200);
     my_microsecond_delay(100);

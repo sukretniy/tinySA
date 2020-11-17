@@ -870,8 +870,7 @@ config_t config = {
 #endif
   .lcd_palette = LCD_DEFAULT_PALETTE,
   .vbat_offset = 500,
-  .frequency_IF2 = 2048600000,
-  .setting_frequency_10mhz = 1000015.0,
+  .frequency_IF2 = 0,
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
   .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
