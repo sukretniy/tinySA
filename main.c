@@ -2382,7 +2382,7 @@ static const VNAShellCommand commands[] =
     { "levelchange", cmd_levelchange,    0 },
     { "modulation", cmd_modulation,    0 },
     { "rbw", cmd_rbw,    0 },
-    { "mode", cmd_mode,    0 },
+    { "mode", cmd_mode,    CMD_WAIT_MUTEX },
     { "spur", cmd_spur,    0 },
     { "load", cmd_load,    0 },
     { "offset", cmd_offset, 0},
