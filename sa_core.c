@@ -717,9 +717,7 @@ void toggle_AGC(void)
   dirty = true;
 }
 
-#ifdef __SI4432__
 static unsigned char SI4432_old_v[2];
-#endif
 
 void auto_set_AGC_LNA(int auto_set, int agc)                                                                    // Adapt the AGC setting if needed
 {
@@ -735,6 +733,17 @@ void auto_set_AGC_LNA(int auto_set, int agc)                                    
     SI4432_old_v[MODE_SELECT(setting.mode)] = v;
   }
 #endif
+#ifdef __SI4463__
+  unsigned char v;
+  if (auto_set)
+    v = 0x00; // Enable AGC and disable LNA
+  else
+    v = 0x88+agc; // Disable AGC and enable LNA
+  if (SI4432_old_v[0] != v) {
+    SI446x_set_AGC_LNA(v);
+    SI4432_old_v[0] = v;
+  }
+#endif
 }
 
 #ifdef __SI4432__
@@ -744,6 +753,18 @@ void set_AGC_LNA(void) {
   if (S_STATE(setting.lna)) v |= 0x10;
   SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
   SI4432_old_v[MODE_SELECT(setting.mode)] = v;
+}
+#endif
+
+#ifdef __SI4463__
+void set_AGC_LNA(void) {
+  uint8_t v = 0;
+  if (!S_STATE(setting.agc))
+    v |= 0x80;     // Inverse!!!!
+  if (S_STATE(setting.lna))
+    v |= 0x08;     // Inverse!!!!
+  SI446x_set_AGC_LNA(v);
+  SI4432_old_v[0] = v;
 }
 #endif
 
@@ -1263,8 +1284,10 @@ case M_ULTRA:
     } else {
       set_switch_receive();
     }
+#endif
     set_AGC_LNA();
 
+#ifdef __SI4432__
     SI4432_Sel = SI4432_LO ;
     if (setting.tracking_output)
       set_switch_transmit();
@@ -1290,8 +1313,8 @@ mute:
      } else {
        set_switch_receive();
      }
-    set_AGC_LNA();
 #endif
+    set_AGC_LNA();
 
     break;
 case M_GENLOW:  // Mixed output from 0
@@ -1736,10 +1759,12 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     }
   }
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !check_for_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
+#ifdef __SI4432__
     if (f < 1500000)
       auto_set_AGC_LNA(false, f*9/1500000);
     else
       auto_set_AGC_LNA(true, 0);
+#endif
   }
   // Calculate the RSSI correction for later use
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
@@ -2184,6 +2209,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
     // ----------------------- in loop AGC ---------------------------------
 
+#ifdef __SI4432__
     if (!in_selftest && setting.mode == M_HIGH && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {
 #define AGC_RSSI_THRESHOLD  (-55+get_attenuation())
 
@@ -2201,7 +2227,7 @@ sweep_again:                                // stay in sweep loop when output mo
       else
         auto_set_AGC_LNA(TRUE, 0);
     }
-
+#endif
 
     // Delay between points if needed, (all delays can apply in SI4432 fill)
     if (setting.measure_sweep_time_us == 0){                                    // If not already in buffer
@@ -2476,6 +2502,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
 
   if (!in_selftest && MODE_INPUT(setting.mode)) {
+#ifdef __SI4432__
     if (S_IS_AUTO(setting.agc)) {
       float actual_max_level = actual_t[max_index[0]] - get_attenuation();
       if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
@@ -2499,6 +2526,7 @@ sweep_again:                                // stay in sweep loop when output mo
         }
       }
     } else
+#endif
       signal_is_AM = false;
   }
 
@@ -2664,9 +2692,7 @@ sweep_again:                                // stay in sweep loop when output mo
           setting.agc = S_AUTO_OFF;
           setting.lna = S_AUTO_ON;
         }
-#ifdef __SI4432__
         set_AGC_LNA();
-#endif
       }
     }
 

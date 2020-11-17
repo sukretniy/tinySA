@@ -1064,7 +1064,9 @@ enum {
 
 
 // -------------------- Si4432.c ---------------
+#ifdef __SI4463__
 extern int SI4463_R;
 void Si4463_set_refer(int ref);
-
+void SI446x_set_AGC_LNA(uint8_t v);
+#endif
 /*EOF*/

@@ -1713,6 +1713,23 @@ int16_t Si446x_RSSI(void)
 
 }
 
+void SI446x_set_AGC_LNA(uint8_t v)
+{
+
+  uint8_t data[2] = {
+      0xd0,                 // AGC_OVERRIDE
+      v
+  };
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+#if 0
+  if (v == 0) {
+    data[0] = 0xd1;     // Read AGC?????? NO
+    SI4463_do_api(data, 1, data, 1);
+  }
+#endif
+}
+
+
 
 // Do an ADC conversion
 static uint16_t getADC(uint8_t adc_en, uint8_t adc_cfg, uint8_t part)
