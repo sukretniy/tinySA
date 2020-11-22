@@ -408,7 +408,7 @@ enum {
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM, KM_IF2,
-  KM_R,
+  KM_R,KM_MOD,
   KM_NONE // always at enum end
 };
 
@@ -447,6 +447,7 @@ static const struct {
   {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
   {keypads_freq        , "IF2"}, // KM_IF2
   {keypads_positive    , "R"}, // KM_R
+  {keypads_positive    , "MODULO"}, // KM_MOD
 };
 
 
@@ -1655,10 +1656,10 @@ static const menuitem_t menu_sweep_speed[] =
 {
  { MT_ADV_CALLBACK,     SD_NORMAL,     "NORMAL",          menu_scanning_speed_acb},    // order must match definition of enum
  { MT_ADV_CALLBACK,     SD_PRECISE,    "PRECISE",         menu_scanning_speed_acb},
- { MT_ADV_CALLBACK | MT_LOW,SD_FAST,   "FAST",            menu_scanning_speed_acb},
+ { MT_ADV_CALLBACK,     SD_FAST,        "FAST",            menu_scanning_speed_acb},
  { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
  { MT_SUBMENU,          0,             "SWEEP\nPOINTS",   menu_sweep_points},
- { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
+ { MT_KEYPAD,           KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
  { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1669,9 +1670,10 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
 //  { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
-  { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
-  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
+//  { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
+//  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
+  { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
 
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
@@ -2009,6 +2011,10 @@ static void fetch_numeric_target(void)
     uistat.value = SI4463_R;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", uistat.value);
     break;
+  case KM_MOD:
+    uistat.value = ADF4350_modulo;
+    plot_printf(uistat.text, sizeof uistat.text, "%4d", uistat.value);
+    break;
   case KM_SAMPLETIME:
     uistat.value = setting.step_delay;
     plot_printf(uistat.text, sizeof uistat.text, "%3dus", ((int32_t)uistat.value));
@@ -2134,6 +2140,10 @@ set_numeric_value(void)
     break;
   case KM_R:
     set_R(uistat.value);
+//    config_save();
+    break;
+  case KM_MOD:
+    set_modulo(uistat.value);
 //    config_save();
     break;
   case KM_SAMPLETIME:

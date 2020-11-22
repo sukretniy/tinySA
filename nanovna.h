@@ -49,8 +49,8 @@
 #define DEFAULT_IF  978000000
 #define DEFAULT_SPUR_IF 979000000
 #define DEFAULT_MAX_FREQ    800000000
-#define HIGH_MIN_FREQ_MHZ   110
-#define HIGH_MAX_FREQ_MHZ   1200
+#define HIGH_MIN_FREQ_MHZ   850
+#define HIGH_MAX_FREQ_MHZ   1150
 /*
  * main.c
  */
@@ -1068,5 +1068,13 @@ enum {
 extern int SI4463_R;
 void Si4463_set_refer(int ref);
 void SI446x_set_AGC_LNA(uint8_t v);
+#endif
+
+void set_R(int f);
+void set_modulo(uint32_t f);
+#ifdef __ADF4351__
+extern uint32_t ADF4350_modulo;
+void ADF4351_Set(int channel);
+void ADF4351_force_refresh(void);
 #endif
 /*EOF*/

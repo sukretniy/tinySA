@@ -335,6 +335,7 @@ void set_SPI_mode(uint16_t mode){
 static void send_command(uint8_t cmd, uint8_t len, const uint8_t *data)
 {
 // Uncomment on low speed SPI (possible get here before previous tx complete)
+//  while (SPI_IN_TX_RX(LCD_SPI))
 //  while (SPI_IN_TX_RX);
   set_SPI_mode(SPI_MODE_LCD);
   LCD_CS_LOW;

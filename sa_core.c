@@ -409,7 +409,15 @@ void set_IF2(int f)
 
 void set_R(int f)
 {
-  ADF4351_R_counter(f);
+  ADF4351_R_counter(f % 10);
+  ADF4351_spur_mode(f/10);
+  dirty = true;
+}
+
+void set_modulo(uint32_t f)
+{
+  ADF4350_modulo = f;
+  //ADF4351_spur_mode(f);
   dirty = true;
 }
 
@@ -1145,8 +1153,8 @@ static uint32_t old_frequency_step;
 
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
-  if (old_freq[V] == freq && setting.frequency_step == old_frequency_step)             // Do not change HW if not needed
-    return;
+//  if (old_freq[V] == freq && setting.frequency_step == old_frequency_step)             // Do not change HW if not needed
+//    return;
 #ifdef __SI4432__
   if (V <= 1) {
     SI4432_Sel = V;
@@ -1211,6 +1219,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
   } else
 #endif
   if (V==ADF4351_LO){
+#if 0
     if (setting.step_delay_mode == SD_FAST) {        // If in fast scanning mode and NOT SI4432_RX !!!!!!
       int delta = - (freq - real_old_freq[V]);           // delta grows with increasing freq
       if (setting.frequency_step < 100000 && 0 < delta && delta < 100000) {
@@ -1220,6 +1229,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
         SI4463_start_rx(0 / setting.frequency_step);   // Start at maximum positive offset
       }
     }
+#endif
     if (freq) {
       real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
     }
@@ -1671,7 +1681,10 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 {
   int modulation_delay = 0;
   int modulation_index = 0;
-  if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
+  if (i == 0 && dirty ) {                                                   // if first point in scan and dirty
+#ifdef __ADF4351__
+    ADF4351_force_refresh();
+#endif
     calculate_correction();                                                 // pre-calculate correction factor dividers to avoid float division
     apply_settings();                                                       // Initialize HW
     scandirty = true;                                                       // This is the first pass with new settings
@@ -1971,6 +1984,7 @@ modulation_again:
           local_IF = config.frequency_IF2;
         }
 
+#if 0
         if (lf < 500000000 && 0) {
           uint32_t tf = ((lf + actual_rbw_x10*200) / 26000000) * 26000000;
           if (tf >= lf && tf < lf + actual_rbw_x10*200)
@@ -1978,7 +1992,7 @@ modulation_again:
           else
             ADF4351_R_counter(1);
         }
-
+#endif
 
        uint32_t target_f;
         if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
