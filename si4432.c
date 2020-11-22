@@ -1259,6 +1259,7 @@ int SI4463_R = 5;
 
 
 #define MIN_DELAY   2
+#define my_deleted_delay(T)
 
 #include <string.h>
 
@@ -1266,13 +1267,10 @@ int SI4463_R = 5;
 
 int SI4463_wait_for_cts(void)
 {
-  if (SI4463_READ_CTS)
-    return 1;
+  set_SPI_mode(SPI_MODE_SI);
   while (!SI4463_READ_CTS) {
-//    ili9341_drawstring_7x13("Waiting               ", 50, 200);
     my_microsecond_delay(10);
   }
-//  ili9341_drawstring_7x13("Proceed                 ", 50, 200);
   return 1;
 }
 
@@ -1280,96 +1278,56 @@ int SI4463_wait_for_cts(void)
 void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 {
   set_SPI_mode(SPI_MODE_SI);
-//  if (SI4432_guard)
-//    while(1) ;
-//  SI4432_guard = 1;
-//  SPI1_CLK_LOW;
   palClearPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(MIN_DELAY);
-//  my_microsecond_delay(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   shiftOut( DATA );
-  my_microsecond_delay(MIN_DELAY);
   palSetPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(MIN_DELAY);
-//  SI4432_guard = 0;
 }
 
 void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 {
   set_SPI_mode(SPI_MODE_SI);
-//  if (SI4432_guard)
-//    while(1) ;
-//  SI4432_guard = 1;
-//  SPI1_CLK_LOW;
   palClearPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(MIN_DELAY);
-//  my_microsecond_delay(SELECT_DELAY);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   while (len-- > 0)
     shiftOut( *(DATA++) );
-  my_microsecond_delay(MIN_DELAY);
   palSetPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(MIN_DELAY);
-//  SI4432_guard = 0;
 }
 
 
 uint8_t SI4463_read_byte( uint8_t ADR )
 {
-//  set_SPI_mode(SPI_MODE_SI);
+  set_SPI_mode(SPI_MODE_SI);
   uint8_t DATA ;
-//  if (SI4432_guard)
-//    while(1) ;
-//  SI4432_guard = 1;
-//  SPI1_CLK_LOW;
   set_SPI_mode(SPI_MODE_SI);
   palClearPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(MIN_DELAY);
   shiftOut( ADR );
-  my_microsecond_delay(MIN_DELAY);
   DATA = shiftIn();
-  my_microsecond_delay(MIN_DELAY);
   palSetPad(GPIOB, GPIOB_RX_SEL);
-  my_microsecond_delay(MIN_DELAY);
-//  SI4432_guard = 0;
   return DATA ;
 }
 
 uint8_t SI4463_get_response(void* buff, uint8_t len)
 {
     uint8_t cts = 0;
-#if 1
+    set_SPI_mode(SPI_MODE_SI);
     cts = SI4463_READ_CTS;
     if (!cts) {
       return false;
     }
-//    if (len == 0)
-//      return true;
-#endif
-    set_SPI_mode(SPI_MODE_SI);
-  //  if (SI4432_guard)
-  //    while(1) ;
-  //  SI4432_guard = 1;
-  //  SPI1_CLK_LOW;
     palClearPad(GPIOB, GPIOB_RX_SEL);
-    my_microsecond_delay(MIN_DELAY);
     shiftOut( SI446X_CMD_READ_CMD_BUFF );
-    my_microsecond_delay(MIN_DELAY);
     cts = (shiftIn() == 0xFF);
-    my_microsecond_delay(MIN_DELAY);
     if (cts)
     {
         // Get response data
         for(uint8_t i=0;i<len;i++) {
             ((uint8_t*)buff)[i] = shiftIn();
-            my_microsecond_delay(MIN_DELAY);
         }
     }
     palSetPad(GPIOB, GPIOB_RX_SEL);
-    my_microsecond_delay(MIN_DELAY);
     return cts;
 }
 
@@ -1397,16 +1355,11 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   if (SI4463_wait_for_cts())
 #endif
     {
-//    set_SPI_mode(SPI_MODE_SI);
     palClearPad(GPIOB, GPIOB_RX_SEL);
-    my_microsecond_delay(MIN_DELAY);
     for(uint8_t i=0;i<len;i++) {
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
-      my_microsecond_delay(MIN_DELAY);
     }
-//    my_microsecond_delay(MIN_DELAY);
     palSetPad(GPIOB, GPIOB_RX_SEL);
-    my_microsecond_delay(MIN_DELAY);
 #if 0
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
 #if 0
@@ -1683,18 +1636,10 @@ void set_RSSI_comp(void)
 
 int16_t Si446x_RSSI(void)
 {
-
-//  int s = Si446x_getInfo(&SI4463_info);
-
-//  if (s != SI446X_STATE_RX)
-//    SI4463_start_rx(0);
-
   volatile uint8_t data[3] = {
         SI446X_CMD_GET_MODEM_STATUS,
         0xFF
   };
-//  volatile si446x_state_t s = getState();
-//START_PROFILE;
   if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
     my_microsecond_delay(SI4432_step_delay);
     ADF4351_frequency_changed = false;
@@ -1708,28 +1653,15 @@ int16_t Si446x_RSSI(void)
   int i = 1; //setting.repeat;
   int RSSI_RAW[3];
   do{
-
-
-
     again:
     data[0] = SI446X_CMD_GET_MODEM_STATUS;
     data[1] = 0xFF;
-
     SI4463_do_api(data, 2, data, 3);
-    if (data[2] == 255)
+    if (data[2] == 255) {
+      my_microsecond_delay(10);
       goto again;
-//    if (data[2] == 0){
-//      data[2] += 1;
-//      goto again;
-//    }
-//    if (data[2] > 150)
-//      data[2] = data[2]+1;
+    }
     RSSI_RAW[--i] = data[2] - 120 * 2;
-    //  if (rssi < -238)
-    //    while(1)
-    //      rssi = rssi;
-    //STOP_PROFILE;
-
     if (i == 0) break;
     my_microsecond_delay(100);
   }while(1);
@@ -2067,44 +1999,16 @@ static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
 
 uint16_t SI4463_force_RBW(int f)
 {
-#if 0
-  SI_SDN_LOW;
-  my_microsecond_delay(1000);
-  SI_SDN_HIGH;
-  my_microsecond_delay(1000);
-  SI_SDN_LOW;
-  my_microsecond_delay(14000);
-#else
   setState(SI446X_STATE_READY);
-  my_microsecond_delay(200);
-#endif
   uint8_t *config = RBW_choices[f].reg;
   uint16_t i=0;
   while(config[i] != 0)
   {
     SI4463_do_api((void *)&config[i+1], config[i], NULL, 0);
     i += config[i]+1;
-    my_microsecond_delay(200);
   }
   SI4463_clear_int_status();
-retry:
   SI4463_short_start_rx();
-#if 0
-  my_microsecond_delay(15000);
-  si446x_state_t s = getState();
-  if (s != SI446X_STATE_RX) {
-
-    SI4463_short_start_rx();
-    osalThreadSleepMilliseconds(1000);
-    si446x_state_t s = getState();
-    if (s != SI446X_STATE_RX) {
-      ili9341_drawstring_7x13("Waiting for RX", 50, 200);
-      osalThreadSleepMilliseconds(3000);
-      goto retry;
-    }
-    ili9341_drawstring_7x13("Waiting done     ", 50, 200);
-  }
-#endif
   set_RSSI_comp();
   SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
@@ -2167,7 +2071,7 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   float MOD = 524288.0;
   int32_t  F = (((RFout * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R) * MOD;
 
-  if ((SI4463_band == prev_band) /* && !ADF4351_frequency_changed */ ) {
+  if (FALSE && (SI4463_band == prev_band) /* && !ADF4351_frequency_changed */ ) {
     uint8_t data[] = {
                       0x36,
                       (uint8_t) R,                   //  R data[4]
@@ -2178,24 +2082,24 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
                       0x66
     };
     SI4463_do_api(data, sizeof(data), NULL, 0);
-#if 0
     my_microsecond_delay(200);
     si446x_state_t s = getState();
     if (s != SI446X_STATE_RX) {
       SI4463_short_start_rx();
       osalThreadSleepMilliseconds(1000);
+#if 0
       si446x_state_t s = getState();
       if (s != SI446X_STATE_RX) {
         osalThreadSleepMilliseconds(3000);
         goto retry;
       }
-    }
 #endif
+    }
     SI4463_frequency_changed = true;
     return;
   }
   setState(SI446X_STATE_READY);
-  my_microsecond_delay(100);
+  my_deleted_delay(100);
 
   /*
   // Set properties:           RF_FREQ_CONTROL_INTE_8
@@ -2253,6 +2157,7 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   //  SI4463_clear_int_status();
   retry:
   SI4463_start_rx(SI4463_channel);
+  SI4463_wait_for_cts();
 #if 0
   my_microsecond_delay(200);
   si446x_state_t s = getState();
@@ -2313,7 +2218,7 @@ for(;i<sizeof(SI4468_config);i++)
 {
   SI4463_do_api((void *)&SI4468_config[i+1], SI4468_config[i], NULL, 0);
   i += SI4468_config[i];
-  my_microsecond_delay(2000);
+  my_deleted_delay(2000);
 }
 #endif
 //  SI4463_do_api((void *)&SI4463_config[1], SI4463_config[0], NULL, 0);
