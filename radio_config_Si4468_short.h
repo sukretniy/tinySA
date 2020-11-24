@@ -1,4 +1,3 @@
-#if 1
 #undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
 #define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x18, 0x10, 0x40
 
@@ -12,6 +11,7 @@
 #undef RF_GLOBAL_CLK_CFG_1
 #define RF_GLOBAL_CLK_CFG_1 GLOBAL_CLK_CFG
 
+#if 1
 
 #undef RADIO_CONFIGURATION_DATA_ARRAY
 #define RADIO_CONFIGURATION_DATA_ARRAY { \

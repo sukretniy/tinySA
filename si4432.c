@@ -910,11 +910,9 @@ int ADF4351_frequency_changed = false;
 double RFout, //Output freq in MHz
   PFDRFout[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0}, //Reference freq in MHz
   Chrystal[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0},
-
-  OutputChannelSpacing = 0.001, // = 0.01
   FRACF; // Temp
 
-unsigned int long RFint,  // Output freq/10Hz
+volatile unsigned int long RFint,  // Output freq/10Hz
   INTA,         // Temp
   RFcalc, //UI
   ADF4350_modulo = 3125, //Temp
@@ -1074,11 +1072,6 @@ void ADF4351_level(int p)
       registers[4] |= (((unsigned long)p) << 3);
 }
 
-void ADF4351_channel_spacing(int spacing)
-{
-  OutputChannelSpacing = 0.001 * spacing;
-}
-
 static uint32_t gcd(uint32_t x, uint32_t y)
 {
   uint32_t z;
@@ -1092,102 +1085,54 @@ static uint32_t gcd(uint32_t x, uint32_t y)
 
 uint32_t ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
 {
-//  START_PROFILE;
-//  if (channel == 0)
-    RFout=freq/1000000.0; // config.setting_frequency_10mhz;  // To MHz
-//  else
-//    RFout=freq/1000210;  // To MHz
-
-    if (RFout >= 2200) {
+    if (freq >= 2200000000) {
       OutputDivider = 1;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 0);
-    } else if (RFout >= 1100) {
+    } else if (freq >= 1100000000) {
       OutputDivider = 2;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 1);
-    } else if (RFout >= 550) {
+    } else if (freq >= 550000000) {
       OutputDivider = 4;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 1);
       bitWrite (registers[4], 20, 0);
-    } else if (RFout >= 275)  {
+    } else if (freq >= 275000000)  {
       OutputDivider = 8;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 1);
       bitWrite (registers[4], 20, 1);
-    } else if (RFout >= 137.5)  {
+    } else {                        // > 137500000
       OutputDivider = 16;
       bitWrite (registers[4], 22, 1);
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 0);
-#if 0       // does not work on ADF4350
-    } else if (RFout >= 68.75) {
-      OutputDivider = 32;
-      bitWrite (registers[4], 22, 1);
-      bitWrite (registers[4], 21, 0);
-      bitWrite (registers[4], 20, 1);
-    } else {
-      OutputDivider = 64;
-      bitWrite (registers[4], 22, 1);
-      bitWrite (registers[4], 21, 1);
-      bitWrite (registers[4], 20, 0);
-#endif
     }
 
-    INTA = (RFout * OutputDivider) / PFDRFout[channel];
-//    ADF4350_modulo = (PFDRFout[channel] / OutputChannelSpacing) + 0.01;
-//    ADF4350_modulo = 3125;
+    volatile uint64_t PFDR = (int) (PFDRFout[channel]*1000000);
+    INTA = (((uint64_t)freq) * OutputDivider) / PFDR;
     MOD = ADF4350_modulo;
-    FRACF = (((RFout * OutputDivider) / PFDRFout[channel]) - INTA) * MOD;
-    FRAC = round(FRACF);
-
-  while (FRAC > 4095 || MOD > 4095) {
-    FRAC = FRAC >> 1;
-    MOD = MOD >> 1;
+    FRAC = ((((uint64_t)freq) * OutputDivider) - INTA * PFDR) * (uint64_t) MOD /PFDR;
+#if 0
+    while (FRAC > 4095 || MOD > 4095) {
+      FRAC = FRAC >> 1;
+      MOD = MOD >> 1;
  //   Serial.println( "MOD/FRAC reduced");
-  }
-#if 1               // Don't reduce for now <-----------------------------------------------------
-    int32_t k = gcd(FRAC, MOD);
-    if (k > 1) {
-      FRAC /= k;
-      MOD /= k;
-//      Serial.print( "MOD/FRAC gcd reduced");
     }
 #endif
-//    while (denom >= (1<<20)) {
-//      num >>= 1;
-//      denom >>= 1;
-//    }
-
-
-//  if (INTA <= 75) Serial.println( "INTA <= 75");
-//  if (FRAC > 4095) Serial.println( "FRAC > 4095");
-//  if (MOD > 4095) Serial.println( "MOD > 4095");
-
-
-//  if (FRAC > 4095) Serial.println( "FRAC > 4095");
-//  if (MOD > 4095) Serial.println( "MOD > 4095");
-//  if (INTA > 4095) Serial.println( "INT > 4095");
-
-  if (debug) {
-    DEBUG("  ODIV=");
-    DEBUG(OutputDivider);
-    DEBUG("  INT=");
-    DEBUG(INTA);
-    DEBUG("  FRAC=");
-    DEBUG(FRAC);
-    DEBUG("  MOD=");
-    DEBUG(MOD);
-    DEBUG( " CalF=");
-//    DEBUGFLN(PFDRFout[channel] *(INTA + ((double)FRAC)/MOD)/OutputDivider,6);
-
-//  DEBUG("  FRACF=");
-//  DEBUGF(FRACF,6);
-  }
-    uint32_t actual_freq = 1000000 * PFDRFout[channel] *(INTA + ((double)FRAC)/MOD)/OutputDivider;
+    uint32_t actual_freq = PFDR *(INTA * MOD +FRAC)/OutputDivider / MOD;
+    volatile int max_delta =  1000000 * PFDRFout[channel]/OutputDivider/MOD;
+    if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
+       while(1)
+         my_microsecond_delay(10);
+    }
+    if (FRAC >= MOD ){
+       while(1)
+         my_microsecond_delay(10);
+    }
     registers[0] = 0;
     registers[0] = INTA << 15; // OK
     FRAC = FRAC << 3;
@@ -1220,27 +1165,6 @@ uint32_t ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // 
       bitSet (registers[4], 3); // +5dBm + out
       bitSet (registers[4], 4); // +5dBm
     }
-
-//    bitSet (registers[4], 5); // enable + output
-//    bitClear (registers[4], 8); // enable B output
-
-#if 0
-    if (FRAC == 0)
-      bitSet (registers[2], 8); // INT mode
-    else
-      bitClear (registers[2], 8); // INT mode
-    bitSet (registers[2], 13); // Double buffered
-
-    bitSet (registers[2], 28); // Digital lock == "110" sur b28 b27 b26
-    bitSet (registers[2], 27); // digital lock
-    bitClear (registers[2], 26); // digital lock
-
-    //bitSet (registers[4], 10); // Mute till lock
-//    bitSet (registers[3], 23); // Fast lock
- #endif
-//   bitSet (registers[4], 10); // Mute till lock
-//    ADF4351_Set(channel);
-//    STOP_PROFILE;
     return actual_freq;
 }
 
@@ -1251,7 +1175,7 @@ uint32_t ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // 
 
 int SI4463_frequency_changed = false;
 static int SI4463_band = -1;
-static int SI4463_outdiv = -1;
+static int64_t SI4463_outdiv = -1;
 static uint32_t SI4463_prev_freq = 0;
 static float SI4463_step_size = 100;        // Will be recalculated once used
 static uint8_t SI4463_channel = 0;
@@ -1457,9 +1381,9 @@ void SI4463_start_rx(uint8_t CHANNEL)
     0,
     0,
     0,
-    8,
-    SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
-    SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
+    0,// 8,
+    0,// SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
+    0, //SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
   };
 retry:
   SI4463_do_api(data, sizeof(data), NULL, 0);
@@ -1469,7 +1393,7 @@ retry:
   //  my_microsecond_delay(15000);
   si446x_state_t s = getState();
   if (s != SI446X_STATE_RX) {
-    my_microsecond_delay(10);
+    my_microsecond_delay(1000);
     goto retry;
   }
 #endif
@@ -1996,6 +1920,8 @@ static const RBW_t RBW_choices[] =
 const int SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
 
 static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
+static int prev_band = -1;
+
 
 uint16_t SI4463_force_RBW(int f)
 {
@@ -2008,8 +1934,10 @@ uint16_t SI4463_force_RBW(int f)
     i += config[i]+1;
   }
   SI4463_clear_int_status();
-  SI4463_short_start_rx();
+  SI4463_short_start_rx();           // This can cause recalibration
+  SI4463_wait_for_cts();
   set_RSSI_comp();
+  prev_band = -1;
   SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }
@@ -2022,15 +1950,56 @@ uint16_t SI4463_SET_RBW(uint16_t WISH)  {
   return SI4463_force_RBW(i);
 }
 
-#define freq_xco    26.0
 
 #define Npresc 1    // 0=low / 1=High performance mode
 
-static int prev_band = -1;
+static int refresh_count = 0;
 
 void SI4463_set_freq(uint32_t freq, uint32_t step_size)
 {
   (void) step_size;
+
+
+  int S = 4 ;               // Aprox 100 Hz channels
+  //  SI4463_step_size = S * (Npresc ? 2000000*freq_xco : 4000000*freq_xco) /  ((2<<18) * SI4463_outdiv);
+  //  SI4463_channel = (freq - SI4463_prev_freq) / SI4463_step_size;    // Recalculate in case step size changed
+
+
+  //   if (freq < SI4463_prev_freq || freq > SI4463_prev_freq + 255 * SI4463_step_size ) {
+  SI4463_channel = 0;
+  //    SI4463_prev_freq = freq - SI4463_channel * SI4463_step_size;
+
+#if 1
+  if (freq >= 822000000 && freq <= 1140000000)         {       // till 1140MHz
+    SI4463_band = 0;
+    SI4463_outdiv = 4;
+#if 0       // band 4 does not function
+  } else if (freq >= 568000000 && freq <= 758000000 ) {    // works till 758MHz
+    SI4463_band = 4;
+    SI4463_outdiv = 6;
+#endif
+  } else if (freq >= 420000000 && freq <= 568000000) {    // works till 568MHz
+    SI4463_band = 2;
+    SI4463_outdiv = 8;
+  } else if (freq >= 329000000 && freq <= 454000000) {    // works till 454MHz
+    SI4463_band = 1;
+    SI4463_outdiv = 10;
+  } else if (freq >= 274000000 && freq <= 339000000) {    // to 339
+    SI4463_band = 3;
+    SI4463_outdiv = 12;
+  } else if (freq >= 136000000 && freq <= 190000000){ // 136 { // To 190
+    SI4463_band = 5;
+    SI4463_outdiv = 24;
+  }
+  if (SI4463_band == -1)
+    return;
+#define freq_xco    26000000
+  int32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
+  int64_t MOD = 524288;
+  int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R*MOD;
+  volatile uint32_t actual_freq = (R*MOD + F) * (Npresc ? 2*freq_xco : 4*freq_xco)/ SI4463_outdiv/MOD;
+#else
+#define freq_xco    26.0
 
   float RFout=freq/1000000.0;  // To MHz
   if (RFout >= 822 && RFout <= 1140)         {       // till 1140MHz
@@ -2057,21 +2026,20 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   if (SI4463_band == -1)
     return;
 
-  int S = 4 ;               // Aprox 100 Hz channels
-  //  SI4463_step_size = S * (Npresc ? 2000000*freq_xco : 4000000*freq_xco) /  ((2<<18) * SI4463_outdiv);
-  //  SI4463_channel = (freq - SI4463_prev_freq) / SI4463_step_size;    // Recalculate in case step size changed
-
-
-  //   if (freq < SI4463_prev_freq || freq > SI4463_prev_freq + 255 * SI4463_step_size ) {
-  SI4463_channel = 0;
-  //    SI4463_prev_freq = freq - SI4463_channel * SI4463_step_size;
-
-
   int32_t R = (RFout * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
   float MOD = 524288.0;
   int32_t  F = (((RFout * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R) * MOD;
-
-  if (FALSE && (SI4463_band == prev_band) /* && !ADF4351_frequency_changed */ ) {
+  volatile uint32_t actual_freq = (R+((float)F)/MOD) * (Npresc ? 2*freq_xco : 4*freq_xco)*1000000 / SI4463_outdiv;
+#endif
+  if (actual_freq < freq - 100 || actual_freq > freq + 100 ){
+    while(1)
+      my_microsecond_delay(10);
+  }
+  if (F < MOD || F >= MOD*2){
+    while(1)
+      my_microsecond_delay(10);
+  }
+  if (FALSE && /* refresh_count++ < 20 && */(SI4463_band == prev_band) /* && !ADF4351_frequency_changed */ ) {
     uint8_t data[] = {
                       0x36,
                       (uint8_t) R,                   //  R data[4]
@@ -2082,6 +2050,8 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
                       0x66
     };
     SI4463_do_api(data, sizeof(data), NULL, 0);
+#if 0
+    //    SI4463_short_start_rx();
     my_microsecond_delay(200);
     si446x_state_t s = getState();
     if (s != SI446X_STATE_RX) {
@@ -2095,9 +2065,11 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
       }
 #endif
     }
+#endif
     SI4463_frequency_changed = true;
     return;
   }
+  refresh_count=0;
   setState(SI446X_STATE_READY);
   my_deleted_delay(100);
 
@@ -2157,20 +2129,21 @@ void SI4463_set_freq(uint32_t freq, uint32_t step_size)
   //  SI4463_clear_int_status();
   retry:
   SI4463_start_rx(SI4463_channel);
-  SI4463_wait_for_cts();
-#if 0
-  my_microsecond_delay(200);
+#if 1
   si446x_state_t s = getState();
   if (s != SI446X_STATE_RX) {
     SI4463_start_rx(SI4463_channel);
     osalThreadSleepMilliseconds(1000);
+#if 1
     si446x_state_t s = getState();
     if (s != SI446X_STATE_RX) {
       osalThreadSleepMilliseconds(3000);
       goto retry;
     }
+#endif
   }
 #endif
+  SI4463_wait_for_cts();
   SI4463_frequency_changed = true;
 }
 
@@ -2227,7 +2200,7 @@ for(;i<sizeof(SI4468_config);i++)
 
 //#define SI446X_ADC_SPEED 10
 //  RSSI = getADC(SI446X_ADC_CONV_BATT, (SI446X_ADC_SPEED<<4), 2);
-#if 0
+#if 1
 volatile si446x_state_t s ;
 again:
   Si446x_getInfo(&SI4463_info);

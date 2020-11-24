@@ -2003,6 +2003,7 @@ modulation_again:
         } else
           target_f = local_IF+lf; // otherwise to above IF
         set_freq(ADF4351_LO, target_f);
+#if 1                                                               // Compensate frequency ADF4350 error with SI4468
         int32_t error_f = 0;
         if (real_old_freq[ADF4351_LO] > target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
@@ -2014,7 +2015,9 @@ modulation_again:
           if ( error_f < - actual_rbw_x10 * 100)
             local_IF += error_f;
         }
-        set_freq (SI4463_RX, local_IF);   // compensate ADF error with SI446x
+#endif
+        if (!tracking)
+          set_freq (SI4463_RX, local_IF);   // compensate ADF error with SI446x when not in tracking mode
       } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       }

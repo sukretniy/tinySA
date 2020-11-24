@@ -1073,7 +1073,7 @@ void SI446x_set_AGC_LNA(uint8_t v);
 void set_R(int f);
 void set_modulo(uint32_t f);
 #ifdef __ADF4351__
-extern uint32_t ADF4350_modulo;
+extern volatile uint32_t ADF4350_modulo;
 void ADF4351_Set(int channel);
 void ADF4351_force_refresh(void);
 #endif
