@@ -663,7 +663,7 @@ void set_harmonic(int h)
 void set_step_delay(int d)                  // override RSSI measurement delay or set to one of three auto modes
 {
 
-  if ((3 <= d && d < 250) || d > 30000)         // values 0 (normal scan), 1 (precise scan) and 2(fast scan) have special meaning and are auto calculated
+  if ((3 <= d && d < 100) || d > 30000)         // values 0 (normal scan), 1 (precise scan) and 2(fast scan) have special meaning and are auto calculated
     return;
   if (d <3) {
     setting.step_delay_mode = d;
@@ -997,9 +997,9 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if (actual_rbw_x10 >= 8500)      { SI4432_step_delay = 500; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 500; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 800; SI4432_offset_delay = 100; }
+      if (actual_rbw_x10 >= 8500)      { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 1400; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 2500; SI4432_offset_delay = 100; }
@@ -1128,6 +1128,10 @@ void setupSA(void)
   PE4302_init();
   PE4302_Write_Byte(0);
 #endif
+#ifdef __SI4463__
+  SI4463_init_rx();            // Must be before ADF4351_setup!!!!
+#endif
+
   ADF4351_Setup();
 #if 0           // Measure fast scan time
   setting.sweep_time_us = 0;
@@ -1153,8 +1157,8 @@ static uint32_t old_frequency_step;
 
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
-//  if (old_freq[V] == freq && setting.frequency_step == old_frequency_step)             // Do not change HW if not needed
-//    return;
+  if (old_freq[V] == freq && setting.frequency_step == old_frequency_step)             // Do not change HW if not needed
+    return;
 #ifdef __SI4432__
   if (V <= 1) {
     SI4432_Sel = V;
@@ -1295,6 +1299,9 @@ case M_ULTRA:
       set_switch_receive();
     }
 #endif
+#ifdef __SI4463__
+    SI4463_init_rx();            // Must be before ADF4351_setup!!!!
+#endif
     set_AGC_LNA();
 
 #ifdef __SI4432__
@@ -1324,6 +1331,9 @@ mute:
        set_switch_receive();
      }
 #endif
+#ifdef __SI4463__
+    SI4463_init_rx();
+#endif
     set_AGC_LNA();
 
     break;
@@ -1348,6 +1358,9 @@ case M_GENLOW:  // Mixed output from 0
       SI4432_Transmit(12);                 // Fix LO drive a 10dBm
     }
 #endif
+#ifdef __SI4468__
+    SI4463_init_tx();
+#endif
     break;
 case M_GENHIGH: // Direct output from 1
     if (setting.mute)
@@ -1364,6 +1377,9 @@ case M_GENHIGH: // Direct output from 1
       set_switch_transmit();
     }
     SI4432_Transmit(setting.drive);
+#endif
+#ifdef __SI4468__
+    SI4463_init_tx();
 #endif
     break;
   }
@@ -2018,7 +2034,7 @@ modulation_again:
 #endif
         if (!tracking)
           set_freq (SI4463_RX, local_IF);   // compensate ADF error with SI446x when not in tracking mode
-      } else if (setting.mode == M_HIGH) {
+      } else if (setting.mode == M_HIGH || setting.mode == M_GENHIGH) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       }
 //      STOP_PROFILE;

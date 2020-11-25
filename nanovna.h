@@ -1068,6 +1068,10 @@ enum {
 extern int SI4463_R;
 void Si4463_set_refer(int ref);
 void SI446x_set_AGC_LNA(uint8_t v);
+void SI4463_set_gpio(int i, int s);
+void SI4463_start_tx(uint8_t CHANNEL);
+void SI4463_init_rx(void);
+void SI4463_init_tx(void);
 #endif
 
 void set_R(int f);
