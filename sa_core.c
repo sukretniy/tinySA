@@ -1994,7 +1994,7 @@ modulation_again:
 #endif
 #ifdef __ADF4351__
 //      START_PROFILE;
-      if (setting.mode == M_LOW) {
+      if (MODE_LOW(setting.mode)) {
         if (config.frequency_IF2 != 0) {
           set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
           local_IF = config.frequency_IF2;

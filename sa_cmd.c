@@ -569,8 +569,9 @@ VNA_SHELL_FUNCTION(cmd_m)
 VNA_SHELL_FUNCTION(cmd_p)
 {
   (void)argc;
-return;
   int p = my_atoi(argv[0]);
+  SI4463_set_output_level(p);
+return;
   int a = my_atoi(argv[1]);
   if (p==5)
     set_attenuation(-a);
@@ -579,6 +580,14 @@ return;
   if (p==1)
     if (get_refer_output() != a)
       set_refer_output(a);
+}
+
+VNA_SHELL_FUNCTION(cmd_g)
+{
+  (void)argc;
+  int p = my_atoi(argv[0]);
+  int a = my_atoi(argv[1]);
+  SI4463_set_gpio(p,a);
 }
 
 VNA_SHELL_FUNCTION(cmd_w)
