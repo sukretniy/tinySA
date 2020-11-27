@@ -1435,9 +1435,9 @@ void SI4463_start_tx(uint8_t CHANNEL)
   {
     uint8_t data[] =
     {
-     0x11, 0x22, 0x04, 0x00,
-     0x05,  // Fine PA mode and switched current PA
-     SI4463_output_level,  // Level
+     0x11, 0x22, 0x04, 0x00,        // PA_MODE
+     0x08,  // Coarse PA mode and class E PA
+     (uint8_t)SI4463_output_level,  // Level
      0x00,  // Duty
      0x00   // Ramp
     };
