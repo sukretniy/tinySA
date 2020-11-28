@@ -424,7 +424,7 @@ const int SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
 
 static pureRSSI_t SI4432_RSSI_correction = float_TO_PURE_RSSI(-120);
 
-uint16_t SI4432_force_RBW(int i)
+uint16_t force_rbw(int i)
 {
   SI4432_Write_Byte(SI4432_IF_FILTER_BW, RBW_choices[i].reg);                     // Write RBW settings to Si4432
   SI4432_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[i].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
@@ -432,12 +432,12 @@ uint16_t SI4432_force_RBW(int i)
   return RBW_choices[i].RBWx10;                                                   // RBW achieved by Si4432 in kHz * 10
 }
 
-uint16_t SI4432_SET_RBW(uint16_t WISH)  {
+uint16_t set_rbw(uint16_t WISH)  {
   int i;
   for (i=0; i < SI4432_RBW_count - 1; i++)
     if (WISH <= RBW_choices[i].RBWx10) 
       break; 
-  return SI4432_force_RBW(i);
+  return force_rbw(i);
 }
 
 
@@ -654,7 +654,7 @@ void SI4432_Sub_Init(void)
   // Clock Recovery Gearshift Value
   SI4432_Write_Byte(SI4432_CLOCK_RECOVERY_GEARSHIFT, 0x00);
   // IF Filter Bandwidth
-  SI4432_SET_RBW(100) ;
+  set_rbw(100) ;
 //  // Register 0x75 Frequency Band Select
 //  uint8_t sbsel = 1 ;  // recommended setting
 //  uint8_t hbsel = 0 ;  // low bands
@@ -753,7 +753,7 @@ void SI4432_Init()
 //  SI4432_Write_Byte(Si4432_UC_OUTPUT_CLOCK, 0x02) ; // Set 10MHz output
 }
 
-void SI4432_SetReference(int freq)
+void set_calibration_freq(int freq)
 {
   SI4432_Sel = SI4432_LO;         //Select Lo module
   if (freq < 0 || freq > 7 ) {
@@ -823,8 +823,8 @@ bool PE4302_Write_Byte(unsigned char DATA )
 //-----------------SI4432 dummy------------------
 void SI4432_Write_Byte(unsigned char ADR, unsigned char DATA ) {}
 unsigned char SI4432_Read_Byte(unsigned char ADR) {return ADR;}
-float SI4432_SET_RBW(float WISH) {return (WISH > 600.0?600: (WISH<3.0?3:WISH));}
-void SI4432_SetReference(int p) {}
+float set_rbw(float WISH) {return (WISH > 600.0?600: (WISH<3.0?3:WISH));}
+void set_calibration_freq(int p) {}
 void SI4432_Set_Frequency(long f) {}
 void PE4302_Write_Byte(unsigned char DATA ) {}
 void PE4302_init(void) {}

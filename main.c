@@ -864,8 +864,12 @@ config_t config = {
   .magic =             CONFIG_MAGIC,
   .dac_value =         1922,
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
-//  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+#ifdef TINYSA3
+  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+#endif
+#ifdef TINYSA4
   .touch_cal =          { 261, 605, 115, 146 }, // 4 inch panel
+#endif
   ._mode     = _MODE_USB,
   ._serial_speed = USART_SPEED_SETTING(SERIAL_DEFAULT_BITRATE),
 #ifdef __VNA__
@@ -873,11 +877,19 @@ config_t config = {
 #endif
   .lcd_palette = LCD_DEFAULT_PALETTE,
   .vbat_offset = 500,
+#ifdef TINYSA4
   .frequency_IF2 = 0,
+#endif
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
+#ifdef TINYSA3
+  .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
+  .correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
+#endif
+#ifdef TINYSA4
   .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
+#endif
   .setting_frequency_10mhz = 10000000,
   .cor_am = -14,
   .cor_wfm = -17,
@@ -2396,8 +2408,7 @@ static const VNAShellCommand commands[] =
  #ifdef ENABLE_THREADS_COMMAND
      {"threads"     , cmd_threads     , 0},
  #endif
-     { "y", cmd_y,    CMD_WAIT_MUTEX },
-     { "z", cmd_z,    CMD_WAIT_MUTEX },
+    { "y", cmd_y,    CMD_WAIT_MUTEX },
    { "i", cmd_i,	CMD_WAIT_MUTEX },
    { "v", cmd_v,	CMD_WAIT_MUTEX },
    { "a", cmd_a,	CMD_WAIT_MUTEX },
@@ -2411,8 +2422,9 @@ static const VNAShellCommand commands[] =
    { "o", cmd_o,    CMD_WAIT_MUTEX },
    { "d", cmd_d,    CMD_WAIT_MUTEX },
    { "f", cmd_f,    CMD_WAIT_MUTEX },
+#ifdef TINYSA4
    { "g", cmd_g,    CMD_WAIT_MUTEX },
-//   { "g", cmd_g,    0 },
+   #endif
 #ifdef __ULTRA_SA__
     { "x", cmd_x,    0 },
 #endif
@@ -2858,7 +2870,7 @@ int main(void)
 //    menu_mode_cb(setting.mode,0);
 //  }
   redraw_frame();
-#if 0
+#ifdef TINYSA3
   set_mode(M_HIGH);
   set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
   sweep(false);

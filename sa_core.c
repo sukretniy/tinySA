@@ -66,10 +66,7 @@ void update_min_max_freq(void)
   switch(setting.mode) {
   case M_LOW:
     minFreq = 0;
-    if (config.frequency_IF2 == 0)
-      maxFreq = DEFAULT_MAX_FREQ;
-    else
-      maxFreq = config.frequency_IF2;
+    maxFreq = DEFAULT_MAX_FREQ;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -237,7 +234,7 @@ void set_refer_output(int v)
 {
   setting.refer = v;
 #ifdef __SI4432__
-  SI4432_SetReference(setting.refer);
+  set_calibration_freq(setting.refer);
 #endif
 #ifdef __SI4463__
   Si4463_set_refer(setting.refer);
@@ -401,6 +398,7 @@ void set_IF(int f)
   dirty = true;
 }
 
+#ifdef TINYSA4
 void set_IF2(int f)
 {
 
@@ -422,6 +420,7 @@ void set_modulo(uint32_t f)
   //ADF4351_spur_mode(f);
   dirty = true;
 }
+#endif
 
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
 #define POWER_OFFSET    15
@@ -1031,7 +1030,7 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
 
   }
 #ifdef __SI4432__
-  SI4432_SetReference(setting.refer);
+  set_calibration_freq(setting.refer);
 #endif
   update_rbw();
   calculate_step_delay();
@@ -1159,7 +1158,7 @@ static uint32_t old_frequency_step;
 
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
-  if (old_freq[V] == freq && setting.frequency_step == old_frequency_step)             // Do not change HW if not needed
+  if (old_freq[V] == freq)       // Do not change HW if not needed
     return;
 #ifdef __SI4432__
   if (V <= 1) {
@@ -1314,13 +1313,13 @@ case M_ULTRA:
       set_switch_off();
 //    SI4432_Receive(); For noise testing only
     SI4432_Transmit(setting.drive);
-    // SI4432_SetReference(setting.refer);
+    // set_calibration_freq(setting.refer);
 #endif
     break;
 case M_HIGH:    // Direct into 1
 mute:
 #ifdef __SI4432__
-    // SI4432_SetReference(-1); // Stop reference output
+    // set_calibration_freq(-1); // Stop reference output
     SI4432_Sel = SI4432_RX ; // both as receiver to avoid spurs
     set_switch_receive();
     SI4432_Receive();
@@ -1423,7 +1422,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   if (setting.spur_removal && actual_rbw_x10 > 3000)
     actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
   SI4432_Sel =  MODE_SELECT(setting.mode);
-  actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
+  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
 #ifdef __SI4463__
 //  if (setting.spur_removal && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
@@ -1902,8 +1901,6 @@ modulation_again:
 #endif
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur_removal){         // If in low input mode and spur reduction is on
-#ifndef __SI4463__
-#if 0                   // <------------------------- DISABLED !!!!!!!!!!!!!!!
         if (S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
         {              // else low/above IF
           if (setting.spur_removal == 1)
@@ -1911,20 +1908,10 @@ modulation_again:
           else
             setting.below_IF = S_AUTO_OFF;              // and above IF in second pass
         }
-        else
-#endif
-#endif
-        {
-#ifdef __SI4432__
-          int32_t spur_offset = actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
+        else 
+		{
           if (setting.spur_removal == -1)                       // If second spur pass
-            spur_offset = - spur_offset;                // IF shift in the other direction
-          local_IF  = local_IF + spur_offset;           // apply IF spur shift
-#endif
-#ifdef __SI4463__
-          if (setting.spur_removal == -1)                       // If second spur pass
-            local_IF  = local_IF + 1000000;                    // apply IF spur shift
-#endif
+          local_IF  = local_IF + 1000000;           // apply IF spur shift
         }
 #endif
       }
@@ -1936,14 +1923,8 @@ modulation_again:
 #ifdef __SI4432__
       if (setting.mode == M_LOW || setting.mode == M_GENLOW )
       {
-        set_freq (SI4432_RX , local_IF);
-      }
-#endif
-#ifdef __SI4463__
-//      if ((setting.mode == M_LOW || setting.mode == M_GENLOW ) && i == 0)
-//      {
-//        set_freq (SI4463_RX , local_IF);
-//      }
+		set_freq (SI4432_RX , local_IF);
+	  }
 #endif
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
@@ -1981,9 +1962,6 @@ modulation_again:
 #endif
     {                                           // Else set LO ('s)
 #ifdef __ULTRA_SA__
-      //#define IF_1    2550000000
-#define IF_2    config.frequency_IF2                      // First IF in Ultra SA mode
-
       set_freq (2, config.frequency_IF2  + lf);                 // Scanning LO up to IF2
       set_freq (3, config.frequency_IF2  - DEFAULT_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
       set_freq (SI4432_LO, DEFAULT_IF);                 // Second IF fixed in Ultra SA mode
@@ -2190,9 +2168,12 @@ static bool sweep(bool break_on_operation)
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
-
+#ifdef TINYSA3
+  palClearPad(GPIOB, GPIOB_LED);
+#endif
+#ifdef TINYSA4
   palClearPad(GPIOC, GPIOC_LED);
-
+#endif
   downslope = true;             // Initialize the peak search algorithm
   temppeakLevel = -150;
   float temp_min_level = 100;
@@ -2291,6 +2272,7 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] + setting.normalize_level;
       }
+#ifdef __SI4432__
 //#define __DEBUG_AGC__
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
@@ -2791,8 +2773,13 @@ sweep_again:                                // stay in sweep loop when output mo
 
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
-
+#ifdef TINYSA3
+  palSetPad(GPIOB, GPIOB_LED);
+#endif
+#ifdef TINYSA4
   palSetPad(GPIOC, GPIOC_LED);
+#endif
+  
   return true;
 }
 
@@ -3839,12 +3826,8 @@ void self_test(int test)
 #endif
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.offset_delay = setting.step_delay / 2;
-#ifdef __SI4432__
-      setting.rbw_x10 = SI4432_force_RBW(j);
-#endif
-#ifdef __SI4463__
-      setting.rbw_x10 = SI4463_force_RBW(j);
-#endif
+      setting.rbw_x10 = force_RBW(j);
+
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
 #if 0
       set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 1000));     // Wide
