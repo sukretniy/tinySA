@@ -23,7 +23,9 @@
 //#include "hal_serial.h"
 
 #include "usbcfg.h"
+#ifdef __VNA__
 #include "si5351.h"
+#endif
 #include "nanovna.h"
 #ifdef __VNA__
 #include "fft.h"
@@ -713,7 +715,7 @@ duplicate_buffer_to_dump(int16_t *p)
   memcpy(dump_buffer, p, sizeof dump_buffer);
 }
 #endif
-
+#ifdef __AUDIO__
 void i2s_end_callback(I2SDriver *i2sp, size_t offset, size_t n)
 {
 #if PORT_SUPPORTS_RT
@@ -754,6 +756,7 @@ static const I2SConfig i2sconfig = {
   0, // i2scfgr
   2 // i2spr
 };
+#endif
 #endif
 
 #define MAX_DATA    2
@@ -2652,7 +2655,7 @@ THD_FUNCTION(myshellThread, p)
 }
 #endif
 
-#if 1
+#ifdef __VNA__
 // I2C clock bus setting: depend from STM32_I2C1SW in mcuconf.h
 static const I2CConfig i2ccfg = {
   .timingr  = STM32_TIMINGR_PRESC(0U)  |            /* 72MHz I2CCLK. ~ 600kHz i2c   */
@@ -2755,8 +2758,10 @@ int main(void)
 
   //palSetPadMode(GPIOB, 8, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
   //palSetPadMode(GPIOB, 9, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
+#ifdef __VNA__
   i2cStart(&I2CD1, &i2ccfg);
   si5351_init();
+#endif
 
 #ifdef __SI4432__
  /*

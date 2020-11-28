@@ -218,7 +218,9 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
     t = 200*sweep_points;                   // 200 microseconds is the delay set in perform when sweeping in output mode
   else {
     uint32_t bare_sweep_time=0;
+#ifdef __SI4432__
     bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
+#endif
     if (FREQ_IS_CW()) {
       bare_sweep_time = MINIMUM_SWEEP_TIME;       // minimum sweep time in fast CW mode
       if (setting.repeat != 1 || setting.sweep_time_us >= 100*ONE_MS_TIME || setting.spur_removal != 0) // if no fast CW sweep possible
@@ -3746,7 +3748,7 @@ void self_test(int test)
     ili9341_clear_screen();
     reset_settings(M_LOW);
     set_refer_output(-1);
-#ifdef DOESNOTFIT
+#ifndef DOESNOTFIT
   } else if (test == 1) {
     float p2, p1, p;
     in_selftest = true;               // Spur search
@@ -3772,7 +3774,7 @@ void self_test(int test)
       f = 400000;
       while (f < DEFAULT_MAX_FREQ) {
         p = PURE_TO_float(perform(false, 1, f, false));
-#define SPUR_DELTA  6
+#define SPUR_DELTA  15
         if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
           shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - setting.frequency_step)/1000, add_spur(f - setting.frequency_step));
         }

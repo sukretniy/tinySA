@@ -19,6 +19,7 @@
  */
 #include "hal.h"
 #include "nanovna.h"
+#ifdef __VNA__
 #include "si5351.h"
 
 #define SI5351_I2C_ADDR   	(0x60<<1)
@@ -463,3 +464,4 @@ int si5351_set_frequency_with_offset(uint32_t freq, int offset, uint8_t drive_st
   current_band = band;
   return delay;
 }
+#endif
