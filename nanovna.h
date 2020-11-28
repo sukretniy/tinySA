@@ -20,12 +20,22 @@
 
 #ifdef TINYSA_F303
 #include "adc_F303.h"
+#define TINYSA4
+#else
+#define TINYSA3
 #endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
 #define __SA__
+#ifdef TINYSA3
 #define __SI4432__
+#endif
+#ifdef TINYSA4
+#define __SI4463__
+#define __SI4468__
+#define __ADF4351__
+#endif
 #define __PE4302__
 //#define __SIMULATION__
 //#define __PIPELINE__
@@ -40,6 +50,20 @@
 //#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
+#ifdef TINYSA3
+#define DEFAULT_IF  433800000
+#define DEFAULT_SPUR_IF 434000000
+#define DEFAULT_MAX_FREQ    350000000
+#define HIGH_MIN_FREQ_MHZ   240
+#define HIGH_MAX_FREQ_MHZ   960
+#endif
+#ifdef TINYSA4
+#define DEFAULT_IF  978000000
+#define DEFAULT_SPUR_IF 979000000
+#define DEFAULT_MAX_FREQ    800000000
+#define HIGH_MIN_FREQ_MHZ   850
+#define HIGH_MAX_FREQ_MHZ   1150
+#endif
 /*
  * main.c
  */
@@ -167,7 +191,7 @@ enum {
 //#define SWEEP_FACTORY    0x20
 
 
-extern int8_t sweep_mode;
+extern uint8_t sweep_mode;
 extern bool completed;
 extern const char *info_about[];
 
@@ -242,14 +266,14 @@ void set_measurement(int);
 // extern int settingSpeed;
 //extern int setting.step_delay;
 void sweep_remote(void);
-#ifdef __VNA__
+#ifdef __AUDIO__
 /*
  * dsp.c
  */
 // 5ms @ 48kHz
 #define AUDIO_BUFFER_LEN 96
 
-extern int16_t rx_buffer[];
+extern int16_t rx_buffer[AUDIO_BUFFER_LEN * 2];
 
 #define STATE_LEN 32
 #define SAMPLE_LEN 48
@@ -258,7 +282,8 @@ extern int16_t rx_buffer[];
 extern int16_t ref_buf[];
 extern int16_t samp_buf[];
 #endif
-
+#endif
+#ifdef __VNA__
 void dsp_process(int16_t *src, size_t len);
 void reset_dsp_accumerator(void);
 void calculate_gamma(float *gamma);
@@ -266,7 +291,7 @@ void fetch_amplitude(float *gamma);
 void fetch_amplitude_ref(float *gamma);
 #endif
 
-#ifdef __VNA__
+#ifdef __AUDIO__
 /*
  * tlv320aic3204.c
  */
@@ -293,11 +318,11 @@ extern uint16_t graph_bottom;
 #define BIG_WATERFALL   90
 #define SMALL_WATERFALL 180
 #define NO_WATERFALL    CHART_BOTTOM
-#define CHART_BOTTOM   230
+#define CHART_BOTTOM   (LCD_HEIGHT-10)
 #define SCROLL_GRIDY      (HEIGHT_SCROLL / NGRIDY)
 #define NOSCROLL_GRIDY    (CHART_BOTTOM / NGRIDY)
 #else
-#define GRIDY             (230 / NGRIDY)
+#define GRIDY             (CHART_BOTTOM / NGRIDY)
 #endif
 
 #define WIDTH  (LCD_WIDTH - 1 - OFFSETX)
@@ -307,8 +332,8 @@ extern uint16_t graph_bottom;
 #define CELLHEIGHT (32)
 
 #define FREQUENCIES_XPOS1 OFFSETX
-#define FREQUENCIES_XPOS2 200
-#define FREQUENCIES_YPOS  (LCD_HEIGHT-7)
+#define FREQUENCIES_XPOS2 (LCD_WIDTH-120)
+#define FREQUENCIES_YPOS  (LCD_HEIGHT-8)
 
 //
 #define CELLOFFSETX 0
@@ -318,15 +343,15 @@ extern uint16_t graph_bottom;
 #define GRID_X_TEXT       (AREA_WIDTH_NORMAL - 7*5)
 
 // Smith/polar chart
-#define P_CENTER_X (CELLOFFSETX + WIDTH/2)
-#define P_CENTER_Y (HEIGHT/2)
-#define P_RADIUS   (HEIGHT/2)
+//#define P_CENTER_X (CELLOFFSETX + WIDTH/2)
+//#define P_CENTER_Y (HEIGHT/2)
+//#define P_RADIUS   (HEIGHT/2)
 
 // Menu Button
 // Maximum menu buttons count
 #define MENU_BUTTON_MAX         8
 #define MENU_BUTTON_WIDTH      80
-#define MENU_BUTTON_HEIGHT     28
+#define MENU_BUTTON_HEIGHT     (LCD_HEIGHT/8-2)
 #define MENU_BUTTON_BORDER      1
 #define KEYBOARD_BUTTON_BORDER  2
 #define FORM_BUTTON_BORDER      2
@@ -341,7 +366,12 @@ extern int16_t area_width;
 extern int16_t area_height;
 
 // Define marker size (can be 0 or 1)
+#ifdef TINYSA3
 #define _MARKER_SIZE_         0
+#endif
+#ifdef TINYSA4
+#define _MARKER_SIZE_         1
+#endif
 // font
 extern const uint8_t x5x7_bits [];
 extern const uint8_t x7x11b_bits [];
@@ -467,8 +497,11 @@ typedef struct config {
 
   uint16_t gridlines;
   uint16_t hambands;
-
-  int8_t   _mode;  int8_t    cor_am;
+#ifdef TINYSA4
+  uint32_t frequency_IF2;
+#endif
+  int8_t   _mode;  
+  int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
   int8_t    dummy;
@@ -752,6 +785,7 @@ typedef struct setting
   int step_delay_mode;
   int offset_delay;
   int fast_speedup;
+  float normalize_level;     // Level to set normalize to, zero if not doing anything
   int modulation_frequency;
   uint32_t checksum;
 }setting_t;
@@ -1037,6 +1071,7 @@ void calibrate(void);
 float to_dBm(float);
 uint32_t calc_min_sweep_time_us(void);
 pureRSSI_t perform(bool b, int i, uint32_t f, int e);
+void interpolate_maximum(int m);
 
 enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD

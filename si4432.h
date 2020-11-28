@@ -119,6 +119,7 @@ uint8_t SI4432_Read_Byte( uint8_t ADR );
 
 void SI4432_Transmit(int d);
 void SI4432_Receive(void);
+void SI4432_Reset(void);
 
 void SI4432_Init(void);
 void SI4432_Drive(int);
@@ -129,10 +130,10 @@ float Simulated_SI4432_RSSI(uint32_t i, int s);
 #endif
 void SI4432_Set_Frequency ( uint32_t Freq );
 
-uint16_t SI4432_force_RBW(int i);
-uint16_t SI4432_SET_RBW(uint16_t WISH);
+uint16_t force_rbw(int i);
+uint16_t set_rbw(uint16_t WISH);
 extern const int SI4432_RBW_count;
-void SI4432_SetReference(int freq);
+void set_calibration_freq(int freq);
 #ifdef __FAST_SWEEP__
 void SI4432_Fill(int s, int start);
 #if 0

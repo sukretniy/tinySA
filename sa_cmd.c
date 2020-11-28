@@ -273,7 +273,7 @@ VNA_SHELL_FUNCTION(cmd_if)
     return;
   } else {
     int a = my_atoi(argv[0]);
-    if (a!= 0 &&( a < 433000000 || a>435000000))
+    if (a!= 0 &&( a < (DEFAULT_IF - 2000000) || a>(DEFAULT_IF + 2000000)))
       goto usage;
     setting.auto_IF = false;
     set_IF(a);
@@ -342,6 +342,33 @@ VNA_SHELL_FUNCTION(cmd_y)
   }
 #endif
 }
+
+VNA_SHELL_FUNCTION(cmd_z)
+{
+  static const char cmd_z_list[] = "t|r|i";
+  if (argc != 1) {
+    shell_printf("usage: z %s\r\n", cmd_z_list);
+    return;
+  }
+  if (argc == 1) {
+#ifdef __SI4432__
+    SI4432_Sel = VFO;
+    int type = get_str_index(argv[0], cmd_z_list);
+    switch(type) {
+    case 0:
+      SI4432_Transmit(3);
+      break;
+    case 1:
+      SI4432_Receive();
+      break;
+    case 2:
+      SI4432_Reset();
+      break;
+    }
+#endif
+  }
+}
+
 
 VNA_SHELL_FUNCTION(cmd_selftest)
 {

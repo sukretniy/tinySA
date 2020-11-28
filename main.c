@@ -103,7 +103,7 @@ static void transform_domain(void);
 
 static int8_t drive_strength = DRIVE_STRENGTH_AUTO;
 #endif
-int8_t sweep_mode = SWEEP_ENABLE;
+uint8_t sweep_mode = SWEEP_ENABLE;
 volatile uint8_t redraw_request = 0; // contains REDRAW_XXX flags
 
 // Version text, displayed in Config->Version menu, also send by info command
@@ -670,29 +670,29 @@ VNA_SHELL_FUNCTION(cmd_clearconfig)
                "Do reset manually to take effect. Then do touch cal and save.\r\n");
 }
 
-#ifdef __VNA__
+#ifdef __AUDIO__
 static struct {
   int16_t rms[2];
   int16_t ave[2];
   int callback_count;
 
-#if 0
+#if 1
   int32_t last_counter_value;
   int32_t interval_cycles;
   int32_t busy_cycles;
 #endif
 } stat;
-
 int16_t rx_buffer[AUDIO_BUFFER_LEN * 2];
 
 #ifdef ENABLED_DUMP
 int16_t dump_buffer[AUDIO_BUFFER_LEN];
 int16_t dump_selection = 0;
 #endif
-
 volatile uint8_t wait_count = 0;
 volatile uint8_t accumerate_count = 0;
+#endif
 
+#ifdef __VNA__
 const int8_t bandwidth_accumerate_count[] = {
   1, // 1kHz
   3, // 300Hz
@@ -704,7 +704,7 @@ const int8_t bandwidth_accumerate_count[] = {
 float measured[2][POINTS_COUNT][2];
 #endif
 measurement_t measured;
-#ifdef __VNA__
+#ifdef __AUDIO__
 #ifdef ENABLED_DUMP
 static void
 duplicate_buffer_to_dump(int16_t *p)
@@ -716,7 +716,7 @@ duplicate_buffer_to_dump(int16_t *p)
   memcpy(dump_buffer, p, sizeof dump_buffer);
 }
 #endif
-
+#ifdef __AUDIO__
 void i2s_end_callback(I2SDriver *i2sp, size_t offset, size_t n)
 {
 #if PORT_SUPPORTS_RT
@@ -757,6 +757,7 @@ static const I2SConfig i2sconfig = {
   0, // i2scfgr
   2 // i2spr
 };
+#endif
 #endif
 
 #define MAX_DATA    2
@@ -864,7 +865,12 @@ config_t config = {
   .magic =             CONFIG_MAGIC,
   .dac_value =         1922,
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
+#ifdef TINYSA3
   .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+#endif
+#ifdef TINYSA4
+  .touch_cal =          { 261, 605, 115, 146 }, // 4 inch panel
+#endif
   ._mode     = _MODE_USB,
   ._serial_speed = USART_SPEED_SETTING(SERIAL_DEFAULT_BITRATE),
 #ifdef __VNA__
@@ -872,10 +878,19 @@ config_t config = {
 #endif
   .lcd_palette = LCD_DEFAULT_PALETTE,
   .vbat_offset = 500,
+#ifdef TINYSA4
+  .frequency_IF2 = 0,
+#endif
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
+#ifdef TINYSA3
   .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
+#endif
+#ifdef TINYSA4
+  .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
+  .correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
+#endif
   .setting_frequency_10mhz = 10000000,
   .cor_am = -14,
   .cor_wfm = -17,
@@ -947,10 +962,11 @@ ensure_edit_config(void)
 }
 
 #include "sa_core.c"
-#ifdef __VNA__
+#ifdef __AUDIO__
 #define DSP_START(delay) wait_count = delay;
 #define DSP_WAIT_READY   while (wait_count) __WFI();
-
+#endif
+#ifdef __VNA__
 #define DELAY_CHANNEL_CHANGE 2
 
 // main loop for measurement
@@ -2252,7 +2268,7 @@ VNA_SHELL_FUNCTION(cmd_color)
 #if CH_CFG_USE_REGISTRY == FALSE
 #error "Threads Requite enabled CH_CFG_USE_REGISTRY in chconf.h"
 #endif
-static const char *states[] = {CH_STATE_NAMES};
+const char *states[] = {CH_STATE_NAMES};
 VNA_SHELL_FUNCTION(cmd_threads) 
 {
   thread_t *tp;
@@ -2393,21 +2409,23 @@ static const VNAShellCommand commands[] =
  #ifdef ENABLE_THREADS_COMMAND
      {"threads"     , cmd_threads     , 0},
  #endif
-    { "y", cmd_y,    0 },
-   { "i", cmd_i,	0 },
-   { "v", cmd_v,	0 },
-   { "a", cmd_a,	0 },
-   { "b", cmd_b,	0 },
-   { "t", cmd_t,	0 },
-   { "e", cmd_e,	0 },
-   { "s", cmd_s,	0 },
-   { "m", cmd_m,	0 },
-   { "p", cmd_p,	0 },
-   { "w", cmd_w,	0 },
-   { "o", cmd_o,    0 },
-   { "d", cmd_d,    0 },
-   { "f", cmd_f,    0 },
-//   { "g", cmd_g,    0 },
+    { "y", cmd_y,    CMD_WAIT_MUTEX },
+   { "i", cmd_i,	CMD_WAIT_MUTEX },
+   { "v", cmd_v,	CMD_WAIT_MUTEX },
+   { "a", cmd_a,	CMD_WAIT_MUTEX },
+   { "b", cmd_b,	CMD_WAIT_MUTEX },
+   { "t", cmd_t,	CMD_WAIT_MUTEX },
+   { "e", cmd_e,	CMD_WAIT_MUTEX },
+   { "s", cmd_s,	CMD_WAIT_MUTEX },
+   { "m", cmd_m,	CMD_WAIT_MUTEX },
+   { "p", cmd_p,	CMD_WAIT_MUTEX },
+   { "w", cmd_w,	CMD_WAIT_MUTEX },
+   { "o", cmd_o,    CMD_WAIT_MUTEX },
+   { "d", cmd_d,    CMD_WAIT_MUTEX },
+   { "f", cmd_f,    CMD_WAIT_MUTEX },
+#ifdef TINYSA4
+   { "g", cmd_g,    CMD_WAIT_MUTEX },
+   #endif
 #ifdef __ULTRA_SA__
     { "x", cmd_x,    0 },
 #endif
@@ -2843,7 +2861,7 @@ int main(void)
   setupSA();
   set_sweep_points(POINTS_COUNT);
 
-#ifdef __VNA__
+#ifdef __AUDIO__
 /*
  * I2S Initialize
  */
@@ -2862,7 +2880,7 @@ int main(void)
 //    menu_mode_cb(setting.mode,0);
 //  }
   redraw_frame();
-#if 1
+#ifdef TINYSA3
   set_mode(M_HIGH);
   set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
   sweep(false);

@@ -16,9 +16,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifdef __SI4432__
+//#ifdef __SI4432__
 #include "si4432.h"		// comment out for simulation
-#endif
+//#endif
 #include "stdlib.h"
 
 #pragma GCC push_options
@@ -67,7 +67,7 @@ void update_min_max_freq(void)
   switch(setting.mode) {
   case M_LOW:
     minFreq = 0;
-    maxFreq = 350000000;
+    maxFreq = DEFAULT_MAX_FREQ;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -77,15 +77,15 @@ void update_min_max_freq(void)
 #endif
   case M_GENLOW:
     minFreq = 0;
-    maxFreq = 350000000;
+    maxFreq = DEFAULT_MAX_FREQ;
     break;
   case M_HIGH:
 #ifdef __ULTRA_SA__
     minFreq = 00000000;
     maxFreq = 2000000000;
 #else
-    minFreq = 24*config.setting_frequency_10mhz;
-    maxFreq = 96*config.setting_frequency_10mhz;
+    minFreq = HIGH_MIN_FREQ_MHZ * 1000000;
+    maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
 #endif
     break;
   case M_GENHIGH:
@@ -113,6 +113,7 @@ void reset_settings(int m)
   setting.show_stored = 0;
   setting.auto_attenuation = false;
   setting.subtract_stored = 0;
+  setting.normalize_level = 0.0;
   setting.drive=13;
   setting.atten_step = 0;       // Only used in low output mode
   setting.agc = S_AUTO_ON;
@@ -131,7 +132,7 @@ void reset_settings(int m)
   setting.repeat = 1;
   setting.tracking_output = false;
   setting.measurement = M_OFF;
-  setting.frequency_IF = 433800000;
+  setting.frequency_IF = DEFAULT_IF;
   setting.auto_IF = true;
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
@@ -205,7 +206,7 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
   if (MODE_OUTPUT(setting.mode))
     t = 200*sweep_points;                   // 200 microseconds is the delay set in perform when sweeping in output mode
   else {
-    uint32_t bare_sweep_time;
+    uint32_t bare_sweep_time=0;
 #ifdef __SI4432__
     bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
 #endif
@@ -225,7 +226,7 @@ void set_refer_output(int v)
 {
   setting.refer = v;
 #ifdef __SI4432__
-  SI4432_SetReference(setting.refer);
+  set_calibration_freq(setting.refer);
 #endif
 //  dirty = true;
 }
@@ -386,6 +387,30 @@ void set_IF(int f)
   dirty = true;
 }
 
+#ifdef TINYSA4
+void set_IF2(int f)
+{
+
+  config.frequency_IF2 = f;
+  dirty = true;
+  config_save();
+}
+
+void set_R(int f)
+{
+  ADF4351_R_counter(f % 10);
+  ADF4351_spur_mode(f/10);
+  dirty = true;
+}
+
+void set_modulo(uint32_t f)
+{
+  ADF4350_modulo = f;
+  //ADF4351_spur_mode(f);
+  dirty = true;
+}
+#endif
+
 #define POWER_STEP  0           // Should be 5 dB but appearently it is lower
 #define POWER_OFFSET    15
 #define SWITCH_ATTENUATION  30
@@ -524,6 +549,7 @@ void set_subtract_storage(void)
     if (!setting.show_stored)
       set_storage();
     setting.subtract_stored = true;
+    setting.normalize_level = 0.0;
 //    setting.auto_attenuation = false;
   } else {
     setting.subtract_stored = false;
@@ -539,6 +565,7 @@ void toggle_normalize(void)
       stored_t[i] = actual_t[i];
     setting.subtract_stored = true;
     setting.auto_attenuation = false;       // Otherwise noise level may move leading to strange measurements
+    setting.normalize_level = 0.0;
   } else {
     setting.subtract_stored = false;
   }
@@ -626,7 +653,7 @@ void set_harmonic(int h)
 void set_step_delay(int d)                  // override RSSI measurement delay or set to one of three auto modes
 {
 
-  if ((3 <= d && d < 250) || d > 30000)         // values 0 (normal scan), 1 (precise scan) and 2(fast scan) have special meaning and are auto calculated
+  if ((3 <= d && d < 100) || d > 30000)         // values 0 (normal scan), 1 (precise scan) and 2(fast scan) have special meaning and are auto calculated
     return;
   if (d <3) {
     setting.step_delay_mode = d;
@@ -688,9 +715,7 @@ void toggle_AGC(void)
   dirty = true;
 }
 
-#ifdef __SI4432__
 static unsigned char SI4432_old_v[2];
-#endif
 
 void auto_set_AGC_LNA(int auto_set, int agc)                                                                    // Adapt the AGC setting if needed
 {
@@ -906,7 +931,6 @@ void set_fast_speedup(int s)
 
 void calculate_step_delay(void)
 {
-#ifdef __SI4432__
   if (setting.step_delay_mode == SD_MANUAL || setting.step_delay != 0) {        // The latter part required for selftest 3
     SI4432_step_delay = setting.step_delay;
     if (setting.offset_delay != 0)      // Override if set
@@ -916,6 +940,7 @@ void calculate_step_delay(void)
     if (setting.frequency_step == 0) {            // zero span mode, not dependent on selected RBW
       SI4432_step_delay = 0;
     } else {
+#ifdef __SI4432__
 #if 1       // Table for double offset delay
       if (actual_rbw_x10 >= 1910)      { SI4432_step_delay =  300; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 1420) { SI4432_step_delay =  350; SI4432_offset_delay = 100; }
@@ -937,6 +962,7 @@ void calculate_step_delay(void)
       else if (actual_rbw_x10 >=  50)  { SI4432_step_delay = 3300; SI4432_offset_delay = 400; }
       else                             { SI4432_step_delay = 6400; SI4432_offset_delay =1600; }
 #endif
+#endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
       if (setting.fast_speedup >0)
@@ -945,7 +971,6 @@ void calculate_step_delay(void)
     if (setting.offset_delay != 0)      // Override if set
       SI4432_offset_delay = setting.offset_delay;
   }
-#endif
 }
 
 void apply_settings(void)       // Ensure all settings in the setting structure are translated to the right HW setup
@@ -961,7 +986,7 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
 
   }
 #ifdef __SI4432__
-  SI4432_SetReference(setting.refer);
+  set_calibration_freq(setting.refer);
 #endif
   update_rbw();
   calculate_step_delay();
@@ -1045,10 +1070,10 @@ void setupSA(void)
 #ifdef __SI4432__
   SI4432_Init();
 #endif
-  old_freq[0] = 0;
-  old_freq[1] = 0;
-  real_old_freq[0] = 0;
-  real_old_freq[1] = 0;
+  for (int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
+    old_freq[i] = 0;
+    real_old_freq[i] = 0;
+  }
 #ifdef __SI4432__
   SI4432_Sel = SI4432_RX ;
   SI4432_Receive();
@@ -1082,7 +1107,7 @@ void setupSA(void)
 
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
-  if (old_freq[V] == freq)             // Do not change HW if not needed
+  if (old_freq[V] == freq)       // Do not change HW if not needed
     return;
   if (V <= 1) {
 #ifdef __SI4432__
@@ -1198,8 +1223,10 @@ case M_ULTRA:
     } else {
       set_switch_receive();
     }
+#endif
     set_AGC_LNA();
 
+#ifdef __SI4432__
     SI4432_Sel = SI4432_LO ;
     if (setting.tracking_output)
       set_switch_transmit();
@@ -1207,13 +1234,13 @@ case M_ULTRA:
       set_switch_off();
 //    SI4432_Receive(); For noise testing only
     SI4432_Transmit(setting.drive);
-    // SI4432_SetReference(setting.refer);
+    // set_calibration_freq(setting.refer);
 #endif
     break;
 case M_HIGH:    // Direct into 1
 mute:
 #ifdef __SI4432__
-    // SI4432_SetReference(-1); // Stop reference output
+    // set_calibration_freq(-1); // Stop reference output
     SI4432_Sel = SI4432_RX ; // both as receiver to avoid spurs
     set_switch_receive();
     SI4432_Receive();
@@ -1225,8 +1252,8 @@ mute:
      } else {
        set_switch_receive();
      }
-    set_AGC_LNA();
 #endif
+    set_AGC_LNA();
 
     break;
 case M_GENLOW:  // Mixed output from 0
@@ -1279,27 +1306,28 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   } else {
     setting.vbw_x10 = 3000; // trick to get right default rbw in zero span mode
   }
-  actual_rbw_x10 = setting.rbw_x10;     // requested rbw
-  if (actual_rbw_x10 == 0) {        // if auto rbw
+  uint32_t temp_actual_rbw_x10 = setting.rbw_x10;     // requested rbw , 32 bit !!!!!!
+  if (temp_actual_rbw_x10 == 0) {        // if auto rbw
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
       if (setting.fast_speedup > 2)
-        actual_rbw_x10 = 6*setting.vbw_x10; // rbw is four the frequency step to ensure no gaps in coverage as there are some weird jumps
+        temp_actual_rbw_x10 = 6*setting.vbw_x10; // rbw is six times the frequency step to ensure no gaps in coverage as there are some weird jumps
       else
-        actual_rbw_x10 = 4*setting.vbw_x10; // rbw is four the frequency step to ensure no gaps in coverage as there are some weird jumps
+        temp_actual_rbw_x10 = 4*setting.vbw_x10; // rbw is four times the frequency step to ensure no gaps in coverage as there are some weird jumps
     } else
-      actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
+      temp_actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
   }
-  if (actual_rbw_x10 < 26)
-    actual_rbw_x10 = 26;
-  if (actual_rbw_x10 > 6000)
-    actual_rbw_x10 = 6000;
-
+#ifdef __SI4432__
+  if (temp_actual_rbw_x10 < 26)
+    temp_actual_rbw_x10 = 26;
+  if (temp_actual_rbw_x10 > 6000)
+    temp_actual_rbw_x10 = 6000;
+#endif
+  actual_rbw_x10 = temp_actual_rbw_x10;         // Now it fits in 16 bit
+#ifdef __SI4432__
   if (setting.spur_removal && actual_rbw_x10 > 3000)
     actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
-
-#ifdef __SI4432__
   SI4432_Sel =  MODE_SELECT(setting.mode);
-  actual_rbw_x10 = SI4432_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
+  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
     vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
@@ -1416,8 +1444,8 @@ search_maximum(int m, int center, int span)
 }
 
 //static int spur_old_stepdelay = 0;
-static const unsigned int spur_IF =            433800000;       // The IF frequency for which the spur table is value
-static const unsigned int spur_alternate_IF =  434000000;       // if the frequency is found in the spur table use this IF frequency
+static const unsigned int spur_IF =            DEFAULT_IF;       // The IF frequency for which the spur table is value
+static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the frequency is found in the spur table use this IF frequency
 static const int spur_table[] =                                 // Frequencies to avoid
 {
 // 580000,            // 433.8 MHz table
@@ -1653,10 +1681,12 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     }
   }
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !check_for_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
+#ifdef __SI4432__
     if (f < 1500000)
       auto_set_AGC_LNA(false, f*9/1500000);
     else
       auto_set_AGC_LNA(true, 0);
+#endif
   }
   // Calculate the RSSI correction for later use
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
@@ -1678,7 +1708,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
           modulation_delay += config.cor_nfm;  // -17 default
           // modulation_index = 0; // default value
         }
-        if ((setting.mode == M_GENLOW  && f > 480000000 - 433000000) ||
+        if ((setting.mode == M_GENLOW  && f > 480000000 - DEFAULT_IF) ||
             (setting.mode == M_GENHIGH  && f > 480000000) )
           modulation_index += 2;
         current_fm_modulation = (int *)fm_modulation[modulation_index];
@@ -1736,7 +1766,7 @@ modulation_again:
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
-    long local_IF;
+    int32_t local_IF;
 
     again:                                                              // Spur reduction jumps to here for second measurement
 
@@ -1744,7 +1774,7 @@ modulation_again:
       local_IF = 0;
     else {
       if (setting.auto_IF)
-        local_IF = setting.spur_removal ? 433900000 : spur_IF;
+        local_IF = setting.spur_removal ? DEFAULT_IF : spur_IF;
       else
         local_IF = setting.frequency_IF;
     }
@@ -1760,18 +1790,17 @@ modulation_again:
 #endif
 #ifdef __SPUR__
       } else if (setting.mode== M_LOW && setting.spur_removal){         // If in low input mode and spur reduction is on
-        if (S_IS_AUTO(setting.below_IF) && lf < 150000000) // if below 150MHz and auto_below_IF
+        if (S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
         {              // else low/above IF
           if (setting.spur_removal == 1)
             setting.below_IF = S_AUTO_ON;               // use below IF in first pass
           else
             setting.below_IF = S_AUTO_OFF;              // and above IF in second pass
         }
-        else {
-          int32_t spur_offset = actual_rbw_x10 * 100;   // Can not use below IF so calculate IF shift that hopefully will kill the spur.
+        else 
+		{
           if (setting.spur_removal == -1)                       // If second spur pass
-            spur_offset = - spur_offset;                // IF shift in the other direction
-          local_IF  = local_IF + spur_offset;           // apply IF spur shift
+          local_IF  = local_IF + 1000000;           // apply IF spur shift
         }
 #endif
       }
@@ -1781,7 +1810,10 @@ modulation_again:
       // --------------------- IF know, set the RX SI4432 frequency ------------------------
 
 #ifdef __SI4432__
-      set_freq (SI4432_RX , local_IF);
+      if (setting.mode == M_LOW || setting.mode == M_GENLOW )
+      {
+		set_freq (SI4432_RX , local_IF);
+	  }
 #endif
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
@@ -1816,12 +1848,9 @@ modulation_again:
 #endif
     {                                           // Else set LO ('s)
 #ifdef __ULTRA_SA__
-      //#define IF_1    2550000000
-#define IF_2    2025000000                      // First IF in Ultra SA mode
-
-      set_freq (2, IF_2 + lf);                 // Scanning LO up to IF2
-      set_freq (3, IF_2 - 433800000);          // Down from IF2 to fixed second IF in Ultra SA mode
-      set_freq (SI4432_LO, 433800000);                 // Second IF fixed in Ultra SA mode
+      set_freq (2, config.frequency_IF2  + lf);                 // Scanning LO up to IF2
+      set_freq (3, config.frequency_IF2  - DEFAULT_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
+      set_freq (SI4432_LO, DEFAULT_IF);                 // Second IF fixed in Ultra SA mode
 #else
 #ifdef __SI4432__
       if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
@@ -1972,8 +2001,12 @@ static bool sweep(bool break_on_operation)
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
+#ifdef TINYSA3
   palClearPad(GPIOB, GPIOB_LED);
-
+#endif
+#ifdef TINYSA4
+  palClearPad(GPIOC, GPIOC_LED);
+#endif
   downslope = true;             // Initialize the peak search algorithm
   temppeakLevel = -150;
   float temp_min_level = 100;
@@ -2025,6 +2058,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
     // ----------------------- in loop AGC ---------------------------------
 
+#ifdef __SI4432__
     if (!in_selftest && setting.mode == M_HIGH && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {
 #define AGC_RSSI_THRESHOLD  (-55+get_attenuation())
 
@@ -2042,7 +2076,7 @@ sweep_again:                                // stay in sweep loop when output mo
       else
         auto_set_AGC_LNA(TRUE, 0);
     }
-
+#endif
 
     // Delay between points if needed, (all delays can apply in SI4432 fill)
     if (setting.measure_sweep_time_us == 0){                                    // If not already in buffer
@@ -2069,8 +2103,9 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.average != AV_OFF)
         temp_t[i] = RSSI;
       if (setting.subtract_stored) {
-        RSSI = RSSI - stored_t[i] ;
+        RSSI = RSSI - stored_t[i] + setting.normalize_level;
       }
+#ifdef __SI4432__
 //#define __DEBUG_AGC__
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
@@ -2085,6 +2120,7 @@ sweep_again:                                // stay in sweep loop when output mo
         }
         last_AGC_value = AGC_value;
       }
+#endif
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
         actual_t[i] = RSSI;
         age[i] = 0;
@@ -2241,6 +2277,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
 #define __MIRROR_MASKING__
 #ifdef __MIRROR_MASKING__
+#ifdef __SI4432__
   if (setting.mode == M_HIGH && setting.mirror_masking) {
     int mirror_offset = 2 * 937000 / setting.frequency_step;
 //    int mask_start = 0;
@@ -2263,6 +2300,7 @@ sweep_again:                                // stay in sweep loop when output mo
     }
   }
 
+#endif
 #endif
 
   // -------------------------- auto attenuate ----------------------------------
@@ -2314,6 +2352,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
 
   if (!in_selftest && MODE_INPUT(setting.mode)) {
+#ifdef __SI4432__
     if (S_IS_AUTO(setting.agc)) {
       float actual_max_level = actual_t[max_index[0]] - get_attenuation();
       if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
@@ -2337,6 +2376,7 @@ sweep_again:                                // stay in sweep loop when output mo
         }
       }
     } else
+#endif
       signal_is_AM = false;
   }
 
@@ -2566,8 +2606,13 @@ sweep_again:                                // stay in sweep loop when output mo
 
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
-
+#ifdef TINYSA3
   palSetPad(GPIOB, GPIOB_LED);
+#endif
+#ifdef TINYSA4
+  palSetPad(GPIOC, GPIOC_LED);
+#endif
+  
   return true;
 }
 
@@ -3367,7 +3412,7 @@ void test_prepare(int i)
 {
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
-  setting.frequency_IF = 433800000;                // Default frequency
+  setting.frequency_IF = DEFAULT_IF;                // Default frequency
   setting.auto_IF = true;
   setting.auto_attenuation = false;
   switch(test_case[i].setup) {                // Prepare test conditions
@@ -3389,7 +3434,7 @@ common_silent:
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
-    setting.frequency_IF = 433900000;                // Center on SAW filters
+    setting.frequency_IF = DEFAULT_IF;                // Center on SAW filters
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input
@@ -3530,7 +3575,7 @@ void self_test(int test)
     reset_settings(M_LOW);
     test_prepare(TEST_SILENCE);
     setting.auto_IF = false;
-    setting.frequency_IF=433850000;
+    setting.frequency_IF=DEFAULT_IF;
     setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
@@ -3547,7 +3592,7 @@ void self_test(int test)
       f += setting.frequency_step;
       shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d and step of %d\n\r", p2, p1, setting.frequency_IF, setting.frequency_step );
       f = 400000;
-      while (f < 100000000) {
+      while (f < DEFAULT_MAX_FREQ) {
         p = PURE_TO_float(perform(false, 1, f, false));
 #define SPUR_DELTA  6
         if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
@@ -3595,7 +3640,7 @@ void self_test(int test)
     in_selftest = true;
 //    reset_settings(M_LOW);
     setting.auto_IF = false;
-    setting.frequency_IF=433900000;
+    setting.frequency_IF=DEFAULT_IF;
     ui_mode_normal();
     test_prepare(TEST_RBW);
     setting.step_delay = 8000;
@@ -3614,9 +3659,8 @@ void self_test(int test)
 #endif
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.offset_delay = setting.step_delay / 2;
-#ifdef __SI4432__
-      setting.rbw_x10 = SI4432_force_RBW(j);
-#endif
+      setting.rbw_x10 = force_RBW(j);
+
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
 #if 0
       set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 1000));     // Wide
@@ -3705,12 +3749,12 @@ void self_test(int test)
     case 2:
       reset_settings(M_LOW);
       set_sweep_frequency(ST_START, 300000000);
-      set_sweep_frequency(ST_STOP, 350000000);
+      set_sweep_frequency(ST_STOP, DEFAULT_MAX_FREQ);
       break;
     case 3:
       reset_settings(M_HIGH);
       set_sweep_frequency(ST_START, 300000000);
-      set_sweep_frequency(ST_STOP, 350000000);
+      set_sweep_frequency(ST_STOP, DEFAULT_MAX_FREQ);
       break;
     case 4:
       reset_settings(M_GENLOW);
