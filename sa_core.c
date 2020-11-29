@@ -1956,7 +1956,6 @@ modulation_again:
       }
 //      STOP_PROFILE;
 #endif
-#endif
     }
 
     if (MODE_OUTPUT(setting.mode)) {

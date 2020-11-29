@@ -18,12 +18,12 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #include "adc_F303.h"
 #define TINYSA4
-#else
-#define TINYSA3
-#endif
+//#else
+//#define TINYSA3
+//#endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 

@@ -385,6 +385,25 @@ VNA_SHELL_FUNCTION(cmd_selftest)
 }
 
 #ifdef __ADF4351__
+
+uint32_t xtoi(char *t)
+{
+
+  uint32_t v=0;
+  while (*t) {
+    if ('0' <= *t && *t <= '9')
+      v = v*16 + *t - '0';
+    else if ('a' <= *t && *t <= 'f')
+      v = v*16 + *t - 'a' + 10;
+    else if ('A' <= *t && *t <= 'F')
+      v = v*16 + *t - 'A' + 10;
+    else
+      return v;
+    t++;
+  }
+  return v;
+}
+
 VNA_SHELL_FUNCTION(cmd_x)
 {
   uint32_t reg;
