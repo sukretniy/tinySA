@@ -2426,7 +2426,7 @@ static const VNAShellCommand commands[] =
 #ifdef TINYSA4
    { "g", cmd_g,    CMD_WAIT_MUTEX },
    #endif
-#ifdef __ULTRA_SA__
+#ifdef __ADF4351__
     { "x", cmd_x,    0 },
 #endif
     {NULL          , NULL            , 0}
@@ -2824,9 +2824,6 @@ int main(void)
   }
 #endif
 
-#ifdef __ULTRA_SA__
-  ADF4351_Setup();
-#endif
   /*
  * SPI LCD Initialize
  */

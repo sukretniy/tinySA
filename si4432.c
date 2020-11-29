@@ -779,7 +779,7 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 #endif
 //------------------------------- ADF4351 -------------------------------------
 
-#ifdef __ULTRA_SA__
+#ifdef __ADF4351__
 
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 #define bitSet(value, bit) ((value) |= (1UL << (bit)))

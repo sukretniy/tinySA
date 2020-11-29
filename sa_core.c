@@ -80,13 +80,8 @@ void update_min_max_freq(void)
     maxFreq = DEFAULT_MAX_FREQ;
     break;
   case M_HIGH:
-#ifdef __ULTRA_SA__
-    minFreq = 00000000;
-    maxFreq = 2000000000;
-#else
     minFreq = HIGH_MIN_FREQ_MHZ * 1000000;
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
-#endif
     break;
   case M_GENHIGH:
     minFreq = 240000000;
@@ -1170,11 +1165,6 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
     }
 #endif
   }
-#ifdef __ULTRA_SA__
-  else {
-    ADF4351_set_frequency(V-2,freq,3);
-  }
-#endif
   old_freq[V] = freq;
 }
 
@@ -1813,17 +1803,11 @@ modulation_again:
     } else
 #endif
     {                                           // Else set LO ('s)
-#ifdef __ULTRA_SA__
-      set_freq (2, config.frequency_IF2  + lf);                 // Scanning LO up to IF2
-      set_freq (3, config.frequency_IF2  - DEFAULT_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
-      set_freq (SI4432_LO, DEFAULT_IF);                 // Second IF fixed in Ultra SA mode
-#else
 #ifdef __SI4432__
       if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
         set_freq (SI4432_LO, local_IF-lf);                                                 // set LO SI4432 to below IF frequency
       else
         set_freq (SI4432_LO, local_IF+lf);                                                 // otherwise to above IF
-#endif
 #endif
     }
 
