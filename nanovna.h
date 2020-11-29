@@ -48,7 +48,6 @@
 // #define __AUDIO__
 #define __HAM_BAND__
 //#define __ULTRA__             // Add harmonics mode on low input.
-//#define __ULTRA_SA__            // Adds ADF4351 control for extra high 1st IF stage
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 #ifdef TINYSA3

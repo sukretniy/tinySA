@@ -384,7 +384,7 @@ VNA_SHELL_FUNCTION(cmd_selftest)
   sweep_mode = SWEEP_SELFTEST;
 }
 
-#ifdef __ULTRA_SA__
+#ifdef __ADF4351__
 VNA_SHELL_FUNCTION(cmd_x)
 {
   uint32_t reg;

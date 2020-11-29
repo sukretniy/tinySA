@@ -55,11 +55,7 @@ uistat_t uistat = {
 #define BIT_DOWN1   1
 
 #define READ_PORT() palReadPort(GPIOA)
-#ifdef __ULTRA_SA__
-#define BUTTON_MASK 0
-#else
 #define BUTTON_MASK 0b1110
-#endif
 
 static uint16_t last_button = 0b0000;
 static uint32_t last_button_down_ticks;
@@ -2700,13 +2696,8 @@ static void extcb1(EXTDriver *extp, expchannel_t channel)
 static const EXTConfig extcfg = {
   {
     {EXT_CH_MODE_DISABLED, NULL},
-#ifdef __ULTRA_SA__
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-#else
     {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOA, extcb1},
     {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOA, extcb1},
-#endif
     {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOA, extcb1},
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},
