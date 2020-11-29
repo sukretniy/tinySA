@@ -225,9 +225,7 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
 void set_refer_output(int v)
 {
   setting.refer = v;
-#ifdef __SI4432__
   set_calibration_freq(setting.refer);
-#endif
 //  dirty = true;
 }
 
@@ -1070,7 +1068,7 @@ void setupSA(void)
 #ifdef __SI4432__
   SI4432_Init();
 #endif
-  for (int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
+  for (unsigned int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
     old_freq[i] = 0;
     real_old_freq[i] = 0;
   }
@@ -1327,8 +1325,8 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   if (setting.spur_removal && actual_rbw_x10 > 3000)
     actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
   SI4432_Sel =  MODE_SELECT(setting.mode);
-  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
+  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
     vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
     if (setting.step_delay_mode==SD_PRECISE)    // if in Precise scanning
@@ -1482,36 +1480,6 @@ static const int spur_table[] =                                 // Frequencies t
  40960000,
  41600000,
  49650000,
-#ifdef IF_AT_4339
-  780000,           // 433.9MHz table
-   830000,
-   880000,
-   949000,
-  1390000,
-  1468000,
-  1830000,
-  1900000,
-  2770000,
-  2840000,
-  2880000,
-  4710000,
-  4780000,
-  4800000,
-  4880000,
-  6510000,
-  6750000,
-  6790000,
-  6860000,
-  7340000,
-  8100000,
-  8200000,
-  8880000,
-//  9970000,    10MHz!!!!!!
- 10870000,
- 11420000,
- 14880000,
- 16820000,
-#endif
 };
 
 int binary_search(int f)
@@ -1779,9 +1747,7 @@ modulation_again:
         local_IF = setting.frequency_IF;
     }
     if (setting.mode == M_LOW && tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
-#ifdef __SI4432__
       set_freq (SI4432_RX , local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
-#endif
     } else if (MODE_LOW(setting.mode)) {
       if (setting.mode == M_LOW && !in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
         local_IF = spur_alternate_IF;
@@ -3659,7 +3625,7 @@ void self_test(int test)
 #endif
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.offset_delay = setting.step_delay / 2;
-      setting.rbw_x10 = force_RBW(j);
+      setting.rbw_x10 = force_rbw(j);
 
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
 #if 0

@@ -22,6 +22,8 @@
 
 #define __SI4432_H__
 
+extern int SI4432_step_delay;
+extern int SI4432_offset_delay;
 #ifdef __SI4432__
 
 //
@@ -108,8 +110,7 @@
 
 
 extern volatile int SI4432_Sel;         // currently selected SI4432
-extern int SI4432_step_delay;
-extern int SI4432_offset_delay;
+
 extern int SI4432_frequency_changed;
 extern int SI4432_offset_changed;
 
@@ -147,15 +148,15 @@ int SI4432_is_fast_mode(void);
 bool PE4302_Write_Byte(unsigned char DATA );
 void PE4302_init(void);
 
-#ifdef __ULTRA_SA__
+#ifdef __ADF4351__
 extern int ADF4351_LE[];
 extern int debug;
 void   ADF4351_Setup(void);
 
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value);
-void ADF4351_set_frequency(int channel, uint32_t freq, int drive_strength);
-void ADF4351_prep_frequency(int channel, uint32_t freq, int drive_strength);
+uint32_t ADF4351_set_frequency(int channel, uint32_t freq, int drive_strength);
+uint32_t ADF4351_prep_frequency(int channel, uint32_t freq, int drive_strength);
 //int ADF4351_set_frequency_with_offset(uint32_t freq, int offset, uint8_t drive_strength);
 void ADF4351_Set(int channel);
 void ADF4351_enable_output(void);
