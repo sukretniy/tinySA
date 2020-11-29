@@ -275,10 +275,6 @@ VNA_SHELL_FUNCTION(cmd_if)
     int a = my_atoi(argv[0]);
     if (a!= 0 &&( a < (DEFAULT_IF - 2000000) || a>(DEFAULT_IF + 2000000)))
       goto usage;
-#ifdef __SI4463__
-    if (a!= 0 &&( a < 977000000 || a>980000000))
-      goto usage;
-#endif
     setting.auto_IF = false;
     set_IF(a);
   }

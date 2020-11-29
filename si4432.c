@@ -1532,7 +1532,7 @@ void SI4463_clear_int_status()
 
 }
 
-void Si4463_set_refer(int ref)
+void set_calibration_freq(int ref)
 {
 
   ref = 0;   // <--------------------- DISABLED FOR PROTOTYPE!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -2063,12 +2063,9 @@ uint16_t set_rbw(uint16_t WISH)  {
 
 static int refresh_count = 0;
 
-void SI4463_set_freq(uint32_t freq, uint32_t step_size)
+void SI4463_set_freq(uint32_t freq)
 {
-  (void) step_size;
-
 //  SI4463_set_gpio(3,GPIO_HIGH);
-
   int S = 4 ;               // Aprox 100 Hz channels
   SI4463_channel = 0;
   if (freq >= 822000000 && freq <= 1140000000)         {       // till 1140MHz

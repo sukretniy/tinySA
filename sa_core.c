@@ -153,8 +153,9 @@ void reset_settings(int m)
   case M_LOW:
     minFreq = 0;
     maxFreq = 4000000000;
-    set_sweep_frequency(ST_START, (uint32_t) 0);
-    set_sweep_frequency(ST_STOP, (uint32_t) DEFAULT_MAX_FREQ);
+    set_sweep_frequency(ST_START, minFreq);
+    set_sweep_frequency(ST_STOP, maxFreq);
+    set_sweep_frequency(ST_STOP, 800000000);    // TODO <----------------- temp ----------------------
     setting.attenuate = 0.0;    // <---------------- WARNING -----------------
     setting.auto_attenuation = false;   // <---------------- WARNING -----------------
     setting.sweep_time_us = 0;
@@ -174,13 +175,6 @@ void reset_settings(int m)
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     break;
   case M_HIGH:
-#ifdef __ULTRA_SA__
-    minFreq = 00000000;
-    maxFreq = 2000000000;
-#else
-    minFreq = HIGH_MIN_FREQ_MHZ*(config.setting_frequency_10mhz/10);
-    maxFreq = HIGH_MAX_FREQ_MHZ*(config.setting_frequency_10mhz/10);
-#endif
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
     setting.sweep_time_us = 0;
@@ -233,12 +227,7 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
 void set_refer_output(int v)
 {
   setting.refer = v;
-#ifdef __SI4432__
   set_calibration_freq(setting.refer);
-#endif
-#ifdef __SI4463__
-  Si4463_set_refer(setting.refer);
-#endif
   //  dirty = true;
 }
 
@@ -1154,8 +1143,6 @@ void setupSA(void)
 #define OFFSET_LOWER_BOUND 0
 #endif
 
-static uint32_t old_frequency_step;
-
 void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
 {
   if (old_freq[V] == freq)       // Do not change HW if not needed
@@ -1242,11 +1229,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
     real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
   } else
     if (V==SI4463_RX) {
-      if (setting.frequency_step<930000)                  // maximum step size is 937.49kHz
-        SI4463_set_freq(freq,setting.frequency_step);
-      else
-        SI4463_set_freq(freq,100);
-      old_frequency_step = setting.frequency_step;
+      SI4463_set_freq(freq);
     }
 #ifdef __ULTRA_SA__
     else {
@@ -1422,13 +1405,12 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   if (setting.spur_removal && actual_rbw_x10 > 3000)
     actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
   SI4432_Sel =  MODE_SELECT(setting.mode);
-  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
 #ifdef __SI4463__
 //  if (setting.spur_removal && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
 //    actual_rbw_x10 = 3000;                         // if spur suppression reduce max rbw to fit within BPF
-  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
+  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
     vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
     if (setting.step_delay_mode==SD_PRECISE)    // if in Precise scanning
@@ -1586,36 +1568,6 @@ static const int spur_table[] =                                 // Frequencies t
  40960000,
  41600000,
  49650000,
-#endif
-#ifdef IF_AT_4339
-  780000,           // 433.9MHz table
-   830000,
-   880000,
-   949000,
-  1390000,
-  1468000,
-  1830000,
-  1900000,
-  2770000,
-  2840000,
-  2880000,
-  4710000,
-  4780000,
-  4800000,
-  4880000,
-  6510000,
-  6750000,
-  6790000,
-  6860000,
-  7340000,
-  8100000,
-  8200000,
-  8880000,
-//  9970000,    10MHz!!!!!!
- 10870000,
- 11420000,
- 14880000,
- 16820000,
 #endif
 };
 
