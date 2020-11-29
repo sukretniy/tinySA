@@ -74,8 +74,8 @@ static uint32_t new_port_moder;
 #define SPI1_SDO       ((palReadPort(GPIOB)>>GPIOB_SPI_MISO)&1)
 #define SPI1_portSDO   (palReadPort(GPIOB)&(1<<GPIOB_SPI_MISO))
 #ifdef __PE4302__
-#define CS_PE_HIGH      palSetPad(GPIOC, GPIO_PE_SEL)
-#define CS_PE_LOW      palClearPad(GPIOC, GPIO_PE_SEL)
+#define CS_PE_HIGH      palSetPad(GPIO_PE, GPIO_PE_SEL)
+#define CS_PE_LOW      palClearPad(GPIO_PE, GPIO_PE_SEL)
 #endif
 
 //#define MAXLOG 1024
@@ -2029,7 +2029,7 @@ static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
 static int prev_band = -1;
 
 
-uint16_t SI4463_force_RBW(int f)
+uint16_t force_rbw(int f)
 {
   if (SI4463_in_tx_mode)
     return(0);
@@ -2050,12 +2050,12 @@ uint16_t SI4463_force_RBW(int f)
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }
 
-uint16_t SI4463_SET_RBW(uint16_t WISH)  {
+uint16_t set_rbw(uint16_t WISH)  {
   int i;
   for (i=0; i < (int)(sizeof(RBW_choices)/sizeof(RBW_t)) - 1; i++)
     if (WISH <= RBW_choices[i].RBWx10 * 15/10)
       break;
-  return SI4463_force_RBW(i);
+  return force_rbw(i);
 }
 
 

@@ -63,7 +63,8 @@
 #define GPIOA_XP				6
 #define GPIOA_YP				7
 //#define GPIOA_MCO				8
-#define GPIOA_PE_SEL            9
+#define GPIO_PE_SEL            9
+#define GPIO_PE            GPIOA
 #define GPIOA_RF_PWR 			10
 #define GPIOA_USB_DM            11
 #define GPIOA_USB_DP            12
@@ -134,7 +135,7 @@
                                      PIN_MODE_ANALOG(GPIOA_XP) |    \
                                      PIN_MODE_ANALOG(GPIOA_YP) |    \
                                      PIN_MODE_ALTERNATE(8U) | \
-                                     PIN_MODE_OUTPUT(GPIOA_PE_SEL) |           \
+                                     PIN_MODE_OUTPUT(GPIO_PE_SEL) |           \
                                      PIN_MODE_OUTPUT(GPIOA_RF_PWR) | \
                                      PIN_MODE_ALTERNATE(GPIOA_USB_DM) |  \
                                      PIN_MODE_ALTERNATE(GPIOA_USB_DP) |  \
@@ -150,7 +151,7 @@
                                      PIN_OTYPE_PUSHPULL(6U) |       \
                                      PIN_OTYPE_PUSHPULL(7U) |       \
                                      PIN_OTYPE_PUSHPULL(8U) |       \
-                                     PIN_OTYPE_PUSHPULL(GPIOA_PE_SEL) |       \
+                                     PIN_OTYPE_PUSHPULL(GPIO_PE_SEL) |       \
                                      PIN_OTYPE_PUSHPULL(GPIOA_RF_PWR) | \
                                      PIN_OTYPE_PUSHPULL(GPIOA_USB_DM) |  \
                                      PIN_OTYPE_PUSHPULL(GPIOA_USB_DP) |  \
@@ -166,7 +167,7 @@
                                      PIN_OSPEED_2M(6) |          \
                                      PIN_OSPEED_2M(7) |          \
                                      PIN_OSPEED_100M(8U) | \
-                                     PIN_OSPEED_100M(GPIOA_PE_SEL) |          \
+                                     PIN_OSPEED_100M(GPIO_PE_SEL) |          \
                                      PIN_OSPEED_100M(GPIOA_RF_PWR) |         \
                                      PIN_OSPEED_100M(GPIOA_USB_DM) |     \
                                      PIN_OSPEED_100M(GPIOA_USB_DP) |     \
@@ -182,7 +183,7 @@
                                      PIN_PUPDR_FLOATING(6) |         \
                                      PIN_PUPDR_FLOATING(7) |         \
                                      PIN_PUPDR_PULLUP(8U) | \
-                                     PIN_PUPDR_PULLUP(GPIOA_PE_SEL) |         \
+                                     PIN_PUPDR_PULLUP(GPIO_PE_SEL) |         \
                                      PIN_PUPDR_PULLUP(GPIOA_RF_PWR) | \
                                      PIN_PUPDR_FLOATING(GPIOA_USB_DM) | \
                                      PIN_PUPDR_FLOATING(GPIOA_USB_DP) | \
@@ -198,7 +199,7 @@
                                      PIN_ODR_HIGH(6) |             \
                                      PIN_ODR_HIGH(7) |             \
                                      PIN_ODR_HIGH(8U) |     \
-                                     PIN_ODR_HIGH(GPIOA_PE_SEL) |             \
+                                     PIN_ODR_HIGH(GPIO_PE_SEL) |             \
                                      PIN_ODR_HIGH(GPIOA_RF_PWR) | \
                                      PIN_ODR_HIGH(GPIOA_USB_DM) |   \
                                      PIN_ODR_HIGH(GPIOA_USB_DP) |   \
@@ -214,7 +215,7 @@
                                      PIN_AFIO_AF(6, 0) |           \
                                      PIN_AFIO_AF(7, 0))
 #define VAL_GPIOA_AFRH              (PIN_AFIO_AF(8U, 0) |           \
-                                     PIN_AFIO_AF(GPIOA_PE_SEL, 0) |           \
+                                     PIN_AFIO_AF(GPIO_PE_SEL, 0) |           \
                                      PIN_AFIO_AF(GPIOA_RF_PWR, 0) |          \
                                      PIN_AFIO_AF(GPIOA_USB_DM, 14) |     \
                                      PIN_AFIO_AF(GPIOA_USB_DP, 14) |     \

@@ -1114,7 +1114,7 @@ void setupSA(void)
 #ifdef __SI4432__
   SI4432_Init();
 #endif
-  for (int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
+  for (unsigned int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
     old_freq[i] = 0;
     real_old_freq[i] = 0;
   }
@@ -1427,7 +1427,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 #ifdef __SI4463__
 //  if (setting.spur_removal && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
 //    actual_rbw_x10 = 3000;                         // if spur suppression reduce max rbw to fit within BPF
-  actual_rbw_x10 = SI4463_SET_RBW(actual_rbw_x10);  // see what rbw the SI4432 can realize
+  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
 #endif
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
     vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
@@ -2277,7 +2277,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
-
+#endif
 #ifdef __SI4432__
       if (check_for_AM) {
         int AGC_value = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0;
@@ -3826,7 +3826,7 @@ void self_test(int test)
 #endif
       setting.step_delay = setting.step_delay * 5 / 4;
       setting.offset_delay = setting.step_delay / 2;
-      setting.rbw_x10 = force_RBW(j);
+      setting.rbw_x10 = force_rbw(j);
 
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
 #if 0
