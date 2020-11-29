@@ -146,8 +146,6 @@ void reset_settings(int m)
 #endif
   switch(m) {
   case M_LOW:
-    minFreq = 0;
-    maxFreq = 4000000000;
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP, maxFreq);
     set_sweep_frequency(ST_STOP, 800000000);    // TODO <----------------- temp ----------------------
