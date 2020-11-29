@@ -1893,11 +1893,13 @@ modulation_again:
     } else
 #endif
     {                                           // Else set LO ('s)
-#ifdef __SI4432__
-      if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
-        set_freq (SI4432_LO, local_IF-lf);                                                 // set LO SI4432 to below IF frequency
+      uint32_t target_f;
+	  if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
+        target_f = local_IF-lf;                                                 // set LO SI4432 to below IF frequency
       else
-        set_freq (SI4432_LO, local_IF+lf);                                                 // otherwise to above IF
+        target_f = local_IF+lf;                                                 // otherwise to above IF
+#ifdef __SI4432__
+      set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
 #ifdef __ADF4351__
 //      START_PROFILE;
@@ -1950,12 +1952,12 @@ modulation_again:
 
 // ----------- Set IF ------------------
 
-#ifdef __SI4432__
     if (local_IF != 0)
     {
+#ifdef __SI4432__
       set_freq (SI4432_RX , local_IF);
-    }
 #endif
+    }
 
     if (MODE_OUTPUT(setting.mode)) {
 #ifdef __SI4432__
