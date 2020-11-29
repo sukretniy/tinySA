@@ -1720,7 +1720,8 @@ modulation_again:
       lf += offs;
     }
 
-    // --------------- Set all the LO's ------------------------
+// -------------- Calculate the IF -----------------------------
+
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
@@ -1730,47 +1731,41 @@ modulation_again:
 
     if (MODE_HIGH(setting.mode))
       local_IF = 0;
-    else {
-      if (setting.auto_IF)
-        local_IF = setting.spur_removal ? DEFAULT_IF : spur_IF;
-      else
+    else if (MODE_LOW(setting.mode)){                                              // All low mode
+      if (!setting.auto_IF) {
         local_IF = setting.frequency_IF;
-    }
-    if (setting.mode == M_LOW && tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
-      set_freq (SI4432_RX , local_IF + lf - reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
-    } else if (MODE_LOW(setting.mode)) {
-      if (setting.mode == M_LOW && !in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
-        local_IF = spur_alternate_IF;
-#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-        stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
-#endif
-#ifdef __SPUR__
-      } else if (setting.mode== M_LOW && setting.spur_removal){         // If in low input mode and spur reduction is on
-        if (S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
-        {              // else low/above IF
-          if (setting.spur_removal == 1)
-            setting.below_IF = S_AUTO_ON;               // use below IF in first pass
-          else
-            setting.below_IF = S_AUTO_OFF;              // and above IF in second pass
-        }
-        else 
-		{
-          if (setting.spur_removal == -1)                       // If second spur pass
-          local_IF  = local_IF + 1000000;           // apply IF spur shift
-        }
-#endif
       }
-      if (setting.mode == M_GENLOW && setting.modulation == MO_EXTERNAL)    // VERY SPECIAL CASE !!!!!! LO input via high port
-        local_IF += lf;
-
-      // --------------------- IF know, set the RX SI4432 frequency ------------------------
-
-#ifdef __SI4432__
-      if (setting.mode == M_LOW || setting.mode == M_GENLOW )
-      {
-		set_freq (SI4432_RX , local_IF);
-	  }
+      local_IF = DEFAULT_IF;
+      if (setting.mode == M_LOW) {
+        if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
+          local_IF += lf - reffer_freq[setting.refer];    // Offset so fundamental of reffer is visible
+          lf = reffer_freq[setting.refer];
+        } else {
+          if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
+            local_IF = spur_alternate_IF;
+#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
+            stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
 #endif
+          }
+          if (setting.spur_removal){         // If in low input mode and spur reduction is on
+            if (S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
+            {              // else low/above IF
+              if (setting.spur_removal == 1)
+                setting.below_IF = S_AUTO_ON;               // use below IF in first pass
+              else
+                setting.below_IF = S_AUTO_OFF;              // and above IF in second pass
+            }
+            else
+            {
+              if (setting.spur_removal == -1)                       // If second spur pass
+                local_IF  = local_IF + 1000000;           // apply IF spur shift
+            }
+          }
+        }
+      } else {              // Output mode
+        if (setting.modulation == MO_EXTERNAL)    // VERY SPECIAL CASE !!!!!! LO input via high port
+          local_IF += lf;
+      }
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
       local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur_removal*300000 : 0 );
@@ -1779,8 +1774,10 @@ modulation_again:
 #endif
       //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?setting.spur_removal * 1000 * actual_rbw:0);
 #endif
-    } else          // This must be high mode
-      local_IF= 0;
+    }
+
+    // ------------- Set LO ---------------------------
+
 #ifdef __ULTRA__
     if (setting.mode == M_ULTRA) {      // Set LO to correct harmonic in Ultra mode
       //      if (lf > 3406000000 )
@@ -1810,6 +1807,15 @@ modulation_again:
         set_freq (SI4432_LO, local_IF+lf);                                                 // otherwise to above IF
 #endif
     }
+
+// ----------- Set IF ------------------
+
+#ifdef __SI4432__
+    if (local_IF != 0)
+    {
+      set_freq (SI4432_RX , local_IF);
+    }
+#endif
 
     if (MODE_OUTPUT(setting.mode)) {
 #ifdef __SI4432__
