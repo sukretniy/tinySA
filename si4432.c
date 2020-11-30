@@ -52,16 +52,16 @@ static uint32_t new_port_moder;
 #endif
 
 
-#define CS_SI0_HIGH     palSetPad(GPIOB, GPIOB_RX_SEL)
-#define CS_SI1_HIGH     palSetPad(GPIOB, GPIOB_LO_SEL)
+#define CS_SI0_HIGH     palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL)
+#define CS_SI1_HIGH     palSetPad(GPIO_RX_SEL_PORT, GPIOB_LO_SEL)
 //#define CS_PE_HIGH      palSetPad(GPIOA, GPIOA_PE_SEL)
 
 #define RF_POWER_HIGH   palSetPad(GPIOB, GPIOB_RF_PWR)
 //#define SPI2_CLK_HIGH   palSetPad(GPIOB, GPIO_SPI2_CLK)
 //#define SPI2_CLK_LOW    palClearPad(GPIOB, GPIO_SPI2_CLK)
 
-#define CS_SI0_LOW      palClearPad(GPIOB, GPIOB_RX_SEL)
-#define CS_SI1_LOW      palClearPad(GPIOB, GPIOB_LO_SEL)
+#define CS_SI0_LOW      palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL)
+#define CS_SI1_LOW      palClearPad(GPIO_RX_SEL_PORT, GPIOB_LO_SEL)
 //#define CS_PE_LOW       palClearPad(GPIOA, GPIOA_PE_SEL)
 
 #define SPI1_CLK_HIGH   palSetPad(GPIOB, GPIOB_SPI_SCLK)
@@ -74,8 +74,8 @@ static uint32_t new_port_moder;
 #define SPI1_SDO       ((palReadPort(GPIOB)>>GPIOB_SPI_MISO)&1)
 #define SPI1_portSDO   (palReadPort(GPIOB)&(1<<GPIOB_SPI_MISO))
 #ifdef __PE4302__
-#define CS_PE_HIGH      palSetPad(GPIO_PE, GPIO_PE_SEL)
-#define CS_PE_LOW      palClearPad(GPIO_PE, GPIO_PE_SEL)
+#define CS_PE_HIGH      palSetPad(GPIO_PE_SEL_PORT, GPIO_PE_SEL)
+#define CS_PE_LOW      palClearPad(GPIO_PE_SEL_PORT, GPIO_PE_SEL)
 #endif
 
 //#define MAXLOG 1024
@@ -1212,22 +1212,22 @@ int SI4463_wait_for_cts(void)
 void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 {
   set_SPI_mode(SPI_MODE_SI);
-  palClearPad(GPIOB, GPIOB_RX_SEL);
+  palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   shiftOut( DATA );
-  palSetPad(GPIOB, GPIOB_RX_SEL);
+  palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
 }
 
 void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 {
   set_SPI_mode(SPI_MODE_SI);
-  palClearPad(GPIOB, GPIOB_RX_SEL);
+  palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   while (len-- > 0)
     shiftOut( *(DATA++) );
-  palSetPad(GPIOB, GPIOB_RX_SEL);
+  palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
 }
 
 
@@ -1236,10 +1236,10 @@ uint8_t SI4463_read_byte( uint8_t ADR )
   set_SPI_mode(SPI_MODE_SI);
   uint8_t DATA ;
   set_SPI_mode(SPI_MODE_SI);
-  palClearPad(GPIOB, GPIOB_RX_SEL);
+  palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
   shiftOut( ADR );
   DATA = shiftIn();
-  palSetPad(GPIOB, GPIOB_RX_SEL);
+  palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
   return DATA ;
 }
 
@@ -1251,7 +1251,7 @@ uint8_t SI4463_get_response(void* buff, uint8_t len)
     if (!cts) {
       return false;
     }
-    palClearPad(GPIOB, GPIOB_RX_SEL);
+    palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
     shiftOut( SI446X_CMD_READ_CMD_BUFF );
     cts = (shiftIn() == 0xFF);
     if (cts)
@@ -1261,7 +1261,7 @@ uint8_t SI4463_get_response(void* buff, uint8_t len)
             ((uint8_t*)buff)[i] = shiftIn();
         }
     }
-    palSetPad(GPIOB, GPIOB_RX_SEL);
+    palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
     return cts;
 }
 
@@ -1289,11 +1289,11 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   if (SI4463_wait_for_cts())
 #endif
     {
-    palClearPad(GPIOB, GPIOB_RX_SEL);
+    palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
     for(uint8_t i=0;i<len;i++) {
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
     }
-    palSetPad(GPIOB, GPIOB_RX_SEL);
+    palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
 #if 0
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
 #if 0

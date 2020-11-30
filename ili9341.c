@@ -27,12 +27,12 @@
 #define __USE_DISPLAY_DMA_RX__
 
 // Pin macros for LCD
-#define LCD_CS_LOW        palClearPad(GPIOB, GPIOB_LCD_CS)
-#define LCD_CS_HIGH       palSetPad(GPIOB, GPIOB_LCD_CS)
-#define LCD_RESET_ASSERT  palClearPad(GPIOA, GPIOA_LCD_RESET)
-#define LCD_RESET_NEGATE  palSetPad(GPIOA, GPIOA_LCD_RESET)
-#define LCD_DC_CMD        palClearPad(GPIOB, GPIOB_LCD_CD)
-#define LCD_DC_DATA       palSetPad(GPIOB, GPIOB_LCD_CD)
+#define LCD_CS_LOW        palClearPad(GPIO_LCD_CS_PORT, GPIO_LCD_CS)
+#define LCD_CS_HIGH       palSetPad(GPIO_LCD_CS_PORT, GPIO_LCD_CS)
+#define LCD_RESET_ASSERT  palClearPad(GPIO_LCD_RESET_PORT, GPIO_LCD_RESET)
+#define LCD_RESET_NEGATE  palSetPad(GPIO_LCD_RESET_PORT, GPIO_LCD_RESET)
+#define LCD_DC_CMD        palClearPad(GPIO_LCD_CD_PORT, GPIO_LCD_CD)
+#define LCD_DC_DATA       palSetPad(GPIO_LCD_CD_PORT, GPIO_LCD_CD)
 
 #define LCD_SPI           SPI1
 // Set SPI bus speed for LCD
