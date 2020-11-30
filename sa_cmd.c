@@ -272,8 +272,8 @@ VNA_SHELL_FUNCTION(cmd_if)
     shell_printf("usage: if {433M..435M}\r\n");
     return;
   } else {
-    int a = my_atoi(argv[0]);
-    if (a!= 0 &&( a < (DEFAULT_IF - 2000000) || a>(DEFAULT_IF + 2000000)))
+    uint32_t a = (uint32_t)my_atoi(argv[0]);
+    if (a!= 0 &&( a < (DEFAULT_IF - (uint32_t)2000000) || a>(DEFAULT_IF + (uint32_t)2000000)))
       goto usage;
     setting.auto_IF = false;
     set_IF(a);
@@ -325,13 +325,13 @@ VNA_SHELL_FUNCTION(cmd_v)
 VNA_SHELL_FUNCTION(cmd_y)
 {
   int rvalue;
-  int lvalue = 0;
   if (argc != 1 && argc != 2) {
     shell_printf("usage: y {addr(0-95)} [value(0-0xFF)]\r\n");
     return;
   }
   rvalue = my_atoui(argv[0]);
 #ifdef __SI4432__
+  int lvalue = 0;
   SI4432_Sel = VFO;
   if (argc == 2){
     lvalue = my_atoui(argv[1]);

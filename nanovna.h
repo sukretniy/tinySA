@@ -58,9 +58,9 @@
 #define HIGH_MAX_FREQ_MHZ   960
 #endif
 #ifdef TINYSA4
-#define DEFAULT_IF  978000000
-#define DEFAULT_SPUR_IF 979000000
-#define DEFAULT_MAX_FREQ    800000000
+#define DEFAULT_IF  ((uint32_t)978000000)
+#define DEFAULT_SPUR_IF ((uint32_t)979000000)
+#define DEFAULT_MAX_FREQ    ((uint32_t)800000000)
 #define HIGH_MIN_FREQ_MHZ   850
 #define HIGH_MAX_FREQ_MHZ   1150
 #endif
@@ -1085,11 +1085,17 @@ enum {
 
 
 // -------------------- Si4432.c ---------------
+
+void set_calibration_freq(int ref);
+uint16_t set_rbw(uint16_t WISH);
+uint16_t force_rbw(int f);
+
 #ifdef __SI4463__
 extern int SI4463_R;
-void Si4463_set_refer(int ref);
+void SI4463_set_freq(uint32_t freq);
 void SI446x_set_AGC_LNA(uint8_t v);
 void SI4463_set_gpio(int i, int s);
+void SI4463_set_output_level(int t);
 #define GPIO_HIGH   3
 #define GPIO_LOW    2
 void SI4463_start_tx(uint8_t CHANNEL);

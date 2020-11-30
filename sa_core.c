@@ -1756,8 +1756,8 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
           modulation_delay += config.cor_nfm;  // -17 default
           // modulation_index = 0; // default value
         }
-        if ((setting.mode == M_GENLOW  && f > 480000000 - DEFAULT_IF) ||
-            (setting.mode == M_GENHIGH  && f > 480000000) )
+        if ((setting.mode == M_GENLOW  && f > ((uint32_t)480000000) - DEFAULT_IF) ||
+            (setting.mode == M_GENHIGH  && f > ((uint32_t)480000000) ) )
           modulation_index += 2;
         current_fm_modulation = (int *)fm_modulation[modulation_index];
         f -= fm_modulation_offset[modulation_index];           // Shift output frequency
@@ -1815,13 +1815,14 @@ modulation_again:
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
-    int32_t local_IF;
+    uint32_t local_IF;
 
     again:                                                              // Spur reduction jumps to here for second measurement
 
-    if (MODE_HIGH(setting.mode))
+    local_IF=0;                                                         // to get rid of warning
+    if (MODE_HIGH(setting.mode)) {
       local_IF = 0;
-    else if (MODE_LOW(setting.mode)){                                              // All low mode
+    } else if (MODE_LOW(setting.mode)){                                              // All low mode
       if (!setting.auto_IF) {
         local_IF = setting.frequency_IF;
       }
@@ -1897,7 +1898,7 @@ modulation_again:
 	  if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
         target_f = local_IF-lf;                                                 // set LO SI4432 to below IF frequency
       else
-        target_f = local_IF+lf;                                                 // otherwise to above IF
+        target_f = local_IF+lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
 #ifdef __SI4432__
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
@@ -1918,7 +1919,7 @@ modulation_again:
             ADF4351_R_counter(1);
         }
 #endif
-
+#if 0
        uint32_t target_f;
         if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
           if (lf > local_IF + 138000000)
@@ -1927,6 +1928,7 @@ modulation_again:
             target_f = local_IF-lf; // set LO SI4432 to below IF frequency
         } else
           target_f = local_IF+lf; // otherwise to above IF
+#endif
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
         int32_t error_f = 0;
@@ -1941,9 +1943,7 @@ modulation_again:
             local_IF += error_f;
         }
 #endif
-        if (!tracking)
-          set_freq (SI4463_RX, local_IF);   // compensate ADF error with SI446x when not in tracking mode
-      } else if (setting.mode == M_HIGH || setting.mode == M_GENHIGH) {
+      } else if (MODE_HIGH(setting.mode)) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       }
 //      STOP_PROFILE;
@@ -1952,10 +1952,13 @@ modulation_again:
 
 // ----------- Set IF ------------------
 
-    if (local_IF != 0)
+    if (local_IF != 0)                  // When not in one of the high modes
     {
 #ifdef __SI4432__
       set_freq (SI4432_RX , local_IF);
+#endif
+#ifdef __SI4463__
+      set_freq (SI4463_RX, local_IF);   // including compensating ADF error with SI446x when not in tracking mode
 #endif
     }
 
@@ -2095,13 +2098,14 @@ static bool sweep(bool break_on_operation)
 {
   float RSSI;
   int16_t downslope;
+#ifdef __SI4432__
   uint32_t agc_peak_freq = 0;
   float agc_peak_rssi = -150;
   float agc_prev_rssi = -150;
   int last_AGC_value = 0;
   uint8_t last_AGC_direction_up = false;
   int AGC_flip_count = 0;
-
+#endif
   //  if (setting.mode== -1)
   //    return;
   //  START_PROFILE;
@@ -3683,7 +3687,7 @@ void self_test(int test)
     setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
-    int f = 400000;           // Start search at 400kHz
+    uint32_t f = 400000;           // Start search at 400kHz
     //  int i = 0;                     // Index in spur table (temp_t)
     set_RBW(setting.frequency_step/100);
     last_spur = 0;

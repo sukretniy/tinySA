@@ -54,7 +54,7 @@ static uint32_t new_port_moder;
 
 #define CS_SI0_HIGH     palSetPad(GPIOB, GPIOB_RX_SEL)
 #define CS_SI1_HIGH     palSetPad(GPIOB, GPIOB_LO_SEL)
-#define CS_PE_HIGH      palSetPad(GPIOA, GPIOA_PE_SEL)
+//#define CS_PE_HIGH      palSetPad(GPIOA, GPIOA_PE_SEL)
 
 #define RF_POWER_HIGH   palSetPad(GPIOB, GPIOB_RF_PWR)
 //#define SPI2_CLK_HIGH   palSetPad(GPIOB, GPIO_SPI2_CLK)
@@ -62,7 +62,7 @@ static uint32_t new_port_moder;
 
 #define CS_SI0_LOW      palClearPad(GPIOB, GPIOB_RX_SEL)
 #define CS_SI1_LOW      palClearPad(GPIOB, GPIOB_LO_SEL)
-#define CS_PE_LOW       palClearPad(GPIOA, GPIOA_PE_SEL)
+//#define CS_PE_LOW       palClearPad(GPIOA, GPIOA_PE_SEL)
 
 #define SPI1_CLK_HIGH   palSetPad(GPIOB, GPIOB_SPI_SCLK)
 #define SPI1_CLK_LOW    palClearPad(GPIOB, GPIOB_SPI_SCLK)
@@ -1121,6 +1121,13 @@ uint32_t ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // 
  //   Serial.println( "MOD/FRAC reduced");
     }
 #endif
+    uint32_t reduce = gcd(MOD, FRAC);
+    if (reduce) {
+      FRAC /= reduce;
+      MOD /= reduce;
+      if (MOD == 1)
+        MOD=2;
+    }
     uint32_t actual_freq = PFDR *(INTA * MOD +FRAC)/OutputDivider / MOD;
     volatile int max_delta =  1000000 * PFDRFout[channel]/OutputDivider/MOD;
     if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
@@ -1174,8 +1181,8 @@ uint32_t ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // 
 int SI4463_frequency_changed = false;
 static int SI4463_band = -1;
 static int64_t SI4463_outdiv = -1;
-static uint32_t SI4463_prev_freq = 0;
-static float SI4463_step_size = 100;        // Will be recalculated once used
+//static uint32_t SI4463_prev_freq = 0;
+//static float SI4463_step_size = 100;        // Will be recalculated once used
 static uint8_t SI4463_channel = 0;
 static uint8_t SI4463_in_tx_mode = false;
 int SI4463_R = 5;
@@ -1307,6 +1314,7 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   }
 }
 
+#ifdef notused
 static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 {
     // len must not be greater than 12
@@ -1323,6 +1331,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 
     SI4463_do_api(data, len + 4, NULL, 0);
 }
+#endif
 
 #include "SI446x_cmd.h"
 
@@ -1332,7 +1341,7 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #endif
 
 #ifdef __SI4468__
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #undef RADIO_CONFIGURATION_DATA_ARRAY
 #include "radio_config_Si4468_default.h"
 
@@ -1344,6 +1353,7 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 
 //#undef RF_MODEM_AGC_CONTROL_1
 //#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
+#undef RF_MODEM_AGC_CONTROL_1
 #define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE0 + 0x10 + 0x08 // slow AGC
 //#undef RF_MODEM_RSSI_JUMP_THRESH_4
 //#define RF_MODEM_RSSI_JUMP_THRESH_4 0x11, 0x20, 0x04, 0x4B, 0x06, 0x09, 0x10, 0x45  // Increase RSSI reported value with 2.5dB
@@ -1409,7 +1419,7 @@ void SI4463_set_output_level(int t)
 }
 void SI4463_start_tx(uint8_t CHANNEL)
 {
-  volatile si446x_state_t s;
+//  volatile si446x_state_t s;
 #if 0
   s = SI4463_get_state();
   if (s == SI446X_STATE_RX){
@@ -1444,7 +1454,7 @@ void SI4463_start_tx(uint8_t CHANNEL)
     SI4463_do_api(data, sizeof(data), NULL, 0);
   }
 #endif
-  retry:
+//  retry:
   {
     uint8_t data[] =
     {
@@ -1498,7 +1508,7 @@ void SI4463_start_rx(uint8_t CHANNEL)
     0,// SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
     0, //SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
   };
-retry:
+//retry:
   SI4463_do_api(data, sizeof(data), NULL, 0);
 
 #if 0
@@ -1518,12 +1528,11 @@ void SI4463_short_start_rx(void)
   uint8_t data[] = {
     SI446X_CMD_ID_START_RX,
   };
-retry:
   SI4463_do_api(data, sizeof(data), NULL, 0);
   SI4463_in_tx_mode = false;
 }
 
-void SI4463_clear_int_status()
+void SI4463_clear_int_status(void)
 {
   uint8_t data[9] = {
     SI446X_CMD_ID_GET_INT_STATUS
@@ -1584,7 +1593,7 @@ void Si446x_getInfo(si446x_info_t* info)
     info->patch         = (data[3]<<8) | data[4];
     info->func          = data[5];
 }
-
+#ifdef notused
 static uint8_t SI4463_get_device_status(void)
 {
   uint8_t data[2] =
@@ -1594,7 +1603,7 @@ static uint8_t SI4463_get_device_status(void)
   SI4463_do_api(data, 1, data, SI446X_CMD_REPLY_COUNT_REQUEST_DEVICE_STATE);
   return(data[0]);
 }
-
+#endif
 
 
 // Read a fast response register
@@ -1666,7 +1675,7 @@ void set_RSSI_comp(void)
 
 int16_t Si446x_RSSI(void)
 {
-  volatile uint8_t data[3] = {
+  uint8_t data[3] = {
         SI446X_CMD_GET_MODEM_STATUS,
         0xFF
   };
@@ -1737,7 +1746,7 @@ void SI446x_set_AGC_LNA(uint8_t v)
 }
 
 
-
+#ifdef notused
 // Do an ADC conversion
 static uint16_t getADC(uint8_t adc_en, uint8_t adc_cfg, uint8_t part)
 {
@@ -1749,6 +1758,7 @@ static uint16_t getADC(uint8_t adc_en, uint8_t adc_cfg, uint8_t part)
     SI4463_do_api(data, 3, data, 6);
     return (data[part]<<8 | data[part + 1]);
 }
+#endif
 
 #ifndef __SI4468__
 // -------------- 0.2 kHz ----------------------------
@@ -1933,7 +1943,7 @@ uint8_t SI4463_RBW_850kHz[] =
 #else
 // -------------- 0.2 kHz ----------------------------
 
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_200Hz.h"
 #include "radio_config_Si4468_short.h"
 
@@ -1942,7 +1952,7 @@ static const uint8_t SI4463_RBW_02kHz[] =
 
 // -------------- 1kHz ----------------------------
 
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_1kHz.h"
 #include "radio_config_Si4468_short.h"
 
@@ -1950,7 +1960,7 @@ static const uint8_t SI4463_RBW_1kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
 
 // -------------- 3 kHz ----------------------------
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_3kHz.h"
 #include "radio_config_Si4468_short.h"
 
@@ -1958,7 +1968,7 @@ static const uint8_t SI4463_RBW_3kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
 
 // -------------- 10 kHz ----------------------------
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_10kHz.h"
 #include "radio_config_Si4468_short.h"
 
@@ -1966,7 +1976,7 @@ static const uint8_t SI4463_RBW_10kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
 
 // -------------- 30 kHz ----------------------------
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_30kHz.h"
 #include "radio_config_Si4468_short.h"
 
@@ -1974,7 +1984,7 @@ static const uint8_t SI4463_RBW_30kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
 
 // -------------- 100kHz ----------------------------
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_100kHz.h"
 #include "radio_config_Si4468_short.h"
 
@@ -1983,7 +1993,7 @@ static const uint8_t SI4463_RBW_100kHz[] =
 
 // -------------- 300kHz ----------------------------
 
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_300kHz.h"
 #include "radio_config_Si4468_short.h"
 
@@ -1992,7 +2002,7 @@ static const uint8_t SI4463_RBW_300kHz[] =
 
 // -------------- 850kHz ----------------------------
 
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_850kHz.h"
 #include "radio_config_Si4468_short.h"
 
@@ -2005,7 +2015,7 @@ static const uint8_t SI4463_RBW_850kHz[] =
 // Return the first entry of the following triple for the RBW actually achieved
 #define IF_BW(dwn3, ndec, filset) (((dwn3)<<7)|((ndec)<<4)|(filset))
 typedef struct {
-  uint8_t  *reg;                   // IF_BW(dwn3, ndec, filset)
+  const uint8_t  *reg;                   // IF_BW(dwn3, ndec, filset)
   int16_t   RSSI_correction_x_10;  // Correction * 10
   int16_t RBWx10;                // RBW in kHz
 }RBW_t; // sizeof(RBW_t) = 8 bytes
@@ -2034,7 +2044,7 @@ uint16_t force_rbw(int f)
   if (SI4463_in_tx_mode)
     return(0);
   SI4463_set_state(SI446X_STATE_READY);
-  uint8_t *config = RBW_choices[f].reg;
+  const uint8_t *config = RBW_choices[f].reg;
   uint16_t i=0;
   while(config[i] != 0)
   {
@@ -2204,7 +2214,7 @@ void SI4463_set_freq(uint32_t freq)
 
 void SI4463_init_rx(void)
 {
-reset:
+// reset:
   SI_SDN_LOW;
   my_microsecond_delay(100);
   SI_SDN_HIGH;
@@ -2241,7 +2251,7 @@ again:
 
 
 #if 0
-#undef RADIO_CONFIG_H_
+#include "radio_config_Si4468_undef.h"
 #include "radio_config_Si4468_tx.h"
 
 static const uint8_t SI4463_config_tx[] =
