@@ -215,7 +215,8 @@ int is_paused(void);
 void set_actual_power(float);
 void SetGenerate(int);
 void set_RBW(uint32_t rbw_x10);
-void set_drive(int d);
+void set_lo_drive(int d);
+void set_rx_drive(int d);
 void set_IF(int f);
 void set_IF2(int f);
 void set_R(int f);
@@ -739,7 +740,8 @@ typedef struct setting
   int average;
   int show_stored;
   int subtract_stored;
-  int drive; // 0-7 , 7=+20dBm, 3dB steps
+  int lo_drive; // 0-3 , 3dB steps
+  int rx_drive; // 0-15 , 7=+20dBm, 3dB steps
   int agc;
   int lna;
   int auto_reflevel;
@@ -790,6 +792,7 @@ typedef struct setting
   float normalize_level;     // Level to set normalize to, zero if not doing anything
   int modulation_frequency;
   uint32_t checksum;
+  int ultra;
 }setting_t;
 
 extern setting_t setting;

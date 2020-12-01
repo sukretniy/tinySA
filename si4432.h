@@ -160,18 +160,23 @@ void   ADF4351_Setup(void);
 
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value);
-uint32_t ADF4351_set_frequency(int channel, uint32_t freq, int drive_strength);
-uint32_t ADF4351_prep_frequency(int channel, uint32_t freq, int drive_strength);
+uint32_t ADF4351_set_frequency(int channel, uint32_t freq);
+uint32_t ADF4351_prep_frequency(int channel, uint32_t freq);
 //int ADF4351_set_frequency_with_offset(uint32_t freq, int offset, uint8_t drive_strength);
 void ADF4351_Set(int channel);
-void ADF4351_enable_output(void);
-void ADF4351_disable_output(void);
 void ADF4351_spur_mode(int S);
 void ADF4351_R_counter(int R);
 void ADF4351_channel_spacing(int spacing);
 void ADF4351_CP(int p);
-void ADF4351_level(int p);
+void ADF4351_drive(int p);
+void ADF4351_aux_drive(int p);
+void ADF4351_enable(int p);
+void ADF4351_enable_aux_out(int p);
+void ADF4351_enable_out(int p);
 int ADF4351_locked(void);
+
+void ADF4351_enable(int s);
+void ADF4351_enable_aux_out(int s);
 #endif
 
 #ifdef __SI4463__
@@ -190,5 +195,13 @@ void SI4463_init(void);
 #define SI4463_RX  2
 
 #endif
+
+#ifdef TINYSA4
+void enable_lna(int s);
+void enable_ultra(int s);
+void enable_rx_output(int s);
+void enable_high(int s);
+#endif
+
 
 #endif //__SI4432_H__

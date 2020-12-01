@@ -66,7 +66,7 @@ void update_min_max_freq(void)
   switch(setting.mode) {
   case M_LOW:
     minFreq = 0;
-    maxFreq = DEFAULT_MAX_FREQ;
+    maxFreq = 3000000000; // DEFAULT_MAX_FREQ; <---------------- TODO
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -83,8 +83,8 @@ void update_min_max_freq(void)
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
     break;
   case M_GENHIGH:
-    minFreq = 240000000;
-    maxFreq = 960000000;
+    minFreq =  135000000;
+    maxFreq = 4290000000U;
     break;
   }
 }
@@ -108,7 +108,8 @@ void reset_settings(int m)
   setting.auto_attenuation = false;
   setting.subtract_stored = 0;
   setting.normalize_level = 0.0;
-  setting.drive=13;
+  setting.lo_drive=1;
+  setting.rx_drive=13;
   setting.atten_step = 0;       // Only used in low output mode
   setting.agc = S_AUTO_ON;
   setting.lna = S_AUTO_OFF;
@@ -152,6 +153,7 @@ void reset_settings(int m)
     setting.attenuate = 0.0;    // <---------------- WARNING -----------------
     setting.auto_attenuation = false;   // <---------------- WARNING -----------------
     setting.sweep_time_us = 0;
+    setting.lo_drive=1;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -162,7 +164,8 @@ void reset_settings(int m)
     break;
 #endif
   case M_GENLOW:
-    setting.drive=8;
+    setting.rx_drive=8;
+    setting.lo_drive=1;
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
@@ -173,7 +176,7 @@ void reset_settings(int m)
     setting.sweep_time_us = 0;
     break;
   case M_GENHIGH:
-    setting.drive=8;
+    setting.lo_drive=1;
     set_sweep_frequency(ST_CENTER, 300000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
@@ -276,9 +279,15 @@ void set_measurement(int m)
   }
   dirty = true;
 }
-void set_drive(int d)
+void set_lo_drive(int d)
 {
-  setting.drive = d;
+  setting.lo_drive = d;
+  dirty = true;
+}
+
+void set_rx_drive(int d)
+{
+  setting.rx_drive = d;
   dirty = true;
 }
 
@@ -433,7 +442,7 @@ float get_attenuation(void)
     if (setting.atten_step)
       return ( -(POWER_OFFSET + setting.attenuate - (setting.atten_step-1)*POWER_STEP + SWITCH_ATTENUATION));
     else
-      return ( -POWER_OFFSET - setting.attenuate + (setting.drive & 7) * 3);
+      return ( -POWER_OFFSET - setting.attenuate + (setting.rx_drive & 7) * 3);
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
       return setting.attenuate + RECEIVE_SWITCH_ATTENUATION;
@@ -448,9 +457,9 @@ static pureRSSI_t get_signal_path_loss(void){
   if (setting.mode == M_ULTRA)
     return float_TO_PURE_RSSI(-15);       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
 #endif
-  if (setting.mode == M_LOW)
-    return float_TO_PURE_RSSI(-5.5);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-  return float_TO_PURE_RSSI(+7);          // Loss in dB (+ is gain)
+//  if (setting.mode == M_LOW)
+//    return float_TO_PURE_RSSI(-5.5);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+  return float_TO_PURE_RSSI(0);          // Loss in dB (+ is gain)
 }
 
 static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
@@ -463,7 +472,7 @@ void set_level(float v)     // Set the drive level of the LO
       d++;
     if (d == 8 && v < -12)  // Round towards closest level
       d = 7;
-    set_drive(d);
+    set_rx_drive(d);
   } else {
     setting.level = v;
     set_attenuation((int)v);
@@ -476,16 +485,16 @@ void set_attenuation(float a)       // Is used both in output mode and input mod
   if (setting.mode == M_GENLOW) {
     a = a + POWER_OFFSET;
     if (a > 6) {                // +9dB
-      setting.drive = 11;   // Maximum save drive for SAW filters.
+      setting.rx_drive = 11;   // Maximum save drive for SAW filters.
       a = a - 9;
     } else if (a > 3) {         // +6dB
-      setting.drive = 10;
+      setting.rx_drive = 10;
       a = a - 6;
     } else if (a > 0) {         // +3dB
-      setting.drive = 9;
+      setting.rx_drive = 9;
       a = a - 3;
     } else
-      setting.drive = 8;        // defined as 0dB level
+      setting.rx_drive = 8;        // defined as 0dB level
     if (a > 0)
       a = 0;
     if( a >  - SWITCH_ATTENUATION) {
@@ -1116,7 +1125,12 @@ void setupSA(void)
 #endif
 
   ADF4351_Setup();
-#if 0           // Measure fast scan time
+  enable_lna(false);
+  enable_ultra(false);
+  enable_rx_output(false);
+  enable_high(false);
+
+  #if 0           // Measure fast scan time
   setting.sweep_time_us = 0;
   setting.additional_step_delay_us = 0;
   START_PROFILE             // measure 90 points to get overhead
@@ -1216,10 +1230,10 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
     }
 #endif
     if (freq) {
-      real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
+      real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq);
     }
   } else if (V==ADF4351_LO2){
-    real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq,setting.drive-12);
+    real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO, freq);
   } else
     if (V==SI4463_RX) {
       SI4463_set_freq(freq);
@@ -1275,6 +1289,10 @@ case M_ULTRA:
     SI4463_init_rx();            // Must be before ADF4351_setup!!!!
 #endif
     set_AGC_LNA();
+    ADF4351_enable(true);
+    ADF4351_drive(setting.lo_drive);
+    ADF4351_enable_aux_out(false);
+    ADF4351_enable_out(true);
 
 #ifdef __SI4432__
     SI4432_Sel = SI4432_LO ;
@@ -1286,6 +1304,10 @@ case M_ULTRA:
     SI4432_Transmit(setting.drive);
     // set_calibration_freq(setting.refer);
 #endif
+    enable_rx_output(false);
+    enable_high(false);
+    enable_lna(setting.lna);
+    enable_ultra(setting.ultra);
     break;
 case M_HIGH:    // Direct into 1
 mute:
@@ -1307,6 +1329,14 @@ mute:
     SI4463_init_rx();
 #endif
     set_AGC_LNA();
+    ADF4351_enable_aux_out(false);
+    ADF4351_enable_out(false);
+    ADF4351_enable(false);
+
+    enable_rx_output(false);
+    enable_high(true);
+    enable_lna(false);
+    enable_ultra(false);
 
     break;
 case M_GENLOW:  // Mixed output from 0
@@ -1333,6 +1363,20 @@ case M_GENLOW:  // Mixed output from 0
 #ifdef __SI4468__
     SI4463_init_tx();
 #endif
+    ADF4351_enable_out(true);
+    ADF4351_drive(setting.lo_drive);
+    ADF4351_enable(true);
+    ADF4351_enable_aux_out(false);
+
+    if (setting.atten_step) { // use switch as attenuator
+      enable_rx_output(false);
+    } else {
+      enable_rx_output(true);
+    }
+    SI4463_set_output_level(setting.rx_drive);
+    enable_high(false);
+    enable_lna(false);
+    enable_ultra(false);
     break;
 case M_GENHIGH: // Direct output from 1
     if (setting.mute)
@@ -1351,8 +1395,21 @@ case M_GENHIGH: // Direct output from 1
     SI4432_Transmit(setting.drive);
 #endif
 #ifdef __SI4468__
-    SI4463_init_tx();
+    SI4463_init_rx();
 #endif
+    ADF4351_enable(true);
+#ifndef TINYSA4_PROTO
+    ADF4351_enable_aux_out(false);
+    ADF4351_enable_out(true);
+#else
+    ADF4351_enable_aux_out(true);
+    ADF4351_enable_out(false);
+#endif
+    ADF4351_aux_drive(setting.lo_drive);
+    enable_rx_output(false);
+    enable_high(true);
+    enable_lna(false);
+    enable_ultra(false);
     break;
   }
 
@@ -1823,10 +1880,10 @@ modulation_again:
     if (MODE_HIGH(setting.mode)) {
       local_IF = 0;
     } else if (MODE_LOW(setting.mode)){                                              // All low mode
-      if (!setting.auto_IF) {
+      if (!setting.auto_IF)
         local_IF = setting.frequency_IF;
-      }
-      local_IF = DEFAULT_IF;
+      else
+        local_IF = DEFAULT_IF;
       if (setting.mode == M_LOW) {
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
           local_IF += lf - reffer_freq[setting.refer];    // Offset so fundamental of reffer is visible
@@ -1943,8 +2000,10 @@ modulation_again:
             local_IF += error_f;
         }
 #endif
-      } else if (MODE_HIGH(setting.mode)) {
+      } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
+      } else if (setting.mode == M_GENHIGH) {
+        set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
       }
 //      STOP_PROFILE;
 #endif

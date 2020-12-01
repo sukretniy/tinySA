@@ -51,19 +51,6 @@ static uint32_t old_port_moder;
 static uint32_t new_port_moder;
 #endif
 
-
-#define CS_SI0_HIGH     palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL)
-#define CS_SI1_HIGH     palSetPad(GPIO_RX_SEL_PORT, GPIOB_LO_SEL)
-//#define CS_PE_HIGH      palSetPad(GPIOA, GPIOA_PE_SEL)
-
-#define RF_POWER_HIGH   palSetPad(GPIOB, GPIOB_RF_PWR)
-//#define SPI2_CLK_HIGH   palSetPad(GPIOB, GPIO_SPI2_CLK)
-//#define SPI2_CLK_LOW    palClearPad(GPIOB, GPIO_SPI2_CLK)
-
-#define CS_SI0_LOW      palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL)
-#define CS_SI1_LOW      palClearPad(GPIO_RX_SEL_PORT, GPIOB_LO_SEL)
-//#define CS_PE_LOW       palClearPad(GPIOA, GPIOA_PE_SEL)
-
 #define SPI1_CLK_HIGH   palSetPad(GPIOB, GPIOB_SPI_SCLK)
 #define SPI1_CLK_LOW    palClearPad(GPIOB, GPIOB_SPI_SCLK)
 
@@ -944,7 +931,7 @@ void ADF4351_Setup(void)
 
 
 
-  ADF4351_set_frequency(0,2000000000,0);
+  ADF4351_set_frequency(0,2000000000);
 
 
 //  ADF4351_set_frequency(1,150000000,0);
@@ -983,17 +970,19 @@ void ADF4351_Set(int channel)
   }
 }
 
+#if 0
 void ADF4351_disable_output(void)
 {
-    bitClear (registers[4], 5); // digital lock
+    bitClear (registers[4], 5); // main output
     ADF4351_Set(0);
 }
 
 void ADF4351_enable_output(void)
 {
-    bitSet (registers[4], 5); // digital lock
+    bitSet (registers[4], 5); // main output
     ADF4351_Set(0);
 }
+#endif
 
 static uint32_t prev_actual_freq = 0;
 
@@ -1001,14 +990,14 @@ void ADF4351_force_refresh(void) {
   prev_actual_freq = 0;
 }
 
-uint32_t ADF4351_set_frequency(int channel, uint32_t freq, int drive)  // freq / 10Hz
+uint32_t ADF4351_set_frequency(int channel, uint32_t freq)  // freq / 10Hz
 {
 //  freq -= 71000;
 //  SI4463_set_gpio(3,GPIO_HIGH);
 
 //  uint32_t offs = ((freq / 1000)* ( 0) )/ 1000;
   uint32_t offs = 0;
-  uint32_t actual_freq = ADF4351_prep_frequency(channel,freq + offs, drive);
+  uint32_t actual_freq = ADF4351_prep_frequency(channel,freq + offs);
 //  SI4463_set_gpio(3,GPIO_LOW);
   if (actual_freq != prev_actual_freq) {
 //START_PROFILE;
@@ -1031,6 +1020,7 @@ void ADF4351_spur_mode(int S)
       bitSet (registers[2], 30); // R set to 8
     else
       bitClear (registers[2], 30); // R set to 8
+    ADF4351_Set(0);
 }
 
 void ADF4351_R_counter(int R)
@@ -1056,18 +1046,28 @@ static int old_R;
       }
       registers[2] &= ~ (((unsigned long)0x3FF) << 14);
       registers[2] |= (((unsigned long)R) << 14);
+      ADF4351_Set(0);
 }
 
 void ADF4351_CP(int p)
 {
       registers[2] &= ~ (((unsigned long)0xF) << 9);
       registers[2] |= (((unsigned long)p) << 9);
+      ADF4351_Set(0);
 }
 
-void ADF4351_level(int p)
+void ADF4351_drive(int p)
 {
       registers[4] &= ~ (((unsigned long)0x3) << 3);
       registers[4] |= (((unsigned long)p) << 3);
+      ADF4351_Set(0);
+}
+
+void ADF4351_aux_drive(int p)
+{
+      registers[4] &= ~ (((unsigned long)0x3) << 6);
+      registers[4] |= (((unsigned long)p) << 6);
+      ADF4351_Set(0);
 }
 
 static uint32_t gcd(uint32_t x, uint32_t y)
@@ -1081,7 +1081,7 @@ static uint32_t gcd(uint32_t x, uint32_t y)
   return x;
 }
 
-uint32_t ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // freq / 10Hz
+uint32_t ADF4351_prep_frequency(int channel, unsigned long freq)  // freq / 10Hz
 {
     if (freq >= 2200000000) {
       OutputDivider = 1;
@@ -1147,33 +1147,38 @@ uint32_t ADF4351_prep_frequency(int channel, unsigned long freq, int drive)  // 
     registers[1] = MOD << 3;
     registers[1] = registers[1] + 1 ; // restore address "001"
     bitSet (registers[1], 27); // Prescaler at 8/9
-
-    if (drive == 0) {
-      bitClear (registers[4], 3); // +5dBm + out
-      bitClear (registers[4], 4); // +5dBm
-      bitClear (registers[4], 6); // +5dBm - out
-      bitClear (registers[4], 7); // +5dBm
-    } else if (drive == 1) {
-      bitSet (registers[4], 6); // +5dBm
-      bitClear (registers[4], 7); // +5dBm - out
-      bitSet (registers[4], 3); // +5dBm
-      bitClear (registers[4], 4); // +5dBm + out
-    } else if (drive == 2) {
-      bitClear (registers[4], 6); // +5dBm - out
-      bitSet (registers[4], 7); // +5dBm
-      bitClear (registers[4], 3); // +5dBm + out
-      bitSet (registers[4], 4); // +5dBm
-    }
-    else {
-      bitSet (registers[4], 6); // +5dBm - out
-      bitSet (registers[4], 7); // +5dBm
-      bitSet (registers[4], 3); // +5dBm + out
-      bitSet (registers[4], 4); // +5dBm
-    }
     return actual_freq;
 }
 
 #endif
+
+void ADF4351_enable(int s)
+{
+  if (s)
+    bitClear(registers[4], 11);     // Inverse logic!!!!!
+  else
+    bitSet(registers[4], 11);
+  ADF4351_Set(0);
+}
+
+void ADF4351_enable_aux_out(int s)
+{
+  if (s)
+    bitSet(registers[4], 8);
+  else
+    bitClear(registers[4], 8);
+  ADF4351_Set(0);
+}
+
+void ADF4351_enable_out(int s)
+{
+  if (s)
+    bitSet(registers[4], 5);
+  else
+    bitClear(registers[4], 5);
+  ADF4351_Set(0);
+}
+
 
 // ------------------------------ SI4463 -------------------------------------
 
@@ -1212,22 +1217,22 @@ int SI4463_wait_for_cts(void)
 void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 {
   set_SPI_mode(SPI_MODE_SI);
-  palClearLine(LINE_RX_SEL);
+  SI_CS_LOW;
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   shiftOut( DATA );
-  palSetLine(LINE_RX_SEL);
+  SI_CS_HIGH;
 }
 
 void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 {
   set_SPI_mode(SPI_MODE_SI);
-  palClearLine(LINE_RX_SEL);
+  SI_CS_LOW;
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   while (len-- > 0)
     shiftOut( *(DATA++) );
-  palSetLine(LINE_RX_SEL);
+  SI_CS_HIGH;
 }
 
 
@@ -1236,10 +1241,10 @@ uint8_t SI4463_read_byte( uint8_t ADR )
   set_SPI_mode(SPI_MODE_SI);
   uint8_t DATA ;
   set_SPI_mode(SPI_MODE_SI);
-  palClearLine(LINE_RX_SEL);
+  SI_CS_LOW;
   shiftOut( ADR );
   DATA = shiftIn();
-  palSetLine(LINE_RX_SEL);
+  SI_CS_HIGH;
   return DATA ;
 }
 
@@ -1251,7 +1256,7 @@ uint8_t SI4463_get_response(void* buff, uint8_t len)
     if (!cts) {
       return false;
     }
-    palClearLine(LINE_RX_SEL);
+    SI_CS_LOW;
     shiftOut( SI446X_CMD_READ_CMD_BUFF );
     cts = (shiftIn() == 0xFF);
     if (cts)
@@ -1261,7 +1266,7 @@ uint8_t SI4463_get_response(void* buff, uint8_t len)
             ((uint8_t*)buff)[i] = shiftIn();
         }
     }
-    palSetLine(LINE_RX_SEL);
+    SI_CS_HIGH;
     return cts;
 }
 
@@ -1289,11 +1294,11 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   if (SI4463_wait_for_cts())
 #endif
     {
-    palClearLine(LINE_RX_SEL);
+    SI_CS_LOW;
     for(uint8_t i=0;i<len;i++) {
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
     }
-    palSetLine(LINE_RX_SEL);
+    SI_CS_HIGH;
 #if 0
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
 #if 0
@@ -2114,7 +2119,7 @@ void SI4463_set_freq(uint32_t freq)
     while(1)
       my_microsecond_delay(10);
   }
-  if ((SI4463_band == prev_band)) {
+  if (false && (SI4463_band == prev_band)) {
     uint8_t data[] = {
                       0x36,
                       (uint8_t) R,                   //  R data[4]
@@ -2297,6 +2302,45 @@ again:
   prev_band = -1; // 433MHz
 }
 
+void enable_lna(int s)
+{
+#ifdef TINYSA4_PROTO
+  if (s)
+    palClearLine(LINE_LNA);         // Inverted logic!!!
+  else
+    palSetLine(LINE_LNA);
+#else
+  (void)s;
+#endif
+}
+
+void enable_ultra(int s)
+{
+#ifdef TINYSA4_PROTO
+  if (s)
+    palSetLine(LINE_ULTRA);
+  else
+    palClearLine(LINE_ULTRA);
+#else
+  (void)s;
+#endif
+}
+
+void enable_rx_output(int s)
+{
+  if (s)
+    SI4463_set_gpio(3,GPIO_HIGH);
+  else
+    SI4463_set_gpio(3,GPIO_LOW);
+}
+
+void enable_high(int s)
+{
+  if (s)
+    SI4463_set_gpio(2,GPIO_HIGH);
+  else
+    SI4463_set_gpio(2,GPIO_LOW);
+}
 
 
 #pragma GCC pop_options
