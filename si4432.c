@@ -1,4 +1,4 @@
- /*
+/*
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
@@ -32,12 +32,12 @@
 // 10MHz clock
 #define SI4432_10MHZ 10000000U
 // !!!! FROM ili9341.c for disable it !!!!
-#define LCD_CS_HIGH    palSetPad(GPIOB, GPIOB_LCD_CS)
-#define SI_CS_LOW      palClearPad(GPIOA, GPIOA_SI_SEL)
-#define SI_CS_HIGH     palSetPad(GPIOA, GPIOA_SI_SEL)
+//#define LCD_CS_HIGH    palSetPad(GPIOB, GPIOB_LCD_CS)
+#define SI_CS_LOW      palClearLine(LINE_RX_SEL)
+#define SI_CS_HIGH     palSetLine(LINE_RX_SEL)
 
-#define SI_SDN_LOW      palClearPad(GPIOC, 15)
-#define SI_SDN_HIGH     palSetPad(GPIOC, 15)
+#define SI_SDN_LOW      palClearLine(LINE_RX_SDN)
+#define SI_SDN_HIGH     palSetLine(LINE_RX_SDN)
 
 
 // Hardware or software SPI use
@@ -74,8 +74,8 @@ static uint32_t new_port_moder;
 #define SPI1_SDO       ((palReadPort(GPIOB)>>GPIOB_SPI_MISO)&1)
 #define SPI1_portSDO   (palReadPort(GPIOB)&(1<<GPIOB_SPI_MISO))
 #ifdef __PE4302__
-#define CS_PE_HIGH      palSetPad(GPIO_PE_SEL_PORT, GPIO_PE_SEL)
-#define CS_PE_LOW      palClearPad(GPIO_PE_SEL_PORT, GPIO_PE_SEL)
+#define CS_PE_HIGH      palSetLine(LINE_PE_SEL)
+#define CS_PE_LOW      palClearLine(LINE_PE_SEL)
 #endif
 
 //#define MAXLOG 1024
@@ -882,18 +882,18 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
-#define CS_ADF0_HIGH     palSetPad(GPIOB, 10)
-#define CS_ADF1_HIGH     palSetPad(GPIOB, 10)
+#define CS_ADF0_HIGH     palSetLine(LINE_LO_SEL)
+#define CS_ADF1_HIGH     palSetLine(LINE_LO_SEL)
 
-#define CS_ADF0_LOW     palClearPad(GPIOB, 10)
-#define CS_ADF1_LOW     palClearPad(GPIOB, 10)
+#define CS_ADF0_LOW     palClearLine(LINE_LO_SEL)
+#define CS_ADF1_LOW     palClearLine(LINE_LO_SEL)
 
 //uint32_t registers[6] =  {0x320000, 0x8008011, 0x4E42, 0x4B3,0x8C803C , 0x580005} ;         //25 MHz ref
 
 uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
 
 int debug = 0;
-int ADF4351_LE[2] = { 10, 11};
+ioline_t ADF4351_LE[2] = { LINE_LO_SEL, LINE_LO_SEL};
 int ADF4351_Mux = 7;
 
 int ADF4351_frequency_changed = false;
@@ -966,16 +966,16 @@ void ADF4351_Setup(void)
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
   for (int i = 3; i >= 0; i--) shiftOut((value >> (8 * i)) & 0xFF);
-  palSetPad(GPIOB, ADF4351_LE[channel]);
+  palSetLine(ADF4351_LE[channel]);
   my_microsecond_delay(1);        // Must
-  palClearPad(GPIOB, ADF4351_LE[channel]);
+  palClearLine(ADF4351_LE[channel]);
 }
 
 void ADF4351_Set(int channel)
 {
   set_SPI_mode(SPI_MODE_SI);
 //  my_microsecond_delay(1);
-  palClearPad(GPIOB, ADF4351_LE[channel]);
+  palClearLine(ADF4351_LE[channel]);
 //  my_microsecond_delay(1);
 
   for (int i = 5; i >= 0; i--) {
@@ -1197,7 +1197,7 @@ static void SI4463_set_state(si446x_state_t);
 
 #include <string.h>
 
-#define SI4463_READ_CTS       ((palReadPort(GPIOC)>>14)&1)
+#define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
 
 int SI4463_wait_for_cts(void)
 {
@@ -1212,22 +1212,22 @@ int SI4463_wait_for_cts(void)
 void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 {
   set_SPI_mode(SPI_MODE_SI);
-  palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+  palClearLine(LINE_RX_SEL);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   shiftOut( DATA );
-  palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+  palSetLine(LINE_RX_SEL);
 }
 
 void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 {
   set_SPI_mode(SPI_MODE_SI);
-  palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+  palClearLine(LINE_RX_SEL);
   ADR |= 0x80 ; // RW = 1
   shiftOut( ADR );
   while (len-- > 0)
     shiftOut( *(DATA++) );
-  palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+  palSetLine(LINE_RX_SEL);
 }
 
 
@@ -1236,10 +1236,10 @@ uint8_t SI4463_read_byte( uint8_t ADR )
   set_SPI_mode(SPI_MODE_SI);
   uint8_t DATA ;
   set_SPI_mode(SPI_MODE_SI);
-  palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+  palClearLine(LINE_RX_SEL);
   shiftOut( ADR );
   DATA = shiftIn();
-  palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+  palSetLine(LINE_RX_SEL);
   return DATA ;
 }
 
@@ -1251,7 +1251,7 @@ uint8_t SI4463_get_response(void* buff, uint8_t len)
     if (!cts) {
       return false;
     }
-    palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+    palClearLine(LINE_RX_SEL);
     shiftOut( SI446X_CMD_READ_CMD_BUFF );
     cts = (shiftIn() == 0xFF);
     if (cts)
@@ -1261,7 +1261,7 @@ uint8_t SI4463_get_response(void* buff, uint8_t len)
             ((uint8_t*)buff)[i] = shiftIn();
         }
     }
-    palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+    palSetLine(LINE_RX_SEL);
     return cts;
 }
 
@@ -1289,11 +1289,11 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   if (SI4463_wait_for_cts())
 #endif
     {
-    palClearPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+    palClearLine(LINE_RX_SEL);
     for(uint8_t i=0;i<len;i++) {
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
     }
-    palSetPad(GPIO_RX_SEL_PORT, GPIO_RX_SEL);
+    palSetLine(LINE_RX_SEL);
 #if 0
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
 #if 0

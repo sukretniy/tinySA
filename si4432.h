@@ -154,7 +154,7 @@ bool PE4302_Write_Byte(unsigned char DATA );
 void PE4302_init(void);
 
 #ifdef __ADF4351__
-extern int ADF4351_LE[];
+extern ioline_t ADF4351_LE[];
 extern int debug;
 void   ADF4351_Setup(void);
 

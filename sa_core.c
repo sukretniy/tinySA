@@ -2113,7 +2113,7 @@ static bool sweep(bool break_on_operation)
   palClearPad(GPIOB, GPIOB_LED);
 #endif
 #ifdef TINYSA4
-  palClearPad(GPIOC, GPIOC_LED);
+  palClearLine(LINE_LED);
 #endif
   downslope = true;             // Initialize the peak search algorithm
   temppeakLevel = -150;
@@ -2718,7 +2718,7 @@ sweep_again:                                // stay in sweep loop when output mo
   palSetPad(GPIOB, GPIOB_LED);
 #endif
 #ifdef TINYSA4
-  palSetPad(GPIOC, GPIOC_LED);
+  palSetLine(LINE_LED);
 #endif
   
   return true;
