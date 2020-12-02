@@ -160,6 +160,8 @@ int shell_printf(const char *fmt, ...);
 void set_marker_frequency(int m, uint32_t f);
 void toggle_sweep(void);
 void toggle_mute(void);
+void toggle_extra_lna(void);
+void set_extra_lna(int t);
 void load_default_properties(void);
 
 enum {
@@ -507,6 +509,7 @@ typedef struct config {
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
+  int8_t    ultra;
   int8_t    dummy;
 //  uint8_t _reserved[22];
   uint32_t checksum;
@@ -792,7 +795,7 @@ typedef struct setting
   float normalize_level;     // Level to set normalize to, zero if not doing anything
   int modulation_frequency;
   uint32_t checksum;
-  int ultra;
+  int extra_lna;
 }setting_t;
 
 extern setting_t setting;

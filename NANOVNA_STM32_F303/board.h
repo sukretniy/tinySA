@@ -55,7 +55,7 @@
 
 /* on-board */
 
-#if 0
+#if 1                                                       // Set to 1 to build for prototype HW
 #define TINYSA4_PROTO
 #define GPIO_LED                0
 #define LINE_LED                PAL_LINE(GPIOA,GPIO_LED)
@@ -92,9 +92,9 @@
 #define GPIO_SD_CD              7
 #define LINE_SD_CD              PAL_LINE(GPIOB, GPIO_SD_CD)
 #define GPIO_RX_SEL             8
-#define LINE_RX_SEL        PAL_LINE(GPIOB, GPIO_RX_SEL)
+#define LINE_RX_SEL             PAL_LINE(GPIOB, GPIO_RX_SEL)
 #define GPIO_RX_CTS             9
-#define LINE_RX_CTS        PAL_LINE(GPIOB, GPIO_RX_CTS)
+#define LINE_RX_CTS             PAL_LINE(GPIOB, GPIO_RX_CTS)
 #define GPIO_LCD_CD             10
 #define GPIO_LCD_CD_PORT        GPIOB
 #define GPIO_LCD_CS             11

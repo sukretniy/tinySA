@@ -2302,13 +2302,17 @@ again:
   prev_band = -1; // 433MHz
 }
 
-void enable_lna(int s)
+void enable_extra_lna(int s)
 {
 #ifdef TINYSA4_PROTO
-  if (s)
-    palClearLine(LINE_LNA);         // Inverted logic!!!
-  else
-    palSetLine(LINE_LNA);
+  static int old_extra_lna = -1;
+  if (s != old_extra_lna) {
+    if (s)
+      palClearLine(LINE_LNA);         // Inverted logic!!!
+    else
+      palSetLine(LINE_LNA);
+    old_extra_lna = s;
+  }
 #else
   (void)s;
 #endif
@@ -2317,10 +2321,14 @@ void enable_lna(int s)
 void enable_ultra(int s)
 {
 #ifdef TINYSA4_PROTO
-  if (s)
-    palSetLine(LINE_ULTRA);
-  else
-    palClearLine(LINE_ULTRA);
+static int old_ultra = -1;
+  if (s != old_ultra) {
+    if (s)
+      palSetLine(LINE_ULTRA);
+    else
+      palClearLine(LINE_ULTRA);
+    old_ultra = s;
+  }
 #else
   (void)s;
 #endif

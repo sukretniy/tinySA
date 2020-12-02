@@ -894,6 +894,7 @@ config_t config = {
   .cor_am = -14,
   .cor_wfm = -17,
   .cor_nfm = -17,
+  .ultra = true,
 };
 
 //properties_t current_props;
@@ -2399,6 +2400,8 @@ static const VNAShellCommand commands[] =
     { "rbw", cmd_rbw,    0 },
     { "mode", cmd_mode,    CMD_WAIT_MUTEX },
     { "spur", cmd_spur,    0 },
+    { "lna", cmd_lna,    0 },
+    { "ultra", cmd_ultra,    0 },
     { "load", cmd_load,    0 },
     { "offset", cmd_offset, 0},
     { "output", cmd_output,    0 },

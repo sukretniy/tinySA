@@ -107,6 +107,36 @@ VNA_SHELL_FUNCTION(cmd_spur)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_lna)
+{
+//  static const char cmd[] = "off|on";
+//  if (argc != 1) {
+//  usage:
+//    shell_printf("usage: spur %s\r\n", cmd);
+//    return;
+//  }
+  int m = generic_option_cmd("lna", "off|on", argc, argv[0]);
+  if (m>=0) {
+    set_extra_lna(m);
+    redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
+  }
+}
+
+VNA_SHELL_FUNCTION(cmd_ultra)
+{
+//  static const char cmd[] = "off|on";
+//  if (argc != 1) {
+//  usage:
+//    shell_printf("usage: spur %s\r\n", cmd);
+//    return;
+//  }
+  int m = generic_option_cmd("ultra", "off|on", argc, argv[0]);
+  if (m>=0) {
+    config.ultra = m;
+    update_min_max_freq();
+  }
+}
+
 VNA_SHELL_FUNCTION(cmd_output)
 {
 #if 0

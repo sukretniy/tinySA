@@ -66,7 +66,10 @@ void update_min_max_freq(void)
   switch(setting.mode) {
   case M_LOW:
     minFreq = 0;
-    maxFreq = 3000000000; // DEFAULT_MAX_FREQ; <---------------- TODO
+    if (config.ultra)
+      maxFreq = 2900000000;
+    else
+      maxFreq =  850000000;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -149,7 +152,10 @@ void reset_settings(int m)
   case M_LOW:
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP, maxFreq);
-    set_sweep_frequency(ST_STOP, 800000000);    // TODO <----------------- temp ----------------------
+    if (config.ultra)
+      set_sweep_frequency(ST_STOP, 2900000000);    // TODO <----------------- temp ----------------------
+    else
+      set_sweep_frequency(ST_STOP,  800000000);    // TODO <----------------- temp ----------------------
     setting.attenuate = 0.0;    // <---------------- WARNING -----------------
     setting.auto_attenuation = false;   // <---------------- WARNING -----------------
     setting.sweep_time_us = 0;
@@ -327,6 +333,18 @@ void set_tracking_output(int t)
 void toggle_tracking_output(void)
 {
   setting.tracking_output = !setting.tracking_output;
+  dirty = true;
+}
+
+void toggle_extra_lna(void)
+{
+  setting.extra_lna = !setting.extra_lna;
+  dirty = true;
+}
+
+void set_extra_lna(int t)
+{
+  setting.extra_lna = t;
   dirty = true;
 }
 
@@ -1125,7 +1143,7 @@ void setupSA(void)
 #endif
 
   ADF4351_Setup();
-  enable_lna(false);
+  enable_extra_lna(false);
   enable_ultra(false);
   enable_rx_output(false);
   enable_high(false);
@@ -1306,8 +1324,8 @@ case M_ULTRA:
 #endif
     enable_rx_output(false);
     enable_high(false);
-    enable_lna(setting.lna);
-    enable_ultra(setting.ultra);
+    enable_extra_lna(setting.extra_lna);
+    enable_ultra(false);
     break;
 case M_HIGH:    // Direct into 1
 mute:
@@ -1335,7 +1353,7 @@ mute:
 
     enable_rx_output(false);
     enable_high(true);
-    enable_lna(false);
+    enable_extra_lna(false);
     enable_ultra(false);
 
     break;
@@ -1375,7 +1393,7 @@ case M_GENLOW:  // Mixed output from 0
     }
     SI4463_set_output_level(setting.rx_drive);
     enable_high(false);
-    enable_lna(false);
+    enable_extra_lna(false);
     enable_ultra(false);
     break;
 case M_GENHIGH: // Direct output from 1
@@ -1408,7 +1426,7 @@ case M_GENHIGH: // Direct output from 1
     ADF4351_aux_drive(setting.lo_drive);
     enable_rx_output(false);
     enable_high(true);
-    enable_lna(false);
+    enable_extra_lna(false);
     enable_ultra(false);
     break;
   }
@@ -1687,6 +1705,7 @@ static void calculate_static_correction(void)                   // Calculate the
       + float_TO_PURE_RSSI(
           + get_level_offset()
           + get_attenuation()
+          + (setting.extra_lna ? -20.0 : 0)                         // TODO <------------------------- set correct value
           - setting.offset);
 }
 
@@ -1847,6 +1866,11 @@ modulation_again:
       my_microsecond_delay(modulation_delay);
     }
   }
+  // -------------- set ultra ---------------------------------
+  if (setting.mode == M_LOW && config.ultra && f > 850000000U ) {
+    enable_ultra(true);
+  } else
+    enable_ultra(false);
 
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
@@ -3093,6 +3117,15 @@ void draw_cal_status(void)
     ili9341_drawstring(buf, x, y);
   }
 #endif
+  if (setting.extra_lna) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("LNA:", x, y);
+
+    y += YSTEP;
+    plot_printf(buf, BLEN, "ON");
+    ili9341_drawstring(buf, x, y);
+  }
 
   if (setting.subtract_stored) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);

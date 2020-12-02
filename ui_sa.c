@@ -767,6 +767,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
 }
 #endif
 
+static UI_FUNCTION_ADV_CALLBACK(menu_extra_lna_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = setting.extra_lna == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  toggle_extra_lna();
+  //  menu_move_back();
+  ui_mode_normal();
+}
+
 static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 {
   (void)item;
@@ -1868,15 +1881,16 @@ static const menuitem_t menu_trigger[] = {
 };
 
 static const menuitem_t menu_level[] = {
-  { MT_SUBMENU, 0,          "REF LEVEL",    menu_reflevel},
-//{ MT_SUBMENU, 0,          "SCALE/DIV",    menu_scale_per},
-  { MT_KEYPAD,  KM_SCALE,   "SCALE/DIV",    NULL},
-  { MT_SUBMENU, 0,          "ATTENUATE",    menu_atten},
-//  { MT_SUBMENU,0,           "CALC",         menu_average},
-  { MT_SUBMENU, 0,          "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_OFFSET,  "EXTERNAL\nAMP",NULL},
-  { MT_SUBMENU,  0,         "TRIGGER",      menu_trigger},
-  { MT_CANCEL, 0,           S_LARROW" BACK",    NULL },
+  { MT_SUBMENU, 0,              "REF LEVEL",    menu_reflevel},
+//{ MT_SUBMENU, 0,              "SCALE/DIV",    menu_scale_per},
+  { MT_KEYPAD,  KM_SCALE,       "SCALE/DIV",    NULL},
+  { MT_SUBMENU, 0,              "ATTENUATE",    menu_atten},
+//  { MT_SUBMENU,0,             "CALC",         menu_average},
+  { MT_SUBMENU, 0,              "UNIT",         menu_unit},
+  { MT_KEYPAD,  KM_OFFSET,      "EXTERNAL\nAMP",NULL},
+  { MT_ADV_CALLBACK | MT_LOW ,0,"LNA",          menu_extra_lna_acb},
+  { MT_SUBMENU,  0,             "TRIGGER",      menu_trigger},
+  { MT_CANCEL, 0,               S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 

@@ -197,7 +197,7 @@ void SI4463_init(void);
 #endif
 
 #ifdef TINYSA4
-void enable_lna(int s);
+void enable_extra_lna(int s);
 void enable_ultra(int s);
 void enable_rx_output(int s);
 void enable_high(int s);
