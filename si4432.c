@@ -1548,9 +1548,9 @@ void SI4463_clear_int_status(void)
 
 void set_calibration_freq(int ref)
 {
-
+#ifndef TINYSA4_PROTO
   ref = 0;   // <--------------------- DISABLED FOR PROTOTYPE!!!!!!!!!!!!!!!!!!!!!!!!!
-
+#endif
 
     if (ref >= 0) {
     uint8_t data[8] = {
