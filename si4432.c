@@ -892,8 +892,11 @@ int ADF4351_frequency_changed = false;
 #define DEBUG(X)
 #define DEBUGLN(X)
 
-
+#ifdef TINYSA4_PROTO
+#define XTAL    30.0
+#else
 #define XTAL    26.0
+#endif
 double RFout, //Output freq in MHz
   PFDRFout[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0}, //Reference freq in MHz
   Chrystal[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0},
@@ -2106,7 +2109,11 @@ void SI4463_set_freq(uint32_t freq)
   }
   if (SI4463_band == -1)
     return;
+#ifdef TINYSA4_PROTO
+#define freq_xco    30000000
+#else
 #define freq_xco    26000000
+#endif
   int32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
   int64_t MOD = 524288;
   int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R*MOD;
