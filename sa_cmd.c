@@ -17,6 +17,7 @@
 #pragma GCC push_options
 #pragma GCC optimize ("Os")
 
+uint32_t xtoi(char *t);
 
 static int VFO = 0;
 static int points = 101; // For 's' and 'm' commands
@@ -355,11 +356,15 @@ VNA_SHELL_FUNCTION(cmd_v)
 VNA_SHELL_FUNCTION(cmd_y)
 {
   int rvalue;
-  if (argc != 1 && argc != 2) {
-    shell_printf("usage: y {addr(0-95)} [value(0-0xFF)]\r\n");
+  uint8_t data[16];
+  if (argc < 1) {
+    shell_printf("usage: y {addr(0-FF)} [value(0-FF)]+\r\n");
     return;
   }
-  rvalue = my_atoui(argv[0]);
+  data[0] = xtoi(argv[0]);
+  for (int i=1; i < argc; i++) {
+    data[i] = xtoi(argv[i]);
+  }
 #ifdef __SI4432__
   int lvalue = 0;
   SI4432_Sel = VFO;
@@ -370,6 +375,12 @@ VNA_SHELL_FUNCTION(cmd_y)
     lvalue = SI4432_Read_Byte(rvalue);
     shell_printf("%x\r\n", lvalue);
   }
+#endif
+#ifdef __SI4463__
+  SI4463_do_api(data, argc, data, 16);
+  for (int i=0; i<16; i++)
+    shell_printf("%02x ", data[i]);
+  shell_printf("\r\n");
 #endif
 }
 

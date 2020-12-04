@@ -881,7 +881,7 @@ uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005
 
 int debug = 0;
 ioline_t ADF4351_LE[2] = { LINE_LO_SEL, LINE_LO_SEL};
-int ADF4351_Mux = 7;
+//int ADF4351_Mux = 7;
 
 int ADF4351_frequency_changed = false;
 
@@ -934,8 +934,9 @@ void ADF4351_Setup(void)
 
 
 
-  ADF4351_set_frequency(0,2000000000);
+  ADF4351_set_frequency(0,200000000);
 
+  ADF4351_mux(6);   // Show lock on led
 
 //  ADF4351_set_frequency(1,150000000,0);
 //  ADF4351_Set(0);
@@ -1049,6 +1050,13 @@ static int old_R;
       }
       registers[2] &= ~ (((unsigned long)0x3FF) << 14);
       registers[2] |= (((unsigned long)R) << 14);
+      ADF4351_Set(0);
+}
+
+void ADF4351_mux(int R)
+{
+      registers[2] &= ~ (((unsigned long)0x7) << 26);
+      registers[2] |= (((unsigned long)R & (unsigned long)0x07) << 26);
       ADF4351_Set(0);
 }
 
@@ -1388,12 +1396,13 @@ static uint8_t gpio_state[4] = { 7,8,0,0 };
 
 void SI4463_refresh_gpio(void)
 {
+#ifndef TINYSA4_PROTO
   uint8_t data[] =
   {
     0x11, 0x00, 0x01, 0x01, 0x40 // GLOBAL_CLK_CFG     Enable divided clock
   };
   SI4463_do_api(data, sizeof(data), NULL, 0);
-
+#endif
   uint8_t data2[] =
   {
     0x13, gpio_state[0], gpio_state[1], gpio_state[2], gpio_state[3], 0, 0, 0
@@ -2352,9 +2361,9 @@ void enable_rx_output(int s)
 void enable_high(int s)
 {
   if (s)
-    SI4463_set_gpio(2,GPIO_HIGH);
-  else
     SI4463_set_gpio(2,GPIO_LOW);
+  else
+    SI4463_set_gpio(2,GPIO_HIGH);
 }
 
 

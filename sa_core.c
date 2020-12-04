@@ -753,10 +753,11 @@ void auto_set_AGC_LNA(int auto_set, int agc)                                    
 #endif
 #ifdef __SI4463__
   unsigned char v;
-  if (auto_set)
+  if (auto_set) {
     v = 0x00; // Enable AGC and disable LNA
-  else
-    v = 0x88+agc; // Disable AGC and enable LNA
+  } else {
+    v = 0xa8+agc; // Disable AGC and enable LNA
+  }
   if (SI4432_old_v[0] != v) {
     SI446x_set_AGC_LNA(v);
     SI4432_old_v[0] = v;
@@ -1421,7 +1422,7 @@ case M_GENHIGH: // Direct output from 1
     ADF4351_enable_out(true);
 #else
     ADF4351_enable_aux_out(true);
-    ADF4351_enable_out(false);
+    ADF4351_enable_out(true);               // Must be enabled to have aux output
 #endif
     ADF4351_aux_drive(setting.lo_drive);
     enable_rx_output(false);
@@ -1704,6 +1705,8 @@ static void calculate_static_correction(void)                   // Calculate the
       - get_signal_path_loss()
       + float_TO_PURE_RSSI(
           + get_level_offset()
+          - (S_STATE(setting.agc)? 0 : +12)
+          - (S_STATE(setting.lna)? 0 : +21)
           + get_attenuation()
           + (setting.extra_lna ? -20.0 : 0)                         // TODO <------------------------- set correct value
           - setting.offset);

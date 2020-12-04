@@ -55,7 +55,7 @@
 
 /* on-board */
 
-#if 1                                                       // Set to 1 to build for prototype HW
+#if  0                                                      // Set to 1 to build for prototype HW
 #define TINYSA4_PROTO
 #define GPIO_LED                0
 #define LINE_LED                PAL_LINE(GPIOA,GPIO_LED)

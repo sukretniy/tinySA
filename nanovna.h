@@ -17,6 +17,7 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "ch.h"
+//#define TINYSA4_PROTO
 
 //#ifdef TINYSA_F303
 #include "adc_F303.h"
@@ -46,7 +47,7 @@
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
 // #define __AUDIO__
-#define __HAM_BAND__
+//#define __HAM_BAND__
 //#define __ULTRA__             // Add harmonics mode on low input.
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
@@ -1115,5 +1116,6 @@ void set_modulo(uint32_t f);
 extern volatile uint32_t ADF4350_modulo;
 void ADF4351_Set(int channel);
 void ADF4351_force_refresh(void);
+void ADF4351_mux(int R);
 #endif
 /*EOF*/

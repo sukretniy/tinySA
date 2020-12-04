@@ -408,7 +408,7 @@ enum {
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM, KM_IF2,
-  KM_R,KM_MOD,
+  KM_R,KM_MOD,KM_MUX,
   KM_NONE // always at enum end
 };
 
@@ -448,6 +448,7 @@ static const struct {
   {keypads_freq        , "IF2"}, // KM_IF2
   {keypads_positive    , "R"}, // KM_R
   {keypads_positive    , "MODULO"}, // KM_MOD
+  {keypads_positive    , "MUX"}, // KM_MUX
 };
 
 
@@ -1703,6 +1704,7 @@ static const menuitem_t menu_settings3[] =
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
+  { MT_KEYPAD,  KM_MUX,  "MUX",           "Set MUX"},
 
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
@@ -2174,6 +2176,9 @@ set_numeric_value(void)
     break;
   case KM_MOD:
     set_modulo(uistat.value);
+    break;
+  case KM_MUX:
+    ADF4351_mux((int)uistat.value);
 //    config_save();
     break;
   case KM_SAMPLETIME:
