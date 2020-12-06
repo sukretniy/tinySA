@@ -122,6 +122,7 @@ void reset_settings(int m)
   setting.vbw_x10 = 0;
   setting.auto_reflevel = true;     // Must be after SetReflevel
   setting.decay=20;
+  setting.attack=1;
   setting.noise=5;
   setting.below_IF = S_AUTO_OFF;
   setting.repeat = 1;
@@ -226,11 +227,27 @@ void set_refer_output(int v)
 
 void set_decay(int d)
 {
-  if (d < 0 || d > 200)
+  if (d < 0 || d > 1000000)
     return;
+  if (setting.frequency_step == 0) {        // decay in ms
+    d = (float)d * 500.0 * (float)sweep_points / (float)setting.actual_sweep_time_us;
+  }
   setting.decay = d;
   dirty = true;
 }
+
+#ifdef __QUASI_PEAK__
+void set_attack(int d)
+{
+  if (d < 0 || d > 20000)
+    return;
+  if (setting.frequency_step == 0 && d>0) {        // decay in ms
+    d = (float)d * 500.0 * (float)sweep_points  / (float)setting.actual_sweep_time_us;
+  }
+  setting.attack = d;
+  dirty = true;
+}
+#endif
 
 void set_noise(int d)
 {
@@ -262,10 +279,10 @@ void set_10mhz(uint32_t f)
   update_grid();
 }
 
-
 void set_measurement(int m)
 {
   setting.measurement = m;
+#ifdef __LINEARITY__
   if (m == M_LINEARITY) {
     trace[TRACE_STORED].enabled = true;
     for (int j = 0; j < setting._sweep_points; j++)
@@ -274,8 +291,10 @@ void set_measurement(int m)
     setting.attenuate = 29.0;
     setting.auto_attenuation = false;
   }
+#endif
   dirty = true;
 }
+
 void set_drive(int d)
 {
   setting.drive = d;
@@ -669,7 +688,11 @@ void set_offset_delay(int d)                  // override RSSI measurement delay
 void set_average(int v)
 {
   setting.average = v;
-  trace[TRACE_TEMP].enabled = (v != 0);
+  trace[TRACE_TEMP].enabled = ((v != 0)
+#ifdef __QUASI_PEAK__
+      && (v != AV_QUASI)
+#endif
+      );
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -2082,16 +2105,16 @@ sweep_again:                                // stay in sweep loop when output mo
       }
 #endif
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
-        actual_t[i] = RSSI;
         age[i] = 0;
+        actual_t[i] = RSSI;
       } else {
         switch(setting.average) {
         case AV_MIN:      if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
         case AV_MAX_HOLD: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
         case AV_MAX_DECAY:
           if (actual_t[i] < RSSI) {
-            actual_t[i] = RSSI;
             age[i] = 0;
+            actual_t[i] = RSSI;
           } else {
             if (age[i] > setting.decay)
               actual_t[i] -= 0.5;
@@ -2101,6 +2124,20 @@ sweep_again:                                // stay in sweep loop when output mo
           break;
         case AV_4:  actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
         case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
+#ifdef __QUASI_PEAK__
+        case AV_QUASI:
+          { static float old_RSSI = -150.0;
+          if (i == 0) old_RSSI = actual_t[sweep_points-1];
+          if (RSSI > old_RSSI && setting.attack > 1)
+             old_RSSI += (RSSI - old_RSSI)/setting.attack;
+          else if (RSSI < old_RSSI && setting.decay > 1)
+            old_RSSI += (RSSI - old_RSSI)/setting.decay;
+          else
+            old_RSSI = RSSI;
+          actual_t[i] = old_RSSI;
+          }
+          break;
+#endif
         }
       }
 
@@ -2554,16 +2591,15 @@ sweep_again:                                // stay in sweep loop when output mo
 #endif
 
 
+#ifdef __LINEARITY__
   //---------------- in Linearity measurement the attenuation has to be adapted ------------------
-
-
   if (setting.measurement == M_LINEARITY && setting.linearity_step < sweep_points) {
     setting.attenuate = 29.0 - setting.linearity_step * 30.0 / (sweep_points);
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
   }
-
+#endif
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
 #ifdef TINYSA3
@@ -2716,7 +2752,7 @@ marker_search_right_min(int from)
 
 
 // -------------------------- CAL STATUS ---------------------------------------------
-const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16"};
+const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16","QUASI"};
 const char * const dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
 const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
 

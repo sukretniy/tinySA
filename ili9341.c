@@ -643,6 +643,7 @@ void ili9341_drawstring_7x13(const char *str, int x, int y)
 
 void ili9341_drawstring_10x14(const char *str, int x, int y)
 {
+#ifdef wFONT_GET_DATA
   int x_pos = x;
   while (*str) {
     uint8_t ch = *str++;
@@ -654,6 +655,9 @@ void ili9341_drawstring_10x14(const char *str, int x, int y)
     x += w;
   }
   bit_align = 0;
+#else
+  ili9341_drawstring_size(str, x, y, 2);
+#endif
 }
 
 void ili9341_drawstringV(const char *str, int x, int y)

@@ -23,7 +23,7 @@
 
 #include <stdint.h>
 #include "nanovna.h"
-
+#ifdef  wFONT_GET_WIDTH
 /*
  * Check 1 byte of bitmap data for get width
  */
@@ -1714,3 +1714,4 @@ const uint8_t x10x14_bits[(127-wFONT_START_CHAR)*wFONT_GET_HEIGHT*2] =
  _BMP16(0b0000000000000000),       // |                |
  _BMP16(0b0000000000000000),       // |                |
 };
+#endif

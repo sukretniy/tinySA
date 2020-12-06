@@ -408,6 +408,7 @@ enum {
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
+  KM_ATTACK,
   KM_NONE // always at enum end
 };
 
@@ -428,7 +429,7 @@ static const struct {
   {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay
   {keypads_positive    , "DRIVE"}, // drive
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
-  {keypads_positive    , "SCANS"},    // KM_DECAY
+  {keypads_positive    , "DECAY"},    // KM_DECAY
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
   {keypads_freq        , "FREQ"},    // KM_10MHz
   {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA
@@ -444,6 +445,8 @@ static const struct {
   {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
   {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
+  {keypads_positive    , "ATTACK"},    // KM_ATTACK
+
 };
 
 // ===[MENU CALLBACKS]=========================================================
@@ -832,7 +835,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //      SetAverage(4);
 
       break;
-    case M_PASS_BAND:                             // Stop band measurement
+    case M_PASS_BAND:                             // pass band measurement
 //      reset_settings(setting.mode);
       markers[0].enabled = M_ENABLED;
       markers[0].mtype = M_REFERENCE | M_TRACKING;
@@ -851,9 +854,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //      SetAverage(4);
 
       break;
+#ifdef __LINEARITY__
     case M_LINEARITY:
       set_measurement(M_LINEARITY);
       break;
+#endif
     case M_AM:                                     // AM
       reset_settings(setting.mode);
       for (int i = 0; i< 3; i++) {
@@ -1457,6 +1462,9 @@ static const menuitem_t  menu_average[] = {
   { MT_ADV_CALLBACK, 3, "MAX\nDECAY",   menu_average_acb},
   { MT_ADV_CALLBACK, 4, "AVER 4",       menu_average_acb},
   { MT_ADV_CALLBACK, 5, "AVER 16",      menu_average_acb},
+#ifdef __QUASI_PEAK__
+  { MT_ADV_CALLBACK, 6, "QUASI\nPEAK",  menu_average_acb},
+#endif
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1682,8 +1690,12 @@ static const menuitem_t menu_settings2[] =
   { MT_ADV_CALLBACK, 0,             "LNA",           menu_settings_lna_acb},
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BPF",           menu_settings_bpf_acb},
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BELOW IF",      menu_settings_below_if_acb},
-  { MT_KEYPAD,   KM_DECAY,      "HOLD\nSWEEPS",   "1..1000 sweeps"},
+  { MT_KEYPAD,   KM_DECAY,      "DECAY",   "0..1000000ms or sweeps"},
+#ifdef __QUASI_PEAK__
+  { MT_KEYPAD,   KM_ATTACK,      "ATTACK",   "0..100000ms"},
+#else
   { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
+#endif
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
@@ -2019,8 +2031,14 @@ static void fetch_numeric_target(void)
     break;
   case KM_DECAY:
     uistat.value = setting.decay;
-    plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
     break;
+#ifdef __QUASI_PEAK__
+  case KM_ATTACK:
+    uistat.value = setting.attack;
+    plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
+    break;
+#endif
   case KM_NOISE:
     uistat.value = setting.noise;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
@@ -2133,6 +2151,11 @@ set_numeric_value(void)
   case KM_DECAY:
     set_decay(uistat.value);
     break;
+#ifdef __QUASI_PEAK__
+  case KM_ATTACK:
+    set_attack(uistat.value);
+    break;
+#endif
   case KM_NOISE:
     set_noise(uistat.value);
     break;
