@@ -1782,7 +1782,11 @@ modulation_again:
             else
             {
               if (setting.spur_removal == -1)                       // If second spur pass
-                local_IF  = local_IF + 1000000;           // apply IF spur shift
+#ifdef __SI4432__
+                local_IF  = local_IF + 500000;           // apply IF spur shift
+#else
+              local_IF  = local_IF + 1000000;           // apply IF spur shift
+#endif
             }
           }
         }
