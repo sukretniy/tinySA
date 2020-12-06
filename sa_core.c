@@ -1039,9 +1039,7 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
   if (setting.mode == M_LOW) {
 
   }
-#ifdef __SI4432__
   set_calibration_freq(setting.refer);
-#endif
   update_rbw();
   calculate_step_delay();
 }

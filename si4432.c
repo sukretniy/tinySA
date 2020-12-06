@@ -876,9 +876,11 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 #define CS_ADF1_LOW     palClearLine(LINE_LO_SEL)
 
 //uint32_t registers[6] =  {0x320000, 0x8008011, 0x4E42, 0x4B3,0x8C803C , 0x580005} ;         //25 MHz ref
-
+#ifdef TINYSA4_PROTO
+uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4042, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
+#else
 uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
-
+#endif
 int debug = 0;
 ioline_t ADF4351_LE[2] = { LINE_LO_SEL, LINE_LO_SEL};
 //int ADF4351_Mux = 7;
@@ -1396,7 +1398,7 @@ static uint8_t gpio_state[4] = { 7,8,0,0 };
 
 void SI4463_refresh_gpio(void)
 {
-#ifndef TINYSA4_PROTO
+#ifndef TINYSA4_PROTO               // Force clock to max frequency for ADF
   uint8_t data[] =
   {
     0x11, 0x00, 0x01, 0x01, 0x40 // GLOBAL_CLK_CFG     Enable divided clock
@@ -1565,22 +1567,15 @@ void set_calibration_freq(int ref)
 #endif
 
     if (ref >= 0) {
-    uint8_t data[8] = {
-      0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00    // GPIO_PIN_CFG GPIO 0 input ,1 CTS, clock div out
-    };
-    SI4463_do_api(data, 8, NULL, 0);
+      SI4463_set_gpio(0, 7);                            // GPIO 0 dic clock out
 
-    uint8_t data2[5] = {
-      0x11, 0x00, 0x01, 0x01, 0x40                      // GLOBAL_CLK_CFG Clock config
-    };
-    data2[4] |= ref<<3;
-    SI4463_do_api(data2, 5, NULL, 0);
-    } else {
-      uint8_t data[8] = {
-        0x13, 0x01, 0x08, 0x01, 0x12, 0x00, 0x00, 0x00    //  GPIO_PIN_CFG GLOBAL_CLK_CFG  GPIO 0,1 CTS, GPIO 2 clock div out
+      uint8_t data2[5] = {
+                        0x11, 0x00, 0x01, 0x01, 0x40                      // GLOBAL_CLK_CFG Clock config
       };
-      SI4463_do_api(data, 8, NULL, 0);
-
+      data2[4] |= ref<<3;
+      SI4463_do_api(data2, 5, NULL, 0);
+    } else {
+      SI4463_set_gpio(0, 1);                            // stop clock out
     }
 }
 
@@ -2324,9 +2319,9 @@ void enable_extra_lna(int s)
   static int old_extra_lna = -1;
   if (s != old_extra_lna) {
     if (s)
-      palClearLine(LINE_LNA);         // Inverted logic!!!
-    else
       palSetLine(LINE_LNA);
+    else
+      palClearLine(LINE_LNA);
     old_extra_lna = s;
   }
 #else
@@ -2340,9 +2335,9 @@ void enable_ultra(int s)
 static int old_ultra = -1;
   if (s != old_ultra) {
     if (s)
-      palSetLine(LINE_ULTRA);
-    else
       palClearLine(LINE_ULTRA);
+    else
+      palSetLine(LINE_ULTRA);
     old_ultra = s;
   }
 #else
