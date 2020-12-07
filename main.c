@@ -82,7 +82,9 @@ static volatile vna_shellcmd_t  shell_function = 0;
 #define ENABLE_INFO_COMMAND
 // Enable color command, allow change config color for traces, grid, menu
 #define ENABLE_COLOR_COMMAND
+#ifdef __USE_SERIAL_CONSOLE__
 #define ENABLE_USART_COMMAND
+#endif
 #ifdef __VNA__
 static void apply_error_term_at(int i);
 static void apply_edelay_at(int i);

@@ -42,7 +42,7 @@ uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
 
 //int setting.refer = -1;  // Off by default
-static const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
+const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
 int in_selftest = false;
 
@@ -125,6 +125,7 @@ void reset_settings(int m)
   setting.vbw_x10 = 0;
   setting.auto_reflevel = true;     // Must be after SetReflevel
   setting.decay=20;
+  setting.attack=1;
   setting.noise=5;
   setting.below_IF = S_AUTO_OFF;
   setting.repeat = 1;
@@ -235,11 +236,27 @@ void set_refer_output(int v)
 
 void set_decay(int d)
 {
-  if (d < 0 || d > 200)
+  if (d < 0 || d > 1000000)
     return;
+  if (setting.frequency_step == 0) {        // decay in ms
+    d = (float)d * 500.0 * (float)sweep_points / (float)setting.actual_sweep_time_us;
+  }
   setting.decay = d;
   dirty = true;
 }
+
+#ifdef __QUASI_PEAK__
+void set_attack(int d)
+{
+  if (d < 0 || d > 20000)
+    return;
+  if (setting.frequency_step == 0 && d>0) {        // decay in ms
+    d = (float)d * 500.0 * (float)sweep_points  / (float)setting.actual_sweep_time_us;
+  }
+  setting.attack = d;
+  dirty = true;
+}
+#endif
 
 void set_noise(int d)
 {
@@ -271,10 +288,10 @@ void set_10mhz(uint32_t f)
   update_grid();
 }
 
-
 void set_measurement(int m)
 {
   setting.measurement = m;
+#ifdef __LINEARITY__
   if (m == M_LINEARITY) {
     trace[TRACE_STORED].enabled = true;
     for (int j = 0; j < setting._sweep_points; j++)
@@ -283,6 +300,7 @@ void set_measurement(int m)
     setting.attenuate = 29.0;
     setting.auto_attenuation = false;
   }
+#endif
   dirty = true;
 }
 void set_lo_drive(int d)
@@ -696,7 +714,11 @@ void set_offset_delay(int d)                  // override RSSI measurement delay
 void set_average(int v)
 {
   setting.average = v;
-  trace[TRACE_TEMP].enabled = (v != 0);
+  trace[TRACE_TEMP].enabled = ((v != 0)
+#ifdef __QUASI_PEAK__
+      && (v != AV_QUASI)
+#endif
+      );
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -1691,7 +1713,7 @@ static pureRSSI_t correct_RSSI;
 static pureRSSI_t correct_RSSI_freq;
 systime_t start_of_sweep_timestamp;
 static systime_t sweep_elapsed = 0;                             // Time since first start of sweeping, used only for auto attenuate
-static uint8_t signal_is_AM = false;
+uint8_t signal_is_AM = false;
 static uint8_t check_for_AM = false;
 
 static void calculate_static_correction(void)                   // Calculate the static part of the RSSI correction
@@ -1931,7 +1953,11 @@ modulation_again:
             else
             {
               if (setting.spur_removal == -1)                       // If second spur pass
-                local_IF  = local_IF + 1000000;           // apply IF spur shift
+#ifdef __SI4432__
+                local_IF  = local_IF + 500000;           // apply IF spur shift
+#else
+              local_IF  = local_IF + 1000000;           // apply IF spur shift
+#endif
             }
           }
         }
@@ -2315,16 +2341,16 @@ sweep_again:                                // stay in sweep loop when output mo
       }
 #endif
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
-        actual_t[i] = RSSI;
         age[i] = 0;
+        actual_t[i] = RSSI;
       } else {
         switch(setting.average) {
         case AV_MIN:      if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
         case AV_MAX_HOLD: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
         case AV_MAX_DECAY:
           if (actual_t[i] < RSSI) {
-            actual_t[i] = RSSI;
             age[i] = 0;
+            actual_t[i] = RSSI;
           } else {
             if (age[i] > setting.decay)
               actual_t[i] -= 0.5;
@@ -2334,6 +2360,20 @@ sweep_again:                                // stay in sweep loop when output mo
           break;
         case AV_4:  actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
         case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
+#ifdef __QUASI_PEAK__
+        case AV_QUASI:
+          { static float old_RSSI = -150.0;
+          if (i == 0) old_RSSI = actual_t[sweep_points-1];
+          if (RSSI > old_RSSI && setting.attack > 1)
+             old_RSSI += (RSSI - old_RSSI)/setting.attack;
+          else if (RSSI < old_RSSI && setting.decay > 1)
+            old_RSSI += (RSSI - old_RSSI)/setting.decay;
+          else
+            old_RSSI = RSSI;
+          actual_t[i] = old_RSSI;
+          }
+          break;
+#endif
         }
       }
 
@@ -2786,16 +2826,15 @@ sweep_again:                                // stay in sweep loop when output mo
 #endif
 
 
+#ifdef __LINEARITY__
   //---------------- in Linearity measurement the attenuation has to be adapted ------------------
-
-
   if (setting.measurement == M_LINEARITY && setting.linearity_step < sweep_points) {
     setting.attenuate = 29.0 - setting.linearity_step * 30.0 / (sweep_points);
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
   }
-
+#endif
   //    redraw_marker(peak_marker, FALSE);
   //  STOP_PROFILE;
 #ifdef TINYSA3
@@ -2945,382 +2984,6 @@ marker_search_right_min(int from)
 
 
 
-
-
-// -------------------------- CAL STATUS ---------------------------------------------
-const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16"};
-const char * const dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
-const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
-
-float my_round(float v)
-{
-  float m = 1;
-  int sign = 1;
-  if (v < 0) {
-    sign = -1;
-    v = -v;
-  }
-  while (v < 100) {
-    v = v * 10;
-    m = m / 10;
-  }
-  while (v > 1000) {
-    v = v / 10;
-    m = m * 10;
-  }
-  v = (int)(v+0.5);
-  v = v * m;
-  if (sign == -1) {
-    v = -v;
-  }
-  return v;
-}
-
-const char * const unit_string[] = { "dBm", "dBmV", "dB"S_MICRO"V", "V", "W", "dBc", "dBc", "dBc", "Vc", "Wc" }; // unit + 5 is delta unit
-
-static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
-static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
-
-
-
-void draw_cal_status(void)
-{
-#define BLEN    7
-  char buf[BLEN+1];
-  buf[6]=0;
-#define YSTEP   8
-  int x = 0;
-  int y = OFFSETY;
-  unsigned int color;
-  int rounding = false;
-  if (!UNIT_IS_LINEAR(setting.unit))
-    rounding  = true;
-  const char * const unit = unit_string[setting.unit];
-  ili9341_set_background(LCD_BG_COLOR);
-  ili9341_fill(0, 0, OFFSETX, CHART_BOTTOM);
-  if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
-    return;
-  }
-
-    //  if (current_menu_is_form() && !in_selftest)
-//    return;
-
-  ili9341_set_background(LCD_BG_COLOR);
-
-  float yMax = setting.reflevel;
-  // Top level
-  if (rounding)
-    plot_printf(buf, BLEN, "%+4d", (int)yMax);
-  else
-    plot_printf(buf, BLEN, "%+4.3F", (yMax/setting.unit_scale));
-
-  if (level_is_calibrated())
-    color = setting.auto_reflevel ? LCD_FG_COLOR : LCD_BRIGHT_COLOR_GREEN;
-  else
-    color = LCD_BRIGHT_COLOR_RED;
-  ili9341_set_foreground(color);
-  ili9341_drawstring(buf, x, y);
-
-  // Unit
-#if 0
-  color = LCD_FG_COLOR;
-  ili9341_set_foreground(color);
-  if (setting.auto_reflevel){
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("AUTO", x, y);
-  }
-#endif
-  y += YSTEP + YSTEP/2 ;
-  plot_printf(buf, BLEN, "%s%s",unit_scale_text[setting.unit_scale_index], unit);
-  ili9341_drawstring(buf, x, y);
-
-  // Scale
-  color = LCD_FG_COLOR;
-  ili9341_set_foreground(color);
-  y += YSTEP + YSTEP/2;
-#if 1
-  unsigned int i = 0;
-  while (i < sizeof(scale_value)/sizeof(float)) {
-    float t = (setting.scale/setting.unit_scale) / scale_value[i];;
-    if (t > 0.9 && t < 1.1){
-      plot_printf(buf, BLEN, "%s%s/",scale_vtext[i],unit_scale_text[setting.unit_scale_index]);
-      break;
-    }
-    i++;
-  }
-#else
-  plot_printf(buf, BLEN, "%.2F/",setting.scale);
-#endif
-  ili9341_drawstring(buf, x, y);
-
-  if (is_paused()) {
-    color = LCD_BRIGHT_COLOR_GREEN;
-    ili9341_set_foreground(color);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("PAUSED", x, y);
-  }
-  if (setting.trigger == T_SINGLE || setting.trigger == T_NORMAL ) {
-    color = LCD_BRIGHT_COLOR_GREEN;
-    ili9341_set_foreground(color);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("ARMED", x, y);
-  }
-
-  if (signal_is_AM) {
-    color = LCD_BRIGHT_COLOR_RED;
-    ili9341_set_foreground(color);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("AM", x, y);
-  }
-
-//  if (setting.mode == M_LOW) {
-    // Attenuation
-    if (setting.auto_attenuation)
-      color = LCD_FG_COLOR;
-    else
-      color = LCD_BRIGHT_COLOR_GREEN;
-    ili9341_set_foreground(color);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Atten:", x, y);
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%.2FdB", get_attenuation());
-    ili9341_drawstring(buf, x, y);
-//  }
-
-  // Average
-  if (setting.average>0) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Calc:", x, y);
-
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%s",averageText[setting.average]);
-    ili9341_drawstring(buf, x, y);
-  }
-  // Spur
-#ifdef __SPUR__
-  if (setting.spur_removal) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Spur:", x, y);
-
-    y += YSTEP;
-    plot_printf(buf, BLEN, "ON");
-    ili9341_drawstring(buf, x, y);
-  }
-  if (setting.mirror_masking) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Mask:", x, y);
-
-    y += YSTEP;
-    plot_printf(buf, BLEN, "ON");
-    ili9341_drawstring(buf, x, y);
-  }
-#endif
-  if (setting.extra_lna) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("LNA:", x, y);
-
-    y += YSTEP;
-    plot_printf(buf, BLEN, "ON");
-    ili9341_drawstring(buf, x, y);
-  }
-
-  if (setting.subtract_stored) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Norm.", x, y);
-  }
-
-  // RBW
-  if (setting.rbw_x10)
-    color = LCD_BRIGHT_COLOR_GREEN;
-  else
-    color = LCD_FG_COLOR;
-  ili9341_set_foreground(color);
-
-  y += YSTEP + YSTEP/2 ;
-  ili9341_drawstring("RBW:", x, y);
-
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%.1FkHz", actual_rbw_x10/10.0);
-  ili9341_drawstring(buf, x, y);
-
-#if 0
-  // VBW
-  if (setting.frequency_step > 0) {
-    ili9341_set_foreground(LCD_FG_COLOR);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("VBW:", x, y);
-
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%dkHz",(int)setting.vbw_x10/10.0);
-    buf[6]=0;
-    ili9341_drawstring(buf, x, y);
-  }
-#endif
-  // Sweep time
-  if (setting.step_delay != 0)
-    color = LCD_BRIGHT_COLOR_GREEN;
-  else
-    color = LCD_FG_COLOR;
-
-  ili9341_set_foreground(color);
-
-  y += YSTEP + YSTEP/2 ;
-
-  buf[0] = ' ';
-  strcpy(&buf[1],"Scan:");
-  if (setting.step_delay_mode == SD_PRECISE)
-    buf[0] = 'P';
-  else if (setting.step_delay_mode == SD_FAST)
-    buf[0] = 'F';
-  else
-    strcpy(&buf[0],"Scan:");
-  ili9341_drawstring(buf, x, y);
-
-#if 0                   // Activate for sweep time debugging
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.sweep_time_us/ONE_SECOND_TIME);
-  ili9341_drawstring(buf, x, y);
-#endif
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
-  ili9341_drawstring(buf, x, y);
-#if 0                   // Activate for sweep time debugging
-  y += YSTEP;
-  update_rbw();             // To ensure the calc_min_sweep time shown takes the latest delay into account
-  calculate_step_delay();
-  uint32_t t = calc_min_sweep_time_us();
-  plot_printf(buf, BLEN, "%5.3Fs", (float)t/ONE_SECOND_TIME);
-  ili9341_drawstring(buf, x, y);
-
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
-  ili9341_drawstring(buf, x, y);
-#endif
-
-   // Cal output
-  if (setting.refer >= 0) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Ref:", x, y);
-
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%dMHz",reffer_freq[setting.refer]/1000000);
-    buf[6]=0;
-    ili9341_drawstring(buf, x, y);
-  }
-
-  // Offset
-  if (setting.offset != 0.0) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Amp:", x, y);
-
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%.1fdB",setting.offset);
-    ili9341_drawstring(buf, x, y);
-  }
-
-  // Repeat
-  if (setting.repeat != 1) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("Repeat:", x, y);
-
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%d",setting.repeat);
-    buf[6]=0;
-    ili9341_drawstring(buf, x, y);
-  }
-
-  // Trigger
-  if (setting.trigger != T_AUTO) {
-    if (is_paused() || setting.trigger == T_NORMAL) {
-      ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    } else {
-      ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
-    }
-    y += YSTEP + YSTEP/2 ;
-    ili9341_drawstring("TRIG:", x, y);
-
-    y += YSTEP;
-    if (rounding)
-      plot_printf(buf, BLEN, "%4f", value(setting.trigger_level));
-    else
-      plot_printf(buf, BLEN, "%.4F", value(setting.trigger_level));
-//    plot_printf(buf, BLEN, "%4f", value(setting.trigger_level)/setting.unit_scale);
-    ili9341_drawstring(buf, x, y);
-  }
-
-  // Mode
-  if (level_is_calibrated())
-    color = LCD_BRIGHT_COLOR_GREEN;
-  else
-    color = LCD_BRIGHT_COLOR_RED;
-  ili9341_set_foreground(color);
-  y += YSTEP + YSTEP/2 ;
-  ili9341_drawstring_7x13(MODE_LOW(setting.mode) ? "LOW" : "HIGH", x, y);
-
-  // Compact status string
-//  ili9341_set_background(LCD_FG_COLOR);
-  ili9341_set_foreground(LCD_FG_COLOR);
-  y += YSTEP + YSTEP/2 ;
-  strncpy(buf,"     ",BLEN-1);
-  if (setting.auto_attenuation)
-    buf[0] = 'a';
-  else
-    buf[0] = 'A';
-  if (setting.auto_IF)
-    buf[1] = 'f';
-  else
-    buf[1] = 'F';
-  if (setting.auto_reflevel)
-    buf[2] = 'r';
-  else
-    buf[2] = 'R';
-  if (S_IS_AUTO(setting.agc))
-    buf[3] = 'g';
-  else if (S_STATE(setting.agc))
-    buf[3] = 'G';
-  if (S_IS_AUTO(setting.lna))
-    buf[4] = 'n';
-  else if (S_STATE(setting.lna))
-    buf[4] = 'N';
-  if (S_IS_AUTO(setting.below_IF))
-    buf[5] = 'b';
-  else if (S_STATE(setting.below_IF))
-    buf[5] = 'B';
-  ili9341_drawstring(buf, x, y);
-
-  // Version
-  y += YSTEP + YSTEP/2 ;
-  strncpy(buf,&VERSION[8], BLEN-1);
-  ili9341_drawstring(buf, x, y);
-
-//  ili9341_set_background(LCD_BG_COLOR);
-  if (!get_waterfall()) {               // Do not draw bottom level if in waterfall mode
-    // Bottom level
-    y = area_height - 8 + OFFSETY;
-    if (rounding)
-      plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
-    else
-      plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
-    //  buf[5]=0;
-    if (level_is_calibrated())
-      if (setting.auto_reflevel)
-        color = LCD_FG_COLOR;
-      else
-        color = LCD_BRIGHT_COLOR_GREEN;
-    else
-      color = LCD_BRIGHT_COLOR_RED;
-    ili9341_set_foreground(color);
-    ili9341_drawstring(buf, x, y);
-  }
-}
 
 // -------------------- Self testing -------------------------------------------------
 

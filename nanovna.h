@@ -43,6 +43,7 @@
 #define __SCROLL__
 #define __ICONS__
 #define __MEASURE__
+//#define __LINEARITY__         // Not available
 #define __SELFTEST__
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
@@ -51,6 +52,9 @@
 //#define __ULTRA__             // Add harmonics mode on low input.
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
+
+#define __QUASI_PEAK__
+
 #ifdef TINYSA3
 #define DEFAULT_IF  433800000
 #define DEFAULT_SPUR_IF 434000000
@@ -166,7 +170,7 @@ void set_extra_lna(int t);
 void load_default_properties(void);
 
 enum {
-  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16
+  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16, AV_QUASI
 };
 enum {
   M_LOW, M_HIGH, M_GENLOW, M_GENHIGH, M_ULTRA
@@ -199,6 +203,12 @@ extern bool completed;
 extern const char *info_about[];
 
 // ------------------------------- sa_core.c ----------------------------------
+
+extern const char * const unit_string[];
+extern uint8_t signal_is_AM;
+extern const int reffer_freq[];
+
+int level_is_calibrated(void);
 void reset_settings(int);
 void update_min_max_freq(void);
 //void ui_process_touch(void);
@@ -260,6 +270,7 @@ void toggle_AGC(void);
 void redrawHisto(void);
 void self_test(int);
 void set_decay(int);
+void set_attack(int);
 void set_noise(int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
@@ -397,16 +408,20 @@ extern const uint8_t numfont16x22[];
 #define bFONT_WIDTH           7
 #define bFONT_GET_HEIGHT     11
 #define bFONT_STR_HEIGHT     11
-
 #define bFONT_GET_DATA(ch)   (  &x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT])
 #define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT]&7))
 
+#if 1                               // Set to 0 to save 3kByte
 #define wFONT_START_CHAR   0x17
 #define wFONT_MAX_WIDTH      12
 #define wFONT_GET_HEIGHT     14
 #define wFONT_STR_HEIGHT     16
 #define wFONT_GET_DATA(ch)   (   &x10x14_bits[(ch-wFONT_START_CHAR)*2*wFONT_GET_HEIGHT  ])
 #define wFONT_GET_WIDTH(ch)  (14-(x10x14_bits[(ch-wFONT_START_CHAR)*2*wFONT_GET_HEIGHT+1]&0x7))
+#else
+#define wFONT_MAX_WIDTH      12
+#define wFONT_GET_HEIGHT     14
+#endif
 
 #define NUM_FONT_GET_WIDTH      16
 #define NUM_FONT_GET_HEIGHT     22
@@ -758,6 +773,7 @@ typedef struct setting
   int test;
   int harmonic;
   int decay;
+  int attack;
   int noise;
   uint32_t vbw_x10;
   int  tracking_output;
@@ -950,6 +966,7 @@ void menu_push_highoutput(void);
 void menu_move_top(void);
 void draw_menu(void);
 int check_touched(void);
+int invoke_quick_menu(int);
 
 // Irq operation process set
 #define OP_NONE       0x00

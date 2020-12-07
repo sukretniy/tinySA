@@ -408,7 +408,7 @@ enum {
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM, KM_IF2,
-  KM_R,KM_MOD,KM_MUX,
+  KM_R,KM_MOD,KM_MUX,KM_ATTACK,
   KM_NONE // always at enum end
 };
 
@@ -429,7 +429,7 @@ static const struct {
   {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay
   {keypads_positive    , "DRIVE"}, // KM_DRIVE
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
-  {keypads_positive    , "SCANS"},    // KM_DECAY
+  {keypads_positive    , "DECAY"},    // KM_DECAY
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
   {keypads_freq        , "FREQ"},    // KM_10MHz
   {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA
@@ -449,6 +449,8 @@ static const struct {
   {keypads_positive    , "R"}, // KM_R
   {keypads_positive    , "MODULO"}, // KM_MOD
   {keypads_positive    , "MUX"}, // KM_MUX
+  {keypads_positive    , "ATTACK"},    // KM_ATTACK
+
 };
 
 
@@ -867,7 +869,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //      SetAverage(4);
 
       break;
-    case M_PASS_BAND:                             // Stop band measurement
+    case M_PASS_BAND:                             // pass band measurement
 //      reset_settings(setting.mode);
       markers[0].enabled = M_ENABLED;
       markers[0].mtype = M_REFERENCE | M_TRACKING;
@@ -886,9 +888,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //      SetAverage(4);
 
       break;
+#ifdef __LINEARITY__
     case M_LINEARITY:
       set_measurement(M_LINEARITY);
       break;
+#endif
     case M_AM:                                     // AM
       reset_settings(setting.mode);
       for (int i = 0; i< 3; i++) {
@@ -1492,6 +1496,9 @@ static const menuitem_t  menu_average[] = {
   { MT_ADV_CALLBACK, 3, "MAX\nDECAY",   menu_average_acb},
   { MT_ADV_CALLBACK, 4, "AVER 4",       menu_average_acb},
   { MT_ADV_CALLBACK, 5, "AVER 16",      menu_average_acb},
+#ifdef __QUASI_PEAK__
+  { MT_ADV_CALLBACK, 6, "QUASI\nPEAK",  menu_average_acb},
+#endif
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1723,8 +1730,12 @@ static const menuitem_t menu_settings2[] =
   { MT_ADV_CALLBACK, 0,             "LNA",           menu_settings_lna_acb},
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BPF",           menu_settings_bpf_acb},
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BELOW IF",      menu_settings_below_if_acb},
-  { MT_KEYPAD,   KM_DECAY,      "HOLD\nSWEEPS",   "1..1000 sweeps"},
+  { MT_KEYPAD,   KM_DECAY,      "DECAY",   "0..1000000ms or sweeps"},
+#ifdef __QUASI_PEAK__
+  { MT_KEYPAD,   KM_ATTACK,      "ATTACK",   "0..100000ms"},
+#else
   { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
+#endif
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
@@ -1837,6 +1848,7 @@ static const menuitem_t menu_storage[] = {
   { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
   { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
   { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
+  { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -2073,8 +2085,14 @@ static void fetch_numeric_target(void)
     break;
   case KM_DECAY:
     uistat.value = setting.decay;
-    plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
     break;
+#ifdef __QUASI_PEAK__
+  case KM_ATTACK:
+    uistat.value = setting.attack;
+    plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
+    break;
+#endif
   case KM_NOISE:
     uistat.value = setting.noise;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
@@ -2202,6 +2220,11 @@ set_numeric_value(void)
   case KM_DECAY:
     set_decay(uistat.value);
     break;
+#ifdef __QUASI_PEAK__
+  case KM_ATTACK:
+    set_attack(uistat.value);
+    break;
+#endif
   case KM_NOISE:
     set_noise(uistat.value);
     break;
@@ -2257,5 +2280,426 @@ menu_move_top(void)
   while (menu_current_level > 0)
     menu_move_back();
 }
+
+
+// -------------------------- CAL STATUS ---------------------------------------------
+const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16","QUASI"};
+const char * const dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
+const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
+
+float my_round(float v)
+{
+  float m = 1;
+  int sign = 1;
+  if (v < 0) {
+    sign = -1;
+    v = -v;
+  }
+  while (v < 100) {
+    v = v * 10;
+    m = m / 10;
+  }
+  while (v > 1000) {
+    v = v / 10;
+    m = m * 10;
+  }
+  v = (int)(v+0.5);
+  v = v * m;
+  if (sign == -1) {
+    v = -v;
+  }
+  return v;
+}
+
+const char * const unit_string[] = { "dBm", "dBmV", "dB"S_MICRO"V", "V", "W", "dBc", "dBc", "dBc", "Vc", "Wc" }; // unit + 5 is delta unit
+
+static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
+static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
+
+#define MAX_QUICK_MENU  20
+uint8_t  quick_menu_y[MAX_QUICK_MENU];
+menuitem_t  *quick_menu[MAX_QUICK_MENU];
+int max_quick_menu = 0;
+
+int invoke_quick_menu(int y)
+{
+  int i=0;
+  while (i < max_quick_menu) {
+    if (y < quick_menu_y[i] && quick_menu[i] != NULL) {
+      if ((uint32_t)quick_menu[i] < KM_NONE) {
+        ui_mode_keypad((int)quick_menu[i]);
+        ui_process_keypad();
+      } else {
+        selection = -1;
+        menu_current_level = 0;
+        menu_push_submenu(quick_menu[i]);
+      }
+      return TRUE;
+    }
+    i++;
+  }
+  return FALSE;
+}
+
+
+
+void draw_cal_status(void)
+{
+#define BLEN    7
+  char buf[BLEN+1];
+  buf[6]=0;
+#define YSTEP   8
+  int x = 0;
+  int y = OFFSETY;
+  unsigned int color;
+  int rounding = false;
+  if (!UNIT_IS_LINEAR(setting.unit))
+    rounding  = true;
+  const char * const unit = unit_string[setting.unit];
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_fill(0, 0, OFFSETX, CHART_BOTTOM);
+  max_quick_menu = 0;
+  if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
+    return;
+  }
+
+    //  if (current_menu_is_form() && !in_selftest)
+//    return;
+
+  ili9341_set_background(LCD_BG_COLOR);
+
+  float yMax = setting.reflevel;
+  // Ref level
+  if (rounding)
+    plot_printf(buf, BLEN, "%+4d", (int)yMax);
+  else
+    plot_printf(buf, BLEN, "%+4.3F", (yMax/setting.unit_scale));
+
+  if (level_is_calibrated())
+    color = setting.auto_reflevel ? LCD_FG_COLOR : LCD_BRIGHT_COLOR_GREEN;
+  else
+    color = LCD_BRIGHT_COLOR_RED;
+  ili9341_set_foreground(color);
+  ili9341_drawstring(buf, x, y);
+  y += YSTEP + YSTEP/2 ;
+  quick_menu_y[max_quick_menu] = y;
+  quick_menu[max_quick_menu++] = (menuitem_t *)menu_reflevel;
+
+  // Unit
+#if 0
+  color = LCD_FG_COLOR;
+  ili9341_set_foreground(color);
+  if (setting.auto_reflevel){
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("AUTO", x, y);
+  }
+#endif
+  plot_printf(buf, BLEN, "%s%s",unit_scale_text[setting.unit_scale_index], unit);
+  ili9341_drawstring(buf, x, y);
+
+  y += YSTEP + YSTEP/2;
+  quick_menu_y[max_quick_menu] = y;
+  quick_menu[max_quick_menu++] = (menuitem_t *)menu_unit;
+
+  // Scale
+  color = LCD_FG_COLOR;
+  ili9341_set_foreground(color);
+#if 1
+  unsigned int i = 0;
+  while (i < sizeof(scale_value)/sizeof(float)) {
+    float t = (setting.scale/setting.unit_scale) / scale_value[i];;
+    if (t > 0.9 && t < 1.1){
+      plot_printf(buf, BLEN, "%s%s/",scale_vtext[i],unit_scale_text[setting.unit_scale_index]);
+      break;
+    }
+    i++;
+  }
+#else
+  plot_printf(buf, BLEN, "%.2F/",setting.scale);
+#endif
+  ili9341_drawstring(buf, x, y);
+  y += YSTEP + YSTEP/2 ;
+  quick_menu_y[max_quick_menu] = y;
+  quick_menu[max_quick_menu++] = (menuitem_t *)KM_SCALE;
+
+  // Trigger status
+  if (is_paused()) {
+    color = LCD_BRIGHT_COLOR_GREEN;
+    ili9341_set_foreground(color);
+    ili9341_drawstring("PAUSED", x, y);
+    y += YSTEP + YSTEP/2 ;
+  }
+  if (setting.trigger == T_SINGLE || setting.trigger == T_NORMAL ) {
+    color = LCD_BRIGHT_COLOR_GREEN;
+    ili9341_set_foreground(color);
+    ili9341_drawstring("ARMED", x, y);
+    y += YSTEP + YSTEP/2 ;
+  }
+  // AM warning
+  if (signal_is_AM) {
+    color = LCD_BRIGHT_COLOR_RED;
+    ili9341_set_foreground(color);
+    ili9341_drawstring("AM", x, y);
+    y += YSTEP + YSTEP/2 ;
+  }
+  quick_menu_y[max_quick_menu] = y;
+  quick_menu[max_quick_menu++] = (menuitem_t *)NULL;
+
+//  if (setting.mode == M_LOW) {
+    // Attenuation
+    if (setting.auto_attenuation)
+      color = LCD_FG_COLOR;
+    else
+      color = LCD_BRIGHT_COLOR_GREEN;
+    ili9341_set_foreground(color);
+    ili9341_drawstring("Atten:", x, y);
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%.2FdB", get_attenuation());
+    ili9341_drawstring(buf, x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)menu_atten;
+//  }
+
+  // Calc
+  if (setting.average>0) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_drawstring("Calc:", x, y);
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%s",averageText[setting.average]);
+    ili9341_drawstring(buf, x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)menu_average;
+  }
+  // Spur
+#ifdef __SPUR__
+  if (setting.spur_removal) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_drawstring("Spur:", x, y);
+    y += YSTEP;
+    plot_printf(buf, BLEN, "ON");
+    ili9341_drawstring(buf, x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)menu_stimulus;
+  }
+  if (setting.mirror_masking) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_drawstring("Mask:", x, y);
+
+    y += YSTEP;
+    plot_printf(buf, BLEN, "ON");
+    ili9341_drawstring(buf, x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)menu_stimulus;
+  }
+#endif
+
+  if (setting.subtract_stored) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_drawstring("Norm.", x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)menu_storage;
+  }
+
+  // RBW
+  if (setting.rbw_x10)
+    color = LCD_BRIGHT_COLOR_GREEN;
+  else
+    color = LCD_FG_COLOR;
+  ili9341_set_foreground(color);
+
+  ili9341_drawstring("RBW:", x, y);
+  y += YSTEP;
+  plot_printf(buf, BLEN, "%.1FkHz", actual_rbw_x10/10.0);
+  ili9341_drawstring(buf, x, y);
+  y += YSTEP + YSTEP/2 ;
+  quick_menu_y[max_quick_menu] = y;
+  quick_menu[max_quick_menu++] = (menuitem_t *)menu_rbw;
+
+#if 0
+  // VBW
+  if (setting.frequency_step > 0) {
+    ili9341_set_foreground(LCD_FG_COLOR);
+    y += YSTEP + YSTEP/2 ;
+    ili9341_drawstring("VBW:", x, y);
+
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%dkHz",(int)setting.vbw_x10/10.0);
+    buf[6]=0;
+    ili9341_drawstring(buf, x, y);
+  }
+#endif
+  // Sweep time
+  if (setting.step_delay != 0)
+    color = LCD_BRIGHT_COLOR_GREEN;
+  else
+    color = LCD_FG_COLOR;
+  ili9341_set_foreground(color);
+  buf[0] = ' ';
+  strcpy(&buf[1],"Scan:");
+  if (setting.step_delay_mode == SD_PRECISE)
+    buf[0] = 'P';
+  else if (setting.step_delay_mode == SD_FAST)
+    buf[0] = 'F';
+  else
+    strcpy(&buf[0],"Scan:");
+  ili9341_drawstring(buf, x, y);
+
+#if 0                   // Activate for sweep time debugging
+  y += YSTEP;
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.sweep_time_us/ONE_SECOND_TIME);
+  ili9341_drawstring(buf, x, y);
+#endif
+  y += YSTEP;
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
+  ili9341_drawstring(buf, x, y);
+  y += YSTEP + YSTEP/2 ;
+  quick_menu_y[max_quick_menu] = y;
+  quick_menu[max_quick_menu++] = (menuitem_t *)menu_sweep_speed;
+
+
+  #if 0                   // Activate for sweep time debugging
+  y += YSTEP;
+  update_rbw();             // To ensure the calc_min_sweep time shown takes the latest delay into account
+  calculate_step_delay();
+  uint32_t t = calc_min_sweep_time_us();
+  plot_printf(buf, BLEN, "%5.3Fs", (float)t/ONE_SECOND_TIME);
+  ili9341_drawstring(buf, x, y);
+  y += YSTEP;
+  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
+  ili9341_drawstring(buf, x, y);
+  y += YSTEP + YSTEP/2 ;
+#endif
+
+   // Cal output
+  if (setting.refer >= 0) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_drawstring("Ref:", x, y);
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%dMHz",reffer_freq[setting.refer]/1000000);
+    buf[6]=0;
+    ili9341_drawstring(buf, x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)menu_reffer;
+  }
+
+  // Offset
+  if (setting.offset != 0.0) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_drawstring("Amp:", x, y);
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%.1fdB",setting.offset);
+    ili9341_drawstring(buf, x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)KM_OFFSET;
+  }
+
+  // Repeat
+  if (setting.repeat != 1) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_drawstring("Repeat:", x, y);
+    y += YSTEP;
+    plot_printf(buf, BLEN, "%d",setting.repeat);
+    buf[6]=0;
+    ili9341_drawstring(buf, x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)KM_REPEAT;
+  }
+
+  // Trigger
+  if (setting.trigger != T_AUTO) {
+    if (is_paused() || setting.trigger == T_NORMAL) {
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    } else {
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
+    }
+    ili9341_drawstring("TRIG:", x, y);
+
+    y += YSTEP;
+    if (rounding)
+      plot_printf(buf, BLEN, "%4f", value(setting.trigger_level));
+    else
+      plot_printf(buf, BLEN, "%.4F", value(setting.trigger_level));
+//    plot_printf(buf, BLEN, "%4f", value(setting.trigger_level)/setting.unit_scale);
+    ili9341_drawstring(buf, x, y);
+    y += YSTEP + YSTEP/2 ;
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = (menuitem_t *)menu_trigger;
+  }
+
+  // Mode
+  if (level_is_calibrated())
+    color = LCD_BRIGHT_COLOR_GREEN;
+  else
+    color = LCD_BRIGHT_COLOR_RED;
+  ili9341_set_foreground(color);
+  y += YSTEP + YSTEP/2 ;
+  ili9341_drawstring_7x13(MODE_LOW(setting.mode) ? "LOW" : "HIGH", x, y);
+
+  // Compact status string
+//  ili9341_set_background(LCD_FG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
+  y += YSTEP + YSTEP/2 ;
+  strncpy(buf,"     ",BLEN-1);
+  if (setting.auto_attenuation)
+    buf[0] = 'a';
+  else
+    buf[0] = 'A';
+  if (setting.auto_IF)
+    buf[1] = 'f';
+  else
+    buf[1] = 'F';
+  if (setting.auto_reflevel)
+    buf[2] = 'r';
+  else
+    buf[2] = 'R';
+  if (S_IS_AUTO(setting.agc))
+    buf[3] = 'g';
+  else if (S_STATE(setting.agc))
+    buf[3] = 'G';
+  if (S_IS_AUTO(setting.lna))
+    buf[4] = 'n';
+  else if (S_STATE(setting.lna))
+    buf[4] = 'N';
+  if (S_IS_AUTO(setting.below_IF))
+    buf[5] = 'b';
+  else if (S_STATE(setting.below_IF))
+    buf[5] = 'B';
+  ili9341_drawstring(buf, x, y);
+
+  // Version
+  y += YSTEP + YSTEP/2 ;
+  strncpy(buf,&VERSION[8], BLEN-1);
+  ili9341_drawstring(buf, x, y);
+
+//  ili9341_set_background(LCD_BG_COLOR);
+  if (!get_waterfall()) {               // Do not draw bottom level if in waterfall mode
+    // Bottom level
+    y = area_height - 8 + OFFSETY;
+    if (rounding)
+      plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
+    else
+      plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
+    //  buf[5]=0;
+    if (level_is_calibrated())
+      if (setting.auto_reflevel)
+        color = LCD_FG_COLOR;
+      else
+        color = LCD_BRIGHT_COLOR_GREEN;
+    else
+      color = LCD_BRIGHT_COLOR_RED;
+    ili9341_set_foreground(color);
+    ili9341_drawstring(buf, x, y);
+  }
+}
+
+
 
 #pragma GCC pop_options

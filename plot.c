@@ -902,8 +902,6 @@ trace_get_value_string_delta(int t, char *buf, int len, float array[POINTS_COUNT
 }
 #endif
 
-extern const char *unit_string[];
-
 inline void trace_get_value_string(     // Only used at one place
     int t, char *buf, int len,
     int i, float coeff[POINTS_COUNT],
@@ -1852,7 +1850,6 @@ cell_drawstring(char *str, int x, int y)
     x += w;
   }
 }
-
 void
 cell_drawstring_7x13(char *str, int x, int y)
 {
@@ -1871,6 +1868,7 @@ cell_drawstring_7x13(char *str, int x, int y)
 void
 cell_drawstring_10x14(char *str, int x, int y)
 {
+#ifdef wFONT_GET_DATA
   if (y <= -wFONT_GET_HEIGHT || y >= CELLHEIGHT)
     return;
   while (*str) {
@@ -1881,9 +1879,12 @@ cell_drawstring_10x14(char *str, int x, int y)
     cell_blit_bitmap(x, y, w <=8 ? 9 : w, wFONT_GET_HEIGHT, wFONT_GET_DATA(ch));
     x+=w;
   }
+#else
+  cell_drawstring_size(str, x, y, 2);
+#endif
 }
 
-#if 0
+#ifndef wFONT_GET_DATA
 static int
 cell_drawchar_size(uint8_t ch, int x, int y, int size)
 {
