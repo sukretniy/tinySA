@@ -2342,10 +2342,15 @@ int invoke_quick_menu(int y)
 }
 #define YSTEP   8
 
+int double_space = false;
+
 int add_quick_menu(char *buf, int x, int y, menuitem_t *menu)
 {
   ili9341_drawstring(buf, x, y);
-  y += YSTEP + YSTEP/2 ;
+  if (double_space)
+    y += YSTEP + YSTEP;
+  else
+    y += YSTEP + YSTEP/2 ;
   if (max_quick_menu<MAX_QUICK_MENU-1) {
     quick_menu_y[max_quick_menu] = y;
     quick_menu[max_quick_menu++] = menu;
@@ -2365,6 +2370,10 @@ void draw_cal_status(void)
   if (!UNIT_IS_LINEAR(setting.unit))
     rounding  = true;
   const char * const unit = unit_string[setting.unit];
+redraw_cal_status:
+  buf[6]=0;
+  x = 0;
+  y = OFFSETY;
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_fill(0, 0, OFFSETX, CHART_BOTTOM);
   max_quick_menu = 0;
@@ -2604,7 +2613,6 @@ void draw_cal_status(void)
   else
     color = LCD_BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
-  y += YSTEP + YSTEP/2 ;
   ili9341_drawstring_7x13(MODE_LOW(setting.mode) ? "LOW" : "HIGH", x, y);
 
   // Compact status string
@@ -2642,6 +2650,15 @@ void draw_cal_status(void)
   y += YSTEP + YSTEP/2 ;
   strncpy(buf,&VERSION[8], BLEN-1);
   ili9341_drawstring(buf, x, y);
+
+  if (y*4 > LCD_HEIGHT*3 && double_space) {
+    double_space = false;
+    goto redraw_cal_status;
+  }
+  if (y*3 < LCD_HEIGHT*2 && !double_space) {
+    double_space = true;
+    goto redraw_cal_status;
+  }
 
 //  ili9341_set_background(LCD_BG_COLOR);
   if (!get_waterfall()) {               // Do not draw bottom level if in waterfall mode
