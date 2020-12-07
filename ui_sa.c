@@ -2340,15 +2340,24 @@ int invoke_quick_menu(int y)
   }
   return FALSE;
 }
+#define YSTEP   8
 
-
+int add_quick_menu(char *buf, int x, int y, menuitem_t *menu)
+{
+  ili9341_drawstring(buf, x, y);
+  y += YSTEP + YSTEP/2 ;
+  if (max_quick_menu<MAX_QUICK_MENU-1) {
+    quick_menu_y[max_quick_menu] = y;
+    quick_menu[max_quick_menu++] = menu;
+  }
+  return y;
+}
 
 void draw_cal_status(void)
 {
 #define BLEN    7
   char buf[BLEN+1];
   buf[6]=0;
-#define YSTEP   8
   int x = 0;
   int y = OFFSETY;
   unsigned int color;
@@ -2380,10 +2389,7 @@ void draw_cal_status(void)
   else
     color = LCD_BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
-  ili9341_drawstring(buf, x, y);
-  y += YSTEP + YSTEP/2 ;
-  quick_menu_y[max_quick_menu] = y;
-  quick_menu[max_quick_menu++] = (menuitem_t *)menu_reflevel;
+  y = add_quick_menu(buf, x, y, (menuitem_t *)menu_reflevel);
 
   // Unit
 #if 0
@@ -2395,11 +2401,7 @@ void draw_cal_status(void)
   }
 #endif
   plot_printf(buf, BLEN, "%s%s",unit_scale_text[setting.unit_scale_index], unit);
-  ili9341_drawstring(buf, x, y);
-
-  y += YSTEP + YSTEP/2;
-  quick_menu_y[max_quick_menu] = y;
-  quick_menu[max_quick_menu++] = (menuitem_t *)menu_unit;
+  y = add_quick_menu(buf, x, y, (menuitem_t *)menu_unit);
 
   // Scale
   color = LCD_FG_COLOR;
@@ -2417,10 +2419,7 @@ void draw_cal_status(void)
 #else
   plot_printf(buf, BLEN, "%.2F/",setting.scale);
 #endif
-  ili9341_drawstring(buf, x, y);
-  y += YSTEP + YSTEP/2 ;
-  quick_menu_y[max_quick_menu] = y;
-  quick_menu[max_quick_menu++] = (menuitem_t *)KM_SCALE;
+  y = add_quick_menu(buf, x, y, (menuitem_t *)KM_SCALE);
 
   // Trigger status
   if (is_paused()) {
@@ -2455,10 +2454,7 @@ void draw_cal_status(void)
     ili9341_drawstring("Atten:", x, y);
     y += YSTEP;
     plot_printf(buf, BLEN, "%.2FdB", get_attenuation());
-    ili9341_drawstring(buf, x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)menu_atten;
+    y = add_quick_menu(buf, x, y, (menuitem_t *)menu_atten);
 //  }
 
   // Calc
@@ -2467,10 +2463,7 @@ void draw_cal_status(void)
     ili9341_drawstring("Calc:", x, y);
     y += YSTEP;
     plot_printf(buf, BLEN, "%s",averageText[setting.average]);
-    ili9341_drawstring(buf, x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)menu_average;
+    y = add_quick_menu(buf, x, y, (menuitem_t *)menu_average);
   }
   // Spur
 #ifdef __SPUR__
@@ -2478,31 +2471,20 @@ void draw_cal_status(void)
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Spur:", x, y);
     y += YSTEP;
-    plot_printf(buf, BLEN, "ON");
-    ili9341_drawstring(buf, x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)menu_stimulus;
+    y = add_quick_menu("ON", x, y, (menuitem_t *)menu_stimulus);
   }
   if (setting.mirror_masking) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Mask:", x, y);
 
     y += YSTEP;
-    plot_printf(buf, BLEN, "ON");
-    ili9341_drawstring(buf, x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)menu_stimulus;
+    y = add_quick_menu("ON", x, y, (menuitem_t *)menu_stimulus);
   }
 #endif
 
   if (setting.subtract_stored) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    ili9341_drawstring("Norm.", x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)menu_storage;
+    y = add_quick_menu("Norm.", x, y, (menuitem_t *)menu_storage);
   }
 
   // RBW
@@ -2515,10 +2497,7 @@ void draw_cal_status(void)
   ili9341_drawstring("RBW:", x, y);
   y += YSTEP;
   plot_printf(buf, BLEN, "%.1FkHz", actual_rbw_x10/10.0);
-  ili9341_drawstring(buf, x, y);
-  y += YSTEP + YSTEP/2 ;
-  quick_menu_y[max_quick_menu] = y;
-  quick_menu[max_quick_menu++] = (menuitem_t *)menu_rbw;
+  y = add_quick_menu(buf, x, y,(menuitem_t *)menu_rbw);
 
 #if 0
   // VBW
@@ -2556,10 +2535,7 @@ void draw_cal_status(void)
 #endif
   y += YSTEP;
   plot_printf(buf, BLEN, "%5.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
-  ili9341_drawstring(buf, x, y);
-  y += YSTEP + YSTEP/2 ;
-  quick_menu_y[max_quick_menu] = y;
-  quick_menu[max_quick_menu++] = (menuitem_t *)menu_sweep_speed;
+  y = add_quick_menu(buf, x, y, (menuitem_t *)menu_sweep_speed);
 
 
   #if 0                   // Activate for sweep time debugging
@@ -2582,10 +2558,7 @@ void draw_cal_status(void)
     y += YSTEP;
     plot_printf(buf, BLEN, "%dMHz",reffer_freq[setting.refer]/1000000);
     buf[6]=0;
-    ili9341_drawstring(buf, x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)menu_reffer;
+    y = add_quick_menu(buf, x, y,(menuitem_t *)menu_reffer);
   }
 
   // Offset
@@ -2594,10 +2567,7 @@ void draw_cal_status(void)
     ili9341_drawstring("Amp:", x, y);
     y += YSTEP;
     plot_printf(buf, BLEN, "%.1fdB",setting.offset);
-    ili9341_drawstring(buf, x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)KM_OFFSET;
+    y = add_quick_menu(buf, x, y,(menuitem_t *)KM_OFFSET);
   }
 
   // Repeat
@@ -2607,10 +2577,7 @@ void draw_cal_status(void)
     y += YSTEP;
     plot_printf(buf, BLEN, "%d",setting.repeat);
     buf[6]=0;
-    ili9341_drawstring(buf, x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)KM_REPEAT;
+    y = add_quick_menu(buf, x, y,(menuitem_t *)KM_REPEAT);
   }
 
   // Trigger
@@ -2628,10 +2595,7 @@ void draw_cal_status(void)
     else
       plot_printf(buf, BLEN, "%.4F", value(setting.trigger_level));
 //    plot_printf(buf, BLEN, "%4f", value(setting.trigger_level)/setting.unit_scale);
-    ili9341_drawstring(buf, x, y);
-    y += YSTEP + YSTEP/2 ;
-    quick_menu_y[max_quick_menu] = y;
-    quick_menu[max_quick_menu++] = (menuitem_t *)menu_trigger;
+    y = add_quick_menu(buf, x, y,(menuitem_t *)menu_trigger);
   }
 
   // Mode
