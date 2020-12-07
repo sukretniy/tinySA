@@ -902,8 +902,6 @@ trace_get_value_string_delta(int t, char *buf, int len, float array[POINTS_COUNT
 }
 #endif
 
-extern const char *unit_string[];
-
 inline void trace_get_value_string(     // Only used at one place
     int t, char *buf, int len,
     int i, float coeff[POINTS_COUNT],

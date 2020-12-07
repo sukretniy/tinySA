@@ -199,6 +199,12 @@ extern bool completed;
 extern const char *info_about[];
 
 // ------------------------------- sa_core.c ----------------------------------
+
+extern const char * const unit_string[];
+extern uint8_t signal_is_AM;
+extern const int reffer_freq[];
+
+int level_is_calibrated(void);
 void reset_settings(int);
 void update_min_max_freq(void);
 //void ui_process_touch(void);
@@ -951,6 +957,7 @@ void menu_push_highoutput(void);
 void menu_move_top(void);
 void draw_menu(void);
 int check_touched(void);
+int invoke_quick_menu(int);
 
 // Irq operation process set
 #define OP_NONE       0x00

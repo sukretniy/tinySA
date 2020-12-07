@@ -2539,6 +2539,18 @@ touch_pickup_marker(void)
   return FALSE;
 }
 
+static int touch_quick_menu(void)
+{
+  int touch_x, touch_y;
+  touch_position(&touch_x, &touch_y);
+  if (touch_x <OFFSETX)
+  {
+    touch_wait_release();
+    return invoke_quick_menu(touch_y);
+  }
+  return FALSE;
+}
+
 static int
 touch_lever_mode_select(void)
 {
@@ -2548,7 +2560,11 @@ touch_lever_mode_select(void)
     select_lever_mode(touch_x < FREQUENCIES_XPOS2 ? LM_CENTER : LM_SPAN);
     return TRUE;
   }
-  if (touch_y < 25) {
+  if (touch_x <OFFSETX)
+  {
+    return invoke_quick_menu(touch_y);
+  }
+  else if (touch_y < 25) {
 #ifdef __VNA__
     if (touch_x < FREQUENCIES_XPOS2 && get_electrical_delay() != 0.0) {
       select_lever_mode(LM_EDELAY);
@@ -2609,6 +2625,8 @@ void ui_process_touch(void)
   if (status == EVT_TOUCH_PRESSED || status == EVT_TOUCH_DOWN) {
     switch (ui_mode) {
     case UI_NORMAL:
+      if (touch_quick_menu())
+        break;
       // Try drag marker
       if (touch_pickup_marker())
         break;
