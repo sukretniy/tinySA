@@ -1,5 +1,5 @@
 /*
- * This is free software; you can redistribute it and/or modify
+* This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
@@ -1943,7 +1943,7 @@ modulation_again:
 #endif
           }
           if (setting.spur_removal){         // If in low input mode and spur reduction is on
-            if (S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
+            if (S_IS_AUTO(setting.below_IF) && lf < local_IF / 2 ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
             {              // else low/above IF
               if (setting.spur_removal == 1)
                 setting.below_IF = S_AUTO_ON;               // use below IF in first pass
@@ -2245,11 +2245,13 @@ static bool sweep(bool break_on_operation)
     }
   } else if ( MODE_INPUT(setting.mode) && setting.frequency_step > 0) {
     sweep_counter++;
+#if 0
     if (sweep_counter > 50 ) {     // refresh HW after 50 sweeps
       dirty = true;
       refreshing = true;
       sweep_counter = 0;
     }
+#endif
   }
 
 again:                          // Waiting for a trigger jumps back to here
