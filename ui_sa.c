@@ -2314,7 +2314,7 @@ redraw_cal_status:
   x = 0;
   y = OFFSETY;
   ili9341_set_background(LCD_BG_COLOR);
-  ili9341_fill(0, 0, OFFSETX, CHART_BOTTOM);
+  ili9341_fill(0, 0, OFFSETX, LCD_HEIGHT);
   max_quick_menu = 0;
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
     return;
@@ -2591,11 +2591,11 @@ redraw_cal_status:
   ili9341_drawstring(buf, x, y);
 
 
-  if (y*4 >= LCD_HEIGHT*3 && item_space > ITEM_NO_SPACE) {
+  if (y >= BATTERY_START && item_space > ITEM_NO_SPACE) {
     item_space--;                       // Reduce item spacing
     goto redraw_cal_status;
   }
-  if ((y + (max_quick_menu+1) * YSTEP/2)* 4 < LCD_HEIGHT*3 && item_space < ITEM_DOUBLE_SPACE) {
+  if ((y + (max_quick_menu+1) * YSTEP/2) < BATTERY_START && item_space < ITEM_DOUBLE_SPACE) {
     item_space++;                       // Increase item spacing
     goto redraw_cal_status;
   }
@@ -2603,7 +2603,7 @@ redraw_cal_status:
 //  ili9341_set_background(LCD_BG_COLOR);
   if (!get_waterfall()) {               // Do not draw bottom level if in waterfall mode
     // Bottom level
-    y = area_height - 8 + OFFSETY;
+    y = area_height + OFFSETY;
     if (rounding)
       plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
     else

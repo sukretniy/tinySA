@@ -2291,14 +2291,14 @@ draw_frequencies(void)
 #endif
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
-  ili9341_fill(0, FREQUENCIES_YPOS, LCD_WIDTH, FONT_GET_HEIGHT);
+  ili9341_fill(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, LCD_WIDTH- FREQUENCIES_XPOS1, FONT_GET_HEIGHT);
   if (uistat.lever_mode == LM_CENTER)
     buf1[0] = S_SARROW[0];
   if (uistat.lever_mode == LM_SPAN)
     buf2[0] = S_SARROW[0];
 //  int p2 = FREQUENCIES_XPOS2;
 //  if (FREQ_IS_CW()) {
-    int p2 = LCD_WIDTH - FONT_MAX_WIDTH*strlen(buf2);
+    int p2 = LCD_WIDTH - FONT_WIDTH*strlen(buf2);
 //  }
   ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);
   ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
@@ -2367,9 +2367,9 @@ static void draw_battery_status(void)
   string_buf[x++] = 0b10000001;
   string_buf[x++] = 0b11111111;
   // Draw battery
-  blit8BitWidthBitmap(7, LCD_HEIGHT-50, 8, x, string_buf);
+  blit8BitWidthBitmap(7, BATTERY_START, 8, x, string_buf);
   plot_printf((char*)string_buf, sizeof string_buf, "%.2fv", vbat/1000.0);
-  ili9341_drawstring((char*)string_buf, 1, LCD_HEIGHT-50+x+3);
+  ili9341_drawstring((char*)string_buf, 1, BATTERY_START+x+3);
 }
 
 void
