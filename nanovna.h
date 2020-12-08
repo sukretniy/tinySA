@@ -343,6 +343,8 @@ extern uint16_t graph_bottom;
 #define GRIDY             (CHART_BOTTOM / NGRIDY)
 #endif
 
+#define BATTERY_START   (LCD_HEIGHT-40)
+
 #define WIDTH  (LCD_WIDTH - 1 - OFFSETX)
 #define HEIGHT (GRIDY*NGRIDY)
 
