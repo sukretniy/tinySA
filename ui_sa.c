@@ -2274,15 +2274,22 @@ int invoke_quick_menu(int y)
 }
 #define YSTEP   8
 
-int double_space = false;
+enum { ITEM_NO_SPACE = 0, ITEM_NORMAL_SPACE= 1, ITEM_DOUBLE_SPACE = 2 };
+
+int item_space = ITEM_NORMAL_SPACE;
 
 int add_quick_menu(char *buf, int x, int y, menuitem_t *menu)
 {
   ili9341_drawstring(buf, x, y);
-  if (double_space)
-    y += YSTEP + YSTEP;
-  else
-    y += YSTEP + YSTEP/2 ;
+  y += YSTEP;
+  switch (item_space) {
+  case ITEM_NORMAL_SPACE:
+    y += YSTEP/2 ;
+    break;
+  case ITEM_DOUBLE_SPACE:
+    y += YSTEP;
+    break;
+  }
   if (max_quick_menu<MAX_QUICK_MENU-1) {
     quick_menu_y[max_quick_menu] = y;
     quick_menu[max_quick_menu++] = menu;
@@ -2583,12 +2590,13 @@ redraw_cal_status:
   strncpy(buf,&VERSION[8], BLEN-1);
   ili9341_drawstring(buf, x, y);
 
-  if (y*4 > LCD_HEIGHT*3 && double_space) {
-    double_space = false;
+
+  if (y*4 >= LCD_HEIGHT*3 && item_space > ITEM_NO_SPACE) {
+    item_space--;                       // Reduce item spacing
     goto redraw_cal_status;
   }
-  if (y*3 < LCD_HEIGHT*2 && !double_space) {
-    double_space = true;
+  if ((y + (max_quick_menu+1) * YSTEP/2)* 4 < LCD_HEIGHT*3 && item_space < ITEM_DOUBLE_SPACE) {
+    item_space++;                       // Increase item spacing
     goto redraw_cal_status;
   }
 
