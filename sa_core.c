@@ -128,6 +128,7 @@ void reset_settings(int m)
   setting.attack=1;
   setting.noise=5;
   setting.below_IF = S_AUTO_OFF;
+  setting.ultra = S_AUTO_OFF;
   setting.repeat = 1;
   setting.tracking_output = false;
   setting.measurement = M_OFF;
@@ -392,6 +393,17 @@ void toggle_below_IF(void)
     setting.below_IF = S_AUTO_OFF;
   else
     setting.below_IF = true;
+  dirty = true;
+}
+
+void toggle_ultra(void)
+{
+  if (S_IS_AUTO(setting.ultra ))
+    setting.ultra = false;
+  else if (setting.ultra)
+    setting.ultra = S_AUTO_OFF;
+  else
+    setting.ultra = true;
   dirty = true;
 }
 
@@ -1890,11 +1902,12 @@ modulation_again:
     }
   }
   // -------------- set ultra ---------------------------------
-  if (setting.mode == M_LOW && config.ultra && f > 850000000U ) {
-    enable_ultra(true);
-  } else
-    enable_ultra(false);
-
+  if (setting.mode == M_LOW && config.ultra) {
+    if ((S_IS_AUTO(setting.ultra)&& f > 850000000U) || S_STATE(setting.ultra) ) {
+      enable_ultra(true);
+    } else
+      enable_ultra(false);
+  }
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
 //#define __DEBUG_SPUR__

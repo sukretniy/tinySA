@@ -216,6 +216,7 @@ void SetPowerGrid(int);
 void SetRefLevel(float);
 void set_refer_output(int);
 void toggle_below_IF(void);
+void toggle_ultra(void);
 int get_refer_output(void);
 void set_attenuation(float);
 float get_attenuation(void);
@@ -813,6 +814,7 @@ typedef struct setting
   int modulation_frequency;
   uint32_t checksum;
   int extra_lna;
+  int ultra;
 }setting_t;
 
 extern setting_t setting;

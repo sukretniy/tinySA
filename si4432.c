@@ -2356,9 +2356,9 @@ void enable_rx_output(int s)
 void enable_high(int s)
 {
   if (s)
-    SI4463_set_gpio(2,GPIO_LOW);
-  else
     SI4463_set_gpio(2,GPIO_HIGH);
+  else
+    SI4463_set_gpio(2,GPIO_LOW);
 }
 
 

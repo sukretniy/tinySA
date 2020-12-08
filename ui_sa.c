@@ -1284,6 +1284,20 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_below_if_acb){
   draw_menu();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_settings_ultra_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    if (S_IS_AUTO(setting.ultra))
+      b->icon = BUTTON_ICON_CHECK_AUTO;
+    else
+      b->icon = setting.ultra ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  toggle_ultra();
+  draw_menu();
+}
+
 static UI_FUNCTION_ADV_CALLBACK(menu_lo_output_acb){
   (void)item;
   (void)data;
@@ -1712,6 +1726,7 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
   { MT_KEYPAD,  KM_MUX,  "MUX",           "Set MUX"},
+  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA",      menu_settings_ultra_acb},
 
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
