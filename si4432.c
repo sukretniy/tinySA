@@ -904,11 +904,11 @@ double RFout, //Output freq in MHz
   Chrystal[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0},
   FRACF; // Temp
 
-volatile unsigned int long RFint,  // Output freq/10Hz
+volatile int64_t
   INTA,         // Temp
-  RFcalc, //UI
   ADF4350_modulo = 3125, //Temp
   MOD,
+  target_freq,
   FRAC; //Temp
 
 uint8_t OutputDivider; // Temp
@@ -996,14 +996,14 @@ void ADF4351_force_refresh(void) {
   prev_actual_freq = 0;
 }
 
-uint32_t ADF4351_set_frequency(int channel, uint32_t freq)  // freq / 10Hz
+uint64_t ADF4351_set_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
 //  freq -= 71000;
 //  SI4463_set_gpio(3,GPIO_HIGH);
 
 //  uint32_t offs = ((freq / 1000)* ( 0) )/ 1000;
   uint32_t offs = 0;
-  uint32_t actual_freq = ADF4351_prep_frequency(channel,freq + offs);
+  uint64_t actual_freq = ADF4351_prep_frequency(channel,freq + offs);
 //  SI4463_set_gpio(3,GPIO_LOW);
   if (actual_freq != prev_actual_freq) {
 //START_PROFILE;
@@ -1094,9 +1094,10 @@ static uint32_t gcd(uint32_t x, uint32_t y)
   return x;
 }
 
-uint32_t ADF4351_prep_frequency(int channel, unsigned long freq)  // freq / 10Hz
+uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
-    if (freq >= 2200000000) {
+  target_freq = freq;
+  if (freq >= 2200000000) {
       OutputDivider = 1;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 0);
@@ -1126,7 +1127,11 @@ uint32_t ADF4351_prep_frequency(int channel, unsigned long freq)  // freq / 10Hz
     volatile uint64_t PFDR = (int) (PFDRFout[channel]*1000000);
     INTA = (((uint64_t)freq) * OutputDivider) / PFDR;
     MOD = ADF4350_modulo;
-    FRAC = ((((uint64_t)freq) * OutputDivider) - INTA * PFDR) * (uint64_t) MOD /PFDR;
+    FRAC = ((((uint64_t)freq) * OutputDivider) - INTA * PFDR + (PFDR / MOD / 2)) * (uint64_t) MOD /PFDR;
+    if (FRAC >= MOD) {
+      FRAC -= MOD;
+      INTA++;
+    }
 #if 0
     while (FRAC > 4095 || MOD > 4095) {
       FRAC = FRAC >> 1;
@@ -1135,17 +1140,24 @@ uint32_t ADF4351_prep_frequency(int channel, unsigned long freq)  // freq / 10Hz
     }
 #endif
     uint32_t reduce = gcd(MOD, FRAC);
-    if (reduce) {
+#if 0
+    if (reduce>1) {
       FRAC /= reduce;
       MOD /= reduce;
       if (MOD == 1)
         MOD=2;
     }
-    uint32_t actual_freq = PFDR *(INTA * MOD +FRAC)/OutputDivider / MOD;
+#endif
+    uint64_t actual_freq = PFDR *(INTA * MOD +FRAC)/OutputDivider / MOD;
     volatile int max_delta =  1000000 * PFDRFout[channel]/OutputDivider/MOD;
     if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
        while(1)
          my_microsecond_delay(10);
+    }
+    max_delta = freq - actual_freq;
+    if (max_delta > 50000 || max_delta < -50000 || freq == 0) {
+      while(1)
+        my_microsecond_delay(10);
     }
     if (FRAC >= MOD ){
        while(1)
@@ -2122,7 +2134,8 @@ void SI4463_set_freq(uint32_t freq)
   int64_t MOD = 524288;
   int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R*MOD;
   uint32_t actual_freq = (R*MOD + F) * (Npresc ? 2*freq_xco : 4*freq_xco)/ SI4463_outdiv/MOD;
-  if (actual_freq < freq - 100 || actual_freq > freq + 100 ){
+  int delta = freq - actual_freq;
+  if (delta < -100 || delta > 100 ){
     while(1)
       my_microsecond_delay(10);
   }

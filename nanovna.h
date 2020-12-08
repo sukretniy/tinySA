@@ -1134,7 +1134,7 @@ void SI4463_init_tx(void);
 void set_R(int f);
 void set_modulo(uint32_t f);
 #ifdef __ADF4351__
-extern volatile uint32_t ADF4350_modulo;
+extern volatile int64_t ADF4350_modulo;
 void ADF4351_Set(int channel);
 void ADF4351_force_refresh(void);
 void ADF4351_mux(int R);

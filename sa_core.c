@@ -2055,12 +2055,12 @@ modulation_again:
         int32_t error_f = 0;
         if (real_old_freq[ADF4351_LO] > target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
-          if (error_f > actual_rbw_x10 * 100)
+          if (error_f > actual_rbw_x10 * 5)        //RBW / 4
             local_IF += error_f;
         }
-        if (target_f > real_old_freq[ADF4351_LO]) {
-          error_f = - (target_f - real_old_freq[ADF4351_LO]);
-          if ( error_f < - actual_rbw_x10 * 100)
+        if ( real_old_freq[ADF4351_LO] < target_f) {
+          error_f = real_old_freq[ADF4351_LO] - target_f;
+          if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
             local_IF += error_f;
         }
 #endif
