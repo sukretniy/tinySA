@@ -122,7 +122,7 @@ VNA_SHELL_FUNCTION(cmd_output)
   } else
     goto usage;
 #endif
-  int m = generic_option_cmd("output", "off|on", argc, argv[0]);
+  int m = generic_option_cmd("output", "on|off", argc, argv[0]);
   if (m>=0) {
     setting.mute = m;
     dirty = true;
