@@ -877,9 +877,9 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 
 //uint32_t registers[6] =  {0x320000, 0x8008011, 0x4E42, 0x4B3,0x8C803C , 0x580005} ;         //25 MHz ref
 #ifdef TINYSA4_PROTO
-uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4042, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
+uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4042, 0x4B3,0x9F003C , 0x580005} ;         //10 MHz ref
 #else
-uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
+uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0x9F003C , 0x580005} ;         //10 MHz ref
 #endif
 int debug = 0;
 ioline_t ADF4351_LE[2] = { LINE_LO_SEL, LINE_LO_SEL};
@@ -1094,6 +1094,9 @@ static uint32_t gcd(uint32_t x, uint32_t y)
   return x;
 }
 
+#if 0
+#endif
+
 uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
   target_freq = freq;
@@ -1139,8 +1142,8 @@ uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
  //   Serial.println( "MOD/FRAC reduced");
     }
 #endif
-    uint32_t reduce = gcd(MOD, FRAC);
 #if 0
+    uint32_t reduce = gcd(MOD, FRAC);
     if (reduce>1) {
       FRAC /= reduce;
       MOD /= reduce;
@@ -1699,58 +1702,70 @@ void set_RSSI_comp(void)
 
 int16_t Si446x_RSSI(void)
 {
-  uint8_t data[3] = {
-        SI446X_CMD_GET_MODEM_STATUS,
-        0xFF
-  };
-  if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
-    my_microsecond_delay(SI4432_step_delay);
-    ADF4351_frequency_changed = false;
-    SI4463_frequency_changed = false;
-  } else if (SI4432_offset_delay && SI4463_frequency_changed) {
+
+  int i = setting.repeat;
+  int32_t RSSI_RAW  = 0;
+  do{
+    //   if (MODE_INPUT(setting.mode) && RSSI_R
+    uint8_t data[3] = {
+                       SI446X_CMD_GET_MODEM_STATUS,
+                       0xFF
+    };
+    if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
+      my_microsecond_delay(SI4432_step_delay);
+      ADF4351_frequency_changed = false;
+      SI4463_frequency_changed = false;
+    } else if (SI4432_offset_delay && SI4463_frequency_changed) {
       my_microsecond_delay(SI4432_offset_delay);
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
-  }
-
-  int i = 1; //setting.repeat;
-  int RSSI_RAW[3];
-  do{
-    again:
-    data[0] = SI446X_CMD_GET_MODEM_STATUS;
-    data[1] = 0xFF;
-    SI4463_do_api(data, 2, data, 3);
-    if (data[2] == 255) {
-      my_microsecond_delay(10);
-      goto again;
     }
-    RSSI_RAW[--i] = data[2] - 120 * 2;
-    if (i == 0) break;
+
+    int j = 1; //setting.repeat;
+    int RSSI_RAW_ARRAY[3];
+    do{
+      again:
+      data[0] = SI446X_CMD_GET_MODEM_STATUS;
+      data[1] = 0xFF;
+      SI4463_do_api(data, 2, data, 3);
+      if (data[2] == 255) {
+        my_microsecond_delay(10);
+        goto again;
+      }
+      RSSI_RAW_ARRAY[--j] = data[2] - 120 * 2;
+      if (j == 0) break;
+      my_microsecond_delay(100);
+    }while(1);
+#if 0
+    int t;
+    if (RSSI_RAW_ARRAY[0] > RSSI_RAW_ARRAY[1]) {
+      t = RSSI_RAW_ARRAY[1];
+      RSSI_RAW_ARRAY[1] = RSSI_RAW_ARRAY[0];
+      RSSI_RAW_ARRAY[0] = t;
+    }
+    if (RSSI_RAW_ARRAY[1] > RSSI_RAW_ARRAY[2]) {
+      t = RSSI_RAW_ARRAY[2];
+      RSSI_RAW_ARRAY[2] = RSSI_RAW_ARRAY[1];
+      RSSI_RAW_ARRAY[1] = t;
+    }
+    if (RSSI_RAW_ARRAY[0] > RSSI_RAW_ARRAY[1]) {
+      t = RSSI_RAW_ARRAY[1];
+      RSSI_RAW_ARRAY[1] = RSSI_RAW_ARRAY[0];
+      RSSI_RAW_ARRAY[0] = t;
+    }
+
+    RSSI_RAW += DEVICE_TO_PURE_RSSI(RSSI_RAW_ARRAY[1]);
+#else
+    RSSI_RAW += DEVICE_TO_PURE_RSSI(RSSI_RAW_ARRAY[0]);
+#endif
+    if (--i <= 0) break;
     my_microsecond_delay(100);
   }while(1);
-#if 0
-  int t;
-  if (RSSI_RAW[0] > RSSI_RAW[1]) {
-    t = RSSI_RAW[1];
-    RSSI_RAW[1] = RSSI_RAW[0];
-    RSSI_RAW[0] = t;
-  }
-  if (RSSI_RAW[1] > RSSI_RAW[2]) {
-    t = RSSI_RAW[2];
-    RSSI_RAW[2] = RSSI_RAW[1];
-    RSSI_RAW[1] = t;
-  }
-  if (RSSI_RAW[0] > RSSI_RAW[1]) {
-    t = RSSI_RAW[1];
-    RSSI_RAW[1] = RSSI_RAW[0];
-    RSSI_RAW[0] = t;
-  }
 
-  return DEVICE_TO_PURE_RSSI(RSSI_RAW[1]);
-#else
-  return DEVICE_TO_PURE_RSSI(RSSI_RAW[0]);
-#endif
+  if (setting.repeat > 1)
+    RSSI_RAW = RSSI_RAW / setting.repeat;
 
+  return RSSI_RAW;
 }
 
 void SI446x_set_AGC_LNA(uint8_t v)
@@ -2143,7 +2158,7 @@ void SI4463_set_freq(uint32_t freq)
     while(1)
       my_microsecond_delay(10);
   }
-  if (false && (SI4463_band == prev_band)) {
+  if ((SI4463_band == prev_band)) {
     uint8_t data[] = {
                       0x36,
                       (uint8_t) R,                   //  R data[4]

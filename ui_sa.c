@@ -408,7 +408,7 @@ enum {
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM, KM_IF2,
-  KM_R,KM_MOD,KM_MUX,KM_ATTACK,
+  KM_R,KM_MOD,KM_CP,KM_ATTACK,
   KM_NONE // always at enum end
 };
 
@@ -448,7 +448,7 @@ static const struct {
   {keypads_freq        , "IF2"}, // KM_IF2
   {keypads_positive    , "R"}, // KM_R
   {keypads_positive    , "MODULO"}, // KM_MOD
-  {keypads_positive    , "MUX"}, // KM_MUX
+  {keypads_positive    , "CP"}, // KM_CP
   {keypads_positive    , "ATTACK"},    // KM_ATTACK
 
 };
@@ -466,6 +466,10 @@ static const menuitem_t  menu_drive_wide[];
 static const menuitem_t  menu_tophigh[];
 static const menuitem_t  menu_topultra[];
 #endif
+
+
+#define AUTO_ICON(s) (s >=2 ? BUTTON_ICON_CHECK_AUTO : s)       // This assumes the a certin icon order !!!!!!
+
 
 static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
 {
@@ -742,6 +746,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   }
   menu_push_submenu(menu_drive_wide);
 }
+
+
 
 #ifdef __SPUR__
 static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
@@ -1725,7 +1731,7 @@ static const menuitem_t menu_settings3[] =
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
-  { MT_KEYPAD,  KM_MUX,  "MUX",           "Set MUX"},
+  { MT_KEYPAD,  KM_CP,  "CP",           "Set CP"},
   { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA",      menu_settings_ultra_acb},
 
 #ifdef __HAM_BAND__
@@ -2210,8 +2216,8 @@ set_numeric_value(void)
   case KM_MOD:
     set_modulo(uistat.value);
     break;
-  case KM_MUX:
-    ADF4351_mux((int)uistat.value);
+  case KM_CP:
+    ADF4351_CP((int)uistat.value);
 //    config_save();
     break;
   case KM_SAMPLETIME:

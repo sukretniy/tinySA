@@ -1956,7 +1956,7 @@ modulation_again:
 #endif
           }
           if (setting.spur_removal){         // If in low input mode and spur reduction is on
-            if (S_IS_AUTO(setting.below_IF) && lf < local_IF / 2 ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
+            if (false && S_IS_AUTO(setting.below_IF) && lf < local_IF / 2 ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
             {              // else low/above IF
               if (setting.spur_removal == 1)
                 setting.below_IF = S_AUTO_ON;               // use below IF in first pass
