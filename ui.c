@@ -431,7 +431,7 @@ show_version(void)
     ili9341_drawstring(info_about[i++], x, y+=5);
   }
   while (true) {
-    if (touch_check() == EVT_TOUCH_RELEASED)
+    if (touch_check() == EVT_TOUCH_PRESSED)
       break;
     if (btn_check() & EVT_BUTTON_SINGLE_CLICK)
       break;
@@ -2459,7 +2459,7 @@ ui_process_keypad(void)
         break;
     }
 
-    if (touch_check() == EVT_TOUCH_RELEASED) {
+    if (touch_check() == EVT_TOUCH_PRESSED) {
       int key = keypad_apply_touch();
       if (key >= 0 && keypad_click(key))
         /* exit loop on done or cancel */
@@ -2560,7 +2560,7 @@ static int touch_quick_menu(void)
 {
   int touch_x, touch_y;
   touch_position(&touch_x, &touch_y);
-  if (touch_x <OFFSETX)
+  if (ui_mode != UI_KEYPAD && touch_x <OFFSETX)
   {
     touch_wait_release();
     return invoke_quick_menu(touch_y);
