@@ -462,6 +462,7 @@ static const menuitem_t  menu_top[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_drive_wide[];
+static const menuitem_t  menu_settings3[];
 #ifdef __ULTRA__
 static const menuitem_t  menu_tophigh[];
 static const menuitem_t  menu_topultra[];
@@ -1490,7 +1491,9 @@ static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           "FREQ: %s",         "10kHz..350MHz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
+//  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
+
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},

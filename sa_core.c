@@ -46,21 +46,6 @@ const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 20000
 
 int in_selftest = false;
 
-#if 0
-const char *dummy = "this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available"
-;
-#endif
-
 void update_min_max_freq(void)
 {
   switch(setting.mode) {
@@ -213,9 +198,9 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
     t = 200*sweep_points;                   // 200 microseconds is the delay set in perform when sweeping in output mode
   else {
     uint32_t bare_sweep_time=0;
-#ifdef __SI4432__
+//#ifdef __SI4432__
     bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
-#endif
+//#endif
     if (FREQ_IS_CW()) {
       bare_sweep_time = MINIMUM_SWEEP_TIME;       // minimum sweep time in fast CW mode
       if (setting.repeat != 1 || setting.sweep_time_us >= 100*ONE_MS_TIME || setting.spur_removal != 0) // if no fast CW sweep possible
@@ -2111,11 +2096,17 @@ modulation_again:
 
     // jump here if in zero span mode and all HW frequency setup is done.
 
-#ifdef __SI4432__
 #ifdef __FAST_SWEEP__
+#ifdef __SI4432__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur_removal == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
+    }
+#endif
+#ifdef __SI4463__
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur_removal == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+      // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
+      SI446x_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
 #endif
@@ -2172,6 +2163,11 @@ modulation_again:
 #ifdef __SI4432__
       if (setting.spur_removal == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
         SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
+      }
+#endif
+#ifdef __SI446x__
+      if (setting.spur_removal == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+        SI446x_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
 #endif
 #endif

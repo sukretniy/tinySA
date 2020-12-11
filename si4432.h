@@ -189,6 +189,7 @@ void setState(si446x_state_t newState);
 extern const int SI4432_RBW_count;
 extern si446x_info_t SI4463_info;
 void Si446x_getInfo(si446x_info_t* info);
+void SI446x_Fill(int s, int start);
 void SI4463_init(void);
 #define ADF4351_LO 3
 #define ADF4351_LO2 4

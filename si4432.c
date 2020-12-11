@@ -877,9 +877,9 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 
 //uint32_t registers[6] =  {0x320000, 0x8008011, 0x4E42, 0x4B3,0x8C803C , 0x580005} ;         //25 MHz ref
 #ifdef TINYSA4_PROTO
-uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4042, 0x4B3,0x9F003C , 0x580005} ;         //10 MHz ref
+uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4042, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
 #else
-uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0x9F003C , 0x580005} ;         //10 MHz ref
+uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
 #endif
 int debug = 0;
 ioline_t ADF4351_LE[2] = { LINE_LO_SEL, LINE_LO_SEL};
@@ -934,7 +934,7 @@ void ADF4351_Setup(void)
 
   ADF4351_R_counter(1);
 
-
+  ADF4351_CP(7);
 
   ADF4351_set_frequency(0,200000000);
 
@@ -1700,8 +1700,57 @@ void set_RSSI_comp(void)
 }
 
 
+#ifdef __FAST_SWEEP__
+extern deviceRSSI_t age[POINTS_COUNT];
+static int buf_index = 0;
+static bool  buf_read = false;
+
+void SI446x_Fill(int s, int start)
+{
+#if 0
+  set_SPI_mode(SPI_MODE_SI);
+  SI4432_Sel = s;
+  uint16_t sel = SI_nSEL[SI4432_Sel];
+#endif
+
+  uint32_t t = setting.additional_step_delay_us;
+  systime_t measure = chVTGetSystemTimeX();
+//  __disable_irq();
+
+#if 1
+    int i = start;
+  uint8_t data[3];
+  do {
+    data[0] = SI446X_CMD_GET_MODEM_STATUS;
+    data[1] = 0xFF;
+    SI4463_do_api(data, 2, data, 3);
+    age[i]=(char)data[2];
+    if (++i >= sweep_points) break;
+    if (t)
+      my_microsecond_delay(t);
+  } while(1);
+#else
+  shiftInBuf(sel, SI4432_REG_RSSI, &age[start], sweep_points - start, t);
+#endif
+//  __enable_irq();
+
+  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
+  buf_index = start; // Is used to skip 1st entry during level triggering
+  buf_read = true;
+}
+#endif
+
+
+
 int16_t Si446x_RSSI(void)
 {
+#ifdef __FAST_SWEEP__
+  if (buf_read) {
+    if (buf_index == sweep_points-1)
+      buf_read = false;
+    return DEVICE_TO_PURE_RSSI(age[buf_index++]);
+  }
+#endif
 
   int i = setting.repeat;
   int32_t RSSI_RAW  = 0;
@@ -1721,7 +1770,7 @@ int16_t Si446x_RSSI(void)
       SI4463_frequency_changed = false;
     }
 
-    int j = 1; //setting.repeat;
+    int j = 3; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
       again:
@@ -1736,7 +1785,7 @@ int16_t Si446x_RSSI(void)
       if (j == 0) break;
       my_microsecond_delay(100);
     }while(1);
-#if 0
+#if 1
     int t;
     if (RSSI_RAW_ARRAY[0] > RSSI_RAW_ARRAY[1]) {
       t = RSSI_RAW_ARRAY[1];
@@ -1767,6 +1816,8 @@ int16_t Si446x_RSSI(void)
 
   return RSSI_RAW;
 }
+
+
 
 void SI446x_set_AGC_LNA(uint8_t v)
 {
