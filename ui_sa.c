@@ -1225,14 +1225,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
 }
 #endif
 
+
+#define AUTO_ICON(S) (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
+
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_agc_acb){
   (void)item;
   (void)data;
   if(b){
+#if 0
     if (S_IS_AUTO(setting.agc))
       b->icon = BUTTON_ICON_CHECK_AUTO;
     else
       b->icon = setting.agc ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+#else
+    b->icon = AUTO_ICON(setting.agc);
+#endif
     return;
   }
   toggle_AGC();
