@@ -462,6 +462,8 @@ static const menuitem_t  menu_tophigh[];
 static const menuitem_t  menu_topultra[];
 #endif
 
+#define AUTO_ICON(S) (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
+
 static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
 {
   (void)data;
@@ -730,7 +732,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
   if (b){
     if (setting.mode == M_LOW) {
       b->param_1.text = "SPUR\nREMOVAL";
-      b->icon = setting.spur_removal == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+      b->icon = AUTO_ICON(setting.spur_removal);
     } else {
       b->param_1.text = "MIRROR\nMASKING";
       b->icon = setting.mirror_masking == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
@@ -738,10 +740,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
     return;
   }
   if (setting.mode == M_LOW) {
-    if (setting.spur_removal)
-      set_spur(0);
-    else
-      set_spur(1); // must be 0 or 1 !!!!
+    toggle_spur();
   } else
     toggle_mirror_masking();
   //  menu_move_back();
@@ -1185,8 +1184,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
 #endif
 
 
-#define AUTO_ICON(S) (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
-
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_agc_acb){
   (void)item;
   (void)data;
@@ -1295,7 +1292,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
   draw_menu();
 }
 
+#ifdef TINYSA4
+static const uint16_t points_setting[] = {51, 101, 201, 450};
+#else
 static const uint16_t points_setting[] = {51, 101, 145, 290};
+#endif
 static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
   (void)item;
   if(b){
@@ -2426,7 +2427,10 @@ redraw_cal_status:
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Spur:", x, y);
     y += YSTEP;
-    y = add_quick_menu("ON", x, y, (menuitem_t *)menu_stimulus);
+    if (S_IS_AUTO(setting.spur_removal))
+      y = add_quick_menu("AUTO", x, y, (menuitem_t *)menu_stimulus);
+    else
+      y = add_quick_menu("ON", x, y, (menuitem_t *)menu_stimulus);
   }
   if (setting.mirror_masking) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);

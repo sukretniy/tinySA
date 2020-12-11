@@ -124,6 +124,7 @@ typedef struct {
 #define EVT_TOUCH_DOWN     1
 #define EVT_TOUCH_PRESSED  2
 #define EVT_TOUCH_RELEASED 3
+#define EVT_TOUCH_LONGPRESS 4
 
 static int8_t last_touch_status = EVT_TOUCH_NONE;
 static int16_t last_touch_x;
@@ -296,7 +297,16 @@ touch_check(void)
       last_touch_y = y;
     }
   }
+#if 0                                           // Long press detection
+  systime_t ticks = chVTGetSystemTimeX();
 
+  if (stat && !last_touch_status) {         // new button, initialize
+    prev_touch_time = ticks;
+  }
+  dt = ticks - prev_touch_time;
+
+  if (stat && stat == last_touch_status && dt > BUTTON_DOWN_LONG_TICKS) {return EVT_TOUCH_LONGPRESS;}
+#endif
   if (stat != last_touch_status) {
     last_touch_status = stat;
     return stat ? EVT_TOUCH_PRESSED : EVT_TOUCH_RELEASED;
@@ -421,7 +431,7 @@ show_version(void)
     ili9341_drawstring(info_about[i++], x, y+=5);
   }
   while (true) {
-    if (touch_check() == EVT_TOUCH_PRESSED)
+    if (touch_check() == EVT_TOUCH_RELEASED)
       break;
     if (btn_check() & EVT_BUTTON_SINGLE_CLICK)
       break;
@@ -895,9 +905,16 @@ active_marker_select(int item)
       choose_active_marker();
     }
   } else {
-    if (previous_marker != active_marker)
+    if (previous_marker != active_marker) {
       previous_marker = active_marker;
-    active_marker = item;
+      active_marker = item;
+    } else {
+      active_marker = item;
+      selection = -1;
+      menu_current_level = 0;
+extern const menuitem_t menu_marker_modify[];
+      menu_push_submenu(menu_marker_modify);
+    }
   }
 }
 #ifdef __VNA__
@@ -2442,7 +2459,7 @@ ui_process_keypad(void)
         break;
     }
 
-    if (touch_check() == EVT_TOUCH_PRESSED) {
+    if (touch_check() == EVT_TOUCH_RELEASED) {
       int key = keypad_apply_touch();
       if (key >= 0 && keypad_click(key))
         /* exit loop on done or cancel */
@@ -2593,6 +2610,14 @@ touch_marker_select(void)
   for (int i = 0; i < MARKERS_MAX; i++) {
     if (markers[i].enabled) {
       if (selected_marker == 0) {
+        if (active_marker == i) {
+          extern const menuitem_t menu_marker_modify[];
+          touch_wait_release();
+          selection = -1;
+          menu_current_level = 0;
+          menu_push_submenu(menu_marker_modify);
+          break;
+        }
         active_marker = i;
         redraw_marker(active_marker);
         break;
