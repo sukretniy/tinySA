@@ -758,10 +758,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
   if (b){
     if (setting.mode == M_LOW) {
       b->param_1.text = "SPUR\nREMOVAL";
-      b->icon = setting.spur_removal == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+      b->icon = AUTO_ICON(setting.spur_removal);
     } else {
       b->param_1.text = "MIRROR\nMASKING";
-      b->icon = setting.mirror_masking == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+      b->icon = AUTO_ICON(setting.mirror_masking);
     }
     return;
   }

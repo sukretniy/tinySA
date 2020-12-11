@@ -73,7 +73,11 @@
  * main.c
  */
 #ifdef __SA__
+#ifdef TINYSA4
+#define POINTS_COUNT     450
+#else
 #define POINTS_COUNT     290
+#endif
 #define MARKER_COUNT    4
 
 #define TRACES_MAX 3
