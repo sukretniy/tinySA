@@ -317,7 +317,7 @@ touch_check(void)
 void
 touch_wait_release(void)
 {
-  while (touch_check() != EVT_TOUCH_RELEASED)
+  while (touch_check() != EVT_TOUCH_NONE)
     chThdSleepMilliseconds(20);
 }
 
@@ -896,7 +896,7 @@ menu_marker_smith_cb(int item, uint8_t data)
 #endif
 
 static void
-active_marker_select(int item)
+active_marker_select(int item)  // used only to select an active marker from the modify marker selection menu
 {
   if (item == -1) {
     active_marker = previous_marker;
@@ -910,10 +910,6 @@ active_marker_select(int item)
       active_marker = item;
     } else {
       active_marker = item;
-      selection = -1;
-      menu_current_level = 0;
-extern const menuitem_t menu_marker_modify[];
-      menu_push_submenu(menu_marker_modify);
     }
   }
 }
@@ -2574,6 +2570,31 @@ touch_lever_mode_select(void)
   int touch_x, touch_y;
   touch_position(&touch_x, &touch_y);
   if (touch_y > HEIGHT) {
+    if (touch_x < FREQUENCIES_XPOS2 -50 && uistat.lever_mode == LM_CENTER) {
+      touch_wait_release();
+      if (setting.freq_mode & FREQ_MODE_CENTER_SPAN)
+        ui_mode_keypad(KM_CENTER);
+      else
+        ui_mode_keypad(KM_START);
+      ui_process_keypad();
+    }
+    if (touch_x >  FREQUENCIES_XPOS2 - 50 && touch_x <  FREQUENCIES_XPOS2 +50) {
+      touch_wait_release();
+      if (FREQ_IS_STARTSTOP())
+        setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
+      else if (FREQ_IS_CENTERSPAN())
+        setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
+      redraw_request |= REDRAW_FREQUENCY;
+      return true;
+    }
+    if (touch_x >= FREQUENCIES_XPOS2 +50 && uistat.lever_mode == LM_SPAN) {
+      touch_wait_release();
+      if (setting.freq_mode & FREQ_MODE_CENTER_SPAN)
+        ui_mode_keypad(KM_SPAN);
+      else
+        ui_mode_keypad(KM_STOP);
+      ui_process_keypad();
+    }
     select_lever_mode(touch_x < FREQUENCIES_XPOS2 ? LM_CENTER : LM_SPAN);
     return TRUE;
   }
@@ -2659,7 +2680,7 @@ void ui_process_touch(void)
         break;
       // Try select lever mode (top and bottom screen)
       if (touch_lever_mode_select()) {
-        touch_wait_release();
+//        touch_wait_release();
         break;
       }
 
