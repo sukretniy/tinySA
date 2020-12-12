@@ -22,7 +22,7 @@
 #include "stdlib.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("Os")
+#pragma GCC optimize ("Os")             // "Os" causes problem in selftest!!!!!!!!
 
 
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
@@ -46,21 +46,6 @@ uint32_t maxFreq = 520000000;
 const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
 int in_selftest = false;
-
-#if 0
-const char *dummy = "this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available\
-this is a very long string only used to fill memory so I know when the memory is full and I can remove some of this string to make more memory available"
-;
-#endif
 
 void update_min_max_freq(void)
 {
@@ -1065,6 +1050,8 @@ void calculate_correction(void)
     scaled_correction_multi[i] = (int32_t) ( m / d );
   }
 }
+#pragma GCC push_options
+#pragma GCC optimize ("Og")             // "Os" causes problem
 
 pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
@@ -1088,6 +1075,8 @@ pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI
 #endif
   return(cv);
 }
+#pragma GCC pop_options
+
 
 
 float peakLevel;
@@ -1592,7 +1581,6 @@ static void calculate_static_correction(void)                   // Calculate the
           + get_attenuation()
           - setting.offset);
 }
-
 
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
@@ -3525,8 +3513,8 @@ quit:
   reset_settings(M_LOW);
 #endif
 }
-#pragma GCC pop_options
 
+#pragma GCC pop_options
 
 #if 0                           // fixed point FFT
 
