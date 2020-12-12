@@ -23,6 +23,7 @@
 #include "si4432.h"
 
 #include "spi.h"
+
 // Allow enable DMA for read display data
 #define __USE_DISPLAY_DMA_RX__
 
@@ -673,7 +674,7 @@ void ili9341_drawstringV(const char *str, int x, int y)
   ili9341_drawstring(str, ILI9341_HEIGHT-y, x);
   ili9341_set_rotation(DISPLAY_ROTATION_0);
 }
-
+#ifndef wFONT_GET_DATA
 int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size)
 {
   uint16_t *buf = spi_buffer;
@@ -691,17 +692,19 @@ int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size)
   return w*size;
 }
 
+void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size)
+{
+  while (*str)
+    x += ili9341_drawchar_size(*str++, x, y, size);
+}
+#endif
+
 void ili9341_drawfont(uint8_t ch, int x, int y)
 {
   blit8BitWidthBitmap(x, y, NUM_FONT_GET_WIDTH, NUM_FONT_GET_HEIGHT,
                        NUM_FONT_GET_DATA(ch));
 }
 
-void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size)
-{
-  while (*str)
-    x += ili9341_drawchar_size(*str++, x, y, size);
-}
 #if 0
 static void ili9341_pixel(int x, int y, uint16_t color)
 {
@@ -717,21 +720,21 @@ static void ili9341_pixel(int x, int y, uint16_t color)
 
 void ili9341_line(int x0, int y0, int x1, int y1)
 {
+  SWAP(foreground_color, background_color);
 #if 0
-  // modifed Bresenham's line algorithm, see https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+  // modified Bresenham's line algorithm, see https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
   int dx = x1 - x0, sx = 1; if (dx < 0) {dx = -dx; sx = -1;}
   int dy = y1 - y0, sy = 1; if (dy < 0) {dy = -dy; sy = -1;}
   int err = (dx > dy ? dx : -dy) / 2;
   while (1) {
-    ili9341_pixel(x0, y0, DEFAULT_FG_COLOR);
+    ili9341_fill(x0, y0, 1, 1);
     if (x0 == x1 && y0 == y1)
       break;
     int e2 = err;
     if (e2 > -dx) { err -= dy; x0 += sx; }
     if (e2 <  dy) { err += dx; y0 += sy; }
   }
-#endif
-  SWAP(foreground_color, background_color);
+#else
   if (x0 > x1) {
     SWAP(x0, x1);
     SWAP(y0, y1);
@@ -762,6 +765,7 @@ void ili9341_line(int x0, int y0, int x1, int y1)
     x0 += dx;
     y0 += dy;
   }
+#endif
   SWAP(foreground_color, background_color);
 }
 

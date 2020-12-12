@@ -21,7 +21,7 @@
 #include "stdlib.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("Og")
+#pragma GCC optimize ("Os")             // "Os" causes problem in selftest!!!!!!!!
 
 
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
@@ -132,7 +132,11 @@ void reset_settings(int m)
 //  setting.refer = -1;             // do not reset reffer when switching modes
   setting.mute = true;
 #ifdef __SPUR__
-  setting.spur_removal = 0;
+#ifdef TINYSA4
+  setting.spur_removal = S_AUTO_OFF;
+#else
+  setting.spur_removal = S_OFF;
+#endif
   setting.mirror_masking = 0;
 #endif
   switch(m) {
@@ -203,10 +207,10 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
 //#endif
     if (FREQ_IS_CW()) {
       bare_sweep_time = MINIMUM_SWEEP_TIME;       // minimum sweep time in fast CW mode
-      if (setting.repeat != 1 || setting.sweep_time_us >= 100*ONE_MS_TIME || setting.spur_removal != 0) // if no fast CW sweep possible
+      if (setting.repeat != 1 || setting.sweep_time_us >= 100*ONE_MS_TIME || S_STATE(setting.spur_removal)) // if no fast CW sweep possible
         bare_sweep_time = 15000;       // minimum CW sweep time when not in fast CW mode
     }
-    t = vbwSteps * (setting.spur_removal ? 2 : 1) * bare_sweep_time ;           // factor in vbwSteps and spur impact
+    t = vbwSteps * (S_STATE(setting.spur_removal) ? 2 : 1) * bare_sweep_time ;           // factor in vbwSteps and spur impact
     t += (setting.repeat - 1)* REPEAT_TIME * (sweep_points);            // Add time required for repeats
   }
   return t;
@@ -668,6 +672,26 @@ void set_spur(int v)
 //    set_RBW(300);
   dirty = true;
 }
+
+void toggle_spur(void)
+{
+  if (setting.mode!=M_LOW)
+    return;
+#ifdef TINYSA4
+  if (S_IS_AUTO(setting.spur_removal ))
+    setting.spur_removal = false;
+  else if (setting.spur_removal)
+    setting.spur_removal = S_AUTO_OFF;
+  else
+    setting.spur_removal = true;
+#else
+  if (S_STATE(setting.spur_removal ))
+    setting.spur_removal = S_OFF;
+  else
+    setting.spur_removal = S_ON;
+#endif
+  dirty = true;
+}
 #endif
 
 #ifdef __ULTRA__
@@ -1096,6 +1120,8 @@ void calculate_correction(void)
     scaled_correction_multi[i] = (int32_t) ( m / d );
   }
 }
+#pragma GCC push_options
+#pragma GCC optimize ("Og")             // "Os" causes problem
 
 pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
@@ -1119,6 +1145,8 @@ pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI
 #endif
   return(cv);
 }
+#pragma GCC pop_options
+
 
 
 float peakLevel;
@@ -1483,7 +1511,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   actual_rbw_x10 = temp_actual_rbw_x10;         // Now it fits in 16 bit
 
 #ifdef __SI4432__
-  if (setting.spur_removal && actual_rbw_x10 > 3000)
+  if (S_STATE(setting.spur_removal) && actual_rbw_x10 > 3000)
     actual_rbw_x10 = 2500;           // if spur suppression reduce max rbw to fit within BPF
   SI4432_Sel =  MODE_SELECT(setting.mode);
 #endif
@@ -1729,12 +1757,12 @@ static void calculate_static_correction(void)                   // Calculate the
           - setting.offset);
 }
 
-
 pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
   int modulation_index = 0;
-  if (i == 0 && dirty ) {                                                   // if first point in scan and dirty
+  int spur_second_pass = false;
+  if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
 #ifdef __ADF4351__
     ADF4351_force_refresh();
 #endif
@@ -1743,7 +1771,6 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     scandirty = true;                                                       // This is the first pass with new settings
     dirty = false;
     sweep_elapsed = chVTGetSystemTimeX();                              // for measuring accumulated time
-    if (setting.spur_removal == -1) setting.spur_removal = 1;                               // ensure spur processing starts in right phase
     // Set for actual time pre calculated value (update after sweep)
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
     // Change actual sweep time as user input if it greater minimum
@@ -1918,8 +1945,8 @@ modulation_again:
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
     uint32_t local_IF;
-
-    again:                                                              // Spur reduction jumps to here for second measurement
+    spur_second_pass = false;
+  again:                                                              // Spur reduction jumps to here for second measurement
 
     local_IF=0;                                                         // to get rid of warning
     if (MODE_HIGH(setting.mode)) {
@@ -1940,17 +1967,17 @@ modulation_again:
             stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
 #endif
           }
-          if (setting.spur_removal){         // If in low input mode and spur reduction is on
-            if (false && S_IS_AUTO(setting.below_IF) && lf < local_IF / 2 ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
+          if (S_STATE(setting.spur_removal)){         // If in low input mode and spur reduction is on
+            if (false && S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
             {              // else low/above IF
-              if (setting.spur_removal == 1)
-                setting.below_IF = S_AUTO_ON;               // use below IF in first pass
+              if (spur_second_pass)
+                setting.below_IF = S_AUTO_ON;               // use below IF in second pass
               else
-                setting.below_IF = S_AUTO_OFF;              // and above IF in second pass
+                setting.below_IF = S_AUTO_OFF;              // and above IF in first pass
             }
             else
             {
-              if (setting.spur_removal == -1)                       // If second spur pass
+              if (spur_second_pass)                       // If second spur pass
 #ifdef __SI4432__
                 local_IF  = local_IF + 500000;           // apply IF spur shift
 #else
@@ -1965,14 +1992,14 @@ modulation_again:
       }
 #ifdef __ULTRA__
     } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
-      local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? setting.spur_removal*300000 : 0 );
+      local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? S_STATE(setting.spur_removal)*300000 : 0 );
 #ifdef __SI4432__
       set_freq (SI4432_RX , local_IF);
 #endif
 #ifdef __SI4463__
       set_freq (SI4463_RX , local_IF);
 #endif
-      //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?setting.spur_removal * 1000 * actual_rbw:0);
+      //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?S_STATE(setting.spur_removal) * 1000 * actual_rbw:0);
 #endif
     }
 
@@ -1983,7 +2010,7 @@ modulation_again:
       //      if (lf > 3406000000 )
       //        setFreq (1, local_IF/5 + lf/5);
       //      else
-      if (setting.spur_removal != 1) {  // Left of tables
+      if (S_STATE(setting.spur_removal) != 1) {  // Left of tables
         if (lf > 3250000000 )
           set_freq (SI4432_LO , lf/5 - local_IF/5);
         if (lf > 1250000000 )
@@ -2098,14 +2125,13 @@ modulation_again:
 
 #ifdef __FAST_SWEEP__
 #ifdef __SI4432__
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur_removal == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
 #ifdef __SI4463__
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && setting.spur_removal == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
-      // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       SI446x_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
@@ -2161,7 +2187,7 @@ modulation_again:
       }while(1);
 #ifdef __FAST_SWEEP__
 #ifdef __SI4432__
-      if (setting.spur_removal == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+      if (S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
         SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
 #endif
@@ -2186,13 +2212,16 @@ modulation_again:
     }
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
-    if (setting.spur_removal == 1) {                                        // If first spur pass
-      spur_RSSI = pureRSSI;                                       // remember measure RSSI
-      setting.spur_removal = -1;
-      goto again;                                                 // Skip all other processing
-    } else if (setting.spur_removal == -1) {                              // If second  spur pass
-      pureRSSI = ( pureRSSI < spur_RSSI ? pureRSSI : spur_RSSI);  // Take minimum of two
-      setting.spur_removal = 1;                                           // and prepare for next call of perform.
+    if (S_STATE(setting.spur_removal)) {
+      if (!spur_second_pass) {                                        // If first spur pass
+        spur_RSSI = pureRSSI;                                       // remember measure RSSI
+        spur_second_pass = true;
+        goto again;                                                 // Skip all other processing
+      } else {                              // If second  spur pass
+        pureRSSI = ( pureRSSI < spur_RSSI ? pureRSSI : spur_RSSI);  // Take minimum of two
+        if (S_IS_AUTO(setting.below_IF))
+          setting.below_IF = S_AUTO_OFF;                            // make sure it is off for next pass
+      }
     }
 #endif
 
@@ -3318,7 +3347,11 @@ common_silent:
     setting.step_delay_mode = SD_PRECISE;
 //        set_step_delay(1);                      // Precise scanning speed
 #ifdef __SPUR__
-    setting.spur_removal = 1;
+#ifdef TINYSA4
+    setting.spur_removal = S_AUTO_OFF;
+#else
+    setting.spur_removal = S_OFF;
+#endif
 #endif
  common:
 
@@ -3336,7 +3369,7 @@ common_silent:
     dirty = true;
  //   set_step_delay(1);                      // Do not set !!!!!
 #ifdef __SPUR__
-    setting.spur_removal = 1;
+    setting.spur_removal = S_ON;
 #endif
 
     goto common;
@@ -3524,7 +3557,7 @@ void self_test(int test)
         j = setting.test_argument;
 // do_again:
       test_prepare(TEST_RBW);
-      setting.spur_removal = 0;
+      setting.spur_removal = S_OFF;
 #if 1               // Disable for offset baseline scanning
       setting.step_delay_mode = SD_NORMAL;
       setting.repeat = 1;
@@ -3561,7 +3594,7 @@ void self_test(int test)
 #if 1                                                                       // Enable for step delay tuning
       while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 0.5) {
         test_prepare(TEST_RBW);
-        setting.spur_removal = 0;
+        setting.spur_removal = S_OFF;
         setting.step_delay_mode = SD_NORMAL;
         setting.step_delay = setting.step_delay * 4 / 5;
         if (setting.rbw_x10 < 1000)
@@ -3588,7 +3621,7 @@ void self_test(int test)
           test_prepare(TEST_RBW);
           setting.step_delay_mode = SD_FAST;
           setting.offset_delay /= 2;
-          setting.spur_removal = 0;
+          setting.spur_removal = S_OFF;
           if (setting.rbw_x10 < 1000)
             set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));   // 50 times RBW
           else
@@ -3736,8 +3769,8 @@ quit:
   reset_settings(M_LOW);
 #endif
 }
-#pragma GCC pop_options
 
+#pragma GCC pop_options
 
 #if 0                           // fixed point FFT
 

@@ -16,8 +16,6 @@
  * the Free Software Foundation, Inc., 51 Franklin Street,
  * Boston, MA 02110-1301, USA.
  */
-#pragma GCC push_options
-#pragma GCC optimize ("Os")
 
 
 #define FORM_ICON_WIDTH      16
@@ -468,9 +466,7 @@ static const menuitem_t  menu_tophigh[];
 static const menuitem_t  menu_topultra[];
 #endif
 
-
-#define AUTO_ICON(s) (s >=2 ? BUTTON_ICON_CHECK_AUTO : s)       // This assumes the a certin icon order !!!!!!
-
+#define AUTO_ICON(S) (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
 
 static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
 {
@@ -766,10 +762,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
     return;
   }
   if (setting.mode == M_LOW) {
-    if (setting.spur_removal)
-      set_spur(0);
-    else
-      set_spur(1); // must be 0 or 1 !!!!
+    toggle_spur();
   } else
     toggle_mirror_masking();
   //  menu_move_back();
@@ -1226,8 +1219,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
 #endif
 
 
-#define AUTO_ICON(S) (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
-
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_agc_acb){
   (void)item;
   (void)data;
@@ -1350,7 +1341,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
   draw_menu();
 }
 
+#ifdef TINYSA4
+static const uint16_t points_setting[] = {51, 101, 201, 450};
+#else
 static const uint16_t points_setting[] = {51, 101, 145, 290};
+#endif
 static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
   (void)item;
   if(b){
@@ -2518,7 +2513,10 @@ redraw_cal_status:
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Spur:", x, y);
     y += YSTEP;
-    y = add_quick_menu("ON", x, y, (menuitem_t *)menu_stimulus);
+    if (S_IS_AUTO(setting.spur_removal))
+      y = add_quick_menu("AUTO", x, y, (menuitem_t *)menu_stimulus);
+    else
+      y = add_quick_menu("ON", x, y, (menuitem_t *)menu_stimulus);
   }
   if (setting.mirror_masking) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
@@ -2720,6 +2718,3 @@ redraw_cal_status:
   }
 }
 
-
-
-#pragma GCC pop_options

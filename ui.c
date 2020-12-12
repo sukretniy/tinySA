@@ -25,6 +25,9 @@
 #include <string.h>
 #include <math.h>
 
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
 uistat_t uistat = {
  digit: 6,
  current_trace: 0,
@@ -76,7 +79,6 @@ enum {
 #endif
 
 #define NUMINPUT_LEN 10
-
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
 static uint8_t keypads_last_index;
@@ -124,7 +126,7 @@ typedef struct {
 #define EVT_TOUCH_DOWN     1
 #define EVT_TOUCH_PRESSED  2
 #define EVT_TOUCH_RELEASED 3
-
+#define EVT_TOUCH_LONGPRESS 4
 static int8_t last_touch_status = EVT_TOUCH_NONE;
 static int16_t last_touch_x;
 static int16_t last_touch_y;
@@ -296,7 +298,16 @@ touch_check(void)
       last_touch_y = y;
     }
   }
+#if 0                                           // Long press detection
+  systime_t ticks = chVTGetSystemTimeX();
 
+  if (stat && !last_touch_status) {         // new button, initialize
+    prev_touch_time = ticks;
+  }
+  dt = ticks - prev_touch_time;
+
+  if (stat && stat == last_touch_status && dt > BUTTON_DOWN_LONG_TICKS) {return EVT_TOUCH_LONGPRESS;}
+#endif
   if (stat != last_touch_status) {
     last_touch_status = stat;
     return stat ? EVT_TOUCH_PRESSED : EVT_TOUCH_RELEASED;
@@ -307,14 +318,22 @@ touch_check(void)
 void
 touch_wait_release(void)
 {
-  while (touch_check() != EVT_TOUCH_RELEASED)
+  while (touch_check() != EVT_TOUCH_NONE)
     chThdSleepMilliseconds(20);
 }
-
+#if 0
 static inline void
 touch_wait_pressed(void)
 {
   while (touch_check() != EVT_TOUCH_PRESSED)
+    ;
+}
+#endif
+
+static inline void
+touch_wait_released(void)
+{
+  while (touch_check() != EVT_TOUCH_RELEASED)
     ;
 }
 
@@ -331,8 +350,8 @@ touch_cal_exec(void)
   ili9341_line(0, 0, 32, 0);
   ili9341_line(0, 0, 32, 32);
   ili9341_drawstring("TOUCH UPPER LEFT", 40, 40);
-
-  touch_wait_release();
+  touch_wait_released();
+//  touch_wait_release();
   x1 = last_touch_x;
   y1 = last_touch_y;
 
@@ -342,7 +361,8 @@ touch_cal_exec(void)
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-32);
   ili9341_drawstring("TOUCH LOWER RIGHT", 210, 200);
 
-  touch_wait_release();
+  touch_wait_released();
+ // touch_wait_release();
   x2 = last_touch_x;
   y2 = last_touch_y;
 
@@ -917,7 +937,7 @@ menu_marker_smith_cb(int item, uint8_t data)
 #endif
 
 static void
-active_marker_select(int item)
+active_marker_select(int item)  // used only to select an active marker from the modify marker selection menu
 {
   if (item == -1) {
     active_marker = previous_marker;
@@ -926,9 +946,12 @@ active_marker_select(int item)
       choose_active_marker();
     }
   } else {
-    if (previous_marker != active_marker)
+    if (previous_marker != active_marker) {
       previous_marker = active_marker;
-    active_marker = item;
+      active_marker = item;
+    } else {
+      active_marker = item;
+    }
   }
 }
 #ifdef __VNA__
@@ -2574,7 +2597,7 @@ static int touch_quick_menu(void)
 {
   int touch_x, touch_y;
   touch_position(&touch_x, &touch_y);
-  if (touch_x <OFFSETX)
+  if (ui_mode != UI_KEYPAD && touch_x <OFFSETX)
   {
     touch_wait_release();
     return invoke_quick_menu(touch_y);
@@ -2588,6 +2611,31 @@ touch_lever_mode_select(void)
   int touch_x, touch_y;
   touch_position(&touch_x, &touch_y);
   if (touch_y > HEIGHT) {
+    if (touch_x < FREQUENCIES_XPOS2 -50 && uistat.lever_mode == LM_CENTER) {
+      touch_wait_release();
+      if (setting.freq_mode & FREQ_MODE_CENTER_SPAN)
+        ui_mode_keypad(KM_CENTER);
+      else
+        ui_mode_keypad(KM_START);
+      ui_process_keypad();
+    }
+    if (touch_x >  FREQUENCIES_XPOS2 - 50 && touch_x <  FREQUENCIES_XPOS2 +50) {
+      touch_wait_release();
+      if (FREQ_IS_STARTSTOP())
+        setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
+      else if (FREQ_IS_CENTERSPAN())
+        setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
+      redraw_request |= REDRAW_FREQUENCY;
+      return true;
+    }
+    if (touch_x >= FREQUENCIES_XPOS2 +50 && uistat.lever_mode == LM_SPAN) {
+      touch_wait_release();
+      if (setting.freq_mode & FREQ_MODE_CENTER_SPAN)
+        ui_mode_keypad(KM_SPAN);
+      else
+        ui_mode_keypad(KM_STOP);
+      ui_process_keypad();
+    }
     select_lever_mode(touch_x < FREQUENCIES_XPOS2 ? LM_CENTER : LM_SPAN);
     return TRUE;
   }
@@ -2624,6 +2672,14 @@ touch_marker_select(void)
   for (int i = 0; i < MARKERS_MAX; i++) {
     if (markers[i].enabled) {
       if (selected_marker == 0) {
+        if (active_marker == i) {
+          extern const menuitem_t menu_marker_modify[];
+          touch_wait_release();
+          selection = -1;
+          menu_current_level = 0;
+          menu_push_submenu(menu_marker_modify);
+          break;
+        }
         active_marker = i;
         redraw_marker(active_marker);
         break;
@@ -2665,7 +2721,7 @@ void ui_process_touch(void)
         break;
       // Try select lever mode (top and bottom screen)
       if (touch_lever_mode_select()) {
-        touch_wait_release();
+//        touch_wait_release();
         break;
       }
 
@@ -2811,3 +2867,7 @@ int check_touched(void)
   touch_start_watchdog();
   return touched;
 }
+
+
+
+#pragma GCC pop_options

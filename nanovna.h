@@ -249,6 +249,7 @@ void set_sweep_time_us(uint32_t);
 #ifdef __SPUR__
 //extern int setting.spur;
 void set_spur(int v);
+void toggle_spur(void);
 void toggle_mirror_masking(void);
 #endif
 void set_average(int);
