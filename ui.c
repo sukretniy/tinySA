@@ -25,6 +25,9 @@
 #include <string.h>
 #include <math.h>
 
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
 uistat_t uistat = {
  digit: 6,
  current_trace: 0,
@@ -76,7 +79,6 @@ enum {
 #endif
 
 #define NUMINPUT_LEN 10
-
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
 static uint8_t keypads_last_index;
@@ -125,7 +127,6 @@ typedef struct {
 #define EVT_TOUCH_PRESSED  2
 #define EVT_TOUCH_RELEASED 3
 #define EVT_TOUCH_LONGPRESS 4
-
 static int8_t last_touch_status = EVT_TOUCH_NONE;
 static int16_t last_touch_x;
 static int16_t last_touch_y;
@@ -320,11 +321,19 @@ touch_wait_release(void)
   while (touch_check() != EVT_TOUCH_NONE)
     chThdSleepMilliseconds(20);
 }
-
+#if 0
 static inline void
 touch_wait_pressed(void)
 {
   while (touch_check() != EVT_TOUCH_PRESSED)
+    ;
+}
+#endif
+
+static inline void
+touch_wait_released(void)
+{
+  while (touch_check() != EVT_TOUCH_RELEASED)
     ;
 }
 
@@ -341,8 +350,8 @@ touch_cal_exec(void)
   ili9341_line(0, 0, 32, 0);
   ili9341_line(0, 0, 32, 32);
   ili9341_drawstring("TOUCH UPPER LEFT", 40, 40);
-
-  touch_wait_release();
+  touch_wait_released();
+//  touch_wait_release();
   x1 = last_touch_x;
   y1 = last_touch_y;
 
@@ -352,7 +361,8 @@ touch_cal_exec(void)
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-32);
   ili9341_drawstring("TOUCH LOWER RIGHT", 210, 200);
 
-  touch_wait_release();
+  touch_wait_released();
+ // touch_wait_release();
   x2 = last_touch_x;
   y2 = last_touch_y;
 
@@ -2826,3 +2836,7 @@ int check_touched(void)
   touch_start_watchdog();
   return touched;
 }
+
+
+
+#pragma GCC pop_options
