@@ -2145,7 +2145,7 @@ uint16_t force_rbw(int f)
   SI4463_short_start_rx();           // This can cause recalibration
   SI4463_wait_for_cts();
   set_RSSI_comp();
-  prev_band = -1;
+//  prev_band = -1;
   SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }
@@ -2210,16 +2210,34 @@ void SI4463_set_freq(uint32_t freq)
       my_microsecond_delay(10);
   }
   if ((SI4463_band == prev_band)) {
-    uint8_t data[] = {
+    int vco = 2091 + (((freq - 850000000)/1000) * 492) / 200000;
+
+    if (SI4463_in_tx_mode) {
+      uint8_t data[] = {
+                      0x37,
+                      (uint8_t) R,                   //  R data[4]
+                      (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      (uint8_t) ((F    ) & 255),     //  F2,F1,F0 data[5] .. data[7]
+                      (vco>>8) & 0xff,
+                      vco & 0xff,
+                      0x00,
+                      0x32
+      };
+      SI4463_do_api(data, sizeof(data), NULL, 0);
+    } else {
+
+      uint8_t data[] = {
                       0x36,
                       (uint8_t) R,                   //  R data[4]
                       (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
                       (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
                       (uint8_t) ((F    ) & 255),     //  F2,F1,F0 data[5] .. data[7]
-                      0x09,
-                      0x66
-    };
-    SI4463_do_api(data, sizeof(data), NULL, 0);
+                      (vco>>8) & 0xff,
+                      vco & 0xff
+      };
+      SI4463_do_api(data, sizeof(data), NULL, 0);
+    }
     SI4463_frequency_changed = true;
 //    SI4463_set_gpio(3,GPIO_LOW);
     return;
@@ -2275,7 +2293,6 @@ void SI4463_set_freq(uint32_t freq)
     };
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
 //    my_microsecond_delay(30000);
-    prev_band = SI4463_band;
   }
 
 
@@ -2305,6 +2322,7 @@ void SI4463_set_freq(uint32_t freq)
   SI4463_wait_for_cts();
 //  SI4463_set_gpio(3,GPIO_LOW);
   SI4463_frequency_changed = true;
+  prev_band = SI4463_band;
 }
 
 void SI4463_init_rx(void)

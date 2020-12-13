@@ -71,8 +71,13 @@ void update_min_max_freq(void)
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
     break;
   case M_GENHIGH:
+#if 0
     minFreq =  135000000;
     maxFreq = 4290000000U;
+#else
+    minFreq =  850000000;
+    maxFreq = 1150000000U;
+#endif
     break;
   }
 }
@@ -174,7 +179,7 @@ void reset_settings(int m)
     break;
   case M_GENHIGH:
     setting.lo_drive=1;
-    set_sweep_frequency(ST_CENTER, 300000000);
+    set_sweep_frequency(ST_CENTER, (minFreq + maxFreq)/2 );
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     break;
@@ -1459,7 +1464,7 @@ case M_GENHIGH: // Direct output from 1
     SI4432_Transmit(setting.drive);
 #endif
 #ifdef __SI4468__
-    SI4463_init_rx();
+    SI4463_init_tx();
 #endif
     ADF4351_enable(true);
 #ifndef TINYSA4_PROTO
@@ -1481,6 +1486,10 @@ case M_GENHIGH: // Direct output from 1
 
 void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# steps in between needed if frequency step is largen than maximum rbw)
 {
+  if (!MODE_INPUT(setting.mode)) {
+    vbwSteps = 1;
+    return;
+  }
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
     setting.vbw_x10 = (setting.frequency_step)/100;
   } else {
@@ -2079,8 +2088,13 @@ modulation_again:
       } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       } else if (setting.mode == M_GENHIGH) {
-        set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
-      }
+#if 1                       // Let SI TX only
+        set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
+        local_IF = 0;
+#else
+          set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
+#endif
+        }
 //      STOP_PROFILE;
 #endif
     }
