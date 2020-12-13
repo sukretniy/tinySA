@@ -1976,6 +1976,15 @@ modulation_again:
             stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
 #endif
           }
+#ifdef __SI4468__
+            if (S_IS_AUTO(setting.spur_removal)) {
+              if (lf >= local_IF) {
+                setting.spur_removal= S_AUTO_ON;
+              } else {
+                setting.spur_removal= S_AUTO_OFF;
+              }
+            }
+#endif
           if (S_STATE(setting.spur_removal)){         // If in low input mode and spur reduction is on
             if (false && S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
             {              // else low/above IF
