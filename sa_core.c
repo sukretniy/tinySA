@@ -1,5 +1,4 @@
 /* All rights reserved.
- *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
@@ -3063,6 +3062,8 @@ void test_prepare(int i)
   setting.frequency_IF = DEFAULT_IF;                // Default frequency
   setting.auto_IF = true;
   setting.auto_attenuation = false;
+  setting.spur_removal = S_OFF;
+
   switch(test_case[i].setup) {                // Prepare test conditions
   case TPH_SILENT:                             // No input signal
     set_mode(M_HIGH);
@@ -3094,7 +3095,7 @@ common_silent:
 #ifdef TINYSA4
     setting.spur_removal = S_AUTO_OFF;
 #else
-    setting.spur_removal = S_OFF;
+    setting.spur_removal = S_ON;
 #endif
 #endif
  common:
@@ -3121,6 +3122,7 @@ common_silent:
   case TPH_30MHZ:
     set_mode(M_HIGH);
     set_refer_output(0);
+    setting.spur_removal = S_ON;
     goto common;
   }
   switch(test_case[i].setup) {                // Prepare test conditions
@@ -3216,6 +3218,7 @@ void self_test(int test)
     test_wait = true;
     if (!check_touched())
       return;
+    sweep_mode = SWEEP_ENABLE;
 
     ili9341_clear_screen();
     reset_settings(M_LOW);
