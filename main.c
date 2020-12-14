@@ -2377,7 +2377,7 @@ static const VNAShellCommand commands[] =
     {"edelay"      , cmd_edelay      , 0},
 #endif
     {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
-    {"vbat"        , cmd_vbat        , 0},
+    {"vbat"        , cmd_vbat        , CMD_WAIT_MUTEX},     // Uses same adc as touch!!!!!
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
     {"vbat_offset" , cmd_vbat_offset , 0},
 #endif

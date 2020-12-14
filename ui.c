@@ -2845,7 +2845,7 @@ ui_init()
 void wait_user(void)
 {
   adc_stop();
-  touch_wait_release();
+  touch_wait_released();
 #if 0
   operation_requested = OP_NONE;
   while (true) {
