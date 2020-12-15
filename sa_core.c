@@ -1756,6 +1756,9 @@ static void calculate_static_correction(void)                   // Calculate the
 #ifdef __SI4432__
       getSI4432_RSSI_correction()
 #endif
+#ifdef __SI4463__
+      getSI4463_RSSI_correction()
+#endif
       - get_signal_path_loss()
       + float_TO_PURE_RSSI(
           + get_level_offset()
@@ -2195,11 +2198,10 @@ modulation_again:
         pureRSSI = DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
 #endif
 #ifdef __SI4463__
-        pureRSSI = DEVICE_TO_PURE_RSSI((deviceRSSI_t)Si446x_RSSI());
+        pureRSSI = Si446x_RSSI();
 #endif
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
           return 0;                                                           // abort
-
         // Store data level bitfield (remember only last 2 states)
         // T_LEVEL_UNDEF mode bit drop after 2 shifts
         data_level = ((data_level<<1) | (pureRSSI < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
@@ -2214,8 +2216,8 @@ modulation_again:
         SI4432_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
 #endif
-#ifdef __SI446x__
-      if (setting.spur_removal == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+#ifdef __SI4463__
+      if (/* S_STATE(setting.spur_removal) == 0 &&  */ SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
         SI446x_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
 #endif
@@ -2225,7 +2227,8 @@ modulation_again:
       }
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
-    else {
+    else
+    {
 #ifdef __SI4432__
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
 #endif
@@ -2234,8 +2237,8 @@ modulation_again:
 #endif
     }
 #ifdef __SPUR__
-    static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
-    if (S_STATE(setting.spur_removal)) {
+    static pureRSSI_t spur_RSSI = 10000;                               // Initialization only to avoid warning.
+    if (setting.mode == M_LOW && S_STATE(setting.spur_removal)) {
       if (!spur_second_pass) {                                        // If first spur pass
         spur_RSSI = pureRSSI;                                       // remember measure RSSI
         spur_second_pass = true;

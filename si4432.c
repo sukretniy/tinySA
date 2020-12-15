@@ -43,8 +43,8 @@
 // Hardware or software SPI use
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
-#define SI4432_SPI_SPEED   SPI_BR_DIV8
 //#define SI4432_SPI_SPEED   SPI_BR_DIV64
+#define SI4432_SPI_SPEED   SPI_BR_DIV8
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -1236,7 +1236,7 @@ int SI4463_wait_for_cts(void)
 {
   set_SPI_mode(SPI_MODE_SI);
   while (!SI4463_READ_CTS) {
-    my_microsecond_delay(10);
+    my_microsecond_delay(1);
   }
   return 1;
 }
@@ -1266,7 +1266,6 @@ void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 
 uint8_t SI4463_read_byte( uint8_t ADR )
 {
-  set_SPI_mode(SPI_MODE_SI);
   uint8_t DATA ;
   set_SPI_mode(SPI_MODE_SI);
   SI_CS_LOW;
@@ -1303,7 +1302,7 @@ uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout)
   uint16_t timeout = 40000;
   while(!SI4463_get_response(buff, len))
   {
-    my_microsecond_delay(10);
+    my_microsecond_delay(1);
     if(use_timeout && !--timeout)
     {
       ((char *)buff)[0] = 1;
@@ -1322,10 +1321,13 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   if (SI4463_wait_for_cts())
 #endif
     {
+//   SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
+
     SI_CS_LOW;
     for(uint8_t i=0;i<len;i++) {
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
     }
+//    SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
     SI_CS_HIGH;
 #if 0
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
@@ -1721,9 +1723,12 @@ void SI446x_Fill(int s, int start)
     int i = start;
   uint8_t data[3];
   do {
+again:
     data[0] = SI446X_CMD_GET_MODEM_STATUS;
     data[1] = 0xFF;
-    SI4463_do_api(data, 2, data, 3);
+    SI4463_do_api(data, 1, data, 3);            // TODO no clear of interrups
+    if (data[2] == 0) goto again;
+    if (data[2] == 255) goto again;
     age[i]=(char)data[2];
     if (++i >= sweep_points) break;
     if (t)
@@ -1770,22 +1775,22 @@ int16_t Si446x_RSSI(void)
       SI4463_frequency_changed = false;
     }
 
-    int j = 3; //setting.repeat;
+    int j = 1; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
       again:
       data[0] = SI446X_CMD_GET_MODEM_STATUS;
       data[1] = 0xFF;
-      SI4463_do_api(data, 2, data, 3);
+      SI4463_do_api(data, 2, data, 3);          // TODO no clear of interrupts
       if (data[2] == 255) {
         my_microsecond_delay(10);
         goto again;
       }
-      RSSI_RAW_ARRAY[--j] = data[2] - 120 * 2;
+      RSSI_RAW_ARRAY[--j] = data[2];
       if (j == 0) break;
-      my_microsecond_delay(100);
+      my_microsecond_delay(20);
     }while(1);
-#if 1
+#if 0
     int t;
     if (RSSI_RAW_ARRAY[0] > RSSI_RAW_ARRAY[1]) {
       t = RSSI_RAW_ARRAY[1];
@@ -2128,6 +2133,10 @@ const int SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
 static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
 static int prev_band = -1;
 
+pureRSSI_t getSI4463_RSSI_correction(void){
+  return SI4463_RSSI_correction;
+};
+
 
 uint16_t force_rbw(int f)
 {
@@ -2210,7 +2219,7 @@ void SI4463_set_freq(uint32_t freq)
       my_microsecond_delay(10);
   }
   if ((SI4463_band == prev_band)) {
-    int vco = 2091 + (((freq - 850000000)/1000) * 492) / 200000;
+    int vco = 2091 + ((((freq / 4 ) * SI4463_outdiv - 850000000)/1000) * 492) / 200000;
 
     if (SI4463_in_tx_mode) {
       uint8_t data[] = {
