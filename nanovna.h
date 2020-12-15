@@ -364,7 +364,7 @@ extern uint16_t graph_bottom;
 // Maximum menu buttons count
 #define MENU_BUTTON_MAX         8
 #define MENU_BUTTON_WIDTH      80
-#define MENU_BUTTON_HEIGHT     (LCD_HEIGHT/8-2)
+#define MENU_BUTTON_HEIGHT     (LCD_HEIGHT/8-1)
 #define MENU_BUTTON_BORDER      1
 #define KEYBOARD_BUTTON_BORDER  2
 #define FORM_BUTTON_BORDER      2

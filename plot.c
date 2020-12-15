@@ -2394,7 +2394,7 @@ redraw_frame(void)
 
 static void update_waterfall(void){
   int i;
-  int w_width = area_width < POINTS_COUNT ? area_width : POINTS_COUNT;
+  int w_width = area_width < WIDTH ? area_width : WIDTH;
   // Waterfall only in 290 or 145 points
 //  if (!(sweep_points == 290 || sweep_points == 145))
 //    return;
@@ -2447,7 +2447,7 @@ static void update_waterfall(void){
     else              color = RGB565(               0, 124-((y-160)*4), 252-((y-160)*4));
 
 #endif
-    while (j * sweep_points  < (i+1) * 290) {   // Scale waterfall to 290 points
+    while (j * sweep_points  < (i+1) * WIDTH) {   // Scale waterfall to WIDTH points
       spi_buffer[j++] = color;
     }
   }

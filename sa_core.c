@@ -1009,9 +1009,7 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
   if (setting.mode == M_LOW) {
 
   }
-#ifdef __SI4432__
   set_calibration_freq(setting.refer);
-#endif
   update_rbw();
   calculate_step_delay();
 }
@@ -1767,10 +1765,10 @@ modulation_again:
     if (MODE_HIGH(setting.mode)) {
       local_IF = 0;
     } else if (MODE_LOW(setting.mode)){                                              // All low mode
-      if (!setting.auto_IF) {
+      if (!setting.auto_IF)
         local_IF = setting.frequency_IF;
-      }
-      local_IF = DEFAULT_IF;
+      else
+        local_IF = DEFAULT_IF;
       if (setting.mode == M_LOW) {
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
           local_IF += lf - reffer_freq[setting.refer];    // Offset so fundamental of reffer is visible
@@ -1884,8 +1882,8 @@ modulation_again:
 
     // jump here if in zero span mode and all HW frequency setup is done.
 
-#ifdef __SI4432__
 #ifdef __FAST_SWEEP__
+#ifdef __SI4432__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
@@ -1957,7 +1955,7 @@ modulation_again:
     }
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
-    if (S_STATE(setting.spur_removal)) {
+    if (setting.mode == M_LOW && S_STATE(setting.spur_removal)) {
       if (!spur_second_pass) {                                        // If first spur pass
         spur_RSSI = pureRSSI;                                       // remember measure RSSI
         spur_second_pass = true;
@@ -2624,7 +2622,7 @@ sweep_again:                                // stay in sweep loop when output mo
   palSetPad(GPIOB, GPIOB_LED);
 #endif
 #ifdef TINYSA4
-  palSetPad(GPIOC, GPIOC_LED);
+  palSetLine(LINE_LED);
 #endif
   
   return true;
