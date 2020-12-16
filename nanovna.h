@@ -805,6 +805,7 @@ typedef struct setting
   int fast_speedup;
   float normalize_level;     // Level to set normalize to, zero if not doing anything
   int modulation_frequency;
+  int trigger_mode;
   uint32_t checksum;
 }setting_t;
 
@@ -1064,6 +1065,7 @@ typedef int16_t  pureRSSI_t;
 // External programm zero level settings (need decrease on this value -)
 #define EXT_ZERO_LEVEL            (128)
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
+#define PURE_TO_DEVICE_RSSI(rssi) ((rssi)>>4)
 #define float_TO_PURE_RSSI(rssi)  ((rssi)*32)
 #define PURE_TO_float(rssi)       ((rssi)/32.0)
 
@@ -1097,6 +1099,7 @@ enum {
 };
 
 enum {
-  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN
+  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID
 };
+
 /*EOF*/

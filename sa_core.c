@@ -117,6 +117,7 @@ void reset_settings(int m)
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
   setting.trigger_direction = T_UP;
+  setting.trigger_mode = T_MID;
   setting.fast_speedup = 0;
   setting.level_sweep = 0.0;
   setting.level = -15.0;
@@ -912,7 +913,9 @@ void set_trigger_level(float trigger_level)
 
 void set_trigger(int trigger)
 {
-  if (trigger == T_UP || trigger == T_DOWN){
+  if (trigger == T_PRE || trigger == T_POST || trigger == T_MID) {
+    setting.trigger_mode = trigger;
+  } else if (trigger == T_UP || trigger == T_DOWN){
     setting.trigger_direction = trigger;
   } else if (trigger == T_DONE) {
     pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
@@ -1906,6 +1909,11 @@ modulation_again:
 #define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
 
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
+
+#if 1
+      volatile uint8_t trigger_lvl = PURE_TO_DEVICE_RSSI((int16_t)((float_TO_PURE_RSSI(setting.trigger_level) - correct_RSSI - correct_RSSI_freq)));
+      SI4432_trigger_fill(MODE_SELECT(setting.mode), trigger_lvl, (setting.trigger_direction == T_UP), setting.trigger_mode);
+#else
       register uint16_t t_mode;
       pureRSSI_t trigger_lvl;
       uint16_t data_level = T_LEVEL_UNDEF;
@@ -1943,12 +1951,15 @@ modulation_again:
       }
 #endif
 #endif
+
+#endif
       if (setting.trigger == T_SINGLE) {
         set_trigger(T_DONE);
       }
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
-    else {
+    //else
+    {
 #ifdef __SI4432__
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
 #endif
@@ -2121,7 +2132,7 @@ sweep_again:                                // stay in sweep loop when output mo
       }
 #endif
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
-        age[i] = 0;
+        if (setting.average == AV_MAX_DECAY) age[i] = 0;
         actual_t[i] = RSSI;
       } else {
         switch(setting.average) {

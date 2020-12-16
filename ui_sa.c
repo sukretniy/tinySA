@@ -1125,20 +1125,33 @@ static UI_FUNCTION_ADV_CALLBACK(menu_scale_per_acb)
 }
 #endif
 
+const char *mode_text[] = {"PRE","POST","MID"};
+
 static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
 {
   (void)item;
   if(b){
-    if (data == T_UP || data == T_DOWN)
+    if (data == T_MODE) {
+      b->param_1.text = mode_text[setting.trigger_mode - T_PRE];
+    } else if (data == T_UP || data == T_DOWN)
       b->icon = setting.trigger_direction == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     else
       b->icon = setting.trigger == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
+  if (data == T_MODE) {
+    setting.trigger_mode += 1;
+    if (setting.trigger_mode > T_MID)
+      setting.trigger_mode = T_PRE;
+    data = setting.trigger_mode;
+    goto done;
+  } else
   if (data != T_DONE) {
+  done:
     set_trigger(data);
 //  menu_move_back();
     ui_mode_normal();
+    draw_menu();
     completed = true;
   }
 }
@@ -1856,6 +1869,7 @@ static const menuitem_t menu_trigger[] = {
   { MT_KEYPAD,       KM_TRIGGER, "TRIGGER\nLEVEL", NULL},
   { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
   { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
+  { MT_ADV_CALLBACK, T_MODE,     "%s\nTRIGGER",     menu_trigger_acb},
   { MT_CANCEL, 0,                S_LARROW" BACK",      NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
