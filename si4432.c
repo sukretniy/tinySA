@@ -454,7 +454,6 @@ void SI4432_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigg
 
   register uint16_t t_mode;
   uint16_t data_level = T_LEVEL_UNDEF;
-
   if (up_direction)
     t_mode = T_UP_MASK;
   else
@@ -469,6 +468,9 @@ void SI4432_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigg
     rssi = shiftIn();
     palSetPad(GPIOC, sel);
     age[i] = rssi;
+    i++;
+    if (i >= sweep_points)
+      i = 0;
     switch (waiting) {
     case ST_ARMING:
       if (i == sweep_points-1) {
@@ -491,15 +493,12 @@ void SI4432_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigg
         waiting = ST_FILLING;
         switch (trigger_mode) {
         case T_PRE:                // Trigger at the begin of the scan
-          buf_index = i - 1;
-          if (buf_index < 0)
-            buf_index += sweep_points;
+          buf_index = i;
+          goto fill_rest;
           break;
         case T_POST:               // Trigger at the end of the scan
           buf_index = i;
-          if (buf_index >= sweep_points)
-            buf_index -= sweep_points;
-          goto store;
+          goto done;
           break;
         case T_MID:                // Trigger in the middle of the scan
           buf_index = i + sweep_points/2;
@@ -510,13 +509,10 @@ void SI4432_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigg
       }
       break;
     case ST_FILLING:
-store:
       if (i == buf_index)
         goto done;
     }
-    i++;
-    if (i >= sweep_points)
-      i = 0;
+fill_rest:
     if (t)
       my_microsecond_delay(t);
   }while(1);

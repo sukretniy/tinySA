@@ -1143,17 +1143,14 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
     setting.trigger_mode += 1;
     if (setting.trigger_mode > T_MID)
       setting.trigger_mode = T_PRE;
-    data = setting.trigger_mode;
-    goto done;
-  } else
-  if (data != T_DONE) {
-  done:
+    set_trigger(setting.trigger_mode);
+  } else if (data != T_DONE) {
     set_trigger(data);
 //  menu_move_back();
     ui_mode_normal();
-    draw_menu();
-    completed = true;
   }
+  draw_menu();
+  completed = true;
 }
 
 #if 0
