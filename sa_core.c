@@ -303,8 +303,8 @@ void set_sweep_time_us(uint32_t t)          // Set the sweep time as the user wa
   if (t > MAXIMUM_SWEEP_TIME)
     t = MAXIMUM_SWEEP_TIME;
   setting.sweep_time_us = t;
-  if (MODE_OUTPUT(setting.mode))
-    setting.actual_sweep_time_us = t;       // To ensure time displayed is correct before first sweep is completed
+//  if (MODE_OUTPUT(setting.mode))
+//    setting.actual_sweep_time_us = t;       // To ensure time displayed is correct before first sweep is completed
 #if 0
   uint32_t ta = calc_min_sweep_time_us();   // Can not be faster than minimum sweep time
   if (ta < t)
