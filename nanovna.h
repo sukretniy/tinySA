@@ -370,7 +370,7 @@ extern uint16_t graph_bottom;
 #define FORM_BUTTON_BORDER      2
 
 // Form button (at center screen better be less LCD_WIDTH - 2*OFFSETX)
-#define MENU_FORM_WIDTH    256
+#define MENU_FORM_WIDTH    (LCD_WIDTH - 2*OFFSETX)
 
 // Num Input height at bottom
 #define NUM_INPUT_HEIGHT   32
