@@ -2809,8 +2809,8 @@ static const struct {
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    7,     -60},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
+ {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60},       // 8 BPF pass band flatness
+ {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
 #define TEST_END 11
@@ -2938,22 +2938,21 @@ int validate_below(int tc, int from, int to) {
 }
 
 int validate_flatness(int i) {
-  volatile int j;
+  volatile int j,k;
   test_fail_cause[i] = "Passband ";
   for (j = peakIndex; j < setting._sweep_points; j++) {
     if (actual_t[j] < peakLevel - 15)    // Search right -3dB
       break;
   }
-  //shell_printf("\n\rRight width %d\n\r", j - peakIndex );
-  if (j - peakIndex < W2P(test_case[i].width))
-    return(TS_FAIL);
-  for (j = peakIndex; j > 0; j--) {
-    if (actual_t[j] < peakLevel - 15)    // Search left -3dB
+  for (k = peakIndex; k > 0; k--) {
+    if (actual_t[k] < peakLevel - 15)    // Search left -3dB
       break;
   }
-  //shell_printf("Left width %d\n\r", j - peakIndex );
-  if (peakIndex - j < W2P(test_case[i].width))
-    return(TS_FAIL);
+//  shell_printf("Width %d between %d and %d\n\r", j - k, 2* W2P(test_case[i].width), 3* W2P(test_case[i].width) );
+  if (j - k < 2* W2P(test_case[i].width))
+      return(TS_FAIL);
+  if (j - k > 3* W2P(test_case[i].width))
+      return(TS_FAIL);
   test_fail_cause[i] = "";
   return(TS_PASS);
 }
