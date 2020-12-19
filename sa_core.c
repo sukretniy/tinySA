@@ -93,7 +93,8 @@ void reset_settings(int m)
   setting.auto_attenuation = false;
   setting.subtract_stored = 0;
   setting.normalize_level = 0.0;
-  setting.drive=13;
+  setting.lo_drive=13;
+  setting.rx_drive=8;
   setting.atten_step = 0;       // Only used in low output mode
   setting.agc = S_AUTO_ON;
   setting.lna = S_AUTO_OFF;
@@ -152,7 +153,8 @@ void reset_settings(int m)
     break;
 #endif
   case M_GENLOW:
-    setting.drive=8;
+    setting.rx_drive=8;
+	setting.lo_drive=13;
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
@@ -163,7 +165,7 @@ void reset_settings(int m)
     setting.sweep_time_us = 0;
     break;
   case M_GENHIGH:
-    setting.drive=8;
+    setting.lo_drive=8;
     set_sweep_frequency(ST_CENTER, 300000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
@@ -283,10 +285,15 @@ void set_measurement(int m)
 #endif
   dirty = true;
 }
-
-void set_drive(int d)
+void set_lo_drive(int d)
 {
-  setting.drive = d;
+  setting.lo_drive = d;
+  dirty = true;
+}
+
+void set_rx_drive(int d)
+{
+  setting.rx_drive = d;
   dirty = true;
 }
 
@@ -441,7 +448,7 @@ float get_attenuation(void)
     if (setting.atten_step)
       return ( -(POWER_OFFSET + setting.attenuate - (setting.atten_step-1)*POWER_STEP + SWITCH_ATTENUATION));
     else
-      return ( -POWER_OFFSET - setting.attenuate + (setting.drive & 7) * 3);
+      return ( -POWER_OFFSET - setting.attenuate + (setting.rx_drive & 7) * 3);
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
       return setting.attenuate + RECEIVE_SWITCH_ATTENUATION;
@@ -471,7 +478,7 @@ void set_level(float v)     // Set the drive level of the LO
       d++;
     if (d == 8 && v < -12)  // Round towards closest level
       d = 7;
-    set_drive(d);
+    set_lo_drive(d);
   } else {
     setting.level = v;
     set_attenuation((int)v);
@@ -484,16 +491,16 @@ void set_attenuation(float a)       // Is used both in output mode and input mod
   if (setting.mode == M_GENLOW) {
     a = a + POWER_OFFSET;
     if (a > 6) {                // +9dB
-      setting.drive = 11;   // Maximum save drive for SAW filters.
+      setting.rx_drive = 11;   // Maximum save drive for SAW filters.
       a = a - 9;
     } else if (a > 3) {         // +6dB
-      setting.drive = 10;
+      setting.rx_drive = 10;
       a = a - 6;
     } else if (a > 0) {         // +3dB
-      setting.drive = 9;
+      setting.rx_drive = 9;
       a = a - 3;
     } else
-      setting.drive = 8;        // defined as 0dB level
+      setting.rx_drive = 8;        // defined as 0dB level
     if (a > 0)
       a = 0;
     if( a >  - SWITCH_ATTENUATION) {
@@ -1257,7 +1264,7 @@ case M_ULTRA:
     else
       set_switch_off();
 //    SI4432_Receive(); For noise testing only
-    SI4432_Transmit(setting.drive);
+    SI4432_Transmit(setting.lo_drive);
     // set_calibration_freq(setting.refer);
 #endif
     break;
@@ -1290,7 +1297,7 @@ case M_GENLOW:  // Mixed output from 0
     } else {
       set_switch_transmit();
     }
-    SI4432_Transmit(setting.drive);
+    SI4432_Transmit(setting.rx_drive);
 
     SI4432_Sel = SI4432_LO ;
     if (setting.modulation == MO_EXTERNAL) {
@@ -1311,12 +1318,12 @@ case M_GENHIGH: // Direct output from 1
     set_switch_receive();
 
     SI4432_Sel = SI4432_LO ;
-    if (setting.drive < 8) {
+    if (setting.lo_drive < 8) {
       set_switch_off(); // use switch as attenuator
     } else {
       set_switch_transmit();
     }
-    SI4432_Transmit(setting.drive);
+    SI4432_Transmit(setting.lo_drive);
 #endif
     break;
   }

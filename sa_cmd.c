@@ -460,7 +460,7 @@ VNA_SHELL_FUNCTION(cmd_d)
   (void) argc;
   (void) argv;
   int32_t a = my_atoi(argv[0]);
-  setting.drive=a;
+  setting.lo_drive=a;
   dirty = true;
 }
 

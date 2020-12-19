@@ -425,7 +425,7 @@ static const struct {
   {keypads_plusmin_unit, "ACTUAL\nPOWER"}, // actual power
   {keypads_freq        , "IF"}, // IF
   {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay
-  {keypads_positive    , "DRIVE"}, // drive
+  {keypads_positive    , "DRIVE"}, // KM_DRIVE
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "DECAY"},    // KM_DECAY
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
@@ -717,16 +717,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sreffer_acb){
 }
 
 const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
-static UI_FUNCTION_ADV_CALLBACK(menu_drive_acb)
+static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
 {
   (void)item;
   if(b){
     b->param_1.i = menu_drive_value[data] + (setting.mode==M_GENHIGH ? setting.offset : 0);
-    b->icon = data == setting.drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->icon = data == setting.lo_drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
 //Serial.println(item);
-  set_drive(data);
+  set_lo_drive(data);
   menu_move_back();
 //  ui_mode_normal();
 //  draw_cal_status();
@@ -736,7 +736,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   (void)item;
   (void)data;
   if(b){
-    b->param_1.i = menu_drive_value[setting.drive] + (setting.mode==M_GENHIGH ? setting.offset : 0);
+    b->param_1.i = menu_drive_value[setting.lo_drive] + (setting.mode==M_GENHIGH ? setting.offset : 0);
     return;
   }
   menu_push_submenu(menu_drive_wide);
@@ -1414,43 +1414,43 @@ static const menuitem_t menu_load_preset[] =
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
-static const menuitem_t menu_drive[] = {
-  { MT_ADV_CALLBACK, 15, "%+ddBm",   menu_drive_acb},
-  { MT_ADV_CALLBACK, 14, "%+ddBm",   menu_drive_acb},
-  { MT_ADV_CALLBACK, 13, "%+ddBm",   menu_drive_acb},
-  { MT_ADV_CALLBACK, 12, "%+ddBm",   menu_drive_acb},
+static const menuitem_t menu_lo_drive[] = {
+  { MT_ADV_CALLBACK, 15, "%+ddBm",   menu_lo_drive_acb},
+  { MT_ADV_CALLBACK, 14, "%+ddBm",   menu_lo_drive_acb},
+  { MT_ADV_CALLBACK, 13, "%+ddBm",   menu_lo_drive_acb},
+  { MT_ADV_CALLBACK, 12, "%+ddBm",   menu_lo_drive_acb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide3[] = {
- { MT_FORM | MT_ADV_CALLBACK, 5, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 4, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 3, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 2, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 1, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 0, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 5, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 4, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 3, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 2, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 1, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 0, "%+ddBm",   menu_lo_drive_acb},
   { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide2[] = {
- { MT_FORM | MT_ADV_CALLBACK, 10, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK,  9, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK,  8, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK,  7, "%+ddBm",   menu_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK,  6, "%+ddBm",   menu_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK, 10, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK,  9, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK,  8, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK,  7, "%+ddBm",   menu_lo_drive_acb},
+ { MT_FORM | MT_ADV_CALLBACK,  6, "%+ddBm",   menu_lo_drive_acb},
  { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide3},
  { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_drive_wide[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 15, "%+ddBm",   menu_drive_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 14, "%+ddBm",   menu_drive_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 13, "%+ddBm",   menu_drive_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 12, "%+ddBm",   menu_drive_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 11, "%+ddBm",   menu_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 15, "%+ddBm",   menu_lo_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 14, "%+ddBm",   menu_lo_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 13, "%+ddBm",   menu_lo_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 12, "%+ddBm",   menu_lo_drive_acb},
+  { MT_FORM | MT_ADV_CALLBACK, 11, "%+ddBm",   menu_lo_drive_acb},
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide2},
   { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
@@ -1759,7 +1759,7 @@ static const menuitem_t menu_settings[] =
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "Set to zero for auto IF"},
   { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
-  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_drive},
+  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings2},
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -2064,7 +2064,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%2d", ((int32_t)uistat.value));
     break;
   case KM_DRIVE:
-    uistat.value = setting.drive;
+    uistat.value = setting.rx_drive;
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", ((int32_t)uistat.value));
     break;
   case KM_LOWOUTLEVEL:
@@ -2195,7 +2195,7 @@ set_numeric_value(void)
     set_repeat(uistat.value);
     break;
   case KM_DRIVE:
-    set_drive(uistat.value);
+    set_rx_drive(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
     set_level(uistat.value - setting.offset);

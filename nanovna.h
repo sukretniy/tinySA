@@ -224,7 +224,8 @@ int is_paused(void);
 void set_actual_power(float);
 void SetGenerate(int);
 void set_RBW(uint32_t rbw_x10);
-void set_drive(int d);
+void set_lo_drive(int d);
+void set_rx_drive(int d);
 void set_IF(int f);
 void set_step_delay(int t);
 void set_offset_delay(int t);
@@ -754,7 +755,8 @@ typedef struct setting
   int average;
   int show_stored;
   int subtract_stored;
-  int drive; // 0-7 , 7=+20dBm, 3dB steps
+  int lo_drive; // 0-3 , 3dB steps
+  int rx_drive; // 0-15 , 7=+20dBm, 3dB steps
   int agc;
   int lna;
   int auto_reflevel;

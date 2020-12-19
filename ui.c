@@ -1871,10 +1871,11 @@ menu_select_touch(int i)
         fetch_numeric_target();
         float m = 1.0;
 #define TOUCH_DEAD_ZONE 5
+#define PULL_SPEED  25.0
         if (touch_x < LCD_WIDTH/2 - TOUCH_DEAD_ZONE) {
-          m = 1 / (1 + pow(10, -6 + ((LCD_WIDTH/2 - TOUCH_DEAD_ZONE) - touch_x)/20.0));
-        } else if (touch_x > LCD_WIDTH/2 + 10) {
-          m = 1 + pow(10, -6 + (touch_x - (LCD_WIDTH/2 + TOUCH_DEAD_ZONE))/20.0);
+          m = 1 / (1 + pow(10, -6 + ((float)((LCD_WIDTH/2 - TOUCH_DEAD_ZONE) - touch_x))/PULL_SPEED));
+        } else if (touch_x > LCD_WIDTH/2 + TOUCH_DEAD_ZONE) {
+          m = 1 + pow(10, -6 + ((float)(touch_x - (LCD_WIDTH/2 + TOUCH_DEAD_ZONE)))/PULL_SPEED);
         }
         uistat.value *= m;
         set_numeric_value();
