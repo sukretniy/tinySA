@@ -498,6 +498,7 @@ void SI4432_Set_Frequency ( uint32_t Freq ) {
 #ifdef __FAST_SWEEP__
 extern deviceRSSI_t age[POINTS_COUNT];
 static int buf_index = 0;
+static int buf_end = 0;
 static bool  buf_read = false;
 
 #if 0
@@ -506,6 +507,102 @@ int SI4432_is_fast_mode(void)
   return buf_read;
 }
 #endif
+
+
+//--------------------------- Trigger -------------------
+// ************** trigger mode if need
+// trigger on measure 4 point
+#define T_POINTS            4
+#define T_LEVEL_UNDEF       (1<<(16-T_POINTS)) // should drop after 4 shifts left
+#define T_LEVEL_BELOW       1
+#define T_LEVEL_ABOVE       0
+// Trigger mask, should have width T_POINTS bit
+#define T_DOWN_MASK         (0b0011)           // 2 from up 2 to bottom
+#define T_UP_MASK           (0b1100)           // 2 from bottom 2 to up
+#define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
+
+enum { ST_ARMING, ST_WAITING, ST_FILLING };
+
+void SI4432_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigger_mode)
+{
+  SI4432_Sel = s;
+  uint8_t rssi;
+  uint16_t sel = SI_nSEL[SI4432_Sel];
+  uint32_t t = setting.additional_step_delay_us;
+  systime_t measure = chVTGetSystemTimeX();
+  int waiting = ST_ARMING;
+//  __disable_irq();
+  SPI2_CLK_LOW;
+  int i = 0;
+
+  register uint16_t t_mode;
+  uint16_t data_level = T_LEVEL_UNDEF;
+  if (up_direction)
+    t_mode = T_UP_MASK;
+  else
+    t_mode = T_DOWN_MASK;
+  do {
+    palClearPad(GPIOC, sel);
+    shiftOut(SI4432_REG_RSSI);
+    if (operation_requested)                        // allow aborting a wait for trigger
+      return;                                                           // abort
+    // Store data level bitfield (remember only last 2 states)
+    // T_LEVEL_UNDEF mode bit drop after 2 shifts
+    rssi = shiftIn();
+    palSetPad(GPIOC, sel);
+    age[i] = rssi;
+    i++;
+    if (i >= sweep_points)
+      i = 0;
+    switch (waiting) {
+    case ST_ARMING:
+      if (i == sweep_points-1) {
+        waiting = ST_WAITING;
+        setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
+      }
+      break;
+    case ST_WAITING:
+#if 1
+      if (rssi < trigger_lvl) {
+        data_level = ((data_level<<1) | (T_LEVEL_BELOW))&(T_LEVEL_CLEAN);
+      } else {
+        data_level = ((data_level<<1) | (T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
+      }
+#else
+      data_level = ((data_level<<1) | (rssi < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
+#endif
+      if (data_level == t_mode) {  // wait trigger
+ //     if (i == 128) {  // wait trigger
+        waiting = ST_FILLING;
+        switch (trigger_mode) {
+        case T_PRE:                // Trigger at the begin of the scan
+          buf_index = i;
+          goto fill_rest;
+          break;
+        case T_POST:               // Trigger at the end of the scan
+          buf_index = i;
+          goto done;
+          break;
+        case T_MID:                // Trigger in the middle of the scan
+          buf_index = i + sweep_points/2;
+          if (buf_index >= sweep_points)
+            buf_index -= sweep_points;
+          break;
+        }
+      }
+      break;
+    case ST_FILLING:
+      if (i == buf_index)
+        goto done;
+    }
+fill_rest:
+    if (t)
+      my_microsecond_delay(t);
+  }while(1);
+done:
+  buf_end = buf_index;
+  buf_read = true;
+}
 
 void SI4432_Fill(int s, int start)
 {
@@ -524,8 +621,8 @@ void SI4432_Fill(int s, int start)
   uint32_t t = setting.additional_step_delay_us;
   systime_t measure = chVTGetSystemTimeX();
 //  __disable_irq();
-#if 0
-  SPI1_CLK_LOW;
+#if 1
+  SPI2_CLK_LOW;
   int i = start;
   do {
     palClearPad(GPIOC, sel);
@@ -542,6 +639,7 @@ void SI4432_Fill(int s, int start)
 //  __enable_irq();
   setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
   buf_index = start; // Is used to skip 1st entry during level triggering
+  buf_end = sweep_points - 1;
   buf_read = true;
 }
 #endif
@@ -565,9 +663,12 @@ pureRSSI_t SI4432_RSSI(uint32_t i, int s)
 //START_PROFILE
 #ifdef __FAST_SWEEP__
   if (buf_read) {
-    if (buf_index == sweep_points-1)
+    pureRSSI_t val = DEVICE_TO_PURE_RSSI(age[buf_index++]);
+    if (buf_index >= sweep_points)
+      buf_index = 0;
+    if (buf_index == buf_end)
       buf_read = false;
-    return DEVICE_TO_PURE_RSSI(age[buf_index++]);
+    return val;
   }
 #endif
   SI4432_Sel = s;

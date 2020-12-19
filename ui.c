@@ -522,8 +522,8 @@ enum {
   MT_LOW = 0x40,                // Only applicable to low mode
   MT_FORM = 0x80,               // Large button menu
 };
-#define MT_BACK     0x40
-#define MT_LEAVE    0x20
+//#define MT_BACK     0x40
+//#define MT_LEAVE    0x20
 #define MT_MASK(x) (0xF & (x))
 
 // Call back functions for MT_CALLBACK type
@@ -2618,6 +2618,7 @@ touch_lever_mode_select(void)
       else
         ui_mode_keypad(KM_START);
       ui_process_keypad();
+      return TRUE;
     }
     if (touch_x >  FREQUENCIES_XPOS2 - 50 && touch_x <  FREQUENCIES_XPOS2 +50) {
       touch_wait_release();
@@ -2635,8 +2636,10 @@ touch_lever_mode_select(void)
       else
         ui_mode_keypad(KM_STOP);
       ui_process_keypad();
+      return TRUE;
     }
     select_lever_mode(touch_x < FREQUENCIES_XPOS2 ? LM_CENTER : LM_SPAN);
+    touch_wait_release();
     return TRUE;
   }
   if (touch_x <OFFSETX)

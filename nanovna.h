@@ -382,7 +382,7 @@ extern uint16_t graph_bottom;
 #define FORM_BUTTON_BORDER      2
 
 // Form button (at center screen better be less LCD_WIDTH - 2*OFFSETX)
-#define MENU_FORM_WIDTH    256
+#define MENU_FORM_WIDTH    (LCD_WIDTH - 2*OFFSETX)
 
 // Num Input height at bottom
 #define NUM_INPUT_HEIGHT   32
@@ -819,6 +819,7 @@ typedef struct setting
   int fast_speedup;
   float normalize_level;     // Level to set normalize to, zero if not doing anything
   int modulation_frequency;
+  int trigger_mode;
   uint32_t checksum;
   int extra_lna;
   int ultra;
@@ -1006,7 +1007,7 @@ typedef struct uistat {
   uint8_t marker_noise;
   uint8_t marker_tracking;
   uint8_t auto_center_marker;
-  char text[20];
+  char text[28];
 } uistat_t;
 
 typedef struct ui_button {
@@ -1080,6 +1081,7 @@ typedef int16_t  pureRSSI_t;
 // External programm zero level settings (need decrease on this value -)
 #define EXT_ZERO_LEVEL            (128)
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
+#define PURE_TO_DEVICE_RSSI(rssi) ((rssi)>>4)
 #define float_TO_PURE_RSSI(rssi)  ((rssi)*32)
 #define PURE_TO_float(rssi)       ((rssi)/32.0)
 
@@ -1113,35 +1115,7 @@ enum {
 };
 
 enum {
-  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN
+  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID
 };
 
-
-// -------------------- Si4432.c ---------------
-
-void set_calibration_freq(int ref);
-uint16_t set_rbw(uint16_t WISH);
-uint16_t force_rbw(int f);
-
-#ifdef __SI4463__
-extern int SI4463_R;
-void SI4463_set_freq(uint32_t freq);
-void SI446x_set_AGC_LNA(uint8_t v);
-void SI4463_set_gpio(int i, int s);
-void SI4463_set_output_level(int t);
-#define GPIO_HIGH   3
-#define GPIO_LOW    2
-void SI4463_start_tx(uint8_t CHANNEL);
-void SI4463_init_rx(void);
-void SI4463_init_tx(void);
-#endif
-
-void set_R(int f);
-void set_modulo(uint32_t f);
-#ifdef __ADF4351__
-extern volatile int64_t ADF4350_modulo;
-void ADF4351_Set(int channel);
-void ADF4351_force_refresh(void);
-void ADF4351_mux(int R);
-#endif
 /*EOF*/

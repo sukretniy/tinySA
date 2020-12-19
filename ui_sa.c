@@ -461,12 +461,32 @@ static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_drive_wide[];
 static const menuitem_t  menu_settings3[];
+static const menuitem_t  menu_sweep[];
 #ifdef __ULTRA__
 static const menuitem_t  menu_tophigh[];
 static const menuitem_t  menu_topultra[];
 #endif
 
 #define AUTO_ICON(S) (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
+
+static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
+{
+  (void)data;
+  if (b){
+    if (setting.level_sweep != 0 || get_sweep_frequency(ST_SPAN) != 0)  {
+      plot_printf(uistat.text, sizeof uistat.text, "SW:%3.2fMHz %+ddB %.3Fs",
+                  get_sweep_frequency(ST_SPAN) / 1000000.0,
+                  (int)setting.level_sweep,
+                  setting.sweep_time_us/(float)ONE_SECOND_TIME);
+      b->param_1.text = uistat.text;
+    }
+    else
+      b->param_1.text = "SWEEP: OFF";
+    return;
+  }
+  menu_push_submenu(menu_sweep);
+}
+
 
 static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
 {
@@ -707,24 +727,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_drive_acb)
 {
   (void)item;
   if(b){
-    b->param_1.i = menu_drive_value[data];
-    b->icon = data == setting.rx_drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
-    return;
-  }
-//Serial.println(item);
-  set_rx_drive(data);
-  menu_move_back();
-//  ui_mode_normal();
-//  draw_cal_status();
-}
-
-const int8_t menu_lo_drive_value[]={4,7,10,13};
-static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
-{
-  (void)item;
-  if(b){
-    b->param_1.i = menu_lo_drive_value[data];
-    b->icon = data == setting.lo_drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->param_1.i = menu_drive_value[data] + (setting.mode==M_GENHIGH ? setting.offset : 0);
+    b->icon = data == setting.drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
 //Serial.println(item);
@@ -738,7 +742,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   (void)item;
   (void)data;
   if(b){
-    b->param_1.i = menu_drive_value[setting.lo_drive];
+    b->param_1.i = menu_drive_value[setting.drive] + (setting.mode==M_GENHIGH ? setting.offset : 0);
     return;
   }
   menu_push_submenu(menu_drive_wide);
@@ -1162,22 +1166,32 @@ static UI_FUNCTION_ADV_CALLBACK(menu_scale_per_acb)
 }
 #endif
 
+const char *mode_text[] = {"PRE","POST","MID"};
+
 static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
 {
   (void)item;
   if(b){
-    if (data == T_UP || data == T_DOWN)
+    if (data == T_MODE) {
+      b->param_1.text = mode_text[setting.trigger_mode - T_PRE];
+    } else if (data == T_UP || data == T_DOWN)
       b->icon = setting.trigger_direction == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     else
       b->icon = setting.trigger == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
-  if (data != T_DONE) {
+  if (data == T_MODE) {
+    setting.trigger_mode += 1;
+    if (setting.trigger_mode > T_MID)
+      setting.trigger_mode = T_PRE;
+    set_trigger(setting.trigger_mode);
+  } else if (data != T_DONE) {
     set_trigger(data);
 //  menu_move_back();
     ui_mode_normal();
-    completed = true;
   }
+  draw_menu();
+  completed = true;
 }
 
 #if 0
@@ -1489,16 +1503,27 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t  menu_sweep[] = {
+  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
+  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
+  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
+  { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
+  { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+
 static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           "FREQ: %s",         "10kHz..350MHz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        "-76..-6"},
 //  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
-
-  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
-  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
-  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
+//  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
+//  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
+//  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
+  { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "AMP: %s",          "-100..+100"},
   { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1510,6 +1535,7 @@ static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
+  { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "AMP: %s",          "-100..+100"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1916,6 +1942,7 @@ static const menuitem_t menu_trigger[] = {
   { MT_KEYPAD,       KM_TRIGGER, "TRIGGER\nLEVEL", NULL},
   { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
   { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
+  { MT_ADV_CALLBACK, T_MODE,     "%s\nTRIGGER",     menu_trigger_acb},
   { MT_CANCEL, 0,                S_LARROW" BACK",      NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -2104,6 +2131,8 @@ static void fetch_numeric_target(void)
       end_level = -76;
     if (end_level > -6)
       end_level = -6;
+    uistat.value += setting.offset;
+    end_level += setting.offset;
     if (setting.level_sweep != 0)
       plot_printf(uistat.text, sizeof uistat.text, "%d to %ddBm", ((int32_t)uistat.value), end_level);
     else
@@ -2241,7 +2270,7 @@ set_numeric_value(void)
     set_rx_drive(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
-    set_level(uistat.value);
+    set_level(uistat.value - setting.offset);
     break;
   case KM_DECAY:
     set_decay(uistat.value);

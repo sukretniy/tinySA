@@ -2133,33 +2133,29 @@ static void cell_draw_marker_info(int x0, int y0)
           break;
         plot_printf(buf, sizeof buf, "DEVIATION:%6.1qHz", dev);
         goto show_computed;
-      }
-    }
-    if (i >= 2 && setting.measurement == M_THD) {
-      if (i == 2 && (markers[0].index << 5) > sweep_points ) {
+      } else if (setting.measurement == M_THD && markers[0].enabled && (markers[0].index << 5) > sweep_points ) {
         int old_unit = setting.unit;
         setting.unit = U_WATT;
         float p = index_to_value(markers[0].index);
-        int j = 2;
+        int h_i = 2;
         uint32_t f = markers[0].frequency;
         float h = 0.0;
-        while (f * j < frequencies[sweep_points-1]) {
-          if (search_maximum(1, f*j, 4*j) )             // use marker 1 for searching harmonics
+        while (f * h_i < frequencies[sweep_points-1]) {
+          if (search_maximum(1, f*h_i, 4*h_i) )             // use marker 1 for searching harmonics
             h += index_to_value(markers[1].index);
-          j++;
+          h_i++;
         }
         float thd = 100.0 * sqrt(h/p);
         setting.unit = old_unit;
-
+        ili9341_set_foreground(marker_color(markers[0].mtype));
         plot_printf(buf, sizeof buf, "THD: %4.1f%%", thd);
-        j = 1;
+//        j = 1;
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
         cell_drawstring_7x13(buf, xpos, ypos);
 //        cell_drawstring(buf, xpos, ypos);
         break;
       }
-      break;
     } else
     if (i >= 2 && setting.measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
       float il = index_to_value(markers[2].index);
@@ -2202,14 +2198,6 @@ static void cell_draw_marker_info(int x0, int y0)
     for (t = TRACE_ACTUAL; t <= TRACE_ACTUAL; t++) { // Only show info on actual trace
       if (!trace[t].enabled)
         continue;
-#if 1
-      int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
-//      int ypos = 1 + (j/2)*(13) - y0;
-      int ypos = 1 + (j/2)*(16) - y0;
-#else
-      int xpos = 1 + CELLOFFSETX - x0;
-      int ypos = 1 + j*(FONT_GET_HEIGHT*2+1) - y0;
-#endif
       int k = 0;
       if (i == active_marker) {
 //        ili9341_set_foreground(LCD_BG_COLOR);
@@ -2248,6 +2236,14 @@ static void cell_draw_marker_info(int x0, int y0)
       trace_get_value_string(
           t, &buf[k], (sizeof buf) - k,
           idx, measured[trace[t].channel], ridx, markers[i].mtype,markers[i].frequency, markers[ref_marker].frequency);
+#if 1
+      int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
+//      int ypos = 1 + (j/2)*(13) - y0;
+      int ypos = 1 + (j/2)*(16) - y0;
+#else
+      int xpos = 1 + CELLOFFSETX - x0;
+      int ypos = 1 + j*(FONT_GET_HEIGHT*2+1) - y0;
+#endif
       if (/* strlen(buf)*7> WIDTH/2 && */active > 1)
         cell_drawstring(buf, xpos, ypos);
       else

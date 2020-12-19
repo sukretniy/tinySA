@@ -142,6 +142,7 @@ extern const int SI4432_RBW_count;
 void set_calibration_freq(int freq);
 #ifdef __FAST_SWEEP__
 void SI4432_Fill(int s, int start);
+void SI4432_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigger_mode);
 #if 0
 int SI4432_is_fast_mode(void);
 #endif

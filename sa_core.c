@@ -127,6 +127,7 @@ void reset_settings(int m)
   setting.offset = 0.0;
   setting.trigger = T_AUTO;
   setting.trigger_direction = T_UP;
+  setting.trigger_mode = T_MID;
   setting.fast_speedup = 0;
   setting.level_sweep = 0.0;
   setting.level = -15.0;
@@ -323,8 +324,8 @@ void set_sweep_time_us(uint32_t t)          // Set the sweep time as the user wa
   if (t > MAXIMUM_SWEEP_TIME)
     t = MAXIMUM_SWEEP_TIME;
   setting.sweep_time_us = t;
-  if (MODE_OUTPUT(setting.mode))
-    setting.actual_sweep_time_us = t;       // To ensure time displayed is correct before first sweep is completed
+//  if (MODE_OUTPUT(setting.mode))
+//    setting.actual_sweep_time_us = t;       // To ensure time displayed is correct before first sweep is completed
 #if 0
   uint32_t ta = calc_min_sweep_time_us();   // Can not be faster than minimum sweep time
   if (ta < t)
@@ -980,7 +981,9 @@ void set_trigger_level(float trigger_level)
 
 void set_trigger(int trigger)
 {
-  if (trigger == T_UP || trigger == T_DOWN){
+  if (trigger == T_PRE || trigger == T_POST || trigger == T_MID) {
+    setting.trigger_mode = trigger;
+  } else if (trigger == T_UP || trigger == T_DOWN){
     setting.trigger_direction = trigger;
   } else if (trigger == T_DONE) {
     pause_sweep();                    // Trigger once so pause after this sweep has completed!!!!!!!
@@ -2178,6 +2181,11 @@ modulation_again:
 #define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
 
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
+
+#if 1
+      volatile uint8_t trigger_lvl = PURE_TO_DEVICE_RSSI((int16_t)((float_TO_PURE_RSSI(setting.trigger_level) - correct_RSSI - correct_RSSI_freq)));
+      SI4432_trigger_fill(MODE_SELECT(setting.mode), trigger_lvl, (setting.trigger_direction == T_UP), setting.trigger_mode);
+#else
       register uint16_t t_mode;
       pureRSSI_t trigger_lvl;
       uint16_t data_level = T_LEVEL_UNDEF;
@@ -2222,12 +2230,14 @@ modulation_again:
       }
 #endif
 #endif
+
+#endif
       if (setting.trigger == T_SINGLE) {
         set_trigger(T_DONE);
       }
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
-    else
+    //else
     {
 #ifdef __SI4432__
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
@@ -2237,7 +2247,7 @@ modulation_again:
 #endif
     }
 #ifdef __SPUR__
-    static pureRSSI_t spur_RSSI = 10000;                               // Initialization only to avoid warning.
+    static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
     if (setting.mode == M_LOW && S_STATE(setting.spur_removal)) {
       if (!spur_second_pass) {                                        // If first spur pass
         spur_RSSI = pureRSSI;                                       // remember measure RSSI
@@ -2407,7 +2417,7 @@ sweep_again:                                // stay in sweep loop when output mo
       }
 #endif
       if (scandirty || setting.average == AV_OFF) {             // Level calculations
-        age[i] = 0;
+        if (setting.average == AV_MAX_DECAY) age[i] = 0;
         actual_t[i] = RSSI;
       } else {
         switch(setting.average) {
@@ -3083,8 +3093,8 @@ static const struct {
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
  {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    7,     -60},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       430,    60,     -75,    0,      -75},       // 9 LPF cutoff
+ {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60},       // 8 BPF pass band flatness
+ {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
 #define TEST_END 11
@@ -3212,22 +3222,21 @@ int validate_below(int tc, int from, int to) {
 }
 
 int validate_flatness(int i) {
-  volatile int j;
+  volatile int j,k;
   test_fail_cause[i] = "Passband ";
   for (j = peakIndex; j < setting._sweep_points; j++) {
     if (actual_t[j] < peakLevel - 15)    // Search right -3dB
       break;
   }
-  //shell_printf("\n\rRight width %d\n\r", j - peakIndex );
-  if (j - peakIndex < W2P(test_case[i].width))
-    return(TS_FAIL);
-  for (j = peakIndex; j > 0; j--) {
-    if (actual_t[j] < peakLevel - 15)    // Search left -3dB
+  for (k = peakIndex; k > 0; k--) {
+    if (actual_t[k] < peakLevel - 15)    // Search left -3dB
       break;
   }
-  //shell_printf("Left width %d\n\r", j - peakIndex );
-  if (peakIndex - j < W2P(test_case[i].width))
-    return(TS_FAIL);
+//  shell_printf("Width %d between %d and %d\n\r", j - k, 2* W2P(test_case[i].width), 3* W2P(test_case[i].width) );
+  if (j - k < 2* W2P(test_case[i].width))
+      return(TS_FAIL);
+  if (j - k > 3* W2P(test_case[i].width))
+      return(TS_FAIL);
   test_fail_cause[i] = "";
   return(TS_PASS);
 }
