@@ -491,8 +491,8 @@ enum {
   MT_LOW = 0x40,                // Only applicable to low mode
   MT_FORM = 0x80,               // Large button menu
 };
-#define MT_BACK     0x40
-#define MT_LEAVE    0x20
+//#define MT_BACK     0x40
+//#define MT_LEAVE    0x20
 #define MT_MASK(x) (0xF & (x))
 
 // Call back functions for MT_CALLBACK type

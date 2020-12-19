@@ -992,7 +992,7 @@ typedef struct uistat {
   uint8_t marker_noise;
   uint8_t marker_tracking;
   uint8_t auto_center_marker;
-  char text[20];
+  char text[28];
 } uistat_t;
 
 typedef struct ui_button {
