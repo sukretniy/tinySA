@@ -467,6 +467,7 @@ static const menuitem_t  menu_topultra[];
 static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
 {
   (void)data;
+  (void)item;
   if (b){
     if (setting.level_sweep != 0 || get_sweep_frequency(ST_SPAN) != 0)  {
       plot_printf(uistat.text, sizeof uistat.text, "SW:%3.2fMHz %+ddB %.3Fs",

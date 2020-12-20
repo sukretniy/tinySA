@@ -227,7 +227,7 @@ static int btn_wait_release(void)
 }
 
 // ADC read count for measure X and Y (2^N count)
-#define TOUCH_X_N 3
+#define TOUCH_X_N 4
 #define TOUCH_Y_N 3
 static int
 touch_measure_y(void)
@@ -301,8 +301,13 @@ touch_check(void)
 {
   int stat = touch_status();
   if (stat) {
+    static int prev_x=0;
     int y = touch_measure_y();
     int x = touch_measure_x();
+#define X_NOISE 5
+    if (x > prev_x - X_NOISE && x < prev_x + X_NOISE)    // avoid noise
+      x = prev_x;
+    prev_x = x;
     touch_prepare_sense();
     if (touch_status())
     {
@@ -1861,7 +1866,7 @@ static int prev_touch_button = -1;
 enum { SL_UNKNOWN, SL_SPAN, SL_MOVE};
 
 static void
-menu_select_touch(int i,int y)
+menu_select_touch(int i)
 {
   selection = i;
   draw_menu();
@@ -1892,7 +1897,6 @@ menu_select_touch(int i,int y)
         int old_keypad_mode = keypad_mode;
         keypad_mode = v;
         fetch_numeric_target();
-        float m = 1.0;
 #define TOUCH_DEAD_ZONE 20
         int new_slider = touch_x - LCD_WIDTH/2;
         float saved_value;
@@ -1905,7 +1909,7 @@ menu_select_touch(int i,int y)
           }
         }
         if (moving == SL_MOVE ) {
-          if (touch_x != prev_touch_x) {
+          if (touch_x !=  prev_touch_x /* - 1 || prev_touch_x + 1 < touch_x */ ) {
             uistat.value = old_value + new_slider * slider_delta;
             if (uistat.value < 0)
               uistat.value = 0;
@@ -1981,7 +1985,7 @@ menu_apply_touch(void)
     }
     if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT) {
       if (touch_x > active_button_start) {
-        menu_select_touch(i, y);
+        menu_select_touch(i);
         return;
       }
     }
