@@ -402,7 +402,8 @@ static const keypads_t keypads_time[] = {
 };
 
 enum {
-  KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
+  KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, // These must be first to share common help text
+  KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
@@ -1486,7 +1487,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 //  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
 //  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
 //  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
-  { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "AMP: %s",          "-100..+100"},
+  { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "EXTERNAL AMP: %s",   "-100..+100"},
   { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -2111,7 +2112,7 @@ static void fetch_numeric_target(void)
 //    if (setting.sweep_time_us < calc_min_sweep_time_us())
 //      uistat.value = calc_min_sweep_time_us();
 //    else
-      uistat.value = setting.actual_sweep_time_us;
+      uistat.value = setting.sweep_time_us;
     uistat.value /= (float)ONE_SECOND_TIME;
     plot_printf(uistat.text, sizeof uistat.text, "%.3Fs", uistat.value);
     break;
