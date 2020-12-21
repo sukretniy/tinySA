@@ -1865,6 +1865,12 @@ static int prev_touch_button = -1;
 
 enum { SL_UNKNOWN, SL_SPAN, SL_MOVE};
 
+void set_keypad_value(int v)
+{
+  keypad_mode = v;
+  set_numeric_value();
+}
+
 static void
 menu_select_touch(int i)
 {
@@ -1872,26 +1878,14 @@ menu_select_touch(int i)
   draw_menu();
 #if 1               // drag values
   const menuitem_t *menu = menu_stack[menu_current_level];
+  int keypad = menu[i].data;
   prev_touch_time = chVTGetSystemTimeX();
 
-  if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && menu[i].data == KM_CENTER){
+  if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER){
     int touch_x, touch_y,  prev_touch_x;
     touch_position(&touch_x, &touch_y);
-    int v = menu[i].data;
-//    int old_keypad_mode = keypad_mode;
-#if 0
-    keypad_mode = v;
-    fetch_numeric_target();
-    float old_value;
-    old_value = uistat.value - slider_position * slider_delta;  // Center value;
-    if (old_value < minFreq)
-      old_value = minFreq;
-    if (old_value > maxFreq)
-      old_value = maxFreq;
-#endif
-//    keypad_mode = old_keypad_mode;
     systime_t dt = 0;
-    int moving = SL_UNKNOWN;
+    int mode = SL_UNKNOWN;
     while (touch_check() != EVT_TOUCH_NONE) {
       prev_touch_x = touch_x;
       touch_position(&touch_x, &touch_y);
@@ -1901,21 +1895,21 @@ menu_select_touch(int i)
 
       if (dt > BUTTON_DOWN_LONG_TICKS) {
         int old_keypad_mode = keypad_mode;
-        keypad_mode = v;
+        keypad_mode = keypad;
         fetch_numeric_target();
 #define TOUCH_DEAD_ZONE 20
         int new_slider = touch_x - LCD_WIDTH/2;
 #if 1
         float saved_value;
-        if (moving == SL_UNKNOWN ) {
+        if (mode == SL_UNKNOWN ) {
           if (slider_position - TOUCH_DEAD_ZONE < new_slider && new_slider < slider_position + TOUCH_DEAD_ZONE) { // Pick up slider
-            moving = SL_MOVE;
+            mode = SL_MOVE;
           } else {
-            moving = SL_SPAN;
+            mode = SL_SPAN;
             goto first_span;
           }
         }
-        if (moving == SL_MOVE ) {
+        if (mode == SL_MOVE ) {
 #endif
           if (touch_x !=  prev_touch_x /* - 1 || prev_touch_x + 1 < touch_x */ ) {
             uistat.value =  uistat.value - slider_position * slider_delta + new_slider * slider_delta;
@@ -1924,13 +1918,12 @@ menu_select_touch(int i)
             if (uistat.value > maxFreq)
               uistat.value = maxFreq;
             slider_position = new_slider;
-            keypad_mode = v;
-            set_numeric_value();
+            set_keypad_value(keypad);
             perform(false, 0, (uint32_t)uistat.value, false);
             draw_menu();
           }
 #if 1
-        } else if (moving == SL_SPAN ){
+        } else if (mode == SL_SPAN ){
           if (touch_x != prev_touch_x) {
             first_span:
             saved_value = uistat.value;
@@ -1942,14 +1935,12 @@ menu_select_touch(int i)
             uint32_t old_minFreq = minFreq;
             minFreq = 0;
             uistat.value = slider_delta;
-            keypad_mode = v;
-            set_numeric_value();
+            set_keypad_value(keypad);
             draw_menu();                    // Show slider span
             slider_position = 0;            // reset slider
             minFreq = old_minFreq;
             uistat.value = saved_value;
-            keypad_mode = v;
-            set_numeric_value();
+            set_keypad_value(keypad);
           }
         }
 #else
@@ -1959,7 +1950,6 @@ menu_select_touch(int i)
           slider_delta *=10;
 #endif
         keypad_mode = old_keypad_mode;
-//        return;
       }
     }
     if (dt > BUTTON_DOWN_LONG_TICKS) {

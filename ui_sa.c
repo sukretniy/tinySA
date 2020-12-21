@@ -447,6 +447,14 @@ static const struct {
   {keypads_positive    , "ATTACK"},    // KM_ATTACK
 
 };
+#if 0 // Not used
+ui_slider_t ui_sliders [] =
+{
+ { KM_CENTER,       true, 0, 1000000,   0,          350000000,  M_GENLOW},
+ { KM_CENTER,       true, 0, 1000000,   240000000,  960000000,  M_GENHIGH},
+ { KM_LOWOUTLEVEL,  false,0, 1,         -76,        -6,         M_GENLOW},
+};
+#endif
 
 // ===[MENU CALLBACKS]=========================================================
 static const menuitem_t  menu_lowoutputmode[];

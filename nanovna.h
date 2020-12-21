@@ -1011,6 +1011,15 @@ typedef struct ui_button {
   char text[32];
 } ui_button_t;
 
+typedef struct ui_slider {
+  uint8_t keypad;
+  uint8_t has_steps;
+  uint16_t slider_position;
+  uint16_t slider_step;
+  float min_value;
+  float max_value;
+} ui_slider_t;
+
 extern uistat_t uistat;
 void ui_init(void);
 void ui_show(void);
