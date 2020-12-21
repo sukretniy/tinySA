@@ -2027,7 +2027,7 @@ static void fetch_numeric_target(void)
     break;
   case KM_CENTER:
     uistat.value = get_sweep_frequency(ST_CENTER);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.4fMHz", uistat.value / 1000000.0);
     break;
   case KM_SPAN:
     uistat.value = get_sweep_frequency(ST_SPAN);

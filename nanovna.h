@@ -203,7 +203,8 @@ extern const char *info_about[];
 extern const char * const unit_string[];
 extern uint8_t signal_is_AM;
 extern const int reffer_freq[];
-
+extern uint32_t minFreq;
+extern uint32_t maxFreq;
 int level_is_calibrated(void);
 void reset_settings(int);
 void update_min_max_freq(void);
