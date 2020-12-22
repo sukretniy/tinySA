@@ -25,7 +25,7 @@
 
 
 #pragma GCC push_options
-// #pragma GCC optimize ("O2")      // Makes the code just a bit faster, disable during debugging.
+#pragma GCC optimize ("Og")      // Makes the code just a bit faster, disable during debugging.
 
 
 #ifdef __SCROLL__

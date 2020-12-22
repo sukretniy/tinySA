@@ -409,7 +409,7 @@ extern const uint8_t numfont16x22[];
 #define bFONT_GET_DATA(ch)   (  &x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT])
 #define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT]&7))
 
-#if 1                               // Set to 0 to save 3kByte
+#if 1                               // Set to 0 to save 3kByte and loose nice font
 #define wFONT_START_CHAR   0x17
 #define wFONT_MAX_WIDTH      12
 #define wFONT_GET_HEIGHT     14

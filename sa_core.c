@@ -21,7 +21,7 @@
 #include "stdlib.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("Os")             // "Os" causes problem in selftest!!!!!!!!
+#pragma GCC optimize ("Os")
 
 
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
@@ -903,10 +903,12 @@ void set_scale(float t) {
   round_reflevel_to_scale();
 }
 
+extern char low_level_help_text[12];
 
 void set_offset(float offset)
 {
   setting.offset = offset;
+  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", -76 + (int)offset, -6 + (int)offset);
   force_set_markmap();
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
 }

@@ -202,6 +202,10 @@ static THD_FUNCTION(Thread1, arg)
 
 }
 
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
+
 int
 is_paused(void)
 {
@@ -2705,6 +2709,7 @@ static DACConfig dac1cfg1 = {
 };
 #endif
 
+#pragma GCC pop_options
 
 static const GPTConfig gpt4cfg = {
   1000000, // 1 MHz timer clock.
