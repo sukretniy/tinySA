@@ -470,7 +470,7 @@ static pureRSSI_t get_signal_path_loss(void){
 
 static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
 
-void set_level(float v)     // Set the drive level of the LO
+void set_level(float v)     // Set the output level in dB  in high/low output
 {
   if (setting.mode == M_GENHIGH) {
     int d = 0;
@@ -486,7 +486,7 @@ void set_level(float v)     // Set the drive level of the LO
   dirty = true;
 }
 
-void set_attenuation(float a)       // Is used both in output mode and input mode
+void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
 {
   if (setting.mode == M_GENLOW) {
     a = a + POWER_OFFSET;
@@ -1781,8 +1781,13 @@ modulation_again:
         local_IF = DEFAULT_IF;
       if (setting.mode == M_LOW) {
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
+#if 0                                                               // Isolation test
+          local_IF = lf;
+          lf = 0;
+#else
           local_IF += lf - reffer_freq[setting.refer];    // Offset so fundamental of reffer is visible
           lf = reffer_freq[setting.refer];
+#endif
         } else {
           if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
             local_IF = spur_alternate_IF;
@@ -1848,7 +1853,7 @@ modulation_again:
 #endif
     {                                           // Else set LO ('s)
       uint32_t target_f;
-	  if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
+      if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
         target_f = local_IF-lf;                                                 // set LO SI4432 to below IF frequency
       else
         target_f = local_IF+lf;                                                 // otherwise to above IF

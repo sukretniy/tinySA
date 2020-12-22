@@ -1831,10 +1831,22 @@ draw_menu_buttons(const menuitem_t *menu)
         blit8BitWidthBitmap(button_start+MENU_FORM_WIDTH-  FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,&right_icons[((menu[i].data >>0)&0xf)*2*FORM_ICON_HEIGHT]);
       }
 #endif
-      if (menu[i].type && MT_KEYPAD && menu[i].data == KM_CENTER)
-        blit8BitWidthBitmap(LCD_WIDTH/2+slider_position - 4, y, 7, 6, slider_bitmap);
-      if (menu[i].type && MT_KEYPAD && menu[i].data == KM_LOWOUTLEVEL)
-        blit8BitWidthBitmap(LCD_WIDTH/2+volume_slider_position - 4, y, 7, 6, slider_bitmap);
+      if (MT_MASK(menu[i].type) == MT_KEYPAD) {
+        if (menu[i].data == KM_CENTER) {
+          volume_slider_position =  LCD_WIDTH/2+slider_position;
+          goto draw_slider;
+//          blit8BitWidthBitmap(LCD_WIDTH/2+slider_position - 4, y, 7, 6, slider_bitmap);
+        } else if (menu[i].data == KM_LOWOUTLEVEL) {
+          volume_slider_position = (get_attenuation() + 76 ) * MENU_FORM_WIDTH / 70 + OFFSETX;
+          goto draw_slider;
+//          blit8BitWidthBitmap(volume_slider_position - 4, y, 7, 6, slider_bitmap);
+        }
+      }
+      if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
+        volume_slider_position = (menu_drive_value[setting.lo_drive] + 38 ) * MENU_FORM_WIDTH / 51 + OFFSETX;
+     draw_slider:
+        blit8BitWidthBitmap(volume_slider_position - 4, y, 7, 6, slider_bitmap);
+      }
 //        ili9341_line(LCD_WIDTH/2+slider_position, y, LCD_WIDTH/2+slider_position,y+button_height);
     } else {
       int button_width = MENU_BUTTON_WIDTH;
@@ -1957,15 +1969,16 @@ menu_select_touch(int i)
           while (pw-->0)
             slider_delta *=10;
 #endif
-        }else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
-//          if (touch_x !=  prev_touch_x /* - 1 || prev_touch_x + 1 < touch_x */ ) {
-            uistat.value =  setting.offset + touch_x *( -6 - -76) / MENU_FORM_WIDTH + -76;
-            volume_slider_position = new_slider;
+        } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
+            uistat.value =  setting.offset + (touch_x - OFFSETX) *( -6 - -76) / MENU_FORM_WIDTH + -76;
             set_keypad_value(keypad);
+         apply:
             perform(false, 0, get_sweep_frequency(ST_CENTER), false);
             draw_menu();
 //          }
-
+        } else if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
+            set_level( (touch_x - OFFSETX) *( 13 - -38) / MENU_FORM_WIDTH + -38 );
+            goto apply;
         }
         keypad_mode = old_keypad_mode;
       }
