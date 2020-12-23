@@ -88,7 +88,6 @@ static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int  selection = 0;
 static int slider_position = 0;
-static int volume_slider_position = 0;
 
 static int slider_delta = 100000;
 
@@ -1831,23 +1830,21 @@ draw_menu_buttons(const menuitem_t *menu)
         blit8BitWidthBitmap(button_start+MENU_FORM_WIDTH-  FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,&right_icons[((menu[i].data >>0)&0xf)*2*FORM_ICON_HEIGHT]);
       }
 #endif
+      int local_slider_positions = 0;
       if (MT_MASK(menu[i].type) == MT_KEYPAD) {
         if (menu[i].data == KM_CENTER) {
-          volume_slider_position =  LCD_WIDTH/2+slider_position;
+          local_slider_positions =  LCD_WIDTH/2+slider_position;
           goto draw_slider;
-//          blit8BitWidthBitmap(LCD_WIDTH/2+slider_position - 4, y, 7, 6, slider_bitmap);
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
-          volume_slider_position = (get_attenuation() + 76 ) * MENU_FORM_WIDTH / 70 + OFFSETX;
+          local_slider_positions = (get_attenuation() + 76 ) * MENU_FORM_WIDTH / 70 + OFFSETX;
           goto draw_slider;
-//          blit8BitWidthBitmap(volume_slider_position - 4, y, 7, 6, slider_bitmap);
         }
       }
       if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
-        volume_slider_position = (menu_drive_value[setting.lo_drive] + 38 ) * MENU_FORM_WIDTH / 51 + OFFSETX;
+        local_slider_positions = (menu_drive_value[setting.lo_drive] + 38 ) * MENU_FORM_WIDTH / 51 + OFFSETX;
      draw_slider:
-        blit8BitWidthBitmap(volume_slider_position - 4, y, 7, 6, slider_bitmap);
+        blit8BitWidthBitmap(local_slider_positions - 4, y, 7, 6, slider_bitmap);
       }
-//        ili9341_line(LCD_WIDTH/2+slider_position, y, LCD_WIDTH/2+slider_position,y+button_height);
     } else {
       int button_width = MENU_BUTTON_WIDTH;
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
@@ -1887,6 +1884,21 @@ void set_keypad_value(int v)
   set_numeric_value();
 }
 
+void check_frequency_slider(uint32_t slider_freq)
+{
+
+  if ( (maxFreq - minFreq) < (uint32_t)(MENU_FORM_WIDTH * slider_delta) ) {
+    slider_delta = (maxFreq - minFreq)/MENU_FORM_WIDTH;                         // absolute mode with max step size
+  }
+  uint32_t half_span = (MENU_FORM_WIDTH / 2) * slider_delta;
+  if (minFreq + half_span > slider_freq) {
+    slider_position -= (minFreq + half_span - slider_freq) / slider_delta;            // reposition if needed
+  }
+  if (maxFreq < slider_freq + half_span) {
+    slider_position += (slider_freq + half_span - maxFreq) / slider_delta;            // reposition if needed
+  }
+}
+
 static void
 menu_select_touch(int i)
 {
@@ -1919,7 +1931,6 @@ menu_select_touch(int i)
           new_slider = MENU_FORM_WIDTH/2;
         if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER){
 #define TOUCH_DEAD_ZONE 20
-#if 1
           if (mode == SL_UNKNOWN ) {
             if (slider_position - TOUCH_DEAD_ZONE < new_slider && new_slider < slider_position + TOUCH_DEAD_ZONE) { // Pick up slider
               mode = SL_MOVE;
@@ -1929,8 +1940,6 @@ menu_select_touch(int i)
             }
           }
           if (mode == SL_MOVE ) {
-#endif
-//            if (touch_x !=  prev_touch_x /* - 1 || prev_touch_x + 1 < touch_x */ ) {
               uistat.value =  uistat.value - slider_position * slider_delta + new_slider * slider_delta;
               if (uistat.value < minFreq)
                 uistat.value = minFreq;
@@ -1940,35 +1949,29 @@ menu_select_touch(int i)
               set_keypad_value(keypad);
               perform(false, 0, (uint32_t)uistat.value, false);
               draw_menu();
-//            }
-#if 1
           } else if (mode == SL_SPAN ){
-//            if (touch_x != prev_touch_x) {
-              float saved_value;
-              first_span:
-              saved_value = uistat.value;
-              int pw=(touch_x + LCD_WIDTH/12 )* 6 / LCD_WIDTH;
-              slider_position = - LCD_WIDTH/2 + pw * LCD_WIDTH / 6 ;   // Show delta on slider
-              slider_delta = 100;
-              while (pw-->0)
+              uint32_t slider_freq;
+            first_span:
+              slider_freq = (uint32_t) uistat.value;
+              int pw=new_slider + LCD_WIDTH/2;
+              slider_position = pw - LCD_WIDTH/2;   // Show delta on slider
+              slider_delta = 10;
+              while (pw>0) {
                 slider_delta *=10;
-              uint32_t old_minFreq = minFreq;
-              minFreq = 0;
+                pw -= LCD_WIDTH/6;
+              }
+              uint32_t old_minFreq = minFreq;           // Save when in high mode
+              minFreq = 0;                              // And set minFreq to 0 for span display
               uistat.value = slider_delta;
               set_keypad_value(keypad);
-              draw_menu();                    // Show slider span
-              slider_position = 0;            // reset slider
-              minFreq = old_minFreq;
-              uistat.value = saved_value;
+              draw_menu();                               // Show slider span
+              minFreq = old_minFreq;                     // and restore minFreq
+              uistat.value = (float) slider_freq;        // and restore current slider freq
               set_keypad_value(keypad);
-//            }
-          }
-#else
-          int pw=(LCD_HEIGHT - touch_y) * 6 / LCD_HEIGHT;
-          slider_delta = 100;
-          while (pw-->0)
-            slider_delta *=10;
-#endif
+
+              slider_position = 0;                         // reset slider after span change
+              check_frequency_slider(slider_freq);
+         }
         } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
             uistat.value =  setting.offset + (touch_x - OFFSETX) *( -6 - -76) / MENU_FORM_WIDTH + -76;
             set_keypad_value(keypad);
