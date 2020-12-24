@@ -565,11 +565,11 @@ to_dBm(const float v)
   {
   case U_DBMV:
 //  return v - 30.0 - 20.0*log10f(sqrt(50));
-    return v - 30.0 - 20.0*LOG_10_SQRT_50;
+    return v - LOG_10_SQRT_50_x20_plus30; // (30.0 + 20.0*LOG_10_SQRT_50);
     break;
   case U_DBUV:
 //  return v - 90.0 - 20.0*log10f(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
-    return v - 90.0 - 20.0*LOG_10_SQRT_50;
+    return v - LOG_10_SQRT_50_x20_plus90; // (90.0 + 20.0*LOG_10_SQRT_50);
     break;
   case U_VOLT:
 //  return log10f( v / (sqrt(50.0))) * 20.0 + 30.0 ;

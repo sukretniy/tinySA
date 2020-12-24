@@ -809,10 +809,9 @@ typedef struct setting
   float normalize_level;     // Level to set normalize to, zero if not doing anything
   int modulation_frequency;
   int trigger_mode;
-  uint32_t checksum;
   int slider_position;
   int32_t slider_span;
-
+  uint32_t checksum;            // must be last
 }setting_t;
 
 extern setting_t setting;
