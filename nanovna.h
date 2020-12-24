@@ -747,7 +747,7 @@ typedef struct setting
 //  uint32_t _frequency0;
 //  uint32_t _frequency1;
   int mode;
-  uint16_t _sweep_points;
+  int _sweep_points;
   float attenuate;
   int auto_attenuation;
   int atten_step;
@@ -810,6 +810,9 @@ typedef struct setting
   int modulation_frequency;
   int trigger_mode;
   uint32_t checksum;
+  int slider_position;
+  int32_t slider_span;
+
 }setting_t;
 
 extern setting_t setting;

@@ -342,7 +342,7 @@ VNA_SHELL_FUNCTION(cmd_y)
   }
 #endif
 }
-
+#if 0       // not used
 VNA_SHELL_FUNCTION(cmd_z)
 {
   static const char cmd_z_list[] = "t|r|i";
@@ -368,7 +368,7 @@ VNA_SHELL_FUNCTION(cmd_z)
 #endif
   }
 }
-
+#endif
 
 VNA_SHELL_FUNCTION(cmd_selftest)
 {

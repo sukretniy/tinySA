@@ -30,14 +30,14 @@
 #undef __FAST_SWEEP__
 #endif
 #endif
-int dirty = true;
+// uint8_t dirty = true;
 int scandirty = true;
 
 setting_t setting;
 uint32_t frequencies[POINTS_COUNT];
 
 uint16_t actual_rbw_x10 = 0;
-int vbwSteps = 1;
+uint16_t vbwSteps = 1;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
 
@@ -135,6 +135,9 @@ void reset_settings(int m)
   setting.spur_removal = S_OFF;
 #endif
   setting.mirror_masking = 0;
+  setting.slider_position = 0;
+  setting.slider_span = 100000;
+
 #endif
   switch(m) {
   case M_LOW:
@@ -171,7 +174,7 @@ void reset_settings(int m)
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     break;
   }
-  for (int i = 0; i< MARKERS_MAX; i++) {
+  for (uint8_t i = 0; i< MARKERS_MAX; i++) {
     markers[i].enabled = M_DISABLED;
     markers[i].mtype = M_NORMAL;
   }
@@ -2801,11 +2804,11 @@ enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH
 };
 
-#define TEST_COUNT  21
+#define TEST_COUNT  (sizeof test_case / sizeof test_case[0])
 
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
-static const struct {
+typedef struct test_case {
   int kind;
   int setup;
   float center;      // In MHz
@@ -2813,7 +2816,9 @@ static const struct {
   float pass;
   int width;
   float stop;
-} test_case [TEST_COUNT] =
+} test_case_t;
+
+const test_case_t test_case [] =
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
  {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
  {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
@@ -2852,8 +2857,8 @@ static const  char *(test_text [4]) =
 {
  "Waiting", "Pass", "Fail", "Critical"
 };
-static const  char *(test_fail_cause [TEST_COUNT]);
 
+static const  char *(test_fail_cause [TEST_COUNT]);
 static int test_status[TEST_COUNT];
 static int show_test_info = FALSE;
 static volatile int test_wait = false;
@@ -3105,7 +3110,7 @@ common_silent:
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
-    setting.frequency_IF = DEFAULT_IF;                // Center on SAW filters
+    setting.frequency_IF = DEFAULT_IF+200000;                // Center on SAW filters
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input
@@ -3200,7 +3205,7 @@ void self_test(int test)
     reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     menu_autosettings_cb(0);
-    for (int i=0; i < TEST_COUNT; i++) {          // All test cases waiting
+    for (uint16_t i=0; i < TEST_COUNT; i++) {          // All test cases waiting
       if (test_case[i].kind == TC_END)
         break;
       test_status[i] = TS_WAITING;
@@ -3219,7 +3224,7 @@ void self_test(int test)
           test_step = TEST_END;
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
           ili9341_drawstring_7x13("Signal level too low", 30, 140);
-          ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
+          ili9341_drawstring_7x13("Did you connect high and low ports with cable?", 0, 210);
           goto resume2;
         }
 

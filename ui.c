@@ -87,9 +87,6 @@ static int8_t  kp_index = 0;
 static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int  selection = 0;
-static int slider_position = 0;
-
-static int slider_delta = 100000;
 
 static const uint8_t slider_bitmap[]=
 {
@@ -1833,7 +1830,7 @@ draw_menu_buttons(const menuitem_t *menu)
       int local_slider_positions = 0;
       if (MT_MASK(menu[i].type) == MT_KEYPAD) {
         if (menu[i].data == KM_CENTER) {
-          local_slider_positions =  LCD_WIDTH/2+slider_position;
+          local_slider_positions =  LCD_WIDTH/2+setting.slider_position;
           goto draw_slider;
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
           local_slider_positions = (get_attenuation() + 76 ) * MENU_FORM_WIDTH / 70 + OFFSETX;
@@ -1887,15 +1884,15 @@ void set_keypad_value(int v)
 void check_frequency_slider(uint32_t slider_freq)
 {
 
-  if ( (maxFreq - minFreq) < (uint32_t)(MENU_FORM_WIDTH * slider_delta) ) {
-    slider_delta = (maxFreq - minFreq)/MENU_FORM_WIDTH;                         // absolute mode with max step size
+  if ( (maxFreq - minFreq) < (uint32_t)setting.slider_span ) {
+    setting.slider_span = maxFreq - minFreq;                         // absolute mode with max step size
   }
-  uint32_t half_span = (MENU_FORM_WIDTH / 2) * slider_delta;
-  if (minFreq + half_span > slider_freq) {
-    slider_position -= (minFreq + half_span - slider_freq) / slider_delta;            // reposition if needed
+  uint32_t half_span = setting.slider_span >> 1;
+  if (minFreq + (uint32_t)half_span > slider_freq) {
+    setting.slider_position -= (minFreq + half_span - slider_freq) / (setting.slider_span /MENU_FORM_WIDTH);            // reposition if needed
   }
-  if (maxFreq < slider_freq + half_span) {
-    slider_position += (slider_freq + half_span - maxFreq) / slider_delta;            // reposition if needed
+  if (maxFreq < slider_freq + (uint32_t)half_span) {
+    setting.slider_position += (slider_freq + half_span - maxFreq) / (setting.slider_span /MENU_FORM_WIDTH);            // reposition if needed
   }
 }
 
@@ -1930,9 +1927,9 @@ menu_select_touch(int i)
         if (new_slider > MENU_FORM_WIDTH/2)
           new_slider = MENU_FORM_WIDTH/2;
         if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER){
-#define TOUCH_DEAD_ZONE 20
+#define TOUCH_DEAD_ZONE 40
           if (mode == SL_UNKNOWN ) {
-            if (slider_position - TOUCH_DEAD_ZONE < new_slider && new_slider < slider_position + TOUCH_DEAD_ZONE) { // Pick up slider
+            if (setting.slider_position - TOUCH_DEAD_ZONE < new_slider && new_slider < setting.slider_position + TOUCH_DEAD_ZONE) { // Pick up slider
               mode = SL_MOVE;
             } else {
               mode = SL_SPAN;
@@ -1940,12 +1937,12 @@ menu_select_touch(int i)
             }
           }
           if (mode == SL_MOVE ) {
-              uistat.value =  uistat.value - slider_position * slider_delta + new_slider * slider_delta;
+              uistat.value =  uistat.value - setting.slider_position * (setting.slider_span/MENU_FORM_WIDTH) + new_slider * (setting.slider_span/MENU_FORM_WIDTH);
               if (uistat.value < minFreq)
                 uistat.value = minFreq;
               if (uistat.value > maxFreq)
                 uistat.value = maxFreq;
-              slider_position = new_slider;
+              setting.slider_position = new_slider;
               set_keypad_value(keypad);
               perform(false, 0, (uint32_t)uistat.value, false);
               draw_menu();
@@ -1954,22 +1951,39 @@ menu_select_touch(int i)
             first_span:
               slider_freq = (uint32_t) uistat.value;
               int pw=new_slider + LCD_WIDTH/2;
-              slider_position = pw - LCD_WIDTH/2;   // Show delta on slider
-              slider_delta = 10;
+              setting.slider_position = pw - LCD_WIDTH/2;   // Show delta on slider
+              setting.slider_span = 10;
               while (pw>0) {
-                slider_delta *=10;
-                pw -= LCD_WIDTH/6;
+                setting.slider_span += setting.slider_span;
+                pw -= 12;
+                if (pw <=0)
+                  break;
+                setting.slider_span += setting.slider_span + (setting.slider_span >>1);
+                pw -= 12;
+                if (pw<=0)
+                  break;
+                setting.slider_span *= 2;
+                pw -= 12;
               }
+              if ((uint32_t)setting.slider_span > (maxFreq - minFreq))
+                setting.slider_span = (maxFreq - minFreq);
               uint32_t old_minFreq = minFreq;           // Save when in high mode
               minFreq = 0;                              // And set minFreq to 0 for span display
-              uistat.value = slider_delta;
+              uistat.value = setting.slider_span;
               set_keypad_value(keypad);
+              center_text[0] = 'S';
+              center_text[1] = 'P';
+              center_text[2] = 'A';
+              center_text[3] = 'N';
               draw_menu();                               // Show slider span
               minFreq = old_minFreq;                     // and restore minFreq
               uistat.value = (float) slider_freq;        // and restore current slider freq
               set_keypad_value(keypad);
-
-              slider_position = 0;                         // reset slider after span change
+              center_text[0] = 'F';
+              center_text[1] = 'R';
+              center_text[2] = 'E';
+              center_text[3] = 'Q';
+              setting.slider_position = 0;                         // reset slider after span change
               check_frequency_slider(slider_freq);
          }
         } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
@@ -1993,7 +2007,7 @@ menu_select_touch(int i)
       draw_menu();
       return;
     }
-    slider_position = 0;            // Reset slider when entering frequency
+    setting.slider_position = 0;            // Reset slider when entering frequency
     prev_touch_button = -1;
 #endif
 
