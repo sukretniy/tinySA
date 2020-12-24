@@ -747,8 +747,8 @@ typedef struct setting
 //  uint32_t _frequency0;
 //  uint32_t _frequency1;
   int mode;
-  int _sweep_points;
-  float attenuate;
+  uint16_t _sweep_points;
+  int16_t attenuate_x2;
   int auto_attenuation;
   int atten_step;
   uint32_t rbw_x10;

@@ -85,7 +85,7 @@ void reset_settings(int m)
   setting.unit = U_DBM;
   set_scale(10);
   set_reflevel(-10);
-  setting.attenuate = 0;
+  setting.attenuate_x2 = 0;
   setting.rbw_x10 = 0;
   setting.average = 0;
   setting.harmonic = 0;
@@ -143,7 +143,7 @@ void reset_settings(int m)
   case M_LOW:
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP, maxFreq);
-    setting.attenuate = 30.0;
+    setting.attenuate_x2 = 60;
     setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
     break;
@@ -151,7 +151,7 @@ void reset_settings(int m)
   case M_ULTRA:
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP, maxFreq);
-    setting.attenuate = 0;
+    setting.attenuate_x2 = 0;
     setting.sweep_time_us = 0;
     break;
 #endif
@@ -282,7 +282,7 @@ void set_measurement(int m)
     for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = -150;
     setting.linearity_step = 0;
-    setting.attenuate = 29.0;
+    setting.attenuate_x2 = 29*2;
     setting.auto_attenuation = false;
   }
 #endif
@@ -432,9 +432,9 @@ void set_auto_attenuation(void)
 {
   setting.auto_attenuation = true;
   if (setting.mode == M_LOW) {
-    setting.attenuate = 30.0;
+    setting.attenuate_x2 = 60;
   } else {
-    setting.attenuate = 0;
+    setting.attenuate_x2 = 0;
   }
   setting.atten_step = false;
   dirty = true;
@@ -447,18 +447,19 @@ void set_auto_reflevel(int v)
 
 float get_attenuation(void)
 {
+  float actual_attenuation = setting.attenuate_x2 / 2.0;
   if (setting.mode == M_GENLOW) {
     if (setting.atten_step)
-      return ( -(POWER_OFFSET + setting.attenuate - (setting.atten_step-1)*POWER_STEP + SWITCH_ATTENUATION));
+      return ( -(POWER_OFFSET + actual_attenuation - (setting.atten_step-1)*POWER_STEP + SWITCH_ATTENUATION));
     else
-      return ( -POWER_OFFSET - setting.attenuate + (setting.rx_drive & 7) * 3);
+      return ( -POWER_OFFSET - actual_attenuation + (setting.rx_drive & 7) * 3);
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
-      return setting.attenuate + RECEIVE_SWITCH_ATTENUATION;
+      return actual_attenuation + RECEIVE_SWITCH_ATTENUATION;
     else
-      return setting.attenuate + SWITCH_ATTENUATION;
+      return actual_attenuation + SWITCH_ATTENUATION;
   }
-  return(setting.attenuate);
+  return(actual_attenuation);
 }
 
 static pureRSSI_t get_signal_path_loss(void){
@@ -531,9 +532,9 @@ void set_attenuation(float a)       // Is used both in low output mode and high/
     a=31.0;
   if (setting.mode == M_HIGH)   // No attenuator in high mode
     a = 0;
-  if (setting.attenuate == a)
+  if (setting.attenuate_x2 == a*2)
     return;
-  setting.attenuate = a;
+  setting.attenuate_x2 = a*2;
   dirty = true;
 }
 
@@ -1019,7 +1020,7 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
   if (setting.mode == M_HIGH)
     PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
-    PE4302_Write_Byte((int)(setting.attenuate * 2));
+    PE4302_Write_Byte((int)(setting.attenuate_x2));
 #endif
   if (setting.mode == M_LOW) {
 
@@ -1725,7 +1726,7 @@ modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
     if (setting.modulation == MO_AM) {               // AM modulation
-      int p = setting.attenuate * 2 + am_modulation[modulation_counter];
+      int p = setting.attenuate_x2 + am_modulation[modulation_counter];
       if      (p>63) p = 63;
       else if (p< 0) p =  0;
 #ifdef __PE4302__
@@ -2353,17 +2354,17 @@ sweep_again:                                // stay in sweep loop when output mo
     int changed = false;
     int delta = 0;
     int actual_max_level = (max_index[0] == 0 ? -100 :(int) (actual_t[max_index[0]] - get_attenuation()) ); // If no max found reduce attenuation
-    if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate > 0) {
+    if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate_x2 > 0) {
       delta = - (AUTO_TARGET_LEVEL - actual_max_level);
-    } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate < 30) {
+    } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate_x2 < 60) {
       delta = actual_max_level - AUTO_TARGET_LEVEL;
     }
     if ((chVTGetSystemTimeX() - sweep_elapsed > 10000 && delta != 0) || delta > 5 ) {
-      setting.attenuate += delta;
-      if (setting.attenuate < 0)
-        setting.attenuate= 0;
-      if (setting.attenuate > 30)
-        setting.attenuate = 30;
+      setting.attenuate_x2 += delta + delta;
+      if (setting.attenuate_x2 < 0)
+        setting.attenuate_x2= 0;
+      if (setting.attenuate_x2 > 60)
+        setting.attenuate_x2 = 60;
       changed = true;
       sweep_elapsed = chVTGetSystemTimeX();
     }
@@ -2638,7 +2639,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __LINEARITY__
   //---------------- in Linearity measurement the attenuation has to be adapted ------------------
   if (setting.measurement == M_LINEARITY && setting.linearity_step < sweep_points) {
-    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / (sweep_points);
+    setting.attenuate_x2 = (29.0 - setting.linearity_step * 30.0 / (sweep_points))*2.0;
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;

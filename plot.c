@@ -517,6 +517,9 @@ draw_on_strut(int v0, int d, int color)
 #define LOG_10_SQRT_50 ((float)0.84948500216800)
 #define POW_30_20   ((float) 0.215443469)
 #define POW_SQRT    ((float)1.5234153789)
+#define LOG_10_SQRT_50_x20_plus30 ((float)46.98970004336)
+#define LOG_10_SQRT_50_x20_plus90 ((float)106.98970004336)
+
 /*
  * calculate log10f(abs(gamma))
  */ 
@@ -535,11 +538,11 @@ value(const float v)
   {
   case U_DBMV:
 //    return v + 30.0 + 20.0*log10f(sqrt(50));
-    return v + 30.0 + 20.0*LOG_10_SQRT_50;     //TODO convert constants to single float number as GCC compiler does runtime calculation
+    return v + LOG_10_SQRT_50_x20_plus30; // + 30.0 + 20.0*LOG_10_SQRT_50;     //TODO convert constants to single float number as GCC compiler does runtime calculation
     break;
   case U_DBUV:
 //    return v + 90.0 + 20.0*log10f(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
-    return v + 90.0 + 20.0*LOG_10_SQRT_50;
+    return v + LOG_10_SQRT_50_x20_plus90; // 90.0 + 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
 //  return pow(10, (v-30.0)/20.0) * sqrt((float)50.0);
