@@ -1944,6 +1944,7 @@ menu_select_touch(int i)
                 uistat.value = maxFreq;
               setting.slider_position = new_slider;
               set_keypad_value(keypad);
+              dirty = false;
               perform(false, 0, (uint32_t)uistat.value, false);
               draw_menu();
           } else if (mode == SL_SPAN ){

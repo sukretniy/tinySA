@@ -161,6 +161,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
+    setting.step_delay_mode = SD_FAST;
     break;
   case M_HIGH:
     set_sweep_frequency(ST_START, minFreq);
@@ -172,6 +173,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_CENTER, 300000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
+    setting.step_delay_mode = SD_FAST;
     break;
   }
   for (uint8_t i = 0; i< MARKERS_MAX; i++) {
