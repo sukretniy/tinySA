@@ -211,7 +211,8 @@ extern const char *info_about[];
 extern const char * const unit_string[];
 extern uint8_t signal_is_AM;
 extern const int reffer_freq[];
-
+extern uint32_t minFreq;
+extern uint32_t maxFreq;
 int level_is_calibrated(void);
 void reset_settings(int);
 void update_min_max_freq(void);
@@ -419,7 +420,7 @@ extern const uint8_t numfont16x22[];
 #define bFONT_GET_DATA(ch)   (  &x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT])
 #define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT]&7))
 
-#if 1                               // Set to 0 to save 3kByte
+#if 1                               // Set to 0 to save 3kByte and loose nice font
 #define wFONT_START_CHAR   0x17
 #define wFONT_MAX_WIDTH      12
 #define wFONT_GET_HEIGHT     14
@@ -759,7 +760,7 @@ typedef struct setting
 //  uint32_t _frequency1;
   int mode;
   uint16_t _sweep_points;
-  float attenuate;
+  int16_t attenuate_x2;
   int auto_attenuation;
   int atten_step;
   uint32_t rbw_x10;
@@ -820,9 +821,11 @@ typedef struct setting
   float normalize_level;     // Level to set normalize to, zero if not doing anything
   int modulation_frequency;
   int trigger_mode;
-  uint32_t checksum;
+  int slider_position;
+  int32_t slider_span;
   int extra_lna;
   int ultra;
+  uint32_t checksum;            // must be last
 }setting_t;
 
 extern setting_t setting;
@@ -1023,6 +1026,15 @@ typedef struct ui_button {
   } param_1, param_2;    // void data for label printf
   char text[32];
 } ui_button_t;
+
+typedef struct ui_slider {
+  uint8_t keypad;
+  uint8_t has_steps;
+  uint16_t slider_position;
+  uint16_t slider_step;
+  float min_value;
+  float max_value;
+} ui_slider_t;
 
 extern uistat_t uistat;
 void ui_init(void);

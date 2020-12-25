@@ -21,7 +21,7 @@
 #include "stdlib.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("Os")             // "Os" causes problem in selftest!!!!!!!!
+#pragma GCC optimize ("Os")
 
 
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
@@ -30,14 +30,14 @@
 #undef __FAST_SWEEP__
 #endif
 #endif
-int dirty = true;
+// uint8_t dirty = true;
 int scandirty = true;
 
 setting_t setting;
 uint32_t frequencies[POINTS_COUNT];
 
 uint16_t actual_rbw_x10 = 0;
-int vbwSteps = 1;
+uint16_t vbwSteps = 1;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
 
@@ -93,7 +93,7 @@ void reset_settings(int m)
   setting.unit = U_DBM;
   set_scale(10);
   set_reflevel(-10);
-  setting.attenuate = 0;
+  setting.attenuate_x2 = 0;
   setting.rbw_x10 = 0;
   setting.average = 0;
   setting.harmonic = 0;
@@ -144,6 +144,9 @@ void reset_settings(int m)
   setting.spur_removal = S_OFF;
 #endif
   setting.mirror_masking = 0;
+  setting.slider_position = 0;
+  setting.slider_span = 100000;
+
 #endif
   switch(m) {
   case M_LOW:
@@ -153,8 +156,8 @@ void reset_settings(int m)
       set_sweep_frequency(ST_STOP, 2900000000);    // TODO <----------------- temp ----------------------
     else
       set_sweep_frequency(ST_STOP,  800000000);    // TODO <----------------- temp ----------------------
-    setting.attenuate = 0.0;    // <---------------- WARNING -----------------
-    setting.auto_attenuation = false;   // <---------------- WARNING -----------------
+    setting.attenuate_x2 = 0;   // TODO <----------------- temp ---------------
+    setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
     setting.lo_drive=1;
     break;
@@ -162,7 +165,7 @@ void reset_settings(int m)
   case M_ULTRA:
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP, maxFreq);
-    setting.attenuate = 0;
+    setting.attenuate_x2 = 0;
     setting.sweep_time_us = 0;
     break;
 #endif
@@ -185,7 +188,7 @@ void reset_settings(int m)
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     break;
   }
-  for (int i = 0; i< MARKERS_MAX; i++) {
+  for (uint8_t i = 0; i< MARKERS_MAX; i++) {
     markers[i].enabled = M_DISABLED;
     markers[i].mtype = M_NORMAL;
   }
@@ -293,7 +296,7 @@ void set_measurement(int m)
     for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = -150;
     setting.linearity_step = 0;
-    setting.attenuate = 29.0;
+    setting.attenuate_x2 = 29*2;
     setting.auto_attenuation = false;
   }
 #endif
@@ -466,9 +469,9 @@ void set_auto_attenuation(void)
 {
   setting.auto_attenuation = true;
   if (setting.mode == M_LOW) {
-    setting.attenuate = 30.0;
+    setting.attenuate_x2 = 60;
   } else {
-    setting.attenuate = 0;
+    setting.attenuate_x2 = 0;
   }
   setting.atten_step = false;
   dirty = true;
@@ -481,18 +484,19 @@ void set_auto_reflevel(int v)
 
 float get_attenuation(void)
 {
+  float actual_attenuation = setting.attenuate_x2 / 2.0;
   if (setting.mode == M_GENLOW) {
     if (setting.atten_step)
-      return ( -(POWER_OFFSET + setting.attenuate - (setting.atten_step-1)*POWER_STEP + SWITCH_ATTENUATION));
+      return ( -(POWER_OFFSET + actual_attenuation - (setting.atten_step-1)*POWER_STEP + SWITCH_ATTENUATION));
     else
-      return ( -POWER_OFFSET - setting.attenuate + (setting.rx_drive & 7) * 3);
+      return ( -POWER_OFFSET - actual_attenuation + (setting.rx_drive & 7) * 3);
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
-      return setting.attenuate + RECEIVE_SWITCH_ATTENUATION;
+      return actual_attenuation + RECEIVE_SWITCH_ATTENUATION;
     else
-      return setting.attenuate + SWITCH_ATTENUATION;
+      return actual_attenuation + SWITCH_ATTENUATION;
   }
-  return(setting.attenuate);
+  return(actual_attenuation);
 }
 
 static pureRSSI_t get_signal_path_loss(void){
@@ -507,7 +511,7 @@ static pureRSSI_t get_signal_path_loss(void){
 
 static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
 
-void set_level(float v)     // Set the drive level of the LO
+void set_level(float v)     // Set the output level in dB  in high/low output
 {
   if (setting.mode == M_GENHIGH) {
     int d = 0;
@@ -523,7 +527,7 @@ void set_level(float v)     // Set the drive level of the LO
   dirty = true;
 }
 
-void set_attenuation(float a)       // Is used both in output mode and input mode
+void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
 {
   if (setting.mode == M_GENLOW) {
     a = a + POWER_OFFSET;
@@ -565,9 +569,9 @@ void set_attenuation(float a)       // Is used both in output mode and input mod
     a=31.0;
   if (setting.mode == M_HIGH)   // No attenuator in high mode
     a = 0;
-  if (setting.attenuate == a)
+  if (setting.attenuate_x2 == a*2)
     return;
-  setting.attenuate = a;
+  setting.attenuate_x2 = a*2;
   dirty = true;
 }
 
@@ -964,10 +968,12 @@ void set_scale(float t) {
   round_reflevel_to_scale();
 }
 
+extern char low_level_help_text[12];
 
 void set_offset(float offset)
 {
   setting.offset = offset;
+  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", -76 + (int)offset, -6 + (int)offset);
   force_set_markmap();
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
 }
@@ -1085,7 +1091,7 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
   if (setting.mode == M_HIGH)
     PE4302_Write_Byte(40);  // Ensure defined input impedance of low port when using high input mode (power calibration)
   else
-    PE4302_Write_Byte((int)(setting.attenuate * 2));
+    PE4302_Write_Byte((int)(setting.attenuate_x2));
 #endif
   if (setting.mode == M_LOW) {
 
@@ -1373,7 +1379,7 @@ case M_ULTRA:
     else
       set_switch_off();
 //    SI4432_Receive(); For noise testing only
-    SI4432_Transmit(setting.drive);
+    SI4432_Transmit(setting.lo_drive);
     // set_calibration_freq(setting.refer);
 #endif
     enable_rx_output(false);
@@ -1421,7 +1427,7 @@ case M_GENLOW:  // Mixed output from 0
     } else {
       set_switch_transmit();
     }
-    SI4432_Transmit(setting.drive);
+    SI4432_Transmit(setting.rx_drive);
 
     SI4432_Sel = SI4432_LO ;
     if (setting.modulation == MO_EXTERNAL) {
@@ -1459,12 +1465,12 @@ case M_GENHIGH: // Direct output from 1
     set_switch_receive();
 
     SI4432_Sel = SI4432_LO ;
-    if (setting.drive < 8) {
+    if (setting.lo_drive < 8) {
       set_switch_off(); // use switch as attenuator
     } else {
       set_switch_transmit();
     }
-    SI4432_Transmit(setting.drive);
+    SI4432_Transmit(setting.lo_drive);
 #endif
 #ifdef __SI4468__
     SI4463_init_tx();
@@ -1906,7 +1912,7 @@ modulation_again:
   // -----------------------------------------------------  modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
     if (setting.modulation == MO_AM) {               // AM modulation
-      int p = setting.attenuate * 2 + am_modulation[modulation_counter];
+      int p = setting.attenuate_x2 + am_modulation[modulation_counter];
       if      (p>63) p = 63;
       else if (p< 0) p =  0;
 #ifdef __PE4302__
@@ -1973,8 +1979,13 @@ modulation_again:
         local_IF = DEFAULT_IF;
       if (setting.mode == M_LOW) {
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
+#if 0                                                               // Isolation test
+          local_IF = lf;
+          lf = 0;
+#else
           local_IF += lf - reffer_freq[setting.refer];    // Offset so fundamental of reffer is visible
           lf = reffer_freq[setting.refer];
+#endif
         } else {
           if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
             local_IF = spur_alternate_IF;
@@ -2052,7 +2063,7 @@ modulation_again:
 #endif
     {                                           // Else set LO ('s)
       uint32_t target_f;
-	  if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
+      if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
         target_f = local_IF-lf;                                                 // set LO SI4432 to below IF frequency
       else
         target_f = local_IF+lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
@@ -2620,17 +2631,17 @@ sweep_again:                                // stay in sweep loop when output mo
     int changed = false;
     int delta = 0;
     int actual_max_level = (max_index[0] == 0 ? -100 :(int) (actual_t[max_index[0]] - get_attenuation()) ); // If no max found reduce attenuation
-    if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate > 0) {
+    if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate_x2 > 0) {
       delta = - (AUTO_TARGET_LEVEL - actual_max_level);
-    } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate < 30) {
+    } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate_x2 < 60) {
       delta = actual_max_level - AUTO_TARGET_LEVEL;
     }
     if ((chVTGetSystemTimeX() - sweep_elapsed > 10000 && delta != 0) || delta > 5 ) {
-      setting.attenuate += delta;
-      if (setting.attenuate < 0)
-        setting.attenuate= 0;
-      if (setting.attenuate > 30)
-        setting.attenuate = 30;
+      setting.attenuate_x2 += delta + delta;
+      if (setting.attenuate_x2 < 0)
+        setting.attenuate_x2= 0;
+      if (setting.attenuate_x2 > 60)
+        setting.attenuate_x2 = 60;
       changed = true;
       sweep_elapsed = chVTGetSystemTimeX();
     }
@@ -2905,7 +2916,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __LINEARITY__
   //---------------- in Linearity measurement the attenuation has to be adapted ------------------
   if (setting.measurement == M_LINEARITY && setting.linearity_step < sweep_points) {
-    setting.attenuate = 29.0 - setting.linearity_step * 30.0 / (sweep_points);
+    setting.attenuate_x2 = (29.0 - setting.linearity_step * 30.0 / (sweep_points))*2.0;
     dirty = true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
@@ -3071,11 +3082,11 @@ enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH
 };
 
-#define TEST_COUNT  21
+#define TEST_COUNT  (sizeof test_case / sizeof test_case[0])
 
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
-static const struct {
+typedef struct test_case {
   int kind;
   int setup;
   float center;      // In MHz
@@ -3083,7 +3094,9 @@ static const struct {
   float pass;
   int width;
   float stop;
-} test_case [TEST_COUNT] =
+} test_case_t;
+
+const test_case_t test_case [] =
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
  {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
  {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
@@ -3092,7 +3105,7 @@ static const struct {
 #define TEST_SILENCE 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  10,     8,      -20,    27,     -80 },      // 7 BPF loss and stop band
+ {TC_SIGNAL,    TP_10MHZEXTRA,  10,     7,      -20,    27,     -80 },      // 7 BPF loss and stop band
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
@@ -3122,8 +3135,8 @@ static const  char *(test_text [4]) =
 {
  "Waiting", "Pass", "Fail", "Critical"
 };
-static const  char *(test_fail_cause [TEST_COUNT]);
 
+static const  char *(test_fail_cause [TEST_COUNT]);
 static int test_status[TEST_COUNT];
 static int show_test_info = FALSE;
 static volatile int test_wait = false;
@@ -3375,7 +3388,7 @@ common_silent:
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
-    setting.frequency_IF = DEFAULT_IF;                // Center on SAW filters
+    setting.frequency_IF = DEFAULT_IF+200000;                // Center on SAW filters
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input
@@ -3470,7 +3483,7 @@ void self_test(int test)
     reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     menu_autosettings_cb(0);
-    for (int i=0; i < TEST_COUNT; i++) {          // All test cases waiting
+    for (uint16_t i=0; i < TEST_COUNT; i++) {          // All test cases waiting
       if (test_case[i].kind == TC_END)
         break;
       test_status[i] = TS_WAITING;
@@ -3489,7 +3502,7 @@ void self_test(int test)
           test_step = TEST_END;
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
           ili9341_drawstring_7x13("Signal level too low", 30, 140);
-          ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
+          ili9341_drawstring_7x13("Did you connect high and low ports with cable?", 0, 210);
           goto resume2;
         }
 

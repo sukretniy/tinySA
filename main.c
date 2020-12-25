@@ -122,7 +122,8 @@ const char *info_about[]={
   "Platform: " PLATFORM_NAME,
   0 // sentinel
 };
-extern int dirty;
+
+uint16_t dirty = true;
 
 bool completed = false;
 
@@ -200,6 +201,10 @@ static THD_FUNCTION(Thread1, arg)
   }
 
 }
+
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
 
 int
 is_paused(void)
@@ -2528,10 +2533,12 @@ static void shell_init_connection(void){
 // Only USB console, shell_stream always on USB
 #define PREPARE_STREAM
 
+#if 0           // Not used
 // Check connection as Active, if no suspend input
 static bool shell_check_connect(void){
   return SDU1.config->usbp->state == USB_ACTIVE;
 }
+#endif
 
 // Init shell I/O connection over USB
 static void shell_init_connection(void){
@@ -2698,6 +2705,7 @@ static DACConfig dac1cfg1 = {
   datamode:     DAC_DHRM_12BIT_RIGHT
 };
 
+#pragma GCC pop_options
 
 static const GPTConfig gpt4cfg = {
   1000000, // 1 MHz timer clock.
