@@ -178,6 +178,8 @@ int ADF4351_locked(void);
 
 void ADF4351_enable(int s);
 void ADF4351_enable_aux_out(int s);
+
+
 #endif
 
 #ifdef __SI4463__
@@ -193,6 +195,7 @@ pureRSSI_t getSI4463_RSSI_correction(void);
 void Si446x_getInfo(si446x_info_t* info);
 void SI446x_Fill(int s, int start);
 void SI4463_init(void);
+void set_calibration_freq(int freq);
 #define ADF4351_LO 3
 #define ADF4351_LO2 4
 #define SI4463_RX  2

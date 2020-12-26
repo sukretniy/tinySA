@@ -575,7 +575,7 @@
 //   MODEM_AFC_LIMITER_0 - Set the AFC limiter value.
 //   MODEM_AFC_MISC - Specifies miscellaneous AFC control bits.
 */
-#define RF_MODEM_AFC_LIMITER_1_3_1 0x11, 0x20, 0x03, 0x30, 0x00, 0xFC, 0xA0
+#define RF_MODEM_AFC_LIMITER_1_3_1 0x11, 0x20, 0x03, 0x30, 0x00, 0xFC, 0x00
 
 /*
 // Set properties:           RF_MODEM_AGC_CONTROL_1_1

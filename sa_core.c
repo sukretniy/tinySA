@@ -1070,11 +1070,11 @@ void calculate_step_delay(void)
       if (actual_rbw_x10 >= 8500)      { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 1400; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 2500; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 7000; SI4432_offset_delay = 100; }
-      else                             { SI4432_step_delay = 15000; SI4432_offset_delay =1600; }
+      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 30; }
+      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 1400; SI4432_offset_delay = 500; }
+      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 2500; SI4432_offset_delay = 800; }
+      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 7000; SI4432_offset_delay = 2500; }
+      else                             { SI4432_step_delay = 15000; SI4432_offset_delay =5000; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay *= 2;
@@ -1314,10 +1314,61 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
     }
   } else if (V==ADF4351_LO2){
     real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO, freq);
-  } else
-    if (V==SI4463_RX) {
-      SI4463_set_freq(freq);
+  } else if (V==SI4463_RX) {
+    if (setting.step_delay_mode == SD_FAST) {        // If in extra fast scanning mode and NOT SI4432_RX !!!!!!
+      int delta =  freq - real_old_freq[V];
+//#define OFFSET_STEP 14.30555
+#define OFFSET_STEP 12.3981
+#define OFFSET_RANGE 937500  // Hz
+      if (real_old_freq[V] >= 480000000)    // 480MHz, high band
+        delta = delta >> 1;
+      delta = ((float)delta) / OFFSET_STEP;            // Calculate and set the offset register i.s.o programming a new frequency
+      if (delta > - 0x6fff && delta < 0x6fff) { // and requested frequency can easily be reached by using the offset registers
+#if 0
+        if (real_old_freq[V] >= 480000000)
+          shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
+        else
+          shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
+#endif
+        si_set_offset(delta);               // Signal offset changed so RSSI retrieval is delayed for frequency settling
+        old_freq[V] = freq;
+      } else {
+#ifdef __WIDE_OFFSET__
+        uint32_t target_f = freq;                    // Impossible to use offset so set SI4432 to new frequency
+#if 0
+        if (freq < real_old_freq[V]) {                          // sweeping down
+          if (freq - OFFSET_RANGE >= 480000000) {
+            target_f = freq - OFFSET_RANGE*2;
+          } else {
+            target_f = freq - OFFSET_RANGE;
+          }
+          SI4463_set_freq(target_f);
+          si_set_offset(0x7fff);        // set offset to most positive
+          real_old_freq[V] = target_f;
+        } else {                                                // sweeping up
+          if (freq + OFFSET_RANGE >= 480000000) {
+            target_f = freq + OFFSET_RANGE*2;
+          } else {
+            target_f = freq + OFFSET_RANGE;
+          }
+#else
+          {
+#endif
+          SI4463_set_freq(target_f);            // Also sets offset to zero
+          real_old_freq[V] = target_f;
+        }
+#else
+        SI4432_Set_Frequency(freq);           // Impossible to use offset so set SI4432 to new frequency
+        SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0, 0);           // set offset to zero
+//        SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
+        real_old_freq[V] = freq;
+#endif
+      }
+    } else {
+      SI4463_set_freq(freq);           // Not in fast mode
+      real_old_freq[V] = freq;
     }
+  }
   old_freq[V] = freq;
 }
 
@@ -1499,6 +1550,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 {
   if (!MODE_INPUT(setting.mode)) {
     vbwSteps = 1;
+    actual_rbw_x10 = 1;         // To force substepping of the SI4463
     return;
   }
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
@@ -1509,10 +1561,15 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   uint32_t temp_actual_rbw_x10 = setting.rbw_x10;     // requested rbw , 32 bit !!!!!!
   if (temp_actual_rbw_x10 == 0) {        // if auto rbw
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
+#ifdef __SI4432__
       if (setting.fast_speedup > 2)
         temp_actual_rbw_x10 = 6*setting.vbw_x10; // rbw is six times the frequency step to ensure no gaps in coverage as there are some weird jumps
       else
         temp_actual_rbw_x10 = 4*setting.vbw_x10; // rbw is four times the frequency step to ensure no gaps in coverage as there are some weird jumps
+#endif
+#ifdef __SI4463__
+      temp_actual_rbw_x10 = setting.vbw_x10;
+#endif
     } else
       temp_actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
   }
@@ -2116,11 +2173,12 @@ modulation_again:
       } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       } else if (setting.mode == M_GENHIGH) {
-#if 1                       // Let SI TX only
+#if 0                       // Let SI TX only
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
         local_IF = 0;
 #else
           set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
+          local_IF = lf;
 #endif
         }
 //      STOP_PROFILE;
@@ -2195,7 +2253,7 @@ modulation_again:
 
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
 
-#if 1
+#if 0
       volatile uint8_t trigger_lvl = PURE_TO_DEVICE_RSSI((int16_t)((float_TO_PURE_RSSI(setting.trigger_level) - correct_RSSI - correct_RSSI_freq)));
       SI4432_trigger_fill(MODE_SELECT(setting.mode), trigger_lvl, (setting.trigger_direction == T_UP), setting.trigger_mode);
 #else
@@ -2258,6 +2316,11 @@ modulation_again:
 #ifdef __SI4463__
         pureRSSI = Si446x_RSSI();
 #endif
+//#define __DEBUG_FREQUENCY_SETTING__
+#ifdef __DEBUG_FREQUENCY_SETTING__                 // For debugging the frequency calculation
+  stored_t[i] = -60.0 + (real_old_freq[ADF4351_LO] - f - old_freq[2])/10;
+#endif
+
     }
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
@@ -3578,11 +3641,11 @@ void self_test(int test)
     test_prepare(TEST_ATTEN);
     test_acquire(TEST_ATTEN);                        // Acquire test
     test_validate(TEST_ATTEN);                       // Validate test
-#if 0
+#if 1
     for (int j= 0; j < 64; j++ ) {
 //      test_prepare(TEST_ATTEN);
       set_attenuation(((float)j)/2.0);
-      float summed_peak_level = 0;
+//      float summed_peak_level = 0;
 //      for (int k=0; k<10; k++) {
         test_acquire(TEST_ATTEN);                        // Acquire test
         test_validate(TEST_ATTEN);                       // Validate test

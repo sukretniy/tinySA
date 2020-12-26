@@ -355,18 +355,14 @@ VNA_SHELL_FUNCTION(cmd_v)
 
 VNA_SHELL_FUNCTION(cmd_y)
 {
-  int rvalue;
-  uint8_t data[16];
   if (argc < 1) {
     shell_printf("usage: y {addr(0-FF)} [value(0-FF)]+\r\n");
     return;
   }
-  data[0] = xtoi(argv[0]);
-  for (int i=1; i < argc; i++) {
-    data[i] = xtoi(argv[i]);
-  }
 #ifdef __SI4432__
   int lvalue = 0;
+  int rvalue;
+  rvalue = xtoi(argv[0]);
   SI4432_Sel = VFO;
   if (argc == 2){
     lvalue = my_atoui(argv[1]);
@@ -377,6 +373,11 @@ VNA_SHELL_FUNCTION(cmd_y)
   }
 #endif
 #ifdef __SI4463__
+  uint8_t data[16];
+  data[0] = xtoi(argv[0]);
+  for (int i=1; i < argc; i++) {
+    data[i] = xtoi(argv[i]);
+  }
   SI4463_do_api(data, argc, data, 16);
   for (int i=0; i<16; i++)
     shell_printf("%02x ", data[i]);
@@ -473,9 +474,11 @@ VNA_SHELL_FUNCTION(cmd_x)
 
 VNA_SHELL_FUNCTION(cmd_i)
 {
-  int rvalue;
+  (void)argc;
+  (void)argv;
 return;             // Don't use!!!!
 #ifdef __SI4432__
+int rvalue;
   SI4432_Init();
   shell_printf("SI4432 init done\r\n");
   if (argc == 1) {

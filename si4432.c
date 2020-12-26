@@ -1313,6 +1313,8 @@ void ADF4351_enable_out(int s)
 
 
 int SI4463_frequency_changed = false;
+int SI4463_offset_changed = false;
+
 static int SI4463_band = -1;
 static int64_t SI4463_outdiv = -1;
 //static uint32_t SI4463_prev_freq = 0;
@@ -1498,6 +1500,8 @@ static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #define RF_GPIO_PIN_CFG GLOBAL_GPIO_PIN_CFG
 #undef RF_GLOBAL_CLK_CFG_1
 #define RF_GLOBAL_CLK_CFG_1 GLOBAL_CLK_CFG
+
+// Remember to change RF_MODEM_AFC_LIMITER_1_3_1 !!!!!!!!!
 
 static const uint8_t SI4468_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #endif
@@ -1802,6 +1806,36 @@ void set_RSSI_comp(void)
 
 }
 
+int SI4463_offset_active = false;
+
+void si_set_offset(int16_t offset)
+{
+  // Set properties:           MODEM_FREQ_OFFSET
+  // Number of properties:     2
+  // Group ID:                 0x20
+  // Start ID:                 0x0d
+  // Default values:           0x00, 0x00
+  // Descriptions:
+  //   MODEM_FREQ_OFFSET1 - High byte of the offset
+  //   MODEM_FREQ_OFFSET2 - Low byte of the offset
+  //
+  // #define RF_MODEM_RSSI_COMP_1 0x11, 0x20, 0x01, 0x4E, 0x40
+
+  uint8_t data[] = {
+      0x11,
+      0x20,
+      0x02,
+      0x0d,
+      (uint8_t) ((offset>>8) & 0xff),
+      (uint8_t) ((offset) & 0xff)
+  };
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+  SI4463_offset_changed = true;
+  if (offset)
+    SI4463_offset_active = true;
+}
+
+
 
 #ifdef __FAST_SWEEP__
 extern deviceRSSI_t age[POINTS_COUNT];
@@ -1810,6 +1844,7 @@ static bool  buf_read = false;
 
 void SI446x_Fill(int s, int start)
 {
+  (void)s;
 #if 0
   set_SPI_mode(SPI_MODE_SI);
   SI4432_Sel = s;
@@ -1870,10 +1905,10 @@ int16_t Si446x_RSSI(void)
       my_microsecond_delay(SI4432_step_delay);
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
-    } else if (SI4432_offset_delay && SI4463_frequency_changed) {
+    } else if (SI4432_offset_delay && SI4463_offset_changed) {
       my_microsecond_delay(SI4432_offset_delay);
       ADF4351_frequency_changed = false;
-      SI4463_frequency_changed = false;
+      SI4463_offset_changed = false;
     }
 
     int j = 1; //setting.repeat;
@@ -2306,6 +2341,10 @@ void SI4463_set_freq(uint32_t freq)
 #else
 #define freq_xco    26000000
 #endif
+  if (SI4463_offset_active) {
+    si_set_offset(0);
+    SI4463_offset_active = false;
+  }
   int32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
   int64_t MOD = 524288;
   int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R*MOD;
@@ -2555,17 +2594,17 @@ static int old_ultra = -1;
 void enable_rx_output(int s)
 {
   if (s)
-    SI4463_set_gpio(3,GPIO_HIGH);
+    SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE1);
   else
-    SI4463_set_gpio(3,GPIO_LOW);
+    SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE0);
 }
 
 void enable_high(int s)
 {
   if (s)
-    SI4463_set_gpio(2,GPIO_HIGH);
+    SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE1);
   else
-    SI4463_set_gpio(2,GPIO_LOW);
+    SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE0);
 }
 
 

@@ -290,6 +290,7 @@ void set_measurement(int);
 // extern int settingSpeed;
 //extern int setting.step_delay;
 void sweep_remote(void);
+extern void set_modulo(uint32_t f);
 #ifdef __AUDIO__
 /*
  * dsp.c
@@ -1129,5 +1130,26 @@ enum {
 enum {
   T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID
 };
+
+// si4432.c
+
+extern void ADF4351_mux(int R);
+extern void ADF4351_force_refresh(void);
+extern void ADF4351_CP(int p);
+extern int SI4463_R;
+extern volatile int64_t ADF4350_modulo;
+extern void SI446x_set_AGC_LNA(uint8_t v);
+extern void SI4463_init_rx(void);
+extern void SI4463_init_tx(void);
+extern void SI4463_start_tx(uint8_t CHANNEL);
+extern void SI4463_set_output_level(int t);
+extern void SI4463_set_freq(uint32_t freq);
+extern uint16_t set_rbw(uint16_t rbw_x10);
+extern uint16_t force_rbw(int f);
+extern void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen);
+extern void SI4463_set_gpio(int i, int s);
+extern void si_set_offset(int16_t offset);
+extern int SI4463_offset_changed;
+
 
 /*EOF*/
