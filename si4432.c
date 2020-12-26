@@ -1007,7 +1007,7 @@ double RFout, //Output freq in MHz
 
 volatile int64_t
   INTA,         // Temp
-  ADF4350_modulo = 3125, //Temp
+  ADF4350_modulo = 260,
   MOD,
   target_freq,
   FRAC; //Temp
@@ -1035,7 +1035,7 @@ void ADF4351_Setup(void)
 
   ADF4351_R_counter(1);
 
-  ADF4351_CP(7);
+  ADF4351_CP(1);
 
   ADF4351_set_frequency(0,200000000);
 
