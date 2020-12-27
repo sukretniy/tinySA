@@ -1136,6 +1136,7 @@ enum {
 extern void ADF4351_mux(int R);
 extern void ADF4351_force_refresh(void);
 extern void ADF4351_CP(int p);
+extern void ADF4351_modulo(int m);
 extern int SI4463_R;
 extern volatile int64_t ADF4350_modulo;
 extern void SI446x_set_AGC_LNA(uint8_t v);

@@ -40,6 +40,8 @@ uint16_t actual_rbw_x10 = 0;
 uint16_t vbwSteps = 1;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
+static unsigned long old_freq[5] = { 0, 0, 0, 0,0};
+static unsigned long real_old_freq[5] = { 0, 0, 0, 0,0};
 
 //int setting.refer = -1;  // Off by default
 const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
@@ -455,9 +457,9 @@ void set_R(int f)
 
 void set_modulo(uint32_t f)
 {
-  ADF4350_modulo = f;
-  //ADF4351_spur_mode(f);
-  dirty = true;
+  ADF4351_modulo(f);
+  ADF4351_force_refresh();
+  ADF4351_set_frequency(0, real_old_freq[ADF4351_LO]);
 }
 #endif
 
@@ -1171,8 +1173,6 @@ uint32_t peakFreq;
 int peakIndex;
 float temppeakLevel;
 int temppeakIndex;
-static unsigned long old_freq[5] = { 0, 0, 0, 0,0};
-static unsigned long real_old_freq[5] = { 0, 0, 0, 0,0};
 // volatile int t;
 
 //static uint32_t extra_vbw_step_time = 0;

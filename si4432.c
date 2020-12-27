@@ -1097,6 +1097,12 @@ void ADF4351_force_refresh(void) {
   prev_actual_freq = 0;
 }
 
+void ADF4351_modulo(int m)
+{
+  ADF4350_modulo = m;
+//  ADF4351_set_frequency(0, (uint64_t)prev_actual_freq);
+}
+
 uint64_t ADF4351_set_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
 //  freq -= 71000;
