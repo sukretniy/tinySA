@@ -17,7 +17,7 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "ch.h"
-//#define TINYSA4_PROTO
+#define TINYSA4_PROTO
 
 //#ifdef TINYSA_F303
 #include "adc_F303.h"

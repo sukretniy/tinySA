@@ -1265,7 +1265,7 @@ uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
          my_microsecond_delay(10);
     }
     max_delta = freq - actual_freq;
-    if (max_delta > 50000 || max_delta < -50000 || freq == 0) {
+    if (max_delta > 100000 || max_delta < -100000 || freq == 0) {
       while(1)
         my_microsecond_delay(10);
     }
@@ -1543,6 +1543,10 @@ void SI4463_refresh_gpio(void)
 void SI4463_set_gpio(int i, int s)
 {
   gpio_state[i] = s;
+#if 0   // debug gpio
+  gpio_state[2] = 3;
+  gpio_state[3] = 2;
+#endif
   SI4463_refresh_gpio();
 }
 
@@ -2342,11 +2346,11 @@ void SI4463_set_freq(uint32_t freq)
   }
   if (SI4463_band == -1)
     return;
-#ifdef TINYSA4_PROTO
+//#ifdef TINYSA4_PROTO
 #define freq_xco    30000000
-#else
-#define freq_xco    26000000
-#endif
+//#else
+//#define freq_xco    26000000
+//#endif
   if (SI4463_offset_active) {
     si_set_offset(0);
     SI4463_offset_active = false;
@@ -2608,9 +2612,9 @@ void enable_rx_output(int s)
 void enable_high(int s)
 {
   if (s)
-    SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE1);
-  else
     SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE0);
+  else
+    SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE1);
 }
 
 
