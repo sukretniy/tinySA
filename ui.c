@@ -1833,12 +1833,12 @@ draw_menu_buttons(const menuitem_t *menu)
           local_slider_positions =  LCD_WIDTH/2+setting.slider_position;
           goto draw_slider;
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
-          local_slider_positions = (get_attenuation() + 76 ) * MENU_FORM_WIDTH / 70 + OFFSETX;
+          local_slider_positions = ((get_attenuation() + 76 ) * (MENU_FORM_WIDTH-8)) / 70 + OFFSETX+4;
           goto draw_slider;
         }
       }
       if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
-        local_slider_positions = (menu_drive_value[setting.lo_drive] + 38 ) * MENU_FORM_WIDTH / 51 + OFFSETX;
+        local_slider_positions = ((menu_drive_value[setting.lo_drive] + 38 ) * (MENU_FORM_WIDTH-8)) / 51 + OFFSETX+4;
      draw_slider:
         blit8BitWidthBitmap(local_slider_positions - 4, y, 7, 6, slider_bitmap);
       }
@@ -1889,10 +1889,10 @@ void check_frequency_slider(uint32_t slider_freq)
   }
   uint32_t half_span = setting.slider_span >> 1;
   if (minFreq + (uint32_t)half_span > slider_freq) {
-    setting.slider_position -= (minFreq + half_span - slider_freq) / (setting.slider_span /MENU_FORM_WIDTH);            // reposition if needed
+    setting.slider_position -= (minFreq + half_span - slider_freq) / (setting.slider_span / (MENU_FORM_WIDTH-8));            // reposition if needed
   }
   if (maxFreq < slider_freq + (uint32_t)half_span) {
-    setting.slider_position += (slider_freq + half_span - maxFreq) / (setting.slider_span /MENU_FORM_WIDTH);            // reposition if needed
+    setting.slider_position += (slider_freq + half_span - maxFreq) / (setting.slider_span /(MENU_FORM_WIDTH-8));            // reposition if needed
   }
 }
 
@@ -1922,10 +1922,10 @@ menu_select_touch(int i)
         keypad_mode = keypad;
         fetch_numeric_target();
         int new_slider = touch_x - LCD_WIDTH/2;
-        if (new_slider < -MENU_FORM_WIDTH/2)
-          new_slider = -MENU_FORM_WIDTH/2;
-        if (new_slider > MENU_FORM_WIDTH/2)
-          new_slider = MENU_FORM_WIDTH/2;
+        if (new_slider < - (MENU_FORM_WIDTH-8)/2)
+          new_slider = -(MENU_FORM_WIDTH-8)/2;
+        if (new_slider > (MENU_FORM_WIDTH-8)/2)
+          new_slider = (MENU_FORM_WIDTH-8)/2;
         if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER){
 #define TOUCH_DEAD_ZONE 40
           if (mode == SL_UNKNOWN ) {
@@ -1937,7 +1937,7 @@ menu_select_touch(int i)
             }
           }
           if (mode == SL_MOVE ) {
-              uistat.value =  uistat.value - setting.slider_position * (setting.slider_span/MENU_FORM_WIDTH) + new_slider * (setting.slider_span/MENU_FORM_WIDTH);
+              uistat.value =  uistat.value - setting.slider_position * (setting.slider_span/(MENU_FORM_WIDTH-8)) + new_slider * (setting.slider_span/(MENU_FORM_WIDTH-8));
               if (uistat.value < minFreq)
                 uistat.value = minFreq;
               if (uistat.value > maxFreq)
@@ -1972,30 +1972,38 @@ menu_select_touch(int i)
               minFreq = 0;                              // And set minFreq to 0 for span display
               uistat.value = setting.slider_span;
               set_keypad_value(keypad);
+#if 1
+              plot_printf(center_text, sizeof center_text, "WIDTH: %%s");
+#else
               center_text[0] = 'S';
               center_text[1] = 'P';
               center_text[2] = 'A';
               center_text[3] = 'N';
+#endif
               draw_menu();                               // Show slider span
               minFreq = old_minFreq;                     // and restore minFreq
               uistat.value = (float) slider_freq;        // and restore current slider freq
               set_keypad_value(keypad);
+#if 1
+              plot_printf(center_text, sizeof center_text, "FREQ: %%s");
+#else
               center_text[0] = 'F';
               center_text[1] = 'R';
               center_text[2] = 'E';
               center_text[3] = 'Q';
+#endif
               setting.slider_position = 0;                         // reset slider after span change
               check_frequency_slider(slider_freq);
          }
         } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
-            uistat.value =  setting.offset + (touch_x - OFFSETX) *( -6 - -76) / MENU_FORM_WIDTH + -76;
+            uistat.value =  setting.offset + (touch_x - OFFSETX+4) *( -6 - -76) / (MENU_FORM_WIDTH-8) + -76;
             set_keypad_value(keypad);
          apply:
             perform(false, 0, get_sweep_frequency(ST_CENTER), false);
             draw_menu();
 //          }
         } else if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
-            set_level( (touch_x - OFFSETX) *( 13 - -38) / MENU_FORM_WIDTH + -38 );
+            set_level( (touch_x - OFFSETX+4) *( 13 - -38) / (MENU_FORM_WIDTH-8) + -38 );
             goto apply;
         }
         keypad_mode = old_keypad_mode;

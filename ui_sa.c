@@ -1492,7 +1492,7 @@ static const menuitem_t  menu_sweep[] = {
 };
 
 char low_level_help_text[12] = "-76..-6";
-char center_text[10] = "FREQ: %s";
+char center_text[18] = "FREQ: %s";
 
 static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
