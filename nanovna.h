@@ -17,7 +17,7 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "ch.h"
-//#define TINYSA4_PROTO
+#define TINYSA4_PROTO
 
 //#ifdef TINYSA_F303
 #include "adc_F303.h"
@@ -63,11 +63,11 @@
 #define HIGH_MAX_FREQ_MHZ   960
 #endif
 #ifdef TINYSA4
-#define DEFAULT_IF  ((uint32_t)978000000)
-#define DEFAULT_SPUR_IF ((uint32_t)979000000)
+#define DEFAULT_IF  ((uint32_t)977000000)
+#define DEFAULT_SPUR_IF ((uint32_t)978000000)
 #define DEFAULT_MAX_FREQ    ((uint32_t)800000000)
-#define HIGH_MIN_FREQ_MHZ   850
-#define HIGH_MAX_FREQ_MHZ   1150
+#define HIGH_MIN_FREQ_MHZ   825
+#define HIGH_MAX_FREQ_MHZ   1130
 #endif
 /*
  * main.c

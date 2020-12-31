@@ -1039,7 +1039,8 @@ void ADF4351_Setup(void)
 
   ADF4351_set_frequency(0,200000000);
 
-  ADF4351_mux(6);   // Show lock on led
+  ADF4351_mux(2);   // No led
+  //  ADF4351_mux(6);   // Show lock on led
 
 //  ADF4351_set_frequency(1,150000000,0);
 //  ADF4351_Set(0);
@@ -1059,6 +1060,7 @@ void ADF4351_Setup(void)
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
+  registers[value & 0x07] = value;
   for (int i = 3; i >= 0; i--) shiftOut((value >> (8 * i)) & 0xFF);
   palSetLine(ADF4351_LE[channel]);
   my_microsecond_delay(1);        // Must
@@ -1265,7 +1267,7 @@ uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
          my_microsecond_delay(10);
     }
     max_delta = freq - actual_freq;
-    if (max_delta > 50000 || max_delta < -50000 || freq == 0) {
+    if (max_delta > 100000 || max_delta < -100000 || freq == 0) {
       while(1)
         my_microsecond_delay(10);
     }
@@ -1543,6 +1545,10 @@ void SI4463_refresh_gpio(void)
 void SI4463_set_gpio(int i, int s)
 {
   gpio_state[i] = s;
+#if 0   // debug gpio
+  gpio_state[2] = 3;
+  gpio_state[3] = 2;
+#endif
   SI4463_refresh_gpio();
 }
 
@@ -1916,8 +1922,8 @@ int16_t Si446x_RSSI(void)
       ADF4351_frequency_changed = false;
       SI4463_offset_changed = false;
     }
-
-    int j = 1; //setting.repeat;
+#define SAMPLE_COUNT 3
+    int j = SAMPLE_COUNT; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
       again:
@@ -1932,7 +1938,7 @@ int16_t Si446x_RSSI(void)
       if (j == 0) break;
       my_microsecond_delay(20);
     }while(1);
-#if 0
+#if SAMPLE_COUNT == 3
     int t;
     if (RSSI_RAW_ARRAY[0] > RSSI_RAW_ARRAY[1]) {
       t = RSSI_RAW_ARRAY[1];
@@ -2342,11 +2348,11 @@ void SI4463_set_freq(uint32_t freq)
   }
   if (SI4463_band == -1)
     return;
-#ifdef TINYSA4_PROTO
+//#ifdef TINYSA4_PROTO
 #define freq_xco    30000000
-#else
-#define freq_xco    26000000
-#endif
+//#else
+//#define freq_xco    26000000
+//#endif
   if (SI4463_offset_active) {
     si_set_offset(0);
     SI4463_offset_active = false;
@@ -2364,7 +2370,7 @@ void SI4463_set_freq(uint32_t freq)
     while(1)
       my_microsecond_delay(10);
   }
-  if ((SI4463_band == prev_band)) {
+  if (false && (SI4463_band == prev_band)) {
     int vco = 2091 + ((((freq / 4 ) * SI4463_outdiv - 850000000)/1000) * 492) / 200000;
 
     if (SI4463_in_tx_mode) {
@@ -2444,7 +2450,7 @@ void SI4463_set_freq(uint32_t freq)
     // #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
     uint8_t data2[] = {
                        0x11, 0x20, 0x01, 0x51,
-                       0x10 + (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
+                       /* 0x10 + */ (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
     };
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
 //    my_microsecond_delay(30000);
@@ -2459,21 +2465,21 @@ void SI4463_set_freq(uint32_t freq)
     SI4463_start_tx(0);
   else {
     SI4463_start_rx(SI4463_channel);
-#if 1
+#if 0
     si446x_state_t s = SI4463_get_state();
     if (s != SI446X_STATE_RX) {
       SI4463_start_rx(SI4463_channel);
-      osalThreadSleepMilliseconds(1000);
+      my_microsecond_delay(1000);
 #if 1
       si446x_state_t s = SI4463_get_state();
       if (s != SI446X_STATE_RX) {
-        osalThreadSleepMilliseconds(3000);
+        my_microsecond_delay(3000);
         goto retry;
       }
 #endif
     }
-  }
 #endif
+  }
   SI4463_wait_for_cts();
 //  SI4463_set_gpio(3,GPIO_LOW);
   SI4463_frequency_changed = true;

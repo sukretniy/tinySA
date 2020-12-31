@@ -73,7 +73,8 @@ void update_min_max_freq(void)
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
     break;
   case M_GENHIGH:
-#if 0
+//#define __HIGH_OUT_ADF4351__
+#ifdef __HIGH_OUT_ADF4351__
     minFreq =  135000000;
     maxFreq = 4290000000U;
 #else
@@ -1525,8 +1526,10 @@ case M_GENHIGH: // Direct output from 1
     }
     SI4432_Transmit(setting.lo_drive);
 #endif
+
+#ifdef __HIGH_OUT_ADF4351__
 #ifdef __SI4468__
-    SI4463_init_tx();
+    SI4463_init_rx();
 #endif
     ADF4351_enable(true);
 #ifndef TINYSA4_PROTO
@@ -1537,7 +1540,14 @@ case M_GENHIGH: // Direct output from 1
     ADF4351_enable_out(true);               // Must be enabled to have aux output
 #endif
     ADF4351_aux_drive(setting.lo_drive);
-    enable_rx_output(false);
+#else
+    ADF4351_enable_aux_out(false);
+    ADF4351_enable_out(false);
+#ifdef __SI4468__
+    SI4463_init_tx();
+#endif
+#endif
+    enable_rx_output(true);
     enable_high(true);
     enable_extra_lna(false);
     enable_ultra(false);
@@ -1833,7 +1843,7 @@ static void calculate_static_correction(void)                   // Calculate the
           - (S_STATE(setting.agc)? 0 : +12)
           - (S_STATE(setting.lna)? 0 : +21)
           + get_attenuation()
-          + (setting.extra_lna ? -20.0 : 0)                         // TODO <------------------------- set correct value
+          + (setting.extra_lna ? -23.0 : 0)                         // TODO <------------------------- set correct value
           - setting.offset);
 }
 
@@ -2173,7 +2183,7 @@ modulation_again:
       } else if (setting.mode == M_HIGH) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       } else if (setting.mode == M_GENHIGH) {
-#if 0                       // Let SI TX only
+#ifndef __HIGH_OUT_ADF4351__                      // Let SI TX only
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
         local_IF = 0;
 #else
