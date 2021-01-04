@@ -21,7 +21,7 @@
 #include "stdlib.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("Os")
+#pragma GCC optimize ("Og")
 
 
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
@@ -40,6 +40,7 @@ uint16_t actual_rbw_x10 = 0;
 uint16_t vbwSteps = 1;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
+uint32_t lpf_switch = 600000000;
 static unsigned long old_freq[5] = { 0, 0, 0, 0,0};
 static unsigned long real_old_freq[5] = { 0, 0, 0, 0,0};
 
@@ -73,7 +74,7 @@ void update_min_max_freq(void)
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
     break;
   case M_GENHIGH:
-//#define __HIGH_OUT_ADF4351__
+#define __HIGH_OUT_ADF4351__
 #ifdef __HIGH_OUT_ADF4351__
     minFreq =  135000000;
     maxFreq = 4290000000U;
@@ -136,6 +137,7 @@ void reset_settings(int m)
   setting.level = -15.0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
+//  setting.R = 0;                // Automatic setting of R
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
 //  setting.refer = -1;             // do not reset reffer when switching modes
@@ -451,8 +453,11 @@ void set_IF2(int f)
 
 void set_R(int f)
 {
-  ADF4351_R_counter(f % 10);
-  ADF4351_spur_mode(f/10);
+  setting.R = f;
+  ADF4351_R_counter(f % 1000);
+  ADF4351_spur_mode(f/1000);
+  ADF4351_force_refresh();
+  old_freq[ADF4351_LO] = 0;
   dirty = true;
 }
 
@@ -460,7 +465,9 @@ void set_modulo(uint32_t f)
 {
   ADF4351_modulo(f);
   ADF4351_force_refresh();
+  old_freq[ADF4351_LO] = 0;
   ADF4351_set_frequency(0, real_old_freq[ADF4351_LO]);
+  dirty = true;
 }
 #endif
 
@@ -1080,7 +1087,7 @@ void calculate_step_delay(void)
       else                             { SI4432_step_delay = 15000; SI4432_offset_delay =5000; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
-        SI4432_step_delay *= 2;
+        SI4432_step_delay += (SI4432_step_delay>>2) ;
       if (setting.fast_speedup >0)
         SI4432_offset_delay = SI4432_step_delay / setting.fast_speedup;
     }
@@ -1313,7 +1320,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
     if (freq) {
       real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq);
     }
-  } else if (V==ADF4351_LO2){
+  } else if (V==ADF4351_LO2) {
     real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO, freq);
   } else if (V==SI4463_RX) {
     if (setting.step_delay_mode == SD_FAST) {        // If in extra fast scanning mode and NOT SI4432_RX !!!!!!
@@ -1581,7 +1588,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
       temp_actual_rbw_x10 = setting.vbw_x10;
 #endif
     } else
-      temp_actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
+      temp_actual_rbw_x10 = setting.vbw_x10; // rbw is NOT twice the frequency step to ensure no gaps in coverage
   }
 #ifdef __SI4432__
   if (temp_actual_rbw_x10 < 26)
@@ -1607,8 +1614,8 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 //    actual_rbw_x10 = 3000;                         // if spur suppression reduce max rbw to fit within BPF
 #endif
   actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
-  if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
-    vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
+  if (setting.vbw_x10 > actual_rbw_x10 && setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
+    vbwSteps = (setting.vbw_x10 / actual_rbw_x10 ) + 1; //((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
     if (setting.step_delay_mode==SD_PRECISE)    // if in Precise scanning
       vbwSteps *= 2;                            // use twice as many steps
     if (vbwSteps < 1)                            // at least one step
@@ -1727,8 +1734,10 @@ static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the 
 static const int spur_table[] =                                 // Frequencies to avoid
 {
  117716000,
+ 487500000,
+ 650700000,
  746083000,
-// 1956000000,
+ // 1956000000,
 #if 0
  // 580000,            // 433.8 MHz table
 // 880000,    //?
@@ -2005,7 +2014,7 @@ modulation_again:
   }
   // -------------- set ultra ---------------------------------
   if (setting.mode == M_LOW && config.ultra) {
-    if ((S_IS_AUTO(setting.ultra)&& f > 850000000U) || S_STATE(setting.ultra) ) {
+    if ((S_IS_AUTO(setting.ultra)&& f > lpf_switch) || S_STATE(setting.ultra) ) {
       enable_ultra(true);
     } else
       enable_ultra(false);
@@ -2020,13 +2029,16 @@ modulation_again:
   do {
     uint32_t lf = f;
     if (vbwSteps > 1) {          // Calculate sub steps
-      int offs_div10 = (t - (vbwSteps >> 1)) * 500 / 10; // steps of half the rbw
+      int offs_div10 = (t - (vbwSteps >> 1)) * 100;    // steps of x10 * settings.
       if ((vbwSteps & 1) == 0)                           // Uneven steps, center
-        offs_div10+= 250 / 10;                           // Even, shift half step
-      int offs = offs_div10 * actual_rbw_x10;
-      if (setting.step_delay_mode == SD_PRECISE)
-        offs>>=1;                                        // steps of a quarter rbw
-      lf += offs;
+        offs_div10+= 50;                              // Even, shift half step
+      int offs = (offs_div10 * (int32_t)setting.vbw_x10 )/ vbwSteps;
+ //     if (setting.step_delay_mode == SD_PRECISE)
+ //       offs>>=1;                                        // steps of a quarter rbw
+ //     if (lf > -offs)                                   // No negative frequencies
+        lf += offs;
+        if (lf > 4000000000U)
+          lf = 0;
     }
 
 // -------------- Calculate the IF -----------------------------
@@ -2064,7 +2076,7 @@ modulation_again:
           }
 #ifdef __SI4468__
             if (S_IS_AUTO(setting.spur_removal)) {
-              if (lf >= local_IF) {
+              if (lf >= lpf_switch) {
                 setting.spur_removal= S_AUTO_ON;
               } else {
                 setting.spur_removal= S_AUTO_OFF;
@@ -2147,14 +2159,27 @@ modulation_again:
           local_IF = config.frequency_IF2;
         }
 
-#if 0
-        if (lf < 500000000 && 0) {
-          uint32_t tf = ((lf + actual_rbw_x10*200) / 26000000) * 26000000;
-          if (tf >= lf && tf < lf + actual_rbw_x10*200)
-            ADF4351_R_counter(6);
-          else
-            ADF4351_R_counter(1);
+#if 1
+#define TCXO    30000000
+#define TXCO_DIV3   10000000
+
+        if (setting.R == 0) {
+          if (lf < 850000000 && lf >= TCXO) {
+            uint32_t tf = ((lf + actual_rbw_x10*100) / TCXO) * TCXO;
+            if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {
+//              ADF4351_R_counter(8);   no impact
+            } else {
+              uint32_t tf = ((lf + actual_rbw_x10*100) / TXCO_DIV3) * TXCO_DIV3;
+              if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100)
+                ADF4351_R_counter(4);
+              else
+                ADF4351_R_counter(3);
+            }
+          } else
+            ADF4351_R_counter(3);
         }
+        else
+          ADF4351_R_counter(setting.R);
 #endif
 #if 0
        uint32_t target_f;

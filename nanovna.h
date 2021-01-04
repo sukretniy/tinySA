@@ -213,6 +213,7 @@ extern uint8_t signal_is_AM;
 extern const int reffer_freq[];
 extern uint32_t minFreq;
 extern uint32_t maxFreq;
+extern uint32_t lpf_switch;
 int level_is_calibrated(void);
 void reset_settings(int);
 void update_min_max_freq(void);
@@ -826,6 +827,7 @@ typedef struct setting
   int32_t slider_span;
   int extra_lna;
   int ultra;
+  int R;
   uint32_t checksum;            // must be last
 }setting_t;
 
@@ -1137,6 +1139,8 @@ extern void ADF4351_mux(int R);
 extern void ADF4351_force_refresh(void);
 extern void ADF4351_CP(int p);
 extern void ADF4351_modulo(int m);
+extern void ADF4351_csr(int c);
+extern void ADF4351_fastlock(int c);
 extern int SI4463_R;
 extern volatile int64_t ADF4350_modulo;
 extern void SI446x_set_AGC_LNA(uint8_t v);

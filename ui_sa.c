@@ -412,7 +412,8 @@ enum {
   KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
 #endif
   KM_ATTACK,
-  KM_IF2, 
+  KM_IF2,
+  KM_LPF,
   KM_NONE // always at enum end
 };
 
@@ -456,7 +457,7 @@ static const struct {
   {keypads_positive    , "MODULO"}, // KM_MOD
   {keypads_positive    , "CP"}, // KM_CP
   {keypads_positive    , "ATTACK"},    // KM_ATTACK
-
+  {keypads_freq        , "LPF"}, // KM_LPF
 };
 #if 0 // Not used
 ui_slider_t ui_sliders [] =
@@ -1373,7 +1374,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
 }
 
 #ifdef TINYSA4
-static const uint16_t points_setting[] = {51, 101, 201, 450};
+static const uint16_t points_setting[] = {51, 101, 201, 290, 450};
 #else
 static const uint16_t points_setting[] = {51, 101, 145, 290};
 #endif
@@ -1549,11 +1550,16 @@ static const menuitem_t  menu_lowoutputmode[] = {
 
 static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         "240MHz..960MHz"},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
+#if 0
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
+#else
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
+#endif
   { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "EXTERNAL AMP: %s",          "-100..+100"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
@@ -1755,6 +1761,7 @@ static const menuitem_t menu_sweep_points[] = {
   { MT_ADV_CALLBACK, 1, "%3d point", menu_points_acb },
   { MT_ADV_CALLBACK, 2, "%3d point", menu_points_acb },
   { MT_ADV_CALLBACK, 3, "%3d point", menu_points_acb },
+  { MT_ADV_CALLBACK, 4, "%3d point", menu_points_acb },
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1775,6 +1782,7 @@ static const menuitem_t menu_settings3[] =
 {
   { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual lMHz frequency"},
   { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+  { MT_KEYPAD,   KM_LPF,        "LPF",              "Enter LPF max freq"},
 #if 0                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
@@ -2169,6 +2177,10 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
     break;
 #endif
+  case KM_LPF:
+    uistat.value = lpf_switch;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
+    break;
   case KM_NOISE:
     uistat.value = setting.noise;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
@@ -2301,6 +2313,9 @@ set_numeric_value(void)
     set_attack(uistat.value);
     break;
 #endif
+  case KM_LPF:
+    lpf_switch = uistat.value;
+    break;
   case KM_NOISE:
     set_noise(uistat.value);
     break;
@@ -2561,7 +2576,10 @@ redraw_cal_status:
   // Spur
 #ifdef __SPUR__
   if (setting.spur_removal) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    if (S_IS_AUTO(setting.spur_removal))
+      color = LCD_FG_COLOR;
+    else
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Spur:", x, y);
     y += YSTEP;
     if (S_IS_AUTO(setting.spur_removal))
@@ -2647,7 +2665,13 @@ redraw_cal_status:
   y += YSTEP + YSTEP/2 ;
 #endif
 
-   // Cal output
+  if (setting.extra_lna){
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    y = add_quick_menu("LNA:ON", x, y, (menuitem_t *)menu_level);
+    y += YSTEP;
+  }
+
+  // Cal output
   if (setting.refer >= 0) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Ref:", x, y);

@@ -976,9 +976,9 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 #define CS_ADF0_LOW     palClearLine(LINE_LO_SEL)
 #define CS_ADF1_LOW     palClearLine(LINE_LO_SEL)
 
-//uint32_t registers[6] =  {0x320000, 0x8008011, 0x4E42, 0x4B3,0x8C803C , 0x580005} ;         //25 MHz ref
+//uint32_t t_R[6] =  {0x320000, 0x8008011, 0x4E42, 0x4B3,0x8C803C , 0x580005} ;         //25 MHz ref
 #ifdef TINYSA4_PROTO
-uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4042, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
+uint32_t registers[6] =  {0xC80000, 0x8008011, 0x1800C642, 0x48963,0xA5003C , 0x580005} ;         //10 MHz ref
 #else
 uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
 #endif
@@ -996,24 +996,25 @@ int ADF4351_frequency_changed = false;
 #define DEBUGLN(X)
 
 #ifdef TINYSA4_PROTO
-#define XTAL    30.0
+#define XTAL    30000000
 #else
-#define XTAL    26.0
+#define XTAL    26000000
 #endif
-double RFout, //Output freq in MHz
-  PFDRFout[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0}, //Reference freq in MHz
-  Chrystal[6] = {XTAL,XTAL,XTAL,10.0,10.0,10.0},
-  FRACF; // Temp
+//double RFout; //Output freq in MHz
+uint64_t  PFDRFout_x100[6] = {XTAL*100,XTAL*100,XTAL*100,10000000,10000000,10000000}; //Reference freq in MHz
+uint64_t  Chrystal[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000};
+//double  FRACF; // Temp
 
 volatile int64_t
   INTA,         // Temp
-  ADF4350_modulo = 260,
+  ADF4350_modulo = 64,
   MOD,
   target_freq,
   FRAC; //Temp
 
 uint8_t OutputDivider; // Temp
 uint8_t lock=2; //Not used
+static int old_R = 0;
 
 // Lock = A4
 
@@ -1035,12 +1036,15 @@ void ADF4351_Setup(void)
 
   ADF4351_R_counter(1);
 
-  ADF4351_CP(1);
+  ADF4351_CP(0);
+
+  ADF4351_fastlock(1);      // Fastlock enabled
+  ADF4351_csr(1);           //Cycle slip enabled
 
   ADF4351_set_frequency(0,200000000);
 
-  ADF4351_mux(2);   // No led
-  //  ADF4351_mux(6);   // Show lock on led
+//  ADF4351_mux(2);   // No led
+    ADF4351_mux(6);   // Show lock on led
 
 //  ADF4351_set_frequency(1,150000000,0);
 //  ADF4351_Set(0);
@@ -1140,7 +1144,6 @@ void ADF4351_spur_mode(int S)
 
 void ADF4351_R_counter(int R)
 {
-static int old_R;
   if (R == old_R)
     return;
   old_R = R;
@@ -1157,7 +1160,7 @@ static int old_R;
         bitClear (registers[2], 25); // Reference doubler
       }
       for (int channel=0; channel < 6; channel++) {
-        PFDRFout[channel] = Chrystal[channel] * (dbl?2:1) / R;
+        PFDRFout_x100[channel] = (100*Chrystal[channel] * (dbl?2:1)) / R;
       }
       registers[2] &= ~ (((unsigned long)0x3FF) << 14);
       registers[2] |= (((unsigned long)R) << 14);
@@ -1168,6 +1171,20 @@ void ADF4351_mux(int R)
 {
       registers[2] &= ~ (((unsigned long)0x7) << 26);
       registers[2] |= (((unsigned long)R & (unsigned long)0x07) << 26);
+      ADF4351_Set(0);
+}
+
+void ADF4351_csr(int c)
+{
+      registers[3] &= ~ (((unsigned long)0x1) << 18);
+      registers[3] |= (((unsigned long)c & (unsigned long)0x01) << 18);
+      ADF4351_Set(0);
+}
+
+void ADF4351_fastlock(int c)
+{
+      registers[3] &= ~ (((unsigned long)0x3) << 15);
+      registers[3] |= (((unsigned long)c & (unsigned long)0x03) << 15);
       ADF4351_Set(0);
 }
 
@@ -1236,10 +1253,10 @@ uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
       bitWrite (registers[4], 20, 0);
     }
 
-    volatile uint64_t PFDR = (int) (PFDRFout[channel]*1000000);
-    INTA = (((uint64_t)freq) * OutputDivider) / PFDR;
+    volatile uint64_t PFDR_x100 = PFDRFout_x100[channel];
+    INTA = (((uint64_t)freq) * OutputDivider*100) / PFDR_x100;
     MOD = ADF4350_modulo;
-    FRAC = ((((uint64_t)freq) * OutputDivider) - INTA * PFDR + (PFDR / MOD / 2)) * (uint64_t) MOD /PFDR;
+    FRAC = ((((uint64_t)freq) * OutputDivider*100) - INTA * PFDR_x100 + (PFDR_x100 / MOD / 2)) * (uint64_t) MOD /PFDR_x100;
     if (FRAC >= MOD) {
       FRAC -= MOD;
       INTA++;
@@ -1260,21 +1277,24 @@ uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
         MOD=2;
     }
 #endif
-    uint64_t actual_freq = PFDR *(INTA * MOD +FRAC)/OutputDivider / MOD;
-    volatile int max_delta =  1000000 * PFDRFout[channel]/OutputDivider/MOD;
+    uint64_t actual_freq = PFDR_x100 *(INTA * MOD +FRAC)/OutputDivider / MOD/100;
+#if 0
+    volatile int max_delta =  PFDRFout_x100[channel]/OutputDivider/MOD/100;
     if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
        while(1)
          my_microsecond_delay(10);
     }
     max_delta = freq - actual_freq;
-    if (max_delta > 100000 || max_delta < -100000 || freq == 0) {
+    if (max_delta > 200000 || max_delta < -200000 || freq == 0) {
       while(1)
         my_microsecond_delay(10);
     }
+#endif
     if (FRAC >= MOD ){
        while(1)
          my_microsecond_delay(10);
     }
+
     registers[0] = 0;
     registers[0] = INTA << 15; // OK
     FRAC = FRAC << 3;
@@ -1914,7 +1934,7 @@ int16_t Si446x_RSSI(void)
                        0xFF
     };
     if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
-      my_microsecond_delay(SI4432_step_delay);
+      my_microsecond_delay(SI4432_step_delay * ((setting.R == 0 && old_R > 5 ) ? 8 : 1));
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
     } else if (SI4432_offset_delay && SI4463_offset_changed) {
@@ -1922,7 +1942,7 @@ int16_t Si446x_RSSI(void)
       ADF4351_frequency_changed = false;
       SI4463_offset_changed = false;
     }
-#define SAMPLE_COUNT 3
+#define SAMPLE_COUNT 1
     int j = SAMPLE_COUNT; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
