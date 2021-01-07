@@ -21,8 +21,8 @@
 /*
 // Crys_freq(Hz): 30000000    Crys_tol(ppm): 0    IF_mode: 2    High_perf_Ch_Fil: 1    OSRtune: 0    Ch_Fil_Bw_AFC: 0    ANT_DIV: 0    PM_pattern: 0    
 // MOD_type: 2    Rsymb(sps): 400000    Fdev(Hz): 200000    RXBW(Hz): 850000    Manchester: 0    AFC_en: 0    Rsymb_error: 0.0    Chip-Version: 2    
-// RF Freq.(MHz): 900    API_TC: 29    fhst: 100000    inputBW: 1    BERT: 1    RAW_dout: 0    D_source: 1    Hi_pfm_div: 1    
-// API_ARR_Det_en: 0    Fdev_error: 0    API_ETSI: 0    
+// RF Freq.(MHz): 977    API_TC: 29    fhst: 250000    inputBW: 1    BERT: 1    RAW_dout: 0    D_source: 1    Hi_pfm_div: 1    
+// API_ARR_Det_en: 0    Fdev_error: 0    API_ETSI: 2    
 // 
 // # RX IF frequency is  -468750 Hz
 // # WB filter 1 (BW = 915.70 kHz);  NB-filter 1 (BW = 915.70 kHz)
@@ -51,7 +51,7 @@
 // Command:                  RF_GPIO_PIN_CFG
 // Description:              Configures the GPIO pins.
 */
-#define RF_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x02, 0x02, 0x00, 0x00, 0x00
+#define RF_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 
 /*
 // Set properties:           RF_GLOBAL_XO_TUNE_1
@@ -62,7 +62,7 @@
 // Descriptions:
 //   GLOBAL_XO_TUNE - Configure the internal capacitor frequency tuning bank for the crystal oscillator.
 */
-#define RF_GLOBAL_XO_TUNE_1 0x11, 0x00, 0x01, 0x00, 0x52
+#define RF_GLOBAL_XO_TUNE_1 0x11, 0x00, 0x01, 0x00, 0x00
 
 /*
 // Set properties:           RF_GLOBAL_CONFIG_1
@@ -139,7 +139,7 @@
 //   MODEM_BCR_OSR_1 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 //   MODEM_BCR_OSR_0 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 */
-#define RF_MODEM_TX_RAMP_DELAY_12 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x08, 0x03, 0xC0, 0x00, 0xB0, 0x10, 0x0C, 0xE8, 0x00, 0x4E
+#define RF_MODEM_TX_RAMP_DELAY_12 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x0A, 0x03, 0xC0, 0x00, 0xB0, 0x10, 0x0C, 0xF9, 0x00, 0x4E
 
 /*
 // Set properties:           RF_MODEM_BCR_NCO_OFFSET_2_12
@@ -398,7 +398,7 @@
 //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
 //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
 */
-#define RF_FREQ_CONTROL_INTE_8 0x11, 0x40, 0x08, 0x00, 0x3B, 0x08, 0x80, 0x00, 0x0D, 0xA7, 0x20, 0xFF
+#define RF_FREQ_CONTROL_INTE_8 0x11, 0x40, 0x08, 0x00, 0x41, 0x08, 0x80, 0x00, 0x22, 0x22, 0x20, 0xFF
 
 /*
 // Command:                  RF_START_RX
@@ -540,7 +540,7 @@
 //   MODEM_BCR_OSR_1 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 //   MODEM_BCR_OSR_0 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 */
-#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x08, 0x03, 0xC0, 0x00, 0x00, 0x30, 0x00, 0xE8, 0x00, 0x4B
+#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x0A, 0x03, 0xC0, 0x00, 0x00, 0x30, 0x00, 0xF9, 0x00, 0x4B
 
 /*
 // Set properties:           RF_MODEM_BCR_NCO_OFFSET_2_12_1
@@ -790,7 +790,7 @@
 //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
 //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
 */
-#define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x3B, 0x08, 0x00, 0x00, 0x0D, 0xA7, 0x20, 0xFF
+#define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x40, 0x09, 0x11, 0x11, 0x22, 0x22, 0x20, 0xFF
 
 
 // AUTOMATICALLY GENERATED CODE! 

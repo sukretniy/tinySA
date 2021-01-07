@@ -40,7 +40,10 @@ uint16_t actual_rbw_x10 = 0;
 uint16_t vbwSteps = 1;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
-uint32_t lpf_switch = 600000000;
+uint32_t lpf_switch = 800000000;
+uint32_t old_CFGR;
+uint32_t orig_CFGR;
+
 static unsigned long old_freq[5] = { 0, 0, 0, 0,0};
 static unsigned long real_old_freq[5] = { 0, 0, 0, 0,0};
 
@@ -55,7 +58,7 @@ void update_min_max_freq(void)
   case M_LOW:
     minFreq = 0;
     if (config.ultra)
-      maxFreq = 2900000000;
+      maxFreq = 3300000000;
     else
       maxFreq =  850000000;
     break;
@@ -74,7 +77,7 @@ void update_min_max_freq(void)
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
     break;
   case M_GENHIGH:
-#define __HIGH_OUT_ADF4351__
+//#define __HIGH_OUT_ADF4351__
 #ifdef __HIGH_OUT_ADF4351__
     minFreq =  135000000;
     maxFreq = 4290000000U;
@@ -1077,9 +1080,9 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if (actual_rbw_x10 >= 8500)      { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 300; SI4432_offset_delay = 100; }
+      if (actual_rbw_x10 >= 8500)      { SI4432_step_delay = 350; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 350; SI4432_offset_delay = 100; }
+      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 350; SI4432_offset_delay = 100; }
       else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 30; }
       else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 1400; SI4432_offset_delay = 500; }
       else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 2500; SI4432_offset_delay = 800; }
@@ -1323,7 +1326,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
   } else if (V==ADF4351_LO2) {
     real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO, freq);
   } else if (V==SI4463_RX) {
-    if (setting.step_delay_mode == SD_FAST) {        // If in extra fast scanning mode and NOT SI4432_RX !!!!!!
+    if (false && setting.step_delay_mode == SD_FAST) {        // If in extra fast scanning mode and NOT SI4432_RX !!!!!!
       int delta =  freq - real_old_freq[V];
 //#define OFFSET_STEP 14.30555
 #define OFFSET_STEP 12.3981
@@ -1338,7 +1341,11 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
         else
           shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
 #endif
-        si_set_offset(delta);               // Signal offset changed so RSSI retrieval is delayed for frequency settling
+        static  int old_delta = 0x20000;
+        if (old_delta != delta) {
+          si_set_offset(delta);               // Signal offset changed so RSSI retrieval is delayed for frequency settling
+          old_delta = delta;
+        }
         old_freq[V] = freq;
       } else {
 #ifdef __WIDE_OFFSET__
@@ -1734,9 +1741,28 @@ static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the 
 static const int spur_table[] =                                 // Frequencies to avoid
 {
  117716000,
- 487500000,
+ 243781200,
+ 244250000,
+ 325666667,
+ 487542300,             // This is linked to the MODULO of the ADF4350
+ 487993000,
+ 488020700,
+ // 487551700,
+// 487578000,
+// 488500000,
  650700000,
+ 651333333,
+ 732750000,
  746083000,
+ 977000000
+ /*
+  * 144.3
+  * 159
+  * 209.8 30MHz
+  * 239.8
+  * 269.9  30MHz?
+  */
+
  // 1956000000,
 #if 0
  // 580000,            // 433.8 MHz table
@@ -1780,8 +1806,8 @@ int binary_search(int f)
 {
   int L = 0;
   int R =  (sizeof spur_table)/sizeof(int) - 1;
-  int fmin =  f - actual_rbw_x10 * (100 / 2);
-  int fplus = f + actual_rbw_x10 * (100 / 2);
+  int fmin =  f - actual_rbw_x10 * (100);
+  int fplus = f + actual_rbw_x10 * (100);
   while (L <= R) {
     int m = (L + R) / 2;
     if (spur_table[m] < fmin)
@@ -2180,6 +2206,35 @@ modulation_again:
         }
         else
           ADF4351_R_counter(setting.R);
+
+
+        if (false) {         // Avoid 72MHz spur
+#define SPUR    72000000
+          uint32_t tf = ((lf + actual_rbw_x10*100) / SPUR) * SPUR;
+#undef STM32_USBPRE
+          int STM32_USBPRE;
+#undef STM32_PLLMUL
+          int STM32_PLLMUL;
+          if (lf < 200000000 && lf >= SPUR && tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {
+            STM32_USBPRE = STM32_USBPRE_DIV1;  // Switch to 48MHz clock (1 << 22)
+            STM32_PLLMUL =  ((6 - 2) << 18);
+            uint32_t CFGR  = STM32_MCOSEL    | STM32_USBPRE    | STM32_PLLMUL   |
+                         STM32_PLLSRC    | STM32_PPRE1     | STM32_PPRE2    |
+                         STM32_HPRE;
+//            old_CFGR = RCC->CFGR;
+            if (old_CFGR != CFGR) {
+              old_CFGR = CFGR;
+              RCC->CFGR  = CFGR;
+            }
+          } else {
+            STM32_USBPRE = STM32_USBPRE_DIV1P5; // Switch to 72MHz clock (0 << 22)
+            STM32_PLLMUL =  ((9 - 2) << 18);
+            orig_CFGR = STM32_MCOSEL    | STM32_USBPRE    | STM32_PLLMUL   |
+                STM32_PLLSRC    | STM32_PPRE1     | STM32_PPRE2    |
+                STM32_HPRE;
+          }
+        }
+
 #endif
 #if 0
        uint32_t target_f;
@@ -2378,6 +2433,13 @@ modulation_again:
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
+
+  if (old_CFGR != orig_CFGR) {
+    old_CFGR = orig_CFGR;
+    RCC->CFGR  = orig_CFGR;
+  }
+
+
   return RSSI + correct_RSSI + correct_RSSI_freq; // add correction
 }
 

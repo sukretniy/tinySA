@@ -44,7 +44,7 @@
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV64
-#define SI4432_SPI_SPEED   SPI_BR_DIV8
+#define SI4432_SPI_SPEED   SPI_BR_DIV16
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -1001,13 +1001,13 @@ int ADF4351_frequency_changed = false;
 #define XTAL    26000000
 #endif
 //double RFout; //Output freq in MHz
-uint64_t  PFDRFout_x100[6] = {XTAL*100,XTAL*100,XTAL*100,10000000,10000000,10000000}; //Reference freq in MHz
+uint64_t  PFDRFout[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000}; //Reference freq in MHz
 uint64_t  Chrystal[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000};
 //double  FRACF; // Temp
 
 volatile int64_t
   INTA,         // Temp
-  ADF4350_modulo = 64,
+  ADF4350_modulo = 60,          // Linked to spur table!!!!!
   MOD,
   target_freq,
   FRAC; //Temp
@@ -1116,7 +1116,7 @@ uint64_t ADF4351_set_frequency(int channel, uint64_t freq)  // freq / 10Hz
 
 //  uint32_t offs = ((freq / 1000)* ( 0) )/ 1000;
   uint32_t offs = 0;
-  uint64_t actual_freq = ADF4351_prep_frequency(channel,freq + offs);
+  uint64_t actual_freq = ADF4351_prepare_frequency(channel,freq + offs);
 //  SI4463_set_gpio(3,GPIO_LOW);
   if (actual_freq != prev_actual_freq) {
 //START_PROFILE;
@@ -1160,7 +1160,7 @@ void ADF4351_R_counter(int R)
         bitClear (registers[2], 25); // Reference doubler
       }
       for (int channel=0; channel < 6; channel++) {
-        PFDRFout_x100[channel] = (100*Chrystal[channel] * (dbl?2:1)) / R;
+        PFDRFout[channel] = (Chrystal[channel] * (dbl?2:1)) / R;
       }
       registers[2] &= ~ (((unsigned long)0x3FF) << 14);
       registers[2] |= (((unsigned long)R) << 14);
@@ -1223,7 +1223,7 @@ static uint32_t gcd(uint32_t x, uint32_t y)
 #if 0
 #endif
 
-uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
+uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
   target_freq = freq;
   if (freq >= 2200000000) {
@@ -1253,10 +1253,12 @@ uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
       bitWrite (registers[4], 20, 0);
     }
 
-    volatile uint64_t PFDR_x100 = PFDRFout_x100[channel];
-    INTA = (((uint64_t)freq) * OutputDivider*100) / PFDR_x100;
+    volatile uint64_t PFDR = PFDRFout[channel];
+    INTA = (((uint64_t)freq) * OutputDivider) / PFDR;
     MOD = ADF4350_modulo;
-    FRAC = ((((uint64_t)freq) * OutputDivider*100) - INTA * PFDR_x100 + (PFDR_x100 / MOD / 2)) * (uint64_t) MOD /PFDR_x100;
+    uint64_t f_int = INTA *(uint64_t) MOD;
+    uint64_t f_target = ((((uint64_t)freq) * OutputDivider) * (uint64_t) MOD) / PFDR;
+    FRAC = f_target - f_int;
     if (FRAC >= MOD) {
       FRAC -= MOD;
       INTA++;
@@ -1277,9 +1279,9 @@ uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
         MOD=2;
     }
 #endif
-    uint64_t actual_freq = PFDR_x100 *(INTA * MOD +FRAC)/OutputDivider / MOD/100;
+    uint64_t actual_freq = (PFDR *(INTA * MOD +FRAC))/OutputDivider / MOD;
 #if 0
-    volatile int max_delta =  PFDRFout_x100[channel]/OutputDivider/MOD/100;
+    volatile int max_delta =  PFDRFout[channel]/OutputDivider/MOD/100;
     if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
        while(1)
          my_microsecond_delay(10);
@@ -1297,8 +1299,7 @@ uint64_t ADF4351_prep_frequency(int channel, uint64_t freq)  // freq / 10Hz
 
     registers[0] = 0;
     registers[0] = INTA << 15; // OK
-    FRAC = FRAC << 3;
-    registers[0] = registers[0] + FRAC;
+    registers[0] = registers[0] + (FRAC << 3);
     if (MOD == 1) MOD = 2;
     registers[1] = 0;
     registers[1] = MOD << 3;
@@ -1367,6 +1368,7 @@ int SI4463_wait_for_cts(void)
 {
   set_SPI_mode(SPI_MODE_SI);
   while (!SI4463_READ_CTS) {
+//    chThdSleepMicroseconds(100);
     my_microsecond_delay(1);
   }
   return 1;
@@ -1468,6 +1470,10 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
       SI4463_wait_for_cts();
 #endif
     else
+#endif
+#if 0
+     if (((uint8_t*)data)[0] == SI446X_CMD_GET_MODEM_STATUS)
+      chThdSleepMicroseconds(2000);
 #endif
 #if 1
     SI4463_wait_for_cts();
