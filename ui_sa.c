@@ -1143,7 +1143,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_delete_cb)
   }
 }
 
-static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000};
+static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,9000};
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
 {
   (void)item;
@@ -1588,6 +1588,7 @@ static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 5, "%4.1qHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 6, "%4.1qHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 7, "%3.1qHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 8, "%3.1qHz",   menu_rbw_acb},
   { MT_CANCEL,  0, S_LARROW" BACK", NULL },
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
@@ -2178,7 +2179,7 @@ static void fetch_numeric_target(void)
     break;
 #endif
   case KM_LPF:
-    uistat.value = lpf_switch;
+    uistat.value = config.lpf_switch;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
   case KM_NOISE:
@@ -2314,7 +2315,8 @@ set_numeric_value(void)
     break;
 #endif
   case KM_LPF:
-    lpf_switch = uistat.value;
+    config.lpf_switch = uistat.value;
+    config_save();
     break;
   case KM_NOISE:
     set_noise(uistat.value);

@@ -886,6 +886,7 @@ config_t config = {
   .vbat_offset = 500,
 #ifdef TINYSA4
   .frequency_IF2 = 0,
+  .lpf_switch = 600000000,
 #endif
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated

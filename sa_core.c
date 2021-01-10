@@ -40,7 +40,7 @@ uint16_t actual_rbw_x10 = 0;
 uint16_t vbwSteps = 1;
 uint32_t minFreq = 0;
 uint32_t maxFreq = 520000000;
-uint32_t lpf_switch = 800000000;
+int spur_gate = 100;
 uint32_t old_CFGR;
 uint32_t orig_CFGR;
 
@@ -168,6 +168,7 @@ void reset_settings(int m)
     setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
     setting.lo_drive=1;
+    setting.extra_lna = false;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -184,11 +185,13 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
+    setting.extra_lna = false;
     break;
   case M_HIGH:
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
     setting.sweep_time_us = 0;
+    setting.extra_lna = false;
     break;
   case M_GENHIGH:
     setting.lo_drive=1;
@@ -196,6 +199,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
+    setting.extra_lna = false;
     break;
   }
   for (uint8_t i = 0; i< MARKERS_MAX; i++) {
@@ -474,7 +478,7 @@ void set_modulo(uint32_t f)
 }
 #endif
 
-#define POWER_STEP  0           // Should be 5 dB but appearently it is lower
+#define POWER_STEP  0           // Should be 5 dB but apparently it is lower
 #define POWER_OFFSET    15
 #define SWITCH_ATTENUATION  30
 #define RECEIVE_SWITCH_ATTENUATION  21
@@ -1080,14 +1084,14 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if (actual_rbw_x10 >= 8500)      { SI4432_step_delay = 350; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 350; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 350; SI4432_offset_delay = 100; }
-      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 30; }
-      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 1400; SI4432_offset_delay = 500; }
-      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 2500; SI4432_offset_delay = 800; }
-      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 7000; SI4432_offset_delay = 2500; }
-      else                             { SI4432_step_delay = 15000; SI4432_offset_delay =5000; }
+      if (actual_rbw_x10 >= 8500)      { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
+      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
+      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 70; }
+      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 30; spur_gate = 80; }
+      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 1400; SI4432_offset_delay = 500; spur_gate = 80; }
+      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 2500; SI4432_offset_delay = 800; spur_gate = 80; }
+      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 7000; SI4432_offset_delay = 2500; spur_gate = 80; }
+      else                             { SI4432_step_delay = 15000; SI4432_offset_delay =5000; spur_gate = 80; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
@@ -1633,12 +1637,14 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   }
 }
 
+#define frequency_seatch_gate 60          // 120% of the RBW
+
 int binary_search_frequency(int f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
   int L = 0;
   int R =  (sizeof frequencies)/sizeof(int) - 1;
-  int fmin =  f - actual_rbw_x10 * 100;
-  int fplus = f + actual_rbw_x10 * 100;
+  int fmin =  f - actual_rbw_x10 * frequency_seatch_gate;
+  int fplus = f + actual_rbw_x10 * frequency_seatch_gate;
   while (L <= R) {
     int m = (L + R) / 2;
     if ((int)frequencies[m] < fmin)
@@ -1744,9 +1750,9 @@ static const int spur_table[] =                                 // Frequencies t
  243781200,
  244250000,
  325666667,
- 487542300,             // This is linked to the MODULO of the ADF4350
- 487993000,
- 488020700,
+ 487541650,             // This is linked to the MODULO of the ADF4350
+// 487993000,
+// 488020700,
  // 487551700,
 // 487578000,
 // 488500000,
@@ -1806,8 +1812,8 @@ int binary_search(int f)
 {
   int L = 0;
   int R =  (sizeof spur_table)/sizeof(int) - 1;
-  int fmin =  f - actual_rbw_x10 * (100);
-  int fplus = f + actual_rbw_x10 * (100);
+  int fmin =  f - actual_rbw_x10 * spur_gate;
+  int fplus = f + actual_rbw_x10 * spur_gate;
   while (L <= R) {
     int m = (L + R) / 2;
     if (spur_table[m] < fmin)
@@ -2040,16 +2046,17 @@ modulation_again:
   }
   // -------------- set ultra ---------------------------------
   if (setting.mode == M_LOW && config.ultra) {
-    if ((S_IS_AUTO(setting.ultra)&& f > lpf_switch) || S_STATE(setting.ultra) ) {
+    if ((S_IS_AUTO(setting.ultra)&& f > config.lpf_switch) || S_STATE(setting.ultra) ) {
       enable_ultra(true);
     } else
       enable_ultra(false);
   }
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
-//#define __DEBUG_SPUR__
+#define __DEBUG_SPUR__
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-  stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
+  if (!setting.auto_IF)
+    stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
 #endif
   int t = 0;
   do {
@@ -2095,14 +2102,16 @@ modulation_again:
 #endif
         } else {
           if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
-            local_IF = spur_alternate_IF;
+            if (setting.auto_IF)
+              local_IF = spur_alternate_IF;
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-            stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
+            else
+              stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
 #endif
           }
 #ifdef __SI4468__
             if (S_IS_AUTO(setting.spur_removal)) {
-              if (lf >= lpf_switch) {
+              if (lf >= config.lpf_switch) {
                 setting.spur_removal= S_AUTO_ON;
               } else {
                 setting.spur_removal= S_AUTO_OFF;

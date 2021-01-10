@@ -996,7 +996,7 @@ int ADF4351_frequency_changed = false;
 #define DEBUGLN(X)
 
 #ifdef TINYSA4_PROTO
-#define XTAL    30000000
+#define XTAL    29999960
 #else
 #define XTAL    26000000
 #endif
@@ -2375,7 +2375,7 @@ void SI4463_set_freq(uint32_t freq)
   if (SI4463_band == -1)
     return;
 //#ifdef TINYSA4_PROTO
-#define freq_xco    30000000
+#define freq_xco    29999960
 //#else
 //#define freq_xco    26000000
 //#endif
@@ -2384,7 +2384,7 @@ void SI4463_set_freq(uint32_t freq)
     SI4463_offset_active = false;
   }
   int32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
-  int64_t MOD = 524288;
+  int64_t MOD = 524288; // = 2^19
   int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R*MOD;
   uint32_t actual_freq = (R*MOD + F) * (Npresc ? 2*freq_xco : 4*freq_xco)/ SI4463_outdiv/MOD;
   int delta = freq - actual_freq;
@@ -2429,6 +2429,14 @@ void SI4463_set_freq(uint32_t freq)
 //    SI4463_set_gpio(3,GPIO_LOW);
     return;
   }
+#if 0
+  static int old_R = -1;    // What about TX/RX switching?
+  static int old_F = -1;
+  if (old_R == R || old_F == F)
+    return;
+  old_R = R;
+  old_F = f;
+#endif
   refresh_count=0;
   SI4463_set_state(SI446X_STATE_READY);
   my_deleted_delay(100);
@@ -2476,7 +2484,7 @@ void SI4463_set_freq(uint32_t freq)
     // #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
     uint8_t data2[] = {
                        0x11, 0x20, 0x01, 0x51,
-                       /* 0x10 + */ (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
+                       0x10 + (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
     };
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
 //    my_microsecond_delay(30000);
