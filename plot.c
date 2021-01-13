@@ -2386,6 +2386,27 @@ redraw_frame(void)
   draw_cal_status();
 }
 
+int display_test(void)
+{
+//  return true;
+  // write and read display, return false on fail.
+  for (int h = 0; h < LCD_HEIGHT; h++) {
+      for (int w = 0; w < LCD_WIDTH; w++) {
+        spi_buffer[w] =  ((w*h) & 0xfff);
+      }
+      ili9341_bulk(0, h, LCD_WIDTH, 1);
+      for (int w = 0; w < LCD_WIDTH; w++) {
+        spi_buffer[w] = 0;
+      }
+      ili9341_read_memory(0, h, LCD_WIDTH, 1, LCD_WIDTH, spi_buffer);
+      for (int volatile w = 0; w < LCD_WIDTH; w++) {
+        if (spi_buffer[w] != ((w*h) & 0xfff))
+          return false;
+      }
+  }
+  return true;
+}
+
 //#define _USE_WATERFALL_PALETTE
 #ifdef  _USE_WATERFALL_PALETTE
 #include "waterfall.c"

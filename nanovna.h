@@ -540,6 +540,7 @@ float get_trace_scale(int t);
 float get_trace_refpos(int t);
 const char *get_trace_typename(int t);
 extern int in_selftest;
+extern int display_test(void);
 
 //
 // Shell config functions and macros

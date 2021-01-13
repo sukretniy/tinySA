@@ -3219,6 +3219,15 @@ void self_test(int test)
     if (setting.test_argument > 0)
       test_step=setting.test_argument-1;
     do {
+      if (test_step == 0) {
+        if (!display_test()) {
+          test_step = TEST_END;
+          show_test_info = FALSE;
+          ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
+          ili9341_drawstring_7x13("Display read fails", 30, 140);
+          goto resume2;
+        }
+      }
       test_prepare(test_step);
       test_acquire(test_step);                        // Acquire test
       test_status[test_step] = test_validate(test_step);                       // Validate test
