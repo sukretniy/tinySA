@@ -2249,7 +2249,7 @@ modulation_again:
 #define TXCO_DIV3   10000000
 
         if (setting.R == 0) {
-          if (lf < 850000000 && lf >= TCXO) {
+          if (lf < 850000000 && lf >= TXCO_DIV3) {
             uint32_t tf = ((lf + actual_rbw_x10*100) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {
 //              ADF4351_R_counter(8);   no impact
