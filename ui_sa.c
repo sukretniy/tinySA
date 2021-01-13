@@ -740,7 +740,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sreffer_acb){
   menu_push_submenu(menu_reffer);
 }
 
+#ifdef TINYSA4
 const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
+#else
+const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
+#endif
+
 static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
 {
   (void)item;
@@ -804,6 +809,34 @@ static UI_FUNCTION_ADV_CALLBACK(menu_extra_lna_acb)
   //  menu_move_back();
   ui_mode_normal();
 }
+
+static UI_FUNCTION_ADV_CALLBACK(menu_adf_out_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = high_out_adf4350 == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  toggle_high_out_adf4350();
+  //  menu_move_back();
+  ui_mode_normal();
+}
+
+
+static UI_FUNCTION_ADV_CALLBACK(menu_debug_freq_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = debug_frequencies == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  debug_frequencies = ! debug_frequencies;
+  //  menu_move_back();
+  ui_mode_normal();
+}
+
 
 static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 {
@@ -1781,8 +1814,10 @@ static const menuitem_t menu_sweep_speed[] =
 
 static const menuitem_t menu_settings3[] =
 {
-  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual lMHz frequency"},
-  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+//  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual lMHz frequency"},
+//  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+ { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
+ { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
   { MT_KEYPAD,   KM_LPF,        "LPF",              "Enter LPF max freq"},
 #if 0                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
@@ -1840,7 +1875,9 @@ static const menuitem_t menu_settings[] =
 };
 
 static const menuitem_t menu_measure2[] = {
-//  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+#ifdef __LINEARITY__
+  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+#endif
   { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_THD,          "THD",           menu_measure_acb},
@@ -2577,11 +2614,12 @@ redraw_cal_status:
   }
   // Spur
 #ifdef __SPUR__
-  if (setting.spur_removal) {
-    if (S_IS_AUTO(setting.spur_removal))
-      color = LCD_FG_COLOR;
-    else
+  if (setting.spur_removal != S_OFF) {
+    if (setting.spur_removal == S_ON)
       ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    else
+      color = LCD_FG_COLOR;
+
     ili9341_drawstring("Spur:", x, y);
     y += YSTEP;
     if (S_IS_AUTO(setting.spur_removal))

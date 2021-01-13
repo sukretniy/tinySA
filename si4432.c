@@ -2299,7 +2299,7 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_30kHz, 0,300},
  {SI4463_RBW_100kHz,0,1000},
  {SI4463_RBW_300kHz,0,3000},
- {SI4463_RBW_850kHz,0,8500},
+ {SI4463_RBW_850kHz,0,7000},
 };
 
 const int SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
@@ -2336,7 +2336,7 @@ uint16_t force_rbw(int f)
 uint16_t set_rbw(uint16_t WISH)  {
   int i;
   for (i=0; i < (int)(sizeof(RBW_choices)/sizeof(RBW_t)) - 1; i++)
-    if (WISH <= RBW_choices[i].RBWx10 * 15/10)
+    if (WISH <= RBW_choices[i].RBWx10)
       break;
   return force_rbw(i);
 }
@@ -2346,7 +2346,7 @@ uint16_t set_rbw(uint16_t WISH)  {
 
 static int refresh_count = 0;
 
-void SI4463_set_freq(uint32_t freq)
+uint32_t SI4463_set_freq(uint32_t freq)
 {
 //  SI4463_set_gpio(3,GPIO_HIGH);
   int S = 4 ;               // Aprox 100 Hz channels
@@ -2373,7 +2373,7 @@ void SI4463_set_freq(uint32_t freq)
     SI4463_outdiv = 24;
   }
   if (SI4463_band == -1)
-    return;
+    return 0;
 //#ifdef TINYSA4_PROTO
 #define freq_xco    29999960
 //#else
@@ -2518,6 +2518,7 @@ void SI4463_set_freq(uint32_t freq)
 //  SI4463_set_gpio(3,GPIO_LOW);
   SI4463_frequency_changed = true;
   prev_band = SI4463_band;
+  return actual_freq;
 }
 
 void SI4463_init_rx(void)

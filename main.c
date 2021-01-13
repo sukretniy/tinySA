@@ -885,6 +885,7 @@ config_t config = {
   .lcd_palette = LCD_DEFAULT_PALETTE,
   .vbat_offset = 500,
 #ifdef TINYSA4
+  .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
   .lpf_switch = 600000000,
 #endif
@@ -2399,6 +2400,7 @@ static const VNAShellCommand commands[] =
     {"color"       , cmd_color       , 0},
 #endif
     { "if", cmd_if,    0 },
+    { "if1", cmd_if1,    0 },
     { "attenuate", cmd_attenuate,    0 },
     { "level", cmd_level,    0 },
     { "sweeptime", cmd_sweeptime,    0 },

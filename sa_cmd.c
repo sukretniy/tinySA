@@ -1,5 +1,4 @@
 /*
- * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
@@ -308,6 +307,21 @@ VNA_SHELL_FUNCTION(cmd_if)
       goto usage;
     setting.auto_IF = false;
     set_IF(a);
+  }
+}
+
+VNA_SHELL_FUNCTION(cmd_if1)
+{
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: if1 {975M..979M}\r\n");
+    return;
+  } else {
+    uint32_t a = (uint32_t)my_atoi(argv[0]);
+    if (a!= 0 &&( a < (DEFAULT_IF - (uint32_t)2000000) || a>(DEFAULT_IF + (uint32_t)2000000)))
+      goto usage;
+    config.frequency_IF1 = a;
+    config_save();
   }
 }
 

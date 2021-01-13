@@ -43,7 +43,7 @@
 #define __SCROLL__
 #define __ICONS__
 #define __MEASURE__
-//#define __LINEARITY__         // Not available
+#define __LINEARITY__         // Not available
 #define __SELFTEST__
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
@@ -64,7 +64,7 @@
 #endif
 #ifdef TINYSA4
 #define DEFAULT_IF  ((uint32_t)977000000)
-#define DEFAULT_SPUR_IF ((uint32_t)978500000)
+#define DEFAULT_SPUR_OFFSET ((uint32_t)1500000)
 #define DEFAULT_MAX_FREQ    ((uint32_t)800000000)
 #define HIGH_MIN_FREQ_MHZ   825
 #define HIGH_MAX_FREQ_MHZ   1130
@@ -254,6 +254,8 @@ void set_spur(int v);
 void toggle_spur(void);
 void toggle_mirror_masking(void);
 #endif
+void toggle_high_out_adf4350(void);
+extern int high_out_adf4350;
 void set_average(int);
 int GetAverage(void);
 //extern int setting.average;
@@ -530,6 +532,7 @@ typedef struct config {
   uint16_t gridlines;
   uint16_t hambands;
 #ifdef TINYSA4
+  uint32_t frequency_IF1;
   uint32_t frequency_IF2;
   uint32_t lpf_switch;
 #endif
@@ -859,7 +862,7 @@ enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
 extern uint32_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
 extern const char * const unit_scale_text[];
-
+extern int debug_frequencies;
 #if 1   // Still sufficient flash
 // Flash save area - flash7  : org = 0x0801B000, len = 20k in *.ld file
 // 2k - for config save
@@ -1149,7 +1152,7 @@ extern void SI4463_init_rx(void);
 extern void SI4463_init_tx(void);
 extern void SI4463_start_tx(uint8_t CHANNEL);
 extern void SI4463_set_output_level(int t);
-extern void SI4463_set_freq(uint32_t freq);
+extern uint32_t SI4463_set_freq(uint32_t freq);
 extern uint16_t set_rbw(uint16_t rbw_x10);
 extern uint16_t force_rbw(int f);
 extern void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen);
