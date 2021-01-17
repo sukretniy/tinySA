@@ -2299,7 +2299,7 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_30kHz, 0,300},
  {SI4463_RBW_100kHz,0,1000},
  {SI4463_RBW_300kHz,0,3000},
- {SI4463_RBW_850kHz,0,7000},
+ {SI4463_RBW_850kHz,0,6000},
 };
 
 const int SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));

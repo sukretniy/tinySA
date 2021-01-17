@@ -543,8 +543,8 @@ static pureRSSI_t get_signal_path_loss(void){
     return float_TO_PURE_RSSI(-15);       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
 #endif
   if (setting.mode == M_LOW)
-    return float_TO_PURE_RSSI(-25);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-  return float_TO_PURE_RSSI(-4.5);          // Loss in dB (+ is gain)
+    return float_TO_PURE_RSSI(-4);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+  return float_TO_PURE_RSSI(+19);          // Loss in dB (+ is gain)
 }
 
 static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
@@ -828,9 +828,9 @@ void toggle_AGC(void)
 
 static unsigned char SI4432_old_v[2];
 
+#ifdef __SI4432__
 void auto_set_AGC_LNA(int auto_set, int agc)                                                                    // Adapt the AGC setting if needed
 {
-#ifdef __SI4432__
   unsigned char v;
   if (auto_set)
     v = 0x60; // Enable AGC and disable LNA
@@ -841,7 +841,6 @@ void auto_set_AGC_LNA(int auto_set, int agc)                                    
     SI4432_Write_Byte(SI4432_AGC_OVERRIDE, v);
     SI4432_old_v[MODE_SELECT(setting.mode)] = v;
   }
-#endif
 #ifdef __SI4463__
   unsigned char v;
   if (auto_set) {
@@ -855,6 +854,7 @@ void auto_set_AGC_LNA(int auto_set, int agc)                                    
   }
 #endif
 }
+#endif
 
 #ifdef __SI4432__
 void set_AGC_LNA(void) {
@@ -1783,7 +1783,7 @@ static const uint32_t spur_table[] =                                 // Frequenc
 {
  117716000,
  243775000,
- 244250000,
+// 244250000,
  324875000,
  325190000,
  487541650,             // This is linked to the MODULO of the ADF4350
@@ -1920,8 +1920,8 @@ static void calculate_static_correction(void)                   // Calculate the
       - get_signal_path_loss()
       + float_TO_PURE_RSSI(
           + get_level_offset()
-          - (S_STATE(setting.agc)? 0 : +12)
-          - (S_STATE(setting.lna)? 0 : +21)
+          - (S_STATE(setting.agc)? 0 : 33)
+          - (S_STATE(setting.lna)? 0 : 0)
           + get_attenuation()
           + (setting.extra_lna ? -23.0 : 0)                         // TODO <------------------------- set correct value
           - setting.offset);
@@ -2031,14 +2031,14 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #endif
     }
   }
-  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !check_for_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
 #ifdef __SI4432__
+  if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !check_for_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
     if (f < 1500000)
       auto_set_AGC_LNA(false, f*9/1500000);
     else
       auto_set_AGC_LNA(true, 0);
-#endif
   }
+#endif
   // Calculate the RSSI correction for later use
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
     if (i == 0 || setting.frequency_step != 0)
@@ -2102,7 +2102,7 @@ modulation_again:
   }
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
-#define __DEBUG_SPUR__
+//#define __DEBUG_SPUR__
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
   if (!setting.auto_IF)
     stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
@@ -2178,14 +2178,18 @@ modulation_again:
 #endif
               }
             }
-          } else if(!in_selftest && setting.auto_IF && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
-              local_IF = config.frequency_IF1 + DEFAULT_SPUR_OFFSET;
-              LO_shifted = true;
+          } else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
+              if (setting.auto_IF) {
+                local_IF = local_IF + DEFAULT_SPUR_OFFSET;
+                if (actual_rbw_x10 == 6000 )
+                  local_IF = local_IF + 50000;
+                LO_shifted = true;
+              }
+#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
+              if (!setting.auto_IF)
+                stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
+#endif
           }
-  #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-          else if (!setting.auto_IF)
-              stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
-  #endif
         }
       } else {              // Output mode
         if (setting.modulation == MO_EXTERNAL)    // VERY SPECIAL CASE !!!!!! LO input via high port
@@ -2353,7 +2357,12 @@ modulation_again:
     }
     if (debug_frequencies && SDU1.config->usbp->state == USB_ACTIVE) {
      uint32_t f = real_old_freq[ADF4351_LO] - real_old_freq[SI4463_RX];
-     float f_error = ((float)f-(float)frequencies[i])/setting.frequency_step;
+     float f_error;
+     if (setting.frequency_step == 0) {
+       f_error = ((float)f-(float)frequencies[i]);
+     } else {
+       f_error = ((float)f-(float)frequencies[i])/setting.frequency_step;
+     }
      char shifted = ( LO_shifted ? '>' : ' ');
       shell_printf ("%d:LO=%11.6q\t%cIF=%11.6q\tF=%11.6q\tD=%.2f\r\n", i, real_old_freq[ADF4351_LO], shifted, real_old_freq[SI4463_RX], f , f_error);
       osalThreadSleepMilliseconds(100);
@@ -2896,8 +2905,8 @@ sweep_again:                                // stay in sweep loop when output mo
   // ----------------------------------  auto AGC ----------------------------------
 
 
-  if (!in_selftest && MODE_INPUT(setting.mode)) {
 #ifdef __SI4432__
+  if (!in_selftest && MODE_INPUT(setting.mode)) {
     if (S_IS_AUTO(setting.agc)) {
       float actual_max_level = actual_t[max_index[0]] - get_attenuation();
       if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
@@ -2921,9 +2930,11 @@ sweep_again:                                // stay in sweep loop when output mo
         }
       }
     } else
-#endif
       signal_is_AM = false;
   }
+#else
+  signal_is_AM = false;
+#endif
 
 
   // -------------------------- auto reflevel ---------------------------------
@@ -3312,6 +3323,12 @@ enum {
 
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
+#ifdef TINYSA4
+#define CAL_LEVEL   -29
+#else
+#define CAL_LEVEL   -25
+#endif
+
 typedef struct test_case {
   int kind;
   int setup;
@@ -3326,20 +3343,20 @@ const test_case_t test_case [] =
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
  {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
  {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
- {TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90 },      // 3
- {TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90 },      // 4
+ {TC_SIGNAL,    TP_30MHZ,       30,     7,      -29,    10,     -90 },      // 3
+ {TC_SIGNAL,    TP_30MHZ,       60,     7,      -70,    10,     -90 },      // 4
 #define TEST_SILENCE 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  10,     7,      -20,    27,     -80 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60},       // 8 BPF pass band flatness
+ {TC_SIGNAL,    TP_10MHZEXTRA,  10,     14,      -20,    27,     -80 },      // 7 BPF loss and stop band
+ {TC_FLAT,      TP_10MHZEXTRA,  10,     8,      -18,    9,     -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
- {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
+ {TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    145,     -60 },      // 11 Measure atten step accuracy
 #define TEST_END 11
  {TC_END,       0,              0,      0,      0,      0,      0},
 #define TEST_POWER  12
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      CAL_LEVEL,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,      0,      0},
@@ -3508,7 +3525,7 @@ int validate_atten(int i) {
     else {
 //      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, summed_peak_level, summed_peak_level - reference_peak_level);
 //     shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",atten_step[j], summed_peak_level, summed_peak_level - reference_peak_level);
-#define ATTEN_TEST_CRITERIA 3.0
+#define ATTEN_TEST_CRITERIA 1.0
       if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA)
         return(TS_FAIL);
     }
@@ -3594,6 +3611,7 @@ void test_prepare(int i)
   setting.auto_IF = true;
   setting.auto_attenuation = false;
   setting.spur_removal = S_OFF;
+  in_selftest = true;
 
   switch(test_case[i].setup) {                // Prepare test conditions
   case TPH_SILENT:                             // No input signal
@@ -3605,6 +3623,7 @@ common_silent:
     set_refer_output(-1);
     for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = test_case[i].pass;
+    in_selftest = false;                    // Otherwise spurs will be visible
     break;
   case TP_10MHZ_SWITCH:
     set_mode(M_LOW);
@@ -3614,7 +3633,7 @@ common_silent:
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
-    setting.frequency_IF = config.frequency_IF1+200000;                // Center on SAW filters
+    setting.frequency_IF = config.frequency_IF1+1000000;                // Center on SAW filters
     set_refer_output(2);
     goto common;
   case TP_10MHZ:                              // 10MHz input
@@ -3985,8 +4004,10 @@ void calibrate(void)
 //    set_sweep_points(21);
     test_prepare(TEST_POWER);
     setting.step_delay_mode = SD_PRECISE;
+#ifndef TINYSA4
     setting.agc = S_OFF;
     setting.lna = S_OFF;
+#endif
     test_acquire(TEST_POWER);                        // Acquire test
     local_test_status = test_validate(TEST_POWER);                       // Validate test
     if (peakLevel < -50) {

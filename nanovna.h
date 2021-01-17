@@ -32,11 +32,11 @@
 #ifdef TINYSA3
 #define __SI4432__
 #endif
-#ifdef TINYSA4
+//#ifdef TINYSA4
 #define __SI4463__
 #define __SI4468__
 #define __ADF4351__
-#endif
+//#endif
 #define __PE4302__
 //#define __SIMULATION__
 //#define __PIPELINE__
