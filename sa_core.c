@@ -1,4 +1,4 @@
-/* All rights reserved.
+/*
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
@@ -1573,10 +1573,10 @@ static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in 
 
 static const int fm_modulation_offset[4] =
 {
-  HND * 10000,
-  HND * 10000,
-  LND * 10000,
-  LND * 10000
+   85000,
+   80000,
+  165000,
+  160000
 };
 
 
@@ -2806,7 +2806,7 @@ marker_search_right_min(int from)
 // -------------------- Self testing -------------------------------------------------
 
 enum {
-  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN,
+  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN, TC_DISPLAY,
 };
 
 enum {
@@ -2840,20 +2840,21 @@ const test_case_t test_case [] =
  {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
- {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
-#define TEST_END 11
+ {TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
+ {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 12 Measure atten step accuracy
+#define TEST_END 12
  {TC_END,       0,              0,      0,      0,      0,      0},
-#define TEST_POWER  12
+#define TEST_POWER  13
  {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,      0,      0},
-#define TEST_RBW    16
+#define TEST_RBW    17
  {TC_MEASURE,   TP_30MHZ,       30,     1,      -20,    10,     -60 },      // 16 Measure RBW step time
  {TC_END,       0,              0,      0,      0,      0,      0},
  {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
  {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
-#define TEST_ATTEN    20
+#define TEST_ATTEN    21
  {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 }      // 20 Measure atten step accuracy
 };
 
@@ -3022,6 +3023,16 @@ int validate_atten(int i) {
   return(TS_PASS);
 }
 
+int validate_display(int tc)
+{
+  test_fail_cause[tc] = "Display ";
+  if (!display_test()) {
+    return(TS_FAIL);
+  }
+  test_fail_cause[tc] = "";
+  return(TS_PASS);
+}
+
 int validate_above(int tc) {
   int status = TS_PASS;
   for (int j = 0; j < setting._sweep_points; j++) {
@@ -3077,6 +3088,9 @@ int test_validate(int i)
     break;
   case TC_ATTEN:
     current_test_status = validate_atten(i);
+    break;
+  case TC_DISPLAY:
+    current_test_status = validate_display(i);
     break;
   }
 
@@ -3225,15 +3239,6 @@ void self_test(int test)
     if (setting.test_argument > 0)
       test_step=setting.test_argument-1;
     do {
-      if (test_step == 0) {
-        if (!display_test()) {
-          test_step = TEST_END;
-          show_test_info = FALSE;
-          ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
-          ili9341_drawstring_7x13("Display read fails", 30, 140);
-          goto resume2;
-        }
-      }
       test_prepare(test_step);
       test_acquire(test_step);                        // Acquire test
       test_status[test_step] = test_validate(test_step);                       // Validate test
