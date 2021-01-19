@@ -60,7 +60,7 @@ void update_min_max_freq(void)
   case M_LOW:
     minFreq = 0;
     if (config.ultra)
-      maxFreq = 3300000000;
+      maxFreq = 4290000000;
     else
       maxFreq =  850000000;
     break;
@@ -101,7 +101,11 @@ void reset_settings(int m)
   setting.unit = U_DBM;
   set_scale(10);
   set_reflevel(-10);
-  setting.attenuate_x2 = 0;
+  setting.attenuate_x2 = 0;         // These should be initialized consistently
+  setting.level_sweep = 0.0;        // And this
+  setting.rx_drive=MAX_DRIVE;              // And this
+  setting.atten_step = 0;           // And this, only used in low output mode
+  setting.level = POWER_OFFSET;     // This is the level with above settings.
   setting.rbw_x10 = 0;
   setting.average = 0;
   setting.harmonic = 0;
@@ -110,8 +114,6 @@ void reset_settings(int m)
   setting.subtract_stored = 0;
   setting.normalize_level = 0.0;
   setting.lo_drive=1;
-  setting.rx_drive=13;
-  setting.atten_step = 0;       // Only used in low output mode
   setting.agc = S_AUTO_ON;
   setting.lna = S_AUTO_OFF;
   setting.tracking = false;
@@ -137,8 +139,6 @@ void reset_settings(int m)
   setting.trigger_direction = T_UP;
   setting.trigger_mode = T_MID;
   setting.fast_speedup = 0;
-  setting.level_sweep = 0.0;
-  setting.level = -15.0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
 //  setting.R = 0;                // Automatic setting of R
@@ -183,7 +183,7 @@ void reset_settings(int m)
     break;
 #endif
   case M_GENLOW:
-    setting.rx_drive=13;
+    setting.rx_drive=MAX_DRIVE;
     setting.lo_drive=1;
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
@@ -489,18 +489,7 @@ void set_modulo(uint32_t f)
 #endif
 
 #define POWER_STEP  0           // Should be 5 dB but apparently it is lower
-#define POWER_OFFSET    15
 #define RECEIVE_SWITCH_ATTENUATION  21
-
-#ifdef TINYSA4
-#define SI_DRIVE_STEP   4
-#define SWITCH_ATTENUATION  34
-#else
-#define SI_DRIVE_STEP   3
-#define SWITCH_ATTENUATION  30
-#endif
-
-
 
 void set_auto_attenuation(void)
 {
@@ -525,9 +514,9 @@ float get_attenuation(void)
   float actual_attenuation = setting.attenuate_x2 / 2.0;
   if (setting.mode == M_GENLOW) {
     if (setting.atten_step)
-      return ( -(POWER_OFFSET + actual_attenuation - (setting.atten_step-1)*POWER_STEP + SWITCH_ATTENUATION));
+      return (float)( POWER_OFFSET - actual_attenuation  - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP - SWITCH_ATTENUATION);
     else
-      return ( -POWER_OFFSET - actual_attenuation + (setting.rx_drive & 7) * SI_DRIVE_STEP);
+      return (float)( POWER_OFFSET - actual_attenuation - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP);
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
       return actual_attenuation + RECEIVE_SWITCH_ATTENUATION;
@@ -552,7 +541,7 @@ static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 
 void set_level(float v)     // Set the output level in dB  in high/low output
 {
   if (setting.mode == M_GENHIGH) {
-    int d = 0;
+//    int d = 0;
 //    while (drive_dBm[d] < v - 1 && d < 16)
 //      d++;
 //    if (d == 8 && v < -12)  // Round towards closest level
@@ -568,25 +557,19 @@ void set_level(float v)     // Set the output level in dB  in high/low output
 void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
 {
   if (setting.mode == M_GENLOW) {
-    a = a + POWER_OFFSET;
-    if (a > 2*SI_DRIVE_STEP) {                // +9dB
-      setting.rx_drive = 11;   // Maximum save drive for SAW filters.
-      a = a - 3*SI_DRIVE_STEP;
-    } else if (a > SI_DRIVE_STEP) {         // +6dB
-      setting.rx_drive = 10;
-      a = a - 2*SI_DRIVE_STEP;
-    } else if (a > 0) {         // +3dB
-      setting.rx_drive = 9;
-      a = a - SI_DRIVE_STEP;
-    } else
-      setting.rx_drive = 8;        // defined as 0dB level
+    a = a - POWER_OFFSET;               // Move to zero for max power
     if (a > 0)
       a = 0;
-    if( a >  - SWITCH_ATTENUATION) {
-      setting.atten_step = 0;
-    } else {
+    if( a <  - SWITCH_ATTENUATION) {
       a = a + SWITCH_ATTENUATION;
       setting.atten_step = 1;
+    } else {
+      setting.atten_step = 0;
+    }
+    setting.rx_drive = MAX_DRIVE;        // defined as 0dB level
+    while (a <= - SI_DRIVE_STEP && setting.rx_drive > MIN_DRIVE) {
+      a += SI_DRIVE_STEP;
+      setting.rx_drive--;
     }
     a = -a;
   } else {
@@ -603,8 +586,8 @@ void set_attenuation(float a)       // Is used both in low output mode and high/
   }
   if (a<0.0)
       a = 0;
-  if (a> 31)
-    a=31.0;
+  if (a> 31.5)
+    a = 31.5;
   if (setting.mode == M_HIGH)   // No attenuator in high mode
     a = 0;
   if (setting.attenuate_x2 == a*2)
@@ -742,16 +725,16 @@ void toggle_spur(void)
 }
 #endif
 
-#ifdef __ULTRA__
+#ifdef __HARMONIC__
 void set_harmonic(int h)
 {
   setting.harmonic = h;
   minFreq = 684000000.0;
-  if ((uint32_t)(setting.harmonic * 240000000)+434000000 >  minFreq)
-    minFreq = setting.harmonic * 240000000.0+434000000.0;
-  maxFreq = 4360000000;
-  if (setting.harmonic != 0 && (960000000.0 * setting.harmonic + 434000000.0 )< 4360000000.0)
-    maxFreq = (960000000.0 * setting.harmonic + 434000000.0 );
+  if ((uint32_t)(setting.harmonic * 135000000)+config.frequency_IF1 >  minFreq)
+    minFreq = setting.harmonic * 135000000 + config.frequency_IF1;
+  maxFreq = 4290000000.0;
+  if (setting.harmonic != 0 && (4400000000.0 * setting.harmonic + config.frequency_IF1 )< 4360000000.0)
+    maxFreq = (4400000000.0 * setting.harmonic + config.frequency_IF1 );
   set_sweep_frequency(ST_START, minFreq);
   set_sweep_frequency(ST_STOP, maxFreq);
 }
@@ -1011,7 +994,7 @@ extern char low_level_help_text[12];
 void set_offset(float offset)
 {
   setting.offset = offset;
-  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", -76 + (int)offset, -6 + (int)offset);
+  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", POWER_OFFSET - 70  + (int)offset, POWER_OFFSET + (int)offset);
   force_set_markmap();
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
 }
@@ -1986,19 +1969,27 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     a += PURE_TO_float(get_frequency_correction(f));
     if (a != old_a) {
       old_a = a;
-      int d = 10;              // Start at lowest drive level;
-      a = a + POWER_OFFSET;
-      if (a > 0) {
-        d++;
-        a = a - SI_DRIVE_STEP;
+      a = a - POWER_OFFSET;                 // convert to all settings maximum power output equals a = zero
+
+      if (a < -SWITCH_ATTENUATION) {
+        a = a + SWITCH_ATTENUATION;
+#ifdef TINYSA3
+        set_switch_receive();
+#else
+        enable_rx_output(false);
+#endif
+      } else {
+#ifdef TINYSA3
+        set_switch_transmit();
+#else
+        enable_rx_output(true);
+#endif
       }
-      if (a > 0) {
-        d++;
-        a = a - SI_DRIVE_STEP;
-      }
-      if (a > 0) {
-        d++;
-        a = a - SI_DRIVE_STEP;
+
+      int d = MAX_DRIVE;                       // Start at highest drive level;
+      while (a < -SI_DRIVE_STEP && d > MIN_DRIVE) {
+        d--;                                   // Reduce drive
+        a = a + SI_DRIVE_STEP;                 // and compensate
       }
 #ifdef __SI4432__
       SI4432_Sel = SI4432_RX ;
@@ -2007,24 +1998,12 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
 #ifdef __SI4463__
       SI4463_set_output_level(d);
 #endif
+
+
       if (a > 0)
         a = 0;
-      if( a >  - SWITCH_ATTENUATION) {
-#ifdef TINYSA3
-        set_switch_transmit();
-#else
-        enable_rx_output(true);
-#endif
-      } else {
-        a = a + SWITCH_ATTENUATION;
-#ifdef TINYSA3
-        set_switch_receive();
-#else
-        enable_rx_output(false);
-#endif
-      }
-      if (a < -31)
-        a = -31;
+      if (a < -31.5)
+        a = -31.5;
       a = -a;
 #ifdef __PE4302__
       PE4302_Write_Byte((int)(a * 2) );
@@ -2095,7 +2074,7 @@ modulation_again:
   }
   // -------------- set ultra ---------------------------------
   if (setting.mode == M_LOW && config.ultra) {
-    if ((S_IS_AUTO(setting.ultra)&& f > config.lpf_switch) || S_STATE(setting.ultra) ) {
+    if ((S_IS_AUTO(setting.ultra)&& f > config.ultra_threshold) || S_STATE(setting.ultra) ) {
       enable_ultra(true);
     } else
       enable_ultra(false);
@@ -2119,7 +2098,7 @@ modulation_again:
  //       offs>>=1;                                        // steps of a quarter rbw
  //     if (lf > -offs)                                   // No negative frequencies
         lf += offs;
-        if (lf > 4000000000U)
+        if (lf > 4290000000U)
           lf = 0;
     }
 // -------------- Calculate the IF -----------------------------
@@ -2152,7 +2131,7 @@ modulation_again:
         } else {
 #ifdef __SI4468__
             if (S_IS_AUTO(setting.spur_removal)) {
-              if (lf >= config.lpf_switch) {
+              if (lf >= config.ultra_threshold) {
                 setting.spur_removal= S_AUTO_ON;
               } else {
                 setting.spur_removal= S_AUTO_OFF;
@@ -2232,11 +2211,17 @@ modulation_again:
     } else
 #endif
     {                                           // Else set LO ('s)
-      uint32_t target_f;
-      if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
-        target_f = local_IF-lf;                                                 // set LO SI4432 to below IF frequency
+      uint64_t target_f;
+      int inverted_f = false;
+      if (setting.mode == M_LOW && !setting.tracking && ( S_STATE(setting.below_IF) || (uint64_t)lf + (uint64_t)local_IF> 4290000000U)  ) { // if in low input mode and below IF
+        if (lf < local_IF)
+          target_f = (uint64_t)local_IF-(uint64_t)lf;                                                 // set LO SI4432 to below IF frequency
+        else
+          target_f = (uint64_t)lf - (uint64_t)local_IF;                                                 // set LO SI4432 to below IF frequency
+        inverted_f = true;
+      }
       else
-        target_f = local_IF+lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
+        target_f = (uint64_t)local_IF+(uint64_t)lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
 #ifdef __SI4432__
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
@@ -2253,7 +2238,7 @@ modulation_again:
 #define TXCO_DIV3   10000000
 
         if (setting.R == 0) {
-          if (lf < 850000000 && lf >= TXCO_DIV3) {
+          if (lf < 850000000U && lf >= TXCO_DIV3) {
             uint32_t tf = ((lf + actual_rbw_x10*100) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {
 //              ADF4351_R_counter(8);   no impact
@@ -2309,16 +2294,34 @@ modulation_again:
         } else
           target_f = local_IF+lf; // otherwise to above IF
 #endif
+        if (setting.harmonic) {
+          target_f /= setting.harmonic;
+        }
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
         int32_t error_f = 0;
         if (real_old_freq[ADF4351_LO] > target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
+          if (inverted_f) {
+            error_f = -error_f;
+            goto correct_min;
+          }
+        correct_plus:
+          if (setting.harmonic) {
+            error_f *= setting.harmonic;
+          }
           if (error_f > actual_rbw_x10 * 5)        //RBW / 4
             local_IF += error_f;
-        }
-        if ( real_old_freq[ADF4351_LO] < target_f) {
+        } else if ( real_old_freq[ADF4351_LO] < target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
+          if (inverted_f) {
+            error_f = -error_f;
+            goto correct_plus;
+          }
+        correct_min:
+          if (setting.harmonic) {
+            error_f *= setting.harmonic;
+          }
           if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
             local_IF += error_f;
         }

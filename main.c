@@ -887,7 +887,7 @@ config_t config = {
 #ifdef TINYSA4
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
-  .lpf_switch = 600000000,
+  .ultra_threshold = 600000000,
 #endif
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
@@ -896,8 +896,8 @@ config_t config = {
   .correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
 #endif
 #ifdef TINYSA4
-  .correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
-  .correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
+  .correction_frequency = { 10000, 100000, 200000, 500000, 1000000000U, 1500000000U, 2500000000U, 2800000000U, 3000000000U, 3300000000U },
+  .correction_value = { 0, 0, 0, 0, 0.0, 1.5, 3, 6, 10, 10 },
 #endif
   .setting_frequency_10mhz = 10000000,
   .cor_am = -14,

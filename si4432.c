@@ -1208,7 +1208,7 @@ void ADF4351_aux_drive(int p)
       registers[4] |= (((unsigned long)p) << 6);
       ADF4351_Set(0);
 }
-
+#if 0
 static uint32_t gcd(uint32_t x, uint32_t y)
 {
   uint32_t z;
@@ -1219,6 +1219,7 @@ static uint32_t gcd(uint32_t x, uint32_t y)
   }
   return x;
 }
+#endif
 
 #if 0
 #endif
@@ -2427,7 +2428,7 @@ uint32_t SI4463_set_freq(uint32_t freq)
     }
     SI4463_frequency_changed = true;
 //    SI4463_set_gpio(3,GPIO_LOW);
-    return;
+    return actual_freq;
   }
 #if 0
   static int old_R = -1;    // What about TX/RX switching?
@@ -2494,7 +2495,9 @@ uint32_t SI4463_set_freq(uint32_t freq)
 
 
   //  SI4463_clear_int_status();
+#if 0
   retry:
+#endif
   if (SI4463_in_tx_mode)
     SI4463_start_tx(0);
   else {

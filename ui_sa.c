@@ -457,14 +457,14 @@ static const struct {
   {keypads_positive    , "MODULO"}, // KM_MOD
   {keypads_positive    , "CP"}, // KM_CP
   {keypads_positive    , "ATTACK"},    // KM_ATTACK
-  {keypads_freq        , "LPF"}, // KM_LPF
+  {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
 };
 #if 0 // Not used
 ui_slider_t ui_sliders [] =
 {
  { KM_CENTER,       true, 0, 1000000,   0,          350000000,  M_GENLOW},
  { KM_CENTER,       true, 0, 1000000,   240000000,  960000000,  M_GENHIGH},
- { KM_LOWOUTLEVEL,  false,0, 1,         -76,        -6,         M_GENLOW},
+ { KM_LOWOUTLEVEL,  false,0, 1,         POWER_OFFSET - 70,        POWER_OFFSET,         M_GENLOW},
 };
 #endif
 
@@ -1270,7 +1270,7 @@ static void choose_active_marker(void)
   active_marker = -1;
 }
 
-#ifdef __ULTRA__
+#ifdef __HARMONIC__
 static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
 {
   (void)item;
@@ -1562,7 +1562,7 @@ static const menuitem_t  menu_sweep[] = {
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
-char low_level_help_text[12] = "-76..-6";
+char low_level_help_text[12] = "-88..-18";
 char center_text[10] = "FREQ: %s";
 
 static const menuitem_t  menu_lowoutputmode[] = {
@@ -1570,7 +1570,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 //  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           center_text,         "10kHz..350MHz"},
-  { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
+  { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        low_level_help_text},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
 //  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
@@ -1765,9 +1765,10 @@ static const menuitem_t menu_dfu[] = {
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-#ifdef __ULTRA__
+#ifdef __HARMONIC__
 static const menuitem_t menu_harmonic[] =
 {
+ { MT_ADV_CALLBACK,  0,     "OFF",              menu_harmonic_acb},
   { MT_ADV_CALLBACK, 2,     "2",              menu_harmonic_acb},
   { MT_ADV_CALLBACK, 3,     "3",              menu_harmonic_acb},
   { MT_ADV_CALLBACK, 4,     "4",              menu_harmonic_acb},
@@ -1818,7 +1819,7 @@ static const menuitem_t menu_settings3[] =
 //  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
  { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
-  { MT_KEYPAD,   KM_LPF,        "LPF",              "Enter LPF max freq"},
+  { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
 #if 0                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
@@ -1828,12 +1829,12 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
   { MT_KEYPAD,  KM_CP,  "CP",           "Set CP"},
-  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA",      menu_settings_ultra_acb},
+  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
 
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
-#ifdef __ULTRA__
+#ifdef __HARMONIC__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
@@ -2194,10 +2195,10 @@ static void fetch_numeric_target(void)
   case KM_LOWOUTLEVEL:
     uistat.value = get_attenuation();           // compensation for dB offset during low output mode
     int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
-    if (end_level < -76)
-      end_level = -76;
-    if (end_level > -6)
-      end_level = -6;
+    if (end_level < POWER_OFFSET - 70)
+      end_level = POWER_OFFSET - 70;
+    if (end_level > POWER_OFFSET)
+      end_level = POWER_OFFSET;
     uistat.value += setting.offset;
     end_level += setting.offset;
     if (setting.level_sweep != 0)
@@ -2216,7 +2217,7 @@ static void fetch_numeric_target(void)
     break;
 #endif
   case KM_LPF:
-    uistat.value = config.lpf_switch;
+    uistat.value = config.ultra_threshold;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
   case KM_NOISE:
@@ -2352,7 +2353,7 @@ set_numeric_value(void)
     break;
 #endif
   case KM_LPF:
-    config.lpf_switch = uistat.value;
+    config.ultra_threshold = uistat.value;
     config_save();
     break;
   case KM_NOISE:

@@ -1864,7 +1864,7 @@ draw_menu_buttons(const menuitem_t *menu)
           local_slider_positions =  LCD_WIDTH/2+setting.slider_position;
           goto draw_slider;
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
-          local_slider_positions = (get_attenuation() + 76 ) * MENU_FORM_WIDTH / 70 + OFFSETX;
+          local_slider_positions = (get_attenuation() - POWER_OFFSET + 70 ) * MENU_FORM_WIDTH / 70 + OFFSETX;
           goto draw_slider;
         }
       }
@@ -2019,7 +2019,7 @@ menu_select_touch(int i)
               check_frequency_slider(slider_freq);
          }
         } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
-            uistat.value =  setting.offset + (touch_x - OFFSETX) *( -6 - -76) / MENU_FORM_WIDTH + -76;
+            uistat.value =  setting.offset + (POWER_OFFSET-70) + (touch_x - OFFSETX) * 70 / MENU_FORM_WIDTH ;
             set_keypad_value(keypad);
          apply:
             perform(false, 0, get_sweep_frequency(ST_CENTER), false);

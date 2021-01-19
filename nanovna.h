@@ -52,6 +52,8 @@
 //#define __ULTRA__             // Add harmonics mode on low input.
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
+#define  __HARMONIC__
+
 
 #define __QUASI_PEAK__
 
@@ -208,12 +210,23 @@ extern const char *info_about[];
 
 // ------------------------------- sa_core.c ----------------------------------
 
+#ifdef TINYSA4
+#define SI_DRIVE_STEP   0.5             // Power step per step in drive level
+#define SWITCH_ATTENUATION  34
+#define POWER_OFFSET    -18             // Max level with all enabled
+#define MAX_DRIVE   16
+#define MIN_DRIVE   8
+#else
+#define SI_DRIVE_STEP   3
+#define SWITCH_ATTENUATION  30
+#define POWER_OFFSET    15
+#endif
+
 extern const char * const unit_string[];
 extern uint8_t signal_is_AM;
 extern const int reffer_freq[];
 extern uint32_t minFreq;
 extern uint32_t maxFreq;
-extern uint32_t lpf_switch;
 int level_is_calibrated(void);
 void reset_settings(int);
 void update_min_max_freq(void);
@@ -534,7 +547,7 @@ typedef struct config {
 #ifdef TINYSA4
   uint32_t frequency_IF1;
   uint32_t frequency_IF2;
-  uint32_t lpf_switch;
+  uint32_t ultra_threshold;
 #endif
   int8_t   _mode;  
   int8_t    cor_am;
