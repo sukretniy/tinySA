@@ -300,7 +300,7 @@ extern int32_t frequencyExtra;
 void set_10mhz(uint32_t f);
 void set_modulation(int);
 void set_modulation_frequency(int);
-int search_maximum(int m, int center, int span);
+int search_maximum(int m, uint32_t center, int span);
 //extern int setting.modulation;
 void set_measurement(int);
 // extern int settingSpeed;

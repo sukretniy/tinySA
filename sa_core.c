@@ -1657,17 +1657,17 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 
 #define frequency_seatch_gate 60          // 120% of the RBW
 
-int binary_search_frequency(int f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
+int binary_search_frequency(uint32_t f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
   int L = 0;
   int R =  (sizeof frequencies)/sizeof(int) - 1;
-  int fmin =  f - actual_rbw_x10 * frequency_seatch_gate;
-  int fplus = f + actual_rbw_x10 * frequency_seatch_gate;
+  uint32_t fmin =  f - actual_rbw_x10 * frequency_seatch_gate;
+  uint32_t fplus = f + actual_rbw_x10 * frequency_seatch_gate;
   while (L <= R) {
     int m = (L + R) / 2;
-    if ((int)frequencies[m] < fmin)
+    if (frequencies[m] < fmin)
       L = m + 1;
-    else if ((int)frequencies[m] > fplus)
+    else if (frequencies[m] > fplus)
       R = m - 1;
     else
        return m; // index is m
@@ -1693,14 +1693,12 @@ void interpolate_maximum(int m)
 
 #define MAX_MAX 4
 int
-search_maximum(int m, int center, int span)
+search_maximum(int m, uint32_t center, int span)
 {
-  center = binary_search_frequency(center);
-  if (center < 0)
-    return false;
-  int from = center - span/2;
+  int center_index = binary_search_frequency(center);
+  int from = center_index - span/2;
   int found = false;
-  int to = center + span/2;
+  int to = center_index + span/2;
   int cur_max = 0;          // Always at least one maximum
   int max_index[4];
   if (from<0)

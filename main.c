@@ -883,7 +883,7 @@ config_t config = {
   .harmonic_freq_threshold = 300000000,
 #endif
   .lcd_palette = LCD_DEFAULT_PALETTE,
-  .vbat_offset = 500,
+  .vbat_offset = 220,
 #ifdef TINYSA4
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
