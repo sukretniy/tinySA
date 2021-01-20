@@ -1785,10 +1785,12 @@ static const menuitem_t menu_settings[] =
 };
 
 static const menuitem_t menu_measure2[] = {
-//  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
   { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_THD,          "THD",           menu_measure_acb},
+#ifdef __LINEARITY__
+  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+#endif
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };

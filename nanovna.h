@@ -42,7 +42,7 @@
 #define __SCROLL__
 #define __ICONS__
 #define __MEASURE__
-//#define __LINEARITY__         // Not available
+#define __LINEARITY__         // Not available
 #define __SELFTEST__
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
