@@ -1541,7 +1541,11 @@ case M_GENLOW:  // Mixed output from 0
 case M_GENHIGH: // Direct output from 1
     if (setting.mute)
       goto mute;
-#ifdef __SI4432__
+    enable_high(true);              // Must be first to protect SAW filters
+    enable_extra_lna(false);
+    enable_ultra(false);
+
+    #ifdef __SI4432__
     SI4432_Sel = SI4432_RX ;
     SI4432_Receive();
     set_switch_receive();
@@ -1573,20 +1577,16 @@ case M_GENHIGH: // Direct output from 1
       ADF4351_enable_aux_out(false);
       ADF4351_enable_out(false);
 #ifdef __SI4468__
-//      SI4463_set_output_level(setting.rx_drive);
       SI4463_init_tx();
-      if (setting.lo_drive < 32) {
-        enable_rx_output(false); // use switch as attenuator
-      } else {
+//      if (setting.lo_drive < 32) {
+//        enable_rx_output(false); // use switch as attenuator
+//      } else {
         enable_rx_output(true);
-      }
-      SI4463_set_output_level(setting.lo_drive & 0x01F);
+//      }
+      SI4463_set_output_level(setting.lo_drive);
 
 #endif
     }
-    enable_high(true);
-    enable_extra_lna(false);
-    enable_ultra(false);
     break;
   }
 
@@ -1765,8 +1765,8 @@ static const uint32_t spur_table[] =                                 // Frequenc
  117716000,
  243775000,
 // 244250000,
- 324875000,
- 325190000,
+ 325000000,
+// 325190000,
  487541650,             // This is linked to the MODULO of the ADF4350
 // 487993000,
 // 488020700,
@@ -1774,7 +1774,7 @@ static const uint32_t spur_table[] =                                 // Frequenc
 // 487578000,
 // 488500000,
  650700000,
- 651333333,
+// 651333333,
  732750000,
  746083000
  /*
@@ -2079,7 +2079,7 @@ modulation_again:
   }
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
-//#define __DEBUG_SPUR__
+#define __DEBUG_SPUR__
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
   if (!setting.auto_IF)
     stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace

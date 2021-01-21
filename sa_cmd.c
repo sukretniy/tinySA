@@ -100,7 +100,7 @@ VNA_SHELL_FUNCTION(cmd_spur)
 //    shell_printf("usage: spur %s\r\n", cmd);
 //    return;
 //  }
-  int m = generic_option_cmd("spur", "off|on", argc, argv[0]);
+  int m = generic_option_cmd("spur", "off|on|auto", argc, argv[0]);
   if (m>=0) {
     set_spur(m);
     redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
@@ -280,18 +280,18 @@ VNA_SHELL_FUNCTION(cmd_rbw)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: rbw 2..600|auto\r\n");
+    shell_printf("usage: rbw 0.3..600|auto\r\n");
     return;
   }
   if (get_str_index(argv[0], "auto|0")>=0) {
     if (setting.rbw_x10 != 0)
       set_RBW(0);
   } else {
-    uint32_t a = my_atoui(argv[0]);
-    if (a < 2 || a>600)
+    float a = my_atof(argv[0]);
+    if (a < 0.2 || a>900)
       goto usage;
     if (setting.rbw_x10 != a*10)
-      set_RBW(a*10);
+      set_RBW((int) ( a*10));
  }
 }
 
@@ -299,7 +299,7 @@ VNA_SHELL_FUNCTION(cmd_if)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: if {433M..435M}\r\n");
+    shell_printf("usage: if {433M..435M}\r\n%qHz\r\n", setting.frequency_IF);
     return;
   } else {
     uint32_t a = (uint32_t)my_atoi(argv[0]);
@@ -310,11 +310,25 @@ VNA_SHELL_FUNCTION(cmd_if)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_ultra_start)
+{
+  if (argc != 1) {
+  usage:
+    shell_printf("usage: ultra_start {0..4290M}\r\n%qHz\r\n", config.ultra_threshold);
+    return;
+  } else {
+    uint32_t a = (uint32_t)my_atoi(argv[0]);
+    config.ultra_threshold = a;
+    config_save();
+  }
+}
+
+
 VNA_SHELL_FUNCTION(cmd_if1)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: if1 {975M..979M}\r\n");
+    shell_printf("usage: if1 {975M..979M}\r\n%qHz\r\n", config.frequency_IF1);
     return;
   } else {
     uint32_t a = (uint32_t)my_atoi(argv[0]);

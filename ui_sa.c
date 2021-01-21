@@ -750,12 +750,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
 {
   (void)item;
   if(b){
+#ifdef TINYSA4
+    b->param_1.i = data+20;
+#else
     b->param_1.i = menu_drive_value[data] + (setting.mode==M_GENHIGH ? setting.offset : 0);
+#endif
     b->icon = data == setting.lo_drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
 //Serial.println(item);
-  set_lo_drive(data);
+  set_lo_drive(data+20);
   menu_move_back();
 //  ui_mode_normal();
 //  draw_cal_status();
@@ -765,7 +769,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   (void)item;
   (void)data;
   if(b){
+#ifdef TINYSA4
+    b->param_1.i = setting.lo_drive;
+#else
     b->param_1.i = menu_drive_value[setting.lo_drive] + (setting.mode==M_GENHIGH ? setting.offset : 0);
+#endif
     return;
   }
   menu_push_submenu(menu_drive_wide);
@@ -1176,7 +1184,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_delete_cb)
   }
 }
 
-static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,9000};
+static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,6000};
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
 {
   (void)item;
@@ -2800,7 +2808,7 @@ redraw_cal_status:
 
   // Version
   y += YSTEP + YSTEP/2 ;
-  strncpy(buf,&VERSION[8], BLEN-1);
+  strncpy(buf,&VERSION[11], BLEN-1);
   ili9341_drawstring(buf, x, y);
 
 

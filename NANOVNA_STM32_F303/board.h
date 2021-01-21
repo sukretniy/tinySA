@@ -25,7 +25,7 @@
  * Board identifier.
  */
 #define BOARD_NANOVNA_STM32_F303
-#define BOARD_NAME              "tinySA-H4"
+#define BOARD_NAME              "tinySA4"
 
 #include <stm32f303xc.h>
 /*
