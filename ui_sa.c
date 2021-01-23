@@ -971,10 +971,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       kp_help_text = "Modulation frequency, 3 .. 10 kHz";
       ui_mode_keypad(KM_SPAN);
       ui_process_keypad();
-      if (uistat.value < 3000)
-        break;
+//      if (uistat.value < 3000)
+//        break;
       span = uistat.value;
-      set_sweep_frequency(ST_SPAN, 50000);     // 100kHz
+      set_sweep_frequency(ST_SPAN, span * 10);
 //      update_frequencies();                     // To ensure markers are positioned right!!!!!!
       set_measurement(M_AM);
       set_marker_frequency(0, center);
@@ -1401,6 +1401,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
   draw_menu();
 //  draw_cal_status();
 }
+
+static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
+{
+  (void) data;
+  (void) item;
+  if (b){
+    b->icon = auto_capture ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  auto_capture = ! auto_capture;
+//  menu_move_back();
+//  ui_mode_normal();
+  draw_menu();
+//  draw_cal_status();
+}
+
 
 static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
 {
@@ -1991,6 +2007,7 @@ static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
   { MT_ADV_CALLBACK,4,          "WATER\nFALL",     menu_waterfall_acb},
   { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
+  { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
 //  { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",    NULL},
 
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },

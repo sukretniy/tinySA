@@ -1762,31 +1762,24 @@ search_maximum(int m, uint32_t center, int span)
 //static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the frequency is found in the spur table use this IF frequency
 static const uint32_t spur_table[] =                                 // Frequencies to avoid
 {
- 117716000,
- 243775000,
+// 117716000,
+ 243775000,             // OK
 // 244250000,
- 325000000,
+ 325000000,             // Not OK
 // 325190000,
- 487541650,             // This is linked to the MODULO of the ADF4350
+ 487541650,             // OK This is linked to the MODULO of the ADF4350
 // 487993000,
 // 488020700,
  // 487551700,
 // 487578000,
 // 488500000,
- 650700000,
+ 650687000,             // OK
 // 651333333,
- 732750000,
- 746083000
- /*
-  * 144.3
-  * 159
-  * 209.8 30MHz
-  * 239.8
-  * 269.9  30MHz?
-  */
+ 731780000,             // OK
+// 746083000
 
- // 1956000000,
-#if 0
+
+ #if 0
  // 580000,            // 433.8 MHz table
 // 880000,    //?
  960000,

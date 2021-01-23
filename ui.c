@@ -312,6 +312,14 @@ touch_check(void)
       last_touch_x = x;
       last_touch_y = y;
     }
+    mouse_down = false;
+  }
+  if (!stat) {
+    stat = mouse_down;
+    if (mouse_down) {
+      last_touch_x = mouse_x;
+      last_touch_y = mouse_y;
+    }
   }
 #if 0                                           // Long press detection
   systime_t ticks = chVTGetSystemTimeX();
@@ -420,12 +428,15 @@ touch_draw_test(void)
   do {
     if (touch_check() == EVT_TOUCH_PRESSED){
       touch_position(&x0, &y0);
+      ili9341_line(x0, y0, x0, y0);
       do {
         chThdSleepMilliseconds(50);
         touch_position(&x1, &y1);
-        ili9341_line(x0, y0, x1, y1);
-        x0 = x1;
-        y0 = y1;
+        if (x0!= x1 || y0 != y1) {
+          ili9341_line(x0, y0, x1, y1);
+          x0 = x1;
+          y0 = y1;
+        }
       } while (touch_check() != EVT_TOUCH_RELEASED);
     }
   }while (!(btn_check() & EVT_BUTTON_SINGLE_CLICK));
@@ -436,8 +447,8 @@ touch_draw_test(void)
 void
 touch_position(int *x, int *y)
 {
-  *x = (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2];
-  *y = (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3];
+  *x = (mouse_down ? mouse_x : (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2]);
+  *y = (mouse_down ? mouse_y : (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3]);
 }
 
 
@@ -2862,6 +2873,9 @@ void ui_process_touch(void)
 }
 
 static int previous_button_state = 0;
+static int previous_mouse_state = 0;
+static int previous_mouse_x = 0;
+static int previous_mouse_y = 0;
 
 void
 ui_process(void)
@@ -2874,10 +2888,12 @@ ui_process(void)
   if (operation_requested&OP_LEVER || previous_button_state != button_state) {
     ui_process_lever();
     previous_button_state = button_state;
-  }
-  if (operation_requested&OP_TOUCH)
+    operation_requested = OP_NONE;
+  } else if (operation_requested&OP_TOUCH || previous_mouse_state != mouse_down || previous_mouse_x != mouse_x || previous_mouse_y != mouse_y) {
     ui_process_touch();
-  operation_requested = OP_NONE;
+    previous_mouse_state = mouse_down;
+    operation_requested = OP_NONE;
+  }
 }
 
 /* Triggered when the button is pressed or released. The LED4 is set to ON.*/
