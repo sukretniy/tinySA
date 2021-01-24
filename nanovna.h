@@ -65,7 +65,7 @@
 #define HIGH_MAX_FREQ_MHZ   960
 #endif
 #ifdef TINYSA4
-#define DEFAULT_IF  ((uint32_t)977000000)
+#define DEFAULT_IF  ((uint32_t)977100000)
 #define DEFAULT_SPUR_OFFSET ((uint32_t)1500000)
 #define DEFAULT_MAX_FREQ    ((uint32_t)800000000)
 #define HIGH_MIN_FREQ_MHZ   825

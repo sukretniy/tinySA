@@ -1185,11 +1185,13 @@ static UI_FUNCTION_CALLBACK(menu_marker_delete_cb)
 }
 
 static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,6000};
+static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300k","600k"};
+
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
 {
   (void)item;
   if (b){
-    b->param_1.u = rbwsel_x10[data]*100;
+    b->param_1.text = rbwsel_text[data];
     b->icon = setting.rbw_x10 == rbwsel_x10[data] ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
@@ -1638,14 +1640,14 @@ static const menuitem_t  menu_average[] = {
 
 static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 0, "  AUTO",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 1, "%3.1qHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 2, "%3.1qHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 3, "%4.1qHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 4, "%4.1qHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 5, "%4.1qHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 6, "%4.1qHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 7, "%3.1qHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 8, "%3.1qHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 1, "%sHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 2, "%sHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 3, "%sHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 4, "%sHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 5, "%sHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 6, "%sHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 7, "%sHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 8, "%sHz",   menu_rbw_acb},
   { MT_CANCEL,  0, S_LARROW" BACK", NULL },
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
@@ -2676,7 +2678,7 @@ redraw_cal_status:
 
   ili9341_drawstring("RBW:", x, y);
   y += YSTEP;
-  plot_printf(buf, BLEN, "%.1FkHz", actual_rbw_x10/10.0);
+  plot_printf(buf, BLEN, "%.1FHz", actual_rbw_x10*100.0);
   y = add_quick_menu(buf, x, y,(menuitem_t *)menu_rbw);
 
 #if 0

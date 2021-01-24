@@ -473,6 +473,8 @@ void ili9341_fill(int x, int y, int w, int h)
      send_region("fill", x,y,w,h);
      spi_buffer[0] = background_color;
      send_buffer((uint8_t *)spi_buffer, 2);
+     osalThreadSleepMilliseconds(2);
+
 //     auto_capture = false;
   }
 //  LCD_CS_HIGH;
@@ -493,6 +495,8 @@ void ili9341_bulk(int x, int y, int w, int h)
   if (auto_capture) {
      send_region("bulk", x,y,w,h);
      send_buffer((uint8_t *)spi_buffer, w*h*2);
+     osalThreadSleepMilliseconds(2);
+
 //     auto_capture = false;
   }
 #endif

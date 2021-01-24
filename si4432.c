@@ -1961,6 +1961,12 @@ int16_t Si446x_RSSI(void)
         my_microsecond_delay(10);
         goto again;
       }
+#if 0
+      if (data[2] == 0) {
+//        my_microsecond_delay(10);
+        goto again;
+      }
+#endif
       RSSI_RAW_ARRAY[--j] = data[2];
       if (j == 0) break;
       my_microsecond_delay(20);
