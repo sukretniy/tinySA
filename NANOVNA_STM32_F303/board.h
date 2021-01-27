@@ -187,7 +187,7 @@
                                      PIN_OSPEED_2M(5) |           \
                                      PIN_OSPEED_2M(6) |          \
                                      PIN_OSPEED_2M(7) |          \
-                                     PIN_OSPEED_100M(8U) | \
+                                     PIN_OSPEED_2M(8U) | \
                                      PIN_OSPEED_100M(9) |          \
                                      PIN_OSPEED_100M(10) |         \
                                      PIN_OSPEED_100M(GPIOA_USB_DM) |     \
@@ -305,7 +305,7 @@
                                      PIN_OSPEED_100M(12) | \
                                      PIN_OSPEED_100M(13) | \
                                      PIN_OSPEED_100M(14) | \
-                                     PIN_OSPEED_100M(15))
+                                     PIN_OSPEED_2M(15))
 #define VAL_GPIOB_PUPDR             (PIN_PUPDR_PULLUP(0) |         \
                                      PIN_PUPDR_PULLUP(1) |         \
                                      PIN_PUPDR_PULLUP(2) |         \

@@ -44,7 +44,8 @@
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV64
-#define SI4432_SPI_SPEED   SPI_BR_DIV16
+#define SI4432_SPI_SPEED   SPI_BR_DIV32
+//#define SI4432_SPI_SPEED   SPI_BR_DIV16
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -1043,8 +1044,8 @@ void ADF4351_Setup(void)
 
   ADF4351_set_frequency(0,200000000);
 
-//  ADF4351_mux(2);   // No led
-    ADF4351_mux(6);   // Show lock on led
+  ADF4351_mux(2);   // No led
+//    ADF4351_mux(6);   // Show lock on led
 
 //  ADF4351_set_frequency(1,150000000,0);
 //  ADF4351_Set(0);
@@ -1331,10 +1332,15 @@ void ADF4351_enable_aux_out(int s)
 
 void ADF4351_enable_out(int s)
 {
-  if (s)
-    bitSet(registers[4], 5);
-  else
-    bitClear(registers[4], 5);
+  if (s) {
+    bitClear(registers[2], 11);     // Disable VCO power down
+    bitClear(registers[2], 5);      // Disable power down
+    bitSet(registers[4], 5);        // Enable output
+  } else {
+    bitClear(registers[4], 5);      // Disable output
+    bitSet(registers[2], 5);        // Enable power down
+    bitSet(registers[2], 11);        // Enable VCO power down
+  }
   ADF4351_Set(0);
 }
 

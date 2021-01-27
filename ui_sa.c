@@ -765,6 +765,25 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
 //  draw_cal_status();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_mixer_drive_acb)
+{
+  (void)item;
+  if(b){
+#ifdef TINYSA4
+    b->param_1.i = data;
+#else
+    b->param_1.i = menu_drive_value[data] + (setting.mode==M_GENHIGH ? setting.offset : 0);
+#endif
+    b->icon = data == setting.lo_drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+//Serial.println(item);
+  set_lo_drive(data);
+  menu_move_back();
+//  ui_mode_normal();
+//  draw_cal_status();
+}
+
 static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   (void)item;
   (void)data;
@@ -1526,11 +1545,11 @@ static const menuitem_t menu_load_preset[] =
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 
-static const menuitem_t menu_lo_drive[] = {
-  { MT_ADV_CALLBACK, 3, "%+ddBm",   menu_lo_drive_acb},
-  { MT_ADV_CALLBACK, 2, "%+ddBm",   menu_lo_drive_acb},
-  { MT_ADV_CALLBACK, 1, "%+ddBm",   menu_lo_drive_acb},
-  { MT_ADV_CALLBACK, 0, "%+ddBm",   menu_lo_drive_acb},
+static const menuitem_t menu_mixer_drive[] = {
+  { MT_ADV_CALLBACK, 3, "%+ddBm",   menu_mixer_drive_acb},
+  { MT_ADV_CALLBACK, 2, "%+ddBm",   menu_mixer_drive_acb},
+  { MT_ADV_CALLBACK, 1, "%+ddBm",   menu_mixer_drive_acb},
+  { MT_ADV_CALLBACK, 0, "%+ddBm",   menu_mixer_drive_acb},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -1895,7 +1914,7 @@ static const menuitem_t menu_settings[] =
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "Set to zero for auto IF"},
   { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
-  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
+  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings2},
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel

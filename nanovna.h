@@ -893,7 +893,14 @@ extern int debug_frequencies;
 // STM32 minimum page size for write
 #define FLASH_PAGESIZE          0x800
 // config save area (flash7 addr)
+#ifdef TINYSA3
 #define SAVE_CONFIG_ADDR        0x0801B000
+#endif
+
+#ifdef TINYSA4
+#define SAVE_CONFIG_ADDR        0x0803B000
+#endif
+
 #define SAVE_CONFIG_SIZE        0x00000800
 // setting_t save area (save area + config size)
 #define SAVE_PROP_CONFIG_ADDR   (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE)
@@ -1120,7 +1127,7 @@ typedef int16_t  pureRSSI_t;
 
 // RSSI values conversion macro
 // External programm zero level settings (need decrease on this value -)
-#define EXT_ZERO_LEVEL            (128)
+#define EXT_ZERO_LEVEL            (174)
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
 #define PURE_TO_DEVICE_RSSI(rssi) ((rssi)>>4)
 #define float_TO_PURE_RSSI(rssi)  ((rssi)*32)

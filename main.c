@@ -809,7 +809,6 @@ VNA_SHELL_FUNCTION(cmd_dump)
 VNA_SHELL_FUNCTION(cmd_refresh)
 {
 // read pixel count at one time (PART*2 bytes required for read buffer)
-  int i, y;
   int m = generic_option_cmd("refresh", "off|on", argc, argv[0]);
   if (m>=0) {
     auto_capture = m;

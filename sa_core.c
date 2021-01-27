@@ -169,7 +169,7 @@ void reset_settings(int m)
       set_sweep_frequency(ST_STOP, 2900000000);    // TODO <----------------- temp ----------------------
     else
       set_sweep_frequency(ST_STOP,  800000000);    // TODO <----------------- temp ----------------------
-    setting.attenuate_x2 = 0;   // TODO <----------------- temp ---------------
+    setting.attenuate_x2 = 10;
     setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
     setting.lo_drive=1;
@@ -1161,15 +1161,28 @@ void calculate_correction(void)
 
 pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
+  pureRSSI_t cv;
+  if (setting.extra_lna) {
+    if (f > 2100000000U) {
+      cv = float_TO_PURE_RSSI(+13);
+    } else {
+      cv = float_TO_PURE_RSSI( (float)f * 6.0 / 1000000000); // +6dBm at 1GHz
+    }
+  }
+
   if (!(setting.mode == M_LOW || setting.mode == M_GENLOW))
     return(0.0);
   int i = 0;
   while (f > config.correction_frequency[i] && i < CORRECTION_POINTS)
     i++;
-  if (i >= CORRECTION_POINTS)
-    return(scaled_correction_value[CORRECTION_POINTS-1] >> (SCALE_FACTOR - 5) );
-  if (i == 0)
-    return(scaled_correction_value[0] >> (SCALE_FACTOR - 5) );
+  if (i >= CORRECTION_POINTS) {
+    cv += scaled_correction_value[CORRECTION_POINTS-1] >> (SCALE_FACTOR - 5);
+    goto done;
+  }
+  if (i == 0) {
+    cv += scaled_correction_value[0] >> (SCALE_FACTOR - 5);
+    goto done;
+  }
   f = f - config.correction_frequency[i-1];
 #if 0
   uint32_t m = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR ;
@@ -1177,8 +1190,9 @@ pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI
   float cv = config.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
 #else
   int32_t scaled_f = f >> SCALE_FACTOR;
-  pureRSSI_t cv = (scaled_correction_value[i-1] + (scaled_f * scaled_correction_multi[i])) >> (SCALE_FACTOR - 5) ;
+  cv += (scaled_correction_value[i-1] + (scaled_f * scaled_correction_multi[i])) >> (SCALE_FACTOR - 5) ;
 #endif
+done:
   return(cv);
 }
 #pragma GCC pop_options
@@ -2042,7 +2056,7 @@ modulation_again:
   }
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
-#define __DEBUG_SPUR__
+//#define __DEBUG_SPUR__
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
   if (!setting.auto_IF)
     stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
@@ -2217,14 +2231,18 @@ modulation_again:
           ADF4351_R_counter(setting.R);
 
 
-        if (false) {         // Avoid 72MHz spur
-#define SPUR    72000000
+        if (true) {         // Avoid 72MHz spur
+#define SPUR    2 * 72000000
           uint32_t tf = ((lf + actual_rbw_x10*100) / SPUR) * SPUR;
 #undef STM32_USBPRE
           int STM32_USBPRE;
 #undef STM32_PLLMUL
           int STM32_PLLMUL;
-          if (lf < 200000000 && lf >= SPUR && tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {
+          if (lf < 200000000 && lf >= SPUR && tf + actual_rbw_x10*400 >= lf  && tf < lf + actual_rbw_x10*400) {
+
+            RCC->CFGR |= STM32_SW_HSI;
+
+#if 0
             STM32_USBPRE = STM32_USBPRE_DIV1;  // Switch to 48MHz clock (1 << 22)
             STM32_PLLMUL =  ((6 - 2) << 18);
             uint32_t CFGR  = STM32_MCOSEL    | STM32_USBPRE    | STM32_PLLMUL   |
@@ -2235,12 +2253,16 @@ modulation_again:
               old_CFGR = CFGR;
               RCC->CFGR  = CFGR;
             }
+#endif
           } else {
+            RCC->CFGR |= STM32_SW_PLL;
+#if 0
             STM32_USBPRE = STM32_USBPRE_DIV1P5; // Switch to 72MHz clock (0 << 22)
             STM32_PLLMUL =  ((9 - 2) << 18);
             orig_CFGR = STM32_MCOSEL    | STM32_USBPRE    | STM32_PLLMUL   |
                 STM32_PLLSRC    | STM32_PPRE1     | STM32_PPRE2    |
                 STM32_HPRE;
+#endif
           }
         }
 
