@@ -50,6 +50,15 @@ static unsigned long old_freq[5] = { 0, 0, 0, 0,0};
 static unsigned long real_old_freq[5] = { 0, 0, 0, 0,0};
 static long real_offset = 0;
 
+void clear_frequency_cache(void)
+{
+  for (unsigned int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
+    old_freq[i] = 0;
+    real_old_freq[i] = 0;
+  }
+  ADF4351_force_refresh();
+}
+
 //int setting.refer = -1;  // Off by default
 const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
@@ -159,8 +168,7 @@ void reset_settings(int m)
   setting.mirror_masking = 0;
   setting.slider_position = 0;
   setting.slider_span = 100000;
-
-#endif
+  #endif
   switch(m) {
   case M_LOW:
     set_sweep_frequency(ST_START, minFreq);
@@ -296,11 +304,11 @@ void set_gridlines(int d)
 
 //int setting_frequency_10mhz = 10000000;
 
-void set_10mhz(uint32_t f)
+void set_30mhz(uint32_t f)
 {
-  if (f < 9000000 || f > 11000000)
+  if (f < 29000000 || f > 31000000)
     return;
-  config.setting_frequency_10mhz = f;
+  config.setting_frequency_30mhz = f;
   config_save();
   dirty = true;
   update_grid();
@@ -474,17 +482,13 @@ void set_R(int f)
   setting.R = f;
   ADF4351_R_counter(f % 1000);
   ADF4351_spur_mode(f/1000);
-  ADF4351_force_refresh();
-  old_freq[ADF4351_LO] = 0;
   dirty = true;
 }
 
 void set_modulo(uint32_t f)
 {
   ADF4351_modulo(f);
-  ADF4351_force_refresh();
-  old_freq[ADF4351_LO] = 0;
-  ADF4351_set_frequency(0, real_old_freq[ADF4351_LO]);
+  clear_frequency_cache();
   dirty = true;
 }
 #endif
@@ -1087,7 +1091,7 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 200; SI4432_offset_delay = 100; spur_gate = 50; }
+      if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
       else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
       else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 70; }
       else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 30; spur_gate = 80; }
@@ -1217,10 +1221,6 @@ void setupSA(void)
 #ifdef __SI4432__
   SI4432_Init();
 #endif
-  for (unsigned int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
-    old_freq[i] = 0;
-    real_old_freq[i] = 0;
-  }
 #ifdef __SI4432__
   SI4432_Sel = SI4432_RX ;
   SI4432_Receive();
@@ -1349,7 +1349,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
   } else if (V==ADF4351_LO2) {
     real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO, freq);
   } else if (V==SI4463_RX) {
-    if (setting.step_delay_mode == SD_FAST && fast_counter++ < 100) {        // If in extra fast scanning mode and NOT SI4432_RX !!!!!!
+    if (setting.step_delay_mode == SD_FAST && fast_counter++ < 100 && real_old_freq[V] != 0) {        // If in extra fast scanning mode and NOT SI4432_RX !!!!!!
       long delta =  (long)freq - (long)real_old_freq[V];
 #define OFFSET_STEP 14.30555                // 30MHz
 //#define OFFSET_STEP 12.3981
@@ -1892,7 +1892,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
   int spur_second_pass = false;
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
 #ifdef __ADF4351__
-    ADF4351_force_refresh();
+    clear_frequency_cache();
 #endif
     calculate_correction();                                                 // pre-calculate correction factor dividers to avoid float division
     apply_settings();                                                       // Initialize HW
@@ -2355,7 +2355,7 @@ modulation_again:
        f_error = ((float)f-(float)frequencies[i])/setting.frequency_step;
      }
      char shifted = ( LO_shifted ? '>' : ' ');
-      shell_printf ("%d:LO=%11.6q\t%cIF=%11.6q\tF=%11.6q\tD=%.2f\r\n", i, real_old_freq[ADF4351_LO], shifted, real_old_freq[SI4463_RX] + real_offset, f , f_error);
+      shell_printf ("%d:LO=%11.6q:%11.6q\t%cIF=%11.6q:%11.6q\tOF=%11.6q\tF=%11.6q\tD=%.2f\r\n", i, old_freq[ADF4351_LO],real_old_freq[ADF4351_LO], shifted, old_freq[SI4463_RX], real_old_freq[SI4463_RX], (int32_t)real_offset, f , f_error);
       osalThreadSleepMilliseconds(100);
     }
     // ------------------------- end of processing when in output mode ------------------------------------------------

@@ -958,7 +958,7 @@ config_t config = {
   .correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
  // .correction_value = { 0, 0, 0, 0, 0.0, 1.5, 3, 6, 10, 10 },
 #endif
-  .setting_frequency_10mhz = 10000000,
+  .setting_frequency_30mhz = 30000000,
   .cor_am = -14,
   .cor_wfm = -17,
   .cor_nfm = -17,

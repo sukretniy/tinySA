@@ -1003,7 +1003,7 @@ int ADF4351_frequency_changed = false;
 #endif
 //double RFout; //Output freq in MHz
 uint64_t  PFDRFout[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000}; //Reference freq in MHz
-uint64_t  Chrystal[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000};
+//uint64_t  Chrystal[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000};
 //double  FRACF; // Temp
 
 volatile int64_t
@@ -1161,8 +1161,9 @@ void ADF4351_R_counter(int R)
         bitClear (registers[2], 25); // Reference doubler
       }
       for (int channel=0; channel < 6; channel++) {
-        PFDRFout[channel] = (Chrystal[channel] * (dbl?2:1)) / R;
+        PFDRFout[channel] = (config.setting_frequency_30mhz * (dbl?2:1)) / R;
       }
+      clear_frequency_cache();                              // When R changes the possible frequencies will change
       registers[2] &= ~ (((unsigned long)0x3FF) << 14);
       registers[2] |= (((unsigned long)R) << 14);
       ADF4351_Set(0);
@@ -1876,8 +1877,7 @@ void si_set_offset(int16_t offset)
   };
   SI4463_do_api(data, sizeof(data), NULL, 0);
   SI4463_offset_changed = true;
-  if (offset)
-    SI4463_offset_active = true;
+  SI4463_offset_active = (offset != 0);
 }
 
 
@@ -1955,7 +1955,7 @@ int16_t Si446x_RSSI(void)
       ADF4351_frequency_changed = false;
       SI4463_offset_changed = false;
     }
-#define SAMPLE_COUNT 1
+#define SAMPLE_COUNT 3
     int j = SAMPLE_COUNT; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
@@ -2387,19 +2387,14 @@ uint32_t SI4463_set_freq(uint32_t freq)
   }
   if (SI4463_band == -1)
     return 0;
-//#ifdef TINYSA4_PROTO
-#define freq_xco    29999960
-//#else
-//#define freq_xco    26000000
-//#endif
   if (SI4463_offset_active) {
     si_set_offset(0);
     SI4463_offset_active = false;
   }
-  int32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*freq_xco : 4*freq_xco) - 1;        // R between 0x00 and 0x7f (127)
+  int32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
   int64_t MOD = 524288; // = 2^19
-  int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*freq_xco : 4*freq_xco)) - R*MOD;
-  uint32_t actual_freq = (R*MOD + F) * (Npresc ? 2*freq_xco : 4*freq_xco)/ SI4463_outdiv/MOD;
+  int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
+  uint32_t actual_freq = (R*MOD + F) * (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)/ SI4463_outdiv/MOD;
   int delta = freq - actual_freq;
   if (delta < -100 || delta > 100 ){
     while(1)
@@ -2552,6 +2547,7 @@ void SI4463_init_rx(void)
     i += SI4468_config[i];
   }
 #endif
+  clear_frequency_cache();
   SI4463_start_rx(SI4463_channel);
 #if 0
 volatile si446x_state_t s ;

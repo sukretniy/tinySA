@@ -405,7 +405,7 @@ enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, // These must be first to share common help text
   KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
-  KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
+  KM_30MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
   KM_R,KM_MOD,KM_CP,
 #if 0
@@ -436,7 +436,7 @@ static const struct {
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "DECAY"},    // KM_DECAY
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
-  {keypads_freq        , "FREQ"},    // KM_10MHz
+  {keypads_freq        , "FREQ"},    // KM_30MHz
   {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA
   {keypads_plusmin     , "OFFSET"},    // KM_OFFSET
   {keypads_plusmin_unit, "TRIGGER\nLEVEL"},    // KM_TRIGGER
@@ -1860,7 +1860,6 @@ static const menuitem_t menu_sweep_speed[] =
 
 static const menuitem_t menu_settings3[] =
 {
-//  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual lMHz frequency"},
 //  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
  { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
@@ -1902,6 +1901,7 @@ static const menuitem_t menu_settings2[] =
 #ifdef __ULTRA__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
+  { MT_KEYPAD,   KM_30MHZ,      "ACTUAL\n30MHz", "Enter actual l0MHz frequency"},
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -2270,8 +2270,8 @@ static void fetch_numeric_target(void)
     uistat.value = setting.noise;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
-  case KM_10MHZ:
-    uistat.value = config.setting_frequency_10mhz;
+  case KM_30MHZ:
+    uistat.value = config.setting_frequency_30mhz;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
   case KM_OFFSET:
@@ -2405,8 +2405,8 @@ set_numeric_value(void)
   case KM_NOISE:
     set_noise(uistat.value);
     break;
-  case KM_10MHZ:
-    set_10mhz(uistat.value);
+  case KM_30MHZ:
+    set_30mhz(uistat.value);
     break;
   case KM_OFFSET:
     set_offset(uistat.value);

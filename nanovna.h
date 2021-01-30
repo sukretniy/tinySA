@@ -263,6 +263,7 @@ void set_R(int f);
 void set_step_delay(int t);
 void set_offset_delay(int t);
 void set_repeat(int);
+void clear_frequency_cache(void);
 void set_level_sweep(float);
 void set_level(float);
 void set_sweep_time_us(uint32_t);
@@ -304,7 +305,7 @@ void set_attack(int);
 void set_noise(int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
-void set_10mhz(uint32_t f);
+void set_30mhz(uint32_t f);
 void set_modulation(int);
 void set_modulation_frequency(int);
 int search_maximum(int m, uint32_t center, int span);
@@ -549,7 +550,7 @@ typedef struct config {
   uint32_t correction_frequency[CORRECTION_POINTS];
   float    correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
-  uint32_t  setting_frequency_10mhz;
+  uint32_t  setting_frequency_30mhz;
 
   uint16_t gridlines;
   uint16_t hambands;
@@ -859,7 +860,7 @@ typedef struct setting
 
 extern setting_t setting;
 
-extern int setting_frequency_10mhz;
+//extern int setting_frequency_30mhz;
 void reset_settings(int m);
 
 
