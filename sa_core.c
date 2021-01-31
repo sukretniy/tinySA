@@ -90,10 +90,10 @@ void update_min_max_freq(void)
     break;
   case M_GENHIGH:
     if (high_out_adf4350) {
-      minFreq =  135000000;
+      minFreq =  136000000;
       maxFreq = 4290000000U;
     } else {
-      minFreq =  850000000;
+      minFreq =  136000000;
       maxFreq = 1150000000U;
     }
     break;
@@ -2468,6 +2468,9 @@ modulation_again:
       pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
 #endif
 #ifdef __SI4463__
+      if (real_old_freq[SI4463_RX] == 0)
+        pureRSSI = 0;
+      else
         pureRSSI = Si446x_RSSI();
 #endif
 //#define __DEBUG_FREQUENCY_SETTING__

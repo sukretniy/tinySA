@@ -532,8 +532,26 @@ VNA_SHELL_FUNCTION(cmd_d)
   (void) argc;
   (void) argv;
   int32_t a = my_atoi(argv[0]);
-  setting.lo_drive=a;
-  dirty = true;
+  int32_t d;
+  if (argc == 2)
+    d = my_atoi(argv[1]);
+  else {
+    d = a;
+    a = 2;
+  }
+  switch (a) {
+  case 1:
+    SI4463_set_output_level(d);
+    break;
+  case 2:
+    ADF4351_drive (d);
+    break;
+  case 3:
+    ADF4351_aux_drive(d);
+    break;
+  }
+//  setting.lo_drive=a;
+//  dirty = true;
 }
 
 #if 0

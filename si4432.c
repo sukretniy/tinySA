@@ -2362,30 +2362,29 @@ static int refresh_count = 0;
 uint32_t SI4463_set_freq(uint32_t freq)
 {
 //  SI4463_set_gpio(3,GPIO_HIGH);
-  int S = 4 ;               // Aprox 100 Hz channels
+  int S = 4 ;               // Approx 100 Hz channels
   SI4463_channel = 0;
-  if (freq >= 822000000 && freq <= 1140000000)         {       // till 1140MHz
+  if (freq >= 822000000 && freq <= 1130000000)         {       // 822 to 1130MHz
     SI4463_band = 0;
     SI4463_outdiv = 4;
-#if 0       // band 4 does not function
-  } else if (freq >= 568000000 && freq <= 758000000 ) {    // works till 758MHz
-    SI4463_band = 4;
-    SI4463_outdiv = 6;
-#endif
-  } else if (freq >= 420000000 && freq <= 568000000) {    // works till 568MHz
+  } else if (freq >= 411000000 && freq <= 566000000) {    // 411 to  568MHz
     SI4463_band = 2;
     SI4463_outdiv = 8;
-  } else if (freq >= 329000000 && freq <= 454000000) {    // works till 454MHz
+  } else if (freq >= 329000000 && freq <= 454000000) {    // 329 to 454MHz
     SI4463_band = 1;
     SI4463_outdiv = 10;
-  } else if (freq >= 274000000 && freq <= 339000000) {    // to 339
+  } else if (freq >= 274000000 && freq <= 378000000) {    // 274 to 378
     SI4463_band = 3;
     SI4463_outdiv = 12;
-  } else if (freq >= 136000000 && freq <= 190000000){ // 136 { // To 190
+  } else if (freq >= 137000000 && freq <= 189000000){ // 137 to 189
     SI4463_band = 5;
     SI4463_outdiv = 24;
-  }
-  if (SI4463_band == -1)
+#if 0                           // Band 4, 6 and 7 do not function
+  } else if (freq >= 137000000 && freq <= 189000000){ // 220 to 266
+    SI4463_band = 4;
+    SI4463_outdiv = 12;
+#endif
+  } else
     return 0;
   if (SI4463_offset_active) {
     si_set_offset(0);
