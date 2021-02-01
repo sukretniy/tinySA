@@ -115,7 +115,8 @@ void reset_settings(int m)
   setting.measurement = M_OFF;
   setting.frequency_IF = DEFAULT_IF;
   setting.auto_IF = true;
-  setting.offset = 0.0;
+  set_offset(0.0);  // This also updates the help text!!!!!
+  //setting.offset = 0.0;
   setting.trigger = T_AUTO;
   setting.trigger_direction = T_UP;
   setting.trigger_mode = T_MID;
@@ -480,7 +481,7 @@ void set_level(float v)     // Set the output level in dB  in high/low output
 {
   if (setting.mode == M_GENHIGH) {
     int d = 0;
-    while (drive_dBm[d] < v - 1 && d < 16)
+    while (drive_dBm[d] < v - 1 && d < 15)          // Do not exceed array size
       d++;
     if (d == 8 && v < -12)  // Round towards closest level
       d = 7;
@@ -492,6 +493,14 @@ void set_level(float v)     // Set the output level in dB  in high/low output
   dirty = true;
 }
 
+float get_level(void)
+{
+  if (setting.mode == M_GENHIGH) {
+    return drive_dBm[setting.lo_drive];
+  } else {
+    return get_attenuation();
+  }
+}
 void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
 {
   if (setting.mode == M_GENLOW) {
@@ -914,7 +923,13 @@ extern char low_level_help_text[12];
 void set_offset(float offset)
 {
   setting.offset = offset;
-  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", -76 + (int)offset, -6 + (int)offset);
+  int min,max;
+  if (setting.mode == M_GENLOW) {
+    min = -76; max = -6;
+  } else {
+    min = -38; max = +13;
+  }
+  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", min + (int)offset, max + (int)offset);
   force_set_markmap();
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
 }

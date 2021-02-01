@@ -75,7 +75,7 @@
 #define MARKER_COUNT    4
 
 #define TRACES_MAX 3
-#define TRACE_AGE       3
+//#define TRACE_AGE       3
 #define TRACE_ACTUAL    2
 #define TRACE_STORED    1
 #define TRACE_TEMP      0
@@ -216,6 +216,7 @@ void toggle_below_IF(void);
 int get_refer_output(void);
 void set_attenuation(float);
 float get_attenuation(void);
+float get_level(void);
 void set_harmonic(int);
 //extern int setting.harmonic;
 int search_is_greater(void);

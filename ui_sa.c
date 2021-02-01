@@ -406,7 +406,7 @@ enum {
   KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_10MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
-  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
+  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION, KM_HIGHOUTLEVEL,
 #if 0
   KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
 #endif
@@ -444,6 +444,7 @@ static const struct {
   {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
   {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
   {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
+  {keypads_plusmin     , "LEVEL"},    // KM_HIGHOUTLEVEL
 #if 0
   {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
@@ -458,6 +459,7 @@ ui_slider_t ui_sliders [] =
  { KM_CENTER,       true, 0, 1000000,   0,          350000000,  M_GENLOW},
  { KM_CENTER,       true, 0, 1000000,   240000000,  960000000,  M_GENHIGH},
  { KM_LOWOUTLEVEL,  false,0, 1,         -76,        -6,         M_GENLOW},
+ { KM_HIGHOUTLEVEL, false,0, 1,         -38,        +6,         M_GENHIGH},
 };
 #endif
 
@@ -747,6 +749,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
 //  draw_cal_status();
 }
 
+#if 0
 static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   (void)item;
   (void)data;
@@ -756,6 +759,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   }
   menu_push_submenu(menu_drive_wide);
 }
+#endif
 
 #ifdef __SPUR__
 static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
@@ -1438,6 +1442,7 @@ static const menuitem_t menu_lo_drive[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+#if 0
 static const menuitem_t menu_drive_wide3[] = {
  { MT_FORM | MT_ADV_CALLBACK, 5, "%+ddBm",   menu_lo_drive_acb},
  { MT_FORM | MT_ADV_CALLBACK, 4, "%+ddBm",   menu_lo_drive_acb},
@@ -1470,6 +1475,7 @@ static const menuitem_t menu_drive_wide[] = {
   { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
+#endif
 
 static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
@@ -1511,7 +1517,8 @@ static const menuitem_t  menu_lowoutputmode[] = {
 static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         "240MHz..960MHz"},
-  { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
+//  { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
+  { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
@@ -2089,7 +2096,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", ((int32_t)uistat.value));
     break;
   case KM_LOWOUTLEVEL:
-    uistat.value = get_attenuation();           // compensation for dB offset during low output mode
+    uistat.value = get_level();           // compensation for dB offset during low output mode
     int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
     if (end_level < -76)
       end_level = -76;
@@ -2101,6 +2108,11 @@ static void fetch_numeric_target(void)
       plot_printf(uistat.text, sizeof uistat.text, "%d to %ddBm", ((int32_t)uistat.value), end_level);
     else
       plot_printf(uistat.text, sizeof uistat.text, "%ddBm", ((int32_t)uistat.value));
+    break;
+  case KM_HIGHOUTLEVEL:
+    uistat.value = get_level();           // compensation for dB offset during low output mode
+    uistat.value += setting.offset;
+    plot_printf(uistat.text, sizeof uistat.text, "%ddBm", ((int32_t)uistat.value));
     break;
   case KM_DECAY:
     uistat.value = setting.decay;
@@ -2219,6 +2231,9 @@ set_numeric_value(void)
     set_rx_drive(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
+    set_level(uistat.value - setting.offset);
+    break;
+  case KM_HIGHOUTLEVEL:
     set_level(uistat.value - setting.offset);
     break;
   case KM_DECAY:
