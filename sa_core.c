@@ -1,4 +1,5 @@
-/* This is free software; you can redistribute it and/or modify
+/*
+ * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
@@ -144,7 +145,8 @@ void reset_settings(int m)
   setting.measurement = M_OFF;
   setting.frequency_IF = config.frequency_IF1;
   setting.auto_IF = true;
-  setting.offset = 0.0;
+  set_offset(0.0);  // This also updates the help text!!!!!
+  //setting.offset = 0.0;
   setting.trigger = T_AUTO;
   setting.trigger_direction = T_UP;
   setting.trigger_mode = T_MID;
@@ -559,6 +561,14 @@ void set_level(float v)     // Set the output level in dB  in high/low output
   dirty = true;
 }
 
+float get_level(void)
+{
+  if (setting.mode == M_GENHIGH) {
+    return drive_dBm[setting.lo_drive];
+  } else {
+    return get_attenuation();
+  }
+}
 void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
 {
   if (setting.mode == M_GENLOW) {
@@ -999,7 +1009,13 @@ extern char low_level_help_text[12];
 void set_offset(float offset)
 {
   setting.offset = offset;
-  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", POWER_OFFSET - 70  + (int)offset, POWER_OFFSET + (int)offset);
+  int min,max;
+  if (setting.mode == M_GENLOW) {
+    min = -76; max = -6;
+  } else {
+    min = -38; max = +13;
+  }
+  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", min + (int)offset, max + (int)offset);
   force_set_markmap();
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
 }
@@ -1847,13 +1863,19 @@ static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };
 #define HWD  48
 static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in NFM
 {
- { 2*LND,(int)( 3.5*LND ), 4*LND, (int)(3.5*LND), 2*LND, (int)(0.5*LND), 0, (int)(0.5*LND)},
- { 0*LWD,(int)( 1.5*LWD ), 2*LWD, (int)(1.5*LWD), 0*LWD, (int)(-1.5*LWD), (int)-2*LWD, (int)(-1.5*LWD)},
- { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},
- { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},
+ { 2*LND,(int)( 3.5*LND ), 4*LND, (int)(3.5*LND), 2*LND, (int)(0.5*LND), 0, (int)(0.5*LND)},                // Low range, NFM
+ { 0*LWD,(int)( 1.5*LWD ), 2*LWD, (int)(1.5*LWD), 0*LWD, (int)(-1.5*LWD), (int)-2*LWD, (int)(-1.5*LWD)},    // Low range, WFM
+ { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},                // High range, NFM
+ { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, WFM
 };    // narrow FM modulation avoid sign changes
 
-static const int fm_modulation_offset[4] = { LND*625/2, 0, LND*625/2, 0};
+static const int fm_modulation_offset[4] =
+{
+   85000,
+   80000,
+  165000,
+  160000
+};
 
 
 deviceRSSI_t age[POINTS_COUNT];     // Array used for 1: calculating the age of any max and 2: buffer for fast sweep RSSI values;
@@ -3306,7 +3328,7 @@ marker_search_right_min(int from)
 // -------------------- Self testing -------------------------------------------------
 
 enum {
-  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN,
+  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN, TC_DISPLAY,
 };
 
 enum {
@@ -3346,20 +3368,21 @@ const test_case_t test_case [] =
  {TC_FLAT,      TP_10MHZEXTRA,  10,     8,      -18,    9,     -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
- {TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    145,     -60 },      // 11 Measure atten step accuracy
-#define TEST_END 11
+ {TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
+ {TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    145,     -60 },      // 12 Measure atten step accuracy
+#define TEST_END 12
  {TC_END,       0,              0,      0,      0,      0,      0},
-#define TEST_POWER  12
+#define TEST_POWER  13
  {TC_MEASURE,   TP_30MHZ,       30,     7,      CAL_LEVEL,   10,     -55 },      // 12 Measure power level and noise
  {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
  {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
  {TC_END,       0,              0,      0,      0,      0,      0},
-#define TEST_RBW    16
+#define TEST_RBW    17
  {TC_MEASURE,   TP_30MHZ,       30,     1,      CAL_LEVEL,    10,     -60 },      // 16 Measure RBW step time
  {TC_END,       0,              0,      0,      0,      0,      0},
  {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
  {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
-#define TEST_ATTEN    20
+#define TEST_ATTEN    21
  {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 }      // 20 Measure atten step accuracy
 };
 
@@ -3528,6 +3551,16 @@ int validate_atten(int i) {
   return(TS_PASS);
 }
 
+int validate_display(int tc)
+{
+  test_fail_cause[tc] = "Display ";
+  if (!display_test()) {
+    return(TS_FAIL);
+  }
+  test_fail_cause[tc] = "";
+  return(TS_PASS);
+}
+
 int validate_above(int tc) {
   int status = TS_PASS;
   for (int j = 0; j < setting._sweep_points; j++) {
@@ -3583,6 +3616,9 @@ int test_validate(int i)
     break;
   case TC_ATTEN:
     current_test_status = validate_atten(i);
+    break;
+  case TC_DISPLAY:
+    current_test_status = validate_display(i);
     break;
   }
 

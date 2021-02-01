@@ -406,7 +406,7 @@ enum {
   KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
   KM_30MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
-  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
+  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION, KM_HIGHOUTLEVEL,
   KM_R,KM_MOD,KM_CP,
 #if 0
   KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
@@ -447,6 +447,7 @@ static const struct {
   {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
   {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
   {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
+  {keypads_plusmin     , "LEVEL"},    // KM_HIGHOUTLEVEL
 #if 0
   {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
@@ -464,7 +465,8 @@ ui_slider_t ui_sliders [] =
 {
  { KM_CENTER,       true, 0, 1000000,   0,          350000000,  M_GENLOW},
  { KM_CENTER,       true, 0, 1000000,   240000000,  960000000,  M_GENHIGH},
- { KM_LOWOUTLEVEL,  false,0, 1,         POWER_OFFSET - 70,        POWER_OFFSET,         M_GENLOW},
+ { KM_LOWOUTLEVEL,  false,0, 1,         -76,        -6,         M_GENLOW},
+ { KM_HIGHOUTLEVEL, false,0, 1,         -38,        +6,         M_GENHIGH},
 };
 #endif
 
@@ -784,6 +786,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_mixer_drive_acb)
 //  draw_cal_status();
 }
 
+#if 0
 static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   (void)item;
   (void)data;
@@ -797,6 +800,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
   }
   menu_push_submenu(menu_drive_wide);
 }
+#endif
 
 
 
@@ -1554,6 +1558,7 @@ static const menuitem_t menu_mixer_drive[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+#if 0
 static const menuitem_t menu_drive_wide3[] = {
  { MT_FORM | MT_ADV_CALLBACK, 5, "%+ddBm",   menu_lo_drive_acb},
  { MT_FORM | MT_ADV_CALLBACK, 4, "%+ddBm",   menu_lo_drive_acb},
@@ -1586,6 +1591,7 @@ static const menuitem_t menu_drive_wide[] = {
   { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
+#endif
 
 static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
@@ -1607,8 +1613,8 @@ static const menuitem_t  menu_sweep[] = {
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
-char low_level_help_text[12] = "-88..-18";
-char center_text[10] = "FREQ: %s";
+char low_level_help_text[12] = "-76..-6";
+char center_text[18] = "FREQ: %s";
 
 static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
@@ -1630,14 +1636,10 @@ static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         "240MHz..960MHz"},
-  { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
-#if 0
+//  { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
+  { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
-  { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
-  { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
-#else
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
-#endif
   { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "EXTERNAL AMP: %s",          "-100..+100"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
@@ -1921,12 +1923,12 @@ static const menuitem_t menu_settings[] =
 };
 
 static const menuitem_t menu_measure2[] = {
-#ifdef __LINEARITY__
-  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
-#endif
   { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_THD,          "THD",           menu_measure_acb},
+#ifdef __LINEARITY__
+  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+#endif
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -2239,7 +2241,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3ddB", ((int32_t)uistat.value));
     break;
   case KM_LOWOUTLEVEL:
-    uistat.value = get_attenuation();           // compensation for dB offset during low output mode
+    uistat.value = get_level();           // compensation for dB offset during low output mode
     int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
     if (end_level < POWER_OFFSET - 70)
       end_level = POWER_OFFSET - 70;
@@ -2251,6 +2253,11 @@ static void fetch_numeric_target(void)
       plot_printf(uistat.text, sizeof uistat.text, "%d to %ddBm", ((int32_t)uistat.value), end_level);
     else
       plot_printf(uistat.text, sizeof uistat.text, "%ddBm", ((int32_t)uistat.value));
+    break;
+  case KM_HIGHOUTLEVEL:
+    uistat.value = get_level();           // compensation for dB offset during low output mode
+    uistat.value += setting.offset;
+    plot_printf(uistat.text, sizeof uistat.text, "%ddBm", ((int32_t)uistat.value));
     break;
   case KM_DECAY:
     uistat.value = setting.decay;
@@ -2388,6 +2395,9 @@ set_numeric_value(void)
     set_rx_drive(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
+    set_level(uistat.value - setting.offset);
+    break;
+  case KM_HIGHOUTLEVEL:
     set_level(uistat.value - setting.offset);
     break;
   case KM_DECAY:
