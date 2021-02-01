@@ -1756,6 +1756,7 @@ static const uint8_t check_box[] = {
   _BMP16(0b0000011110000000),
 };
 static const char *step_text[5] = {"-10dB", "-1dB", "set", "+1dB", "+10dB"};
+static char step_text_freq[5][10] = { "-100MHz", "-10MHz", "set", "+10MHz", "+100MHz" };
 
 static void
 draw_menu_buttons(const menuitem_t *menu)
@@ -1831,15 +1832,25 @@ draw_menu_buttons(const menuitem_t *menu)
       if (MT_MASK(menu[i].type) == MT_KEYPAD) {
         if (menu[i].data == KM_CENTER) {
           local_slider_positions =  LCD_WIDTH/2+setting.slider_position;
-        draw_slider:
-           blit8BitWidthBitmap(local_slider_positions - 4, y, 7, 5, slider_bitmap);
+          plot_printf(step_text_freq[0], sizeof step_text_freq[0], "-%3.1qHz", setting.slider_span);
+          plot_printf(step_text_freq[1], sizeof step_text_freq[1], "-%3.1qHz", setting.slider_span/10);
+          plot_printf(step_text_freq[3], sizeof step_text_freq[3], "+%3.1qHz", setting.slider_span/10);
+          plot_printf(step_text_freq[4], sizeof step_text_freq[4], "+%3.1qHz", setting.slider_span);
+          for (int i=0; i <= 4; i++) {
+            ili9341_drawstring(step_text_freq[i], button_start+12 + i * MENU_FORM_WIDTH/5, y+button_height-9);
+          }
+          goto draw_divider;
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
           local_slider_positions = ((get_attenuation() + 76 ) * (MENU_FORM_WIDTH-8)) / 70 + OFFSETX+4;
-          for (int i=0; i <= 4; i++)
+          for (int i=0; i <= 4; i++) {
             ili9341_drawstring(step_text[i], button_start+12 + i * MENU_FORM_WIDTH/5, y+button_height-9);
-          for (int i = 1; i <= 4; i++)
+          }
+        draw_divider:
+          for (int i = 1; i <= 4; i++) {
             ili9341_line(button_start + i * MENU_FORM_WIDTH/5, y+button_height-9, button_start + i * MENU_FORM_WIDTH/5, y+button_height);
-          goto draw_slider;
+          }
+        draw_slider:
+          blit8BitWidthBitmap(local_slider_positions - 4, y, 7, 5, slider_bitmap);
         } else if (menu[i].data == KM_HIGHOUTLEVEL) {
           local_slider_positions = ((menu_drive_value[setting.lo_drive] + 38 ) * (MENU_FORM_WIDTH-8)) / 51 + OFFSETX+4;
           goto draw_slider;
@@ -1908,7 +1919,7 @@ void check_frequency_slider(uint32_t slider_freq)
 static void
 menu_select_touch(int i, int pos)
 {
-  int step = 0;
+  int32_t step = 0;
   int do_exit = false;
   selection = i;
   draw_menu();
@@ -2049,7 +2060,28 @@ menu_select_touch(int i, int pos)
       uistat.value = get_level() + step;
       do_exit = true;
       goto apply_step;
+    } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER) {
+      switch (pos) {
+      case 0:
+        step = -setting.slider_span;
+        break;
+      case 1:
+        step = -setting.slider_span/10;
+        break;
+      case 2:
+        goto nogo;
+      case 3:
+        step = setting.slider_span/10;
+        break;
+      case 4:
+        step = setting.slider_span;
+        break;
+      }
+      uistat.value = get_sweep_frequency(ST_CENTER) + step;
+      do_exit = true;
+      goto apply_step;
     }
+
 nogo:
     setting.slider_position = 0;            // Reset slider when entering frequency
     prev_touch_button = -1;
