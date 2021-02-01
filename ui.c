@@ -1995,7 +1995,7 @@ menu_select_touch(int i, int pos)
               uistat.value = setting.slider_span;
               set_keypad_value(keypad);
 #if 1
-              plot_printf(center_text, sizeof center_text, "WIDTH: %%s");
+              plot_printf(center_text, sizeof center_text, "RANGE: %%s");
 #else
               center_text[0] = 'S';
               center_text[1] = 'P';
