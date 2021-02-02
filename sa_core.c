@@ -1011,7 +1011,7 @@ void set_offset(float offset)
   setting.offset = offset;
   int min,max;
   if (setting.mode == M_GENLOW) {
-    min = -76; max = -6;
+    min = POWER_OFFSET - POWER_RANGE; max = POWER_OFFSET;
   } else {
     min = -38; max = +13;
   }
@@ -1181,7 +1181,7 @@ void calculate_correction(void)
 
 pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
-  pureRSSI_t cv;
+  pureRSSI_t cv = 0;
   if (setting.extra_lna) {
     if (f > 2100000000U) {
       cv = float_TO_PURE_RSSI(+13);
@@ -1854,6 +1854,8 @@ static int modulation_counter = 0;
 
 #define MODULATION_STEPS    8
 static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };         // AM modulation
+
+#ifdef TINYSA3
 //
 //  Offset is 156.25Hz when below 600MHz and 312.5 when above.
 //
@@ -1861,6 +1863,17 @@ static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };
 #define HND  8
 #define LWD  96 // Total WFM deviation is LWD * 4 * 156.25 = 30kHz when below 600MHz
 #define HWD  48
+#endif
+#ifdef TINYSA4
+//
+//  Offset is 14.4Hz when below 600MHz and 28.8 when above.
+//
+#define LND  96
+#define HND  48
+#define LWD  512
+#define HWD  256
+#endif
+
 static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in NFM
 {
  { 2*LND,(int)( 3.5*LND ), 4*LND, (int)(3.5*LND), 2*LND, (int)(0.5*LND), 0, (int)(0.5*LND)},                // Low range, NFM
@@ -1871,10 +1884,10 @@ static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in 
 
 static const int fm_modulation_offset[4] =
 {
-   85000,
-   80000,
-  165000,
-  160000
+   5000, //85000,
+   0, //80000,
+   -2700, //165000,
+  0, //160000
 };
 
 
@@ -2035,7 +2048,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
           modulation_delay += config.cor_nfm;  // -17 default
           // modulation_index = 0; // default value
         }
-        if ((setting.mode == M_GENLOW  && f > ((uint32_t)480000000) - config.frequency_IF1) ||
+        if ((setting.mode == M_GENLOW) ||
             (setting.mode == M_GENHIGH  && f > ((uint32_t)480000000) ) )
           modulation_index += 2;
         current_fm_modulation = (int *)fm_modulation[modulation_index];
@@ -2060,6 +2073,9 @@ modulation_again:
       int offset = current_fm_modulation[modulation_counter];
       SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, (offset & 0xff ), ((offset >> 8) & 0x03 ));  // Use frequency hopping channel for FM modulation
 //      SI4432_Write_Byte(SI4432_FREQ_OFFSET2, );  // Use frequency hopping channel for FM modulation
+#endif
+#ifdef __SI4468__
+      si_fm_offset(current_fm_modulation[modulation_counter]);
 #endif
     }
     modulation_counter++;
@@ -2253,7 +2269,7 @@ modulation_again:
           ADF4351_R_counter(setting.R);
 
 
-        if (true) {         // Avoid 72MHz spur
+        if (false) {         // Avoid 72MHz spur
 #define SPUR    2 * 72000000
           uint32_t tf = ((lf + actual_rbw_x10*100) / SPUR) * SPUR;
 #undef STM32_USBPRE
@@ -2874,7 +2890,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #endif
 #endif
   // -------------------------- auto attenuate ----------------------------------
-#define AUTO_TARGET_LEVEL   -25
+#define AUTO_TARGET_LEVEL   -30
 #define AUTO_TARGET_WINDOW  2
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate

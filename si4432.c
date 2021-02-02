@@ -44,8 +44,13 @@
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV64
-#define SI4432_SPI_SPEED   SPI_BR_DIV32
-//#define SI4432_SPI_SPEED   SPI_BR_DIV16
+//#define SI4432_SPI_SPEED   SPI_BR_DIV32
+#define SI4432_SPI_SPEED   SPI_BR_DIV8
+
+//#define ADF_SPI_SPEED   SPI_BR_DIV64
+//#define ADF_SPI_SPEED   SPI_BR_DIV32
+#define ADF_SPI_SPEED   SPI_BR_DIV8
+
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -692,7 +697,7 @@ pureRSSI_t SI4432_RSSI(uint32_t i, int s)
   do{
     RSSI_RAW += DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
     if (--i == 0) break;
-    my_microsecond_delay(100);
+//    my_microsecond_delay(100);
   }while(1);
 
   if (setting.repeat > 1)
@@ -1075,6 +1080,7 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
 void ADF4351_Set(int channel)
 {
   set_SPI_mode(SPI_MODE_SI);
+  SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
 //  my_microsecond_delay(1);
   palClearLine(ADF4351_LE[channel]);
 //  my_microsecond_delay(1);
@@ -1351,6 +1357,7 @@ void ADF4351_enable_out(int s)
 
 int SI4463_frequency_changed = false;
 int SI4463_offset_changed = false;
+int SI4463_offset_value = 0;
 
 static int SI4463_band = -1;
 static int64_t SI4463_outdiv = -1;
@@ -1866,7 +1873,33 @@ void si_set_offset(int16_t offset)
   //   MODEM_FREQ_OFFSET2 - Low byte of the offset
   //
   // #define RF_MODEM_RSSI_COMP_1 0x11, 0x20, 0x01, 0x4E, 0x40
+  SI4463_offset_value = offset;
+  uint8_t data[] = {
+      0x11,
+      0x20,
+      0x02,
+      0x0d,
+      (uint8_t) ((offset>>8) & 0xff),
+      (uint8_t) ((offset) & 0xff)
+  };
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+  SI4463_offset_changed = true;
+  SI4463_offset_active = (offset != 0);
+}
 
+void si_fm_offset(int16_t offset)
+{
+  // Set properties:           MODEM_FREQ_OFFSET
+  // Number of properties:     2
+  // Group ID:                 0x20
+  // Start ID:                 0x0d
+  // Default values:           0x00, 0x00
+  // Descriptions:
+  //   MODEM_FREQ_OFFSET1 - High byte of the offset
+  //   MODEM_FREQ_OFFSET2 - Low byte of the offset
+  //
+  // #define RF_MODEM_RSSI_COMP_1 0x11, 0x20, 0x01, 0x4E, 0x40
+  offset = SI4463_offset_value + offset;
   uint8_t data[] = {
       0x11,
       0x20,
@@ -1975,7 +2008,7 @@ int16_t Si446x_RSSI(void)
 #endif
       RSSI_RAW_ARRAY[--j] = data[2];
       if (j == 0) break;
-      my_microsecond_delay(20);
+//      my_microsecond_delay(20);
     }while(1);
 #if SAMPLE_COUNT == 3
     int t;
@@ -2000,7 +2033,7 @@ int16_t Si446x_RSSI(void)
     RSSI_RAW += DEVICE_TO_PURE_RSSI(RSSI_RAW_ARRAY[0]);
 #endif
     if (--i <= 0) break;
-    my_microsecond_delay(100);
+//    my_microsecond_delay(100);
   }while(1);
 
   if (setting.repeat > 1)

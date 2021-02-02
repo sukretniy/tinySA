@@ -221,6 +221,7 @@ extern const char *info_about[];
 #define SI_DRIVE_STEP   0.5             // Power step per step in drive level
 #define SWITCH_ATTENUATION  34
 #define POWER_OFFSET    -18             // Max level with all enabled
+#define POWER_RANGE     70
 #define MAX_DRIVE   16
 #define MIN_DRIVE   8
 #else

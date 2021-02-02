@@ -408,7 +408,7 @@ enum {
   KM_30MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION, KM_HIGHOUTLEVEL,
   KM_R,KM_MOD,KM_CP,
-#if 0
+#if 1
   KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
 #endif
   KM_ATTACK,
@@ -448,7 +448,7 @@ static const struct {
   {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
   {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
   {keypads_plusmin     , "LEVEL"},    // KM_HIGHOUTLEVEL
-#if 0
+#if 1
   {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
   {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
@@ -747,7 +747,7 @@ const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7
 #else
 const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
 #endif
-
+#if 0
 static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
 {
   (void)item;
@@ -766,7 +766,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
 //  ui_mode_normal();
 //  draw_cal_status();
 }
-
+#endif
 static UI_FUNCTION_ADV_CALLBACK(menu_mixer_drive_acb)
 {
   (void)item;
@@ -1860,17 +1860,27 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t menu_settings3[] =
+static const menuitem_t menu_settings4[] =
 {
-//  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
- { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
-  { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
-#if 0                                                                           // only used during development
+#if 1                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
   { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
 #endif
+#ifdef __HARMONIC__
+  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
+#endif
+  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
+ { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_settings3[] =
+{
+//  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+ { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
+  { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
@@ -1880,10 +1890,8 @@ static const menuitem_t menu_settings3[] =
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
-#ifdef __HARMONIC__
-  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
-#endif
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings4},
+ { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -2445,18 +2453,21 @@ set_numeric_value(void)
   case KM_MODULATION:
     set_modulation_frequency((int)uistat.value);
     break;
-#if 0
+#if 1
   case KM_COR_AM:
-    config.cor_am =(int)uistat.value;
+    config.cor_am = -(int)uistat.value;
     config_save();
+    dirty = true;
     break;
   case KM_COR_WFM:
-    config.cor_wfm =(int)uistat.value;
+    config.cor_wfm = -(int)uistat.value;
     config_save();
+    dirty = true;
     break;
   case KM_COR_NFM:
-    config.cor_nfm =(int)uistat.value;
+    config.cor_nfm = -(int)uistat.value;
     config_save();
+    dirty = true;
     break;
 #endif
   }

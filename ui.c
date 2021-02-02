@@ -1883,7 +1883,7 @@ draw_menu_buttons(const menuitem_t *menu)
           }
           goto draw_divider;
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
-          local_slider_positions = ((get_attenuation() + 76 ) * (MENU_FORM_WIDTH-8)) / 70 + OFFSETX+4;
+          local_slider_positions = ((get_attenuation() - POWER_OFFSET + POWER_RANGE ) * (MENU_FORM_WIDTH-8)) / POWER_RANGE + OFFSETX+4;
           for (int i=0; i <= 4; i++) {
             ili9341_drawstring(step_text[i], button_start+12 + i * MENU_FORM_WIDTH/5, y+button_height-9);
           }
@@ -2060,7 +2060,7 @@ menu_select_touch(int i, int pos)
               check_frequency_slider(slider_freq);
          }
         } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
-            uistat.value =  setting.offset + (touch_x - OFFSETX+4) *( -6 - -76) / (MENU_FORM_WIDTH-8) + -76;
+            uistat.value =  setting.offset + (touch_x - OFFSETX+4) *( POWER_RANGE) / (MENU_FORM_WIDTH-8) + POWER_OFFSET - POWER_RANGE;
          apply_step:
             set_keypad_value(keypad);
          apply:

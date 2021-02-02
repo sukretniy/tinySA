@@ -841,15 +841,15 @@ VNA_SHELL_FUNCTION(cmd_release)
 
 VNA_SHELL_FUNCTION(cmd_capture)
 {
-// read pixel count at one time (PART*2 bytes required for read buffer)
+  // read pixel count at one time (PART*2 bytes required for read buffer)
   int i, y;
-#if 0
-  int m = generic_option_cmd("capture", "off|on", argc, argv[0]);
-  if (m>=0) {
-    auto_capture = m;
-    return;
+  if (argc == 1) {
+    int m = generic_option_cmd("capture", "off|on", argc, argv[0]);
+    if (m>=0) {
+      auto_capture = m;
+      return;
+    }
   }
-#endif
 #if SPI_BUFFER_SIZE < (2*LCD_WIDTH)
 #error "Low size of spi_buffer for cmd_capture"
 #endif
@@ -959,9 +959,9 @@ config_t config = {
  // .correction_value = { 0, 0, 0, 0, 0.0, 1.5, 3, 6, 10, 10 },
 #endif
   .setting_frequency_30mhz = 30000000,
-  .cor_am = -14,
-  .cor_wfm = -17,
-  .cor_nfm = -17,
+  .cor_am = -5,
+  .cor_wfm = -55,
+  .cor_nfm = -55,
   .ultra = false,
 };
 

@@ -313,7 +313,6 @@ VNA_SHELL_FUNCTION(cmd_if)
 VNA_SHELL_FUNCTION(cmd_ultra_start)
 {
   if (argc != 1) {
-  usage:
     shell_printf("usage: ultra_start {0..4290M}\r\n%qHz\r\n", config.ultra_threshold);
     return;
   } else {
