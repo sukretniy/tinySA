@@ -448,7 +448,7 @@ void set_modulation(int m)
 
 void set_modulation_frequency(int f)
 {
-  if (100 <= f && f <= 6000) {
+  if (50 <= f && f <= 6000) {
     setting.modulation_frequency = f;
     dirty = true;
   }
@@ -804,8 +804,8 @@ void toggle_tracking(void)
 {
   setting.tracking = !setting.tracking;
   if (setting.tracking) {
-    set_refer_output(2);
-    set_sweep_frequency(ST_CENTER, 10000000);
+    set_refer_output(0);
+    set_sweep_frequency(ST_CENTER, 30000000);
     set_sweep_frequency(ST_SPAN,    5000000);
   } else {
     set_refer_output(-1);
@@ -1108,15 +1108,15 @@ void calculate_step_delay(void)
 #endif
 #ifdef __SI4463__
       if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
-      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
-      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 70; }
-      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 1000; SI4432_offset_delay = 30; spur_gate = 80; }
-      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 1400; SI4432_offset_delay = 500; spur_gate = 80; }
-      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 2500; SI4432_offset_delay = 800; spur_gate = 80; }
-      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 7000; SI4432_offset_delay = 2500; spur_gate = 80; }
-      else                             { SI4432_step_delay = 15000; SI4432_offset_delay =5000; spur_gate = 80; }
+      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 250; SI4432_offset_delay = 100; spur_gate = 50; }
+      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 250; SI4432_offset_delay = 100; spur_gate = 70; }
+      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 80; }
+      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 500; SI4432_offset_delay = 180; spur_gate = 80; }
+      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 900; SI4432_offset_delay = 300; spur_gate = 80; }
+      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 1000; spur_gate = 80; }
+      else                             { SI4432_step_delay = 9000; SI4432_offset_delay =3000; spur_gate = 80; }
 #endif
-      if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabalize
+      if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
       if (setting.fast_speedup >0)
         SI4432_offset_delay = SI4432_step_delay / setting.fast_speedup;
@@ -3380,8 +3380,8 @@ const test_case_t test_case [] =
 #define TEST_SILENCE 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  10,     14,      -20,    27,     -80 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  10,     8,      -18,    9,     -60},       // 8 BPF pass band flatness
+ {TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -20,    27,     -80 },      // 7 BPF loss and stop band
+ {TC_FLAT,      TP_10MHZEXTRA,  30,     8,      -18,    9,     -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
@@ -3680,7 +3680,7 @@ common_silent:
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
     setting.frequency_IF = config.frequency_IF1+1000000;                // Center on SAW filters
-    set_refer_output(2);
+    set_refer_output(0);
     goto common;
   case TP_10MHZ:                              // 10MHz input
     set_mode(M_LOW);

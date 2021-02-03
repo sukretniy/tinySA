@@ -1600,7 +1600,7 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "Narrow FM", menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "Wide FM",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "External",  menu_modulation_acb},
-  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "100Hz..6kHz"},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..6kHz"},
   { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };

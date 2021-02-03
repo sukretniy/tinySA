@@ -45,11 +45,11 @@
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV64
 //#define SI4432_SPI_SPEED   SPI_BR_DIV32
-#define SI4432_SPI_SPEED   SPI_BR_DIV32
+#define SI4432_SPI_SPEED   SPI_BR_DIV16
 
 //#define ADF_SPI_SPEED   SPI_BR_DIV64
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
-#define ADF_SPI_SPEED   SPI_BR_DIV32
+#define ADF_SPI_SPEED   SPI_BR_DIV4
 
 static uint32_t old_spi_settings;
 #else
