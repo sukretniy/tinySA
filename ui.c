@@ -2022,6 +2022,7 @@ menu_select_touch(int i, int pos)
          apply_step:
             set_keypad_value(keypad);
          apply:
+            perform(false, 0, get_sweep_frequency(ST_CENTER), false);
             draw_menu();
 //          }
 //        } else if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
@@ -2076,7 +2077,7 @@ menu_select_touch(int i, int pos)
         step = setting.slider_span;
         break;
       }
-      if (step < 0 && get_sweep_frequency(ST_CENTER) <  -step)
+      if (step < 0 && get_sweep_frequency(ST_CENTER) < (uint32_t)(-step))
         uistat.value = 0;
       else
         uistat.value = get_sweep_frequency(ST_CENTER) + step;
