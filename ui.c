@@ -2022,7 +2022,6 @@ menu_select_touch(int i, int pos)
          apply_step:
             set_keypad_value(keypad);
          apply:
-            perform(false, 0, get_sweep_frequency(ST_CENTER), false);
             draw_menu();
 //          }
 //        } else if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
@@ -2511,7 +2510,7 @@ ui_process_menu(void)
 //activate:
         ensure_selection();
         draw_menu();
-        chThdSleepMilliseconds(100); // Add delay for not move so fast in menu
+        chThdSleepMilliseconds(50); // Add delay for not move so fast in menu
         status = btn_wait_release();
       } while (status != 0);
     }
