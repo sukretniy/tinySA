@@ -1874,10 +1874,10 @@ draw_menu_buttons(const menuitem_t *menu)
       if (MT_MASK(menu[i].type) == MT_KEYPAD) {
         if (menu[i].data == KM_CENTER) {
           local_slider_positions =  LCD_WIDTH/2+setting.slider_position;
-          plot_printf(step_text_freq[0], sizeof step_text_freq[0], "-%3.1qHz", setting.slider_span);
-          plot_printf(step_text_freq[1], sizeof step_text_freq[1], "-%3.1qHz", setting.slider_span/10);
-          plot_printf(step_text_freq[3], sizeof step_text_freq[3], "+%3.1qHz", setting.slider_span/10);
-          plot_printf(step_text_freq[4], sizeof step_text_freq[4], "+%3.1qHz", setting.slider_span);
+          plot_printf(step_text_freq[0], sizeof step_text_freq[0], "-%3.0FHz", (float)setting.slider_span);
+          plot_printf(step_text_freq[1], sizeof step_text_freq[1], "-%3.0FHz", (float)setting.slider_span/10);
+          plot_printf(step_text_freq[3], sizeof step_text_freq[3], "+%3.0FHz", (float)setting.slider_span/10);
+          plot_printf(step_text_freq[4], sizeof step_text_freq[4], "+%3.0FHz", (float)setting.slider_span);
           for (int i=0; i <= 4; i++) {
             ili9341_drawstring(step_text_freq[i], button_start+12 + i * MENU_FORM_WIDTH/5, y+button_height-9);
           }
@@ -2037,7 +2037,7 @@ menu_select_touch(int i, int pos)
               uistat.value = setting.slider_span;
               set_keypad_value(keypad);
 #if 1
-              plot_printf(center_text, sizeof center_text, "WIDTH: %%s");
+              plot_printf(center_text, sizeof center_text, "RANGE: %%s");
 #else
               center_text[0] = 'S';
               center_text[1] = 'P';
@@ -2064,7 +2064,6 @@ menu_select_touch(int i, int pos)
          apply_step:
             set_keypad_value(keypad);
          apply:
-            perform(false, 0, get_sweep_frequency(ST_CENTER), false);
             draw_menu();
 //          }
 //        } else if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
@@ -2119,8 +2118,13 @@ menu_select_touch(int i, int pos)
         step = setting.slider_span;
         break;
       }
-      uistat.value = get_sweep_frequency(ST_CENTER) + step;
+      if (step < 0 && get_sweep_frequency(ST_CENTER) <  -step)
+        uistat.value = 0;
+      else
+        uistat.value = get_sweep_frequency(ST_CENTER) + step;
       do_exit = true;
+      setting.slider_position = 0;                         // reset slider after step
+      check_frequency_slider(uistat.value);
       goto apply_step;
     }
 
@@ -2548,7 +2552,7 @@ ui_process_menu(void)
 //activate:
         ensure_selection();
         draw_menu();
-        chThdSleepMilliseconds(100); // Add delay for not move so fast in menu
+        chThdSleepMilliseconds(50); // Add delay for not move so fast in menu
         status = btn_wait_release();
       } while (status != 0);
     }
