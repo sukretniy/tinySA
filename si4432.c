@@ -45,11 +45,11 @@
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV64
 //#define SI4432_SPI_SPEED   SPI_BR_DIV32
-#define SI4432_SPI_SPEED   SPI_BR_DIV8
+#define SI4432_SPI_SPEED   SPI_BR_DIV32
 
 //#define ADF_SPI_SPEED   SPI_BR_DIV64
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
-#define ADF_SPI_SPEED   SPI_BR_DIV8
+#define ADF_SPI_SPEED   SPI_BR_DIV32
 
 static uint32_t old_spi_settings;
 #else
@@ -1088,6 +1088,7 @@ void ADF4351_Set(int channel)
   for (int i = 5; i >= 0; i--) {
     ADF4351_WriteRegister32(channel, registers[i]);
   }
+  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
 }
 
 #if 0
@@ -1379,9 +1380,9 @@ static void SI4463_set_state(si446x_state_t);
 
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
 
-int SI4463_wait_for_cts(void)
+static int SI4463_wait_for_cts(void)
 {
-  set_SPI_mode(SPI_MODE_SI);
+//  set_SPI_mode(SPI_MODE_SI);
   while (!SI4463_READ_CTS) {
 //    chThdSleepMicroseconds(100);
     my_microsecond_delay(1);
@@ -1390,7 +1391,7 @@ int SI4463_wait_for_cts(void)
 }
 
 
-void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
+static void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 {
   set_SPI_mode(SPI_MODE_SI);
   SI_CS_LOW;
@@ -1400,7 +1401,7 @@ void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
   SI_CS_HIGH;
 }
 
-void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
+static void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 {
   set_SPI_mode(SPI_MODE_SI);
   SI_CS_LOW;
@@ -1412,7 +1413,7 @@ void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
 }
 
 
-uint8_t SI4463_read_byte( uint8_t ADR )
+static uint8_t SI4463_read_byte( uint8_t ADR )
 {
   uint8_t DATA ;
   set_SPI_mode(SPI_MODE_SI);
@@ -1423,14 +1424,15 @@ uint8_t SI4463_read_byte( uint8_t ADR )
   return DATA ;
 }
 
-uint8_t SI4463_get_response(void* buff, uint8_t len)
+static uint8_t SI4463_get_response(void* buff, uint8_t len)
 {
     uint8_t cts = 0;
-    set_SPI_mode(SPI_MODE_SI);
+//    set_SPI_mode(SPI_MODE_SI);
     cts = SI4463_READ_CTS;
     if (!cts) {
       return false;
     }
+//    __disable_irq();
     SI_CS_LOW;
     shiftOut( SI446X_CMD_READ_CMD_BUFF );
     cts = (shiftIn() == 0xFF);
@@ -1442,10 +1444,11 @@ uint8_t SI4463_get_response(void* buff, uint8_t len)
         }
     }
     SI_CS_HIGH;
+//    __enable_irq();
     return cts;
 }
 
-uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout)
+static uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout)
 {
   uint16_t timeout = 40000;
   while(!SI4463_get_response(buff, len))
@@ -1471,12 +1474,14 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
     {
 //   SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
 
+//    __disable_irq();
     SI_CS_LOW;
     for(uint8_t i=0;i<len;i++) {
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
     }
 //    SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
     SI_CS_HIGH;
+//    __enable_irq();
 #if 0
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
 #if 0
@@ -1931,7 +1936,7 @@ void SI446x_Fill(int s, int start)
 
   uint32_t t = setting.additional_step_delay_us;
   systime_t measure = chVTGetSystemTimeX();
-//  __disable_irq();
+  __disable_irq();
 
 #if 1
     int i = start;
@@ -1951,7 +1956,7 @@ again:
 #else
   shiftInBuf(sel, SI4432_REG_RSSI, &age[start], sweep_points - start, t);
 #endif
-//  __enable_irq();
+  __enable_irq();
 
   setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
   buf_index = start; // Is used to skip 1st entry during level triggering
@@ -1988,14 +1993,17 @@ int16_t Si446x_RSSI(void)
       ADF4351_frequency_changed = false;
       SI4463_offset_changed = false;
     }
-#define SAMPLE_COUNT 3
+#define SAMPLE_COUNT 1
     int j = SAMPLE_COUNT; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
-      again:
+    again:
+      __disable_irq();
       data[0] = SI446X_CMD_GET_MODEM_STATUS;
       data[1] = 0xFF;
       SI4463_do_api(data, 2, data, 3);          // TODO no clear of interrupts
+      __enable_irq();
+
       if (data[2] == 255) {
         my_microsecond_delay(10);
         goto again;
