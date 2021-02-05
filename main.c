@@ -35,10 +35,10 @@
 #include <string.h>
 #include <math.h>
 
-extern uint32_t minFreq;
-extern uint32_t maxFreq;
-uint32_t frequencyStart;
-uint32_t frequencyStop;
+extern freq_t minFreq;
+extern freq_t maxFreq;
+freq_t frequencyStart;
+freq_t frequencyStop;
 int32_t frequencyExtra;
 #define START_MIN minFreq
 #define STOP_MAX maxFreq
@@ -91,7 +91,7 @@ static void apply_edelay_at(int i);
 static void cal_interpolate(int s);
 #endif
 void update_frequencies(void);
-static void set_frequencies(uint32_t start, uint32_t stop, uint16_t points);
+static void set_frequencies(freq_t start, freq_t stop, uint16_t points);
 static bool sweep(bool break_on_operation);
 #ifdef __VNA__
 static void transform_domain(void);
@@ -423,7 +423,7 @@ adjust_gain(uint32_t newfreq)
 }
 #endif
 
-int set_frequency(uint32_t freq)
+int set_frequency(freq_t freq)
 {
   (void) freq;
 #ifdef __VNA__  
@@ -589,7 +589,7 @@ VNA_SHELL_FUNCTION(cmd_freq)
   if (argc != 1) {
     goto usage;
   }
-  uint32_t freq = my_atoui(argv[0]);
+  freq_t freq = my_atoui(argv[0]);
 
   pause_sweep();
   set_frequency(freq);
@@ -1091,7 +1091,7 @@ void set_sweep_points(uint16_t points){
 
 VNA_SHELL_FUNCTION(cmd_scan)
 {
-  uint32_t start, stop;
+  freq_t start, stop;
   uint32_t points = sweep_points;
   uint32_t i;
   if (argc < 2 || argc > 4) {
@@ -1142,9 +1142,9 @@ update_marker_index(void)
   for (m = 0; m < MARKERS_MAX; m++) {
     if (!markers[m].enabled)
       continue;
-    uint32_t f = markers[m].frequency;
-    uint32_t fstart = get_sweep_frequency(ST_START);
-    uint32_t fstop  = get_sweep_frequency(ST_STOP);
+    freq_t f = markers[m].frequency;
+    freq_t fstart = get_sweep_frequency(ST_START);
+    freq_t fstop  = get_sweep_frequency(ST_STOP);
     if (f < fstart) {
       markers[m].index = 0;
       markers[m].frequency = fstart;
@@ -1163,13 +1163,13 @@ update_marker_index(void)
   }
 }
 
-void set_marker_frequency(int m, uint32_t f)
+void set_marker_frequency(int m, freq_t f)
 {
   if (m < 0 || !markers[m].enabled)
     return;
   int i = 1;
   markers[m].mtype &= ~M_TRACKING;
-  uint32_t s = (frequencies[1] - frequencies[0])/2;
+  freq_t s = (frequencies[1] - frequencies[0])/2;
   while (i< sweep_points - 2){
     if (frequencies[i]-s  <= f && f < frequencies[i+1]-s) {     // Avoid rounding error in s!!!!!!!
       markers[m].index = i;
@@ -1181,14 +1181,14 @@ void set_marker_frequency(int m, uint32_t f)
 }
 
 static void
-set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
+set_frequencies(freq_t start, freq_t stop, uint16_t points)
 {
   uint32_t i;
-  uint32_t step = (points - 1);
-  uint32_t span = stop - start;
-  uint32_t delta = span / step;
-  uint32_t error = span % step;
-  uint32_t f = start, df = step>>1;
+  freq_t step = (points - 1);
+  freq_t span = stop - start;
+  freq_t delta = span / step;
+  freq_t error = span % step;
+  freq_t f = start, df = step>>1;
   for (i = 0; i <= step; i++, f+=delta) {
     frequencies[i] = f;
     df+=error;
@@ -1207,7 +1207,7 @@ set_frequencies(uint32_t start, uint32_t stop, uint16_t points)
 void
 update_frequencies(void)
 {
-  uint32_t start, stop;
+  freq_t start, stop;
   start = get_sweep_frequency(ST_START);
   stop  = get_sweep_frequency(ST_STOP);
 
@@ -1221,7 +1221,7 @@ update_frequencies(void)
 }
 
 void
-set_sweep_frequency(int type, uint32_t freq)
+set_sweep_frequency(int type, freq_t freq)
 {
 #ifdef __VNA__
   int cal_applied = cal_status & CALSTAT_APPLY;
@@ -1257,9 +1257,9 @@ set_sweep_frequency(int type, uint32_t freq)
       break;
     case ST_CENTER:
       setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
-      uint32_t center = setting.frequency0 / 2 + setting.frequency1 / 2;
+      freq_t center = setting.frequency0 / 2 + setting.frequency1 / 2;
       if (center != freq) {
-        uint32_t span = setting.frequency1 - setting.frequency0;
+        freq_t span = setting.frequency1 - setting.frequency0;
         if (freq < START_MIN + span / 2) {
           span = (freq - START_MIN) * 2;
         }
@@ -1273,7 +1273,7 @@ set_sweep_frequency(int type, uint32_t freq)
     case ST_SPAN:
       setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
       if (setting.frequency1 - setting.frequency0 != freq) {
-        uint32_t center = setting.frequency0 / 2 + setting.frequency1 / 2;
+        freq_t center = setting.frequency0 / 2 + setting.frequency1 / 2;
         if (center < START_MIN + freq / 2) {
           center = START_MIN + freq / 2;
         }
@@ -1300,12 +1300,12 @@ set_sweep_frequency(int type, uint32_t freq)
 #endif
 }
 
-uint32_t
+freq_t
 get_sweep_frequency(int type)
 {
   // Obsolete, ensure correct start/stop, start always must be < stop
   if (setting.frequency0 > setting.frequency1) {
-    uint32_t t = setting.frequency0;
+    freq_t t = setting.frequency0;
     setting.frequency0 = setting.frequency1;
     setting.frequency1 = t;
   }
@@ -1327,9 +1327,9 @@ VNA_SHELL_FUNCTION(cmd_sweep)
   } else if (argc > 3) {
     goto usage;
   }
-  uint32_t value0 = 0;
-  uint32_t value1 = 0;
-  uint32_t value2 = 0;
+  freq_t value0 = 0;
+  freq_t value1 = 0;
+  freq_t value2 = 0;
   if (argc >= 1) value0 = my_atoui(argv[0]);
   if (argc >= 2) value1 = my_atoui(argv[1]);
   if (argc >= 3) value2 = my_atoui(argv[2]);
@@ -2026,7 +2026,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     default:
       // select active marker and move to index or frequency
       markers[t].enabled = TRUE;
-      uint32_t value = my_atoui(argv[1]);
+      freq_t value = my_atoui(argv[1]);
       markers[t].mtype &= ~M_TRACKING;
       active_marker = t;
       if (value > sweep_points)
@@ -2949,12 +2949,12 @@ int main(void)
   redraw_frame();
 #ifdef TINYSA3
   set_mode(M_HIGH);
-  set_sweep_frequency(ST_STOP, (uint32_t) 30000000);
+  set_sweep_frequency(ST_STOP, (freq_t) 30000000);
   sweep(false);
   osalThreadSleepMilliseconds(100);
 
   set_mode(M_LOW);
-  set_sweep_frequency(ST_STOP, (uint32_t) 4000000);
+  set_sweep_frequency(ST_STOP, (freq_t) 4000000);
   sweep(false);
 #endif
 

@@ -302,8 +302,8 @@ VNA_SHELL_FUNCTION(cmd_if)
     shell_printf("usage: if {433M..435M}\r\n%qHz\r\n", setting.frequency_IF);
     return;
   } else {
-    uint32_t a = (uint32_t)my_atoi(argv[0]);
-    if (a!= 0 &&( a < (DEFAULT_IF - (uint32_t)2000000) || a>(DEFAULT_IF + (uint32_t)2000000)))
+    freq_t a = (freq_t)my_atoi(argv[0]);
+    if (a!= 0 &&( a < (DEFAULT_IF - (freq_t)2000000) || a>(DEFAULT_IF + (freq_t)2000000)))
       goto usage;
     setting.auto_IF = false;
     set_IF(a);
@@ -316,7 +316,7 @@ VNA_SHELL_FUNCTION(cmd_ultra_start)
     shell_printf("usage: ultra_start {0..4290M}\r\n%qHz\r\n", config.ultra_threshold);
     return;
   } else {
-    uint32_t a = (uint32_t)my_atoi(argv[0]);
+    freq_t a = (freq_t)my_atoi(argv[0]);
     config.ultra_threshold = a;
     config_save();
   }
@@ -330,8 +330,8 @@ VNA_SHELL_FUNCTION(cmd_if1)
     shell_printf("usage: if1 {975M..979M}\r\n%qHz\r\n", config.frequency_IF1);
     return;
   } else {
-    uint32_t a = (uint32_t)my_atoi(argv[0]);
-    if (a!= 0 &&( a < (DEFAULT_IF - (uint32_t)80000000) || a>(DEFAULT_IF + (uint32_t)80000000)))
+    freq_t a = (freq_t)my_atoi(argv[0]);
+    if (a!= 0 &&( a < (DEFAULT_IF - (freq_t)80000000) || a>(DEFAULT_IF + (freq_t)80000000)))
       goto usage;
     config.frequency_IF1 = a;
     config_save();
@@ -520,7 +520,7 @@ int rvalue;
 VNA_SHELL_FUNCTION(cmd_o)
 {
   (void) argc;
-  uint32_t value = my_atoi(argv[0]);
+  freq_t value = my_atoi(argv[0]);
   if (VFO == 0)
     setting.frequency_IF = value;
   set_freq(VFO, value);
@@ -578,7 +578,7 @@ VNA_SHELL_FUNCTION(cmd_a)
     shell_printf("a=%u\r\n", frequencyStart);
     return;
   }
-  uint32_t value = my_atoui(argv[0]);
+  freq_t value = my_atoui(argv[0]);
   frequencyStart = value;
 }
 
@@ -590,7 +590,7 @@ VNA_SHELL_FUNCTION(cmd_b)
     shell_printf("b=%u\r\n", frequencyStop);
     return;
   }
-  uint32_t value = my_atoui(argv[0]);
+  freq_t value = my_atoui(argv[0]);
   frequencyStop = value;
 }
 
@@ -631,11 +631,11 @@ void sweep_remote(void)
 {
   uint32_t i;
   uint32_t step = (points - 1);
-  uint32_t span = frequencyStop - frequencyStart;
-  uint32_t delta = span / step;
-  uint32_t error = span % step;
-  uint32_t f = frequencyStart - setting.frequency_IF, df = step>>1;
-  uint32_t old_step = setting.frequency_step;
+  freq_t span = frequencyStop - frequencyStart;
+  freq_t delta = span / step;
+  freq_t error = span % step;
+  freq_t f = frequencyStart - setting.frequency_IF, df = step>>1;
+  freq_t old_step = setting.frequency_step;
   setting.frequency_step = delta;
   streamPut(shell_stream, '{');
   dirty = true;
@@ -736,7 +736,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
     return;
   }
   int i = my_atoi(argv[0]);
-  uint32_t f = my_atoui(argv[1]);
+  freq_t f = my_atoui(argv[1]);
   float v = my_atof(argv[2]);
   config.correction_frequency[i] = f;
   config.correction_value[i] = v;
@@ -746,7 +746,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
 
 VNA_SHELL_FUNCTION(cmd_scanraw)
 {
-  uint32_t start, stop;
+  freq_t start, stop;
   uint32_t points = sweep_points;
   if (argc < 2 || argc > 3) {
     shell_printf("usage: scanraw {start(Hz)} {stop(Hz)} [points]\r\n");
@@ -766,12 +766,13 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
 //  if (get_waterfall())
 //    disable_waterfall();            // display dma hangs when waterfall is enabled
 
-  uint32_t old_step = setting.frequency_step;
+  freq_t old_step = setting.frequency_step;
   float f_step = (stop-start)/ points;
-  setting.frequency_step = (uint32_t)f_step;
+  setting.frequency_step = (freq_t)f_step;
 
   streamPut(shell_stream, '{');
-  static  uint32_t old_start=0, old_stop=0, old_points=0;
+  static freq_t old_start=0, old_stop=0;
+  static uint32_t old_points=0;
   if (old_start != start || old_stop != stop || old_points != points) {     // To prevent dirty for every sweep
     dirty = true;
     old_start = start;
@@ -782,7 +783,7 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   dirty = true;
 
   for (uint32_t i = 0; i<points; i++) {
-    int val = perform(false, i, start +(uint32_t)(f_step * i), false) + float_TO_PURE_RSSI(EXT_ZERO_LEVEL);
+    int val = perform(false, i, start +(freq_t)(f_step * i), false) + float_TO_PURE_RSSI(EXT_ZERO_LEVEL);
     if (operation_requested) // break on operation in perform
       break;
     streamPut(shell_stream, 'x');

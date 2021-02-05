@@ -446,7 +446,7 @@ static int old_freq_band[2] = {-1,-1};
 static int written[2]= {0,0};
 #endif
 
-void SI4432_Set_Frequency ( uint32_t Freq ) {
+void SI4432_Set_Frequency ( freq_t Freq ) {
 //  int mode = SI4432_Read_Byte(0x02) & 0x03;           // Disabled as unreliable
 //  SI4432_Write_Byte(0x07, 0x02);    // Switch to tune mode
 
@@ -943,7 +943,7 @@ extern int settingAttenuate;
 
 //#define LEVEL(i, f, v) (v * (1-(fabs(f - frequencies[i])/actual_rbw/1000)))
 
-float LEVEL(uint32_t i, uint32_t f, int v)
+float LEVEL(uint32_t i, freq_t f, int v)
 {
   float dv;
   float df = fabs((float)f - (float)i);
@@ -1111,7 +1111,7 @@ void ADF4351_enable_output(void)
 }
 #endif
 
-static uint32_t prev_actual_freq = 0;
+static freq_t prev_actual_freq = 0;
 
 void ADF4351_force_refresh(void) {
   prev_actual_freq = 0;
@@ -1368,7 +1368,7 @@ int SI4463_offset_value = 0;
 
 static int SI4463_band = -1;
 static int64_t SI4463_outdiv = -1;
-//static uint32_t SI4463_prev_freq = 0;
+//static freq_t SI4463_prev_freq = 0;
 //static float SI4463_step_size = 100;        // Will be recalculated once used
 static uint8_t SI4463_channel = 0;
 static uint8_t SI4463_in_tx_mode = false;
@@ -2406,7 +2406,7 @@ uint16_t set_rbw(uint16_t WISH)  {
 
 static int refresh_count = 0;
 
-uint32_t SI4463_set_freq(uint32_t freq)
+freq_t SI4463_set_freq(freq_t freq)
 {
 //  SI4463_set_gpio(3,GPIO_HIGH);
   int S = 4 ;               // Approx 100 Hz channels
@@ -2440,7 +2440,7 @@ uint32_t SI4463_set_freq(uint32_t freq)
   int32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
   int64_t MOD = 524288; // = 2^19
   int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
-  uint32_t actual_freq = (R*MOD + F) * (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)/ SI4463_outdiv/MOD;
+  freq_t actual_freq = (R*MOD + F) * (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)/ SI4463_outdiv/MOD;
   int delta = freq - actual_freq;
   if (delta < -100 || delta > 100 ){
     while(1)

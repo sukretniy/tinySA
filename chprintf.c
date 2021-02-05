@@ -57,7 +57,7 @@ static char smallPrefix[] = {'m', 0x1d, 'n', 'p', 'f', 'a', 'z', 'y', 0};
 #pragma pack(pop)
 
 static char *long_to_string_with_divisor(char *p,
-                                         uint32_t num,
+                                         uint64_t num,
                                          uint32_t radix,
                                          uint32_t precision) {
   char *q = p + MAX_FILLER;
@@ -84,7 +84,7 @@ static char *long_to_string_with_divisor(char *p,
 #define FREQ_PREFIX_SPACE   4
 
 static char *
-ulong_freq(char *p, uint32_t freq, uint32_t precision)
+ulong_freq(char *p, uint64_t freq, uint32_t precision)
 {
   uint8_t flag = FREQ_PSET;
   flag|= precision == 0 ? FREQ_PREFIX_SPACE : FREQ_NO_SPACE;
@@ -258,6 +258,7 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
       uint32_t u;
       int32_t  l;
       float    f;
+      uint64_t   x;
   }value;
 #if CHPRINTF_USE_FLOAT
   char tmpbuf[2*MAX_FILLER + 1];
@@ -329,12 +330,12 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
     else
       state|=DEFAULT_PRESCISION;
     //Get [length]
-    /*
     if (c == 'l' || c == 'L') {
       state|=IS_LONG;
       if (*fmt)
         c = *fmt++;
     }
+    /*
     else if ((c >= 'A') && (c <= 'Z'))
         state|=IS_LONG;
     */
@@ -356,15 +357,15 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
     case 'D':
     case 'd':
     case 'I':
-    case 'i':/*
+    case 'i':
       if (state & IS_LONG)
-        value.l = va_arg(ap, long);
-      else*/
-        value.l = va_arg(ap, uint32_t);
-      if (value.l < 0) {
+        value.x = va_arg(ap, uint64_t);
+      else
+        value.x = va_arg(ap, uint32_t);
+      if (value.x < 0) {
         state|=NEGATIVE;
         *p++ = '-';
-        value.l = -value.l;
+        value.x = -value.l;
       }
       else if (state & POSITIVE)
         *p++ = '+';
@@ -372,11 +373,14 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
       else if (state & PLUS_SPACE)
         *p++ = ' ';
 #endif
-      p = long_to_string_with_divisor(p, value.l, 10, 0);
+      p = long_to_string_with_divisor(p, (uint64_t)value.x, 10, 0);
       break;
     case 'q':
-      value.u = va_arg(ap, uint32_t);
-      p=ulong_freq(p, value.u, precision);
+      if (state & IS_LONG)
+        value.x = va_arg(ap, uint64_t);
+      else
+        value.x = va_arg(ap, uint32_t);
+      p=ulong_freq(p, value.x, precision);
       break;
 #if CHPRINTF_USE_FLOAT
     case 'F':
@@ -411,10 +415,10 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
     case 'O':
     case 'o':
       c = 8;
-unsigned_common:/*
+unsigned_common:
       if (state & IS_LONG)
-        value.u = va_arg(ap, unsigned long);
-      else*/
+        value.x = va_arg(ap, uint64_t);
+      else
         value.u = va_arg(ap, uint32_t);
       p = long_to_string_with_divisor(p, value.u, c, 0);
       break;

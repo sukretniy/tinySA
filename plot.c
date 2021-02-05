@@ -42,7 +42,7 @@ void cell_draw_test_info(int x0, int y0);
 
 static int16_t grid_offset;
 static int16_t grid_width;
-static int32_t grid_span;
+static freq_t grid_span;
 
 int16_t area_width  = AREA_WIDTH_NORMAL;
 int16_t area_height; // initialized in main()  = AREA_HEIGHT_NORMAL;
@@ -119,10 +119,10 @@ float2int(float v)
 
 void update_grid(void)
 {
-  uint32_t gdigit = 100000000;
-  uint32_t fstart = get_sweep_frequency(ST_START);
-  uint32_t fspan  = get_sweep_frequency(ST_SPAN);
-  uint32_t grid;
+  freq_t gdigit = 100000000;
+  freq_t fstart = get_sweep_frequency(ST_START);
+  freq_t fspan  = get_sweep_frequency(ST_SPAN);
+  freq_t grid;
 
   if (fspan == 0) {
     fspan = setting.actual_sweep_time_us; // Time in uS
@@ -412,8 +412,8 @@ rectangular_grid(int x, int y)
 
 #ifdef __HAM_BAND__
 typedef const struct {
-  uint32_t start;
-  uint32_t stop;
+  freq_t start;
+  freq_t stop;
 } ham_bands_t;
 
 const ham_bands_t ham_bands[] =
@@ -439,9 +439,9 @@ int ham_band(int x)      // Search which index in the frequency tabled matches w
 {
   if (!config.hambands)
     return false;
-  uint32_t f = frequencies[x];
+  freq_t f = frequencies[x];
   int L = 0;
-  int R =  (sizeof ham_bands)/sizeof(uint32_t) - 1;
+  int R =  (sizeof ham_bands)/sizeof(freq_t) - 1;
   while (L <= R) {
     int m = (L + R) / 2;
     if (ham_bands[m].stop < f)
@@ -909,14 +909,14 @@ void trace_get_value_string(     // Only used at one place
     int t, char *buf, int len,
     int i, float coeff[POINTS_COUNT],
     int ri, int mtype,
-    uint32_t i_freq, uint32_t ref_freq)
+    freq_t i_freq, freq_t ref_freq)
 {
   (void) t;
   float v;
   char buf2[16];
   char buf3[8];
   char *ptr2 = buf2;
-  uint32_t dfreq = 0;
+  freq_t dfreq = 0;
   float rlevel = 0;
   int ii = i;
   int unit_index = setting.unit;
@@ -961,7 +961,7 @@ void trace_get_value_string(     // Only used at one place
 #endif
   } else {
 #if 0
-  uint32_t resolution = get_sweep_frequency(ST_SPAN);
+  freq_t resolution = get_sweep_frequency(ST_SPAN);
   if (resolution  <= 2000*POINTS_COUNT)
     plot_printf(ptr2, sizeof(buf2) - 2, "%3.3f" , (dfreq + 500) / 1000000.0);
   else if (resolution  <= 20000*POINTS_COUNT)
@@ -970,7 +970,7 @@ void trace_get_value_string(     // Only used at one place
     plot_printf(ptr2, sizeof(buf2) - 2, "%3.1f" , (dfreq + 50000) / 1000000.0);
   }
 #else
-    plot_printf(ptr2, sizeof(buf2) - 2, "%9.5qHz" , dfreq);
+    plot_printf(ptr2, sizeof(buf2) - 2, "%9.5LqHz" , dfreq);
   }
 #endif
     v = value(coeff[i]);
@@ -1957,10 +1957,10 @@ cell_draw_marker_info(int x0, int y0)
       cell_drawstring(buf, xpos, ypos);
       xpos += 13;
       //trace_get_info(t, buf, sizeof buf);
-      uint32_t freq = frequencies[markers[mk].index];
+      freq_t freq = frequencies[markers[mk].index];
       if (uistat.marker_delta && mk != active_marker) {
-        uint32_t freq1 = frequencies[markers[active_marker].index];
-        uint32_t delta = freq > freq1 ? freq - freq1 : freq1 - freq;
+        freq_t freq1 = frequencies[markers[active_marker].index];
+        freq_t delta = freq > freq1 ? freq - freq1 : freq1 - freq;
         plot_printf(buf, sizeof buf, S_DELTA"%.9qHz", delta);
       } else {
         plot_printf(buf, sizeof buf, "%.10qHz", freq);
@@ -1987,9 +1987,9 @@ cell_draw_marker_info(int x0, int y0)
       cell_drawstring(buf, xpos, ypos);
       xpos += 27;
       if ((domain_mode & DOMAIN_MODE) == DOMAIN_FREQ) {
-        uint32_t freq  = frequencies[idx];
-        uint32_t freq1 = frequencies[idx0];
-        uint32_t delta = freq > freq1 ? freq - freq1 : freq1 - freq;
+        freq_t freq  = frequencies[idx];
+        freq_t freq1 = frequencies[idx0];
+        freq_t delta = freq > freq1 ? freq - freq1 : freq1 - freq;
         plot_printf(buf, sizeof buf, "%c%.13qHz", freq >= freq1 ? '+' : '-', delta);
       } else {
         plot_printf(buf, sizeof buf, "%Fs (%Fm)", time_of_index(idx) - time_of_index(idx0), distance_of_index(idx) - distance_of_index(idx0));
@@ -2100,12 +2100,12 @@ static void cell_draw_marker_info(int x0, int y0)
   for (int i = 0; i < MARKER_COUNT; i++) {
     if (i == 3) {
       if (setting.measurement == M_PASS_BAND) {
-        uint32_t f;
+        freq_t f;
         if (markers[2].frequency>markers[1].frequency)
           f = markers[2].frequency-markers[1].frequency;
         else
           f = markers[1].frequency-markers[2].frequency;
-        plot_printf(buf, sizeof buf, "WIDTH: %8.3qHz", f);
+        plot_printf(buf, sizeof buf, "WIDTH: %8.3LqHz", f);
     show_computed:
         j = 3;
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
@@ -2131,17 +2131,17 @@ static void cell_draw_marker_info(int x0, int y0)
         plot_printf(buf, sizeof buf, "DEPTH: %3d%%", depth);
         goto show_computed;
       } else if (setting.measurement == M_FM){
-        int32_t dev = ( markers[2].frequency - markers[1].frequency - actual_rbw_x10 * 100 ) >> 1;
+        freq_t dev = ( markers[2].frequency - markers[1].frequency - actual_rbw_x10 * 100 ) >> 1;
         if (dev < 0 )
           break;
-        plot_printf(buf, sizeof buf, "DEVIATION:%6.1qHz", dev);
+        plot_printf(buf, sizeof buf, "DEVIATION:%6.1LqHz", dev);
         goto show_computed;
       } else if (setting.measurement == M_THD && markers[0].enabled && (markers[0].index << 5) > sweep_points ) {
         int old_unit = setting.unit;
         setting.unit = U_WATT;
         float p = index_to_value(markers[0].index);
         int h_i = 2;
-        uint32_t f = markers[0].frequency;
+        freq_t f = markers[0].frequency;
         float h = 0.0;
         while (f * h_i < frequencies[sweep_points-1]) {
           if (search_maximum(1, f*h_i, 4*h_i) )             // use marker 1 for searching harmonics
@@ -2270,17 +2270,17 @@ draw_frequencies(void)
   if ((domain_mode & DOMAIN_MODE) == DOMAIN_FREQ) {
 #endif
     if (FREQ_IS_CW()) {
-      plot_printf(buf1, sizeof(buf1), " CW %qHz", get_sweep_frequency(ST_CW));
+      plot_printf(buf1, sizeof(buf1), " CW %LqHz", get_sweep_frequency(ST_CW));
       // Show user actual select sweep time?
       uint32_t t = setting.actual_sweep_time_us;
       plot_printf(buf2, sizeof(buf2), " TIME %.3Fs", (float)t/ONE_SECOND_TIME);
 
     } else if (FREQ_IS_STARTSTOP()) {
-      plot_printf(buf1, sizeof(buf1), " START %.3qHz    %5.1qHz/", get_sweep_frequency(ST_START), grid_span);
-      plot_printf(buf2, sizeof(buf2), " STOP %.3qHz", get_sweep_frequency(ST_STOP));
+      plot_printf(buf1, sizeof(buf1), " START %.3LqHz    %5.1LqHz/", get_sweep_frequency(ST_START), grid_span);
+      plot_printf(buf2, sizeof(buf2), " STOP %.3LqHz", get_sweep_frequency(ST_STOP));
     } else if (FREQ_IS_CENTERSPAN()) {
-      plot_printf(buf1, sizeof(buf1), " CENTER %.3qHz    %5.1qHz/", get_sweep_frequency(ST_CENTER), grid_span);
-      plot_printf(buf2, sizeof(buf2), " SPAN %.3qHz", get_sweep_frequency(ST_SPAN));
+      plot_printf(buf1, sizeof(buf1), " CENTER %.3LqHz    %5.1LqHz/", get_sweep_frequency(ST_CENTER), grid_span);
+      plot_printf(buf2, sizeof(buf2), " SPAN %.3LqHz", get_sweep_frequency(ST_SPAN));
     }
 #ifdef __VNA__
   } else {
