@@ -1108,11 +1108,11 @@ void calculate_step_delay(void)
       if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
       else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 250; SI4432_offset_delay = 100; spur_gate = 50; }
       else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 250; SI4432_offset_delay = 100; spur_gate = 70; }
-      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 80; }
-      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 500; SI4432_offset_delay = 180; spur_gate = 80; }
-      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 900; SI4432_offset_delay = 300; spur_gate = 80; }
-      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 1000; spur_gate = 80; }
-      else                             { SI4432_step_delay = 9000; SI4432_offset_delay =3000; spur_gate = 80; }
+      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 200; }
+      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 500; SI4432_offset_delay = 180; spur_gate = 300; }
+      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 900; SI4432_offset_delay = 300; spur_gate = 1000; }
+      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 1000; spur_gate = 3000; }
+      else                             { SI4432_step_delay = 9000; SI4432_offset_delay =3000; spur_gate = 10000; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
@@ -1230,7 +1230,7 @@ int temppeakIndex;
 //static uint32_t minimum_zero_span_sweep_time = 0;
 //static uint32_t minimum_sweep_time = 0;
 
-void setupSA(void)
+void setup_sa(void)
 {
 #ifdef __SI4432__
   SI4432_Init();
@@ -1255,6 +1255,8 @@ void setupSA(void)
   enable_ultra(false);
   enable_rx_output(false);
   enable_high(false);
+
+  fill_spur_table();
 
   #if 0           // Measure fast scan time
   setting.sweep_time_us = 0;
@@ -1758,23 +1760,16 @@ search_maximum(int m, uint32_t center, int span)
 //static int spur_old_stepdelay = 0;
 //static const unsigned int spur_IF =            DEFAULT_IF;       // The IF frequency for which the spur table is value
 //static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the frequency is found in the spur table use this IF frequency
-static const uint32_t spur_table[] =                                 // Frequencies to avoid
+static  uint32_t spur_table[] =                                 // Frequencies to avoid
 {
-// 117716000,
  243775000,             // OK
-// 244250000,
- 325000000,             // Not OK
-// 325190000,
+ 325000000,             // !!! This is a double spur
+ 325190000,             // !!! This is a double spur
  487541650,             // OK This is linked to the MODULO of the ADF4350
-// 487993000,
-// 488020700,
- // 487551700,
-// 487578000,
-// 488500000,
  650687000,             // OK
-// 651333333,
  731780000,             // OK
-// 746083000
+
+
 
 
  #if 0
@@ -1837,6 +1832,32 @@ int binary_search(uint32_t f)
   return false;
 }
 
+static const uint8_t spur_div[] = {4, 3, 3, 2, 3, 4};
+static const uint8_t spur_mul[] = {1, 1, 1, 1, 2, 3};
+#define IF_OFFSET   468750*4        //
+void fill_spur_table(void)
+{
+  for (uint8_t i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
+  {
+   volatile uint64_t corr_IF = config.frequency_IF1;
+   if (i != 4)
+     corr_IF -= IF_OFFSET;
+   else
+     corr_IF -= IF_OFFSET/2;
+
+   volatile uint64_t target = (corr_IF * (uint64_t)spur_mul[i] ) / (uint64_t) spur_div[i];
+//   volatile uint64_t actual_freq = ADF4351_set_frequency(0, target + config.frequency_IF1);
+//   volatile uint64_t delta =  target + (uint64_t) config.frequency_IF1 - actual_freq ;
+//   volatile uint64_t spur = target - delta;
+//   spur_table[i] = spur;
+   if (i==1)
+     spur_table[i] = target - IF_OFFSET / 12;
+   else if (i == 2)
+     spur_table[i] = target + IF_OFFSET / 12;
+   else
+     spur_table[i] = target;
+  }
+}
 
 int avoid_spur(uint32_t f)                   // find if this frequency should be avoided
 {
@@ -2092,7 +2113,6 @@ modulation_again:
   }
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
-//#define __DEBUG_SPUR__
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
   if (!setting.auto_IF)
     stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
@@ -2171,8 +2191,8 @@ modulation_again:
           } else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
               if (setting.auto_IF) {
                 local_IF = local_IF + DEFAULT_SPUR_OFFSET;
-                if (actual_rbw_x10 == 6000 )
-                  local_IF = local_IF + 50000;
+//                if (actual_rbw_x10 == 6000 )
+//                  local_IF = local_IF + 50000;
                 LO_shifted = true;
               }
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
@@ -2377,7 +2397,7 @@ modulation_again:
       my_microsecond_delay(200);                 // To prevent lockup of SI4432
 #endif
     }
-    if (debug_frequencies && SDU1.config->usbp->state == USB_ACTIVE) {
+    if (debug_frequencies ) {
 
       uint32_t f;
       if (setting.mode == M_LOW || setting.mode == M_GENLOW)
@@ -2390,8 +2410,20 @@ modulation_again:
      } else {
        f_error = ((float)f-(float)frequencies[i])/setting.frequency_step;
      }
+     char spur = ' ';
+     int delta=0;
+     if ( f * 4 < real_old_freq[SI4463_RX] + real_offset) {
+       delta = real_old_freq[SI4463_RX] + real_offset - 4*f;
+       if (delta < actual_rbw_x10*100)
+         spur = '!';
+     } else {
+       delta = 4*f - real_old_freq[SI4463_RX] + real_offset;
+       if (delta < actual_rbw_x10*100)
+         spur = '!';
+     }
      char shifted = ( LO_shifted ? '>' : ' ');
-      shell_printf ("%d:LO=%11.6q:%11.6q\t%cIF=%11.6q:%11.6q\tOF=%11.6q\tF=%11.6q\tD=%.2f\r\n", i, old_freq[ADF4351_LO],real_old_freq[ADF4351_LO], shifted, old_freq[SI4463_RX], real_old_freq[SI4463_RX], (int32_t)real_offset, f , f_error);
+      if (SDU1.config->usbp->state == USB_ACTIVE)
+        shell_printf ("%d:LO=%11.6q:%11.6q\t%c%cIF=%11.6q:%11.6q\tOF=%11.6q\tF=%11.6q\tD=%.2f\r\n", i, old_freq[ADF4351_LO],real_old_freq[ADF4351_LO], spur, shifted, old_freq[SI4463_RX], real_old_freq[SI4463_RX], (int32_t)real_offset, f , f_error);
       osalThreadSleepMilliseconds(100);
     }
     // ------------------------- end of processing when in output mode ------------------------------------------------

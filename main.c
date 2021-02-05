@@ -2925,7 +2925,7 @@ int main(void)
  */
   dacStart(&DACD2, &dac1cfg1);
 
-  setupSA();
+  setup_sa();
   set_sweep_points(POINTS_COUNT);
 
 #ifdef __AUDIO__

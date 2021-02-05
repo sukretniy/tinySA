@@ -28,6 +28,8 @@
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
+// #define __DEBUG_SPUR__
+
 #define __SA__
 #ifdef TINYSA3
 #define __SI4432__
@@ -324,6 +326,7 @@ void set_measurement(int);
 void sweep_remote(void);
 extern void set_modulo(uint32_t f);
 extern int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv);
+extern void fill_spur_table(void);
 
 #ifdef __AUDIO__
 /*
