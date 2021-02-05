@@ -223,7 +223,8 @@ void reset_settings(int m)
   }
   markers[0].mtype = M_REFERENCE | M_TRACKING;
   markers[0].enabled = M_ENABLED;
-
+  setting._active_marker = 0;
+  set_sweep_points(POINTS_COUNT);
   dirty = true;
 }
 
@@ -1106,8 +1107,8 @@ void calculate_step_delay(void)
 #endif
 #ifdef __SI4463__
       if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
-      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 250; SI4432_offset_delay = 100; spur_gate = 50; }
-      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 250; SI4432_offset_delay = 100; spur_gate = 70; }
+      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
+      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 70; }
       else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 200; }
       else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 500; SI4432_offset_delay = 180; spur_gate = 300; }
       else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 900; SI4432_offset_delay = 300; spur_gate = 1000; }
