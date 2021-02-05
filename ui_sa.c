@@ -461,6 +461,9 @@ static const struct {
   {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
 };
 #if 0 // Not used
+
+enum { SL_GENLOW_FREQ, SL_GENHIGH_FREQ, SL_GENLOW_LEVEL, SL_GENHIGH_LEVEL };
+
 ui_slider_t ui_sliders [] =
 {
  { KM_CENTER,       true, 0, 1000000,   0,          350000000,  M_GENLOW},
@@ -2251,10 +2254,10 @@ static void fetch_numeric_target(void)
   case KM_LOWOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
     int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
-    if (end_level < POWER_OFFSET - 70)
-      end_level = POWER_OFFSET - 70;
-    if (end_level > POWER_OFFSET)
-      end_level = POWER_OFFSET;
+    if (end_level < SL_GENLOW_LEVEL_MIN)
+      end_level = SL_GENLOW_LEVEL_MIN;
+    if (end_level > SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE)
+      end_level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;
     uistat.value += setting.offset;
     end_level += setting.offset;
     if (setting.level_sweep != 0)

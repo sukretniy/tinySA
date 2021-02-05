@@ -220,10 +220,16 @@ extern const char *info_about[];
 #ifdef TINYSA4
 #define SI_DRIVE_STEP   0.5             // Power step per step in drive level
 #define SWITCH_ATTENUATION  34
-#define POWER_OFFSET    -18             // Max level with all enabled
-#define POWER_RANGE     70
+//#define POWER_OFFSET    -18             // Max level with all enabled
+//#define POWER_RANGE     70
 #define MAX_DRIVE   16
 #define MIN_DRIVE   8
+#define SL_GENHIGH_LEVEL_MIN    -15
+#define SL_GENHIGH_LEVEL_RANGE    9
+#define SL_GENLOW_LEVEL_MIN    -88
+#define SL_GENLOW_LEVEL_RANGE   70
+
+
 #else
 #define SI_DRIVE_STEP   3
 #define SWITCH_ATTENUATION  30
@@ -1192,6 +1198,7 @@ extern void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen);
 extern void SI4463_set_gpio(int i, int s);
 extern void si_set_offset(int16_t offset);
 extern int SI4463_offset_changed;
+extern void si_fm_offset(int16_t offset);
 
 
 /*EOF*/

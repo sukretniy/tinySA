@@ -51,6 +51,8 @@
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
 #define ADF_SPI_SPEED   SPI_BR_DIV4
 
+#define PE_SPI_SPEED   SPI_BR_DIV32
+
 static uint32_t old_spi_settings;
 #else
 static uint32_t old_port_moder;
@@ -902,12 +904,16 @@ bool PE4302_Write_Byte(unsigned char DATA )
 //  my_microsecond_delay(PE4302_DELAY);
 //  PE4302_shiftOut(DATA);
 
+  set_SPI_mode(SPI_MODE_SI);
+  SPI_BR_SET(SI4432_SPI, PE_SPI_SPEED);
+
   shiftOut(DATA);
 //  my_microsecond_delay(PE4302_DELAY);
   CS_PE_HIGH;
 //  my_microsecond_delay(PE4302_DELAY);
   CS_PE_LOW;
 //  my_microsecond_delay(PE4302_DELAY);
+  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
   return true;
 }
 
@@ -1390,7 +1396,7 @@ static int SI4463_wait_for_cts(void)
   return 1;
 }
 
-
+#if 0   // not used
 static void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
 {
   set_SPI_mode(SPI_MODE_SI);
@@ -1411,7 +1417,7 @@ static void SI4463_write_buffer(uint8_t ADR, uint8_t *DATA, int len)
     shiftOut( *(DATA++) );
   SI_CS_HIGH;
 }
-
+#endif
 
 static uint8_t SI4463_read_byte( uint8_t ADR )
 {

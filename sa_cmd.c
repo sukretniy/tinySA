@@ -331,7 +331,7 @@ VNA_SHELL_FUNCTION(cmd_if1)
     return;
   } else {
     uint32_t a = (uint32_t)my_atoi(argv[0]);
-    if (a!= 0 &&( a < (DEFAULT_IF - (uint32_t)2000000) || a>(DEFAULT_IF + (uint32_t)2000000)))
+    if (a!= 0 &&( a < (DEFAULT_IF - (uint32_t)80000000) || a>(DEFAULT_IF + (uint32_t)80000000)))
       goto usage;
     config.frequency_IF1 = a;
     config_save();

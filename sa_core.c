@@ -116,7 +116,7 @@ void reset_settings(int m)
   setting.level_sweep = 0.0;        // And this
   setting.rx_drive=MAX_DRIVE;              // And this
   setting.atten_step = 0;           // And this, only used in low output mode
-  setting.level = POWER_OFFSET;     // This is the level with above settings.
+  setting.level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;     // This is the level with above settings.
   setting.rbw_x10 = 0;
   setting.average = 0;
   setting.harmonic = 0;
@@ -520,10 +520,7 @@ float get_attenuation(void)
 {
   float actual_attenuation = setting.attenuate_x2 / 2.0;
   if (setting.mode == M_GENLOW) {
-    if (setting.atten_step)
-      return (float)( POWER_OFFSET - actual_attenuation  - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP - SWITCH_ATTENUATION);
-    else
-      return (float)( POWER_OFFSET - actual_attenuation - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP);
+    return (float)( SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE - actual_attenuation  - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP - ( setting.atten_step ? SWITCH_ATTENUATION : 0) );
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
       return actual_attenuation + RECEIVE_SWITCH_ATTENUATION;
@@ -543,17 +540,18 @@ static pureRSSI_t get_signal_path_loss(void){
   return float_TO_PURE_RSSI(+19);          // Loss in dB (+ is gain)
 }
 
-static const int drive_dBm [16] = {-38,-35,-33,-30,-27,-24,-21,-19,-7,-4,-2, 1, 4, 7, 10, 13};
+static const int drive_dBm [] = {-15,-12,-9,-6};
+
 
 void set_level(float v)     // Set the output level in dB  in high/low output
 {
   if (setting.mode == M_GENHIGH) {
-//    int d = 0;
-//    while (drive_dBm[d] < v - 1 && d < 16)
-//      d++;
+    int d = 0;
+    while (drive_dBm[d] < v - 1 && (unsigned int)d < (sizeof(drive_dBm)/sizeof(int))-1 )
+      d++;
 //    if (d == 8 && v < -12)  // Round towards closest level
 //      d = 7;
-    set_lo_drive(v);
+    set_lo_drive(d);
   } else {
     setting.level = v;
     set_attenuation((int)v);
@@ -572,7 +570,7 @@ float get_level(void)
 void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
 {
   if (setting.mode == M_GENLOW) {
-    a = a - POWER_OFFSET;               // Move to zero for max power
+    a = a - (SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE);               // Move to zero for max power
     if (a > 0)
       a = 0;
     if( a <  - SWITCH_ATTENUATION) {
@@ -1011,9 +1009,9 @@ void set_offset(float offset)
   setting.offset = offset;
   int min,max;
   if (setting.mode == M_GENLOW) {
-    min = POWER_OFFSET - POWER_RANGE; max = POWER_OFFSET;
+    min = SL_GENLOW_LEVEL_MIN; max = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;
   } else {
-    min = -38; max = +13;
+    min = SL_GENHIGH_LEVEL_MIN; max = SL_GENHIGH_LEVEL_MIN + SL_GENHIGH_LEVEL_RANGE;
   }
   plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", min + (int)offset, max + (int)offset);
   force_set_markmap();
@@ -1562,7 +1560,7 @@ case M_GENHIGH: // Direct output from 1
     if (high_out_adf4350)  {
 #ifdef __SI4468__
       SI4463_init_rx();
-      enable_rx_output(true);       // to protext the SI
+      enable_rx_output(true);       // to protect the SI
 #endif
       ADF4351_enable(true);
 #ifndef TINYSA4_PROTO
@@ -1979,7 +1977,7 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
     a += PURE_TO_float(get_frequency_correction(f));
     if (a != old_a) {
       old_a = a;
-      a = a - POWER_OFFSET;                 // convert to all settings maximum power output equals a = zero
+      a = a - (SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE);                 // convert to all settings maximum power output equals a = zero
 
       if (a < -SWITCH_ATTENUATION) {
         a = a + SWITCH_ATTENUATION;
@@ -2138,8 +2136,8 @@ modulation_again:
           local_IF = lf;
           lf = 0;
 #else
-          local_IF += lf - reffer_freq[setting.refer];    // Offset so fundamental of reffer is visible
-          lf = reffer_freq[setting.refer];
+          local_IF += lf - (setting.refer == -1 ? 0 : reffer_freq[setting.refer]);    // Offset so fundamental of reffer is visible
+          lf = (setting.refer == -1 ? 0 : reffer_freq[setting.refer]);
 #endif
         } else {
 #ifdef __SI4468__
@@ -3104,7 +3102,7 @@ sweep_again:                                // stay in sweep loop when output mo
       markers[2].frequency = frequencies[markers[2].index];
     } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
       int t = 0;
-      float v = actual_t[markers[0].index] - 3.0;
+      float v = actual_t[markers[0].index] - (in_selftest ? 6.0 : 3.0);
       while (t < markers[0].index && actual_t[t+1] < v)                                        // Find left -3dB point
         t++;
       if (t< markers[0].index) {
@@ -3681,6 +3679,11 @@ common_silent:
     setting.auto_IF = false;
     setting.frequency_IF = config.frequency_IF1+1000000;                // Center on SAW filters
     set_refer_output(0);
+    markers[1].enabled = M_ENABLED;
+    markers[1].mtype = M_DELTA;
+    markers[2].enabled = M_ENABLED;
+    markers[2].mtype = M_DELTA;
+    setting.measurement = M_PASS_BAND;
     goto common;
   case TP_10MHZ:                              // 10MHz input
     set_mode(M_LOW);
