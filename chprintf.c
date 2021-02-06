@@ -254,11 +254,11 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
   int precision, width;
   int n = 0;
   uint32_t  state;
-  union {
+  volatile union {
       uint32_t u;
       int32_t  l;
       float    f;
-      uint64_t   x;
+      int64_t   x;
   }value;
 #if CHPRINTF_USE_FLOAT
   char tmpbuf[2*MAX_FILLER + 1];
@@ -359,9 +359,9 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
     case 'I':
     case 'i':
       if (state & IS_LONG)
-        value.x = va_arg(ap, uint64_t);
+        value.x = va_arg(ap, int64_t);
       else
-        value.x = va_arg(ap, uint32_t);
+        value.x = va_arg(ap, int32_t);
       if (value.x < 0) {
         state|=NEGATIVE;
         *p++ = '-';
@@ -373,7 +373,7 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
       else if (state & PLUS_SPACE)
         *p++ = ' ';
 #endif
-      p = long_to_string_with_divisor(p, (uint64_t)value.x, 10, 0);
+      p = long_to_string_with_divisor(p, (int64_t)value.x, 10, 0);
       break;
     case 'q':
       if (state & IS_LONG)

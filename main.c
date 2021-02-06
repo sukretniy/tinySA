@@ -443,9 +443,9 @@ int set_frequency(freq_t freq)
 // Rewrite universal standart str to value functions to more compact
 //
 // Convert string to int32
-static int32_t my_atoi(const char *p)
+static int64_t my_atoi(const char *p)
 {
-  int32_t value = 0;
+  int64_t value = 0;
   uint32_t c;
   bool neg = false;
 
@@ -466,9 +466,9 @@ static int32_t my_atoi(const char *p)
 //  0o - for oct radix
 //  0b - for bin radix
 //  default dec radix
-uint32_t my_atoui(const char *p)
+uint64_t my_atoui(const char *p)
 {
-  uint32_t value = 0, radix = 10, c;
+  uint64_t value = 0, radix = 10, c;
   if (*p == '+') p++;
   if (*p == '0') {
     switch (p[1]) {
@@ -1124,7 +1124,7 @@ VNA_SHELL_FUNCTION(cmd_scan)
     uint16_t mask = my_atoui(argv[3]);
     if (mask) {
       for (i = 0; i < points; i++) {
-        if (mask & 1) shell_printf("%u ", frequencies[i]);
+        if (mask & 1) shell_printf("%Lu ", frequencies[i]);
         if (mask & 2) shell_printf("%f %f ", value(measured[2][i]), 0.0);
         if (mask & 4) shell_printf("%f %f ", value(measured[1][i]), 0.0);
         if (mask & 8) shell_printf("%f %f ", value(measured[0][i]), 0.0);
@@ -1322,7 +1322,7 @@ get_sweep_frequency(int type)
 VNA_SHELL_FUNCTION(cmd_sweep)
 {
   if (argc == 0) {
-    shell_printf("%d %d %d\r\n", get_sweep_frequency(ST_START), get_sweep_frequency(ST_STOP), sweep_points);
+    shell_printf("%Ld %Ld %d\r\n", get_sweep_frequency(ST_START), get_sweep_frequency(ST_STOP), sweep_points);
     return;
   } else if (argc > 3) {
     goto usage;
@@ -1990,7 +1990,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
-        shell_printf("%d %d %d %f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
+        shell_printf("%d %d %Ld %f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
       }
     }
     return;
@@ -2007,7 +2007,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     goto usage;
   if (argc == 1) {
   display_marker:
-    shell_printf("%d %d %d %.2f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
+    shell_printf("%d %d %Ld %.2f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
     active_marker = t;
     // select active marker
     markers[t].enabled = TRUE;
@@ -2075,7 +2075,7 @@ VNA_SHELL_FUNCTION(cmd_frequencies)
   (void)argv;
   for (i = 0; i < sweep_points; i++) {
     if (frequencies[i] != 0)
-      shell_printf("%u\r\n", frequencies[i]);
+      shell_printf("%Lu\r\n", frequencies[i]);
   }
 }
 
@@ -2907,10 +2907,11 @@ int main(void)
 
 /* restore config */
   config_recall();
+#if 1
   if (caldata_recall(0) == -1) {
     load_LCD_properties();
   }
-
+#endif
 /*
  * Init Shell console connection data (after load config for settings)
  */

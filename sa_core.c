@@ -1819,6 +1819,8 @@ int binary_search(freq_t f)
     return true;
   if(config.frequency_IF1 > fmin && config.frequency_IF1 < fplus)
     return true;
+  if(4*config.frequency_IF1 > fmin && 4*config.frequency_IF1 < fplus)
+    return true;
   return false;
 }
 

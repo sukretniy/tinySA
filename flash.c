@@ -21,7 +21,7 @@
 #include "hal.h"
 #include "nanovna.h"
 #include <string.h>
-
+#include "usbcfg.h"
 static int flash_wait_for_last_operation(void)
 {
   while (FLASH->SR == FLASH_SR_BSY) {
@@ -70,8 +70,10 @@ checksum(const void *start, size_t len)
   uint32_t *p = (uint32_t*)start;
   uint32_t *tail = (uint32_t*)(start + len);
   uint32_t value = 0;
-  while (p < tail)
+  while (p < tail) {
     value = __ROR(value, 31) + *p++;
+    if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("%x\r\n", value);
+  }
   return value;
 }
 
@@ -107,7 +109,7 @@ config_recall(void)
 
   if (src->magic != CONFIG_MAGIC)
     return -1;
-  if (checksum(src, sizeof *src - sizeof src->checksum) != src->checksum)
+  if (checksum(src, sizeof config - sizeof config.checksum) != src->checksum)
     return -1;
 
   /* duplicated saved data onto sram to be able to modify marker/trace */
