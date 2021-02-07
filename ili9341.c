@@ -252,6 +252,7 @@ void spi_DMATxBuffer(uint8_t *buffer, uint16_t len) {
   dmaStreamFlush(len);
 }
 #ifdef __USE_DISPLAY_DMA_RX__
+#if 0 // Not used
 // SPI transmit byte buffer use DMA
 static void spi_DMARxBuffer(uint8_t *buffer, uint16_t len) {
   uint8_t dummy_tx = 0xFF;
@@ -272,8 +273,9 @@ static void spi_DMARxBuffer(uint8_t *buffer, uint16_t len) {
   dmaWaitCompletion(dmatx);
   dmaWaitCompletion(dmarx);
 }
-#endif
-#endif
+#endif  // 0
+#endif  // __USE_DISPLAY_DMA_RX__
+#endif  // __USE_DISPLAY_DMA__
 
 static void spi_init(void)
 {
