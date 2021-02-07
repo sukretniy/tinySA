@@ -356,6 +356,7 @@ VNA_SHELL_FUNCTION(cmd_pause)
   (void)argc;
   (void)argv;
   pause_sweep();
+  draw_cal_status();
 }
 
 VNA_SHELL_FUNCTION(cmd_resume)

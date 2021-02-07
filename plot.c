@@ -2131,9 +2131,10 @@ static void cell_draw_marker_info(int x0, int y0)
         plot_printf(buf, sizeof buf, "DEPTH: %3d%%", depth);
         goto show_computed;
       } else if (setting.measurement == M_FM){
-        freq_t dev = ( markers[2].frequency - markers[1].frequency - actual_rbw_x10 * 100 ) >> 1;
-        if (dev < 0 )
+        freq_t dev = markers[1].frequency + actual_rbw_x10 * 100;      // Temp value to prevent calculation of negative deviation
+        if ( markers[2].frequency < dev)
           break;
+        dev = ( markers[2].frequency - dev ) >> 1;
         plot_printf(buf, sizeof buf, "DEVIATION:%6.1LqHz", dev);
         goto show_computed;
       } else if (setting.measurement == M_THD && markers[0].enabled && (markers[0].index << 5) > sweep_points ) {

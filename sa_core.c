@@ -71,9 +71,9 @@ void update_min_max_freq(void)
   case M_LOW:
     minFreq = 0;
     if (config.ultra)
-      maxFreq = 5290000000ULL;
+      maxFreq = 9900000000.0; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
     else
-      maxFreq =  850000000;
+      maxFreq =  LOW_MAX_FREQ;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -83,7 +83,7 @@ void update_min_max_freq(void)
 #endif
   case M_GENLOW:
     minFreq = 0;
-    maxFreq = DEFAULT_MAX_FREQ;
+    maxFreq = LOW_MAX_FREQ;
     break;
   case M_HIGH:
     minFreq = HIGH_MIN_FREQ_MHZ * 1000000;
@@ -119,7 +119,7 @@ void reset_settings(int m)
   setting.level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;     // This is the level with above settings.
   setting.rbw_x10 = 0;
   setting.average = 0;
-  setting.harmonic = 0;
+  setting.harmonic = 3;         // Automatically used when above ULTRA_MAX_FREQ
   setting.show_stored = 0;
   setting.auto_attenuation = false;
   setting.subtract_stored = 0;
@@ -175,10 +175,10 @@ void reset_settings(int m)
   case M_LOW:
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP, maxFreq);
-    if (config.ultra)
-      set_sweep_frequency(ST_STOP, 2900000000);    // TODO <----------------- temp ----------------------
-    else
-      set_sweep_frequency(ST_STOP,  800000000);    // TODO <----------------- temp ----------------------
+//    if (config.ultra)
+//      set_sweep_frequency(ST_STOP, 2900000000);    // TODO <----------------- temp ----------------------
+//    else
+      set_sweep_frequency(ST_STOP,  LOW_MAX_FREQ);    // TODO <----------------- temp ----------------------
     setting.attenuate_x2 = 10;
     setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
@@ -737,11 +737,13 @@ void toggle_spur(void)
 void set_harmonic(int h)
 {
   setting.harmonic = h;
+#if 0
   minFreq = 684000000.0;
   if ((freq_t)(setting.harmonic * 135000000)+config.frequency_IF1 >  minFreq)
     minFreq = setting.harmonic * 135000000 + config.frequency_IF1;
-  maxFreq = 4290000000.0;
-  if (setting.harmonic != 0 && (4400000000.0 * setting.harmonic + config.frequency_IF1 )< 4360000000.0)
+#endif
+  maxFreq = 9900000000.0;
+  if (setting.harmonic != 0 && (4400000000.0 * setting.harmonic + config.frequency_IF1 )< 9900000000.0)
     maxFreq = (4400000000.0 * setting.harmonic + config.frequency_IF1 );
   set_sweep_frequency(ST_START, minFreq);
   set_sweep_frequency(ST_STOP, maxFreq);
@@ -2120,7 +2122,7 @@ modulation_again:
  //     if (setting.step_delay_mode == SD_PRECISE)
  //       offs>>=1;                                        // steps of a quarter rbw
  //     if (lf > -offs)                                   // No negative frequencies
-      if (offs >= 0 || lf > -offs)
+      if (offs >= 0 || lf > (unsigned int)(-offs))
         lf += offs;
 //        if (lf > 4290000000U)
 //          lf = 0;
@@ -2262,7 +2264,7 @@ modulation_again:
 #define TXCO_DIV3   10000000
 
         if (setting.R == 0) {
-          if (lf < 850000000U && lf >= TXCO_DIV3) {
+          if (lf < LOW_MAX_FREQ && lf >= TXCO_DIV3) {
             freq_t tf = ((lf + actual_rbw_x10*100) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {
 //              ADF4351_R_counter(8);   no impact
@@ -2279,7 +2281,7 @@ modulation_again:
         else
           ADF4351_R_counter(setting.R);
 
-
+#if 0               // No 72MHz spur avoidance yet
         if (false) {         // Avoid 72MHz spur
 #define SPUR    2 * 72000000
           freq_t tf = ((lf + actual_rbw_x10*100) / SPUR) * SPUR;
@@ -2314,8 +2316,8 @@ modulation_again:
 #endif
           }
         }
-
 #endif
+#endif          // __ADF4351__
 #if 0
        freq_t target_f;
         if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
@@ -2326,7 +2328,7 @@ modulation_again:
         } else
           target_f = local_IF+lf; // otherwise to above IF
 #endif
-        if (setting.harmonic) {
+        if (setting.harmonic && f > ULTRA_MAX_FREQ) {
           target_f /= setting.harmonic;
         }
         set_freq(ADF4351_LO, target_f);
@@ -2339,7 +2341,7 @@ modulation_again:
             goto correct_min;
           }
         correct_plus:
-          if (setting.harmonic) {
+          if (setting.harmonic && f > ULTRA_MAX_FREQ) {
             error_f *= setting.harmonic;
           }
           if (error_f > actual_rbw_x10 * 5)        //RBW / 4
@@ -2351,7 +2353,7 @@ modulation_again:
             goto correct_plus;
           }
         correct_min:
-          if (setting.harmonic) {
+          if (setting.harmonic && f > ULTRA_MAX_FREQ) {
             error_f *= setting.harmonic;
           }
           if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4

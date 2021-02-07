@@ -72,6 +72,8 @@
 #define DEFAULT_MAX_FREQ    ((freq_t)800000000)
 #define HIGH_MIN_FREQ_MHZ   136// 825
 #define HIGH_MAX_FREQ_MHZ   1130
+#define ULTRA_MAX_FREQ      5290000000ULL
+#define LOW_MAX_FREQ         800000000ULL
 #endif
 /*
  * main.c
@@ -874,6 +876,7 @@ typedef struct setting
   int extra_lna;
   int ultra;
   int R;
+  uint32_t dummy;
   uint32_t checksum;            // must be last
 }setting_t;
 

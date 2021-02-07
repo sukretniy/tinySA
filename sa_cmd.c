@@ -792,6 +792,7 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
   }
   streamPut(shell_stream, '}');
   setting.frequency_step = old_step;
+  dirty = true;
   redraw_request = 0; // disable screen update in this mode
 }
 

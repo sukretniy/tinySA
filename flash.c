@@ -72,7 +72,7 @@ checksum(const void *start, size_t len)
   uint32_t value = 0;
   while (p < tail) {
     value = __ROR(value, 31) + *p++;
-    if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("%x\r\n", value);
+    // if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("%x\r\n", value);
   }
   return value;
 }
