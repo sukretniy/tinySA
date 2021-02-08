@@ -2363,7 +2363,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #define AUTO_TARGET_LEVEL   -25
 #define AUTO_TARGET_WINDOW  2
 
-  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate
+  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     int delta = 0;
