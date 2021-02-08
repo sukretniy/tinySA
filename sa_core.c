@@ -47,13 +47,13 @@ int high_out_adf4350 = true;
 
 int debug_frequencies = false;
 
-static unsigned long old_freq[5] = { 0, 0, 0, 0,0};
-static unsigned long real_old_freq[5] = { 0, 0, 0, 0,0};
+static freq_t old_freq[5] = { 0, 0, 0, 0,0};
+static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
 static long real_offset = 0;
 
 void clear_frequency_cache(void)
 {
-  for (unsigned int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
+  for (unsigned int i = 0; i < sizeof(old_freq)/sizeof(freq_t) ; i++) {
     old_freq[i] = 0;
     real_old_freq[i] = 0;
   }
@@ -92,7 +92,7 @@ void update_min_max_freq(void)
   case M_GENHIGH:
     if (high_out_adf4350) {
       minFreq =  136000000;
-      maxFreq = 4390000000ULL;
+      maxFreq = MAX_LO_FREQ;
     } else {
       minFreq =  136000000;
       maxFreq = 1150000000U;
@@ -743,8 +743,8 @@ void set_harmonic(int h)
     minFreq = setting.harmonic * 135000000 + config.frequency_IF1;
 #endif
   maxFreq = 9900000000.0;
-  if (setting.harmonic != 0 && (4400000000.0 * setting.harmonic + config.frequency_IF1 )< 9900000000.0)
-    maxFreq = (4400000000.0 * setting.harmonic + config.frequency_IF1 );
+  if (setting.harmonic != 0 && (MAX_LO_FREQ * setting.harmonic + config.frequency_IF1 )< 9900000000.0)
+    maxFreq = (MAX_LO_FREQ * setting.harmonic + config.frequency_IF1 );
   set_sweep_frequency(ST_START, minFreq);
   set_sweep_frequency(ST_STOP, maxFreq);
 }
@@ -1177,16 +1177,21 @@ void calculate_correction(void)
 pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
   pureRSSI_t cv = 0;
+  if (!(setting.mode == M_LOW || setting.mode == M_GENLOW))
+    return(0.0);
+
   if (setting.extra_lna) {
     if (f > 2100000000U) {
-      cv = float_TO_PURE_RSSI(+13);
+      cv += float_TO_PURE_RSSI(+13);
     } else {
-      cv = float_TO_PURE_RSSI( (float)f * 6.0 / 1000000000); // +6dBm at 1GHz
+      cv += float_TO_PURE_RSSI( (float)f * 6.0 / 1000000000); // +6dBm at 1GHz
     }
   }
 
-  if (!(setting.mode == M_LOW || setting.mode == M_GENLOW))
-    return(0.0);
+  if (f > ULTRA_MAX_FREQ) {
+    cv += float_TO_PURE_RSSI(+4);       // 4dB loss in harmonic mode
+  }
+
   int i = 0;
   while (f > config.correction_frequency[i] && i < CORRECTION_POINTS)
     i++;
@@ -1272,7 +1277,7 @@ void setup_sa(void)
 
 static int fast_counter = 0;
 
-void set_freq(int V, unsigned long freq)    // translate the requested frequency into a setting of the SI4432
+void set_freq(int V, freq_t freq)    // translate the requested frequency into a setting of the SI4432
 {
   if (old_freq[V] == freq)       // Do not change HW if not needed
     return;
@@ -1833,13 +1838,13 @@ void fill_spur_table(void)
 {
   for (uint8_t i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
   {
-   volatile uint64_t corr_IF = config.frequency_IF1;
+   freq_t corr_IF = config.frequency_IF1;
    if (i != 4)
      corr_IF -= IF_OFFSET;
    else
      corr_IF -= IF_OFFSET/2;
 
-   volatile uint64_t target = (corr_IF * (uint64_t)spur_mul[i] ) / (uint64_t) spur_div[i];
+   freq_t target = (corr_IF * (uint64_t)spur_mul[i] ) / (uint64_t) spur_div[i];
 //   volatile uint64_t actual_freq = ADF4351_set_frequency(0, target + config.frequency_IF1);
 //   volatile uint64_t delta =  target + (uint64_t) config.frequency_IF1 - actual_freq ;
 //   volatile uint64_t spur = target - delta;
@@ -2124,7 +2129,7 @@ modulation_again:
  //     if (lf > -offs)                                   // No negative frequencies
       if (offs >= 0 || lf > (unsigned int)(-offs))
         lf += offs;
-//        if (lf > 4290000000U)
+//        if (lf > MAX_LO_FREQ)
 //          lf = 0;
     }
 // -------------- Calculate the IF -----------------------------
@@ -2134,10 +2139,12 @@ modulation_again:
 
     freq_t local_IF;
     spur_second_pass = false;
-  again:                                                              // Spur reduction jumps to here for second measurement
+    again:                                                              // Spur reduction jumps to here for second measurement
 
     local_IF=0;                                                         // to get rid of warning
     int LO_shifted = false;
+    int LO_mirrored = false;
+    int LO_harmonic = false;
     if (MODE_HIGH(setting.mode)) {
       local_IF = 0;
     } else if (MODE_LOW(setting.mode)){                                              // All low mode
@@ -2156,16 +2163,25 @@ modulation_again:
 #endif
         } else {
 #ifdef __SI4468__
-            if (S_IS_AUTO(setting.spur_removal)) {
-              if (lf >= config.ultra_threshold) {
-                setting.spur_removal= S_AUTO_ON;
-              } else {
-                setting.spur_removal= S_AUTO_OFF;
-              }
+          if (S_IS_AUTO(setting.spur_removal)) {
+            if (lf >= config.ultra_threshold) {
+              setting.spur_removal= S_AUTO_ON;
+            } else {
+              setting.spur_removal= S_AUTO_OFF;
             }
+          }
 #endif
+          if (S_IS_AUTO(setting.below_IF)) {
+            if ((uint64_t)lf + (uint64_t)local_IF> MAX_LO_FREQ && lf < ULTRA_MAX_FREQ)
+              setting.below_IF = S_AUTO_ON; // Only way to reach this range.
+            else
+              setting.below_IF = S_AUTO_OFF; // default is above IF
+          }
+
           if (S_STATE(setting.spur_removal)){         // If in low input mode and spur reduction is on
-            if (false && S_IS_AUTO(setting.below_IF) && (lf < local_IF / 2  || lf > local_IF) ) // if below 150MHz and auto_below_IF  <-------------------TODO ---------------------
+            if (S_IS_AUTO(setting.below_IF) &&
+                ( lf > ULTRA_MAX_FREQ || lf < local_IF/2 /*  || ( (uint64_t)lf + (uint64_t)local_IF< MAX_LO_FREQ && lf + local_IF > 136000000ULL) */)
+                )
             {              // else low/above IF
               if (spur_second_pass)
                 setting.below_IF = S_AUTO_ON;               // use below IF in second pass
@@ -2184,15 +2200,15 @@ modulation_again:
               }
             }
           } else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
-              if (setting.auto_IF) {
-                local_IF = local_IF + DEFAULT_SPUR_OFFSET;
-//                if (actual_rbw_x10 == 6000 )
-//                  local_IF = local_IF + 50000;
-                LO_shifted = true;
-              }
+            if (setting.auto_IF) {
+              local_IF = local_IF + DEFAULT_SPUR_OFFSET;
+              //                if (actual_rbw_x10 == 6000 )
+              //                  local_IF = local_IF + 50000;
+              LO_shifted = true;
+            }
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-              if (!setting.auto_IF)
-                stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
+            if (!setting.auto_IF)
+              stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
 #endif
           }
         }
@@ -2239,12 +2255,14 @@ modulation_again:
     {                                           // Else set LO ('s)
       uint64_t target_f;
       int inverted_f = false;
-      if (setting.mode == M_LOW && !setting.tracking && ( S_STATE(setting.below_IF) || (uint64_t)lf + (uint64_t)local_IF> 4290000000U)  ) { // if in low input mode and below IF
+      if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
         if (lf < local_IF)
           target_f = (uint64_t)local_IF-(uint64_t)lf;                                                 // set LO SI4432 to below IF frequency
-        else
+        else {
           target_f = (uint64_t)lf - (uint64_t)local_IF;                                                 // set LO SI4432 to below IF frequency
-        inverted_f = true;
+          inverted_f = true;
+          LO_mirrored = true;
+        }
       }
       else
         target_f = (uint64_t)local_IF+(uint64_t)lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
@@ -2330,6 +2348,7 @@ modulation_again:
 #endif
         if (setting.harmonic && f > ULTRA_MAX_FREQ) {
           target_f /= setting.harmonic;
+          LO_harmonic = true;
         }
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
@@ -2394,19 +2413,27 @@ modulation_again:
     }
     if (debug_frequencies ) {
 
-      freq_t f;
-      if (setting.mode == M_LOW || setting.mode == M_GENLOW)
-        f = real_old_freq[ADF4351_LO] - (real_old_freq[SI4463_RX] + real_offset);
-      else
-        f = real_old_freq[SI4463_RX] + real_offset;
-     float f_error;
+      freq_t mult = (LO_harmonic ? 3 : 1);
+      freq_t f_low, f_high;
+      if (setting.mode == M_LOW || setting.mode == M_GENLOW) {
+        if (real_old_freq[ADF4351_LO] > (real_old_freq[SI4463_RX] + real_offset))
+          f_low = (mult*real_old_freq[ADF4351_LO]) - (real_old_freq[SI4463_RX] + real_offset);          // f below LO
+        else
+          f_low = (real_old_freq[SI4463_RX] + real_offset) - (mult*real_old_freq[ADF4351_LO]);
+        f_high = (mult*real_old_freq[ADF4351_LO]) + (real_old_freq[SI4463_RX] + real_offset);           // f above LO
+      } else
+        f_low = f_high = real_old_freq[SI4463_RX] + real_offset;
+     float f_error_low, f_error_high;
      if (setting.frequency_step == 0) {
-       f_error = ((float)f-(float)frequencies[i]);
+         f_error_low = ((float)frequencies[i] - (float)f_low);
+         f_error_high = ((float)f_high-(float)frequencies[i]);
      } else {
-       f_error = ((float)f-(float)frequencies[i])/setting.frequency_step;
+       f_error_low = ((float)f_low-(float)frequencies[i])/setting.frequency_step;
+       f_error_high = ((float)f_high-(float)frequencies[i])/setting.frequency_step;
      }
      char spur = ' ';
      int delta=0;
+     freq_t f = (LO_mirrored ? f_high : f_low);
      if ( f * 4 < real_old_freq[SI4463_RX] + real_offset) {
        delta = real_old_freq[SI4463_RX] + real_offset - 4*f;
        if (delta < actual_rbw_x10*100)
@@ -2418,7 +2445,10 @@ modulation_again:
      }
      char shifted = ( LO_shifted ? '>' : ' ');
       if (SDU1.config->usbp->state == USB_ACTIVE)
-        shell_printf ("%d:LO=%11.6q:%11.6q\t%c%cIF=%11.6q:%11.6q\tOF=%11.6q\tF=%11.6q\tD=%.2f\r\n", i, old_freq[ADF4351_LO],real_old_freq[ADF4351_LO], spur, shifted, old_freq[SI4463_RX], real_old_freq[SI4463_RX], (int32_t)real_offset, f , f_error);
+        shell_printf ("%d:%c%c%c%cLO=%11.6Lq:%11.6Lq\tIF=%11.6Lq:%11.6Lq\tOF=%11.6q\tF=%11.6Lq:%11.6Lq\tD=%.2f:%.2f\r\n",
+                      i,   spur, shifted,(LO_mirrored ? 'm' : ' '), (LO_harmonic ? 'h':' ' ),
+                      old_freq[ADF4351_LO],real_old_freq[ADF4351_LO],
+                      old_freq[SI4463_RX], real_old_freq[SI4463_RX], (int32_t)real_offset, f_low, f_high , f_error_low, f_error_high);
       osalThreadSleepMilliseconds(100);
     }
     // ------------------------- end of processing when in output mode ------------------------------------------------
