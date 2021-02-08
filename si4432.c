@@ -354,7 +354,7 @@ static int old_freq_band[2] = {-1,-1};
 static int written[2]= {0,0};
 #endif
 
-void SI4432_Set_Frequency ( uint32_t Freq ) {
+void SI4432_Set_Frequency ( freq_t Freq ) {
 //  int mode = SI4432_Read_Byte(0x02) & 0x03;           // Disabled as unreliable
 //  SI4432_Write_Byte(0x07, 0x02);    // Switch to tune mode
 
@@ -848,7 +848,7 @@ extern int settingAttenuate;
 
 //#define LEVEL(i, f, v) (v * (1-(fabs(f - frequencies[i])/actual_rbw/1000)))
 
-float LEVEL(uint32_t i, uint32_t f, int v)
+float LEVEL(uint32_t i, freq_t f, int v)
 {
   float dv;
   float df = fabs((float)f - (float)i);

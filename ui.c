@@ -778,7 +778,7 @@ menu_stimulus_cb(int item, uint8_t data)
 }
 #endif
 
-static uint32_t
+static freq_t
 get_marker_frequency(int marker)
 {
   if (marker < 0 || marker >= MARKERS_MAX)
@@ -791,7 +791,7 @@ get_marker_frequency(int marker)
 static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
 {
   (void)item;
-  uint32_t freq = get_marker_frequency(active_marker);
+  freq_t freq = get_marker_frequency(active_marker);
   if (freq == 0)
     return; // no active marker
 
@@ -809,12 +809,12 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
     {
       if (previous_marker == -1 || active_marker == previous_marker) {
         // if only 1 marker is active, keep center freq and make span the marker comes to the edge
-        uint32_t center = get_sweep_frequency(ST_CENTER);
-        uint32_t span = center > freq ? center - freq : freq - center;
+        freq_t center = get_sweep_frequency(ST_CENTER);
+        freq_t span = center > freq ? center - freq : freq - center;
         set_sweep_frequency(ST_SPAN, span * 2);
       } else {
         // if 2 or more marker active, set start and stop freq to each marker
-        uint32_t freq2 = get_marker_frequency(previous_marker);
+        freq_t freq2 = get_marker_frequency(previous_marker);
         if (freq2 == 0)
           return;
         if (freq > freq2) {
@@ -1234,6 +1234,7 @@ menu_move_back(void)
 
   if (current_menu_is_form()) {
     redraw_frame();
+    redraw_request |= REDRAW_BATTERY;
     area_width = 0;
   } else {
 //    redraw_frame();
@@ -1269,6 +1270,7 @@ menu_push_submenu(const menuitem_t *submenu)
   ensure_selection();
   if (menu_is_form(submenu)) {
     redraw_frame();
+    redraw_request |= REDRAW_BATTERY;
     area_width = 0;
   } else {
 //    redraw_frame();
@@ -1901,17 +1903,17 @@ void set_keypad_value(int v)
   set_numeric_value();
 }
 
-void check_frequency_slider(uint32_t slider_freq)
+void check_frequency_slider(freq_t slider_freq)
 {
 
-  if ( (maxFreq - minFreq) < (uint32_t)setting.slider_span ) {
+  if ( (maxFreq - minFreq) < (freq_t)setting.slider_span ) {
     setting.slider_span = maxFreq - minFreq;                         // absolute mode with max step size
   }
-  uint32_t half_span = setting.slider_span >> 1;
-  if (minFreq + (uint32_t)half_span > slider_freq) {
+  freq_t half_span = setting.slider_span >> 1;
+  if (minFreq + (freq_t)half_span > slider_freq) {
     setting.slider_position -= (minFreq + half_span - slider_freq) / (setting.slider_span / (MENU_FORM_WIDTH-8));            // reposition if needed
   }
-  if (maxFreq < slider_freq + (uint32_t)half_span) {
+  if (maxFreq < slider_freq + (freq_t)half_span) {
     setting.slider_position += (slider_freq + half_span - maxFreq) / (setting.slider_span /(MENU_FORM_WIDTH-8));            // reposition if needed
   }
 }
@@ -1967,12 +1969,12 @@ menu_select_touch(int i, int pos)
               setting.slider_position = new_slider;
               set_keypad_value(keypad);
               dirty = false;
-              perform(false, 0, (uint32_t)uistat.value, false);
+              perform(false, 0, (freq_t)uistat.value, false);
               draw_menu();
           } else if (mode == SL_SPAN ){
-              uint32_t slider_freq;
+              freq_t slider_freq;
             first_span:
-              slider_freq = (uint32_t) uistat.value;
+              slider_freq = (freq_t) uistat.value;
               int pw=new_slider + LCD_WIDTH/2;
               setting.slider_position = pw - LCD_WIDTH/2;   // Show delta on slider
               setting.slider_span = 10;
@@ -1988,9 +1990,9 @@ menu_select_touch(int i, int pos)
                 setting.slider_span *= 2;
                 pw -= 12;
               }
-              if ((uint32_t)setting.slider_span > (maxFreq - minFreq))
+              if ((freq_t)setting.slider_span > (maxFreq - minFreq))
                 setting.slider_span = (maxFreq - minFreq);
-              uint32_t old_minFreq = minFreq;           // Save when in high mode
+              freq_t old_minFreq = minFreq;           // Save when in high mode
               minFreq = 0;                              // And set minFreq to 0 for span display
               uistat.value = setting.slider_span;
               set_keypad_value(keypad);
@@ -2077,7 +2079,7 @@ menu_select_touch(int i, int pos)
         step = setting.slider_span;
         break;
       }
-      if (step < 0 && get_sweep_frequency(ST_CENTER) < (uint32_t)(-step))
+      if (step < 0 && get_sweep_frequency(ST_CENTER) < (freq_t)(-step))
         uistat.value = 0;
       else
         uistat.value = get_sweep_frequency(ST_CENTER) + step;
@@ -2361,11 +2363,11 @@ lever_search_marker(int status)
 // ex. 10942 -> 10000
 //      6791 ->  5000
 //       341 ->   200
-static uint32_t
-step_round(uint32_t v)
+static freq_t
+step_round(freq_t v)
 {
   // decade step
-  uint32_t x = 1;
+  freq_t x = 1;
   for (x = 1; x*10 <= v; x*= 10)
     ;
 
@@ -2381,9 +2383,9 @@ step_round(uint32_t v)
 static void
 lever_zoom_span(int status)
 {
-  uint32_t span = get_sweep_frequency(ST_SPAN);
+  freq_t span = get_sweep_frequency(ST_SPAN);
   if (uistat.auto_center_marker) {
-    uint32_t freq = get_marker_frequency(active_marker);
+    freq_t freq = get_marker_frequency(active_marker);
     search_maximum(active_marker, freq, 10 );
     if (freq != 0)
       set_sweep_frequency(ST_CENTER, freq);
@@ -2415,8 +2417,8 @@ lever_zoom_time(int status)
 static void
 lever_move(int status, int mode)
 {
-  uint32_t center = get_sweep_frequency(mode);
-  uint32_t span = get_sweep_frequency(ST_SPAN);
+  freq_t center = get_sweep_frequency(mode);
+  freq_t span = get_sweep_frequency(ST_SPAN);
   span = step_round(span / 3);
   if (status & EVT_UP) {
     set_sweep_frequency(mode, center + span);

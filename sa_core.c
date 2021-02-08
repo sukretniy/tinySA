@@ -34,13 +34,15 @@
 int scandirty = true;
 
 setting_t setting;
-uint32_t frequencies[POINTS_COUNT];
+freq_t frequencies[POINTS_COUNT];
 
 uint16_t actual_rbw_x10 = 0;
 uint16_t vbwSteps = 1;
-uint32_t minFreq = 0;
-uint32_t maxFreq = 520000000;
+freq_t minFreq = 0;
+freq_t maxFreq = 520000000;
 
+static freq_t old_freq[4] = { 0, 0, 0, 0};
+static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 //int setting.refer = -1;  // Off by default
 const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
@@ -183,15 +185,10 @@ void reset_settings(int m)
   }
   markers[0].mtype = M_REFERENCE | M_TRACKING;
   markers[0].enabled = M_ENABLED;
-
+  setting._active_marker = 0;
+  set_sweep_points(POINTS_COUNT);
   dirty = true;
 }
-
-//static uint32_t extra_vbw_step_time = 0;
-//static uint32_t etra_repeat_time = 0;
-//static uint32_t minimum_zero_span_sweep_time = 0;
-//static uint32_t minimum_sweep_time = 0;
-
 
 uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in uS,  needed to calculate the initial delays for the RSSI before first sweep
 {
@@ -266,7 +263,7 @@ void set_gridlines(int d)
 
 //int setting_frequency_10mhz = 10000000;
 
-void set_10mhz(uint32_t f)
+void set_10mhz(freq_t f)
 {
   if (f < 9000000 || f > 11000000)
     return;
@@ -379,7 +376,7 @@ void set_modulation(int m)
 
 void set_modulation_frequency(int f)
 {
-  if (100 <= f && f <= 6000) {
+  if (50 <= f && f <= 6000) {
     setting.modulation_frequency = f;
     dirty = true;
   }
@@ -683,7 +680,7 @@ void set_harmonic(int h)
 {
   setting.harmonic = h;
   minFreq = 684000000.0;
-  if ((uint32_t)(setting.harmonic * 240000000)+434000000 >  minFreq)
+  if ((freq_t)(setting.harmonic * 240000000)+434000000 >  minFreq)
     minFreq = setting.harmonic * 240000000.0+434000000.0;
   maxFreq = 4360000000;
   if (setting.harmonic != 0 && (960000000.0 * setting.harmonic + 434000000.0 )< 4360000000.0)
@@ -1051,7 +1048,7 @@ void apply_settings(void)       // Ensure all settings in the setting structure 
 #if 0
 #define CORRECTION_POINTS  10
 
-static const uint32_t correction_frequency[CORRECTION_POINTS] =
+static const freq_t correction_frequency[CORRECTION_POINTS] =
 { 100000, 200000, 400000, 1000000, 2000000, 50000000, 100000000, 200000000, 300000000, 350000000 };
 
 static const float correction_value[CORRECTION_POINTS] =
@@ -1083,7 +1080,7 @@ void calculate_correction(void)
 #pragma GCC push_options
 #pragma GCC optimize ("Og")             // "Os" causes problem
 
-pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
+pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
   if (!(setting.mode == M_LOW || setting.mode == M_GENLOW))
     return(0.0);
@@ -1096,7 +1093,7 @@ pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI
     return(scaled_correction_value[0] >> (SCALE_FACTOR - 5) );
   f = f - config.correction_frequency[i-1];
 #if 0
-  uint32_t m = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR ;
+  freq_t m = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR ;
   float multi = (config.correction_value[i] - config.correction_value[i-1]) * (1 << (SCALE_FACTOR -1)) / (float)m;
   float cv = config.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
 #else
@@ -1111,18 +1108,12 @@ pureRSSI_t get_frequency_correction(uint32_t f)      // Frequency dependent RSSI
 
 float peakLevel;
 float min_level;
-uint32_t peakFreq;
+freq_t peakFreq;
 int peakIndex;
 float temppeakLevel;
 int temppeakIndex;
-static unsigned long old_freq[4] = { 0, 0, 0, 0};
-static unsigned long real_old_freq[4] = { 0, 0, 0, 0};
-// volatile int t;
 
-//static uint32_t extra_vbw_step_time = 0;
-//static uint32_t etra_repeat_time = 0;
-//static uint32_t minimum_zero_span_sweep_time = 0;
-//static uint32_t minimum_sweep_time = 0;
+// volatile int t;
 
 void setupSA(void)
 {
@@ -1184,9 +1175,9 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
       if (delta > OFFSET_LOWER_BOUND && delta < 79999) { // and requested frequency can be reached by using the offset registers
 #if 0
         if (real_old_freq[V] >= 480000000)
-          shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
+          shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (freq_t)(real_old_freq[V]+delta*2),  real_old_freq[V]);
         else
-          shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (uint32_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
+          shell_printf("%d: Offs %q HW %d\r\n", SI4432_Sel, (freq_t)(real_old_freq[V]+delta*1),  real_old_freq[V]);
 #endif
         delta = delta * 4 / 625; // = 156.25;             // Calculate and set the offset register i.s.o programming a new frequency
         SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, (uint8_t)(delta & 0xff), (uint8_t)((delta >> 8) & 0x03));
@@ -1195,7 +1186,7 @@ void set_freq(int V, unsigned long freq)    // translate the requested frequency
         old_freq[V] = freq;
       } else {
 #ifdef __WIDE_OFFSET__
-        uint32_t target_f;                    // Impossible to use offset so set SI4432 to new frequency
+        freq_t target_f;                    // Impossible to use offset so set SI4432 to new frequency
         if (freq < real_old_freq[V]) {                          // sweeping down
           if (freq - 80000 >= 480000000) {
             target_f = freq - 160000;
@@ -1360,7 +1351,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   } else {
     setting.vbw_x10 = 3000; // trick to get right default rbw in zero span mode
   }
-  uint32_t temp_actual_rbw_x10 = setting.rbw_x10;     // requested rbw , 32 bit !!!!!!
+  freq_t temp_actual_rbw_x10 = setting.rbw_x10;     // requested rbw , 32 bit !!!!!!
   if (temp_actual_rbw_x10 == 0) {        // if auto rbw
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
       if (setting.fast_speedup > 2)
@@ -1618,7 +1609,7 @@ static void calculate_static_correction(void)                   // Calculate the
           - setting.offset);
 }
 
-pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
+pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
   int modulation_index = 0;
@@ -1737,8 +1728,8 @@ pureRSSI_t perform(bool break_on_operation, int i, uint32_t f, int tracking)    
           modulation_delay += config.cor_nfm;  // -17 default
           // modulation_index = 0; // default value
         }
-        if ((setting.mode == M_GENLOW  && f > ((uint32_t)480000000) - DEFAULT_IF) ||
-            (setting.mode == M_GENHIGH  && f > ((uint32_t)480000000) ) )
+        if ((setting.mode == M_GENLOW  && f > ((freq_t)480000000) - DEFAULT_IF) ||
+            (setting.mode == M_GENHIGH  && f > ((freq_t)480000000) ) )
           modulation_index += 2;
         current_fm_modulation = (int *)fm_modulation[modulation_index];
         f -= fm_modulation_offset[modulation_index];           // Shift output frequency
@@ -1780,7 +1771,7 @@ modulation_again:
 #endif
   int t = 0;
   do {
-    uint32_t lf = f;
+    freq_t lf = f;
     if (vbwSteps > 1) {          // Calculate sub steps
       int offs_div10 = (t - (vbwSteps >> 1)) * 500 / 10; // steps of half the rbw
       if ((vbwSteps & 1) == 0)                           // Uneven steps, center
@@ -1796,7 +1787,7 @@ modulation_again:
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
-    uint32_t local_IF;
+    freq_t local_IF;
     spur_second_pass = false;
   again:                                                              // Spur reduction jumps to here for second measurement
 
@@ -1881,7 +1872,7 @@ modulation_again:
     } else
 #endif
     {                                           // Else set LO ('s)
-      uint32_t target_f;
+      freq_t target_f;
       if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) // if in low input mode and below IF
         target_f = local_IF-lf;                                                 // set LO SI4432 to below IF frequency
       else
@@ -2119,7 +2110,7 @@ sweep_again:                                // stay in sweep loop when output mo
       }
       if (RSSI < AGC_RSSI_THRESHOLD)
         agc_prev_rssi = -150;
-      uint32_t delta_freq = frequencies[i] - agc_peak_freq;
+      freq_t delta_freq = frequencies[i] - agc_peak_freq;
       if (agc_peak_freq != 0 &&  delta_freq < 2000000) {
         int max_gain = (-25 - agc_peak_rssi ) / 4;
         auto_set_AGC_LNA(false, 16 + delta_freq * max_gain / 2000000 );    // enable LNA   and stepwise gain
@@ -2511,7 +2502,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #if 0
           float v = actual_t[markers[m].index] - 10.0;              // -10dB points
           int index = markers[m].index;
-          uint32_t f = markers[m].frequency;
+          freq_t f = markers[m].frequency;
           uint32_t s = actual_rbw_x10 * 200;                        // twice the selected RBW
           int left = index, right = index;
           while (t > 0 && actual_t[t+1] > v && markers[t].frequency > f - s)                                        // Find left point
@@ -2562,8 +2553,8 @@ sweep_again:                                // stay in sweep loop when output mo
         markers[0].index = l;
         markers[1].index = r;
       }
-      uint32_t lf = frequencies[l];
-      uint32_t rf = frequencies[r];
+      freq_t lf = frequencies[l];
+      freq_t rf = frequencies[r];
       markers[0].frequency = lf;
       markers[1].frequency = rf;
 
@@ -3203,8 +3194,8 @@ common_silent:
   }
   trace[TRACE_STORED].enabled = true;
   set_reflevel(test_case[i].pass+10);
-  set_sweep_frequency(ST_CENTER, (uint32_t)(test_case[i].center * 1000000));
-  set_sweep_frequency(ST_SPAN, (uint32_t)(test_case[i].span * 1000000));
+  set_sweep_frequency(ST_CENTER, (freq_t)(test_case[i].center * 1000000));
+  set_sweep_frequency(ST_SPAN, (freq_t)(test_case[i].span * 1000000));
   draw_cal_status();
 }
 
@@ -3299,7 +3290,7 @@ void self_test(int test)
     setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
-    uint32_t f = 400000;           // Start search at 400kHz
+    freq_t f = 400000;           // Start search at 400kHz
     //  int i = 0;                     // Index in spur table (temp_t)
     set_RBW(setting.frequency_step/100);
     last_spur = 0;
@@ -3383,12 +3374,12 @@ void self_test(int test)
 
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
 #if 0
-      set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 1000));     // Wide
+      set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * 1000));     // Wide
 #else
       if (setting.rbw_x10 < 1000)
-        set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));   // Narrow
+        set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * 5000));   // Narrow
       else
-        set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
+        set_sweep_frequency(ST_SPAN, (freq_t)(18000000));
 #endif
       test_acquire(TEST_RBW);                        // Acquire test
       test_validate(TEST_RBW);                       // Validate test
@@ -3410,9 +3401,9 @@ void self_test(int test)
         setting.step_delay_mode = SD_NORMAL;
         setting.step_delay = setting.step_delay * 4 / 5;
         if (setting.rbw_x10 < 1000)
-          set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));
+          set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * 5000));
         else
-          set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));
+          set_sweep_frequency(ST_SPAN, (freq_t)(18000000));
 
 //        setting.repeat = 10;
         test_acquire(TEST_RBW);                        // Acquire test
@@ -3435,9 +3426,9 @@ void self_test(int test)
           setting.offset_delay /= 2;
           setting.spur_removal = S_OFF;
           if (setting.rbw_x10 < 1000)
-            set_sweep_frequency(ST_SPAN, (uint32_t)(setting.rbw_x10 * 5000));   // 50 times RBW
+            set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * 5000));   // 50 times RBW
           else
-            set_sweep_frequency(ST_SPAN, (uint32_t)(18000000));     // Limit to 18MHz
+            set_sweep_frequency(ST_SPAN, (freq_t)(18000000));     // Limit to 18MHz
 //          setting.repeat = 10;
           test_acquire(TEST_RBW);                        // Acquire test
           test_validate(TEST_RBW);                       // Validate test

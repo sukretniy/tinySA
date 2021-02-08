@@ -901,7 +901,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
         markers[i].enabled = M_ENABLED;
         markers[i].mtype = M_DELTA;// | M_TRACKING;
       }
-      uint32_t center, span;
+      freq_t center, span;
       markers[0].mtype = M_REFERENCE;// | M_TRACKING;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
@@ -2167,7 +2167,7 @@ static void fetch_numeric_target(void)
   }
   
   {
-    uint32_t x = uistat.value;
+    freq_t x = uistat.value;
     int n = 0;
     for (; x >= 10 && n < 9; n++)
       x /= 10;
@@ -2181,20 +2181,20 @@ set_numeric_value(void)
 {
   switch (keypad_mode) {
   case KM_START:
-    set_sweep_frequency(ST_START, (uint32_t)uistat.value);
+    set_sweep_frequency(ST_START, (freq_t)uistat.value);
     break;
   case KM_STOP:
-    set_sweep_frequency(ST_STOP, (uint32_t)uistat.value);
+    set_sweep_frequency(ST_STOP, (freq_t)uistat.value);
     break;
   case KM_CENTER:
-    set_sweep_frequency(ST_CENTER, (uint32_t)uistat.value);
+    set_sweep_frequency(ST_CENTER, (freq_t)uistat.value);
     break;
   case KM_SPAN:
     setting.modulation = MO_NONE;
-    set_sweep_frequency(ST_SPAN, (uint32_t)uistat.value);
+    set_sweep_frequency(ST_SPAN, (freq_t)uistat.value);
     break;
   case KM_CW:
-    set_sweep_frequency(ST_CW, (uint32_t)uistat.value);
+    set_sweep_frequency(ST_CW, (freq_t)uistat.value);
     break;
   case KM_SCALE:
     user_set_scale(uistat.value);
@@ -2272,7 +2272,7 @@ set_numeric_value(void)
     set_gridlines(uistat.value);
     break;
   case KM_MARKER:
-    set_marker_frequency(active_marker, (uint32_t)uistat.value);
+    set_marker_frequency(active_marker, (freq_t)uistat.value);
     break;
   case KM_MODULATION:
     set_modulation_frequency((int)uistat.value);

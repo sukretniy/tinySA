@@ -84,6 +84,7 @@
 #define actual_t  measured[TRACE_ACTUAL]
 #define temp_t    measured[TRACE_TEMP]
 
+typedef uint32_t freq_t;
 #define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
 
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
@@ -154,13 +155,13 @@ enum stimulus_type {
 
 void set_sweep_points(uint16_t points);
 void update_frequencies(void);
-void set_sweep_frequency(int type, uint32_t frequency);
-uint32_t get_sweep_frequency(int type);
+void set_sweep_frequency(int type, freq_t frequency);
+freq_t get_sweep_frequency(int type);
 void my_microsecond_delay(int t);
 float my_atof(const char *p);
 int shell_printf(const char *fmt, ...);
 
-void set_marker_frequency(int m, uint32_t f);
+void set_marker_frequency(int m, freq_t f);
 void toggle_sweep(void);
 void toggle_mute(void);
 void load_default_properties(void);
@@ -203,8 +204,8 @@ extern const char *info_about[];
 extern const char * const unit_string[];
 extern uint8_t signal_is_AM;
 extern const int reffer_freq[];
-extern uint32_t minFreq;
-extern uint32_t maxFreq;
+extern freq_t minFreq;
+extern freq_t maxFreq;
 int level_is_calibrated(void);
 void reset_settings(int);
 void update_min_max_freq(void);
@@ -271,7 +272,7 @@ void set_attack(int);
 void set_noise(int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
-void set_10mhz(uint32_t);
+void set_10mhz(freq_t);
 void set_modulation(int);
 void set_modulation_frequency(int);
 int search_maximum(int m, int center, int span);
@@ -504,29 +505,29 @@ typedef struct config {
   int16_t  touch_cal[4];
   uint32_t _serial_speed;
 #ifdef __VNA__
-  uint32_t harmonic_freq_threshold;
+  freq_t harmonic_freq_threshold;
 #endif
   uint16_t dac_value;
   uint16_t vbat_offset;
   float low_level_offset;
   float high_level_offset;
-  uint32_t correction_frequency[CORRECTION_POINTS];
+  freq_t correction_frequency[CORRECTION_POINTS];
   float    correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
-  uint32_t  setting_frequency_10mhz;
+  freq_t  setting_frequency_10mhz;
 
   uint16_t gridlines;
   uint16_t hambands;
 #ifdef TINYSA4
-  uint32_t frequency_IF2;
+  freq_t frequency_IF2;
 #endif
   int8_t   _mode;  
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
-  int8_t    dummy;
+  uint32_t    dummy;
 //  uint8_t _reserved[22];
-  uint32_t checksum;
+  freq_t checksum;
 } config_t;
 
 extern config_t config;
@@ -575,7 +576,7 @@ typedef struct {
   int8_t enabled;
   int8_t mtype;
   int16_t index;
-  uint32_t frequency;
+  freq_t frequency;
 } marker_t;
 
 #define MARKERS_MAX 4
@@ -746,8 +747,8 @@ void show_version(void);
 typedef struct setting
 {
   uint32_t magic;
-//  uint32_t _frequency0;
-//  uint32_t _frequency1;
+//  freq_t _frequency0;
+//  freq_t _frequency1;
   int mode;
   uint16_t _sweep_points;
   int16_t attenuate_x2;
@@ -768,7 +769,7 @@ typedef struct setting
   int tracking;
   int modulation;
   int step_delay;
-  uint32_t frequency_step;
+  freq_t frequency_step;
   int test;
   int harmonic;
   int decay;
@@ -777,9 +778,9 @@ typedef struct setting
   uint32_t vbw_x10;
   int  tracking_output;
   int repeat;
-  uint32_t frequency0;
-  uint32_t frequency1;
-  uint32_t frequency_IF;
+  freq_t frequency0;
+  freq_t frequency1;
+  freq_t frequency_IF;
   int freq_mode;
   int measurement;
   int refer;
@@ -840,7 +841,7 @@ enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
 #define REPEAT_TIME         111         // Time per extra repeat in uS
 #define MEASURE_TIME        127         // Time per single point measurement with vbwstep =1 without step delay in uS
 
-extern uint32_t frequencies[POINTS_COUNT];
+extern freq_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
 extern const char * const unit_scale_text[];
 
@@ -880,17 +881,17 @@ extern const char * const unit_scale_text[];
 typedef struct properties {
   uint32_t magic;
   preset_t setting;
-//  uint32_t _frequency0;
-//  uint32_t _frequency1;
+//  freq_t _frequency0;
+//  freq_t _frequency1;
   uint16_t _sweep_points;
 #ifdef __VNA__
   uint16_t _cal_status;
 
 #endif
 #ifdef __SA__
-//  uint32_t _frequency_IF; //IF frequency
+//  freq_t _frequency_IF; //IF frequency
 #endif
-//  uint32_t _frequencies[POINTS_COUNT];
+//  freq_t _frequencies[POINTS_COUNT];
 #ifdef __VNA__
   float _cal_data[5][POINTS_COUNT][2];
   float _electrical_delay; // picoseconds
@@ -1107,7 +1108,7 @@ void wait_user(void);
 void calibrate(void);
 float to_dBm(float);
 uint32_t calc_min_sweep_time_us(void);
-pureRSSI_t perform(bool b, int i, uint32_t f, int e);
+pureRSSI_t perform(bool b, int i, freq_t f, int e);
 void interpolate_maximum(int m);
 
 enum {
