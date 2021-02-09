@@ -60,8 +60,6 @@ void clear_frequency_cache(void)
   ADF4351_force_refresh();
 }
 
-static freq_t old_freq[4] = { 0, 0, 0, 0};
-static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 //int setting.refer = -1;  // Off by default
 const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
