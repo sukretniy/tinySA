@@ -419,8 +419,8 @@ unsigned_common:
       if (state & IS_LONG)
         value.x = va_arg(ap, uint64_t);
       else
-        value.u = va_arg(ap, uint32_t);
-      p = long_to_string_with_divisor(p, value.u, c, 0);
+        value.x = va_arg(ap, uint32_t);
+      p = long_to_string_with_divisor(p, value.x, c, 0);
       break;
     default:
       *p++ = c;

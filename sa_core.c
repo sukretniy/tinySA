@@ -1102,8 +1102,8 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
-      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 50; }
+      if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 60; }
+      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 60; }
       else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 70; }
       else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 200; }
       else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 500; SI4432_offset_delay = 180; spur_gate = 300; }
@@ -2200,7 +2200,9 @@ modulation_again:
               }
             }
           } else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
-            if (setting.auto_IF) {
+            if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 1000000) {
+              setting.below_IF = S_AUTO_ON;
+            } else if (setting.auto_IF) {
               local_IF = local_IF + DEFAULT_SPUR_OFFSET;
               //                if (actual_rbw_x10 == 6000 )
               //                  local_IF = local_IF + 50000;
@@ -2346,7 +2348,7 @@ modulation_again:
         } else
           target_f = local_IF+lf; // otherwise to above IF
 #endif
-        if (setting.harmonic && f > ULTRA_MAX_FREQ) {
+        if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
           target_f /= setting.harmonic;
           LO_harmonic = true;
         }
@@ -2360,7 +2362,7 @@ modulation_again:
             goto correct_min;
           }
         correct_plus:
-          if (setting.harmonic && f > ULTRA_MAX_FREQ) {
+          if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
             error_f *= setting.harmonic;
           }
           if (error_f > actual_rbw_x10 * 5)        //RBW / 4
@@ -2372,7 +2374,7 @@ modulation_again:
             goto correct_plus;
           }
         correct_min:
-          if (setting.harmonic && f > ULTRA_MAX_FREQ) {
+          if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
             error_f *= setting.harmonic;
           }
           if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
@@ -2417,10 +2419,10 @@ modulation_again:
       freq_t f_low, f_high;
       if (setting.mode == M_LOW || setting.mode == M_GENLOW) {
         if (real_old_freq[ADF4351_LO] > (real_old_freq[SI4463_RX] + real_offset))
-          f_low = (mult*real_old_freq[ADF4351_LO]) - (real_old_freq[SI4463_RX] + real_offset);          // f below LO
+          f_low = (mult*real_old_freq[ADF4351_LO]) - (real_old_freq[SI4463_RX] + real_offset);          // lf below LO
         else
           f_low = (real_old_freq[SI4463_RX] + real_offset) - (mult*real_old_freq[ADF4351_LO]);
-        f_high = (mult*real_old_freq[ADF4351_LO]) + (real_old_freq[SI4463_RX] + real_offset);           // f above LO
+        f_high = (mult*real_old_freq[ADF4351_LO]) + (real_old_freq[SI4463_RX] + real_offset);           // lf above LO
       } else
         f_low = f_high = real_old_freq[SI4463_RX] + real_offset;
      float f_error_low, f_error_high;
