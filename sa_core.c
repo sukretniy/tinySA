@@ -60,6 +60,8 @@ void clear_frequency_cache(void)
   ADF4351_force_refresh();
 }
 
+static freq_t old_freq[4] = { 0, 0, 0, 0};
+static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 //int setting.refer = -1;  // Off by default
 const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
@@ -1601,7 +1603,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   } else {
     setting.vbw_x10 = 3000; // trick to get right default rbw in zero span mode
   }
-  uint32_t temp_actual_rbw_x10 = setting.rbw_x10;     // requested rbw , 32 bit !!!!!!
+  freq_t temp_actual_rbw_x10 = setting.rbw_x10;     // requested rbw , 32 bit !!!!!!
   if (temp_actual_rbw_x10 == 0) {        // if auto rbw
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
 #ifdef __SI4432__
@@ -2462,7 +2464,7 @@ modulation_again:
     if (MODE_OUTPUT(setting.mode)) {               // No substepping and no RSSI in output mode
       if (break_on_operation && operation_requested)          // break subscanning if requested
         return(0);         // abort
-      if (i == 1 && MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) { // if in output mode with modulation
+      if ( i==1 && MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) { // if in output mode with modulation and LO setup done
 //        i = 1;              // Everything set so skip LO setting
         goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
       }
@@ -2950,7 +2952,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #define AUTO_TARGET_LEVEL   -30
 #define AUTO_TARGET_WINDOW  2
 
-  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation && max_index[0] > 0) {  // calculate and apply auto attenuate
+  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     int delta = 0;
@@ -3892,7 +3894,7 @@ void self_test(int test)
     setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
-    uint32_t f = 400000;           // Start search at 400kHz
+    freq_t f = 400000;           // Start search at 400kHz
     //  int i = 0;                     // Index in spur table (temp_t)
     set_RBW(setting.frequency_step/100);
     last_spur = 0;

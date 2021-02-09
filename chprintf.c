@@ -331,11 +331,11 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
       state|=DEFAULT_PRESCISION;
     //Get [length]
     if (c == 'l' || c == 'L') {
-      state|=IS_LONG;
+      // state|=IS_LONG; // Ignore Long
       if (*fmt)
         c = *fmt++;
     }
-    /*
+	/*
     else if ((c >= 'A') && (c <= 'Z'))
         state|=IS_LONG;
     */

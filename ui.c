@@ -1276,6 +1276,7 @@ menu_move_back(void)
 
   if (current_menu_is_form()) {
     redraw_frame();
+    redraw_request |= REDRAW_BATTERY;
     area_width = 0;
   } else {
 //    redraw_frame();
@@ -1311,6 +1312,7 @@ menu_push_submenu(const menuitem_t *submenu)
   ensure_selection();
   if (menu_is_form(submenu)) {
     redraw_frame();
+    redraw_request |= REDRAW_BATTERY;
     area_width = 0;
   } else {
 //    redraw_frame();
@@ -2119,7 +2121,7 @@ menu_select_touch(int i, int pos)
         step = setting.slider_span;
         break;
       }
-      if (step < 0 && get_sweep_frequency(ST_CENTER) <  (unsigned int)-step)
+      if (step < 0 && get_sweep_frequency(ST_CENTER) < (freq_t)(-step))
         uistat.value = 0;
       else
         uistat.value = get_sweep_frequency(ST_CENTER) + step;

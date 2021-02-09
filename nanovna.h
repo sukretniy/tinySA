@@ -326,7 +326,7 @@ void set_attack(int);
 void set_noise(int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
-void set_30mhz(freq_t f);
+void set_30mhz(freq_t);
 void set_modulation(int);
 void set_modulation_frequency(int);
 int search_maximum(int m, freq_t center, int span);
@@ -563,7 +563,7 @@ typedef struct config {
   int16_t  touch_cal[4];
   uint32_t _serial_speed;
 #ifdef __VNA__
-  uint32_t harmonic_freq_threshold;
+  freq_t harmonic_freq_threshold;
 #endif
   uint16_t dac_value;
   uint16_t vbat_offset;
@@ -588,7 +588,7 @@ typedef struct config {
   int8_t    ultra;
   uint32_t    dummy;
 //  uint8_t _reserved[22];
-  uint32_t checksum;
+  freq_t checksum;
 } config_t;
 
 extern config_t config;
