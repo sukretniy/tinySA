@@ -1822,10 +1822,12 @@ int binary_search(freq_t f)
     else
        return true; // index is m
   }
-  if (!setting.auto_IF && setting.frequency_IF > fmin && setting.frequency_IF < fplus)
+#if 1
+  if (!setting.auto_IF && setting.frequency_IF-2000000 < f && f < setting.frequency_IF -200000)
     return true;
-  if(config.frequency_IF1 > fmin && config.frequency_IF1 < fplus)
+  if(config.frequency_IF1 > f-200000 && config.frequency_IF1 < f-200000)
     return true;
+#endif
   if(4*config.frequency_IF1 > fmin && 4*config.frequency_IF1 < fplus)
     return true;
   return false;

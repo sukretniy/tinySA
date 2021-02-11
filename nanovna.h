@@ -28,7 +28,7 @@
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
-// #define __DEBUG_SPUR__
+//#define __DEBUG_SPUR__
 
 #define __SA__
 #ifdef TINYSA3
