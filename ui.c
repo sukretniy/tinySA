@@ -2101,7 +2101,7 @@ menu_select_touch(int i, int pos)
         step = +10;
         break;
       }
-      uistat.value = get_level() + step;
+      uistat.value = setting.offset + get_level() + step;
       do_exit = true;
       goto apply_step;
     } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER) {
