@@ -2289,7 +2289,7 @@ modulation_again:
           if (lf < LOW_MAX_FREQ && lf >= TXCO_DIV3) {
             freq_t tf = ((lf + actual_rbw_x10*100) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {
-//              ADF4351_R_counter(8);   no impact
+              ADF4351_R_counter(6);
             } else {
               freq_t tf = ((lf + actual_rbw_x10*100) / TXCO_DIV3) * TXCO_DIV3;
               if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100)
