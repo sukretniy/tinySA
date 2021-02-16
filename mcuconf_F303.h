@@ -39,7 +39,7 @@
 #define STM32_NO_INIT                       FALSE
 #define STM32_PVD_ENABLE                    FALSE
 #define STM32_PLS                           STM32_PLS_LEV0
-#if 1                                   // 72MHz
+#if 0                                                                            // 72MHz
 #define STM32_HSI_ENABLED                   FALSE
 #define STM32_HSE_ENABLED                   TRUE
 #define STM32_SW                            STM32_SW_PLL
@@ -48,7 +48,7 @@
 #define STM32_PLLMUL_VALUE                  9
 #define STM32_USBPRE                        STM32_USBPRE_DIV1P5
 #else
-#define STM32_HSI_ENABLED                   TRUE
+#define STM32_HSI_ENABLED                   TRUE                                  // 48MHz
 #define STM32_HSE_ENABLED                   FALSE
 #define STM32_SW                            STM32_SW_PLL
 #define STM32_PLLSRC                        STM32_PLLSRC_HSI

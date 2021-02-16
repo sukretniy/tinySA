@@ -98,14 +98,14 @@ ulong_freq(char *p, uint64_t freq, uint32_t precision)
   // Set format (every 3 digits add ' ' up to GHz)
   uint32_t format = 0b00100100100;
   do {
-#if 0
+#if 1
     uint8_t c = freq % 10;
     freq/= 10;
 #else
     // Fast and compact division uint32_t on 10, using shifts, result:
     // c = freq % 10
     // freq = freq / 10;
-    uint32_t c = freq;
+    uint64_t c = freq;
     freq >>= 1;
     freq += freq >> 1;
     freq += freq >> 4;

@@ -1102,14 +1102,14 @@ void calculate_step_delay(void)
 #endif
 #endif
 #ifdef __SI4463__
-      if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 60; }
-      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 60; }
-      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 70; }
-      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 200; }
-      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 500; SI4432_offset_delay = 180; spur_gate = 300; }
-      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 900; SI4432_offset_delay = 300; spur_gate = 1000; }
-      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 1000; spur_gate = 3000; }
-      else                             { SI4432_step_delay = 9000; SI4432_offset_delay =3000; spur_gate = 10000; }
+      if      (actual_rbw_x10 >= 6000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 400000; }
+      else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 200000; }
+      else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 100000; }
+      else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 100000; }
+      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 500; SI4432_offset_delay = 180; spur_gate = 100000; }
+      else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 900; SI4432_offset_delay = 300; spur_gate = 100000; }
+      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 1000; spur_gate = 100000; }
+      else                             { SI4432_step_delay = 9000; SI4432_offset_delay =3000; spur_gate = 100000; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
@@ -1811,8 +1811,8 @@ int binary_search(freq_t f)
 {
   int L = 0;
   int R =  (sizeof spur_table)/sizeof(int) - 1;
-  freq_t fmin =  f - actual_rbw_x10 * spur_gate;
-  freq_t fplus = f + actual_rbw_x10 * spur_gate;
+  freq_t fmin =  f - spur_gate;
+  freq_t fplus = f + spur_gate;
   while (L <= R) {
     int m = (L + R) / 2;
     if (spur_table[m] < fmin)
@@ -1920,6 +1920,7 @@ systime_t start_of_sweep_timestamp;
 static systime_t sweep_elapsed = 0;                             // Time since first start of sweeping, used only for auto attenuate
 uint8_t signal_is_AM = false;
 static uint8_t check_for_AM = false;
+static int is_below = false;
 
 static void calculate_static_correction(void)                   // Calculate the static part of the RSSI correction
 {
@@ -1938,6 +1939,31 @@ static void calculate_static_correction(void)                   // Calculate the
           + get_attenuation()
           + (setting.extra_lna ? -23.0 : 0)                         // TODO <------------------------- set correct value
           - setting.offset);
+}
+
+int hsical = -1;
+void clock_above_48MHz(void)
+{
+  if (hsical == -1)
+    hsical = (RCC->CR & 0xff00) >> 8;
+  if (hsical != -1) {
+    RCC->CR &= RCC_CR_HSICAL;
+    RCC->CR |= ( (hsical) << 8 );
+    RCC->CR &= RCC_CR_HSITRIM | RCC_CR_HSION; /* CR Reset value.              */
+    RCC->CR |= RCC_CR_HSITRIM_4 | RCC_CR_HSITRIM_0 | RCC_CR_HSITRIM_1;
+  }
+}
+
+void clock_below_48MHz(void)
+{
+  if (hsical == -1)
+    hsical = ( (RCC->CR & 0xff00) >> 8 );
+  if (hsical != -1) {
+    RCC->CR &= RCC_CR_HSICAL;
+    RCC->CR |= ( (hsical) << 8 );
+    RCC->CR &= RCC_CR_HSITRIM | RCC_CR_HSION; /* CR Reset value.              */
+    RCC->CR |=  RCC_CR_HSITRIM_2 | RCC_CR_HSITRIM_3;
+  }
 }
 
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -1977,6 +2003,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
     if (MODE_INPUT(setting.mode)) {
       calculate_static_correction();
+      clock_above_48MHz();
+      is_below = false;
     }
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
@@ -2303,39 +2331,30 @@ modulation_again:
         else
           ADF4351_R_counter(setting.R);
 
-#if 0               // No 72MHz spur avoidance yet
-        if (false) {         // Avoid 72MHz spur
-#define SPUR    2 * 72000000
-          freq_t tf = ((lf + actual_rbw_x10*100) / SPUR) * SPUR;
-#undef STM32_USBPRE
-          int STM32_USBPRE;
-#undef STM32_PLLMUL
-          int STM32_PLLMUL;
-          if (lf < 200000000 && lf >= SPUR && tf + actual_rbw_x10*400 >= lf  && tf < lf + actual_rbw_x10*400) {
-
-            RCC->CFGR |= STM32_SW_HSI;
-
-#if 0
-            STM32_USBPRE = STM32_USBPRE_DIV1;  // Switch to 48MHz clock (1 << 22)
-            STM32_PLLMUL =  ((6 - 2) << 18);
-            uint32_t CFGR  = STM32_MCOSEL    | STM32_USBPRE    | STM32_PLLMUL   |
-                         STM32_PLLSRC    | STM32_PPRE1     | STM32_PPRE2    |
-                         STM32_HPRE;
-//            old_CFGR = RCC->CFGR;
-            if (old_CFGR != CFGR) {
-              old_CFGR = CFGR;
-              RCC->CFGR  = CFGR;
-            }
-#endif
+#if 1               // No 72MHz spur avoidance yet
+        if (setting.mode == M_LOW /* && !(SDU1.config->usbp->state == USB_ACTIVE) */ ) {         // Avoid 72MHz spur
+          int set_below = false;
+          if (lf < 40000000) {
+            uint32_t tf = lf;
+            while (tf > 4000000) tf -= 4000000;
+            if (tf < 2000000 )
+              set_below = true;
           } else {
-            RCC->CFGR |= STM32_SW_PLL;
-#if 0
-            STM32_USBPRE = STM32_USBPRE_DIV1P5; // Switch to 72MHz clock (0 << 22)
-            STM32_PLLMUL =  ((9 - 2) << 18);
-            orig_CFGR = STM32_MCOSEL    | STM32_USBPRE    | STM32_PLLMUL   |
-                STM32_PLLSRC    | STM32_PPRE1     | STM32_PPRE2    |
-                STM32_HPRE;
-#endif
+            uint32_t tf = lf;
+            while (tf > 48000000) tf -= 48000000;
+            if (tf < 20000000 )
+              set_below = true;
+          }
+          if (set_below) {     // If below 48MHz
+            if (!is_below) {
+              clock_below_48MHz();
+              is_below = true;
+            }
+          } else {
+            if (is_below) {
+              clock_above_48MHz();
+              is_below = false;
+            }
           }
         }
 #endif
@@ -2531,7 +2550,7 @@ modulation_again:
         pureRSSI = Si446x_RSSI();
 #endif
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
-          return 0;                                                           // abort
+          goto abort; //return 0;                                                           // abort
         // Store data level bitfield (remember only last 2 states)
         // T_LEVEL_UNDEF mode bit drop after 2 shifts
         data_level = ((data_level<<1) | (pureRSSI < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
@@ -2603,8 +2622,12 @@ modulation_again:
     RCC->CFGR  = orig_CFGR;
   }
 
-
-  return RSSI + correct_RSSI + correct_RSSI_freq; // add correction
+  pureRSSI_t rssi = RSSI + correct_RSSI + correct_RSSI_freq; // add correction
+  if (false) {
+  abort:
+    rssi = 0;
+  }
+  return rssi;
 }
 
 #define MAX_MAX 4
@@ -2721,7 +2744,7 @@ sweep_again:                                // stay in sweep loop when output mo
 
     if (MODE_INPUT(setting.mode)) {
 
-      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && (i & 0x07) == 0) {  // if required
+      if ((i & 0x07) == 0 && (setting.actual_sweep_time_us > ONE_SECOND_TIME || (chVTGetSystemTimeX() - start_of_sweep_timestamp) > ONE_SECOND_TIME / 100)) {  // if required
     	int pos = i * (WIDTH+1) / sweep_points;
     	ili9341_set_background(LCD_SWEEP_LINE_COLOR);
         ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
