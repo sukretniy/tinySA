@@ -686,12 +686,22 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
 
   for (uint32_t i = 0; i<points; i++) {
     int val = perform(false, i, start +(freq_t)(f_step * i), false) + float_TO_PURE_RSSI(EXT_ZERO_LEVEL);
-    if (operation_requested) // break on operation in perform
+    if (operation_requested && SDU1.config->usbp->state != USB_ACTIVE) // break on operation in perform
       break;
     streamPut(shell_stream, 'x');
     streamPut(shell_stream, (uint8_t)(val & 0xFF));
     streamPut(shell_stream, (uint8_t)((val>>8) & 0xFF));
+    if ((i & 0x07) == 0) {  // if required
+      int pos = i * (WIDTH+1) / points;
+      ili9341_set_background(LCD_SWEEP_LINE_COLOR);
+      ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
+      ili9341_set_background(LCD_BG_COLOR);
+      ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
+    }
+
   }
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);
   streamPut(shell_stream, '}');
   setting.frequency_step = old_step;
   dirty = true;

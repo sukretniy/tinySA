@@ -1504,6 +1504,7 @@ static const int spur_table[] =                                 // Frequencies t
  2960000,
  4933000,
  4960000,
+// 5019325, <---------------
  6960000,
 // 6980000,
  8267000,
@@ -1514,8 +1515,10 @@ static const int spur_table[] =                                 // Frequencies t
  12960000,
  14960000,
  16960000,
+// 18323722, <---------------
  18960000,
  21600000,
+// 22991931, <---------------
 // 22960000,
  24960000,
  28960000,
@@ -1527,6 +1530,10 @@ static const int spur_table[] =                                 // Frequencies t
  40960000,
  41600000,
  49650000,
+ 272400000,
+ 287950000,
+// 288029520,
+ 332494215,
 };
 
 int binary_search(int f)
@@ -1595,6 +1602,7 @@ systime_t start_of_sweep_timestamp;
 static systime_t sweep_elapsed = 0;                             // Time since first start of sweeping, used only for auto attenuate
 uint8_t signal_is_AM = false;
 static uint8_t check_for_AM = false;
+static int is_below = false;
 
 static void calculate_static_correction(void)                   // Calculate the static part of the RSSI correction
 {
@@ -1607,6 +1615,31 @@ static void calculate_static_correction(void)                   // Calculate the
           + get_level_offset()
           + get_attenuation()
           - setting.offset);
+}
+
+int hsical = -1;
+void clock_above_48MHz(void)
+{
+  if (hsical == -1)
+    hsical = (RCC->CR & 0xff00) >> 8;
+  if (hsical != -1) {
+    RCC->CR &= RCC_CR_HSICAL;
+    RCC->CR |= ( (hsical) << 8 );
+    RCC->CR &= RCC_CR_HSITRIM | RCC_CR_HSION; /* CR Reset value.              */
+    RCC->CR |= RCC_CR_HSITRIM_4 | RCC_CR_HSITRIM_0 | RCC_CR_HSITRIM_1;
+  }
+}
+
+void clock_below_48MHz(void)
+{
+  if (hsical == -1)
+    hsical = ( (RCC->CR & 0xff00) >> 8 );
+  if (hsical != -1) {
+    RCC->CR &= RCC_CR_HSICAL;
+    RCC->CR |= ( (hsical) << 8 );
+    RCC->CR &= RCC_CR_HSITRIM | RCC_CR_HSION; /* CR Reset value.              */
+    RCC->CR |=  RCC_CR_HSITRIM_2 | RCC_CR_HSITRIM_3;
+  }
 }
 
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -1643,6 +1676,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
     if (MODE_INPUT(setting.mode)) {
       calculate_static_correction();
+      if (!in_selftest) clock_above_48MHz();
+      is_below = false;
     }
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
@@ -1881,6 +1916,37 @@ modulation_again:
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
     }
+
+#if 1               // No 72MHz spur avoidance yet
+        if (setting.mode == M_LOW && !in_selftest /* && !(SDU1.config->usbp->state == USB_ACTIVE) */ ) {         // Avoid 72MHz spur
+          int set_below = false;
+#if 0
+          if (lf < 40000000) {
+            uint32_t tf = lf;
+            while (tf > 4000000) tf -= 4000000;
+            if (tf < 2000000 )
+              set_below = true;
+          } else
+#endif
+          if (lf > 40000000){
+            uint32_t tf = lf;
+            while (tf > 48000000) tf -= 48000000;
+            if (tf < 20000000 )
+              set_below = true;
+          }
+          if (set_below) {     // If below 48MHz
+            if (!is_below) {
+              clock_below_48MHz();
+              is_below = true;
+            }
+          } else {
+            if (is_below) {
+              clock_above_48MHz();
+              is_below = false;
+            }
+          }
+        }
+#endif
 
 // ----------- Set IF ------------------
 
@@ -2861,7 +2927,9 @@ const test_case_t test_case [] =
  {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
  {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
 #define TEST_ATTEN    21
- {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 }      // 20 Measure atten step accuracy
+ {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 20 Measure atten step accuracy
+#define TEST_SPUR    22
+ {TC_BELOW,      TP_SILENT,     96,     8,      -95,    0,     0 },       // 22 Measure 48MHz spur
 };
 
 
@@ -3479,9 +3547,27 @@ void self_test(int test)
       set_sweep_frequency(ST_SPAN, 0);
       break;
     }
-    in_selftest = false;
-#endif
   }
+#endif
+  } else if (test == 6) {
+    in_selftest = true;               // Spur search
+    reset_settings(M_LOW);
+    test_prepare(TEST_SPUR);
+    for (int i = 0; i < 31; i++) {
+      hsical = (RCC->CR & 0xff00) >> 8;
+      RCC->CR &= RCC_CR_HSICAL;
+      RCC->CR |= ( (hsical) << 8 );
+      RCC->CR &= RCC_CR_HSITRIM | RCC_CR_HSION; /* CR Reset value.              */
+      RCC->CR |= (i << 3 ) & RCC_CR_HSITRIM;
+//      set_RBW(100);
+      test_acquire(TEST_SPUR);                        // Acquire test
+      shell_printf("%d: %9.3q\n\r",i, peakFreq);
+      test_validate(TEST_SPUR);                       // Validate test
+
+    }
+
+  }
+
   show_test_info = FALSE;
   in_selftest = false;
   test_wait = false;
