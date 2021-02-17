@@ -1504,7 +1504,6 @@ static const int spur_table[] =                                 // Frequencies t
  2960000,
  4933000,
  4960000,
-// 5019325, <---------------
  6960000,
 // 6980000,
  8267000,
@@ -1513,12 +1512,12 @@ static const int spur_table[] =                                 // Frequencies t
  10960000,
  11600000,
  12960000,
+ 14933000,
  14960000,
  16960000,
-// 18323722, <---------------
  18960000,
  21600000,
-// 22991931, <---------------
+
 // 22960000,
  24960000,
  28960000,
@@ -1920,7 +1919,7 @@ modulation_again:
 #if 1               // No 72MHz spur avoidance yet
         if (setting.mode == M_LOW && !in_selftest /* && !(SDU1.config->usbp->state == USB_ACTIVE) */ ) {         // Avoid 72MHz spur
           int set_below = false;
-#if 0
+#ifdef TINYSA4
           if (lf < 40000000) {
             uint32_t tf = lf;
             while (tf > 4000000) tf -= 4000000;
