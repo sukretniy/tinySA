@@ -116,7 +116,7 @@ void reset_settings(int m)
   setting.level_sweep = 0.0;        // And this
   setting.rx_drive=MAX_DRIVE;              // And this
   setting.atten_step = 0;           // And this, only used in low output mode
-  setting.level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;     // This is the level with above settings.
+  setting.level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE + config.low_level_output_offset;     // This is the level with above settings.
   setting.rbw_x10 = 0;
   setting.average = 0;
   setting.harmonic = 3;         // Automatically used when above ULTRA_MAX_FREQ
@@ -515,7 +515,7 @@ float get_attenuation(void)
 {
   float actual_attenuation = setting.attenuate_x2 / 2.0;
   if (setting.mode == M_GENLOW) {
-    return (float)( SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE - actual_attenuation  - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP - ( setting.atten_step ? SWITCH_ATTENUATION : 0) );
+    return (float)( SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE  + config.low_level_output_offset - actual_attenuation  - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP - ( setting.atten_step ? SWITCH_ATTENUATION : 0) );
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
       return actual_attenuation + RECEIVE_SWITCH_ATTENUATION;
@@ -565,7 +565,7 @@ float get_level(void)
 void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
 {
   if (setting.mode == M_GENLOW) {
-    a = a - (SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE);               // Move to zero for max power
+    a = a - (SL_GENLOW_LEVEL_MIN  + config.low_level_output_offset + SL_GENLOW_LEVEL_RANGE);               // Move to zero for max power
     if (a > 0)
       a = 0;
     if( a <  - SWITCH_ATTENUATION) {
@@ -681,6 +681,12 @@ float get_level_offset(void)
     if (config.low_level_offset == 100)
       return 0;
     return(config.low_level_offset);
+  }
+  if (setting.mode == M_GENLOW) {
+    return(config.low_level_output_offset);
+  }
+  if (setting.mode == M_GENHIGH) {
+    return(config.high_level_output_offset);
   }
   return(0);
 }
@@ -1006,7 +1012,7 @@ void set_offset(float offset)
   setting.offset = offset;
   int min,max;
   if (setting.mode == M_GENLOW) {
-    min = SL_GENLOW_LEVEL_MIN; max = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;
+    min = SL_GENLOW_LEVEL_MIN  + config.low_level_output_offset; max = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE  + config.low_level_output_offset;
   } else {
     min = SL_GENHIGH_LEVEL_MIN; max = SL_GENHIGH_LEVEL_MIN + SL_GENHIGH_LEVEL_RANGE;
   }
@@ -2029,7 +2035,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     a += PURE_TO_float(get_frequency_correction(f));
     if (a != old_a) {
       old_a = a;
-      a = a - (SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE);                 // convert to all settings maximum power output equals a = zero
+      a = a - (SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE + config.low_level_output_offset);                 // convert to all settings maximum power output equals a = zero
 
       if (a < -SWITCH_ATTENUATION) {
         a = a + SWITCH_ATTENUATION;
@@ -2333,33 +2339,6 @@ modulation_again:
         else
           ADF4351_R_counter(setting.R);
 
-#if 1               // No 72MHz spur avoidance yet
-        if (setting.mode == M_LOW /* && !(SDU1.config->usbp->state == USB_ACTIVE) */ ) {         // Avoid 72MHz spur
-          int set_below = false;
-          if (lf < 40000000) {
-            uint32_t tf = lf;
-            while (tf > 4000000) tf -= 4000000;
-            if (tf < 2000000 )
-              set_below = true;
-          } else {
-            uint32_t tf = lf;
-            while (tf > 48000000) tf -= 48000000;
-            if (tf < 20000000 )
-              set_below = true;
-          }
-          if (set_below) {     // If below 48MHz
-            if (!is_below) {
-              clock_below_48MHz();
-              is_below = true;
-            }
-          } else {
-            if (is_below) {
-              clock_above_48MHz();
-              is_below = false;
-            }
-          }
-        }
-#endif
 #endif          // __ADF4351__
 #if 0
        freq_t target_f;
@@ -4146,6 +4125,7 @@ void self_test(int test)
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SPUR);
+    set_RBW(300);
     setting.extra_lna = true;
     for (int i = 0; i < 31; i++) {
       hsical = (RCC->CR & 0xff00) >> 8;
@@ -4153,7 +4133,6 @@ void self_test(int test)
       RCC->CR |= ( (hsical) << 8 );
       RCC->CR &= RCC_CR_HSITRIM | RCC_CR_HSION; /* CR Reset value.              */
       RCC->CR |= (i << 3 ) & RCC_CR_HSITRIM;
-      set_RBW(100);
       test_acquire(TEST_SPUR);                        // Acquire test
       shell_printf("%d: %9.3q\n\r",i, peakFreq);
       test_validate(TEST_SPUR);                       // Validate test

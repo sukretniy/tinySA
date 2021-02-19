@@ -2254,10 +2254,10 @@ static void fetch_numeric_target(void)
   case KM_LOWOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
     int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
-    if (end_level < SL_GENLOW_LEVEL_MIN)
-      end_level = SL_GENLOW_LEVEL_MIN;
-    if (end_level > SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE)
-      end_level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;
+    if (end_level < SL_GENLOW_LEVEL_MIN + config.low_level_output_offset)
+      end_level = SL_GENLOW_LEVEL_MIN + config.low_level_output_offset;
+    if (end_level > SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE  + config.low_level_output_offset)
+      end_level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE + config.low_level_output_offset;
     uistat.value += setting.offset;
     end_level += setting.offset;
     if (setting.level_sweep != 0)

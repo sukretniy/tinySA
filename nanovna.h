@@ -569,8 +569,10 @@ typedef struct config {
   uint16_t vbat_offset;
   float low_level_offset;
   float high_level_offset;
-  freq_t correction_frequency[CORRECTION_POINTS];
-  float    correction_value[CORRECTION_POINTS];
+  float low_level_output_offset;
+  float high_level_output_offset;
+  freq_t low_correction_frequency[CORRECTION_POINTS];
+  float    low_correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
   freq_t  setting_frequency_30mhz;
 

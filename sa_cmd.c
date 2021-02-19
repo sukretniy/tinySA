@@ -247,6 +247,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
   if (argc == 0) {
     shell_printf("leveloffset low %.1f\r\n", config.low_level_offset);
     shell_printf("leveloffset high %.1f\r\n", config.high_level_offset);
+    shell_printf("leveloffset low output %.1f\r\n", config.low_level_output_offset);
+    shell_printf("leveloffset high output %.1f\r\n", config.high_level_output_offset);
     return;
   } else if (argc == 2) {
     float v = my_atof(argv[1]);
@@ -256,9 +258,17 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       config.high_level_offset = v;
     else
       goto usage;
+  } else if (argc == 3) {
+    float v = my_atof(argv[2]);
+    if (strcmp(argv[0],"low") == 0)
+      config.low_level_output_offset = v;
+    else if (strcmp(argv[0],"high") == 0)
+      config.high_level_output_offset = v;
+    else
+      goto usage;
   } else {
   usage:
-    shell_printf("leveloffset [low|high] [<offset>]\r\n");
+    shell_printf("leveloffset [low|high] {output} [<offset>]\r\n");
   }
 }
 
