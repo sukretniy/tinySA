@@ -573,6 +573,8 @@ typedef struct config {
   float high_level_output_offset;
   freq_t low_correction_frequency[CORRECTION_POINTS];
   float    low_correction_value[CORRECTION_POINTS];
+  freq_t high_correction_frequency[CORRECTION_POINTS];
+  float    high_correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
   freq_t  setting_frequency_30mhz;
 
@@ -880,6 +882,8 @@ typedef struct setting
   int extra_lna;
   int ultra;
   int R;
+  freq_t *correction_frequency;
+  float   *correction_value;
   uint32_t dummy;
   uint32_t checksum;            // must be last
 }setting_t;
