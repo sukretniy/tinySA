@@ -511,8 +511,10 @@ typedef struct config {
   uint16_t vbat_offset;
   float low_level_offset;
   float high_level_offset;
-  freq_t correction_frequency[CORRECTION_POINTS];
-  float    correction_value[CORRECTION_POINTS];
+  freq_t low_correction_frequency[CORRECTION_POINTS];
+  float    low_correction_value[CORRECTION_POINTS];
+  freq_t high_correction_frequency[CORRECTION_POINTS];
+  float    high_correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
   freq_t  setting_frequency_10mhz;
 
@@ -814,6 +816,9 @@ typedef struct setting
   int trigger_mode;
   int slider_position;
   int32_t slider_span;
+  freq_t *correction_frequency;
+  float   *correction_value;
+
   uint32_t checksum;            // must be last
 }setting_t;
 

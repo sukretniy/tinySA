@@ -622,13 +622,13 @@ VNA_SHELL_FUNCTION(cmd_correction)
   if (argc == 0) {
     shell_printf("index frequency value\r\n");
     for (int i=0; i<CORRECTION_POINTS; i++) {
-      shell_printf("%d %d %.1f\r\n", i, config.correction_frequency[i], config.correction_value[i]);
+      shell_printf("%d %d %.1f\r\n", i, setting.correction_frequency[i], setting.correction_value[i]);
     }
     return;
   }
   if (argc == 1 && (strcmp(argv[0],"reset") == 0)) {
     for (int i=0; i<CORRECTION_POINTS; i++) {
-      config.correction_value[i] = 0.0;
+      setting.correction_value[i] = 0.0;
     }
     shell_printf("correction table reset\r\n");
     return;
@@ -640,10 +640,10 @@ VNA_SHELL_FUNCTION(cmd_correction)
   int i = my_atoi(argv[0]);
   freq_t f = my_atoui(argv[1]);
   float v = my_atof(argv[2]);
-  config.correction_frequency[i] = f;
-  config.correction_value[i] = v;
+  setting.correction_frequency[i] = f;
+  setting.correction_value[i] = v;
   redraw_request|=REDRAW_AREA;                  // to ensure the change in level will be visible
-  shell_printf("updated %d to %d %.1f\r\n", i, config.correction_frequency[i], config.correction_value[i]);
+  shell_printf("updated %d to %d %.1f\r\n", i, setting.correction_frequency[i], setting.correction_value[i]);
 }
 
 VNA_SHELL_FUNCTION(cmd_scanraw)

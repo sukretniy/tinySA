@@ -149,6 +149,8 @@ void reset_settings(int m)
     setting.attenuate_x2 = 60;
     setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
+    setting.correction_frequency = config.low_correction_frequency;
+    setting.correction_value = config.low_correction_value;
     break;
 #ifdef __ULTRA__
   case M_ULTRA:
@@ -165,11 +167,15 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
+    setting.correction_frequency = config.low_correction_frequency;
+    setting.correction_value = config.low_correction_value;
     break;
   case M_HIGH:
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
     setting.sweep_time_us = 0;
+    setting.correction_frequency = config.high_correction_frequency;
+    setting.correction_value = config.high_correction_value;
     break;
   case M_GENHIGH:
     setting.lo_drive=8;
@@ -177,6 +183,8 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
+    setting.correction_frequency = config.high_correction_frequency;
+    setting.correction_value = config.high_correction_value;
     break;
   }
   for (uint8_t i = 0; i< MARKERS_MAX; i++) {
@@ -1069,11 +1077,11 @@ static int32_t scaled_correction_value[CORRECTION_POINTS];
 
 void calculate_correction(void)
 {
-  scaled_correction_value[0] = config.correction_value[0]  * (1 << (SCALE_FACTOR));
+  scaled_correction_value[0] = setting.correction_value[0]  * (1 << (SCALE_FACTOR));
   for (int i = 1; i < CORRECTION_POINTS; i++) {
-    scaled_correction_value[i] = config.correction_value[i]  * (1 << (SCALE_FACTOR));
+    scaled_correction_value[i] = setting.correction_value[i]  * (1 << (SCALE_FACTOR));
     int32_t m = scaled_correction_value[i] - scaled_correction_value[i-1];
-    int32_t d = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR;
+    int32_t d = (setting.correction_frequency[i] - setting.correction_frequency[i-1]) >> SCALE_FACTOR;
     scaled_correction_multi[i] = (int32_t) ( m / d );
   }
 }
@@ -1082,20 +1090,20 @@ void calculate_correction(void)
 
 pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
-  if (!(setting.mode == M_LOW || setting.mode == M_GENLOW))
+  if (setting.mode == M_GENHIGH)
     return(0.0);
   int i = 0;
-  while (f > config.correction_frequency[i] && i < CORRECTION_POINTS)
+  while (f > setting.correction_frequency[i] && i < CORRECTION_POINTS)
     i++;
   if (i >= CORRECTION_POINTS)
     return(scaled_correction_value[CORRECTION_POINTS-1] >> (SCALE_FACTOR - 5) );
   if (i == 0)
     return(scaled_correction_value[0] >> (SCALE_FACTOR - 5) );
-  f = f - config.correction_frequency[i-1];
+  f = f - setting.correction_frequency[i-1];
 #if 0
-  freq_t m = (config.correction_frequency[i] - config.correction_frequency[i-1]) >> SCALE_FACTOR ;
-  float multi = (config.correction_value[i] - config.correction_value[i-1]) * (1 << (SCALE_FACTOR -1)) / (float)m;
-  float cv = config.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
+  freq_t m = (setting.correction_frequency[i] - setting.correction_frequency[i-1]) >> SCALE_FACTOR ;
+  float multi = (setting.correction_value[i] - setting.correction_value[i-1]) * (1 << (SCALE_FACTOR -1)) / (float)m;
+  float cv = setting.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
 #else
   int32_t scaled_f = f >> SCALE_FACTOR;
   pureRSSI_t cv = (scaled_correction_value[i-1] + (scaled_f * scaled_correction_multi[i])) >> (SCALE_FACTOR - 5) ;
