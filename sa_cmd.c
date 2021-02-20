@@ -226,6 +226,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       config.high_level_offset = v;
     else
       goto usage;
+    dirty = true;
   } else {
   usage:
     shell_printf("leveloffset [low|high] [<offset>]\r\n");
