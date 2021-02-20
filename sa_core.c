@@ -2641,8 +2641,8 @@ modulation_again:
     old_CFGR = orig_CFGR;
     RCC->CFGR  = orig_CFGR;
   }
-
-  pureRSSI_t rssi = RSSI + correct_RSSI + correct_RSSI_freq; // add correction
+#define IGNORE_RSSI 30000
+  pureRSSI_t rssi = (RSSI>0 ? RSSI + correct_RSSI + correct_RSSI_freq : IGNORE_RSSI); // add correction
   if (false) {
   abort:
     rssi = 0;
@@ -2717,8 +2717,11 @@ sweep_again:                                // stay in sweep loop when output mo
   // ------------------------- start sweep loop -----------------------------------
   for (int i = 0; i < sweep_points; i++) {
     // --------------------- measure -------------------------
-
-    RSSI = PURE_TO_float(perform(break_on_operation, i, frequencies[i], setting.tracking));    // Measure RSSI for one of the frequencies
+    pureRSSI_t rssi = perform(break_on_operation, i, frequencies[i], setting.tracking);   // Measure RSSI for one of the frequencies
+    if (rssi == IGNORE_RSSI)
+      RSSI = -174.0;
+    else
+      RSSI = PURE_TO_float(rssi);
     // if break back to top level to handle ui operation
     if (refreshing)
       scandirty = false;
@@ -2833,7 +2836,7 @@ sweep_again:                                // stay in sweep loop when output mo
         }
       }
 
-      if (temp_min_level > actual_t[i])   // Remember minimum
+      if ( actual_t[i] > -174.0 && temp_min_level > actual_t[i])   // Remember minimum
         temp_min_level = actual_t[i];
 
       // --------------------------- find peak and add to peak table if found  ------------------------
