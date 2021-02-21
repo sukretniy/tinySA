@@ -2171,6 +2171,8 @@ sweep_again:                                // stay in sweep loop when output mo
       return false;
     }
 
+    dacPutChannelX(&DACD2, 0, i*14);        // Output sweep voltage
+
     // ----------------------- in loop AGC ---------------------------------
 
 #ifdef __SI4432__

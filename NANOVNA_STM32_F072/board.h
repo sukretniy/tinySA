@@ -128,7 +128,7 @@
                                      PIN_MODE_INPUT(1U) |           \
                                      PIN_MODE_INPUT(2U) |  			\
                                      PIN_MODE_INPUT(3U) |   		\
-                                     PIN_MODE_INPUT(4U) | \
+                                     PIN_MODE_ANALOG(4U) | \
                                      PIN_MODE_INPUT(5U) | \
                                      PIN_MODE_ANALOG(GPIOA_XP) |    \
                                      PIN_MODE_ANALOG(GPIOA_YP) |    \
@@ -160,7 +160,7 @@
                                      PIN_OSPEED_2M(1) |          \
                                      PIN_OSPEED_2M(2) |       \
                                      PIN_OSPEED_2M(3) |       \
-                                     PIN_OSPEED_100M(4) |          \
+                                     PIN_OSPEED_2M(4) |          \
                                      PIN_OSPEED_100M(5) |           \
                                      PIN_OSPEED_2M(6) |          \
                                      PIN_OSPEED_2M(7) |          \
@@ -176,7 +176,7 @@
                                      PIN_PUPDR_PULLDOWN(1) | \
                                      PIN_PUPDR_PULLDOWN(2) | \
                                      PIN_PUPDR_PULLDOWN(3) | \
-                                     PIN_PUPDR_PULLDOWN(4) |         \
+                                     PIN_PUPDR_FLOATING(4) |         \
                                      PIN_PUPDR_PULLDOWN(5) |         \
                                      PIN_PUPDR_FLOATING(6) |         \
                                      PIN_PUPDR_FLOATING(7) |         \

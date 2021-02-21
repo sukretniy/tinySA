@@ -2710,12 +2710,12 @@ static const I2CConfig i2ccfg = {
   .cr1 = 0,     // CR1 register initialization.
   .cr2 = 0      // CR2 register initialization.
 };
+#endif
 static DACConfig dac1cfg1 = {
   //init:         2047U,
   init:         1922U,
   datamode:     DAC_DHRM_12BIT_RIGHT
 };
-#endif
 
 #pragma GCC pop_options
 
@@ -2861,15 +2861,13 @@ int main(void)
  */
   shell_init_connection();
 
-/* restore frequencies and calibration 0 slot properties from flash memory */
-#ifdef __VNA__
-  dac1cfg1.init = config.dac_value;
+  dac1cfg1.init = 0;
+
 /*
  * Starting DAC1 driver, setting up the output pin as analog as suggested
  * by the Reference Manual.
  */
   dacStart(&DACD2, &dac1cfg1);
-#endif
   setupSA();
   set_sweep_points(POINTS_COUNT);
 
