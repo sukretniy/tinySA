@@ -527,6 +527,7 @@ typedef struct config {
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
+  float sweep_voltage;
   uint32_t    dummy;
 //  uint8_t _reserved[22];
   freq_t checksum;

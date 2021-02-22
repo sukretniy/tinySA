@@ -907,6 +907,7 @@ config_t config = {
   .cor_am = -14,
   .cor_wfm = -17,
   .cor_nfm = -17,
+  .sweep_voltage = 3.3,
 };
 
 //properties_t current_props;
@@ -2348,6 +2349,7 @@ static const VNAShellCommand commands[] =
     {"time"        , cmd_time        , 0},
 #endif
     {"dac"         , cmd_dac         , 0},
+    {"sweep_voltage",cmd_sweep_voltage,0},
     {"saveconfig"  , cmd_saveconfig  , 0},
     {"clearconfig" , cmd_clearconfig , 0},
     {"data"        , cmd_data        , CMD_WAIT_MUTEX},

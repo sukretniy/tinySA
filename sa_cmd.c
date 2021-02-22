@@ -246,6 +246,17 @@ VNA_SHELL_FUNCTION(cmd_deviceid)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_sweep_voltage)
+{
+  float value;
+  if (argc != 1) {
+    shell_printf("usage: sweep_voltage {value(0-3.3)}\r\n"\
+                 "current value: %f\r\n", config.sweep_voltage);
+    return;
+  }
+  value = my_atof(argv[0]);
+  config.sweep_voltage = value;
+}
 
 VNA_SHELL_FUNCTION(cmd_rbw)
 {

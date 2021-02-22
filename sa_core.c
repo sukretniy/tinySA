@@ -1698,6 +1698,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   }
 
   if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
+    if (i == 0)
+      set_switch_transmit();
+    else
+      set_switch_off();
     float ls=setting.level_sweep;                                           // calculate and set the output level
     if (ls > 0)
       ls += 0.5;
@@ -2171,7 +2175,7 @@ sweep_again:                                // stay in sweep loop when output mo
       return false;
     }
 
-    dacPutChannelX(&DACD2, 0, i*14);        // Output sweep voltage
+    dacPutChannelX(&DACD2, 0, (((float)i)*config.sweep_voltage)*4.279);        // Output sweep voltage  4095 -> 3.3 Volt
 
     // ----------------------- in loop AGC ---------------------------------
 

@@ -119,7 +119,7 @@ float2int(float v)
 
 void update_grid(void)
 {
-  freq_t gdigit = 100000000;
+  freq_t gdigit = 1000000000;
   freq_t fstart = get_sweep_frequency(ST_START);
   freq_t fspan  = get_sweep_frequency(ST_SPAN);
   freq_t grid;
