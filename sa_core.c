@@ -1700,10 +1700,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// start burst
     SI4432_Sel = SI4432_LO ;
     if (i == 0) {
-      set_switch_transmit();
+//      set_switch_transmit();
       SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1D) ; // Set GPIO2 output to ground
     } else if (i == 1) {
-      set_switch_off();
+//      set_switch_off();
       SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 output to ground
     }
   }
