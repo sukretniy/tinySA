@@ -1697,11 +1697,15 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
   }
 
-  if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
+  if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// start burst
+    SI4432_Sel = SI4432_LO ;
     if (i == 0)
       set_switch_transmit();
-    else
+    else if (i == 1)
       set_switch_off();
+  }
+
+  if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
     float ls=setting.level_sweep;                                           // calculate and set the output level
     if (ls > 0)
       ls += 0.5;
