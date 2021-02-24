@@ -589,7 +589,7 @@ void set_attenuation(float a)       // Is used both in low output mode and high/
     }
     a = -a;
   } else {
-    if (setting.mode == M_LOW && a > 31) {
+    if (setting.mode == M_LOW && a > 31.5) {
       setting.atten_step = 1;
       a = a - RECEIVE_SWITCH_ATTENUATION;
     } else if (setting.mode == M_HIGH && a > 0) {
@@ -3461,7 +3461,7 @@ enum {
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
 #ifdef TINYSA4
-#define CAL_LEVEL   -29
+#define CAL_LEVEL   -30
 #else
 #define CAL_LEVEL   -25
 #endif
@@ -3480,13 +3480,13 @@ const test_case_t test_case [] =
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
  {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
  {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
- {TC_SIGNAL,    TP_30MHZ,       30,     7,      -29,    10,     -90 },      // 3
+ {TC_SIGNAL,    TP_30MHZ,       30,     7,      -30,    10,     -90 },      // 3
  {TC_SIGNAL,    TP_30MHZ,       60,     7,      -70,    10,     -90 },      // 4
 #define TEST_SILENCE 4
  {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
  {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
  {TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -20,    27,     -80 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  30,     8,      -18,    9,     -60},       // 8 BPF pass band flatness
+ {TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60},       // 8 BPF pass band flatness
  {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
  {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
  {TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
@@ -3586,7 +3586,7 @@ int validate_signal_within(int i, float margin)
     return TS_CRITICAL;
   }
   test_fail_cause[i] = "Frequency ";
-  if (peakFreq < test_case[i].center * 1000000 - 600000 || test_case[i].center * 1000000 + 600000 < peakFreq )
+  if (peakFreq < test_case[i].center * 1000000 - 1000000 || test_case[i].center * 1000000 + 1000000 < peakFreq )
     return TS_FAIL;
   test_fail_cause[i] = "";
   return TS_PASS;
@@ -3641,37 +3641,41 @@ int validate_flatness(int i) {
 const float atten_step[7] = { 0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0 };
 
 int validate_atten(int i) {
+  int status = TS_PASS;
   float reference_peak_level = 0.0;
   test_fail_cause[i] = "Attenuator ";
 //  for (int j= 0; j < 64; j++ ) {
   for (int j= 0; j < 7; j++ ) {
-//    set_attenuation(((float)j)/2.0);
+    //    set_attenuation(((float)j)/2.0);
     set_attenuation(atten_step[j]);
     float summed_peak_level = 0;
 #define ATTEN_TEST_SWEEPS    5
     for (int k=0; k<ATTEN_TEST_SWEEPS; k++) {
-//        setting.sweep_time_us = 1000000;
-        test_acquire(TEST_ATTEN);                        // Acquire test
-//      test_validate(TEST_ATTEN);                       // Validate test
-        float peaklevel = 0.0;
-        for (int k = 0 ; k < sweep_points; k++)
-          peaklevel += actual_t[k];
-        peaklevel /= sweep_points;
-        summed_peak_level += peakLevel;
-      }
-      summed_peak_level /= ATTEN_TEST_SWEEPS;
+      //        setting.sweep_time_us = 1000000;
+      test_acquire(TEST_ATTEN);                        // Acquire test
+      //      test_validate(TEST_ATTEN);                       // Validate test
+      float peaklevel = 0.0;
+      for (int n = 0 ; n < sweep_points; n++)
+        peaklevel += actual_t[n];
+      peaklevel /= sweep_points;
+      summed_peak_level += peaklevel;
+    }
+    summed_peak_level /= ATTEN_TEST_SWEEPS;
     if (j == 0)
       reference_peak_level = summed_peak_level;
     else {
-//      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, summed_peak_level, summed_peak_level - reference_peak_level);
-//     shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",atten_step[j], summed_peak_level, summed_peak_level - reference_peak_level);
-#define ATTEN_TEST_CRITERIA 1.0
-      if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA)
-        return(TS_FAIL);
+      //      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, summed_peak_level, summed_peak_level - reference_peak_level);
+      //   shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",atten_step[j], summed_peak_level, summed_peak_level - reference_peak_level);
+#define ATTEN_TEST_CRITERIA 0.5
+      if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA) {
+        status = TS_FAIL;
+ //       draw_all(true);
+      }
     }
   }
-  test_fail_cause[i] = "";
-  return(TS_PASS);
+  if (status == TS_PASS)
+    test_fail_cause[i] = "";
+  return(status);
 }
 
 int validate_display(int tc)
@@ -4199,7 +4203,7 @@ void calibrate(void)
       goto quit;
     } else {
 #ifdef TINYSA4
-      set_actual_power(-29.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
+      set_actual_power(-30.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
 #else
       set_actual_power(-25.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
 #endif
