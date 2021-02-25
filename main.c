@@ -2423,6 +2423,7 @@ static const VNAShellCommand commands[] =
  #ifdef ENABLE_THREADS_COMMAND
      {"threads"     , cmd_threads     , 0},
  #endif
+#ifdef __SINGLE_LETTER__
     { "y", cmd_y,    CMD_WAIT_MUTEX },
    { "i", cmd_i,	CMD_WAIT_MUTEX },
    { "v", cmd_v,	CMD_WAIT_MUTEX },
@@ -2437,9 +2438,10 @@ static const VNAShellCommand commands[] =
    { "o", cmd_o,    CMD_WAIT_MUTEX },
    { "d", cmd_d,    CMD_WAIT_MUTEX },
    { "f", cmd_f,    CMD_WAIT_MUTEX },
+#endif
 #ifdef TINYSA4
    { "g", cmd_g,    CMD_WAIT_MUTEX },
-   #endif
+#endif
 #ifdef __ADF4351__
     { "x", cmd_x,    0 },
 #endif
@@ -2452,7 +2454,11 @@ VNA_SHELL_FUNCTION(cmd_help)
   (void)argv;
   const VNAShellCommand *scp = commands;
   shell_printf("Commands:");
-  while (scp->sc_name != NULL && scp->sc_function != cmd_y) {
+  while (scp->sc_name != NULL
+#ifdef __SINGLE_LETTER__
+      && scp->sc_function != cmd_y
+#endif
+      )   {
     shell_printf(" %s", scp->sc_name);
     scp++;
   }
@@ -3018,7 +3024,10 @@ void hard_fault_handler_c(uint32_t *sp)
 #endif
   shell_printf("===================================\r\n");
 #else
-  (void)sp;
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_drawstring("FATAL ERROR", OFFSETX, 120);
+   (void)sp;
 #endif
   while (true) {
   }

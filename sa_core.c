@@ -3084,12 +3084,14 @@ int validate_flatness(int i) {
 const float atten_step[7] = { 0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0 };
 
 int validate_atten(int i) {
+  int status = TS_PASS;
   float reference_peak_level = 0.0;
   test_fail_cause[i] = "Attenuator ";
 //  for (int j= 0; j < 64; j++ ) {
   for (int j= 0; j < 7; j++ ) {
-//    set_attenuation(((float)j)/2.0);
-    set_attenuation(atten_step[j]);
+//    float a = ((float)j)/2.0;
+    float a = atten_step[j];
+    set_attenuation(a);
     float summed_peak_level = 0;
 #define ATTEN_TEST_SWEEPS    5
     for (int k=0; k<ATTEN_TEST_SWEEPS; k++) {
@@ -3097,24 +3099,28 @@ int validate_atten(int i) {
         test_acquire(TEST_ATTEN);                        // Acquire test
 //      test_validate(TEST_ATTEN);                       // Validate test
         float peaklevel = 0.0;
-        for (int k = 0 ; k < sweep_points; k++)
-          peaklevel += actual_t[k];
-        peaklevel /= sweep_points;
-        summed_peak_level += peakLevel;
+      for (int n = 0 ; n < sweep_points; n++)
+        peaklevel += actual_t[n];
+      peaklevel /= (sweep_points - 0);
+      summed_peak_level += peaklevel;
       }
       summed_peak_level /= ATTEN_TEST_SWEEPS;
     if (j == 0)
       reference_peak_level = summed_peak_level;
     else {
 //      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, summed_peak_level, summed_peak_level - reference_peak_level);
-//     shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",atten_step[j], summed_peak_level, summed_peak_level - reference_peak_level);
-#define ATTEN_TEST_CRITERIA 3.0
-      if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA)
-        return(TS_FAIL);
+      if (SDU1.config->usbp->state == USB_ACTIVE)  shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",a, summed_peak_level, summed_peak_level - reference_peak_level);
+#define ATTEN_TEST_CRITERIA 1
+      if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA) {
+        status = TS_FAIL;
+ //       draw_all(true);
+      }
+
     }
   }
-  test_fail_cause[i] = "";
-  return(TS_PASS);
+  if (status == TS_PASS)
+    test_fail_cause[i] = "";
+  return(status);
 }
 
 int validate_display(int tc)

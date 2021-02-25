@@ -46,11 +46,12 @@
 #define __SELFTEST__
 #define __CALIBRATE__
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
-#define __HAM_BAND__
+//#define __HAM_BAND__
 //#define __ULTRA__             // Add harmonics mode on low input.
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
-
+#define __SINGLE_LETTER__
+#define __NICE_BIG_FONT__
 #define __QUASI_PEAK__
 
 #ifdef TINYSA3
@@ -411,7 +412,7 @@ extern const uint8_t numfont16x22[];
 #define bFONT_GET_DATA(ch)   (  &x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT])
 #define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT]&7))
 
-#if 1                               // Set to 0 to save 3kByte and loose nice font
+#ifdef __NICE_BIG_FONT__
 #define wFONT_START_CHAR   0x17
 #define wFONT_MAX_WIDTH      12
 #define wFONT_GET_HEIGHT     14
