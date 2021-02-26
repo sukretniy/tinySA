@@ -51,9 +51,9 @@
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 #define __SINGLE_LETTER__
-//#define __NICE_BIG_FONT__
+#define __NICE_BIG_FONT__
 #define __QUASI_PEAK__
-#define __REMOTE_DESKTOP__
+//#define __REMOTE_DESKTOP__
 
 #ifdef TINYSA3
 #define DEFAULT_IF  433800000

@@ -556,6 +556,8 @@ VNA_SHELL_FUNCTION(cmd_z)
 
 #endif
 
+#ifdef __SINGLE_LETTER__
+
 void sweep_remote(void)
 {
   uint32_t i;
@@ -582,7 +584,6 @@ void sweep_remote(void)
   sweep_mode = 0;
 }
 
-#ifdef __SINGLE_LETTER__
 VNA_SHELL_FUNCTION(cmd_m)
 {
   (void)argc;

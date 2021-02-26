@@ -146,9 +146,11 @@ static THD_FUNCTION(Thread1, arg)
       // call from lowest level to save stack space
       self_test(setting.test);
 //      sweep_mode = SWEEP_ENABLE;
-    } else if (sweep_mode & SWEEP_REMOTE) {
+#ifdef __SINGLE_LETTER__
+      } else if (sweep_mode & SWEEP_REMOTE) {
       sweep_remote();
-    } else if (sweep_mode & SWEEP_CALIBRATE) {
+#endif
+      } else if (sweep_mode & SWEEP_CALIBRATE) {
       // call from lowest level to save stack space
       calibrate();
       sweep_mode = SWEEP_ENABLE;
@@ -3021,7 +3023,7 @@ void HardFault_Handler(void)
 
 void hard_fault_handler_c(uint32_t *sp)
 {
-#if 1
+#if 0
   uint32_t r0  = sp[0];
   uint32_t r1  = sp[1];
   uint32_t r2  = sp[2];
