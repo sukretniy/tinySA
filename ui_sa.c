@@ -1327,6 +1327,23 @@ static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
 //  draw_cal_status();
 }
 
+#ifdef __REMOTE_DESKTOP__
+static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
+{
+  (void) data;
+  (void) item;
+  if (b){
+    b->icon = auto_capture ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  auto_capture = ! auto_capture;
+//  menu_move_back();
+//  ui_mode_normal();
+  draw_menu();
+//  draw_cal_status();
+}
+#endif
+
 static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
 {
   (void) data;
@@ -1899,6 +1916,9 @@ static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
   { MT_ADV_CALLBACK,4,          "WATER\nFALL",     menu_waterfall_acb},
   { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
+#ifdef __REMOTE_DESKTOP__
+  { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
+#endif
 //  { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",    NULL},
 
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },

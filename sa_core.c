@@ -3028,8 +3028,12 @@ int validate_signal_within(int i, float margin)
   if (fabsf(peakLevel-test_case[i].pass) > margin) {
     return TS_CRITICAL;
   }
+  if (setting.measurement == M_PASS_BAND) {
+    peakFreq = (markers[2].frequency + markers[1].frequency)/2;
+    markers[0].frequency = peakFreq;
+  }
   test_fail_cause[i] = "Frequency ";
-  if (peakFreq < test_case[i].center * 1000000 - 600000 || test_case[i].center * 1000000 + 600000 < peakFreq )
+  if (peakFreq < test_case[i].center * 1000000 - 100000 || test_case[i].center * 1000000 + 100000 < peakFreq )
     return TS_FAIL;
   test_fail_cause[i] = "";
   return TS_PASS;
@@ -3233,8 +3237,13 @@ common_silent:
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
-    setting.frequency_IF = DEFAULT_IF+200000;                // Center on SAW filters
+    setting.frequency_IF = DEFAULT_IF+210000;                // Center on SAW filters
     set_refer_output(2);
+    markers[1].enabled = M_ENABLED;
+    markers[1].mtype = M_DELTA;
+    markers[2].enabled = M_ENABLED;
+    markers[2].mtype = M_DELTA;
+    setting.measurement = M_PASS_BAND;
     goto common;
   case TP_10MHZ:                              // 10MHz input
     set_mode(M_LOW);
@@ -3253,7 +3262,7 @@ common_silent:
     for (int j = 0; j < setting._sweep_points/2 - W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].stop;
     for (int j = setting._sweep_points/2 + W2P(test_case[i].width); j < setting._sweep_points; j++)
-      stored_t[j] = test_case[i].stop;
+      stored_t[j] = test_case[i].stop - (i == 6?5:0);
     for (int j = setting._sweep_points/2 - W2P(test_case[i].width); j < setting._sweep_points/2 + W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].pass;
     break;

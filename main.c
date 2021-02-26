@@ -107,7 +107,7 @@ static int8_t drive_strength = DRIVE_STRENGTH_AUTO;
 #endif
 uint8_t sweep_mode = SWEEP_ENABLE;
 volatile uint8_t redraw_request = 0; // contains REDRAW_XXX flags
-
+volatile int auto_capture = false;
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
   BOARD_NAME,
@@ -808,6 +808,41 @@ VNA_SHELL_FUNCTION(cmd_dump)
 }
 #endif
 
+#ifdef __REMOTE_DESKTOP__
+VNA_SHELL_FUNCTION(cmd_refresh)
+{
+// read pixel count at one time (PART*2 bytes required for read buffer)
+  int m = generic_option_cmd("refresh", "off|on", argc, argv[0]);
+  if (m>=0) {
+    auto_capture = m;
+  }
+}
+
+volatile int mouse_x = 0;
+volatile int mouse_y = 0;
+volatile int mouse_down = false;
+
+VNA_SHELL_FUNCTION(cmd_touch)
+{
+  if (argc == 2){
+    mouse_x = (uint32_t)my_atoi(argv[0]);
+    mouse_y = (uint32_t)my_atoi(argv[1]);
+    mouse_down = true;
+    handle_touch_interrupt();
+  }
+}
+
+VNA_SHELL_FUNCTION(cmd_release)
+{
+  if (argc==2) {
+    mouse_x = (uint32_t)my_atoi(argv[0]);
+    mouse_y = (uint32_t)my_atoi(argv[1]);
+  }
+  mouse_down = false;
+  handle_touch_interrupt();
+}
+#endif
+
 VNA_SHELL_FUNCTION(cmd_capture)
 {
 // read pixel count at one time (PART*2 bytes required for read buffer)
@@ -828,6 +863,26 @@ VNA_SHELL_FUNCTION(cmd_capture)
   }
 }
 
+void send_region(const char *t, int x, int y, int w, int h)
+{
+  shell_printf("%s\r\n", t);
+  streamPut(shell_stream, (((uint16_t) x) & 0xff));
+  streamPut(shell_stream, (((uint16_t)x>>8) & 0xff));
+  streamPut(shell_stream, (((uint16_t) y) & 0xff));
+  streamPut(shell_stream, (((uint16_t)y>>8) & 0xff));
+  streamPut(shell_stream, (((uint16_t) w) & 0xff));
+  streamPut(shell_stream, (((uint16_t)w>>8) & 0xff));
+  streamPut(shell_stream, (((uint16_t) h) & 0xff));
+  streamPut(shell_stream, (((uint16_t)h>>8) & 0xff));
+}
+
+void send_buffer(uint8_t * buf, int s)
+{
+  for (int i = 0; i < s; i++) {
+    streamPut(shell_stream, *buf++);
+  }
+  shell_printf("ch> \r\n");
+}
 #if 0
 VNA_SHELL_FUNCTION(cmd_gamma)
 {
@@ -2389,6 +2444,11 @@ static const VNAShellCommand commands[] =
     {"edelay"      , cmd_edelay      , 0},
 #endif
     {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
+#ifdef __REMOTE_DESKTOP__
+    {"refresh"     , cmd_refresh     , 0},
+    {"touch"       , cmd_touch       , 0},
+    {"release"     , cmd_release     , 0},
+#endif
     {"vbat"        , cmd_vbat        , CMD_WAIT_MUTEX},     // Uses same adc as touch!!!!!
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
     {"vbat_offset" , cmd_vbat_offset , 0},

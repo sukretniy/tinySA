@@ -51,8 +51,9 @@
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 #define __SINGLE_LETTER__
-#define __NICE_BIG_FONT__
+//#define __NICE_BIG_FONT__
 #define __QUASI_PEAK__
+#define __REMOTE_DESKTOP__
 
 #ifdef TINYSA3
 #define DEFAULT_IF  433800000
@@ -90,6 +91,13 @@ typedef uint32_t freq_t;
 
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
+#endif
+
+#ifdef __REMOTE_DESKTOP__
+extern volatile int auto_capture;
+extern volatile int mouse_x;
+extern volatile int mouse_y;
+extern volatile int mouse_down;
 #endif
 
 #ifdef __VNA__
@@ -161,7 +169,10 @@ freq_t get_sweep_frequency(int type);
 void my_microsecond_delay(int t);
 float my_atof(const char *p);
 int shell_printf(const char *fmt, ...);
-
+#ifdef __REMOTE_DESKTOP__
+void send_region(const char *t, int x, int y, int w, int h);
+void send_buffer(uint8_t * buf, int s);
+#endif
 void set_marker_frequency(int m, freq_t f);
 void toggle_sweep(void);
 void toggle_mute(void);
@@ -282,6 +293,8 @@ void set_measurement(int);
 // extern int settingSpeed;
 //extern int setting.step_delay;
 void sweep_remote(void);
+extern int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv);
+
 #ifdef __AUDIO__
 /*
  * dsp.c

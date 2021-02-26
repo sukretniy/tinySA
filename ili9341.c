@@ -451,6 +451,14 @@ void ili9341_fill(int x, int y, int w, int h)
   dmaStreamSetMemory0(dmatx, &background_color);
   dmaStreamSetMode(dmatx, txdmamode | STM32_DMA_CR_PSIZE_HWORD | STM32_DMA_CR_MSIZE_HWORD);
   dmaStreamFlush(w * h);
+#ifdef __REMOTE_DESKTOP__
+  if (auto_capture) {
+     send_region("fill", x,y,w,h);
+     spi_buffer[0] = background_color;
+     send_buffer((uint8_t *)spi_buffer, 2);
+     osalThreadSleepMilliseconds(2);
+  }
+#endif
 }
 
 // Copy spi_buffer to region
@@ -464,6 +472,13 @@ void ili9341_bulk(int x, int y, int w, int h)
   dmaStreamSetMode(dmatx, txdmamode | STM32_DMA_CR_PSIZE_HWORD |
                               STM32_DMA_CR_MSIZE_HWORD | STM32_DMA_CR_MINC);
   dmaStreamFlush(w * h);
+#ifdef __REMOTE_DESKTOP__
+  if (auto_capture) {
+     send_region("bulk", x,y,w,h);
+     send_buffer((uint8_t *)spi_buffer, w*h*2);
+     osalThreadSleepMilliseconds(2);
+  }
+#endif
 }
 #endif
 
