@@ -107,7 +107,6 @@ static int8_t drive_strength = DRIVE_STRENGTH_AUTO;
 uint8_t sweep_mode = SWEEP_ENABLE;
 volatile uint8_t redraw_request = 0; // contains REDRAW_XXX flags
 volatile int auto_capture = false;
-
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
   BOARD_NAME,
@@ -145,9 +144,11 @@ static THD_FUNCTION(Thread1, arg)
       // call from lowest level to save stack space
       self_test(setting.test);
 //      sweep_mode = SWEEP_ENABLE;
-    } else if (sweep_mode & SWEEP_REMOTE) {
+#ifdef __SINGLE_LETTER__
+      } else if (sweep_mode & SWEEP_REMOTE) {
       sweep_remote();
-    } else if (sweep_mode & SWEEP_CALIBRATE) {
+#endif
+      } else if (sweep_mode & SWEEP_CALIBRATE) {
       // call from lowest level to save stack space
       calibrate();
       sweep_mode = SWEEP_ENABLE;
@@ -807,6 +808,7 @@ VNA_SHELL_FUNCTION(cmd_dump)
 }
 #endif
 
+#ifdef __REMOTE_DESKTOP__
 VNA_SHELL_FUNCTION(cmd_refresh)
 {
 // read pixel count at one time (PART*2 bytes required for read buffer)
@@ -839,6 +841,7 @@ VNA_SHELL_FUNCTION(cmd_release)
   mouse_down = false;
   handle_touch_interrupt();
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_capture)
 {
@@ -953,13 +956,13 @@ config_t config = {
   .low_level_output_offset =   0.0,    // Uncalibrated
   .high_level_output_offset =  0.0,    // Uncalibrated
 #ifdef TINYSA3
-  .low_correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
+  .low_correction_frequency = { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .low_correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
   .high_correction_frequency = { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 },
   .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
 #endif
 #ifdef TINYSA4
-  .low_correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
+  .low_correction_frequency = { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .low_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
   .high_correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
@@ -969,6 +972,7 @@ config_t config = {
   .cor_wfm = -55,
   .cor_nfm = -55,
   .ultra = false,
+  .sweep_voltage = 3.3,
 };
 
 //properties_t current_props;
@@ -2410,6 +2414,7 @@ static const VNAShellCommand commands[] =
     {"time"        , cmd_time        , 0},
 #endif
     {"dac"         , cmd_dac         , 0},
+    {"sweep_voltage",cmd_sweep_voltage,0},
     {"saveconfig"  , cmd_saveconfig  , 0},
     {"clearconfig" , cmd_clearconfig , 0},
     {"data"        , cmd_data        , CMD_WAIT_MUTEX},
@@ -2449,10 +2454,11 @@ static const VNAShellCommand commands[] =
     {"edelay"      , cmd_edelay      , 0},
 #endif
     {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
+#ifdef __REMOTE_DESKTOP__
     {"refresh"     , cmd_refresh     , 0},
     {"touch"       , cmd_touch       , 0},
     {"release"     , cmd_release     , 0},
-
+#endif
     {"vbat"        , cmd_vbat        , CMD_WAIT_MUTEX},     // Uses same adc as touch!!!!!
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
     {"vbat_offset" , cmd_vbat_offset , 0},
@@ -2491,6 +2497,7 @@ static const VNAShellCommand commands[] =
  #ifdef ENABLE_THREADS_COMMAND
      {"threads"     , cmd_threads     , 0},
  #endif
+#ifdef __SINGLE_LETTER__
     { "y", cmd_y,    CMD_WAIT_MUTEX },
    { "i", cmd_i,	CMD_WAIT_MUTEX },
    { "v", cmd_v,	CMD_WAIT_MUTEX },
@@ -2505,9 +2512,10 @@ static const VNAShellCommand commands[] =
    { "o", cmd_o,    CMD_WAIT_MUTEX },
    { "d", cmd_d,    CMD_WAIT_MUTEX },
    { "f", cmd_f,    CMD_WAIT_MUTEX },
+#endif
 #ifdef TINYSA4
    { "g", cmd_g,    CMD_WAIT_MUTEX },
-   #endif
+#endif
 #ifdef __ADF4351__
     { "x", cmd_x,    CMD_WAIT_MUTEX },
 #endif
@@ -2520,7 +2528,11 @@ VNA_SHELL_FUNCTION(cmd_help)
   (void)argv;
   const VNAShellCommand *scp = commands;
   shell_printf("Commands:");
-  while (scp->sc_name != NULL && scp->sc_function != cmd_y) {
+  while (scp->sc_name != NULL
+#ifdef __SINGLE_LETTER__
+      && scp->sc_function != cmd_y
+#endif
+      )   {
     shell_printf(" %s", scp->sc_name);
     scp++;
   }
@@ -2771,7 +2783,6 @@ static const I2CConfig i2ccfg = {
   .cr2      = 0
 };
 #endif
-
 static DACConfig dac1cfg1 = {
   //init:         2047U,
   init:         1922U,
@@ -3017,7 +3028,7 @@ void HardFault_Handler(void)
 
 void hard_fault_handler_c(uint32_t *sp)
 {
-#if 1
+#if 0
   uint32_t r0  = sp[0];
   uint32_t r1  = sp[1];
   uint32_t r2  = sp[2];
@@ -3080,7 +3091,10 @@ void hard_fault_handler_c(uint32_t *sp)
 #endif
   shell_printf("===================================\r\n");
 #else
-  (void)sp;
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_drawstring("FATAL ERROR", OFFSETX, 120);
+   (void)sp;
 #endif
   while (true) {
   }

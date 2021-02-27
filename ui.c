@@ -311,6 +311,7 @@ touch_check(void)
       last_touch_x = x;
       last_touch_y = y;
     }
+#ifdef __REMOTE_DESKTOP__
     mouse_down = false;
   }
   if (!stat) {
@@ -320,7 +321,10 @@ touch_check(void)
       last_touch_y = mouse_y;
     }
   }
-#if 0                                           // Long press detection
+#else
+  }
+#endif  
+  #if 0                                           // Long press detection
   systime_t ticks = chVTGetSystemTimeX();
 
   if (stat && !last_touch_status) {         // new button, initialize
@@ -446,8 +450,13 @@ touch_draw_test(void)
 void
 touch_position(int *x, int *y)
 {
+#ifdef __REMOTE_DESKTOP__
   *x = (mouse_down ? mouse_x : (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2]);
   *y = (mouse_down ? mouse_y : (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3]);
+#else
+  *x = (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2];
+  *y = (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3];
+#endif
 }
 
 
@@ -2955,9 +2964,11 @@ void ui_process_touch(void)
 }
 
 static int previous_button_state = 0;
+#ifdef __REMOTE_DESKTOP__
 static int previous_mouse_state = 0;
 static int previous_mouse_x = 0;
 static int previous_mouse_y = 0;
+#endif
 
 void
 ui_process(void)
@@ -2971,10 +2982,14 @@ ui_process(void)
     ui_process_lever();
     previous_button_state = button_state;
     operation_requested = OP_NONE;
-  } else if (operation_requested&OP_TOUCH || previous_mouse_state != mouse_down || previous_mouse_x != mouse_x || previous_mouse_y != mouse_y) {
+  }
+  if (operation_requested&OP_TOUCH
+#ifdef __REMOTE_DESKTOP__
+	  || previous_mouse_state != mouse_down || previous_mouse_x != mouse_x || previous_mouse_y != mouse_y
+#endif
+  ) {
     ui_process_touch();
-    previous_mouse_state = mouse_down;
-    operation_requested = OP_NONE;
+	operation_requested = OP_NONE;
   }
 }
 

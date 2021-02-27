@@ -2033,6 +2033,17 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
   }
 
+  if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// start burst
+    SI4432_Sel = SI4432_LO ;
+    if (i == 0) {
+//      set_switch_transmit();
+      SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1D) ; // Set GPIO2 output to ground
+    } else if (i == 1) {
+//      set_switch_off();
+      SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 output to ground
+    }
+  }
+
   if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
     float ls=setting.level_sweep;                                           // calculate and set the output level
     if (ls > 0)
@@ -2733,6 +2744,8 @@ sweep_again:                                // stay in sweep loop when output mo
       return false;
     }
 
+    dacPutChannelX(&DACD2, 0, (((float)i)*config.sweep_voltage)*4.279);        // Output sweep voltage  4095 -> 3.3 Volt
+
     // ----------------------- in loop AGC ---------------------------------
 
 #ifdef __SI4432__
@@ -2790,7 +2803,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #endif
 #ifdef __SI4432__
       if (check_for_AM) {
-        int AGC_value = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0;
+        int AGC_value = (SI4432_Read_Byte(0x69) & 0x01f) * 3 - 90;
         if (AGC_value < last_AGC_value &&  last_AGC_direction_up ) {
           AGC_flip_count++;
         } else if (AGC_value > last_AGC_value &&  !last_AGC_direction_up ) {
@@ -3045,7 +3058,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __SI4432__
   if (!in_selftest && MODE_INPUT(setting.mode)) {
     if (S_IS_AUTO(setting.agc)) {
-      float actual_max_level = actual_t[max_index[0]] - get_attenuation();
+      int actual_max_level = actual_t[max_index[0]] - get_attenuation();        // No need to use float
       if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
         if (actual_max_level > - 45)
           auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
@@ -3225,10 +3238,11 @@ sweep_again:                                // stay in sweep loop when output mo
       }
     } else if (setting.measurement == M_AM) {      // ----------------AM measurement
       if (S_IS_AUTO(setting.agc )) {
-        if (actual_t[max_index[0]]  - get_attenuation() > -20 ) {
+        int actual_level = actual_t[max_index[0]] - get_attenuation();  // no need for float
+        if (actual_level > -20 ) {
           setting.agc = S_AUTO_OFF;
           setting.lna = S_AUTO_OFF;
-        } else if (actual_t[max_index[0]]  - get_attenuation() < -45 ) {
+        } else if (actual_level < -45 ) {
           setting.agc = S_AUTO_ON;
           setting.lna = S_AUTO_ON;
         } else {
@@ -3383,7 +3397,7 @@ int marker_search_max(void)
   return found;
 }
 
-#define MINMAX_DELTA 10
+#define MINMAX_DELTA_X10 100
 
 
 int
@@ -3394,22 +3408,22 @@ marker_search_left_min(int from)
   if (uistat.current_trace == -1)
     return -1;
 
-  float value = actual_t[from];
+  int value_x10 = actual_t[from]*10;
   for (i = from - 1; i >= 0; i--) {
-    float new_value = actual_t[i];
-    if (new_value > value) {
-      value = new_value;        // follow up
+    int new_value_x10 = actual_t[i]*10;
+    if (new_value_x10 > value_x10) {
+      value_x10 = new_value_x10;        // follow up
 //      found = i;
-    } else if (new_value < value - MINMAX_DELTA )
+    } else if (new_value_x10 < value_x10 - MINMAX_DELTA_X10 )
       break;  // past the maximum
   }
 
   for (; i >= 0; i--) {
-    float new_value = actual_t[i];
-    if (new_value < value) {
-      value = new_value;        // follow down
+    int new_value_x10 = actual_t[i]*10;
+    if (new_value_x10 < value_x10) {
+      value_x10 = new_value_x10;        // follow down
       found = i;
-    } else if (new_value > value  + MINMAX_DELTA )
+    } else if (new_value_x10 > value_x10  + MINMAX_DELTA_X10 )
       break;
   }
   return found;
@@ -3423,21 +3437,21 @@ marker_search_right_min(int from)
 
   if (uistat.current_trace == -1)
     return -1;
-  float value = actual_t[from];
+  int value_x10 = actual_t[from]*10;
   for (i = from + 1; i < sweep_points; i++) {
-    float new_value = actual_t[i];
-    if (new_value > value) {    // follow up
-      value = new_value;
+    int new_value_x10 = actual_t[i]*10;
+    if (new_value_x10 > value_x10) {    // follow up
+      value_x10 = new_value_x10;
 //      found = i;
-    } else if (new_value < value - MINMAX_DELTA) // less then largest value - noise
+    } else if (new_value_x10 < value_x10 - MINMAX_DELTA_X10) // less then largest value_x10 - noise
       break;    // past the maximum
   }
   for (; i < sweep_points; i++) {
-    float new_value = actual_t[i];
-    if (new_value < value) {    // follow down
-      value = new_value;
+    int new_value_x10 = actual_t[i]*10;
+    if (new_value_x10 < value_x10) {    // follow down
+      value_x10 = new_value_x10;
       found = i;
-    } else if (new_value > value + MINMAX_DELTA) // larger then smallest value + noise
+    } else if (new_value_x10 > value_x10 + MINMAX_DELTA_X10) // larger then smallest value_x10 + noise
       break;
   }
   return found;
@@ -3585,8 +3599,12 @@ int validate_signal_within(int i, float margin)
   if (fabsf(peakLevel-test_case[i].pass) > margin) {
     return TS_CRITICAL;
   }
+  if (setting.measurement == M_PASS_BAND) {
+    peakFreq = (markers[2].frequency + markers[1].frequency)/2;
+    markers[0].frequency = peakFreq;
+  }
   test_fail_cause[i] = "Frequency ";
-  if (peakFreq < test_case[i].center * 1000000 - 1000000 || test_case[i].center * 1000000 + 1000000 < peakFreq )
+  if (peakFreq < test_case[i].center * 1000000 - 100000 || test_case[i].center * 1000000 + 100000 < peakFreq )
     return TS_FAIL;
   test_fail_cause[i] = "";
   return TS_PASS;
@@ -3652,21 +3670,20 @@ int validate_atten(int i) {
     float summed_peak_level = 0;
 #define ATTEN_TEST_SWEEPS    5
     for (int k=0; k<ATTEN_TEST_SWEEPS; k++) {
-      //        setting.sweep_time_us = 1000000;
-      test_acquire(TEST_ATTEN);                        // Acquire test
-      //      test_validate(TEST_ATTEN);                       // Validate test
-      float peaklevel = 0.0;
-      for (int n = 50 ; n < sweep_points; n++)
+//        setting.sweep_time_us = 1000000;
+        test_acquire(TEST_ATTEN);                        // Acquire test
+//      test_validate(TEST_ATTEN);                       // Validate test
+        float peaklevel = 0.0;
+      for (int n = 0 ; n < sweep_points; n++)
         peaklevel += actual_t[n];
-      peaklevel /= (sweep_points - 50);
+      peaklevel /= (sweep_points - 0);
       summed_peak_level += peaklevel;
-    }
-    summed_peak_level /= ATTEN_TEST_SWEEPS;
+      }
+      summed_peak_level /= ATTEN_TEST_SWEEPS;
     if (j == 0)
       reference_peak_level = summed_peak_level;
     else {
-      //      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, summed_peak_level, summed_peak_level - reference_peak_level);
-      if (SDU1.config->usbp->state == USB_ACTIVE)  shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",a, summed_peak_level, summed_peak_level - reference_peak_level);
+//      if (SDU1.config->usbp->state == USB_ACTIVE)  shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",a, summed_peak_level, summed_peak_level - reference_peak_level);
 #define ATTEN_TEST_CRITERIA 1
       if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA) {
         status = TS_FAIL;
@@ -3816,7 +3833,7 @@ common_silent:
     for (int j = 0; j < setting._sweep_points/2 - W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].stop;
     for (int j = setting._sweep_points/2 + W2P(test_case[i].width); j < setting._sweep_points; j++)
-      stored_t[j] = test_case[i].stop;
+      stored_t[j] = test_case[i].stop - (i == 6?5:0);
     for (int j = setting._sweep_points/2 - W2P(test_case[i].width); j < setting._sweep_points/2 + W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].pass;
     break;
@@ -4136,7 +4153,6 @@ void self_test(int test)
       set_sweep_frequency(ST_SPAN, 0);
       break;
     }
-#endif
   } else if (test == 6) {
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
@@ -4152,9 +4168,8 @@ void self_test(int test)
       test_acquire(TEST_SPUR);                        // Acquire test
       shell_printf("%d: %9.3q\n\r",i, peakFreq);
       test_validate(TEST_SPUR);                       // Validate test
-
     }
-
+#endif
   }
 
   show_test_info = FALSE;

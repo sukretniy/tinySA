@@ -18,7 +18,6 @@
 
 uint32_t xtoi(char *t);
 
-static int VFO = 0;
 static int points = 101; // For 's' and 'm' commands
 
 VNA_SHELL_FUNCTION(cmd_mode)
@@ -258,14 +257,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       config.high_level_offset = v;
     else
       goto usage;
-  } else if (argc == 3) {
-    float v = my_atof(argv[2]);
-    if (strcmp(argv[0],"low") == 0)
-      config.low_level_output_offset = v;
-    else if (strcmp(argv[0],"high") == 0)
-      config.high_level_output_offset = v;
-    else
-      goto usage;
+    dirty = true;
   } else {
   usage:
     shell_printf("leveloffset [low|high] {output} [<offset>]\r\n");
@@ -285,6 +277,17 @@ VNA_SHELL_FUNCTION(cmd_deviceid)
   }
 }
 
+VNA_SHELL_FUNCTION(cmd_sweep_voltage)
+{
+  float value;
+  if (argc != 1) {
+    shell_printf("usage: sweep_voltage {value(0-3.3)}\r\n"\
+                 "current value: %f\r\n", config.sweep_voltage);
+    return;
+  }
+  value = my_atof(argv[0]);
+  config.sweep_voltage = value;
+}
 
 VNA_SHELL_FUNCTION(cmd_rbw)
 {
@@ -380,75 +383,6 @@ usage:
 }
 
 
-VNA_SHELL_FUNCTION(cmd_v)
-{
-    if (argc != 1) {
-        shell_printf("%d\r\n", VFO);
-        return;
-    }
-    VFO = my_atoi(argv[0]) > 0 ? 1 : 0;
-    shell_printf("VFO %d\r\n", VFO);
-}
-
-VNA_SHELL_FUNCTION(cmd_y)
-{
-  if (argc < 1) {
-    shell_printf("usage: y {addr(0-FF)} [value(0-FF)]+\r\n");
-    return;
-  }
-#ifdef __SI4432__
-  int lvalue = 0;
-  int rvalue;
-  rvalue = xtoi(argv[0]);
-  SI4432_Sel = VFO;
-  if (argc == 2){
-    lvalue = my_atoui(argv[1]);
-    SI4432_Write_Byte(rvalue, lvalue);
-  } else {
-    lvalue = SI4432_Read_Byte(rvalue);
-    shell_printf("%x\r\n", lvalue);
-  }
-#endif
-#ifdef __SI4463__
-  uint8_t data[16];
-  data[0] = xtoi(argv[0]);
-  for (int i=1; i < argc; i++) {
-    data[i] = xtoi(argv[i]);
-  }
-  SI4463_do_api(data, argc, data, 16);
-  for (int i=0; i<16; i++)
-    shell_printf("%02x ", data[i]);
-  shell_printf("\r\n");
-#endif
-}
-#if 0       // not used
-VNA_SHELL_FUNCTION(cmd_z)
-{
-  static const char cmd_z_list[] = "t|r|i";
-  if (argc != 1) {
-    shell_printf("usage: z %s\r\n", cmd_z_list);
-    return;
-  }
-  if (argc == 1) {
-#ifdef __SI4432__
-    SI4432_Sel = VFO;
-    int type = get_str_index(argv[0], cmd_z_list);
-    switch(type) {
-    case 0:
-      SI4432_Transmit(3);
-      break;
-    case 1:
-      SI4432_Receive();
-      break;
-    case 2:
-      SI4432_Reset();
-      break;
-    }
-#endif
-  }
-}
-#endif
-
 VNA_SHELL_FUNCTION(cmd_selftest)
 {
   if (argc < 1 || argc > 2) {
@@ -462,6 +396,10 @@ VNA_SHELL_FUNCTION(cmd_selftest)
     setting.test_argument = my_atoi(argv[1]);
   sweep_mode = SWEEP_SELFTEST;
 }
+
+#ifdef __SINGLE_LETTER__
+
+static int VFO = 0;
 
 #ifdef __ADF4351__
 
@@ -507,7 +445,6 @@ VNA_SHELL_FUNCTION(cmd_x)
   shell_printf("x=%x\r\n", reg);
 }
 #endif
-
 
 VNA_SHELL_FUNCTION(cmd_i)
 {
@@ -637,6 +574,81 @@ VNA_SHELL_FUNCTION(cmd_s)
   points = my_atoi(argv[0]);
 }
 
+
+VNA_SHELL_FUNCTION(cmd_v)
+{
+    if (argc != 1) {
+        shell_printf("%d\r\n", VFO);
+        return;
+    }
+    VFO = my_atoi(argv[0]) > 0 ? 1 : 0;
+    shell_printf("VFO %d\r\n", VFO);
+}
+
+VNA_SHELL_FUNCTION(cmd_y)
+{
+  if (argc < 1) {
+    shell_printf("usage: y {addr(0-FF)} [value(0-FF)]+\r\n");
+    return;
+  }
+#ifdef __SI4432__
+  int lvalue = 0;
+  int rvalue;
+  rvalue = xtoi(argv[0]);
+  SI4432_Sel = VFO;
+  if (argc == 2){
+    lvalue = my_atoui(argv[1]);
+    SI4432_Write_Byte(rvalue, lvalue);
+  } else {
+    lvalue = SI4432_Read_Byte(rvalue);
+    shell_printf("%x\r\n", lvalue);
+  }
+#endif
+#ifdef __SI4463__
+  uint8_t data[16];
+  data[0] = xtoi(argv[0]);
+  for (int i=1; i < argc; i++) {
+    data[i] = xtoi(argv[i]);
+  }
+  SI4463_do_api(data, argc, data, 16);
+  for (int i=0; i<16; i++)
+    shell_printf("%02x ", data[i]);
+  shell_printf("\r\n");
+#endif
+}
+#if 0       // not used
+VNA_SHELL_FUNCTION(cmd_z)
+{
+  static const char cmd_z_list[] = "t|r|i";
+  if (argc != 1) {
+    shell_printf("usage: z %s\r\n", cmd_z_list);
+    return;
+  }
+  if (argc == 1) {
+#ifdef __SI4432__
+    SI4432_Sel = VFO;
+    int type = get_str_index(argv[0], cmd_z_list);
+    switch(type) {
+    case 0:
+      SI4432_Transmit(3);
+      break;
+    case 1:
+      SI4432_Receive();
+      break;
+    case 2:
+      SI4432_Reset();
+      break;
+    }
+#endif
+  }
+}
+#endif
+
+
+#endif
+
+#ifdef __SINGLE_LETTER__
+
 void sweep_remote(void)
 {
   uint32_t i;
@@ -723,6 +735,7 @@ VNA_SHELL_FUNCTION(cmd_f)
   setting.test_argument =  my_atoi(argv[0]);;
   sweep_mode = SWEEP_SELFTEST;
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_correction)
 {

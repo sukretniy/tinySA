@@ -57,7 +57,10 @@
 #define  __HARMONIC__
 
 
+#define __SINGLE_LETTER__
+#define __NICE_BIG_FONT__
 #define __QUASI_PEAK__
+#define __REMOTE_DESKTOP__
 
 #ifdef TINYSA3
 #define DEFAULT_IF  433800000
@@ -111,10 +114,12 @@ typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
 #endif
 
+#ifdef __REMOTE_DESKTOP__
 extern volatile int auto_capture;
 extern volatile int mouse_x;
 extern volatile int mouse_y;
 extern volatile int mouse_down;
+#endif
 
 #ifdef __VNA__
 // Minimum frequency set
@@ -185,9 +190,10 @@ freq_t get_sweep_frequency(int type);
 void my_microsecond_delay(int t);
 float my_atof(const char *p);
 int shell_printf(const char *fmt, ...);
+#ifdef __REMOTE_DESKTOP__
 void send_region(const char *t, int x, int y, int w, int h);
 void send_buffer(uint8_t * buf, int s);
-
+#endif
 void set_marker_frequency(int m, freq_t f);
 void toggle_sweep(void);
 void toggle_mute(void);
@@ -469,7 +475,7 @@ extern const uint8_t numfont16x22[];
 #define bFONT_GET_DATA(ch)   (  &x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT])
 #define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT]&7))
 
-#if 1                               // Set to 0 to save 3kByte and loose nice font
+#ifdef __NICE_BIG_FONT__
 #define wFONT_START_CHAR   0x17
 #define wFONT_MAX_WIDTH      12
 #define wFONT_GET_HEIGHT     14
@@ -590,6 +596,7 @@ typedef struct config {
   int8_t    cor_wfm;
   int8_t    cor_nfm;
   int8_t    ultra;
+  float sweep_voltage;
   uint32_t    dummy;
 //  uint8_t _reserved[22];
   freq_t checksum;

@@ -1430,6 +1430,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
 //  draw_cal_status();
 }
 
+#ifdef __REMOTE_DESKTOP__
 static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
 {
   (void) data;
@@ -1444,7 +1445,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
   draw_menu();
 //  draw_cal_status();
 }
-
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
 {
@@ -1924,7 +1925,7 @@ static const menuitem_t menu_settings[] =
 {
   { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
   { MT_KEYPAD, KM_ACTUALPOWER,  "ACTUAL\nPOWER",  NULL},
-  { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "Set to zero for auto IF"},
+  { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "0=auto IF"},
   { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
@@ -2041,7 +2042,9 @@ static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
   { MT_ADV_CALLBACK,4,          "WATER\nFALL",     menu_waterfall_acb},
   { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
+#ifdef __REMOTE_DESKTOP__
   { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
+#endif
 //  { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",    NULL},
 
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },

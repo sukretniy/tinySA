@@ -39,7 +39,9 @@ static void cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t
 static void draw_battery_status(void);
 static void update_waterfall(void);
 void cell_draw_test_info(int x0, int y0);
-
+#ifndef wFONT_GET_DATA
+static void cell_drawstring_size(char *str, int x, int y, int size);
+#endif
 static int16_t grid_offset;
 static int16_t grid_width;
 static freq_t grid_span;
@@ -2448,7 +2450,7 @@ static void update_waterfall(void){
     gamma_correct(b);
     color = RGB565(r, g, b);
 #else
-    uint16_t y = CELL_Y(index[i])* (graph_bottom == BIG_WATERFALL ? 2 : 1); // should be always in range 0 - graph_bottom *2 depends on height of scroll
+    uint16_t y = SMALL_WATERFALL - CELL_Y(index[i])* (graph_bottom == BIG_WATERFALL ? 2 : 1); // should be always in range 0 - graph_bottom *2 depends on height of scroll
     // Calculate gradient palette for range 0 .. 192
     // idx     r   g   b
     //   0 - 127   0   0
