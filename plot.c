@@ -547,12 +547,12 @@ value(const float v)
     return v + LOG_10_SQRT_50_x20_plus90; // 90.0 + 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
-//  return pow(10, (v-30.0)/20.0) * sqrt((float)50.0);
-    return pow((float)10.0, (v-(float)30.0)/(float)20.0)*SQRT_50;  // Do NOT change pow to powf as this will increase the size
+//  return powf(10, (v-30.0)/20.0) * sqrt((float)50.0);
+    return powf((float)10.0, (v-(float)30.0)/(float)20.0)*SQRT_50;  // Do NOT change pow to powf as this will increase the size
 //    return pow(10, v/20.0) * POW_SQRT;      //TODO there is an error in this calculation as the outcome is different from the not optimized version
     break;
   case U_WATT:
-    return pow((float)10.0, v/10.0)/1000.0;  // Do NOT change pow to powf as this will increase the size
+    return powf((float)10.0, v/10.0)/1000.0;  // Do NOT change pow to powf as this will increase the size
     break;
   }
 //  case U_DBM:
@@ -972,7 +972,7 @@ void trace_get_value_string(     // Only used at one place
     plot_printf(ptr2, sizeof(buf2) - 2, "%3.1f" , (dfreq + 50000) / 1000000.0);
   }
 #else
-    plot_printf(ptr2, sizeof(buf2) - 2, "%9.5LqHz" , dfreq);
+    plot_printf(ptr2, sizeof(buf2) - 2, "%9.5QHz" , dfreq);
   }
 #endif
     v = value(coeff[i]);
@@ -2107,7 +2107,7 @@ static void cell_draw_marker_info(int x0, int y0)
           f = markers[2].frequency-markers[1].frequency;
         else
           f = markers[1].frequency-markers[2].frequency;
-        plot_printf(buf, sizeof buf, "WIDTH: %8.3LqHz", f);
+        plot_printf(buf, sizeof buf, "WIDTH: %8.3QHz", f);
     show_computed:
         j = 3;
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
@@ -2128,7 +2128,7 @@ static void cell_draw_marker_info(int x0, int y0)
         float level = (actual_t[markers[1].index] + actual_t[markers[2].index])/2.0 -  actual_t[markers[0].index];
         if (level < -70 || level > 0)
           break;
-        int depth =(int) (pow((float)10.0, 2.0 + (level + 6.02) /20.0));
+        int depth =(int) (powf((float)10.0, 2.0 + (level + 6.02) /20.0));
 #endif
         plot_printf(buf, sizeof buf, "DEPTH: %3d%%", depth);
         goto show_computed;
@@ -2137,7 +2137,7 @@ static void cell_draw_marker_info(int x0, int y0)
         if ( markers[2].frequency < dev)
           break;
         dev = ( markers[2].frequency - dev ) >> 1;
-        plot_printf(buf, sizeof buf, "DEVIATION:%6.1LqHz", dev);
+        plot_printf(buf, sizeof buf, "DEVIATION:%6.1QHz", dev);
         goto show_computed;
       } else if (setting.measurement == M_THD && markers[0].enabled && (markers[0].index << 5) > sweep_points ) {
         int old_unit = setting.unit;
@@ -2151,7 +2151,7 @@ static void cell_draw_marker_info(int x0, int y0)
             h += index_to_value(markers[1].index);
           h_i++;
         }
-        float thd = 100.0 * sqrt(h/p);
+        float thd = 100.0 * sqrtf(h/p);
         setting.unit = old_unit;
         ili9341_set_foreground(marker_color(markers[0].mtype));
         plot_printf(buf, sizeof buf, "THD: %4.1f%%", thd);
@@ -2273,17 +2273,17 @@ draw_frequencies(void)
   if ((domain_mode & DOMAIN_MODE) == DOMAIN_FREQ) {
 #endif
     if (FREQ_IS_CW()) {
-      plot_printf(buf1, sizeof(buf1), " CW %LqHz", get_sweep_frequency(ST_CW));
+      plot_printf(buf1, sizeof(buf1), " CW %QHz", get_sweep_frequency(ST_CW));
       // Show user actual select sweep time?
       uint32_t t = setting.actual_sweep_time_us;
       plot_printf(buf2, sizeof(buf2), " TIME %.3Fs", (float)t/ONE_SECOND_TIME);
 
     } else if (FREQ_IS_STARTSTOP()) {
-      plot_printf(buf1, sizeof(buf1), " START %.3LqHz    %5.1LqHz/", get_sweep_frequency(ST_START), grid_span);
-      plot_printf(buf2, sizeof(buf2), " STOP %.3LqHz", get_sweep_frequency(ST_STOP));
+      plot_printf(buf1, sizeof(buf1), " START %.3QHz    %5.1QHz/", get_sweep_frequency(ST_START), grid_span);
+      plot_printf(buf2, sizeof(buf2), " STOP %.3QHz", get_sweep_frequency(ST_STOP));
     } else if (FREQ_IS_CENTERSPAN()) {
-      plot_printf(buf1, sizeof(buf1), " CENTER %.3LqHz    %5.1LqHz/", get_sweep_frequency(ST_CENTER), grid_span);
-      plot_printf(buf2, sizeof(buf2), " SPAN %.3LqHz", get_sweep_frequency(ST_SPAN));
+      plot_printf(buf1, sizeof(buf1), " CENTER %.3QHz    %5.1QHz/", get_sweep_frequency(ST_CENTER), grid_span);
+      plot_printf(buf2, sizeof(buf2), " SPAN %.3QHz", get_sweep_frequency(ST_SPAN));
     }
 #ifdef __VNA__
   } else {

@@ -284,7 +284,11 @@ void
 touch_start_watchdog(void)
 {
   touch_prepare_sense();
+#ifdef TINYSA4
   adc_start_analog_watchdogd();
+#else
+  adc_start_analog_watchdogd(ADC_TOUCH_Y);
+#endif
 }
 
 static inline int
@@ -431,15 +435,12 @@ touch_draw_test(void)
   do {
     if (touch_check() == EVT_TOUCH_PRESSED){
       touch_position(&x0, &y0);
-      ili9341_line(x0, y0, x0, y0);
       do {
         chThdSleepMilliseconds(50);
         touch_position(&x1, &y1);
-        if (x0!= x1 || y0 != y1) {
-          ili9341_line(x0, y0, x1, y1);
-          x0 = x1;
-          y0 = y1;
-        }
+        ili9341_line(x0, y0, x1, y1);
+        x0 = x1;
+        y0 = y1;
       } while (touch_check() != EVT_TOUCH_RELEASED);
     }
   }while (!(btn_check() & EVT_BUTTON_SINGLE_CLICK));
@@ -459,7 +460,6 @@ touch_position(int *x, int *y)
 #endif
 }
 
-
 void
 show_version(void)
 {
@@ -475,7 +475,7 @@ show_version(void)
     do {shift>>=1; y+=5;} while (shift&1);
     ili9341_drawstring(info_about[i++], x, y+=5);
   }
-
+#ifdef TINYSA4
   static  char buf[96];
 extern const char *states[];
   #define ENABLE_THREADS_COMMAND
@@ -503,7 +503,7 @@ extern const char *states[];
 #endif
 
 
-
+#endif		// TINYSA4
 
   while (true) {
     if (touch_check() == EVT_TOUCH_PRESSED)
@@ -881,7 +881,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
     {
     float l = actual_t[markers[active_marker].index];
     float s_max = value(l)/setting.scale;
-    user_set_reflevel(setting.scale*(floor(s_max)+2));
+    user_set_reflevel(setting.scale*(floorf(s_max)+2));
     }
     break;
 #ifdef __VNA__
@@ -1894,7 +1894,7 @@ draw_menu_buttons(const menuitem_t *menu)
           }
           goto draw_divider;
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
-          local_slider_positions = ((get_level() - SL_GENLOW_LEVEL_MIN - config.low_level_output_offset ) * (MENU_FORM_WIDTH-8)) / SL_GENLOW_LEVEL_RANGE + OFFSETX+4;
+          local_slider_positions = ((get_level() - level_min()) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
           for (int i=0; i <= 4; i++) {
             ili9341_drawstring(step_text[i], button_start+12 + i * MENU_FORM_WIDTH/5, y+button_height-9);
           }
@@ -1905,7 +1905,7 @@ draw_menu_buttons(const menuitem_t *menu)
         draw_slider:
           blit8BitWidthBitmap(local_slider_positions - 4, y, 7, 5, slider_bitmap);
         } else if (menu[i].data == KM_HIGHOUTLEVEL) {
-          local_slider_positions = ((get_level() - SL_GENHIGH_LEVEL_MIN ) * (MENU_FORM_WIDTH-8)) / SL_GENHIGH_LEVEL_RANGE + OFFSETX+4;
+          local_slider_positions = ((get_level() - level_min() ) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
           goto draw_slider;
         }
       }
@@ -2071,7 +2071,7 @@ menu_select_touch(int i, int pos)
               check_frequency_slider(slider_freq);
          }
         } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
-            uistat.value =  setting.offset + ((touch_x - OFFSETX+4) * SL_GENLOW_LEVEL_RANGE ) / (MENU_FORM_WIDTH-8) + SL_GENLOW_LEVEL_MIN  + config.low_level_output_offset;
+            uistat.value =  setting.offset + ((touch_x - OFFSETX+4) * level_range() ) / (MENU_FORM_WIDTH-8) + level_min() ;
          apply_step:
             set_keypad_value(keypad);
          apply:
@@ -2080,7 +2080,7 @@ menu_select_touch(int i, int pos)
 //          }
 //        } else if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
         } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_HIGHOUTLEVEL) {
-            set_level( (touch_x - OFFSETX+4) *(SL_GENHIGH_LEVEL_RANGE) / (MENU_FORM_WIDTH-8) + SL_GENHIGH_LEVEL_MIN );
+            set_level( (touch_x - OFFSETX+4) *(level_range()) / (MENU_FORM_WIDTH-8) + level_min() );
             goto apply;
         }
         keypad_mode = old_keypad_mode;

@@ -1,5 +1,6 @@
 /*
  *
+ * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
@@ -124,15 +125,22 @@ const char *info_about[]={
 };
 
 uint16_t dirty = true;
+
 bool completed = false;
 
+#ifdef TINYSA4
 static THD_WORKING_AREA(waThread1, 1124);
+#else
+static THD_WORKING_AREA(waThread1, 768);
+#endif
 static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
   chRegSetThreadName("sweep");
 
-//  ui_process();
+#ifndef TINYSA4
+  ui_process();
+#endif
 
   while (1) {
 //  START_PROFILE
@@ -445,9 +453,9 @@ int set_frequency(freq_t freq)
 // Rewrite universal standart str to value functions to more compact
 //
 // Convert string to int32
-static int64_t my_atoi(const char *p)
+static long_t my_atoi(const char *p)
 {
-  int64_t value = 0;
+  long_t value = 0;
   uint32_t c;
   bool neg = false;
 
@@ -468,9 +476,9 @@ static int64_t my_atoi(const char *p)
 //  0o - for oct radix
 //  0b - for bin radix
 //  default dec radix
-uint64_t my_atoui(const char *p)
+freq_t my_atoui(const char *p)
 {
-  uint64_t value = 0, radix = 10, c;
+  freq_t value = 0, radix = 10, c;
   if (*p == '+') p++;
   if (*p == '0') {
     switch (p[1]) {
@@ -739,7 +747,9 @@ void i2s_end_callback(I2SDriver *i2sp, size_t offset, size_t n)
     --wait_count;
   } else if (wait_count > 0) {
     if (accumerate_count > 0) {
- //     dsp_process(p, n);
+#ifndef TINYSA4
+	//     dsp_process(p, n);
+#endif
       accumerate_count--;
     }
 #ifdef ENABLED_DUMP
@@ -846,16 +856,17 @@ VNA_SHELL_FUNCTION(cmd_release)
 VNA_SHELL_FUNCTION(cmd_capture)
 {
   // read pixel count at one time (PART*2 bytes required for read buffer)
+  (void)argc;
+  (void)argv;
   int i, y;
-  if (argc == 1) {
-    int m = generic_option_cmd("capture", "off|on", argc, argv[0]);
-    if (m>=0) {
-      auto_capture = m;
-      return;
-    }
-  }
+#ifdef TINYSA4  
 #if SPI_BUFFER_SIZE < (2*LCD_WIDTH)
 #error "Low size of spi_buffer for cmd_capture"
+#endif
+#else
+#if SPI_BUFFER_SIZE < (3*LCD_WIDTH + 1)
+#error "Low size of spi_buffer for cmd_capture"
+#endif
 #endif
   // read 2 row pixel time (read buffer limit by 2/3 + 1 from spi_buffer size)
   for (y = 0; y < LCD_HEIGHT; y += 2) {
@@ -945,33 +956,40 @@ config_t config = {
   .harmonic_freq_threshold = 300000000,
 #endif
   .lcd_palette = LCD_DEFAULT_PALETTE,
-  .vbat_offset = 220,
 #ifdef TINYSA4
-  .frequency_IF1 = DEFAULT_IF,
-  .frequency_IF2 = 0,
-  .ultra_threshold = 800000000,
 #endif
-  .low_level_offset =       100.0,    // Uncalibrated
-  .high_level_offset =      100.0,    // Uncalibrated
-  .low_level_output_offset =   0.0,    // Uncalibrated
-  .high_level_output_offset =  0.0,    // Uncalibrated
 #ifdef TINYSA3
+  .vbat_offset = 500,
+  .low_level_offset =       100,    // Uncalibrated
+  .high_level_offset =      100,    // Uncalibrated
   .low_correction_frequency = { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .low_correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
   .high_correction_frequency = { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 },
   .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
+  .setting_frequency_10mhz = 10000000,
+  .cor_am = -14,
+  .cor_wfm = -17,
+  .cor_nfm = -17,
 #endif
 #ifdef TINYSA4
+  .vbat_offset = 220,
+  .frequency_IF1 = DEFAULT_IF,
+  .frequency_IF2 = 0,
+  .ultra_threshold = 800000000,
+  .low_level_offset =       100.0,    // Uncalibrated
+  .high_level_offset =      100.0,    // Uncalibrated
+  .low_level_output_offset =   0.0,    // Uncalibrated
+  .high_level_output_offset =  0.0,    // Uncalibrated
   .low_correction_frequency = { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .low_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
   .high_correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
-#endif
   .setting_frequency_30mhz = 30000000,
   .cor_am = -5,
   .cor_wfm = -55,
   .cor_nfm = -55,
   .ultra = false,
+#endif
   .sweep_voltage = 3.3,
 };
 
@@ -1134,7 +1152,7 @@ VNA_SHELL_FUNCTION(cmd_scan)
     uint16_t mask = my_atoui(argv[3]);
     if (mask) {
       for (i = 0; i < points; i++) {
-        if (mask & 1) shell_printf("%Lu ", frequencies[i]);
+        if (mask & 1) shell_printf("%U ", frequencies[i]);
         if (mask & 2) shell_printf("%f %f ", value(measured[2][i]), 0.0);
         if (mask & 4) shell_printf("%f %f ", value(measured[1][i]), 0.0);
         if (mask & 8) shell_printf("%f %f ", value(measured[0][i]), 0.0);
@@ -1332,7 +1350,7 @@ get_sweep_frequency(int type)
 VNA_SHELL_FUNCTION(cmd_sweep)
 {
   if (argc == 0) {
-    shell_printf("%Ld %Ld %d\r\n", get_sweep_frequency(ST_START), get_sweep_frequency(ST_STOP), sweep_points);
+    shell_printf("%D %D %d\r\n", get_sweep_frequency(ST_START), get_sweep_frequency(ST_STOP), sweep_points);
     return;
   } else if (argc > 3) {
     goto usage;
@@ -2000,7 +2018,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
-        shell_printf("%d %d %Ld %f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
+        shell_printf("%d %d %D %f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
       }
     }
     return;
@@ -2017,7 +2035,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     goto usage;
   if (argc == 1) {
   display_marker:
-    shell_printf("%d %d %Ld %.2f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
+    shell_printf("%d %d %D %.2f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
     active_marker = t;
     // select active marker
     markers[t].enabled = TRUE;
@@ -2085,7 +2103,7 @@ VNA_SHELL_FUNCTION(cmd_frequencies)
   (void)argv;
   for (i = 0; i < sweep_points; i++) {
     if (frequencies[i] != 0)
-      shell_printf("%Lu\r\n", frequencies[i]);
+      shell_printf("%U\r\n", frequencies[i]);
   }
 }
 
@@ -2475,7 +2493,9 @@ static const VNAShellCommand commands[] =
     {"color"       , cmd_color       , 0},
 #endif
     { "if", cmd_if,    0 },
+#ifdef TINYSA4
     { "if1", cmd_if1,    0 },
+#endif
     { "attenuate", cmd_attenuate,    0 },
     { "level", cmd_level,    0 },
     { "sweeptime", cmd_sweeptime,    0 },
@@ -2485,9 +2505,11 @@ static const VNAShellCommand commands[] =
     { "rbw", cmd_rbw,    0 },
     { "mode", cmd_mode,    CMD_WAIT_MUTEX },
     { "spur", cmd_spur,    0 },
+#ifdef TINYSA4
     { "lna", cmd_lna,    0 },
     { "ultra", cmd_ultra,    0 },
     { "ultra_start", cmd_ultra_start, CMD_WAIT_MUTEX },
+#endif
     { "load", cmd_load,    0 },
     { "offset", cmd_offset, 0},
     { "output", cmd_output,    0 },
@@ -2783,6 +2805,7 @@ static const I2CConfig i2ccfg = {
   .cr2      = 0
 };
 #endif
+
 static DACConfig dac1cfg1 = {
   //init:         2047U,
   init:         1922U,
@@ -2799,7 +2822,11 @@ static const GPTConfig gpt4cfg = {
 
 void my_microsecond_delay(int t)
 {
+#ifdef TINYSA4
   if (t>1) gptPolledDelay(&GPTD4, t); // t us delay
+#else
+  if (t>1) gptPolledDelay(&GPTD14, t); // t us delay
+#endif
 }
 #if 0
 /*
@@ -2881,7 +2908,11 @@ int main(void)
   palClearPad(GPIOB, GPIOA_RF_PWR);
   chThdSleepMilliseconds(200);
 #endif
+#ifdef TINYSA4
   palSetPad(GPIOB, GPIOA_RF_PWR);
+#else
+  palSetPad(GPIOB, GPIO_RF_PWR);
+#endif
   chThdSleepMilliseconds(500);
 #endif
 
@@ -2919,24 +2950,31 @@ int main(void)
 /*
  *  Initiate 1 micro second timer
  */
-  gptStart(&GPTD4, &gpt4cfg);
+#ifdef TINYSA4
+ gptStart(&GPTD4, &gpt4cfg);
   gptPolledDelay(&GPTD4, 10); // 10 us delay
+#else
+  gptStart(&GPTD14, &gpt4cfg);
+  gptPolledDelay(&GPTD14, 10); // 10 us delay
+#endif
 
 /* restore config */
   config_recall();
-#if 1
   if (caldata_recall(0) == -1) {
     load_LCD_properties();
   }
-#endif
+
 /*
  * Init Shell console connection data (after load config for settings)
  */
   shell_init_connection();
 
-/* restore frequencies and calibration 0 slot properties from flash memory */
-
+#ifdef TINYSA4
   dac1cfg1.init = config.dac_value;
+#else
+  dac1cfg1.init = 0;
+#endif
+
 /*
  * Starting DAC1 driver, setting up the output pin as analog as suggested
  * by the Reference Manual.

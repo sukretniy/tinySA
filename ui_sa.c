@@ -405,15 +405,22 @@ enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, // These must be first to share common help text
   KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
   KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
-  KM_30MHZ, KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
+#ifdef TINYSA4
+  KM_30MHZ, 
+#else
+  KM_10MHZ, 
+#endif
+  KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
   KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION, KM_HIGHOUTLEVEL,
+#ifdef TINYSA4
   KM_R,KM_MOD,KM_CP,
-#if 1
   KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
 #endif
   KM_ATTACK,
+#ifdef TINYSA4
   KM_IF2,
   KM_LPF,
+#endif
   KM_NONE // always at enum end
 };
 
@@ -436,7 +443,7 @@ static const struct {
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "DECAY"},    // KM_DECAY
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
-  {keypads_freq        , "FREQ"},    // KM_30MHz
+  {keypads_freq        , "FREQ"},    // KM_30MHz | KM_10MHz
   {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA
   {keypads_plusmin     , "OFFSET"},    // KM_OFFSET
   {keypads_plusmin_unit, "TRIGGER\nLEVEL"},    // KM_TRIGGER
@@ -448,17 +455,19 @@ static const struct {
   {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
   {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
   {keypads_plusmin     , "LEVEL"},    // KM_HIGHOUTLEVEL
-#if 1
+#ifdef TINYSA
   {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
   {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
-#endif
   {keypads_freq        , "IF2"}, // KM_IF2
   {keypads_positive    , "R"}, // KM_R
   {keypads_positive    , "MODULO"}, // KM_MOD
   {keypads_positive    , "CP"}, // KM_CP
+#endif
   {keypads_positive    , "ATTACK"},    // KM_ATTACK
+#ifdef TINYSA4
   {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
+#endif
 };
 #if 0 // Not used
 
@@ -482,12 +491,10 @@ static const menuitem_t  menu_top[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_drive_wide[];
+#ifdef TINYSA4
 static const menuitem_t  menu_settings3[];
-static const menuitem_t  menu_sweep[];
-#ifdef __ULTRA__
-static const menuitem_t  menu_tophigh[];
-static const menuitem_t  menu_topultra[];
 #endif
+static const menuitem_t  menu_sweep[];
 
 #define AUTO_ICON(S) (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
 
@@ -543,11 +550,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
   case 3:
     menu_push_submenu(menu_highoutputmode);
     break;
-#ifdef __ULTRA__
-  case 7:
-    menu_push_submenu(menu_topultra);
-    break;
-#endif
   }
   redraw_request |= REDRAW_CAL_STATUS;
 }
@@ -745,40 +747,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sreffer_acb){
   menu_push_submenu(menu_reffer);
 }
 
-#ifdef TINYSA4
-const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
-#else
-const int8_t menu_drive_value[]={-38,-35,-33,-30,-27,-24,-21,-19, -7,-4,-2,1,4,7,10,13};
-#endif
-#if 0
+#ifdef TINYSA3
 static UI_FUNCTION_ADV_CALLBACK(menu_lo_drive_acb)
 {
   (void)item;
   if(b){
-#ifdef TINYSA4
-    b->param_1.i = data+20;
-#else
-    b->param_1.i = menu_drive_value[data] + (setting.mode==M_GENHIGH ? setting.offset : 0);
-#endif
-    b->icon = data == setting.lo_drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
-    return;
-  }
-//Serial.println(item);
-  set_lo_drive(data+20);
-  menu_move_back();
-//  ui_mode_normal();
-//  draw_cal_status();
-}
-#endif
-static UI_FUNCTION_ADV_CALLBACK(menu_mixer_drive_acb)
-{
-  (void)item;
-  if(b){
-#ifdef TINYSA4
-    b->param_1.i = data;
-#else
-    b->param_1.i = menu_drive_value[data] + (setting.mode==M_GENHIGH ? setting.offset : 0);
-#endif
+    b->param_1.i = drive_dBm[data];
     b->icon = data == setting.lo_drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
@@ -788,6 +762,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_mixer_drive_acb)
 //  ui_mode_normal();
 //  draw_cal_status();
 }
+#else
+static UI_FUNCTION_ADV_CALLBACK(menu_mixer_drive_acb)
+{
+  (void)item;
+  if(b){
+    b->param_1.i = data;
+    b->icon = data == setting.lo_drive ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+//Serial.println(item);
+  set_lo_drive(data);
+  menu_move_back();
+//  ui_mode_normal();
+//  draw_cal_status();
+}
+#endif
 
 #if 0
 static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
@@ -797,15 +787,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
 #ifdef TINYSA4
     b->param_1.i = setting.lo_drive;
 #else
-    b->param_1.i = menu_drive_value[setting.lo_drive] + (setting.mode==M_GENHIGH ? setting.offset : 0);
+    b->param_1.i = drive_dBm[setting.lo_drive] + (setting.mode==M_GENHIGH ? setting.offset : 0);
 #endif
     return;
   }
   menu_push_submenu(menu_drive_wide);
 }
 #endif
-
-
 
 #ifdef __SPUR__
 static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
@@ -818,7 +806,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
       b->icon = AUTO_ICON(setting.spur_removal);
     } else {
       b->param_1.text = "MIRROR\nMASKING";
+#ifdef TINYSA4
       b->icon = AUTO_ICON(setting.mirror_masking);
+#else
+      b->icon = setting.mirror_masking == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+#endif
     }
     return;
   }
@@ -831,6 +823,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
 }
 #endif
 
+#ifdef TINYSA4
 static UI_FUNCTION_ADV_CALLBACK(menu_extra_lna_acb)
 {
   (void)data;
@@ -870,7 +863,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_freq_acb)
   //  menu_move_back();
   ui_mode_normal();
 }
-
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 {
@@ -1210,15 +1203,23 @@ static UI_FUNCTION_CALLBACK(menu_marker_delete_cb)
   }
 }
 
+#ifdef TINYSA4
 static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,6000};
 static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300k","600k"};
+#else
+static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
 {
   (void)item;
   if (b){
-    b->param_1.text = rbwsel_text[data];
-    b->icon = setting.rbw_x10 == rbwsel_x10[data] ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+#ifdef TINYSA4
+  b->param_1.text = rbwsel_text[data];
+#else
+    b->param_1.u = rbwsel_x10[data]/10;
+#endif
+  b->icon = setting.rbw_x10 == rbwsel_x10[data] ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
   set_RBW(rbwsel_x10[data]);
@@ -1390,6 +1391,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_below_if_acb){
   draw_menu();
 }
 
+#ifdef TINYSA4
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_ultra_acb){
   (void)item;
   (void)data;
@@ -1403,6 +1405,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_ultra_acb){
   toggle_ultra();
   draw_menu();
 }
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_lo_output_acb){
   (void)item;
@@ -1552,7 +1555,7 @@ static const menuitem_t menu_load_preset[] =
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
-
+#ifdef TINYSA4
 static const menuitem_t menu_mixer_drive[] = {
   { MT_ADV_CALLBACK, 3, "%+ddBm",   menu_mixer_drive_acb},
   { MT_ADV_CALLBACK, 2, "%+ddBm",   menu_mixer_drive_acb},
@@ -1561,39 +1564,14 @@ static const menuitem_t menu_mixer_drive[] = {
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
-
-#if 0
-static const menuitem_t menu_drive_wide3[] = {
- { MT_FORM | MT_ADV_CALLBACK, 5, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 4, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 3, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 2, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 1, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK, 0, "%+ddBm",   menu_lo_drive_acb},
-  { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
- { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
-};
-
-static const menuitem_t menu_drive_wide2[] = {
- { MT_FORM | MT_ADV_CALLBACK, 10, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK,  9, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK,  8, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK,  7, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_ADV_CALLBACK,  6, "%+ddBm",   menu_lo_drive_acb},
- { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide3},
- { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
- { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
-};
-
-static const menuitem_t menu_drive_wide[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 15, "%+ddBm",   menu_lo_drive_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 14, "%+ddBm",   menu_lo_drive_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 13, "%+ddBm",   menu_lo_drive_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 12, "%+ddBm",   menu_lo_drive_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 11, "%+ddBm",   menu_lo_drive_acb},
-  { MT_FORM | MT_SUBMENU,  255, S_RARROW" MORE", menu_drive_wide2},
-  { MT_FORM | MT_CANCEL,   255, S_LARROW" BACK", NULL },
-  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
+#else
+static const menuitem_t menu_lo_drive[] = {
+  { MT_ADV_CALLBACK, 15, "%+ddBm",   menu_lo_drive_acb},
+  { MT_ADV_CALLBACK, 14, "%+ddBm",   menu_lo_drive_acb},
+  { MT_ADV_CALLBACK, 13, "%+ddBm",   menu_lo_drive_acb},
+  { MT_ADV_CALLBACK, 12, "%+ddBm",   menu_lo_drive_acb},
+  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 #endif
 
@@ -1623,7 +1601,9 @@ char center_text[18] = "FREQ: %s";
 static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
 //  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
+#ifdef TINYSA4
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
+#endif
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           center_text,         "10kHz..350MHz"},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        low_level_help_text},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
@@ -1638,12 +1618,19 @@ static const menuitem_t  menu_lowoutputmode[] = {
 
 static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
+#ifdef TINYSA4
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
+#endif
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         "240MHz..960MHz"},
 //  { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
   { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
+#ifdef TINYSA4
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
+#else
+  { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
+  { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
+#endif
   { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "EXTERNAL AMP: %s",          "-100..+100"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
@@ -1665,6 +1652,7 @@ static const menuitem_t  menu_average[] = {
 
 static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 0, "  AUTO",   menu_rbw_acb},
+#ifdef TINYSA4
   { MT_ADV_CALLBACK, 1, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 2, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 3, "%sHz",   menu_rbw_acb},
@@ -1673,6 +1661,14 @@ static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 6, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 7, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 8, "%sHz",   menu_rbw_acb},
+#else
+  { MT_ADV_CALLBACK, 1, "%4dkHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 2, "%4dkHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 3, "%4dkHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 4, "%4dkHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 5, "%4dkHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 6, "%4dkHz",   menu_rbw_acb},
+#endif  
   { MT_CANCEL,  0, S_LARROW" BACK", NULL },
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
@@ -1847,7 +1843,9 @@ static const menuitem_t menu_sweep_points[] = {
   { MT_ADV_CALLBACK, 1, "%3d point", menu_points_acb },
   { MT_ADV_CALLBACK, 2, "%3d point", menu_points_acb },
   { MT_ADV_CALLBACK, 3, "%3d point", menu_points_acb },
+#ifdef TINYSA4  
   { MT_ADV_CALLBACK, 4, "%3d point", menu_points_acb },
+#endif
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1856,14 +1854,52 @@ static const menuitem_t menu_sweep_speed[] =
 {
  { MT_ADV_CALLBACK,     SD_NORMAL,     "NORMAL",          menu_scanning_speed_acb},    // order must match definition of enum
  { MT_ADV_CALLBACK,     SD_PRECISE,    "PRECISE",         menu_scanning_speed_acb},
+#ifdef TINYSA4
  { MT_ADV_CALLBACK,     SD_FAST,        "FAST",            menu_scanning_speed_acb},
+#else
+ { MT_ADV_CALLBACK | MT_LOW,SD_FAST,   "FAST",            menu_scanning_speed_acb},
+#endif
  { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
  { MT_SUBMENU,          0,             "SWEEP\nPOINTS",   menu_sweep_points},
+#ifdef TINYSA4
  { MT_KEYPAD,           KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
+#else
+ { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
+#endif
  { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
  { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+#ifdef TINYSA4
+static const menuitem_t menu_settings4[];
+#endif
+
+static const menuitem_t menu_settings3[] =
+{
+#ifdef TINYSA4
+//  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+ { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
+  { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
+//  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
+  { MT_KEYPAD,  KM_R,  "R",           "Set R"},
+  { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
+  { MT_KEYPAD,  KM_CP,  "CP",           "Set CP"},
+  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
+#ifdef __HAM_BAND__
+  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
+#endif
+  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings4},
+#else
+  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
+  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+#ifdef __HAM_BAND__
+  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
+#endif
+#endif		// TINYSA4
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+#ifdef TINYSA4
 static const menuitem_t menu_settings4[] =
 {
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
@@ -1879,26 +1915,7 @@ static const menuitem_t menu_settings4[] =
  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
-
-static const menuitem_t menu_settings3[] =
-{
-//  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
- { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
-  { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
-//  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
-  { MT_KEYPAD,  KM_R,  "R",           "Set R"},
-  { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
-  { MT_KEYPAD,  KM_CP,  "CP",           "Set CP"},
-  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
-
-#ifdef __HAM_BAND__
-  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
-  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings4},
- { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
-};
-
 
 static const menuitem_t menu_settings2[] =
 {
@@ -1912,10 +1929,9 @@ static const menuitem_t menu_settings2[] =
 #else
   { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
 #endif
-#ifdef __ULTRA__
-  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
-#endif
+#ifdef TINYSA4
   { MT_KEYPAD,   KM_30MHZ,      "ACTUAL\n30MHz", "Enter actual l0MHz frequency"},
+#endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -1928,7 +1944,11 @@ static const menuitem_t menu_settings[] =
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "0=auto IF"},
   { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
+#ifdef TINYSA4
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
+#else
+  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
+#endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings2},
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -2085,7 +2105,9 @@ static const menuitem_t menu_level[] = {
 //  { MT_SUBMENU,0,             "CALC",         menu_average},
   { MT_SUBMENU, 0,              "UNIT",         menu_unit},
   { MT_KEYPAD,  KM_OFFSET,      "EXTERNAL\nAMP",NULL},
+#ifdef TINYSA4
   { MT_ADV_CALLBACK | MT_LOW ,0,"LNA",          menu_extra_lna_acb},
+ #endif
   { MT_SUBMENU,  0,             "TRIGGER",      menu_trigger},
   { MT_CANCEL, 0,               S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
@@ -2114,27 +2136,9 @@ static const menuitem_t menu_mode[] = {
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Cal. output: %s",   menu_sreffer_acb},
 //  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings3},
 
-#ifdef __ULTRA__
-  { MT_FORM | MT_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "ULTRA HIGH INPUT",menu_mode_cb},
-#endif
 //  { MT_FORM | MT_CANCEL,   0, S_RARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
-
-#ifdef __ULTRA__
-const menuitem_t menu_topultra[] = {
-  { MT_CALLBACK, 0, "RESET",        menu_autosettings_cb},
-  { MT_SUBMENU,  0, "FREQ",         menu_stimulus},
-  { MT_SUBMENU,  0, "LEVEL",        menu_level},
-  { MT_SUBMENU,  0, "DISPLAY",      menu_display},
-  { MT_SUBMENU,  0, "MARKER",       menu_marker},
-  { MT_SUBMENU,  0, "MEASURE",      menu_measure},
-  { MT_SUBMENU,  0, "SETTINGS",     menu_settings},
-  { MT_CANCEL,   0, "MODE",NULL},
-  { MT_NONE,     0, NULL, NULL } // sentinel,
- // MENUITEM_CLOSE,
-};
-#endif
 
 static const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "PRESET",       menu_load_preset},
@@ -2230,6 +2234,7 @@ static void fetch_numeric_target(void)
     uistat.value = setting.frequency_IF;
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
+#ifdef TINYSA4
   case KM_IF2:
     uistat.value = config.frequency_IF2;
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
@@ -2242,6 +2247,7 @@ static void fetch_numeric_target(void)
     uistat.value = ADF4350_modulo;
     plot_printf(uistat.text, sizeof uistat.text, "%4d", uistat.value);
     break;
+#endif
   case KM_SAMPLETIME:
     uistat.value = setting.step_delay;
     plot_printf(uistat.text, sizeof uistat.text, "%3dus", ((int32_t)uistat.value));
@@ -2257,10 +2263,10 @@ static void fetch_numeric_target(void)
   case KM_LOWOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
     int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
-    if (end_level < SL_GENLOW_LEVEL_MIN + config.low_level_output_offset)
-      end_level = SL_GENLOW_LEVEL_MIN + config.low_level_output_offset;
-    if (end_level > SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE  + config.low_level_output_offset)
-      end_level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE + config.low_level_output_offset;
+    if (end_level < level_min())
+      end_level = level_min();
+    if (end_level > level_max())
+      end_level = level_max();
     uistat.value += setting.offset;
     end_level += setting.offset;
     if (setting.level_sweep != 0)
@@ -2283,18 +2289,27 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
     break;
 #endif
+#ifdef TINYSA4
   case KM_LPF:
     uistat.value = config.ultra_threshold;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
+#endif
   case KM_NOISE:
     uistat.value = setting.noise;
     plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
     break;
+#ifdef TINYSA4
   case KM_30MHZ:
     uistat.value = config.setting_frequency_30mhz;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
+#else
+  case KM_10MHZ:
+    uistat.value = config.setting_frequency_10mhz;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
+    break;
+#endif
   case KM_OFFSET:
     uistat.value = setting.offset;
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
@@ -2378,6 +2393,7 @@ set_numeric_value(void)
     set_IF(uistat.value);
 //    config_save();
     break;
+#ifdef TINYSA4
   case KM_IF2:
     set_IF2(uistat.value);
 //    config_save();
@@ -2393,6 +2409,7 @@ set_numeric_value(void)
     ADF4351_CP((int)uistat.value);
 //    config_save();
     break;
+#endif
   case KM_SAMPLETIME:
     set_step_delay(uistat.value);
     break;
@@ -2422,16 +2439,24 @@ set_numeric_value(void)
     set_attack(uistat.value);
     break;
 #endif
+#ifdef TINYSA4
   case KM_LPF:
     config.ultra_threshold = uistat.value;
     config_save();
     break;
+#endif
   case KM_NOISE:
     set_noise(uistat.value);
     break;
+#ifdef TINYSA4
   case KM_30MHZ:
     set_30mhz(uistat.value);
     break;
+#else
+  case KM_10MHZ:
+    set_10mhz(uistat.value);
+    break;
+#endif
   case KM_OFFSET:
     set_offset(uistat.value);
     break;
@@ -2459,7 +2484,7 @@ set_numeric_value(void)
   case KM_MODULATION:
     set_modulation_frequency((int)uistat.value);
     break;
-#if 1
+#ifdef TINYSA4
   case KM_COR_AM:
     config.cor_am = -(int)uistat.value;
     config_save();
@@ -2778,13 +2803,13 @@ redraw_cal_status:
   ili9341_drawstring(buf, x, y);
   y += YSTEP + YSTEP/2 ;
 #endif
-
+#ifdef TINYSA
   if (setting.extra_lna){
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y = add_quick_menu("LNA:ON", x, y, (menuitem_t *)menu_level);
     y += YSTEP;
   }
-
+#endif
   // Cal output
   if (setting.refer >= 0) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
@@ -2873,7 +2898,11 @@ redraw_cal_status:
 
   // Version
   y += YSTEP + YSTEP/2 ;
+#ifdef TINYSA4
   strncpy(buf,&VERSION[11], BLEN-1);
+#else
+  strncpy(buf,&VERSION[8], BLEN-1);
+#endif
   ili9341_drawstring(buf, x, y);
 
 

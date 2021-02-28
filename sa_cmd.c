@@ -99,13 +99,18 @@ VNA_SHELL_FUNCTION(cmd_spur)
 //    shell_printf("usage: spur %s\r\n", cmd);
 //    return;
 //  }
+#ifdef TINYSA4
   int m = generic_option_cmd("spur", "off|on|auto", argc, argv[0]);
+#else
+  int m = generic_option_cmd("spur", "off|on", argc, argv[0]);
+#endif
   if (m>=0) {
     set_spur(m);
     redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
   }
 }
 
+#ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_lna)
 {
 //  static const char cmd[] = "off|on";
@@ -135,6 +140,7 @@ VNA_SHELL_FUNCTION(cmd_ultra)
     update_min_max_freq();
   }
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_output)
 {
@@ -258,6 +264,15 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     else
       goto usage;
     dirty = true;
+  } else if (argc == 3 && strcmp(argv[1],"output") == 0) {
+    float v = my_atof(argv[2]);
+    if (strcmp(argv[0],"low") == 0)
+      config.low_level_output_offset = v;
+    else if (strcmp(argv[0],"high") == 0)
+      config.high_level_output_offset = v;
+    else
+      goto usage;
+    dirty = true;
   } else {
   usage:
     shell_printf("leveloffset [low|high] {output} [<offset>]\r\n");
@@ -293,15 +308,19 @@ VNA_SHELL_FUNCTION(cmd_rbw)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: rbw 0.3..600|auto\r\n");
-    return;
+#ifdef TINYSA4
+	shell_printf("usage: rbw 0.3..600|auto\r\n");
+#else
+	shell_printf("usage: rbw 2..600|auto\r\n");
+#endif
+	return;
   }
   if (get_str_index(argv[0], "auto|0")>=0) {
     if (setting.rbw_x10 != 0)
       set_RBW(0);
   } else {
     float a = my_atof(argv[0]);
-    if (a < 0.2 || a>900)
+    if (a < 0.2 || a>600)
       goto usage;
     if (setting.rbw_x10 != a*10)
       set_RBW((int) ( a*10));
@@ -312,7 +331,7 @@ VNA_SHELL_FUNCTION(cmd_if)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: if {433M..435M}\r\n%qHz\r\n", setting.frequency_IF);
+    shell_printf("usage: if {433M..435M}\r\n%QHz\r\n", setting.frequency_IF);
     return;
   } else {
     freq_t a = (freq_t)my_atoi(argv[0]);
@@ -323,6 +342,7 @@ VNA_SHELL_FUNCTION(cmd_if)
   }
 }
 
+#ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_ultra_start)
 {
   if (argc != 1) {
@@ -350,7 +370,7 @@ VNA_SHELL_FUNCTION(cmd_if1)
     config_save();
   }
 }
-
+#endif
 
 VNA_SHELL_FUNCTION(cmd_trigger)
 {
@@ -401,7 +421,6 @@ VNA_SHELL_FUNCTION(cmd_selftest)
 
 static int VFO = 0;
 
-#ifdef __ADF4351__
 
 uint32_t xtoi(char *t)
 {
@@ -420,6 +439,8 @@ uint32_t xtoi(char *t)
   }
   return v;
 }
+
+#ifdef __ADF4351__
 
 VNA_SHELL_FUNCTION(cmd_x)
 {
@@ -478,6 +499,7 @@ VNA_SHELL_FUNCTION(cmd_d)
   (void) argc;
   (void) argv;
   int32_t a = my_atoi(argv[0]);
+#ifdef TINYSA4
   int32_t d;
   if (argc == 2)
     d = my_atoi(argv[1]);
@@ -498,6 +520,10 @@ VNA_SHELL_FUNCTION(cmd_d)
   }
 //  setting.lo_drive=a;
 //  dirty = true;
+#else
+  setting.lo_drive=a;
+  dirty = true;
+#endif
 }
 
 #if 0
@@ -522,7 +548,7 @@ VNA_SHELL_FUNCTION(cmd_a)
 {
   (void)argc;
   if (argc != 1) {
-    shell_printf("a=%Lu\r\n", frequencyStart);
+    shell_printf("a=%U\r\n", frequencyStart);
     return;
   }
   freq_t value = my_atoui(argv[0]);
@@ -534,7 +560,7 @@ VNA_SHELL_FUNCTION(cmd_b)
 {
   (void)argc;
   if (argc != 1) {
-    shell_printf("b=%Lu\r\n", frequencyStop);
+    shell_printf("b=%U\r\n", frequencyStop);
     return;
   }
   freq_t value = my_atoui(argv[0]);
@@ -588,7 +614,7 @@ VNA_SHELL_FUNCTION(cmd_v)
 VNA_SHELL_FUNCTION(cmd_y)
 {
   if (argc < 1) {
-    shell_printf("usage: y {addr(0-FF)} [value(0-FF)]+\r\n");
+    shell_printf("usage: y {addr(0-95)} [value(0-0xFF)]\r\n");
     return;
   }
 #ifdef __SI4432__
@@ -700,7 +726,9 @@ VNA_SHELL_FUNCTION(cmd_p)
 {
   (void)argc;
   int p = my_atoi(argv[0]);
+#ifdef TINYSA4
   SI4463_set_output_level(p);
+#endif
 return;
   int a = my_atoi(argv[1]);
   if (p==5)
@@ -712,6 +740,7 @@ return;
       set_refer_output(a);
 }
 
+#ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_g)
 {
   (void)argc;
@@ -719,6 +748,7 @@ VNA_SHELL_FUNCTION(cmd_g)
   int a = my_atoi(argv[1]);
   SI4463_set_gpio(p,a);
 }
+#endif
 
 VNA_SHELL_FUNCTION(cmd_w)
 {
@@ -743,7 +773,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
   if (argc == 0) {
     shell_printf("index frequency value\r\n");
     for (int i=0; i<CORRECTION_POINTS; i++) {
-      shell_printf("%d %Ld %.1f\r\n", i, setting.correction_frequency[i], setting.correction_value[i]);
+      shell_printf("%d %D%.1f\r\n", i, setting.correction_frequency[i], setting.correction_value[i]);
     }
     return;
   }
@@ -764,7 +794,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
   setting.correction_frequency[i] = f;
   setting.correction_value[i] = v;
   redraw_request|=REDRAW_AREA;                  // to ensure the change in level will be visible
-  shell_printf("updated %d to %Ld %.1f\r\n", i, setting.correction_frequency[i], setting.correction_value[i]);
+  shell_printf("updated %d to %D %.1f\r\n", i, setting.correction_frequency[i], setting.correction_value[i]);
 }
 
 VNA_SHELL_FUNCTION(cmd_scanraw)

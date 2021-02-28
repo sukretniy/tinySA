@@ -22,13 +22,8 @@
 
 #define __SI4432_H__
 
-void start_SI4432_SPI_mode(void);
-void stop_SI4432_SPI_mode(void);
-
 extern int SI4432_step_delay;
 extern int SI4432_offset_delay;
-
-
 #ifdef __SI4432__
 
 //
@@ -178,8 +173,6 @@ int ADF4351_locked(void);
 
 void ADF4351_enable(int s);
 void ADF4351_enable_aux_out(int s);
-
-
 #endif
 
 #ifdef __SI4463__

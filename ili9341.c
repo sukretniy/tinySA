@@ -20,28 +20,43 @@
 #include "ch.h"
 #include "hal.h"
 #include "nanovna.h"
+#ifdef TINYSA4
 #include "si4432.h"
+#endif
 
 #include "spi.h"
 
 
 
 // Allow enable DMA for read display data
+#ifdef TINYSA4
 #define __USE_DISPLAY_DMA_RX__
+#endif
 
 // Pin macros for LCD
+#ifdef TINYSA4
 #define LCD_CS_LOW        palClearPad(GPIO_LCD_CS_PORT, GPIO_LCD_CS)
 #define LCD_CS_HIGH       palSetPad(GPIO_LCD_CS_PORT, GPIO_LCD_CS)
 #define LCD_RESET_ASSERT  palClearPad(GPIO_LCD_RESET_PORT, GPIO_LCD_RESET)
 #define LCD_RESET_NEGATE  palSetPad(GPIO_LCD_RESET_PORT, GPIO_LCD_RESET)
 #define LCD_DC_CMD        palClearPad(GPIO_LCD_CD_PORT, GPIO_LCD_CD)
 #define LCD_DC_DATA       palSetPad(GPIO_LCD_CD_PORT, GPIO_LCD_CD)
+#else
+#define LCD_CS_LOW        palClearPad(GPIOB, GPIOB_LCD_CS)
+#define LCD_CS_HIGH       palSetPad(GPIOB, GPIOB_LCD_CS)
+#define LCD_RESET_ASSERT  palClearPad(GPIOA, GPIOA_LCD_RESET)
+#define LCD_RESET_NEGATE  palSetPad(GPIOA, GPIOA_LCD_RESET)
+#define LCD_DC_CMD        palClearPad(GPIOB, GPIOB_LCD_CD)
+#define LCD_DC_DATA       palSetPad(GPIOB, GPIOB_LCD_CD)
+#endif
 
 #define LCD_SPI           SPI1
 // Set SPI bus speed for LCD
 #define LCD_SPI_SPEED    SPI_BR_DIV2
 //Not define if need use some as Tx speed
+#ifdef TINYSA4
 #define LCD_SPI_RX_SPEED SPI_BR_DIV4
+#endif
 
 uint16_t spi_buffer[SPI_BUFFER_SIZE];
 // Default foreground & background colors
@@ -311,6 +326,7 @@ static void spi_init(void)
   LCD_SPI->CR1|= SPI_CR1_SPE;       //SPI enable
 }
 
+#ifdef TINYSA4
 static uint16_t current_spi_mode;
 void set_SPI_mode(uint16_t mode){
   if (current_spi_mode == mode) return;
@@ -335,14 +351,19 @@ void set_SPI_mode(uint16_t mode){
   }
   current_spi_mode = mode;
 }
+#endif
 
 // Disable inline for this function
 static void send_command(uint8_t cmd, uint8_t len, const uint8_t *data)
 {
 // Uncomment on low speed SPI (possible get here before previous tx complete)
-//  while (SPI_IN_TX_RX(LCD_SPI))
+#ifndef TINYSA4
+  while (SPI_IN_TX_RX(LCD_SPI));
+#endif
+#ifdef TINYSA4
 //  while (SPI_IN_TX_RX);
   set_SPI_mode(SPI_MODE_LCD);
+#endif
   LCD_CS_LOW;
   LCD_DC_CMD;
   SPI_WRITE_8BIT(LCD_SPI, cmd);
@@ -359,6 +380,7 @@ static void send_command(uint8_t cmd, uint8_t len, const uint8_t *data)
   //LCD_CS_HIGH;
 }
 
+#ifdef TINYSA4
 static const uint8_t ST7796S_init_seq[] = {
   // SW reset
   ILI9341_SOFTWARE_RESET, 0,
@@ -402,6 +424,66 @@ static const uint8_t ST7796S_init_seq[] = {
   ILI9341_DISPLAY_ON, 0,
   0 // sentinel
 };
+#else
+static const uint8_t ili9341_init_seq[] = {
+  // cmd, len, data...,
+  // SW reset
+  ILI9341_SOFTWARE_RESET, 0,
+  // display off
+  ILI9341_DISPLAY_OFF, 0,
+  // Power control B
+  ILI9341_POWERB, 3, 0x00, 0xC1, 0x30,
+  // Power on sequence control
+  ILI9341_POWER_SEQ, 4, 0x64, 0x03, 0x12, 0x81,
+  // Driver timing control A
+  ILI9341_DTCA, 3, 0x85, 0x00, 0x78,
+  // Power control A
+  ILI9341_POWERA, 5, 0x39, 0x2C, 0x00, 0x34, 0x02,
+  // Pump ratio control
+  ILI9341_PUMP_RATIO_CONTROL, 1, 0x20,
+  // Driver timing control B
+  ILI9341_DTCB, 2, 0x00, 0x00,
+  // POWER_CONTROL_1
+  ILI9341_POWER_CONTROL_1, 1, 0x23,
+  // POWER_CONTROL_2
+  ILI9341_POWER_CONTROL_2, 1, 0x10,
+  // VCOM_CONTROL_1
+  ILI9341_VCOM_CONTROL_1, 2, 0x3e, 0x28,
+  // VCOM_CONTROL_2
+  ILI9341_VCOM_CONTROL_2, 1, 0xBE,
+  // MEMORY_ACCESS_CONTROL
+  //ILI9341_MEMORY_ACCESS_CONTROL, 1, 0x48, // portlait
+  ILI9341_MEMORY_ACCESS_CONTROL, 1, DISPLAY_ROTATION_0, // landscape
+  // COLMOD_PIXEL_FORMAT_SET : 16 bit pixel
+  ILI9341_PIXEL_FORMAT_SET, 1, 0x55,
+  // Frame Rate
+  ILI9341_FRAME_RATE_CONTROL_1, 2, 0x00, 0x18,
+  // Gamma Function Disable
+  ILI9341_3GAMMA_EN, 1, 0x00,
+  // gamma set for curve 01/2/04/08
+  ILI9341_GAMMA_SET, 1, 0x01,
+  // positive gamma correction
+  ILI9341_POSITIVE_GAMMA_CORRECTION, 15, 0x0F,  0x31,  0x2B,  0x0C,  0x0E,  0x08,  0x4E,  0xF1,  0x37,  0x07,  0x10,  0x03,  0x0E, 0x09,  0x00,
+  // negativ gamma correction
+  ILI9341_NEGATIVE_GAMMA_CORRECTION, 15, 0x00,  0x0E,  0x14,  0x03,  0x11,  0x07,  0x31,  0xC1,  0x48,  0x08,  0x0F,  0x0C,  0x31, 0x36,  0x0F,
+  // Column Address Set
+//ILI9341_COLUMN_ADDRESS_SET, 4, 0x00, 0x00, 0x01, 0x3f, // width 320
+  // Page Address Set
+//ILI9341_PAGE_ADDRESS_SET, 4, 0x00, 0x00, 0x00, 0xef,   // height 240
+  // entry mode
+  ILI9341_ENTRY_MODE_SET, 1, 0x06,
+  // display function control
+  ILI9341_DISPLAY_FUNCTION_CONTROL, 3, 0x08, 0x82, 0x27,
+  // Interface Control (set WEMODE=0)
+  ILI9341_INTERFACE_CONTROL, 3, 0x00, 0x00, 0x00,
+  // sleep out
+  ILI9341_SLEEP_OUT, 0,
+  // display on
+  ILI9341_DISPLAY_ON, 0,
+  0 // sentinel
+};
+
+#endif
 
 void ili9341_init(void)
 {
@@ -411,12 +493,19 @@ void ili9341_init(void)
   chThdSleepMilliseconds(10);
   LCD_RESET_NEGATE;
   const uint8_t *p;
-  for (p = ST7796S_init_seq; *p; ) {
+#ifdef TINYSA4
+  p = ST7796S_init_seq;
+#else
+  p = ili9341_init_seq;
+#endif
+  while (*p) {
     send_command(p[0], p[1], &p[2]);
     p += 2 + p[1];
     chThdSleepMilliseconds(5);
   }
+#ifdef TINYSA4
   LCD_CS_HIGH;
+#endif
 }
 
 static void ili9341_setWindow(int x, int y, int w, int h){
@@ -518,8 +607,19 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
 #endif
   // require 8bit dummy clock
   spi_RxByte();
+#ifdef TINYSA4
   // receive pixel data to buffer
   spi_RxBuffer((uint8_t *)out, len * 2);
+#else
+  while (len-- > 0) {
+    uint8_t r, g, b;
+    // read data is always 18bit
+    r = spi_RxByte();
+    g = spi_RxByte();
+    b = spi_RxByte();
+    *out++ = RGB565(r, g, b);
+  }
+#endif
   // restore speed if need
 #ifdef LCD_SPI_RX_SPEED
   SPI_BR_SET(LCD_SPI, LCD_SPI_SPEED);
@@ -534,6 +634,7 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
 {
   uint16_t dummy_tx = 0;
   uint8_t *rgbbuf = (uint8_t *)out;
+#ifdef TINYSA4
   uint16_t data_size = len * 2;
   //uint8_t xx[4] = { x >> 8, x, (x+w-1) >> 8, (x+w-1) };
   //uint8_t yy[4] = { y >> 8, y, (y+h-1) >> 8, (y+h-1) };
@@ -541,7 +642,13 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
   uint32_t yy = __REV16(y | ((y + h - 1) << 16));
   send_command(ILI9341_COLUMN_ADDRESS_SET, 4, (uint8_t *)&xx);
   send_command(ILI9341_PAGE_ADDRESS_SET, 4, (uint8_t *)&yy);
+#else
+  uint16_t data_size = len * 3;
+
+  ili9341_setWindow(x, y ,w, h);
+#endif
   send_command(ILI9341_MEMORY_READ, 0, NULL);
+  
   // Init Rx DMA buffer, size, mode (spi and mem data size is 8 bit)
   dmaStreamSetMemory0(dmarx, rgbbuf);
   dmaStreamSetTransactionSize(dmarx, data_size);
@@ -569,6 +676,18 @@ void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t *out)
   SPI_BR_SET(LCD_SPI, LCD_SPI_SPEED);
 #endif
   LCD_CS_HIGH;
+#ifndef TINYSA4
+  // Parce recived data
+  while (len-- > 0) {
+    uint8_t r, g, b;
+    // read data is always 18bit
+    r = rgbbuf[0];
+    g = rgbbuf[1];
+    b = rgbbuf[2];
+    *out++ = RGB565(r, g, b);
+    rgbbuf += 3;
+  }
+#endif
 }
 #endif
 

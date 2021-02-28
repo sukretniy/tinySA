@@ -317,7 +317,11 @@
  *          buffers.
  */
 #if !defined(SERIAL_USB_BUFFERS_SIZE) || defined(__DOXYGEN__)
+#ifdef TINYSA4
 #define SERIAL_USB_BUFFERS_SIZE     128
+#else
+#define SERIAL_USB_BUFFERS_SIZE     64
+#endif
 #endif
 
 /**

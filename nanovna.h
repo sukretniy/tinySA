@@ -17,14 +17,14 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "ch.h"
-#define TINYSA4_PROTO
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #include "adc_F303.h"
-#define TINYSA4
-//#else
-//#define TINYSA3
-//#endif
+// #define TINYSA4
+#define TINYSA4_PROTO
+#else
+#define TINYSA3
+#endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
@@ -34,11 +34,11 @@
 #ifdef TINYSA3
 #define __SI4432__
 #endif
-//#ifdef TINYSA4
+#ifdef TINYSA4
 #define __SI4463__
 #define __SI4468__
 #define __ADF4351__
-//#endif
+#endif
 #define __PE4302__
 //#define __SIMULATION__
 //#define __PIPELINE__
@@ -51,16 +51,15 @@
 #define __FAST_SWEEP__          // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
 // #define __AUDIO__
 //#define __HAM_BAND__
-//#define __ULTRA__             // Add harmonics mode on low input.
 #define __SPUR__                // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
-#define  __HARMONIC__
-
-
 #define __SINGLE_LETTER__
 #define __NICE_BIG_FONT__
 #define __QUASI_PEAK__
+#ifdef TINYSA4
+#define  __HARMONIC__
 #define __REMOTE_DESKTOP__
+#endif
 
 #ifdef TINYSA3
 #define DEFAULT_IF  433800000
@@ -103,9 +102,11 @@
 
 #ifdef TINYSA3
 typedef uint32_t freq_t;
+ typedef int32_t long_t;
 #endif
 #ifdef TINYSA4
-typedef uint64_t freq_t;
+ typedef uint64_t freq_t;
+ typedef int64_t long_t;
 #endif
 
 #define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
@@ -197,8 +198,6 @@ void send_buffer(uint8_t * buf, int s);
 void set_marker_frequency(int m, freq_t f);
 void toggle_sweep(void);
 void toggle_mute(void);
-void toggle_extra_lna(void);
-void set_extra_lna(int t);
 void load_default_properties(void);
 
 enum {
@@ -234,28 +233,20 @@ extern uint8_t sweep_mode;
 extern bool completed;
 extern const char *info_about[];
 
-// ------------------------------- sa_core.c ----------------------------------
-
 #ifdef TINYSA4
-#define SI_DRIVE_STEP   0.5             // Power step per step in drive level
-#define SWITCH_ATTENUATION  34
-//#define POWER_OFFSET    -18             // Max level with all enabled
-//#define POWER_RANGE     70
-#define MAX_DRIVE   16
-#define MIN_DRIVE   8
-#define SL_GENHIGH_LEVEL_MIN    -15
-#define SL_GENHIGH_LEVEL_RANGE    9
-#define SL_GENLOW_LEVEL_MIN    -88
-#define SL_GENLOW_LEVEL_RANGE   70
-
-
-#else
-#define SI_DRIVE_STEP   3
-#define SWITCH_ATTENUATION  30
-#define POWER_OFFSET    15
+void toggle_extra_lna(void);
+void set_extra_lna(int t);
 #endif
 
+// ------------------------------- sa_core.c ----------------------------------
+
+
+extern int level_min(void);
+extern int level_max(void);
+extern int level_range(void);
+
 extern const char * const unit_string[];
+extern const int8_t drive_dBm [];
 extern uint8_t signal_is_AM;
 extern const int reffer_freq[];
 extern freq_t minFreq;
@@ -268,7 +259,6 @@ void SetPowerGrid(int);
 void SetRefLevel(float);
 void set_refer_output(int);
 void toggle_below_IF(void);
-void toggle_ultra(void);
 int get_refer_output(void);
 void set_attenuation(float);
 float get_attenuation(void);
@@ -285,12 +275,9 @@ void set_RBW(uint32_t rbw_x10);
 void set_lo_drive(int d);
 void set_rx_drive(int d);
 void set_IF(int f);
-void set_IF2(int f);
-void set_R(int f);
 void set_step_delay(int t);
 void set_offset_delay(int t);
 void set_repeat(int);
-void clear_frequency_cache(void);
 void set_level_sweep(float);
 void set_level(float);
 void set_sweep_time_us(uint32_t);
@@ -302,8 +289,6 @@ void set_spur(int v);
 void toggle_spur(void);
 void toggle_mirror_masking(void);
 #endif
-void toggle_high_out_adf4350(void);
-extern int high_out_adf4350;
 void set_average(int);
 int GetAverage(void);
 //extern int setting.average;
@@ -332,7 +317,6 @@ void set_attack(int);
 void set_noise(int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
-void set_30mhz(freq_t);
 void set_modulation(int);
 void set_modulation_frequency(int);
 int search_maximum(int m, freq_t center, int span);
@@ -341,9 +325,21 @@ void set_measurement(int);
 // extern int settingSpeed;
 //extern int setting.step_delay;
 void sweep_remote(void);
-extern void set_modulo(uint32_t f);
 extern int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv);
+
+#ifdef TINYSA4
+void clear_frequency_cache(void);
+void toggle_high_out_adf4350(void);
+extern int high_out_adf4350;
+void set_30mhz(freq_t);
+void toggle_ultra(void);
+void set_IF2(int f);
+void set_R(int f);
+extern void set_modulo(uint32_t f);
 extern void fill_spur_table(void);
+#else
+void set_10mhz(freq_t);
+#endif
 
 #ifdef __AUDIO__
 /*
@@ -430,9 +426,13 @@ extern uint16_t graph_bottom;
 
 // Menu Button
 // Maximum menu buttons count
+#ifdef TINYSA4
 #define MENU_BUTTON_MAX         9
+#else
+#define MENU_BUTTON_MAX         8
+#endif
 #define MENU_BUTTON_WIDTH      80
-#define MENU_BUTTON_HEIGHT     (LCD_HEIGHT/9-1)
+#define MENU_BUTTON_HEIGHT     (LCD_HEIGHT/MENU_BUTTON_MAX-1)
 #define MENU_BUTTON_BORDER      1
 #define KEYBOARD_BUTTON_BORDER  2
 #define FORM_BUTTON_BORDER      2
@@ -582,7 +582,11 @@ typedef struct config {
   freq_t high_correction_frequency[CORRECTION_POINTS];
   float    high_correction_value[CORRECTION_POINTS];
   uint32_t deviceid;
+#ifdef TINYSA4
   freq_t  setting_frequency_30mhz;
+#else
+  freq_t  setting_frequency_10mhz;
+#endif
 
   uint16_t gridlines;
   uint16_t hambands;
@@ -590,12 +594,12 @@ typedef struct config {
   freq_t frequency_IF1;
   freq_t frequency_IF2;
   freq_t ultra_threshold;
+  int8_t    ultra;
 #endif
-  int8_t   _mode;  
+  uint8_t   _mode;
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
-  int8_t    ultra;
   float sweep_voltage;
   uint32_t    dummy;
 //  uint8_t _reserved[22];
@@ -645,8 +649,8 @@ enum {
 };
 
 typedef struct {
-  int8_t enabled;
-  int8_t mtype;
+  uint8_t enabled;
+  uint8_t mtype;
   int16_t index;
   freq_t frequency;
 } marker_t;
@@ -708,8 +712,13 @@ extern volatile uint8_t redraw_request;
 // Define size of screen buffer in pixels (one pixel 16bit size)
 #define SPI_BUFFER_SIZE             (CELLWIDTH*CELLHEIGHT)
 
+#ifdef TINYSA4
 #define LCD_WIDTH                   480
 #define LCD_HEIGHT                  320
+#else
+#define LCD_WIDTH                   320
+#define LCD_HEIGHT                  240
+#endif
 
 #define LCD_BG_COLOR             0
 #define LCD_FG_COLOR             1
@@ -886,18 +895,19 @@ typedef struct setting
   int trigger_mode;
   int slider_position;
   int32_t slider_span;
+  freq_t *correction_frequency;
+  float   *correction_value;
+#ifdef TINYSA4
   int extra_lna;
   int ultra;
   int R;
-  freq_t *correction_frequency;
-  float   *correction_value;
+#endif
   uint32_t dummy;
   uint32_t checksum;            // must be last
 }setting_t;
 
 extern setting_t setting;
 
-//extern int setting_frequency_30mhz;
 void reset_settings(int m);
 
 
@@ -922,7 +932,9 @@ enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
 extern freq_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
 extern const char * const unit_scale_text[];
+#ifdef TINYSA4
 extern int debug_frequencies;
+#endif
 #if 1   // Still sufficient flash
 // Flash save area - flash7  : org = 0x0801B000, len = 20k in *.ld file
 // 2k - for config save
@@ -1128,7 +1140,8 @@ void enter_dfu(void);
 /*
  * adc.c
  */
-#define rccEnableWWDG(lp) rccEnableAPB1(RCC_APB1ENR_WWDGEN, lp)
+#ifdef TINYSA4
+ #define rccEnableWWDG(lp) rccEnableAPB1(RCC_APB1ENR_WWDGEN, lp)
 #define ADC_TOUCH_X  ADC_CHANNEL_IN3
 #define ADC_TOUCH_Y  ADC_CHANNEL_IN4
 
@@ -1137,7 +1150,17 @@ uint16_t adc_single_read(uint32_t chsel);
 void adc_start_analog_watchdogd(void);
 void adc_stop(void);
 int16_t adc_vbat_read(void);
+#else
+#define ADC_TOUCH_X  ADC_CHSELR_CHSEL6
+#define ADC_TOUCH_Y  ADC_CHSELR_CHSEL7
 
+void adc_init(void);
+uint16_t adc_single_read(uint32_t chsel);
+void adc_start_analog_watchdogd(uint32_t chsel);
+void adc_stop(void);
+void adc_interrupt(void);
+int16_t adc_vbat_read(void);
+#endif
 /*
  * misclinous
  */
@@ -1165,7 +1188,11 @@ typedef int16_t  pureRSSI_t;
 
 // RSSI values conversion macro
 // External programm zero level settings (need decrease on this value -)
+#ifdef TINYSA4
 #define EXT_ZERO_LEVEL            (174)
+#else
+#define EXT_ZERO_LEVEL            (174)
+#endif
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
 #define PURE_TO_DEVICE_RSSI(rssi) ((rssi)>>4)
 #define float_TO_PURE_RSSI(rssi)  ((rssi)*32)
@@ -1204,6 +1231,7 @@ enum {
   T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID
 };
 
+#ifdef TINYSA4
 // si4432.c
 
 extern void ADF4351_mux(int R);
@@ -1228,5 +1256,5 @@ extern void si_set_offset(int16_t offset);
 extern int SI4463_offset_changed;
 extern void si_fm_offset(int16_t offset);
 
-
+#endif
 /*EOF*/

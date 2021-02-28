@@ -21,111 +21,79 @@
 #include "hal.h"
 #include "nanovna.h"
 
-#define ADC_FULL_SCALE  3300
-#define F303_ADC_VREF_ALWAYS_ON
 
-#define ADC_CHSELR_VREFINT      ADC_CHANNEL_IN18
-#define ADC_CHSELR_VBAT         ADC_CHANNEL_IN17
+#define ADC_TR(low, high)               (((uint32_t)(high) << 16U) |        \
+                                         (uint32_t)(low))
+#define ADC_SMPR_SMP_1P5        0U  /**< @brief 14 cycles conversion time   */
+#define ADC_SMPR_SMP_239P5      7U  /**< @brief 252 cycles conversion time. */ 
+#define ADC_CFGR1_RES_12BIT             (0U << 3U)
 
-#define ADC_TOUCH_SMP_TIME           ADC_SMPR_SMP_1P5
-#define ADC_TOUCH_XY_SMP_TIME        ADC_SMPR_SMP_601P5
-#define ADC_VBAT_SMP_TIME            ADC_SMPR_SMP_601P5
-
-#define ADC_GRP_NUM_CHANNELS_VBAT   2
-static adcsample_t samplesVBAT[ADC_GRP_NUM_CHANNELS_VBAT];
-static adcsample_t samples[1];
-
-static const ADCConversionGroup adcgrpcfgVBAT = {
-  FALSE,
-  ADC_GRP_NUM_CHANNELS_VBAT,
-  NULL,
-  NULL,
-  ADC_CFGR_CONT | ADC_CFGR1_RES_12BIT,       // CFGR1
-  ADC_TR(0, 0),                              // ADC watchdog threshold TR1
-  {0, ADC_SMPR2_SMP_AN16(ADC_VBAT_SMP_TIME) | ADC_SMPR2_SMP_AN17(ADC_VBAT_SMP_TIME)/*| ADC_SMPR2_SMP_AN18(ADC_VBAT_SMP_TIME)*/}, // SMPR
-  {ADC_SQR1_SQ1_N(ADC_CHANNEL_IN17) | ADC_SQR1_SQ2_N(ADC_CHANNEL_IN18)/*| ADC_SQR1_SQ3_N(ADC_CHANNEL_IN16)*/, 0, 0, 0}           // CHSELR
-};
-
-static const ADCConversionGroup adcgrpcfgTouch = {
-  TRUE,                // Enables the circular buffer mode for the group.
-  1,                   // Number of the analog channels belonging to the conversion group.
-  NULL,                // adccallback_touch
-  NULL,                // adcerrorcallback_touch
-                       // CFGR
-  ADC_CFGR_EXTEN_0     // rising edge of external trigger
-  | ADC_CFGR_EXTSEL_2  // EXT4 0x1000 event (TIM3_TRGO)
-  | ADC_CFGR_AWD1EN,   // Enable Analog watchdog check interrupt
-  ADC_TR(0, TOUCH_THRESHOLD),                 // Analog watchdog threshold TR1, interrupt on touch press
-  {ADC_SMPR1_SMP_AN4(ADC_TOUCH_SMP_TIME), 0}, // SMPR[2]
-  {ADC_SQR1_SQ1_N(ADC_CHANNEL_IN4), 0, 0, 0}  // SQR[4]
-};
-
-static ADCConversionGroup adcgrpcfgXY = {
-  FALSE,
-  1,
-  NULL,                         /* adccallback_touch */
-  NULL,                         /* adcerrorcallback_touch */
-  ADC_CFGR1_RES_12BIT,          /* CFGR */
-  ADC_TR(0, 0),                 /* TR1     */
-  {ADC_SMPR1_SMP_AN3(ADC_TOUCH_XY_SMP_TIME) | ADC_SMPR1_SMP_AN4(ADC_TOUCH_XY_SMP_TIME), 0}, /* SMPR[2] */
-  {ADC_SQR1_SQ1_N(ADC_CHANNEL_IN3), 0, 0, 0} /* SQR[4]  */
-};
+#define VNA_ADC     ADC1
 
 void adc_init(void)
 {
-  adcStart(&ADCD2, NULL);
-  adcStart(&ADCD1, NULL);
-  #ifdef F303_ADC_VREF_ALWAYS_ON
-  adcSTM32EnableVBAT(&ADCD1);
-  adcSTM32EnableVREF(&ADCD1);
-//  adcSTM32EnableTS(&ADCD1);
-  #endif
+  rccEnableADC1(FALSE);
+
+  /* Ensure flag states */
+  VNA_ADC->IER = 0;
+
+  /* Calibration procedure.*/
+  ADC->CCR = 0;
+  if (VNA_ADC->CR & ADC_CR_ADEN) {
+    VNA_ADC->CR |= ~ADC_CR_ADDIS; /* Disable ADC */
+  }
+  while (VNA_ADC->CR & ADC_CR_ADEN)
+    ;
+  VNA_ADC->CFGR1 &= ~ADC_CFGR1_DMAEN;
+  VNA_ADC->CR |= ADC_CR_ADCAL;
+  while (VNA_ADC->CR & ADC_CR_ADCAL)
+    ;
+
+  if (VNA_ADC->ISR & ADC_ISR_ADRDY) {
+    VNA_ADC->ISR |= ADC_ISR_ADRDY; /* clear ADRDY */
+  }
+  /* Enable ADC */
+  VNA_ADC->CR |= ADC_CR_ADEN;
+  while (!(VNA_ADC->ISR & ADC_ISR_ADRDY))
+    ;
 }
 
 uint16_t adc_single_read(uint32_t chsel)
 {
   /* ADC setup */
-//  adcStart(&ADCD2, NULL);
-  adcgrpcfgXY.sqr[0] = ADC_SQR1_SQ1_N(chsel);
-  adcConvert(&ADCD2, &adcgrpcfgXY, samples, 1);
-  return(samples[0]);
+  VNA_ADC->ISR    = VNA_ADC->ISR;
+  VNA_ADC->IER    = 0;
+  VNA_ADC->TR     = ADC_TR(0, 0);
+  VNA_ADC->SMPR   = ADC_SMPR_SMP_239P5;
+  VNA_ADC->CFGR1  = ADC_CFGR1_RES_12BIT;
+  VNA_ADC->CHSELR = chsel;
+
+  uint32_t result = 0;
+  uint32_t count = 1<<3; // Average count
+  do{
+    VNA_ADC->CR |= ADC_CR_ADSTART; // ADC conversion start.
+    while (VNA_ADC->CR & ADC_CR_ADSTART)
+      ;
+    result+=VNA_ADC->DR;
+  }while(--count);
+  return result>>3;
 }
 
 int16_t adc_vbat_read(void)
 {
-  uint16_t VREFINT_CAL = (*((uint16_t*)0x1FFFF7BA));
-  uint32_t vbat;
-  uint32_t vrefint;
-//  const uint16_t V25 = 1750;// when V25=1.41V at ref 3.3V
-//  const uint16_t Avg_Slope = 5; //when avg_slope=4.3mV/C at ref 3.3V
-//  uint16_t temperature_cal1 = *((uint16_t*) ((uint32_t)0x1FFFF7B8U));
-//                            /* Internal temperature sensor, address of parameter TS_CAL1: On STM32F3,
-//                               temperature sensor ADC raw data acquired at temperature  25 DegC (tolerance: +-5 DegC),
-//                               Vref+ = 3.3 V (tolerance: +-10 mV). */
-//  uint16_t temperature_cal2 = *((uint16_t*) ((uint32_t)0x1FFFF7C2U));
-//                            /* Internal temperature sensor, address of parameter TS_CAL2: On STM32F3,
-//                               temperature sensor ADC raw data acquired at temperature 110 DegC (tolerance: +-5 DegC),
-//                               Vref+ = 3.3 V (tolerance: +-10 mV). */
-//  float avg_slope = ((float)(temperature_cal1 - temperature_cal2))/(110-25);
-//  float ts;
- #ifndef F303_ADC_VREF_ALWAYS_ON
-  adcSTM32EnableVBAT(&ADCD1);
-  adcSTM32EnableVREF(&ADCD1);
-//  adcSTM32EnableTS(&ADCD1);
-  adcConvert(&ADCD1, &adcgrpcfgVBAT, samplesVBAT,  ADC_GRP_BUF_DEPTH_VBAT);
-  adcSTM32DisableVBAT(&ADCD1);
-  adcSTM32DisableVREF(&ADCD1);
-//  adcSTM32DisableTS(&ADCD1);
- #else
-  adcConvert(&ADCD1, &adcgrpcfgVBAT, samplesVBAT,  sizeof(samplesVBAT)/(sizeof(adcsample_t)*ADC_GRP_NUM_CHANNELS_VBAT));
- #endif
-  vbat = samplesVBAT[0];
-  vrefint = samplesVBAT[1];
-//  ts = samplesVBAT[2];
-//  uint16_t vts = (ADC_FULL_SCALE * VREFINT_CAL * ts / (vrefint * ((1<<12)-1)));
-//  uint16_t TemperatureC2 = (uint16_t)((V25-ts)/Avg_Slope+25);
-//  uint16_t TemperatureC = (uint16_t)((V25-ts)/avg_slope+25);
-
+// 13.9 Temperature sensor and internal reference voltage
+// VREFINT_CAL calibrated on 3.3V, need get value in mV
+#define ADC_FULL_SCALE 3300
+#define VREFINT_CAL (*((uint16_t*)0x1FFFF7BA))
+  adc_stop();
+  ADC->CCR |= ADC_CCR_VREFEN | ADC_CCR_VBATEN;
+  // VREFINT == ADC_IN17
+  uint32_t vrefint = adc_single_read(ADC_CHSELR_CHSEL17);
+  // VBAT == ADC_IN18
+  // VBATEN enables resiter devider circuit. It consume vbat power.
+  uint32_t vbat = adc_single_read(ADC_CHSELR_CHSEL18);
+  ADC->CCR &= ~(ADC_CCR_VREFEN | ADC_CCR_VBATEN);
+  touch_start_watchdog();
   // vbat_raw = (3300 * 2 * vbat / 4095) * (VREFINT_CAL / vrefint)
   // uint16_t vbat_raw = (ADC_FULL_SCALE * VREFINT_CAL * (float)vbat * 2 / (vrefint * ((1<<12)-1)));
   // For speed divide not on 4095, divide on 4096, get little error, but no matter
@@ -137,41 +105,61 @@ int16_t adc_vbat_read(void)
   return vbat_raw + config.vbat_offset;
 }
 
-void adc_start_analog_watchdogd(void)
+void adc_start_analog_watchdogd(uint32_t chsel)
 {
-//  adcStart(&ADCD2, NULL);
-  adcStartConversion(&ADCD2, &adcgrpcfgTouch, samples, 1);
+  uint32_t cfgr1;
+
+  cfgr1 = ADC_CFGR1_RES_12BIT | ADC_CFGR1_AWDEN
+    | ADC_CFGR1_EXTEN_0 // rising edge of external trigger
+    | ADC_CFGR1_EXTSEL_0 | ADC_CFGR1_EXTSEL_1; // TRG3  , /* CFGR1 */
+
+  /* ADC setup, if it is defined a callback for the analog watch dog then it
+     is enabled.*/
+  VNA_ADC->ISR    = VNA_ADC->ISR;
+  VNA_ADC->IER    = ADC_IER_AWDIE;
+  VNA_ADC->TR     = ADC_TR(0, TOUCH_THRESHOLD);
+  VNA_ADC->SMPR   = ADC_SMPR_SMP_1P5;
+  VNA_ADC->CHSELR = chsel;
+
+  /* ADC configuration and start.*/
+  VNA_ADC->CFGR1  = cfgr1;
+
+  /* ADC conversion start.*/
+  VNA_ADC->CR |= ADC_CR_ADSTART;
 }
 
 void adc_stop(void)
 {
- #if 1
-  adcStopConversion(&ADCD2);
- #else
-  if (ADC2->CR & ADC_CR_ADEN) {
-    if (ADC2->CR & ADC_CR_ADSTART) {
-      ADC2->CR |= ADC_CR_ADSTP;
-      while (ADC2->CR & ADC_CR_ADSTP)
+  if (VNA_ADC->CR & ADC_CR_ADEN) {
+    if (VNA_ADC->CR & ADC_CR_ADSTART) {
+      VNA_ADC->CR |= ADC_CR_ADSTP;
+      while (VNA_ADC->CR & ADC_CR_ADSTP)
         ;
     }
+
+    /*    VNA_ADC->CR |= ADC_CR_ADDIS;
+    while (VNA_ADC->CR & ADC_CR_ADDIS)
+    ;*/
   }
- #endif
 }
 
-static inline void adc_interrupt(void)
+void adc_interrupt(void)
 {
-  uint32_t isr = ADC2->ISR;
-  ADC2->ISR = isr;
+  uint32_t isr = VNA_ADC->ISR;
+  VNA_ADC->ISR = isr;
+
   if (isr & ADC_ISR_OVR) {
-//    ADC overflow condition, this could happen only if the DMA is unable to read data fast enough.
+    /* ADC overflow condition, this could happen only if the DMA is unable
+       to read data fast enough.*/
+    
   }
-  if (isr & ADC_ISR_AWD1) {
+  if (isr & ADC_ISR_AWD) {
     /* Analog watchdog error.*/
     handle_touch_interrupt();
   }
 }
 
-OSAL_IRQ_HANDLER(STM32_ADC2_HANDLER)
+OSAL_IRQ_HANDLER(STM32_ADC1_HANDLER)
 {
   OSAL_IRQ_PROLOGUE();
 
@@ -180,7 +168,7 @@ OSAL_IRQ_HANDLER(STM32_ADC2_HANDLER)
   OSAL_IRQ_EPILOGUE();
 }
 
-#if 0
+#if 1
 uint16_t adc_multi_read(uint32_t chsel, uint16_t *result, uint32_t count)
 {
   /* ADC setup */

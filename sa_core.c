@@ -21,7 +21,11 @@
 #include "stdlib.h"
 
 #pragma GCC push_options
+#ifdef TINYSA4
 #pragma GCC optimize ("Og")
+#else
+#pragma GCC optimize ("Os")
+#endif
 
 
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
@@ -40,6 +44,7 @@ uint16_t actual_rbw_x10 = 0;
 uint16_t vbwSteps = 1;
 freq_t minFreq = 0;
 freq_t maxFreq = 520000000;
+#ifdef TINYSA4
 int spur_gate = 100;
 uint32_t old_CFGR;
 uint32_t orig_CFGR;
@@ -59,6 +64,46 @@ void clear_frequency_cache(void)
   }
   ADF4351_force_refresh();
 }
+#else
+static freq_t old_freq[4] = { 0, 0, 0, 0};
+static freq_t real_old_freq[4] = { 0, 0, 0, 0};
+#endif
+
+#ifdef TINYSA4
+const int8_t drive_dBm [] = {-15,-12,-9,-6};
+#else
+const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0, 3, 6, 9, 12, 16};
+#endif
+
+#ifdef TINYSA4
+#define SI_DRIVE_STEP   0.5             // Power step per step in drive level
+#define SWITCH_ATTENUATION  34
+//#define POWER_OFFSET    -18             // Max level with all enabled
+//#define POWER_RANGE     70
+#define MAX_DRIVE   16
+//#define MAX_DRIVE_DBM   3
+#define MIN_DRIVE   8
+#define SL_GENHIGH_LEVEL_MIN    -15
+#define SL_GENHIGH_LEVEL_RANGE    9
+#define SL_GENLOW_LEVEL_MIN    -88
+#define SL_GENLOW_LEVEL_RANGE   70
+
+
+#else
+#define SI_DRIVE_STEP   3
+#define SWITCH_ATTENUATION  30
+#define POWER_OFFSET    15
+#define MAX_DRIVE   11
+#define MAX_DRIVE_DBM   3
+#define MIN_DRIVE   8
+#define SL_GENHIGH_LEVEL_MIN    -38
+#define SL_GENHIGH_LEVEL_RANGE    51
+#define SL_GENLOW_LEVEL_MIN    -76
+#define SL_GENLOW_LEVEL_RANGE   70
+#endif
+
+#define RECEIVE_SWITCH_ATTENUATION  21      // TODO differentiate for tinySA3 and tinySA4
+
 
 //int setting.refer = -1;  // Off by default
 const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
@@ -70,26 +115,29 @@ void update_min_max_freq(void)
   switch(setting.mode) {
   case M_LOW:
     minFreq = 0;
+#ifdef TINYSA4
     if (config.ultra)
       maxFreq = 9900000000.0; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
     else
       maxFreq =  LOW_MAX_FREQ;
-    break;
-#ifdef __ULTRA__
-  case M_ULTRA:
-    minFreq = 674000000;
-    maxFreq = 4300000000;
-    break;
+#else
+    maxFreq = DEFAULT_MAX_FREQ;
 #endif
+    break;
   case M_GENLOW:
     minFreq = 0;
+#ifdef TINYSA4
     maxFreq = LOW_MAX_FREQ;
+#else
+   maxFreq = DEFAULT_MAX_FREQ;
+#endif
     break;
   case M_HIGH:
     minFreq = HIGH_MIN_FREQ_MHZ * 1000000;
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
     break;
   case M_GENHIGH:
+#ifdef TINYSA4 
     if (high_out_adf4350) {
       minFreq =  136000000;
       maxFreq = MAX_LO_FREQ;
@@ -97,6 +145,10 @@ void update_min_max_freq(void)
       minFreq =  136000000;
       maxFreq = 1150000000U;
     }
+#else
+    minFreq = 240000000;
+    maxFreq = 960000000;
+#endif
     break;
   }
 }
@@ -116,15 +168,25 @@ void reset_settings(int m)
   setting.level_sweep = 0.0;        // And this
   setting.rx_drive=MAX_DRIVE;              // And this
   setting.atten_step = 0;           // And this, only used in low output mode
-  setting.level = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE + config.low_level_output_offset;     // This is the level with above settings.
+  setting.level =  level_max();     // This is the level with above settings.
   setting.rbw_x10 = 0;
   setting.average = 0;
+#ifdef TINYSA4  
   setting.harmonic = 3;         // Automatically used when above ULTRA_MAX_FREQ
+#else
+  setting.harmonic = 0;
+#endif
   setting.show_stored = 0;
   setting.auto_attenuation = false;
   setting.subtract_stored = 0;
   setting.normalize_level = 0.0;
+#ifdef TINYSA4
   setting.lo_drive=1;
+#else
+  setting.lo_drive=13;
+//  setting.rx_drive=8;		moved to top
+//  setting.atten_step = 0;     moved to top
+#endif
   setting.agc = S_AUTO_ON;
   setting.lna = S_AUTO_OFF;
   setting.tracking = false;
@@ -139,11 +201,15 @@ void reset_settings(int m)
   setting.attack=1;
   setting.noise=5;
   setting.below_IF = S_AUTO_OFF;
-  setting.ultra = S_AUTO_OFF;
   setting.repeat = 1;
   setting.tracking_output = false;
   setting.measurement = M_OFF;
+#ifdef TINYSA4
+  setting.ultra = S_AUTO_OFF;
   setting.frequency_IF = config.frequency_IF1;
+#else
+  setting.frequency_IF = DEFAULT_IF;
+#endif
   setting.auto_IF = true;
   set_offset(0.0);  // This also updates the help text!!!!!
   //setting.offset = 0.0;
@@ -153,7 +219,6 @@ void reset_settings(int m)
   setting.fast_speedup = 0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
-//  setting.R = 0;                // Automatic setting of R
   trace[TRACE_STORED].enabled = false;
   trace[TRACE_TEMP].enabled = false;
 //  setting.refer = -1;             // do not reset reffer when switching modes
@@ -170,7 +235,7 @@ void reset_settings(int m)
   setting.mirror_masking = 0;
   setting.slider_position = 0;
   setting.slider_span = 100000;
-  #endif
+#endif		// __SPUR__
   switch(m) {
   case M_LOW:
     set_sweep_frequency(ST_START, minFreq);
@@ -178,31 +243,36 @@ void reset_settings(int m)
 //    if (config.ultra)
 //      set_sweep_frequency(ST_STOP, 2900000000);    // TODO <----------------- temp ----------------------
 //    else
+#ifdef TINYSA4
       set_sweep_frequency(ST_STOP,  LOW_MAX_FREQ);    // TODO <----------------- temp ----------------------
     setting.attenuate_x2 = 10;
+#else
+    setting.attenuate_x2 = 60;
+#endif
     setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
+#ifdef TINYSA4
     setting.lo_drive=1;
     setting.extra_lna = false;
+#endif
     setting.correction_frequency = config.low_correction_frequency;
     setting.correction_value = config.low_correction_value;
     break;
-#ifdef __ULTRA__
-  case M_ULTRA:
-    set_sweep_frequency(ST_START, minFreq);
-    set_sweep_frequency(ST_STOP, maxFreq);
-    setting.attenuate_x2 = 0;
-    setting.sweep_time_us = 0;
-    break;
-#endif
   case M_GENLOW:
+#ifdef TINYSA4
     setting.rx_drive=MAX_DRIVE;
     setting.lo_drive=1;
+#else
+    setting.rx_drive=8;
+	setting.lo_drive=13;
+#endif
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
+#ifdef TINYSA4
     setting.extra_lna = false;
+#endif
     setting.correction_frequency = config.low_correction_frequency;
     setting.correction_value = config.low_correction_value;
     break;
@@ -210,17 +280,24 @@ void reset_settings(int m)
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP,  maxFreq);
     setting.sweep_time_us = 0;
+#ifdef TINYSA4
     setting.extra_lna = false;
+#endif
     setting.correction_frequency = config.high_correction_frequency;
     setting.correction_value = config.high_correction_value;
     break;
   case M_GENHIGH:
-    setting.lo_drive=1;
+#ifdef TINYSA4
+	setting.lo_drive=1;
     set_sweep_frequency(ST_CENTER, (minFreq + maxFreq)/2 );
+    setting.extra_lna = false;
+#else
+    setting.lo_drive=8;
+    set_sweep_frequency(ST_CENTER, 300000000);
+#endif
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
-    setting.extra_lna = false;
     setting.correction_frequency = config.high_correction_frequency;
     setting.correction_value = config.high_correction_value;
     break;
@@ -243,9 +320,7 @@ uint32_t calc_min_sweep_time_us(void)         // Estimate minimum sweep time in 
     t = 200*sweep_points;                   // 200 microseconds is the delay set in perform when sweeping in output mode
   else {
     uint32_t bare_sweep_time=0;
-//#ifdef __SI4432__
     bare_sweep_time = (SI4432_step_delay + MEASURE_TIME) * (sweep_points); // Single RSSI delay and measurement time in uS while scanning
-//#endif
     if (FREQ_IS_CW()) {
       bare_sweep_time = MINIMUM_SWEEP_TIME;       // minimum sweep time in fast CW mode
       if (setting.repeat != 1 || setting.sweep_time_us >= 100*ONE_MS_TIME || S_STATE(setting.spur_removal)) // if no fast CW sweep possible
@@ -309,6 +384,7 @@ void set_gridlines(int d)
 
 //int setting_frequency_10mhz = 10000000;
 
+#ifdef TINYSA4
 void set_30mhz(freq_t f)
 {
   if (f < 29000000 || f > 31000000)
@@ -318,6 +394,17 @@ void set_30mhz(freq_t f)
   dirty = true;
   update_grid();
 }
+#else
+void set_10mhz(freq_t f)
+{
+  if (f < 9000000 || f > 11000000)
+    return;
+  config.setting_frequency_10mhz = f;
+  config_save();
+  dirty = true;
+  update_grid();
+}
+#endif
 
 void set_measurement(int m)
 {
@@ -385,6 +472,7 @@ void toggle_tracking_output(void)
   dirty = true;
 }
 
+#ifdef TINYSA4
 void toggle_high_out_adf4350(void)
 {
   high_out_adf4350 = !high_out_adf4350;
@@ -402,6 +490,7 @@ void set_extra_lna(int t)
   setting.extra_lna = t;
   dirty = true;
 }
+#endif
 
 void toggle_mirror_masking(void)
 {
@@ -432,6 +521,7 @@ void toggle_below_IF(void)
   dirty = true;
 }
 
+#ifdef TINYSA4
 void toggle_ultra(void)
 {
   if (S_IS_AUTO(setting.ultra ))
@@ -442,6 +532,7 @@ void toggle_ultra(void)
     setting.ultra = true;
   dirty = true;
 }
+#endif
 
 void set_modulation(int m)
 {
@@ -498,9 +589,6 @@ void set_modulo(uint32_t f)
 }
 #endif
 
-#define POWER_STEP  0           // Should be 5 dB but apparently it is lower
-#define RECEIVE_SWITCH_ATTENUATION  21
-
 void set_auto_attenuation(void)
 {
   setting.auto_attenuation = true;
@@ -518,12 +606,35 @@ void set_auto_reflevel(int v)
   setting.auto_reflevel = v;
 }
 
+int level_min(void)
+{
+  if (setting.mode == M_GENLOW)
+    return SL_GENLOW_LEVEL_MIN + config.low_level_output_offset;
+  else
+    return SL_GENHIGH_LEVEL_MIN + config.high_level_output_offset;
+}
+
+int level_max(void)
+{
+  if (setting.mode == M_GENLOW)
+    return SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE + config.low_level_output_offset;
+  else
+    return SL_GENHIGH_LEVEL_MIN + SL_GENHIGH_LEVEL_RANGE + config.high_level_output_offset;
+}
+
+int level_range(void)
+{
+  if (setting.mode == M_GENLOW)
+    return SL_GENLOW_LEVEL_RANGE ;
+  else
+    return SL_GENHIGH_LEVEL_RANGE;
+}
 
 float get_attenuation(void)
 {
   float actual_attenuation = setting.attenuate_x2 / 2.0;
   if (setting.mode == M_GENLOW) {
-    return (float)( SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE  + config.low_level_output_offset - actual_attenuation  - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP - ( setting.atten_step ? SWITCH_ATTENUATION : 0) );
+    return (float)( level_max() - actual_attenuation  - (MAX_DRIVE - setting.rx_drive) * SI_DRIVE_STEP - ( setting.atten_step ? SWITCH_ATTENUATION : 0) );
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
       return actual_attenuation + RECEIVE_SWITCH_ATTENUATION;
@@ -534,22 +645,22 @@ float get_attenuation(void)
 }
 
 static pureRSSI_t get_signal_path_loss(void){
-#ifdef __ULTRA__
-  if (setting.mode == M_ULTRA)
-    return float_TO_PURE_RSSI(-15);       // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-#endif
+#ifdef TINYSA4
   if (setting.mode == M_LOW)
     return float_TO_PURE_RSSI(-4);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
   return float_TO_PURE_RSSI(+19);          // Loss in dB (+ is gain)
+#else
+  if (setting.mode == M_LOW)
+    return float_TO_PURE_RSSI(-5.5);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+  return float_TO_PURE_RSSI(+7);          // Loss in dB (+ is gain)
+#endif  
 }
-
-static const int drive_dBm [] = {-15,-12,-9,-6};
-
 
 void set_level(float v)     // Set the output level in dB  in high/low output
 {
   if (setting.mode == M_GENHIGH) {
     int d = 0;
+    v = v - config.high_level_output_offset;
     while (drive_dBm[d] < v - 1 && (unsigned int)d < (sizeof(drive_dBm)/sizeof(int))-1 )
       d++;
 //    if (d == 8 && v < -12)  // Round towards closest level
@@ -565,15 +676,16 @@ void set_level(float v)     // Set the output level in dB  in high/low output
 float get_level(void)
 {
   if (setting.mode == M_GENHIGH) {
-    return drive_dBm[setting.lo_drive];
+    return drive_dBm[setting.lo_drive] + config.high_level_output_offset;
   } else {
     return get_attenuation();
   }
 }
+
 void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
 {
   if (setting.mode == M_GENLOW) {
-    a = a - (SL_GENLOW_LEVEL_MIN  + config.low_level_output_offset + SL_GENLOW_LEVEL_RANGE);               // Move to zero for max power
+    a = a - level_max();               // Move to zero for max power
     if (a > 0)
       a = 0;
     if( a <  - SWITCH_ATTENUATION) {
@@ -668,10 +780,6 @@ void set_actual_power(float o)              // Set peak level to known value
     config.high_level_offset = new_offset;
   } else if (setting.mode == M_LOW) {
     config.low_level_offset = new_offset;
-#ifdef __ULTRA__
-  } else if (setting.mode == M_ULTRA) {
-    config.low_level_offset = new_offset;
-#endif
   }
   dirty = true;
   config_save();
@@ -813,8 +921,13 @@ void toggle_tracking(void)
 {
   setting.tracking = !setting.tracking;
   if (setting.tracking) {
-    set_refer_output(0);
+#ifdef TINYSA4
+   set_refer_output(0);
     set_sweep_frequency(ST_CENTER, 30000000);
+#else
+    set_refer_output(2);
+    set_sweep_frequency(ST_CENTER, 10000000);
+#endif
     set_sweep_frequency(ST_SPAN,    5000000);
   } else {
     set_refer_output(-1);
@@ -960,7 +1073,7 @@ void set_reflevel(float level)
 }
 
 void round_reflevel_to_scale(void) {
-  int multi = floor((setting.reflevel + setting.scale/2)/setting.scale);
+  int multi = floorf((setting.reflevel + setting.scale/2)/setting.scale);
   if (UNIT_IS_LINEAR(setting.unit)) {
     if (multi < NGRIDY) {
       setting.reflevel = setting.scale*10;  // Never negative bottom
@@ -1019,11 +1132,8 @@ void set_offset(float offset)
 {
   setting.offset = offset;
   int min,max;
-  if (setting.mode == M_GENLOW) {
-    min = SL_GENLOW_LEVEL_MIN  + config.low_level_output_offset; max = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE  + config.low_level_output_offset;
-  } else {
-    min = SL_GENHIGH_LEVEL_MIN; max = SL_GENHIGH_LEVEL_MIN + SL_GENHIGH_LEVEL_RANGE;
-  }
+  min = level_min();
+  max = min + level_range();
   plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", min + (int)offset, max + (int)offset);
   force_set_markmap();
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
@@ -1064,10 +1174,6 @@ void set_trigger(int trigger)
 //}
 void set_mode(int m)
 {
-#ifdef __ULTRA__
-  if (m == 6)
-    m = M_ULTRA;
-#endif
   dirty = true;
   if (setting.mode == m)
     return;
@@ -1193,7 +1299,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   pureRSSI_t cv = 0;
   if (setting.mode == M_GENHIGH)
     return(0.0);
-
+#ifdef TINYSA4
   if (setting.extra_lna) {
     if (f > 2100000000U) {
       cv += float_TO_PURE_RSSI(+13);
@@ -1205,7 +1311,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (f > ULTRA_MAX_FREQ) {
     cv += float_TO_PURE_RSSI(+4);       // 4dB loss in harmonic mode
   }
-
+#endif
   int i = 0;
   while (f > setting.correction_frequency[i] && i < CORRECTION_POINTS)
     i++;
@@ -1246,6 +1352,12 @@ void setup_sa(void)
 #ifdef __SI4432__
   SI4432_Init();
 #endif
+#ifdef TINYSA3
+  for (unsigned int i = 0; i < sizeof(old_freq)/sizeof(unsigned long) ; i++) {
+    old_freq[i] = 0;
+    real_old_freq[i] = 0;
+  }
+#endif
 #ifdef __SI4432__
   SI4432_Sel = SI4432_RX ;
   SI4432_Receive();
@@ -1260,7 +1372,7 @@ void setup_sa(void)
 #ifdef __SI4463__
   SI4463_init_rx();            // Must be before ADF4351_setup!!!!
 #endif
-
+#ifdef TINYSA
   ADF4351_Setup();
   enable_extra_lna(false);
   enable_ultra(false);
@@ -1268,7 +1380,7 @@ void setup_sa(void)
   enable_high(false);
 
   fill_spur_table();
-
+#endif
   #if 0           // Measure fast scan time
   setting.sweep_time_us = 0;
   setting.additional_step_delay_us = 0;
@@ -1289,7 +1401,9 @@ void setup_sa(void)
 #define OFFSET_LOWER_BOUND 0
 #endif
 
+#ifdef TINYSA4
 static int fast_counter = 0;
+#endif
 
 void set_freq(int V, freq_t freq)    // translate the requested frequency into a setting of the SI4432
 {
@@ -1339,6 +1453,8 @@ void set_freq(int V, freq_t freq)    // translate the requested frequency into a
           } else {
             target_f = freq + 80000;
           }
+          if (target_f > 960000000)
+            target_f = 960000000;
           SI4432_Set_Frequency(target_f);
           SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0, 0x02);           // set offset to most negative
 //          SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0x02);
@@ -1356,8 +1472,9 @@ void set_freq(int V, freq_t freq)    // translate the requested frequency into a
       SI4432_Set_Frequency(freq);           // Not in fast mode
       real_old_freq[V] = freq;
     }
-  } else
+  } 
 #endif
+#ifdef TINYSA4
   if (V==ADF4351_LO){
 #if 0
     if (setting.step_delay_mode == SD_FAST) {        // If in fast scanning mode and NOT SI4432_RX !!!!!!
@@ -1399,23 +1516,24 @@ void set_freq(int V, freq_t freq)    // translate the requested frequency into a
     real_old_freq[V] = SI4463_set_freq(freq);           // Not in fast mode
   }
 done:
+#endif
   old_freq[V] = freq;
 }
 
 #ifdef __SI4432__
 void set_switch_transmit(void) {
-  SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x1f);// Set switch to transmit
-  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1d);
+  SI4432_Write_2_Byte(SI4432_GPIO0_CONF, 0x1f, 0x1d);// Set switch to transmit
+  // SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1d);
 }
 
 void set_switch_receive(void) {
-  SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x1d);// Set switch to receive
-  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1f);
+  SI4432_Write_2_Byte(SI4432_GPIO0_CONF, 0x1d, 0x1f);// Set switch to receive
+//  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1f);
 }
 
 void set_switch_off(void) {
-  SI4432_Write_Byte(SI4432_GPIO0_CONF, 0x1d);// Set both switch off
-  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1f);
+  SI4432_Write_2_Byte(SI4432_GPIO0_CONF, 0x1d, 0x1f);// Set both switch off
+//  SI4432_Write_Byte(SI4432_GPIO1_CONF, 0x1f);
 }
 
 #endif
@@ -1429,14 +1547,11 @@ void set_switches(int m)
   real_old_freq[0] = 0;
   real_old_freq[1] = 0;
   SI4432_Sel = SI4432_LO ;
-  SI4432_Write_Byte(SI4432_FREQ_OFFSET1, 0);  // Back to nominal offset
-  SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
+  SI4432_Write_2_Byte(SI4432_FREQ_OFFSET1, 0, 0);  // Back to nominal offset
+//  SI4432_Write_Byte(SI4432_FREQ_OFFSET2, 0);
 #endif
   switch(m) {
 case M_LOW:     // Mixed into 0
-#ifdef __ULTRA__
-case M_ULTRA:
-#endif
 #ifdef __SI4432__
     SI4432_Sel = SI4432_RX ;
     SI4432_Receive();
@@ -1455,6 +1570,7 @@ case M_ULTRA:
     }
  #endif
     set_AGC_LNA();
+#ifdef TINYSA4
     ADF4351_enable(true);
     ADF4351_drive(setting.lo_drive);
     if (setting.tracking_output)
@@ -1462,6 +1578,7 @@ case M_ULTRA:
     else
       ADF4351_enable_aux_out(false);
     ADF4351_enable_out(true);
+#endif
 
 #ifdef __SI4432__
     SI4432_Sel = SI4432_LO ;
@@ -1473,10 +1590,12 @@ case M_ULTRA:
     SI4432_Transmit(setting.lo_drive);
     // set_calibration_freq(setting.refer);
 #endif
+#ifdef TINYSA4
     enable_rx_output(false);
     enable_high(false);
     enable_extra_lna(setting.extra_lna);
     enable_ultra(false);
+#endif
     break;
 case M_HIGH:    // Direct into 1
 mute:
@@ -1498,6 +1617,7 @@ mute:
     SI4463_init_rx();
 #endif
     set_AGC_LNA();
+#ifdef TINYSA4
     ADF4351_enable_aux_out(false);
     ADF4351_enable_out(false);
     ADF4351_enable(false);
@@ -1509,6 +1629,7 @@ mute:
     enable_high(true);
     enable_extra_lna(false);
     enable_ultra(false);
+#endif
     break;
 case M_GENLOW:  // Mixed output from 0
     if (setting.mute)
@@ -1534,6 +1655,7 @@ case M_GENLOW:  // Mixed output from 0
 #ifdef __SI4468__
     SI4463_init_tx();
 #endif
+#ifdef TINYSA4
     ADF4351_enable_out(true);
     ADF4351_drive(setting.lo_drive);
     ADF4351_enable(true);
@@ -1548,14 +1670,16 @@ case M_GENLOW:  // Mixed output from 0
     enable_high(false);
     enable_extra_lna(false);
     enable_ultra(false);
+#endif
     break;
 case M_GENHIGH: // Direct output from 1
     if (setting.mute)
       goto mute;
-    enable_high(true);              // Must be first to protect SAW filters
+#ifdef TINYSA4
+	  enable_high(true);              // Must be first to protect SAW filters
     enable_extra_lna(false);
     enable_ultra(false);
-
+#endif
     #ifdef __SI4432__
     SI4432_Sel = SI4432_RX ;
     SI4432_Receive();
@@ -1569,7 +1693,7 @@ case M_GENHIGH: // Direct output from 1
     }
     SI4432_Transmit(setting.lo_drive);
 #endif
-
+#ifdef TINYSA4
     if (high_out_adf4350)  {
 #ifdef __SI4468__
       SI4463_init_rx();
@@ -1598,6 +1722,7 @@ case M_GENHIGH: // Direct output from 1
 
 #endif
     }
+#endif
     break;
   }
 
@@ -1628,8 +1753,12 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
       temp_actual_rbw_x10 = setting.vbw_x10;
 #endif
     } else
-      temp_actual_rbw_x10 = setting.vbw_x10; // rbw is NOT twice the frequency step to ensure no gaps in coverage
-  }
+#ifdef TINYSA4
+	temp_actual_rbw_x10 = setting.vbw_x10; // rbw is NOT twice the frequency step to ensure no gaps in coverage
+#else
+      temp_actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
+#endif
+	}
 #ifdef __SI4432__
   if (temp_actual_rbw_x10 < 26)
     temp_actual_rbw_x10 = 26;
@@ -1666,7 +1795,11 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   }
 }
 
+#ifdef TINYSA4
 #define frequency_seatch_gate 60          // 120% of the RBW
+#else
+#define frequency_seatch_gate 100          // 200% of the RBW
+#endif
 
 int binary_search_frequency(freq_t f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
@@ -1707,6 +1840,8 @@ int
 search_maximum(int m, freq_t center, int span)
 {
   int center_index = binary_search_frequency(center);
+  if (center_index < 0)
+	return false;
   int from = center_index - span/2;
   int found = false;
   int to = center_index + span/2;
@@ -1769,22 +1904,21 @@ search_maximum(int m, freq_t center, int span)
 }
 
 //static int spur_old_stepdelay = 0;
-//static const unsigned int spur_IF =            DEFAULT_IF;       // The IF frequency for which the spur table is value
-//static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the frequency is found in the spur table use this IF frequency
+#ifdef TINYSA3
+static const unsigned int spur_IF =            DEFAULT_IF;       // The IF frequency for which the spur table is value
+static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the frequency is found in the spur table use this IF frequency
+#endif
 static  freq_t spur_table[] =                                 // Frequencies to avoid
 {
+#ifdef TINYSA4
  243775000,             // OK
  325000000,             // !!! This is a double spur
  325190000,             // !!! This is a double spur
  487541650,             // OK This is linked to the MODULO of the ADF4350
  650687000,             // OK
  731780000,             // OK
-
-
-
-
- #if 0
- // 580000,            // 433.8 MHz table
+#else
+// 580000,            // 433.8 MHz table
 // 880000,    //?
  960000,
 // 1487000,   //?
@@ -1820,6 +1954,12 @@ static  freq_t spur_table[] =                                 // Frequencies to 
  40960000,
  41600000,
  49650000,
+ 272400000,
+ 287950000,
+// 288029520,
+ 332494215,
+
+
 #endif
 };
 
@@ -1827,8 +1967,13 @@ int binary_search(freq_t f)
 {
   int L = 0;
   int R =  (sizeof spur_table)/sizeof(int) - 1;
+#ifdef TINYSA4
   freq_t fmin =  f - spur_gate;
   freq_t fplus = f + spur_gate;
+#else
+  freq_t fmin =  f - actual_rbw_x10 * (100 / 2);
+  freq_t fplus = f + actual_rbw_x10 * (100 / 2);
+#endif
   while (L <= R) {
     int m = (L + R) / 2;
     if (spur_table[m] < fmin)
@@ -1838,6 +1983,7 @@ int binary_search(freq_t f)
     else
        return true; // index is m
   }
+#ifdef TINYSA4  
 #if 1
   if (!setting.auto_IF && setting.frequency_IF-2000000 < f && f < setting.frequency_IF -200000)
     return true;
@@ -1846,9 +1992,11 @@ int binary_search(freq_t f)
 #endif
   if(4*config.frequency_IF1 > fmin && 4*config.frequency_IF1 < fplus)
     return true;
+#endif
   return false;
 }
 
+#ifdef TINYSA4
 static const uint8_t spur_div[] = {4, 3, 3, 2, 3, 4};
 static const uint8_t spur_mul[] = {1, 1, 1, 1, 2, 3};
 #define IF_OFFSET   468750*4        //
@@ -1875,14 +2023,20 @@ void fill_spur_table(void)
      spur_table[i] = target;
   }
 }
+#endif
 
 int avoid_spur(freq_t f)                   // find if this frequency should be avoided
 {
 //  int window = ((int)actual_rbw ) * 1000*2;
 //  if (window < 50000)
 //    window = 50000;
+#ifdef TINYSA4
   if (setting.mode != M_LOW /* || !setting.auto_IF */)
     return(false);
+#else
+  if (setting.mode != M_LOW || !setting.auto_IF || actual_rbw_x10 > 3000)
+    return(false);
+#endif
   return binary_search(f);
 }
 
@@ -1920,10 +2074,17 @@ static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in 
 
 static const int fm_modulation_offset[4] =
 {
+#ifdef TINYSA
    5000, //85000,
    0, //80000,
    -2700, //165000,
   0, //160000
+#else
+   85000,
+   80000,
+  165000,
+  160000
+#endif
 };
 
 
@@ -1950,10 +2111,12 @@ static void calculate_static_correction(void)                   // Calculate the
       - get_signal_path_loss()
       + float_TO_PURE_RSSI(
           + get_level_offset()
+          + get_attenuation()
+#ifdef TINYSA4
           - (S_STATE(setting.agc)? 0 : 33)
           - (S_STATE(setting.lna)? 0 : 0)
-          + get_attenuation()
           + (setting.extra_lna ? -23.0 : 0)                         // TODO <------------------------- set correct value
+#endif		  
           - setting.offset);
 }
 
@@ -2033,7 +2196,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
   }
 
-  if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// start burst
+  #ifdef __SI4432__
+  if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// pulse high out
     SI4432_Sel = SI4432_LO ;
     if (i == 0) {
 //      set_switch_transmit();
@@ -2043,7 +2207,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 output to ground
     }
   }
-
+#endif
   if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
     float ls=setting.level_sweep;                                           // calculate and set the output level
     if (ls > 0)
@@ -2054,17 +2218,18 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     a += PURE_TO_float(get_frequency_correction(f));
     if (a != old_a) {
       old_a = a;
-      a = a - (SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE + config.low_level_output_offset);                 // convert to all settings maximum power output equals a = zero
-
+      a = a - level_max();                 // convert to all settings maximum power output equals a = zero
       if (a < -SWITCH_ATTENUATION) {
         a = a + SWITCH_ATTENUATION;
 #ifdef TINYSA3
+        SI4432_Sel = SI4432_RX ;
         set_switch_receive();
 #else
         enable_rx_output(false);
 #endif
       } else {
 #ifdef TINYSA3
+        SI4432_Sel = SI4432_RX ;
         set_switch_transmit();
 #else
         enable_rx_output(true);
@@ -2123,8 +2288,13 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           modulation_delay += config.cor_nfm;  // -17 default
           // modulation_index = 0; // default value
         }
+#ifdef TINYSA4
         if ((setting.mode == M_GENLOW) ||
             (setting.mode == M_GENHIGH  && f > ((freq_t)480000000) ) )
+#else
+        if ((setting.mode == M_GENLOW  && f > ((freq_t)480000000) - DEFAULT_IF) ||
+            (setting.mode == M_GENHIGH  && f > ((freq_t)480000000) ) )
+#endif
           modulation_index += 2;
         current_fm_modulation = (int *)fm_modulation[modulation_index];
         f -= fm_modulation_offset[modulation_index];           // Shift output frequency
@@ -2160,6 +2330,7 @@ modulation_again:
       my_microsecond_delay(modulation_delay);
     }
   }
+#ifdef TINYSA4
   // -------------- set ultra ---------------------------------
   if (setting.mode == M_LOW && config.ultra) {
     if ((S_IS_AUTO(setting.ultra)&& f > config.ultra_threshold) || S_STATE(setting.ultra) ) {
@@ -2167,17 +2338,21 @@ modulation_again:
     } else
       enable_ultra(false);
   }
+#endif
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
 #ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
+#ifdef TINYSA4
   if (!setting.auto_IF)
-    stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
+#endif
+	stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
 #endif
   int t = 0;
   do {
     freq_t lf = f;
     if (vbwSteps > 1) {          // Calculate sub steps
-      int offs_div10 = (t - (vbwSteps >> 1)) * 100;    // steps of x10 * settings.
+#ifdef TINYSA4
+	int offs_div10 = (t - (vbwSteps >> 1)) * 100;    // steps of x10 * settings.
       if ((vbwSteps & 1) == 0)                           // Uneven steps, center
         offs_div10+= 50;                              // Even, shift half step
       int offs = (offs_div10 * (int32_t)setting.vbw_x10 )/ vbwSteps;
@@ -2188,6 +2363,15 @@ modulation_again:
         lf += offs;
 //        if (lf > MAX_LO_FREQ)
 //          lf = 0;
+#else
+     int offs_div10 = (t - (vbwSteps >> 1)) * 500 / 10; // steps of half the rbw
+      if ((vbwSteps & 1) == 0)                           // Uneven steps, center
+        offs_div10+= 250 / 10;                           // Even, shift half step
+      int offs = offs_div10 * actual_rbw_x10;
+      if (setting.step_delay_mode == SD_PRECISE)
+        offs>>=1;                                        // steps of a quarter rbw
+      lf += offs;
+#endif
     }
 // -------------- Calculate the IF -----------------------------
 
@@ -2199,17 +2383,23 @@ modulation_again:
     again:                                                              // Spur reduction jumps to here for second measurement
 
     local_IF=0;                                                         // to get rid of warning
+#ifdef TINYSA4
     int LO_shifted = false;
     int LO_mirrored = false;
     int LO_harmonic = false;
+#endif
     if (MODE_HIGH(setting.mode)) {
       local_IF = 0;
     } else if (MODE_LOW(setting.mode)){                                              // All low mode
       if (!setting.auto_IF)
         local_IF = setting.frequency_IF;
       else
+#ifdef TINYSA4	  
         local_IF = config.frequency_IF1;
-      if (setting.mode == M_LOW) {
+#else
+        local_IF = DEFAULT_IF;
+#endif
+		if (setting.mode == M_LOW) {
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
 #if 0                                                               // Isolation test
           local_IF = lf;
@@ -2219,6 +2409,14 @@ modulation_again:
           lf = (setting.refer == -1 ? 0 : reffer_freq[setting.refer]);
 #endif
         } else {
+#ifdef TINYSA3
+          if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
+            local_IF = spur_alternate_IF;
+#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
+            stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
+#endif
+		  }
+#endif
 #ifdef __SI4468__
           if (S_IS_AUTO(setting.spur_removal)) {
             if (lf >= config.ultra_threshold) {
@@ -2228,16 +2426,21 @@ modulation_again:
             }
           }
 #endif
+#ifdef TINYSA4
           if (S_IS_AUTO(setting.below_IF)) {
             if ((uint64_t)lf + (uint64_t)local_IF> MAX_LO_FREQ && lf < ULTRA_MAX_FREQ)
               setting.below_IF = S_AUTO_ON; // Only way to reach this range.
             else
               setting.below_IF = S_AUTO_OFF; // default is above IF
           }
-
+#endif
           if (S_STATE(setting.spur_removal)){         // If in low input mode and spur reduction is on
             if (S_IS_AUTO(setting.below_IF) &&
-                ( lf > ULTRA_MAX_FREQ || lf < local_IF/2 /*  || ( (uint64_t)lf + (uint64_t)local_IF< MAX_LO_FREQ && lf + local_IF > 136000000ULL) */)
+#ifdef TINYSA4
+				( lf > ULTRA_MAX_FREQ || lf < local_IF/2 /*  || ( (uint64_t)lf + (uint64_t)local_IF< MAX_LO_FREQ && lf + local_IF > 136000000ULL) */)
+#else
+				(lf < local_IF / 2  || lf > local_IF) 
+#endif
                 )
             {              // else low/above IF
               if (spur_second_pass)
@@ -2256,7 +2459,9 @@ modulation_again:
 #endif
               }
             }
-          } else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
+          }
+#ifdef TINYSA4
+		  else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
             if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 1000000) {
               setting.below_IF = S_AUTO_ON;
             } else if (setting.auto_IF) {
@@ -2270,61 +2475,36 @@ modulation_again:
               stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
 #endif
           }
+#endif
         }
       } else {              // Output mode
         if (setting.modulation == MO_EXTERNAL)    // VERY SPECIAL CASE !!!!!! LO input via high port
           local_IF += lf;
       }
-#ifdef __ULTRA__
-    } else if (setting.mode == M_ULTRA) {               // No above/below IF mode in Ultra
-      local_IF  = setting.frequency_IF + (int)(actual_rbw < 350.0 ? S_STATE(setting.spur_removal)*300000 : 0 );
-#ifdef __SI4432__
-      set_freq (SI4432_RX , local_IF);
-#endif
-#ifdef __SI4463__
-      set_freq (SI4463_RX , local_IF);
-#endif
-      //     local_IF  = setting.frequency_IF + (int)(actual_rbw < 300.0?S_STATE(setting.spur_removal) * 1000 * actual_rbw:0);
-#endif
     }
 
     // ------------- Set LO ---------------------------
 
-#ifdef __ULTRA__
-    if (setting.mode == M_ULTRA) {      // Set LO to correct harmonic in Ultra mode
-      //      if (lf > 3406000000 )
-      //        setFreq (1, local_IF/5 + lf/5);
-      //      else
-      if (S_STATE(setting.spur_removal) != 1) {  // Left of tables
-        if (lf > 3250000000 )
-          set_freq (SI4432_LO , lf/5 - local_IF/5);
-        if (lf > 1250000000 )
-          set_freq (SI4432_LO, lf/3 - local_IF/3);
-        else
-          set_freq (SI4432_LO,  lf - local_IF);
-
-      } else {              // Right of tables
-        if (lf >= 2350000000)
-          set_freq (SI4432_LO,  lf/5 + local_IF/5);
-        else
-          set_freq (SI4432_LO, lf/3 + local_IF/3);
-      }
-    } else
-#endif
     {                                           // Else set LO ('s)
-      uint64_t target_f;
+      freq_t target_f;
+#ifdef TINYSA4
       int inverted_f = false;
+#endif
       if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
+#ifdef TINYSA4
         if (lf < local_IF)
-          target_f = (uint64_t)local_IF-(uint64_t)lf;                                                 // set LO SI4432 to below IF frequency
+#endif
+          target_f = local_IF-lf;                                                 // set LO SI4432 to below IF frequency
+#ifdef TINYSA4
         else {
-          target_f = (uint64_t)lf - (uint64_t)local_IF;                                                 // set LO SI4432 to below IF frequency
+          target_f = lf - local_IF;                                                 // set LO SI4432 to below IF frequency
           inverted_f = true;
           LO_mirrored = true;
         }
+#endif
       }
       else
-        target_f = (uint64_t)local_IF+(uint64_t)lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
+        target_f = local_IF+lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
 #ifdef __SI4432__
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
@@ -2465,6 +2645,7 @@ modulation_again:
       my_microsecond_delay(200);                 // To prevent lockup of SI4432
 #endif
     }
+#ifdef TINYSA4
     if (debug_frequencies ) {
 
       freq_t mult = (LO_harmonic ? 3 : 1);
@@ -2505,6 +2686,7 @@ modulation_again:
                       old_freq[SI4463_RX], real_old_freq[SI4463_RX], (int32_t)real_offset, f_low, f_high , f_error_low, f_error_high);
       osalThreadSleepMilliseconds(100);
     }
+#endif
     // ------------------------- end of processing when in output mode ------------------------------------------------
 
     skip_LO_setting:
@@ -2554,7 +2736,7 @@ modulation_again:
 
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
 
-#if 0
+#ifdef TINYSA3
       volatile uint8_t trigger_lvl = PURE_TO_DEVICE_RSSI((int16_t)((float_TO_PURE_RSSI(setting.trigger_level) - correct_RSSI - correct_RSSI_freq)));
       SI4432_trigger_fill(MODE_SELECT(setting.mode), trigger_lvl, (setting.trigger_direction == T_UP), setting.trigger_mode);
 #else
@@ -2619,12 +2801,11 @@ modulation_again:
         pureRSSI = 0;
       else
         pureRSSI = Si446x_RSSI();
-#endif
 //#define __DEBUG_FREQUENCY_SETTING__
 #ifdef __DEBUG_FREQUENCY_SETTING__                 // For debugging the frequency calculation
   stored_t[i] = -60.0 + (real_old_freq[ADF4351_LO] - f - old_freq[2])/10;
 #endif
-
+#endif
     }
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
@@ -2647,7 +2828,7 @@ modulation_again:
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < vbwSteps);                                   // till all sub steps done
-
+#ifdef TINYSA4
   if (old_CFGR != orig_CFGR) {
     old_CFGR = orig_CFGR;
     RCC->CFGR  = orig_CFGR;
@@ -2659,6 +2840,10 @@ modulation_again:
     rssi = 0;
   }
   return rssi;
+#else
+  return RSSI + correct_RSSI + correct_RSSI_freq; // add correction
+#endif
+
 }
 
 #define MAX_MAX 4
@@ -2710,7 +2895,7 @@ static bool sweep(bool break_on_operation)
     }
   } else if ( MODE_INPUT(setting.mode) && setting.frequency_step > 0) {
     sweep_counter++;
-#if 0
+#ifdef TINYSA3
     if (sweep_counter > 50 ) {     // refresh HW after 50 sweeps
       dirty = true;
       refreshing = true;
@@ -2729,9 +2914,11 @@ sweep_again:                                // stay in sweep loop when output mo
   for (int i = 0; i < sweep_points; i++) {
     // --------------------- measure -------------------------
     pureRSSI_t rssi = perform(break_on_operation, i, frequencies[i], setting.tracking);   // Measure RSSI for one of the frequencies
+#ifdef TINYSA4
     if (rssi == IGNORE_RSSI)
       RSSI = -174.0;
     else
+#endif
       RSSI = PURE_TO_float(rssi);
     // if break back to top level to handle ui operation
     if (refreshing)
@@ -2743,8 +2930,9 @@ sweep_again:                                // stay in sweep loop when output mo
       }
       return false;
     }
-
+#ifdef __SWEEP_OUTPUT__
     dacPutChannelX(&DACD2, 0, (((float)i)*config.sweep_voltage)*4.279);        // Output sweep voltage  4095 -> 3.3 Volt
+#endif
 
     // ----------------------- in loop AGC ---------------------------------
 
@@ -2779,8 +2967,11 @@ sweep_again:                                // stay in sweep loop when output mo
     }
 
     if (MODE_INPUT(setting.mode)) {
-
+#ifdef TINYSA4
       if ((i & 0x07) == 0 && (setting.actual_sweep_time_us > ONE_SECOND_TIME || (chVTGetSystemTimeX() - start_of_sweep_timestamp) > ONE_SECOND_TIME / 100)) {  // if required
+#else
+      if ( (i & 0x07) == 0 && setting.actual_sweep_time_us > ONE_SECOND_TIME) {  // if required
+#endif
     	int pos = i * (WIDTH+1) / sweep_points;
     	ili9341_set_background(LCD_SWEEP_LINE_COLOR);
         ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
@@ -2800,8 +2991,6 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
-#endif
-#ifdef __SI4432__
       if (check_for_AM) {
         int AGC_value = (SI4432_Read_Byte(0x69) & 0x01f) * 3 - 90;
         if (AGC_value < last_AGC_value &&  last_AGC_direction_up ) {
@@ -3008,7 +3197,11 @@ sweep_again:                                // stay in sweep loop when output mo
 #endif
 #endif
   // -------------------------- auto attenuate ----------------------------------
+#ifdef TINYSA4
 #define AUTO_TARGET_LEVEL   -30
+#else
+#define AUTO_TARGET_LEVEL   -25
+#endif
 #define AUTO_TARGET_WINDOW  2
 
   if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation) {  // calculate and apply auto attenuate
@@ -3123,9 +3316,9 @@ sweep_again:                                // stay in sweep loop when output mo
       float s_ref = setting.reflevel/setting.scale;
       if (s_max < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
         if (s_max - s_min < NGRIDY - 2)
-          set_reflevel(setting.scale*(floor(s_min+8.8+ 1)));
+          set_reflevel(setting.scale*(floorf(s_min+8.8+ 1)));
         else
-          set_reflevel(setting.scale*(floor(s_max)+1));
+          set_reflevel(setting.scale*(floorf(s_max)+1));
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       }else if (s_max > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
         set_reflevel(setting.reflevel + setting.scale);
@@ -3491,6 +3684,7 @@ typedef struct test_case {
 } test_case_t;
 
 const test_case_t test_case [] =
+#ifdef TINYSA4
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
  {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
  {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
@@ -3522,7 +3716,39 @@ const test_case_t test_case [] =
 #define TEST_SPUR    22
  {TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0 },       // 22 Measure 48MHz spur
 };
-
+#else
+{// Condition   Preparation     Center  Span    Pass    Width(%)Stop
+ {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
+ {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
+ {TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90 },      // 3
+ {TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90 },      // 4
+#define TEST_SILENCE 4
+ {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
+ {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
+ {TC_SIGNAL,    TP_10MHZEXTRA,  10,     7,      -20,    27,     -80 },      // 7 BPF loss and stop band
+ {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60},       // 8 BPF pass band flatness
+ {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
+ {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
+ {TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
+ {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 12 Measure atten step accuracy
+#define TEST_END 12
+ {TC_END,       0,              0,      0,      0,      0,      0},
+#define TEST_POWER  13
+ {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
+ {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
+ {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
+ {TC_END,       0,              0,      0,      0,      0,      0},
+#define TEST_RBW    17
+ {TC_MEASURE,   TP_30MHZ,       30,     1,      -20,    10,     -60 },      // 16 Measure RBW step time
+ {TC_END,       0,              0,      0,      0,      0,      0},
+ {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
+ {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
+#define TEST_ATTEN    21
+ {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 20 Measure atten step accuracy
+#define TEST_SPUR    22
+ {TC_BELOW,      TP_SILENT,     96,     8,      -95,    0,     0 },       // 22 Measure 48MHz spur
+};
+#endif
 
 
 enum {
@@ -3602,6 +3828,7 @@ int validate_signal_within(int i, float margin)
   if (setting.measurement == M_PASS_BAND) {
     peakFreq = (markers[2].frequency + markers[1].frequency)/2;
     markers[0].frequency = peakFreq;
+    markers[0].index = (markers[2].index + markers[1].index)/2;
   }
   test_fail_cause[i] = "Frequency ";
   if (peakFreq < test_case[i].center * 1000000 - 100000 || test_case[i].center * 1000000 + 100000 < peakFreq )
@@ -3689,6 +3916,8 @@ int validate_atten(int i) {
         status = TS_FAIL;
  //       draw_all(true);
       }
+
+	  
     }
   }
   if (status == TS_PASS)
@@ -3782,7 +4011,11 @@ void test_prepare(int i)
 {
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
+#ifdef TINYSA4
   setting.frequency_IF = config.frequency_IF1;                // Default frequency
+#else
+  setting.frequency_IF = DEFAULT_IF;                // Default frequency
+#endif
   setting.auto_IF = true;
   setting.auto_attenuation = false;
   setting.spur_removal = S_OFF;
@@ -3808,8 +4041,13 @@ common_silent:
     set_mode(M_LOW);
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
-    setting.frequency_IF = config.frequency_IF1+1000000;                // Center on SAW filters
+#ifdef TINYSA4
+    setting.frequency_IF = config.frequency_IF1+700000;                // Center on SAW filters
     set_refer_output(0);
+#else
+    setting.frequency_IF = DEFAULT_IF+210000;                // Center on SAW filters
+    set_refer_output(2);
+#endif
     markers[1].enabled = M_ENABLED;
     markers[1].mtype = M_DELTA;
     markers[2].enabled = M_ENABLED;
@@ -3953,14 +4191,18 @@ void self_test(int test)
     ili9341_clear_screen();
     reset_settings(M_LOW);
     set_refer_output(-1);
-#ifndef DOESNOTFIT
+#ifdef TINYSA4
   } else if (test == 1) {
     float p2, p1, p;
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SILENCE);
     setting.auto_IF = false;
+#ifdef TINYSA4
     setting.frequency_IF=config.frequency_IF1;
+#else
+   setting.frequency_IF=DEFAULT_IF;
+ #endif
     setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
@@ -3979,7 +4221,11 @@ void self_test(int test)
       f = 400000;
       while (f < DEFAULT_MAX_FREQ) {
         p = PURE_TO_float(perform(false, 1, f, false));
+#ifdef TINYSA4
 #define SPUR_DELTA  15
+#else
+#define SPUR_DELTA  15
+#endif
         if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
           shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - setting.frequency_step)/1000, add_spur(f - setting.frequency_step));
         }
@@ -3997,38 +4243,43 @@ void self_test(int test)
   } else if (test == 2) {                                   // Attenuator test
     in_selftest = true;
     reset_settings(M_LOW);
-    float reference_peak_level = 0;
     test_prepare(TEST_ATTEN);
     test_acquire(TEST_ATTEN);                        // Acquire test
     test_validate(TEST_ATTEN);                       // Validate test
-#if 1
+#if 0
+    float reference_peak_level = 0;
     for (int j= 0; j < 64; j++ ) {
-//      test_prepare(TEST_ATTEN);
+      test_prepare(TEST_ATTEN);
       set_attenuation(((float)j)/2.0);
-//      float summed_peak_level = 0;
-//      for (int k=0; k<10; k++) {
-        test_acquire(TEST_ATTEN);                        // Acquire test
-        test_validate(TEST_ATTEN);                       // Validate test
-//        summed_peak_level += peakLevel;
-//      }
+      float summed_peak_level = 0;
+      for (int k=0; k<10; k++) {
+			test_acquire(TEST_ATTEN);                        // Acquire test
+			test_validate(TEST_ATTEN);                       // Validate test
+			summed_peak_level += peakLevel;
+      }
         float peaklevel = 0.0;
         for (int k = 0 ; k < sweep_points; k++)
           peaklevel += actual_t[k];
         peaklevel /= sweep_points;
       if (j == 0)
-        reference_peak_level = peakLevel;
-      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, peakLevel, peakLevel - reference_peak_level);
+        reference_peak_level = peaklevel;
+      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, peaklevel, peaklevel - reference_peak_level);
     }
 #endif
     reset_settings(M_LOW);
   } else if (test == 3) {                       // RBW step time search
     in_selftest = true;
-//    reset_settings(M_LOW);
-    setting.auto_IF = false;
-    setting.frequency_IF=config.frequency_IF1;
     ui_mode_normal();
     test_prepare(TEST_RBW);
+//    reset_settings(M_LOW);
+    setting.auto_IF = false;
+#ifdef TINYSA4
+    setting.frequency_IF=config.frequency_IF1;
     setting.step_delay = 15000;
+#else
+    setting.frequency_IF=DEFAULT_IF;
+    setting.step_delay = 8000;
+#endif
     for (int j= 0; j < SI4432_RBW_count; j++ ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
@@ -4090,7 +4341,11 @@ void self_test(int test)
       setting.step_delay = setting.step_delay * 4 / 5;
 
 #endif
+#ifdef TINYSA4
       setting.offset_delay = 5000;
+#else
+      setting.offset_delay = 1600;
+#endif
 #if 1                       // Enable for offset tuning stepping
       test_value = saved_peakLevel;
       if ((uint32_t)(setting.rbw_x10 * 1000) / (sweep_points) < 8000) {           // fast mode possible
@@ -4158,7 +4413,9 @@ void self_test(int test)
     reset_settings(M_LOW);
     test_prepare(TEST_SPUR);
     set_RBW(300);
+#ifdef TINYSA4
     setting.extra_lna = true;
+#endif
     for (int i = 0; i < 31; i++) {
       hsical = (RCC->CR & 0xff00) >> 8;
       RCC->CR &= RCC_CR_HSICAL;
