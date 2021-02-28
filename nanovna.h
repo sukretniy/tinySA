@@ -1191,7 +1191,7 @@ typedef int16_t  pureRSSI_t;
 #ifdef TINYSA4
 #define EXT_ZERO_LEVEL            (174)
 #else
-#define EXT_ZERO_LEVEL            (174)
+#define EXT_ZERO_LEVEL            (128)
 #endif
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
 #define PURE_TO_DEVICE_RSSI(rssi) ((rssi)>>4)

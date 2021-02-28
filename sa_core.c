@@ -661,7 +661,7 @@ void set_level(float v)     // Set the output level in dB  in high/low output
   if (setting.mode == M_GENHIGH) {
     int d = 0;
     v = v - config.high_level_output_offset;
-    while (drive_dBm[d] < v - 1 && (unsigned int)d < (sizeof(drive_dBm)/sizeof(int))-1 )
+    while (drive_dBm[d] < v - 1 && (unsigned int)d < (sizeof(drive_dBm)/sizeof(drive_dBm[0]))-1 )
       d++;
 //    if (d == 8 && v < -12)  // Round towards closest level
 //      d = 7;
@@ -3911,7 +3911,7 @@ int validate_atten(int i) {
       reference_peak_level = summed_peak_level;
     else {
 //      if (SDU1.config->usbp->state == USB_ACTIVE)  shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",a, summed_peak_level, summed_peak_level - reference_peak_level);
-#define ATTEN_TEST_CRITERIA 1
+#define ATTEN_TEST_CRITERIA 1.5
       if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA) {
         status = TS_FAIL;
  //       draw_all(true);
@@ -4009,6 +4009,9 @@ int test_validate(int i)
 
 void test_prepare(int i)
 {
+  setting.measurement = M_OFF;
+  markers[1].enabled = M_DISABLED;
+  markers[2].enabled = M_DISABLED;
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
 #ifdef TINYSA4
@@ -4071,7 +4074,7 @@ common_silent:
     for (int j = 0; j < setting._sweep_points/2 - W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].stop;
     for (int j = setting._sweep_points/2 + W2P(test_case[i].width); j < setting._sweep_points; j++)
-      stored_t[j] = test_case[i].stop - (i == 6?5:0);
+      stored_t[j] = test_case[i].stop - (i == 6?3:0);
     for (int j = setting._sweep_points/2 - W2P(test_case[i].width); j < setting._sweep_points/2 + W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].pass;
     break;
