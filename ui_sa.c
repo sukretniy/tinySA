@@ -563,10 +563,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_load_preset_acb)
   if (caldata_recall(data) == -1) {
     if (data == 0)
       reset_settings(setting.mode);  // Restore factory defaults
-    else {
-      draw_menu();
-      return;
-    }
   }
   menu_move_back_and_leave_ui();
 }
@@ -623,7 +619,6 @@ static UI_FUNCTION_CALLBACK(menu_calibrate_cb)
     break;
   case 2:
     reset_calibration();
-    draw_menu();
     break;
   }
 }
@@ -652,13 +647,11 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
     touch_cal_exec();
     redraw_frame();
     request_to_redraw_grid();
-    draw_menu();
     break;
   case CONFIG_MENUITEM_TOUCH_TEST:
     touch_draw_test();
     redraw_frame();
     request_to_redraw_grid();
-    draw_menu();
     break;
   case CONFIG_MENUITEM_SELFTEST:
     sweep_mode = 0;         // Suspend sweep to save time
@@ -671,7 +664,6 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
     show_version();
     redraw_frame();
     request_to_redraw_grid();
-    draw_menu();
   }
 }
 
@@ -1148,7 +1140,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
   active_marker_select(data-1);
   menu_push_submenu(menu_marker_modify);
   redraw_marker(active_marker);
-  draw_menu();
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
@@ -1188,7 +1179,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
   markmap_all_markers();
 //  redraw_marker(active_marker, TRUE);
 //  menu_move_back();
-  draw_menu();
 }
 
 static UI_FUNCTION_CALLBACK(menu_marker_delete_cb)
@@ -1277,7 +1267,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
 //  menu_move_back();
     ui_mode_normal();
   }
-  draw_menu();
   completed = true;
 }
 
@@ -1315,7 +1304,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
     return;
   }
   set_harmonic(data);
-  draw_menu();
 }
 #endif
 
@@ -1335,7 +1323,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_agc_acb){
     return;
   }
   toggle_AGC();
-  draw_menu();
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_lna_acb){
@@ -1349,7 +1336,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_lna_acb){
     return;
   }
   toggle_LNA();
-  draw_menu();
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_bpf_acb){
@@ -1360,7 +1346,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_bpf_acb){
     return;
   }
   toggle_tracking();
-  draw_menu();
 }
 
 #ifdef __HAM_BAND__
@@ -1372,7 +1357,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_ham_bands){
     return;
   }
   toggle_hambands();
-  draw_menu();
 }
 #endif
 
@@ -1387,7 +1371,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_below_if_acb){
     return;
   }
   toggle_below_IF();
-  draw_menu();
 }
 
 #ifdef TINYSA4
@@ -1402,7 +1385,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_ultra_acb){
     return;
   }
   toggle_ultra();
-  draw_menu();
 }
 #endif
 
@@ -1414,7 +1396,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lo_output_acb){
     return;
   }
   toggle_tracking_output();
-  draw_menu();
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
@@ -1428,7 +1409,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
   toggle_sweep();
 //  menu_move_back();
 //  ui_mode_normal();
-  draw_menu();
 //  draw_cal_status();
 }
 
@@ -1444,7 +1424,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
   auto_capture = ! auto_capture;
 //  menu_move_back();
 //  ui_mode_normal();
-  draw_menu();
 //  draw_cal_status();
 }
 #endif
@@ -1458,7 +1437,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
     return;
   }
   toggle_mute();
-  draw_menu();
 }
 
 #ifdef TINYSA4
@@ -1474,7 +1452,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
     return;
   }
   set_sweep_points(points_setting[data]);
-  draw_menu();
 }
 
 #ifdef __USE_SERIAL_CONSOLE__
@@ -1488,7 +1465,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_serial_speed_acb)
   }
   config._serial_speed = data;
   shell_update_speed();
-  draw_menu();
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_connection_acb)
@@ -1501,7 +1477,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_connection_acb)
   config._mode&=~_MODE_CONNECTION_MASK;
   config._mode|=data;
   shell_reset_console();
-  draw_menu();
 }
 #endif
 // ===[MENU DEFINITION]=========================================================

@@ -932,7 +932,6 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
     else
       markers[active_marker].frequency = frequencies[i];
   }
-  draw_menu();
   redraw_marker(active_marker);
 //  if (data == 4)
     select_lever_mode(LM_MARKER);   // Allow any position with level
@@ -949,7 +948,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb){
     return;
   }
   markers[active_marker].mtype ^= M_TRACKING;
-  draw_menu();
 }
 
 #ifdef __VNA__
@@ -1285,8 +1283,6 @@ menu_move_back(void)
     redraw_request |= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
-
-  draw_menu();
 }
 
 static void
@@ -1321,7 +1317,6 @@ menu_push_submenu(const menuitem_t *submenu)
 //    request_to_redraw_grid();
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
-  draw_menu();
 }
 
 void
@@ -1408,6 +1403,9 @@ menu_invoke(int item)
     redraw_request |= REDRAW_CAL_STATUS;
     break;
   }
+  // Redraw menu after if UI in menu mode
+  if (ui_mode == UI_MENU)
+    draw_menu();
 }
 
 #ifdef __VNA__
