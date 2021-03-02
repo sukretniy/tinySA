@@ -66,7 +66,7 @@ static uint32_t last_button_repeat_ticks;
 
 volatile uint8_t operation_requested = OP_NONE;
 
-int8_t previous_marker = -1;
+int8_t previous_marker = MARKER_INVALID;
 
 enum {
   UI_NORMAL, UI_MENU, UI_KEYPAD
@@ -81,7 +81,6 @@ enum {
 #define NUMINPUT_LEN 10
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
-static uint8_t keypads_last_index;
 static char    kp_buf[NUMINPUT_LEN+1];
 static int8_t  kp_index = 0;
 static char   *kp_help_text = NULL;
@@ -1595,11 +1594,10 @@ draw_numeric_input(const char *buf)
 {
   int i;
   int x;
-  int focused = FALSE;
   uint16_t xsim = 0b0010010000000000;
 
-  uint16_t fg = LCD_INPUT_TEXT_COLOR;
-  uint16_t bg = LCD_INPUT_BG_COLOR;
+  ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
+  ili9341_set_background(LCD_INPUT_BG_COLOR);
   for (i = 0, x = 64; i < 10 && buf[i]; i++, xsim<<=1) {
     int c = buf[i];
     if (c == '.')
@@ -1609,23 +1607,16 @@ draw_numeric_input(const char *buf)
     else// if (c >= '0' && c <= '9')
       c = c - '0';
 
-    ili9341_set_foreground(fg);
-    ili9341_set_background(bg);
     if (c >= 0) // c is number
       ili9341_drawfont(c, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
-    else if (focused) // c not number, but focused
-      ili9341_drawfont(0, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
     else // erase
-      ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_WIDTH+2+8);
+      break;
 
     x += xsim&0x8000 ? NUM_FONT_GET_WIDTH+2+8 : NUM_FONT_GET_WIDTH+2;
   }
   // erase last
-//  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
   ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-x-1, NUM_FONT_GET_WIDTH+2+8);
   if (buf[0] == 0 && kp_help_text != NULL) {
-    ili9341_set_foreground(fg);
-    ili9341_set_background(bg);
     int  lines = menu_is_multiline(kp_help_text);
     ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(lines*bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   }
