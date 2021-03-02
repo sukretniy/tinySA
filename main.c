@@ -2967,6 +2967,7 @@ int main(void)
 /*
  * Init Shell console connection data (after load config for settings)
  */
+
   shell_init_connection();
 
 #ifdef TINYSA4
@@ -3066,7 +3067,7 @@ void HardFault_Handler(void)
 
 void hard_fault_handler_c(uint32_t *sp)
 {
-#if 0
+#ifdef TINYSA4
   uint32_t r0  = sp[0];
   uint32_t r1  = sp[1];
   uint32_t r2  = sp[2];

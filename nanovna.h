@@ -20,10 +20,22 @@
 
 #ifdef TINYSA_F303
 #include "adc_F303.h"
-// #define TINYSA4
+#ifdef TINYSA_F072
+#error "Remove comment for #ifdef TINYSA_F303"
+#endif
+#ifndef TINYSA4
+#define TINYSA4
+#endif
 #define TINYSA4_PROTO
-#else
+#endif
+
+#ifdef TINYSA_F072
+#ifdef TINYSA_F303
+#error "Remove comment for #ifdef TINYSA_F072"
+#endif
+#ifndef TINYSA3
 #define TINYSA3
+#endif
 #endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
@@ -241,12 +253,16 @@ void set_extra_lna(int t);
 // ------------------------------- sa_core.c ----------------------------------
 
 
-extern int level_min(void);
-extern int level_max(void);
-extern int level_range(void);
+extern float level_min(void);
+extern float level_max(void);
+extern float level_range(void);
 
 extern const char * const unit_string[];
+#ifdef TINYSA4
+extern float *drive_dBm;
+#else
 extern const int8_t drive_dBm [];
+#endif
 extern uint8_t signal_is_AM;
 extern const int reffer_freq[];
 extern freq_t minFreq;
@@ -833,26 +849,29 @@ typedef struct setting
   int mode;
   uint16_t _sweep_points;
   int16_t attenuate_x2;
-  int auto_attenuation;
-  int atten_step;
-  uint32_t rbw_x10;
-  int below_IF;
-  int average;
+  uint8_t auto_attenuation;
+  uint8_t below_IF;
+  int8_t _active_marker;
+  int8_t unit;
+  uint8_t mirror_masking;
+  uint8_t subtract_stored;          // uint8_t increases size
+  uint8_t agc;
+  uint8_t lna;
+  uint8_t auto_reflevel;
+  int modulation;
   int show_stored;
-  int subtract_stored;
+  int atten_step;
+  int test;
+  int harmonic;
+  uint32_t rbw_x10;
+  int average;
   int lo_drive; // 0-3 , 3dB steps
   int rx_drive; // 0-15 , 7=+20dBm, 3dB steps
-  int agc;
-  int lna;
-  int auto_reflevel;
   float reflevel;
   float scale;
   int tracking;
-  int modulation;
   int step_delay;
   freq_t frequency_step;
-  int test;
-  int harmonic;
   int decay;
   int attack;
   int noise;
@@ -866,11 +885,8 @@ typedef struct setting
   int measurement;
   int refer;
   int spur_removal;
-  int mirror_masking;
   trace_t _trace[TRACES_MAX];
   marker_t _markers[MARKERS_MAX];
-  int8_t _active_marker;
-  int8_t unit;
   float offset;
   float trigger_level;
   int trigger_direction;

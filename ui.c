@@ -1903,6 +1903,8 @@ draw_menu_buttons(const menuitem_t *menu)
             ili9341_line(button_start + i * MENU_FORM_WIDTH/5, y+button_height-9, button_start + i * MENU_FORM_WIDTH/5, y+button_height);
           }
         draw_slider:
+          if (local_slider_positions < button_start)
+            local_slider_positions = button_start;
           blit8BitWidthBitmap(local_slider_positions - 4, y, 7, 5, slider_bitmap);
         } else if (menu[i].data == KM_HIGHOUTLEVEL) {
           local_slider_positions = ((get_level() - level_min() ) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
