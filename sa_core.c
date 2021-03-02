@@ -3701,80 +3701,84 @@ enum {
 #define CAL_LEVEL   -25
 #endif
 
+// TODO made more compact this structure (need use aligned data)
 typedef struct test_case {
-  int kind;
-  int setup;
+  uint8_t kind;
+  uint8_t setup;
+  int16_t width;
   float center;      // In MHz
   float span;        // In MHz
   float pass;
-  int width;
   float stop;
 } test_case_t;
 
+// Use this data parser for init structure data
+#define TEST_CASE_STRUCT(Condition, Preparation, Center, Span, Pass, Width, Stop) {Condition, Preparation, Width, Center, Span, Pass, Stop}
+
 const test_case_t test_case [] =
 #ifdef TINYSA4
-{// Condition   Preparation     Center  Span    Pass    Width(%)Stop
- {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
- {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
- {TC_SIGNAL,    TP_30MHZ,       30,     7,      -30,    10,     -90 },      // 3
- {TC_SIGNAL,    TP_30MHZ,       60,     7,      -70,    10,     -90 },      // 4
+{//                 Condition   Preparation     Center  Span    Pass    Width(%)Stop
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0),         // 1 Zero Hz leakage
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0),         // 2 Phase noise of zero Hz
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     7,      -30,    10,     -90),      // 3
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       60,     7,      -70,    10,     -90),      // 4
 #define TEST_SILENCE 4
- {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
- {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -20,    27,     -80 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
- {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
- {TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
- {TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    145,     -60 },      // 12 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0),         // 5  Wide band noise floor low mode
+ TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0),         // 6 Wide band noise floor high mode
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -20,    27,     -80),      // 7 BPF loss and stop band
+ TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
+ TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75),       // 9 LPF cutoff
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60),      // 10 Switch isolation using high attenuation
+ TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60),      // 11 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    145,     -60),      // 12 Measure atten step accuracy
 #define TEST_END 12
- {TC_END,       0,              0,      0,      0,      0,      0},
+ TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
 #define TEST_POWER  13
- {TC_MEASURE,   TP_30MHZ,       30,     7,      CAL_LEVEL,   10,     -55 },      // 12 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
- {TC_END,       0,              0,      0,      0,      0,      0},
+ TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       30,     7,      CAL_LEVEL,   10,     -55),      // 12 Measure power level and noise
+ TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75),       // 13 Measure powerlevel and noise
+ TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
+ TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
 #define TEST_RBW    17
- {TC_MEASURE,   TP_30MHZ,       30,     1,      CAL_LEVEL,    10,     -60 },      // 16 Measure RBW step time
- {TC_END,       0,              0,      0,      0,      0,      0},
- {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
- {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
+ TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       30,     1,      CAL_LEVEL,    10,     -60),      // 16 Measure RBW step time
+ TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
+ TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65),       // 14 Calibrate power high mode
+ TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
 #define TEST_ATTEN    21
- {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 20 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60),      // 20 Measure atten step accuracy
 #define TEST_SPUR    22
- {TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0 },       // 22 Measure 48MHz spur
+ TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
 };
 #else
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
- {TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0},         // 1 Zero Hz leakage
- {TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0},         // 2 Phase noise of zero Hz
- {TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90 },      // 3
- {TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90 },      // 4
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0),         // 1 Zero Hz leakage
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0),         // 2 Phase noise of zero Hz
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90),      // 3
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90),      // 4
 #define TEST_SILENCE 4
- {TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0},         // 5  Wide band noise floor low mode
- {TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0},         // 6 Wide band noise floor high mode
- {TC_SIGNAL,    TP_10MHZEXTRA,  10,     7,      -20,    27,     -80 },      // 7 BPF loss and stop band
- {TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60},       // 8 BPF pass band flatness
- {TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75},       // 9 LPF cutoff
- {TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60 },      // 10 Switch isolation using high attenuation
- {TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 11 Measure atten step accuracy
- {TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 12 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0),         // 5  Wide band noise floor low mode
+ TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0),         // 6 Wide band noise floor high mode
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  10,     7,      -20,    27,     -80),      // 7 BPF loss and stop band
+ TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60),       // 8 BPF pass band flatness
+ TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75),       // 9 LPF cutoff
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60),      // 10 Switch isolation using high attenuation
+ TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60),      // 11 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60),      // 12 Measure atten step accuracy
 #define TEST_END 12
- {TC_END,       0,              0,      0,      0,      0,      0},
+ TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
 #define TEST_POWER  13
- {TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55 },      // 12 Measure power level and noise
- {TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75 },       // 13 Measure powerlevel and noise
- {TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
- {TC_END,       0,              0,      0,      0,      0,      0},
+ TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       30,     7,      -25,   10,     -55),      // 12 Measure power level and noise
+ TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75),       // 13 Measure powerlevel and noise
+ TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
+ TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
 #define TEST_RBW    17
- {TC_MEASURE,   TP_30MHZ,       30,     1,      -20,    10,     -60 },      // 16 Measure RBW step time
- {TC_END,       0,              0,      0,      0,      0,      0},
- {TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65 },       // 14 Calibrate power high mode
- {TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65 },       // 14 Calibrate power high mode
+ TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       30,     1,      -20,    10,     -60),      // 16 Measure RBW step time
+ TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
+ TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65),       // 14 Calibrate power high mode
+ TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
 #define TEST_ATTEN    21
- {TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60 },      // 20 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60),      // 20 Measure atten step accuracy
 #define TEST_SPUR    22
- {TC_BELOW,      TP_SILENT,     96,     8,      -95,    0,     0 },       // 22 Measure 48MHz spur
+ TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     96,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
 };
 #endif
 
