@@ -404,7 +404,7 @@ static const keypads_t keypads_time[] = {
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, // These must be first to share common help text
   KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_DRIVE, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
+  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
 #ifdef TINYSA4
   KM_30MHZ, 
 #else
@@ -439,7 +439,6 @@ static const struct {
   {keypads_plusmin_unit, "ACTUAL\nPOWER"}, // actual power
   {keypads_freq        , "IF"}, // IF
   {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay
-  {keypads_positive    , "DRIVE"}, // KM_DRIVE
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "DECAY"},    // KM_DECAY
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
@@ -2256,10 +2255,6 @@ static void fetch_numeric_target(void)
     uistat.value = setting.repeat;
     plot_printf(uistat.text, sizeof uistat.text, "%2d", ((int32_t)uistat.value));
     break;
-  case KM_DRIVE:
-    uistat.value = setting.rx_drive;
-    plot_printf(uistat.text, sizeof uistat.text, "%3ddB", ((int32_t)uistat.value));
-    break;
   case KM_LOWOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
     int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
@@ -2421,9 +2416,6 @@ set_numeric_value(void)
     break;
   case KM_REPEAT:
     set_repeat(uistat.value);
-    break;
-  case KM_DRIVE:
-    set_rx_drive(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
     set_level(uistat.value - setting.offset);

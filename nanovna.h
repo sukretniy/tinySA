@@ -858,6 +858,7 @@ typedef struct setting
   uint8_t agc;
   uint8_t lna;
   uint8_t auto_reflevel;
+  uint8_t dummy2;
   int modulation;
   int show_stored;
   int atten_step;
@@ -918,8 +919,8 @@ typedef struct setting
   int ultra;
   int R;
 #endif
-  uint32_t dummy;
-  uint32_t checksum;            // must be last
+  uint16_t dummy;
+  uint32_t checksum;            // must be last and at 4 byte boundary
 }setting_t;
 
 extern setting_t setting;

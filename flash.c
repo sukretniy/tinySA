@@ -71,8 +71,9 @@ checksum(const void *start, size_t len)
   uint32_t *tail = (uint32_t*)(start + len);
   uint32_t value = 0;
   while (p < tail) {
-    value = __ROR(value, 31) + *p++;
-    // if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("%x\r\n", value);
+    value = __ROR(value, 31) + *p;
+//    if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("%x, %x\r\n", *p, value);
+    p++;
   }
   return value;
 }
@@ -109,6 +110,7 @@ config_recall(void)
 
   if (src->magic != CONFIG_MAGIC)
     return -1;
+//  if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("Checksum %x\r\n", src->checksum);
   if (checksum(src, sizeof config - sizeof config.checksum) != src->checksum)
     return -1;
 
@@ -132,8 +134,9 @@ caldata_save(uint16_t id)
   dst = (uint16_t*)(SAVE_PROP_CONFIG_ADDR + id * SAVE_PROP_CONFIG_SIZE);
 
   setting.magic = CONFIG_MAGIC;
+  setting.checksum = 0x12345678;
   setting.checksum = checksum(
-      &setting, sizeof setting - sizeof setting.checksum);
+      &setting, (sizeof (setting)) - sizeof setting.checksum);
 
   flash_unlock();
 
@@ -179,7 +182,8 @@ caldata_recall(uint16_t id)
 
   if (src->magic != CONFIG_MAGIC)
     return -1;
-  if (checksum(src, sizeof setting - sizeof src->checksum) != src->checksum)
+//  if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("Checksum %x\r\n", src->checksum);
+  if (checksum(src, (sizeof (setting)) - sizeof src->checksum) != src->checksum)
     return -1;
 
   /* active configuration points to save data on flash memory */

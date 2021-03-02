@@ -103,7 +103,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 #define MAX_DRIVE   (setting.mode == M_GENHIGH ? 15 : 11)
 #define MIN_DRIVE   8
 #define SL_GENHIGH_LEVEL_MIN    -38
-#define SL_GENHIGH_LEVEL_RANGE    51
+#define SL_GENHIGH_LEVEL_RANGE    54
 #define SL_GENLOW_LEVEL_MIN    -76
 #define SL_GENLOW_LEVEL_RANGE   70
 #endif
@@ -670,8 +670,12 @@ void set_level(float v)     // Set the output level in dB  in high/low output
 //      d = 7;
     set_lo_drive(d);
   } else {
+    if (v < SL_GENLOW_LEVEL_MIN)
+      v = SL_GENLOW_LEVEL_MIN;
+    if (v > SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE)
+      v = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;
     setting.level = v;
-    set_attenuation(setting.level - config.low_level_output_offset);
+//    set_attenuation(setting.level - config.low_level_output_offset);
   }
   dirty = true;
 }
@@ -681,7 +685,7 @@ float get_level(void)
   if (setting.mode == M_GENHIGH) {
     return drive_dBm[setting.lo_drive] + config.high_level_output_offset;
   } else {
-    setting.level = get_attenuation() + config.low_level_output_offset;
+//    setting.level = get_attenuation() + config.low_level_output_offset;
     return setting.level;
   }
 }
@@ -701,8 +705,9 @@ float get_attenuation(void)
   return(actual_attenuation);
 }
 
-void set_attenuation(float a)       // Is used both in low output mode and high/low input mode
+void set_attenuation(float a)       // Is used both only in  high/low input mode
 {
+#if 0
   if (setting.mode == M_GENLOW) {
     a = a - level_max();               // Move to zero for max power
     if (a > 0)
@@ -719,7 +724,9 @@ void set_attenuation(float a)       // Is used both in low output mode and high/
     }
     a -= BELOW_MAX_DRIVE(setting.rx_drive);
     a = -a;
-  } else {
+  } else
+#endif
+  {
     if (setting.mode == M_LOW && a > 31.5) {
       setting.atten_step = 1;
       a = a - RECEIVE_SWITCH_ATTENUATION;
