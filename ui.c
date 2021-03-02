@@ -2147,13 +2147,11 @@ nogo:
 
 
 static void
-menu_apply_touch(void)
+menu_apply_touch(int touch_x, int touch_y)
 {
-  int touch_x, touch_y;
   const menuitem_t *menu = menu_stack[menu_current_level];
   int i;
   int y = 0;
-  touch_position(&touch_x, &touch_y);
   for (i = 0; i < MENU_BUTTON_MAX; i++) {
     if (menuDisabled(menu[i].type))            //not applicable to mode
       continue;
@@ -2769,11 +2767,9 @@ drag_marker(int t, int m)
 }
 
 static int
-touch_pickup_marker(void)
+touch_pickup_marker(int touch_x, int touch_y)
 {
-  int touch_x, touch_y;
   int m, t;
-  touch_position(&touch_x, &touch_y);
   touch_x -= OFFSETX;
   touch_y -= OFFSETY;
 
@@ -2814,11 +2810,9 @@ touch_pickup_marker(void)
   return TRUE;
 }
 
-static int touch_quick_menu(void)
+static int touch_quick_menu(int touch_x, int touch_y)
 {
-  int touch_x, touch_y;
-  touch_position(&touch_x, &touch_y);
-  if (ui_mode != UI_KEYPAD && touch_x <OFFSETX)
+  if (touch_x <OFFSETX)
   {
     touch_wait_release();
     return invoke_quick_menu(touch_y);
@@ -2827,10 +2821,8 @@ static int touch_quick_menu(void)
 }
 
 static int
-touch_lever_mode_select(void)
+touch_lever_mode_select(int touch_x, int touch_y)
 {
-  int touch_x, touch_y;
-  touch_position(&touch_x, &touch_y);
   if (touch_y > HEIGHT) {
     if (touch_x < FREQUENCIES_XPOS2 -50 && uistat.lever_mode == LM_CENTER) {
       touch_wait_release();
@@ -2883,11 +2875,9 @@ touch_lever_mode_select(void)
 }
 
 static int
-touch_marker_select(void)
+touch_marker_select(int touch_x, int touch_y)
 {
   int selected_marker = 0;
-  int touch_x, touch_y;
-  touch_position(&touch_x, &touch_y);
   if (current_menu_is_form() || touch_x > LCD_WIDTH-MENU_BUTTON_WIDTH || touch_x < 25 || touch_y > 30)
     return FALSE;
   if (touch_y > 15)
@@ -2931,20 +2921,21 @@ void ui_process_touch(void)
 {
 //  awd_count++;
   adc_stop();
-
+  int touch_x, touch_y;
   int status = touch_check();
   if (status == EVT_TOUCH_PRESSED || status == EVT_TOUCH_DOWN) {
+    touch_position(&touch_x, &touch_y);
     switch (ui_mode) {
     case UI_NORMAL:
-      if (touch_quick_menu())
+      if (touch_quick_menu(touch_x, touch_y))
         break;
       // Try drag marker
-      if (touch_pickup_marker())
+      if (touch_pickup_marker(touch_x, touch_y))
         break;
-      if (touch_marker_select())
+      if (touch_marker_select(touch_x, touch_y))
         break;
       // Try select lever mode (top and bottom screen)
-      if (touch_lever_mode_select()) {
+      if (touch_lever_mode_select(touch_x, touch_y)) {
 //        touch_wait_release();
         break;
       }
@@ -2956,7 +2947,7 @@ void ui_process_touch(void)
       ui_mode_menu();
       break;
     case UI_MENU:
-      menu_apply_touch();
+      menu_apply_touch(touch_x, touch_y);
       break;
     }
   }
