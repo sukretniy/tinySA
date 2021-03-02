@@ -1154,7 +1154,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
 {
   (void)item;
-  if (active_marker == -1) return;
+  if (active_marker == MARKER_INVALID) return;
   if(b){
     if (markers[active_marker].enabled == M_ENABLED) {
       b->icon = BUTTON_ICON_NOCHECK;
@@ -1303,7 +1303,7 @@ static void choose_active_marker(void)
       active_marker = i;
       return;
     }
-  active_marker = -1;
+  active_marker = MARKER_INVALID;
 }
 
 #ifdef __HARMONIC__

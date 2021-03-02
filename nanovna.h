@@ -107,6 +107,8 @@
 #define TRACE_ACTUAL    2
 #define TRACE_STORED    1
 #define TRACE_TEMP      0
+#define TRACE_INVALID  -1
+
 // #define age_t     measured[TRACE_AGE]
 #define stored_t  measured[TRACE_STORED]
 #define actual_t  measured[TRACE_ACTUAL]
@@ -672,6 +674,7 @@ typedef struct {
 } marker_t;
 
 #define MARKERS_MAX 4
+#define MARKER_INVALID -1
 
 extern int8_t previous_marker;
 extern int8_t marker_tracking;
@@ -696,11 +699,8 @@ void draw_cal_status(void);
 
 void marker_position(int m, int t, int *x, int *y);
 int search_nearest_index(int x, int y, int t);
-void set_marker_search(int mode);
-int marker_search(void);
+
 int marker_search_max(void);
-int marker_search_left(int from);
-int marker_search_right(int from);
 int marker_search_left_max(int from);
 int marker_search_right_max(int from);
 int marker_search_left_min(int from);

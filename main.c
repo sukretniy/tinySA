@@ -194,8 +194,8 @@ static THD_FUNCTION(Thread1, arg)
       redraw_request |= REDRAW_CELLS | REDRAW_BATTERY;
 
       if (uistat.marker_tracking) {
-        int i = marker_search();
-        if (i != -1 && active_marker != -1) {
+        int i = marker_search_max();
+        if (i != -1 && active_marker != MARKER_INVALID) {
           markers[active_marker].index = i;
           markers[active_marker].frequency = frequencies[i];
 
@@ -2025,7 +2025,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   }
   redraw_request |= REDRAW_MARKER;
   if (strcmp(argv[0], "off") == 0) {
-    active_marker = -1;
+    active_marker = MARKER_INVALID;
     for (t = 0; t < MARKERS_MAX; t++)
       markers[t].enabled = FALSE;
     return;
@@ -2044,7 +2044,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   static const char cmd_marker_list[] = "on|off|peak";
   switch (get_str_index(argv[1], cmd_marker_list)) {
     case 0: markers[t].enabled = TRUE; active_marker = t; return;
-    case 1: markers[t].enabled =FALSE; if (active_marker == t) active_marker = -1; return;
+    case 1: markers[t].enabled =FALSE; if (active_marker == t) active_marker = MARKER_INVALID; return;
     case 2: markers[t].enabled = TRUE; active_marker = t;
       int i = marker_search_max();
       if (i == -1) i = 0;

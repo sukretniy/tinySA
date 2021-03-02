@@ -3550,7 +3550,7 @@ marker_search_left_max(int from)
 {
   int i;
   int found = -1;
-  if (uistat.current_trace == -1)
+  if (uistat.current_trace == TRACE_INVALID)
     return -1;
 
   float value = actual_t[from];
@@ -3580,7 +3580,7 @@ marker_search_right_max(int from)
   int i;
   int found = -1;
 
-  if (uistat.current_trace == -1)
+  if (uistat.current_trace == TRACE_INVALID)
     return -1;
   float value = actual_t[from];
   for (i = from + 1; i < sweep_points; i++) {
@@ -3626,7 +3626,7 @@ marker_search_left_min(int from)
 {
   int i;
   int found = from;
-  if (uistat.current_trace == -1)
+  if (uistat.current_trace == TRACE_INVALID)
     return -1;
 
   int value_x10 = actual_t[from]*10;
@@ -3656,7 +3656,7 @@ marker_search_right_min(int from)
   int i;
   int found = from;
 
-  if (uistat.current_trace == -1)
+  if (uistat.current_trace == TRACE_INVALID)
     return -1;
   int value_x10 = actual_t[from]*10;
   for (i = from + 1; i < sweep_points; i++) {

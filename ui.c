@@ -858,7 +858,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
     break;
   case 3: /* MARKERS->SPAN */
     {
-      if (previous_marker == -1 || active_marker == previous_marker) {
+      if (previous_marker == MARKER_INVALID || active_marker == previous_marker) {
         // if only 1 marker is active, keep center freq and make span the marker comes to the edge
         freq_t center = get_sweep_frequency(ST_CENTER);
         freq_t span = center > freq ? center - freq : freq - center;
@@ -905,7 +905,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
 {
   (void)item;
   int i = -1;
-  if (active_marker == -1)
+  if (active_marker == MARKER_INVALID)
     return;
   markers[active_marker].mtype &= ~M_TRACKING;
   switch (data) {
@@ -915,13 +915,6 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   case 1: /* search right */
     i = marker_search_right_min(markers[active_marker].index);
     break;
-#if 0
-  case 0: /* maximum */
-  case 1: /* minimum */
-    set_marker_search(data);
-    i = marker_search();
-    break;
-#endif
   case 2: /* search Left */
     i = marker_search_left_max(markers[active_marker].index);
     break;
@@ -950,7 +943,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb){
   (void)item;
   (void)data;
-  if (active_marker == -1) return;
+  if (active_marker == MARKER_INVALID) return;
   if(b){
     b->icon = markers[active_marker].mtype & M_TRACKING ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     return;
@@ -975,8 +968,8 @@ active_marker_select(int item)  // used only to select an active marker from the
 {
   if (item == -1) {
     active_marker = previous_marker;
-    previous_marker = -1;
-    if (active_marker == -1) {
+    previous_marker = MARKER_INVALID;
+    if (active_marker == MARKER_INVALID) {
       choose_active_marker();
     }
   } else {
@@ -2391,7 +2384,7 @@ lever_move_marker(int status)
     }
     status = btn_wait_release();
   } while (status != 0);
-  if (active_marker >= 0)
+  if (active_marker != MARKER_INVALID)
     redraw_marker(active_marker);
 }
 
@@ -2399,7 +2392,7 @@ static void
 lever_search_marker(int status)
 {
   int i = -1;
-  if (active_marker >= 0) {
+  if (active_marker != MARKER_INVALID) {
     if (status & EVT_DOWN)
       i = marker_search_left_max(markers[active_marker].index);
     else if (status & EVT_UP)
