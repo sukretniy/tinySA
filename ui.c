@@ -2777,36 +2777,41 @@ touch_pickup_marker(void)
   touch_x -= OFFSETX;
   touch_y -= OFFSETY;
 
-  for (m = 0; m < MARKERS_MAX; m++) {
-    if (!markers[m].enabled)
+  int i = MARKER_INVALID, mt;
+  int min_dist = MARKER_PICKUP_DISTANCE * MARKER_PICKUP_DISTANCE;
+  // Search closest marker to touch position
+  for (t = 0; t < TRACES_MAX; t++) {
+    if (!trace[t].enabled)
       continue;
-
-    for (t = 0; t < TRACES_MAX; t++) {
-      int x, y;
-      if (!trace[t].enabled)
+    for (m = 0; m < MARKERS_MAX; m++) {
+      if (!markers[m].enabled)
         continue;
-
-      marker_position(m, t, &x, &y);
-      x -= touch_x;
-      y -= touch_y;
-      if ((x * x + y * y) < 20 * 20) {
-        if (active_marker != m) {
-          previous_marker = active_marker;
-          active_marker = m;
-          redraw_marker(active_marker);
-        }
-        // select trace
-        uistat.current_trace = t;
-        select_lever_mode(LM_MARKER);
-        markers[m].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
-        // drag marker until release
-        drag_marker(t, m);
-        return TRUE;
+      // Get distance to marker from touch point
+      int dist = distance_to_index(t, markers[m].index, touch_x, touch_y);
+      if (dist < min_dist) {
+        min_dist = dist;
+        i  = m;
+        mt = t;
       }
     }
   }
-
-  return FALSE;
+  // Marker not found
+  if (i == MARKER_INVALID)
+    return FALSE;
+  // Marker found, set as active and start drag it
+  if (active_marker != i) {
+    previous_marker = active_marker;
+    active_marker = i;
+  }
+  // Disable tracking
+  markers[i].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
+  // Leveler mode = marker move
+  select_lever_mode(LM_MARKER);
+  // select trace
+  uistat.current_trace = mt;
+  // drag marker until release
+  drag_marker(mt, i);
+  return TRUE;
 }
 
 static int touch_quick_menu(void)

@@ -1369,29 +1369,23 @@ markmap_all_markers(void)
   markmap_upperarea();
 }
 
-void
-marker_position(int m, int t, int *x, int *y)
+int
+distance_to_index(int8_t t, uint16_t idx, int16_t x, int16_t y)
 {
-  index_t index = trace_index[t][markers[m].index];
-  *x = CELL_X(index);
-  *y = CELL_Y(index);
+  index_t *index = trace_index[t];
+  x-= CELL_X(index[idx]);
+  y-= CELL_Y(index[idx]);
+  return x*x + y*y;
 }
 
 int
 search_nearest_index(int x, int y, int t)
 {
-  index_t *index = trace_index[t];
   int min_i = -1;
-  int min_d = 1000;
+  int min_d = MARKER_PICKUP_DISTANCE * MARKER_PICKUP_DISTANCE;
   int i;
   for (i = 0; i < sweep_points; i++) {
-    int16_t dx = x - CELL_X(index[i]);
-    int16_t dy = y - CELL_Y(index[i]);
-    if (dx < 0) dx = -dx;
-    if (dy < 0) dy = -dy;
-    if (dx > 20 || dy > 20)
-      continue;
-    int d = dx*dx + dy*dy;
+    int d = distance_to_index(t, i, x , y);
     if (d < min_d) {
       min_d = d;
       min_i = i;

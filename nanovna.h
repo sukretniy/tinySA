@@ -437,6 +437,9 @@ extern uint16_t graph_bottom;
 
 #define GRID_X_TEXT       (AREA_WIDTH_NORMAL - 7*5)
 
+// Marker start drag distance (can be bigger for various display resolution)
+#define MARKER_PICKUP_DISTANCE 20
+
 // Smith/polar chart
 //#define P_CENTER_X (CELLOFFSETX + WIDTH/2)
 //#define P_CENTER_Y (HEIGHT/2)
@@ -697,7 +700,7 @@ void draw_cal_status(void);
 
 //void markmap_all_markers(void);
 
-void marker_position(int m, int t, int *x, int *y);
+int distance_to_index(int8_t t, uint16_t idx, int16_t x, int16_t y);
 int search_nearest_index(int x, int y, int t);
 
 int marker_search_max(void);
