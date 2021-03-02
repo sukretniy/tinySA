@@ -459,8 +459,8 @@ extern uint16_t graph_bottom;
 // Num Input height at bottom
 #define NUM_INPUT_HEIGHT   32
 
-extern int16_t area_width;
-extern int16_t area_height;
+extern uint16_t area_width;
+extern uint16_t area_height;
 
 // Define marker size (can be 0 or 1)
 #ifdef TINYSA3

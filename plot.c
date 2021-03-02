@@ -46,8 +46,8 @@ static int16_t grid_offset;
 static int16_t grid_width;
 static freq_t grid_span;
 
-int16_t area_width  = AREA_WIDTH_NORMAL;
-int16_t area_height; // initialized in main()  = AREA_HEIGHT_NORMAL;
+uint16_t area_width  = AREA_WIDTH_NORMAL;
+uint16_t area_height; // initialized in main()  = AREA_HEIGHT_NORMAL;
 
 // Cell render use spi buffer
 typedef uint16_t pixel_t;
@@ -1532,9 +1532,9 @@ draw_cell(int m, int n)
   int t;
   uint16_t c;
   // Clip cell by area
-  if (x0 + w > area_width)
+  if (w > area_width - x0)
     w = area_width - x0;
-  if (y0 + h > area_height)
+  if (h > area_height - y0)
     h = area_height - y0;
   if (w <= 0 || h <= 0)
     return;
