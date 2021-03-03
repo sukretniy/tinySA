@@ -107,6 +107,8 @@
 #define TRACE_ACTUAL    2
 #define TRACE_STORED    1
 #define TRACE_TEMP      0
+#define TRACE_INVALID  -1
+
 // #define age_t     measured[TRACE_AGE]
 #define stored_t  measured[TRACE_STORED]
 #define actual_t  measured[TRACE_ACTUAL]
@@ -435,6 +437,9 @@ extern uint16_t graph_bottom;
 
 #define GRID_X_TEXT       (AREA_WIDTH_NORMAL - 7*5)
 
+// Marker start drag distance (can be bigger for various display resolution)
+#define MARKER_PICKUP_DISTANCE 20
+
 // Smith/polar chart
 //#define P_CENTER_X (CELLOFFSETX + WIDTH/2)
 //#define P_CENTER_Y (HEIGHT/2)
@@ -459,8 +464,8 @@ extern uint16_t graph_bottom;
 // Num Input height at bottom
 #define NUM_INPUT_HEIGHT   32
 
-extern int16_t area_width;
-extern int16_t area_height;
+extern uint16_t area_width;
+extern uint16_t area_height;
 
 // Define marker size (can be 0 or 1)
 #ifdef TINYSA3
@@ -672,6 +677,7 @@ typedef struct {
 } marker_t;
 
 #define MARKERS_MAX 4
+#define MARKER_INVALID -1
 
 extern int8_t previous_marker;
 extern int8_t marker_tracking;
@@ -694,13 +700,10 @@ void draw_cal_status(void);
 
 //void markmap_all_markers(void);
 
-void marker_position(int m, int t, int *x, int *y);
+int distance_to_index(int8_t t, uint16_t idx, int16_t x, int16_t y);
 int search_nearest_index(int x, int y, int t);
-void set_marker_search(int mode);
-int marker_search(void);
+
 int marker_search_max(void);
-int marker_search_left(int from);
-int marker_search_right(int from);
 int marker_search_left_max(int from);
 int marker_search_right_max(int from);
 int marker_search_left_min(int from);

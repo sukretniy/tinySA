@@ -66,7 +66,7 @@ static uint32_t last_button_repeat_ticks;
 
 volatile uint8_t operation_requested = OP_NONE;
 
-int8_t previous_marker = -1;
+int8_t previous_marker = MARKER_INVALID;
 
 enum {
   UI_NORMAL, UI_MENU, UI_KEYPAD
@@ -81,7 +81,6 @@ enum {
 #define NUMINPUT_LEN 10
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
-static uint8_t keypads_last_index;
 static char    kp_buf[NUMINPUT_LEN+1];
 static int8_t  kp_index = 0;
 static char   *kp_help_text = NULL;
@@ -858,7 +857,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
     break;
   case 3: /* MARKERS->SPAN */
     {
-      if (previous_marker == -1 || active_marker == previous_marker) {
+      if (previous_marker == MARKER_INVALID || active_marker == previous_marker) {
         // if only 1 marker is active, keep center freq and make span the marker comes to the edge
         freq_t center = get_sweep_frequency(ST_CENTER);
         freq_t span = center > freq ? center - freq : freq - center;
@@ -905,7 +904,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
 {
   (void)item;
   int i = -1;
-  if (active_marker == -1)
+  if (active_marker == MARKER_INVALID)
     return;
   markers[active_marker].mtype &= ~M_TRACKING;
   switch (data) {
@@ -915,13 +914,6 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   case 1: /* search right */
     i = marker_search_right_min(markers[active_marker].index);
     break;
-#if 0
-  case 0: /* maximum */
-  case 1: /* minimum */
-    set_marker_search(data);
-    i = marker_search();
-    break;
-#endif
   case 2: /* search Left */
     i = marker_search_left_max(markers[active_marker].index);
     break;
@@ -939,7 +931,6 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
     else
       markers[active_marker].frequency = frequencies[i];
   }
-  draw_menu();
   redraw_marker(active_marker);
 //  if (data == 4)
     select_lever_mode(LM_MARKER);   // Allow any position with level
@@ -950,13 +941,12 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb){
   (void)item;
   (void)data;
-  if (active_marker == -1) return;
+  if (active_marker == MARKER_INVALID) return;
   if(b){
     b->icon = markers[active_marker].mtype & M_TRACKING ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     return;
   }
   markers[active_marker].mtype ^= M_TRACKING;
-  draw_menu();
 }
 
 #ifdef __VNA__
@@ -975,8 +965,8 @@ active_marker_select(int item)  // used only to select an active marker from the
 {
   if (item == -1) {
     active_marker = previous_marker;
-    previous_marker = -1;
-    if (active_marker == -1) {
+    previous_marker = MARKER_INVALID;
+    if (active_marker == MARKER_INVALID) {
       choose_active_marker();
     }
   } else {
@@ -1292,8 +1282,6 @@ menu_move_back(void)
     redraw_request |= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
-
-  draw_menu();
 }
 
 static void
@@ -1328,7 +1316,6 @@ menu_push_submenu(const menuitem_t *submenu)
 //    request_to_redraw_grid();
     area_width = AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH;
   }
-  draw_menu();
 }
 
 void
@@ -1415,6 +1402,9 @@ menu_invoke(int item)
     redraw_request |= REDRAW_CAL_STATUS;
     break;
   }
+  // Redraw menu after if UI in menu mode
+  if (ui_mode == UI_MENU)
+    draw_menu();
 }
 
 #ifdef __VNA__
@@ -1604,11 +1594,10 @@ draw_numeric_input(const char *buf)
 {
   int i;
   int x;
-  int focused = FALSE;
   uint16_t xsim = 0b0010010000000000;
 
-  uint16_t fg = LCD_INPUT_TEXT_COLOR;
-  uint16_t bg = LCD_INPUT_BG_COLOR;
+  ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
+  ili9341_set_background(LCD_INPUT_BG_COLOR);
   for (i = 0, x = 64; i < 10 && buf[i]; i++, xsim<<=1) {
     int c = buf[i];
     if (c == '.')
@@ -1618,23 +1607,16 @@ draw_numeric_input(const char *buf)
     else// if (c >= '0' && c <= '9')
       c = c - '0';
 
-    ili9341_set_foreground(fg);
-    ili9341_set_background(bg);
     if (c >= 0) // c is number
       ili9341_drawfont(c, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
-    else if (focused) // c not number, but focused
-      ili9341_drawfont(0, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
     else // erase
-      ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_WIDTH+2+8);
+      break;
 
     x += xsim&0x8000 ? NUM_FONT_GET_WIDTH+2+8 : NUM_FONT_GET_WIDTH+2;
   }
   // erase last
-//  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, NUM_FONT_GET_WIDTH+2+8, NUM_FONT_GET_WIDTH+2+8, config.menu_normal_color);
   ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-x-1, NUM_FONT_GET_WIDTH+2+8);
   if (buf[0] == 0 && kp_help_text != NULL) {
-    ili9341_set_foreground(fg);
-    ili9341_set_background(bg);
     int  lines = menu_is_multiline(kp_help_text);
     ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(lines*bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   }
@@ -2154,13 +2136,11 @@ nogo:
 
 
 static void
-menu_apply_touch(void)
+menu_apply_touch(int touch_x, int touch_y)
 {
-  int touch_x, touch_y;
   const menuitem_t *menu = menu_stack[menu_current_level];
   int i;
   int y = 0;
-  touch_position(&touch_x, &touch_y);
   for (i = 0; i < MENU_BUTTON_MAX; i++) {
     if (menuDisabled(menu[i].type))            //not applicable to mode
       continue;
@@ -2391,7 +2371,7 @@ lever_move_marker(int status)
     }
     status = btn_wait_release();
   } while (status != 0);
-  if (active_marker >= 0)
+  if (active_marker != MARKER_INVALID)
     redraw_marker(active_marker);
 }
 
@@ -2399,7 +2379,7 @@ static void
 lever_search_marker(int status)
 {
   int i = -1;
-  if (active_marker >= 0) {
+  if (active_marker != MARKER_INVALID) {
     if (status & EVT_DOWN)
       i = marker_search_left_max(markers[active_marker].index);
     else if (status & EVT_UP)
@@ -2776,51 +2756,52 @@ drag_marker(int t, int m)
 }
 
 static int
-touch_pickup_marker(void)
+touch_pickup_marker(int touch_x, int touch_y)
 {
-  int touch_x, touch_y;
   int m, t;
-  touch_position(&touch_x, &touch_y);
   touch_x -= OFFSETX;
   touch_y -= OFFSETY;
 
-  for (m = 0; m < MARKERS_MAX; m++) {
-    if (!markers[m].enabled)
+  int i = MARKER_INVALID, mt;
+  int min_dist = MARKER_PICKUP_DISTANCE * MARKER_PICKUP_DISTANCE;
+  // Search closest marker to touch position
+  for (t = 0; t < TRACES_MAX; t++) {
+    if (!trace[t].enabled)
       continue;
-
-    for (t = 0; t < TRACES_MAX; t++) {
-      int x, y;
-      if (!trace[t].enabled)
+    for (m = 0; m < MARKERS_MAX; m++) {
+      if (!markers[m].enabled)
         continue;
-
-      marker_position(m, t, &x, &y);
-      x -= touch_x;
-      y -= touch_y;
-      if ((x * x + y * y) < 20 * 20) {
-        if (active_marker != m) {
-          previous_marker = active_marker;
-          active_marker = m;
-          redraw_marker(active_marker);
-        }
-        // select trace
-        uistat.current_trace = t;
-        select_lever_mode(LM_MARKER);
-        markers[m].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
-        // drag marker until release
-        drag_marker(t, m);
-        return TRUE;
+      // Get distance to marker from touch point
+      int dist = distance_to_index(t, markers[m].index, touch_x, touch_y);
+      if (dist < min_dist) {
+        min_dist = dist;
+        i  = m;
+        mt = t;
       }
     }
   }
-
-  return FALSE;
+  // Marker not found
+  if (i == MARKER_INVALID)
+    return FALSE;
+  // Marker found, set as active and start drag it
+  if (active_marker != i) {
+    previous_marker = active_marker;
+    active_marker = i;
+  }
+  // Disable tracking
+  markers[i].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
+  // Leveler mode = marker move
+  select_lever_mode(LM_MARKER);
+  // select trace
+  uistat.current_trace = mt;
+  // drag marker until release
+  drag_marker(mt, i);
+  return TRUE;
 }
 
-static int touch_quick_menu(void)
+static int touch_quick_menu(int touch_x, int touch_y)
 {
-  int touch_x, touch_y;
-  touch_position(&touch_x, &touch_y);
-  if (ui_mode != UI_KEYPAD && touch_x <OFFSETX)
+  if (touch_x <OFFSETX)
   {
     touch_wait_release();
     return invoke_quick_menu(touch_y);
@@ -2829,10 +2810,8 @@ static int touch_quick_menu(void)
 }
 
 static int
-touch_lever_mode_select(void)
+touch_lever_mode_select(int touch_x, int touch_y)
 {
-  int touch_x, touch_y;
-  touch_position(&touch_x, &touch_y);
   if (touch_y > HEIGHT) {
     if (touch_x < FREQUENCIES_XPOS2 -50 && uistat.lever_mode == LM_CENTER) {
       touch_wait_release();
@@ -2885,11 +2864,9 @@ touch_lever_mode_select(void)
 }
 
 static int
-touch_marker_select(void)
+touch_marker_select(int touch_x, int touch_y)
 {
   int selected_marker = 0;
-  int touch_x, touch_y;
-  touch_position(&touch_x, &touch_y);
   if (current_menu_is_form() || touch_x > LCD_WIDTH-MENU_BUTTON_WIDTH || touch_x < 25 || touch_y > 30)
     return FALSE;
   if (touch_y > 15)
@@ -2933,20 +2910,21 @@ void ui_process_touch(void)
 {
 //  awd_count++;
   adc_stop();
-
+  int touch_x, touch_y;
   int status = touch_check();
   if (status == EVT_TOUCH_PRESSED || status == EVT_TOUCH_DOWN) {
+    touch_position(&touch_x, &touch_y);
     switch (ui_mode) {
     case UI_NORMAL:
-      if (touch_quick_menu())
+      if (touch_quick_menu(touch_x, touch_y))
         break;
       // Try drag marker
-      if (touch_pickup_marker())
+      if (touch_pickup_marker(touch_x, touch_y))
         break;
-      if (touch_marker_select())
+      if (touch_marker_select(touch_x, touch_y))
         break;
       // Try select lever mode (top and bottom screen)
-      if (touch_lever_mode_select()) {
+      if (touch_lever_mode_select(touch_x, touch_y)) {
 //        touch_wait_release();
         break;
       }
@@ -2958,7 +2936,7 @@ void ui_process_touch(void)
       ui_mode_menu();
       break;
     case UI_MENU:
-      menu_apply_touch();
+      menu_apply_touch(touch_x, touch_y);
       break;
     }
   }

@@ -46,8 +46,8 @@ static int16_t grid_offset;
 static int16_t grid_width;
 static freq_t grid_span;
 
-int16_t area_width  = AREA_WIDTH_NORMAL;
-int16_t area_height; // initialized in main()  = AREA_HEIGHT_NORMAL;
+uint16_t area_width  = AREA_WIDTH_NORMAL;
+uint16_t area_height; // initialized in main()  = AREA_HEIGHT_NORMAL;
 
 // Cell render use spi buffer
 typedef uint16_t pixel_t;
@@ -1369,125 +1369,23 @@ markmap_all_markers(void)
   markmap_upperarea();
 }
 
-void
-marker_position(int m, int t, int *x, int *y)
-{
-  index_t index = trace_index[t][markers[m].index];
-  *x = CELL_X(index);
-  *y = CELL_Y(index);
-}
-
-static int greater(int x, int y, int d) { return x - d > y; }
-static int lesser(int x, int y, int d) { return x - d < y; }
-
-static int (*compare)(int x, int y, int d) = greater;
-
 int
-marker_search(void)
+distance_to_index(int8_t t, uint16_t idx, int16_t x, int16_t y)
 {
-  int i;
-  int found = 0;
-
-  if (uistat.current_trace == -1)
-    return -1;
-
-  int value = CELL_Y(trace_index[TRACE_ACTUAL][0]);
-  for (i = 0; i < sweep_points; i++) {
-    int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(value, new_value, 0)) {
-      value = new_value;
-      found = i;
-    }
-  }
-
-  return found;
-}
-
-void
-set_marker_search(int mode)
-{
-  compare = (mode == 0) ? greater : lesser;
-}
-
-int
-search_is_greater(void)
-{
-  return(compare == greater);
-}
-
-#define MINMAX_DELTA    10
-
-int
-marker_search_left(int from)
-{
-  int i;
-  int found = -1;
-  if (uistat.current_trace == -1)
-    return -1;
-
-  int value = CELL_Y(trace_index[TRACE_ACTUAL][from]);
-  for (i = from - 1; i >= 0; i--) {
-    int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(value, new_value, MINMAX_DELTA))
-      break;
-  }
-
-  for (; i >= 0; i--) {
-    int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(new_value, value, -MINMAX_DELTA)) {
-      break;
-    }
-    if ((*compare)(value, new_value, 0)) {
-      found = i;
-      value = new_value;
-    }
-  }
-  return found;
-}
-
-int
-marker_search_right(int from)
-{
-  int i;
-  int found = -1;
-
-  if (uistat.current_trace == -1)
-    return -1;
-  int value = CELL_Y(trace_index[TRACE_ACTUAL][from]);
-  for (i = from + 1; i < sweep_points; i++) {
-    int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(value, new_value, MINMAX_DELTA))
-      break;
-    value = new_value;
-  }
-  for (; i < sweep_points; i++) {
-    int new_value = CELL_Y(trace_index[TRACE_ACTUAL][i]);
-    if ((*compare)(new_value, value, -MINMAX_DELTA)) {
-      break;
-    }
-    if ((*compare)(value, new_value, 0)) {
-      found = i;
-      value = new_value;
-    }
-  }
-  return found;
+  index_t *index = trace_index[t];
+  x-= CELL_X(index[idx]);
+  y-= CELL_Y(index[idx]);
+  return x*x + y*y;
 }
 
 int
 search_nearest_index(int x, int y, int t)
 {
-  index_t *index = trace_index[t];
   int min_i = -1;
-  int min_d = 1000;
+  int min_d = MARKER_PICKUP_DISTANCE * MARKER_PICKUP_DISTANCE;
   int i;
   for (i = 0; i < sweep_points; i++) {
-    int16_t dx = x - CELL_X(index[i]);
-    int16_t dy = y - CELL_Y(index[i]);
-    if (dx < 0) dx = -dx;
-    if (dy < 0) dy = -dy;
-    if (dx > 20 || dy > 20)
-      continue;
-    int d = dx*dx + dy*dy;
+    int d = distance_to_index(t, i, x , y);
     if (d < min_d) {
       min_d = d;
       min_i = i;
@@ -1532,9 +1430,9 @@ draw_cell(int m, int n)
   int t;
   uint16_t c;
   // Clip cell by area
-  if (x0 + w > area_width)
+  if (w > area_width - x0)
     w = area_width - x0;
-  if (y0 + h > area_height)
+  if (h > area_height - y0)
     h = area_height - y0;
   if (w <= 0 || h <= 0)
     return;
