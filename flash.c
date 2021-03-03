@@ -136,7 +136,10 @@ caldata_save(uint16_t id)
   setting.magic = CONFIG_MAGIC;
   setting.checksum = 0x12345678;
   setting.checksum = checksum(
-      &setting, (sizeof (setting)) - sizeof setting.checksum);
+      &setting,
+//      (sizeof (setting)) - sizeof setting.checksum
+      (void *)&setting.checksum - (void *) &setting
+      );
 
   flash_unlock();
 
@@ -183,7 +186,10 @@ caldata_recall(uint16_t id)
   if (src->magic != CONFIG_MAGIC)
     return -1;
 //  if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("Checksum %x\r\n", src->checksum);
-  if (checksum(src, (sizeof (setting)) - sizeof src->checksum) != src->checksum)
+  if (checksum(src,
+//               (sizeof (setting)) - sizeof src->checksum
+               (void *)&setting.checksum - (void *) &setting
+               ) != src->checksum)
     return -1;
 
   /* active configuration points to save data on flash memory */
