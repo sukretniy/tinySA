@@ -135,6 +135,9 @@ typedef struct {
 #define EVT_TOUCH_PRESSED  2
 #define EVT_TOUCH_RELEASED 3
 #define EVT_TOUCH_LONGPRESS 4
+
+#define TOUCH_INTERRUPT_ENABLED   1
+static uint8_t touch_status_flag = 0;
 static int8_t last_touch_status = EVT_TOUCH_NONE;
 static int16_t last_touch_x;
 static int16_t last_touch_y;
@@ -220,9 +223,15 @@ static int btn_wait_release(void)
   }
 }
 
+
+#define SOFTWARE_TOUCH
+//*******************************************************************************
+// Software Touch module
+//*******************************************************************************
+#ifdef SOFTWARE_TOUCH
 // ADC read count for measure X and Y (2^N count)
-#define TOUCH_X_N 4
-#define TOUCH_Y_N 3
+#define TOUCH_X_N 2
+#define TOUCH_Y_N 2
 static int
 touch_measure_y(void)
 {
@@ -260,8 +269,14 @@ touch_measure_x(void)
   do{v+=adc_single_read(ADC_TOUCH_X);}while(--cnt);
   return v>>TOUCH_X_N;
 }
+// Manually measure touch event
+static inline int
+touch_status(void)
+{
+  return adc_single_read(ADC_TOUCH_Y) > TOUCH_THRESHOLD;
+}
 
-void
+static void
 touch_prepare_sense(void)
 {
   // Set Y line as input
@@ -277,35 +292,54 @@ touch_prepare_sense(void)
 //  chThdSleepMilliseconds(10); // Wait 10ms for denounce touch
 }
 
-void
+static void
 touch_start_watchdog(void)
 {
-  touch_prepare_sense();
-#ifdef TINYSA4
-  adc_start_analog_watchdogd();
-#else
-  adc_start_analog_watchdogd(ADC_TOUCH_Y);
-#endif
+  if (touch_status_flag&TOUCH_INTERRUPT_ENABLED) return;
+  touch_status_flag^=TOUCH_INTERRUPT_ENABLED;
+  adc_start_analog_watchdog();
 }
 
-static inline int
-touch_status(void)
+static void
+touch_stop_watchdog(void)
 {
-  return adc_single_read(ADC_TOUCH_Y) > TOUCH_THRESHOLD;
+  if (!(touch_status_flag&TOUCH_INTERRUPT_ENABLED)) return;
+  touch_status_flag^=TOUCH_INTERRUPT_ENABLED;
+  adc_stop_analog_watchdog();
 }
 
+// Touch panel timer check (check press frequency 20Hz)
+static const GPTConfig gpt3cfg = {
+  20,     // 200Hz timer clock. 200/10 = 20Hz touch check
+  NULL,   // Timer callback.
+  0x0020, // CR2:MMS=02 to output TRGO
+  0
+};
+
+//
+// Touch init function init timer 3 trigger adc for check touch interrupt, and run measure
+//
+static void touch_init(void){
+  // Prepare pin for measure touch event
+  touch_prepare_sense();
+  // Start touch interrupt, used timer_3 ADC check threshold:
+  gptStart(&GPTD3, &gpt3cfg);         // Init timer 3
+  gptStartContinuous(&GPTD3, 10);     // Start timer 3 vs timer 10 interval
+  touch_start_watchdog();             // Start ADC watchdog (measure by timer 3 interval and trigger interrupt if touch pressed)
+}
+
+// Main software touch function, should:
+// set last_touch_x and last_touch_x
+// return touch status
 static int
 touch_check(void)
 {
+  touch_stop_watchdog();
+
   int stat = touch_status();
   if (stat) {
-    static int prev_x=0;
     int y = touch_measure_y();
     int x = touch_measure_x();
-#define X_NOISE 5
-    if (x > prev_x - X_NOISE && x < prev_x + X_NOISE)    // avoid noise
-      x = prev_x;
-    prev_x = x;
     touch_prepare_sense();
     if (touch_status())
     {
@@ -321,10 +355,8 @@ touch_check(void)
       last_touch_x = mouse_x;
       last_touch_y = mouse_y;
     }
+#endif
   }
-#else
-  }
-#endif  
   #if 0                                           // Long press detection
   systime_t ticks = chVTGetSystemTimeX();
 
@@ -341,6 +373,10 @@ touch_check(void)
   }
   return stat ? EVT_TOUCH_DOWN : EVT_TOUCH_NONE;
 }
+//*******************************************************************************
+// End Software Touch module
+//*******************************************************************************
+#endif // end SOFTWARE_TOUCH
 
 void
 touch_wait_release(void)
@@ -368,8 +404,6 @@ void
 touch_cal_exec(void)
 {
   int x1, x2, y1, y2;
-
-  adc_stop();
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_clear_screen();
@@ -401,7 +435,6 @@ touch_cal_exec(void)
   config_save();            // Auto save touch calibration
 
   //redraw_all();
-  touch_start_watchdog();
 }
 
 void
@@ -409,8 +442,6 @@ touch_draw_test(void)
 {
   int x0, y0;
   int x1, y1;
-  
-  adc_stop();
 
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
@@ -441,7 +472,6 @@ touch_draw_test(void)
       } while (touch_check() != EVT_TOUCH_RELEASED);
     }
   }while (!(btn_check() & EVT_BUTTON_SINGLE_CLICK));
-  touch_start_watchdog();
 }
 
 
@@ -461,7 +491,6 @@ void
 show_version(void)
 {
   int x = 5, y = 5, i = 0;
-  adc_stop();
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
 
@@ -522,21 +551,17 @@ extern const char *states[];
       (RCC->BDCR & STM32_RTCSEL_MASK) == STM32_RTCSEL_LSE ? 'E' : 'I');
     ili9341_drawstring(buffer, x, y);
 #endif
-#if 1
+#if 0
     uint32_t vbat=adc_vbat_read();
     plot_printf(buf, sizeof(buf), "Batt: %d.%03dV", vbat/1000, vbat%1000);
     ili9341_drawstring(buf, x, y + FONT_STR_HEIGHT + 2);
 #endif
   }
-
-  touch_start_watchdog();
 }
 
 void
 enter_dfu(void)
 {
-  adc_stop();
-
   int x = 5, y = 5;
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
@@ -2692,8 +2717,6 @@ static void
 ui_process_keypad(void)
 {
   int status;
-  adc_stop();
-
   kp_index = 0;
   while (TRUE) {
     status = btn_check();
@@ -2735,7 +2758,6 @@ ui_process_keypad(void)
 //  request_to_redraw_grid();
   }
   //redraw_all();
-  touch_start_watchdog();
 }
 
 static void
@@ -2926,8 +2948,6 @@ touch_marker_select(int touch_x, int touch_y)
 static
 void ui_process_touch(void)
 {
-//  awd_count++;
-  adc_stop();
   int touch_x, touch_y;
   int status = touch_check();
   if (status == EVT_TOUCH_PRESSED || status == EVT_TOUCH_DOWN) {
@@ -2958,7 +2978,6 @@ void ui_process_touch(void)
       break;
     }
   }
-  touch_start_watchdog();
 }
 
 static int previous_button_state = 0;
@@ -2989,6 +3008,7 @@ ui_process(void)
     ui_process_touch();
 	operation_requested = OP_NONE;
   }
+  touch_start_watchdog();
 }
 
 /* Triggered when the button is pressed or released. The LED4 is set to ON.*/
@@ -3028,27 +3048,6 @@ static const EXTConfig extcfg = {
   }
 };
 
-// Used for touch check interval
-static const GPTConfig gpt3cfg = {
-  20,     /* 20Hz timer clock.*/
-  NULL,   /* Timer callback.*/
-  0x0020, /* CR2:MMS=02 to output TRGO */
-  0
-};
-
-#if 0
-static void
-test_touch(int *x, int *y)
-{
-  adc_stop(ADC1);
-
-  *x = touch_measure_x();
-  *y = touch_measure_y();
-
-  touch_start_watchdog();
-}
-#endif
-
 void
 handle_touch_interrupt(void)
 {
@@ -3059,25 +3058,14 @@ void
 ui_init()
 {
   adc_init();
-
-  /*
-   * Activates the EXT driver 1.
-   */
-
+  // Activates the EXT driver 1.
   extStart(&EXTD1, &extcfg);
-#if 1
-  gptStart(&GPTD3, &gpt3cfg);
-  gptPolledDelay(&GPTD3, 10); /* Small delay.*/
-
-  gptStartContinuous(&GPTD3, 10);
-#endif
-
-  touch_start_watchdog();
+  // Init touch subsystem
+  touch_init();
 }
 
 void wait_user(void)
 {
-  adc_stop();
   touch_wait_released();
 #if 0
   operation_requested = OP_NONE;
@@ -3088,16 +3076,13 @@ void wait_user(void)
       break;
   }
 #endif
-  touch_start_watchdog();
 }
 
 int check_touched(void)
 {
   int touched = false;
-  adc_stop();
   if (touch_check() == EVT_TOUCH_RELEASED)
     touched = true;
-  touch_start_watchdog();
   return touched;
 }
 
