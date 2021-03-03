@@ -2517,16 +2517,19 @@ const char * const unit_string[] = { "dBm", "dBmV", "dB"S_MICRO"V", "V", "W", "d
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
 
+// Quick menu
 #define MAX_QUICK_MENU  20
-uint8_t  quick_menu_y[MAX_QUICK_MENU];
-menuitem_t  *quick_menu[MAX_QUICK_MENU];
-int max_quick_menu = 0;
+enum { ITEM_NO_SPACE = 0, ITEM_NORMAL_SPACE= 1, ITEM_DOUBLE_SPACE = 2 };
+static uint16_t    quick_menu_y[MAX_QUICK_MENU];
+static menuitem_t  *quick_menu[MAX_QUICK_MENU];
+static uint8_t max_quick_menu = 0;
+static uint8_t item_space = ITEM_NORMAL_SPACE;
 
 int invoke_quick_menu(int y)
 {
-  int i=0;
-  while (i < max_quick_menu) {
-    if (y < quick_menu_y[i] && quick_menu[i] != NULL) {
+  int i;
+  for (i = 0; i < max_quick_menu;i++) {
+    if (y < quick_menu_y[i]) {
       if ((uint32_t)quick_menu[i] < KM_NONE) {
         ui_mode_keypad((int)quick_menu[i]);
         ui_process_keypad();
@@ -2534,18 +2537,14 @@ int invoke_quick_menu(int y)
         selection = -1;
         menu_current_level = 0;
         menu_push_submenu(quick_menu[i]);
+        draw_menu();
       }
       return TRUE;
     }
-    i++;
   }
   return FALSE;
 }
 #define YSTEP   8
-
-enum { ITEM_NO_SPACE = 0, ITEM_NORMAL_SPACE= 1, ITEM_DOUBLE_SPACE = 2 };
-
-int item_space = ITEM_NORMAL_SPACE;
 
 int add_quick_menu(char *buf, int x, int y, menuitem_t *menu)
 {
