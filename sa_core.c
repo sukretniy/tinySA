@@ -190,6 +190,7 @@ void reset_settings(int m)
   setting.auto_attenuation = false;
   setting.subtract_stored = false;
   setting.normalize_level = 0.0;
+  setting.waterfall = W_OFF;
 #ifdef TINYSA4
   setting.lo_drive=1;
 #else
@@ -614,7 +615,7 @@ void set_auto_attenuation(void)
   dirty = true;
 }
 
-void set_auto_reflevel(int v)
+void set_auto_reflevel(bool v)
 {
   setting.auto_reflevel = v;
 }

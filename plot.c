@@ -31,7 +31,6 @@
 #ifdef __SCROLL__
 uint16_t _grid_y = (CHART_BOTTOM / NGRIDY);
 uint16_t graph_bottom = CHART_BOTTOM;
-static int waterfall = false;
 #endif
 static void cell_draw_marker_info(int x0, int y0);
 static void cell_grid_line_info(int x0, int y0);
@@ -517,7 +516,7 @@ draw_on_strut(int v0, int d, int color)
 #define SQRT_50 ((float)7.0710678118654)
 #define LOG_10_SQRT_50 ((float)0.84948500216800)
 #define POW_30_20   ((float) 0.215443469)
-#define POW_SQRT    ((float)1.5234153789)
+#define POW_SQRT    ((float)0.2236067950725555419921875)
 #define LOG_10_SQRT_50_x20_plus30 ((float)46.98970004336)
 #define LOG_10_SQRT_50_x20_plus90 ((float)106.98970004336)
 
@@ -538,20 +537,20 @@ value(const float v)
   switch(setting.unit)
   {
   case U_DBMV:
-//    return v + 30.0 + 20.0*log10f(sqrt(50));
+//    return v + 30.0 + 20.0*log10f(sqrtf(50));
     return v + LOG_10_SQRT_50_x20_plus30; // + 30.0 + 20.0*LOG_10_SQRT_50;     //TODO convert constants to single float number as GCC compiler does runtime calculation
     break;
   case U_DBUV:
-//    return v + 90.0 + 20.0*log10f(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
+//    return v + 90.0 + 20.0*log10f(sqrtf(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
     return v + LOG_10_SQRT_50_x20_plus90; // 90.0 + 20.0*LOG_10_SQRT_50;
     break;
   case U_VOLT:
-//  return powf(10, (v-30.0)/20.0) * sqrt((float)50.0);
-    return powf((float)10.0, (v-(float)30.0)/(float)20.0)*SQRT_50;  // Do NOT change pow to powf as this will increase the size
-//    return pow(10, v/20.0) * POW_SQRT;      //TODO there is an error in this calculation as the outcome is different from the not optimized version
+//    return powf(10.0, (v-30.0)/20.0) * sqrtf(50.0);
+//    return powf(10.0, (v-30.0)/20.0) * SQRT_50;  //
+    return powf(10.0, v/20) * POW_SQRT;      //  powf(10.0,v/20.0) * powf(10, -30.0/20.0) * sqrtf(50)
     break;
   case U_WATT:
-    return powf((float)10.0, v/10.0)/1000.0;  // Do NOT change pow to powf as this will increase the size
+    return powf((float)10.0, v/10.0)/1000.0;  // 
     break;
   }
 //  case U_DBM:
@@ -565,16 +564,16 @@ to_dBm(const float v)
   switch(setting.unit)
   {
   case U_DBMV:
-//  return v - 30.0 - 20.0*log10f(sqrt(50));
+//  return v - 30.0 - 20.0*log10f(sqrtf(50));
     return v - LOG_10_SQRT_50_x20_plus30; // (30.0 + 20.0*LOG_10_SQRT_50);
     break;
   case U_DBUV:
-//  return v - 90.0 - 20.0*log10f(sqrt(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
+//  return v - 90.0 - 20.0*log10f(sqrtf(50.0));     //TODO convert constants to single float number as GCC compiler does runtime calculation
     return v - LOG_10_SQRT_50_x20_plus90; // (90.0 + 20.0*LOG_10_SQRT_50);
     break;
   case U_VOLT:
-//  return log10f( v / (sqrt(50.0))) * 20.0 + 30.0 ;
-    return log10f( v / (SQRT_50)) * 20.0 + 30.0 ;
+//  return log10f( v / (sqrtf(50.0))) * 20.0 + 30.0 ;
+    return log10f( v / SQRT_50) * 20.0 + 30.0 ;
     break;
   case U_WATT:
     return log10f(v*1000.0)*10.0;
@@ -1072,7 +1071,7 @@ mark_cells_from_index(void)
   for (t = 0; t < TRACES_MAX; t++) {
     if (!trace[t].enabled)
       continue;
-    index_t *index = &trace_index[t][0];
+    index_t *index = trace_index[t];
     int m0 = CELL_X(index[0]) / CELLWIDTH;
     int n0 = CELL_Y(index[0]) / CELLHEIGHT;
     map[n0] |= 1 << m0;
@@ -1481,7 +1480,7 @@ draw_cell(int m, int n)
     for (y = 0; y < h; y++) {
       if (rectangular_grid_y(y + y0)) {
         for (x = 0; x < w; x++)
-          if (x + x0 >= CELLOFFSETX && x + x0 <= WIDTH + CELLOFFSETX)
+          if ((uint32_t)(x + x0 - CELLOFFSETX) <= WIDTH)
             cell_buffer[y * CELLWIDTH + x] = c;
       }
     }
@@ -1665,8 +1664,8 @@ draw_all(bool flush)
     draw_all_cells(flush);
 #ifdef __SCROLL__
   //  START_PROFILE
-    if (waterfall)
-      update_waterfall();
+  if (setting.waterfall)
+    update_waterfall();
   //  STOP_PROFILE
 #endif
   }
@@ -2374,26 +2373,25 @@ static void update_waterfall(void){
 
 int get_waterfall(void)
 {
-  return(waterfall);
+  return(setting.waterfall);
 }
-enum {W_OFF, W_SMALL, W_BIG};
 
 void
 toggle_waterfall(void)
 {
-  if (waterfall == W_OFF) {
+  if (setting.waterfall == W_OFF) {
     w_min = (int)min_level;
     w_max = (int)peakLevel;
     if (w_max < w_min + 20)
       w_max = w_min + 20;
     graph_bottom = SMALL_WATERFALL;
-    waterfall = W_SMALL;
-  } else if (waterfall == W_SMALL) {
+    setting.waterfall = W_SMALL;
+  } else if (setting.waterfall == W_SMALL) {
     graph_bottom = BIG_WATERFALL;
-    waterfall = W_BIG;
+    setting.waterfall = W_BIG;
   } else {
     graph_bottom = NO_WATERFALL;
-    waterfall = W_OFF;
+    setting.waterfall = W_OFF;
   }
   _grid_y = graph_bottom / NGRIDY;
   ili9341_set_background(LCD_BG_COLOR);
@@ -2405,7 +2403,7 @@ void
 disable_waterfall(void)
 {
   graph_bottom = NO_WATERFALL;
-  waterfall = W_OFF;
+  setting.waterfall = W_OFF;
   _grid_y = graph_bottom / NGRIDY;
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);

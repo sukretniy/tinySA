@@ -285,7 +285,7 @@ void set_harmonic(int);
 //extern int setting.harmonic;
 int search_is_greater(void);
 void set_auto_attenuation(void);
-void set_auto_reflevel(int);
+void set_auto_reflevel(bool);
 int is_paused(void);
 void set_actual_power(float);
 void SetGenerate(int);
@@ -586,6 +586,7 @@ typedef struct trace {
 
 typedef struct config {
   int32_t magic;
+  uint32_t deviceid;
   uint16_t lcd_palette[MAX_PALETTE];
   int16_t  touch_cal[4];
   uint32_t _serial_speed;
@@ -598,11 +599,10 @@ typedef struct config {
   float high_level_offset;
   float low_level_output_offset;
   float high_level_output_offset;
+  float  low_correction_value[CORRECTION_POINTS];
+  float  high_correction_value[CORRECTION_POINTS];
   freq_t low_correction_frequency[CORRECTION_POINTS];
-  float    low_correction_value[CORRECTION_POINTS];
   freq_t high_correction_frequency[CORRECTION_POINTS];
-  float    high_correction_value[CORRECTION_POINTS];
-  uint32_t deviceid;
 #ifdef TINYSA4
   freq_t  setting_frequency_30mhz;
 #else
@@ -842,87 +842,97 @@ void show_version(void);
 /*
  * flash.c
  */
-
-
 typedef struct setting
 {
   uint32_t magic;
-//  freq_t _frequency0;
-//  freq_t _frequency1;
-  int mode;
+  bool auto_reflevel;          // bool
+  bool auto_attenuation;       // bool
+  bool mirror_masking;         // bool
+  bool subtract_stored;        // bool
+  bool show_stored;            // bool
+  bool tracking_output;        // bool
+  bool mute;                   // bool
+  bool auto_IF;                // bool
+
+  uint8_t mode;                // enum
+  uint8_t below_IF;            // enum
+  uint8_t unit;                // enum
+  uint8_t agc;                 // enum
+  uint8_t lna;                 // enum
+  uint8_t modulation;          // enum
+  uint8_t trigger;             // enum
+  uint8_t trigger_mode;        // enum
+  uint8_t trigger_direction;   // enum
+  uint8_t step_delay_mode;     // enum
+  uint8_t waterfall;           // enum
+  uint8_t average;             // enum
+  uint8_t measurement;         // enum
+  uint8_t spur_removal;        // enum
+
+  int8_t  tracking;            // -1...1 !!! need convert to bool
+  uint8_t atten_step;          //  0...1 !!! need convert to bool
+  int8_t _active_marker;       // -1...MARKER_MAX
+  uint8_t unit_scale_index;    // table index
+  uint8_t repeat;              // 1...100
+  uint8_t noise;               // 2...50
+  uint8_t lo_drive;            // 0-3 , 3dB steps
+  uint8_t rx_drive;            // 0-15 , 7=+20dBm, 3dB steps
+  uint8_t test;                // current test number
+  uint8_t harmonic;            // used harmonic number 1...5
+  uint8_t fast_speedup;        // 0 - 20
+
+  uint16_t linearity_step;     // range equal POINTS_COUNT
   uint16_t _sweep_points;
-  int16_t attenuate_x2;
-  uint8_t auto_attenuation;
-  uint8_t below_IF;
-  int8_t _active_marker;
-  int8_t unit;
-  uint8_t mirror_masking;
-  uint8_t subtract_stored;          // uint8_t increases size
-  uint8_t agc;
-  uint8_t lna;
-  uint8_t auto_reflevel;
-  uint8_t dummy2;
-  int modulation;
-  int show_stored;
-  int atten_step;
-  int test;
-  int harmonic;
+  int16_t attenuate_x2;        // 0...60 !!! in calculation can be < 0
+
+  uint16_t step_delay;         // KM_SAMPLETIME   250...10000, 0=auto
+  uint16_t offset_delay;       // KM_OFFSET_DELAY 250...10000, 0=auto
+
+  uint16_t freq_mode;           //  0...1!!! need convert to bool or bit field
+  int16_t  refer;               // -1 disabled
+
+  uint16_t modulation_frequency;  // 50...6000
+  int decay;                      // KM_DECAY   < 1000000
+  int attack;                     // KM_ATTACK  <   20000
+
+  int32_t  slider_position;
+  uint32_t slider_span;
+
   uint32_t rbw_x10;
-  int average;
-  int lo_drive; // 0-3 , 3dB steps
-  int rx_drive; // 0-15 , 7=+20dBm, 3dB steps
+  uint32_t vbw_x10;
+
   float reflevel;
   float scale;
-  int tracking;
-  int step_delay;
+  float offset;
+  float trigger_level;
+  float level;
+  float level_sweep;
+
+  float unit_scale;
+  float normalize_level;     // Level to set normalize to, zero if not doing anything
+
   freq_t frequency_step;
-  int decay;
-  int attack;
-  int noise;
-  uint32_t vbw_x10;
-  int  tracking_output;
-  int repeat;
   freq_t frequency0;
   freq_t frequency1;
   freq_t frequency_IF;
-  int freq_mode;
-  int measurement;
-  int refer;
-  int spur_removal;
+
   trace_t _trace[TRACES_MAX];
   marker_t _markers[MARKERS_MAX];
-  float offset;
-  float trigger_level;
-  int trigger_direction;
-  int trigger;
-  int linearity_step;
-  float level;
-  float level_sweep;
-  uint32_t sweep_time_us;
+
+  systime_t sweep_time_us;
   systime_t measure_sweep_time_us;
-  uint32_t actual_sweep_time_us;
-  uint32_t additional_step_delay_us;
-  int test_argument;
-  int auto_IF;
-  unsigned int unit_scale_index;
-  float unit_scale;
-  int mute;
-  int step_delay_mode;
-  int offset_delay;
-  int fast_speedup;
-  float normalize_level;     // Level to set normalize to, zero if not doing anything
-  int modulation_frequency;
-  int trigger_mode;
-  int slider_position;
-  int32_t slider_span;
-  freq_t *correction_frequency;
+  systime_t actual_sweep_time_us;
+  systime_t additional_step_delay_us;
+
+  freq_t  *correction_frequency;
   float   *correction_value;
+
 #ifdef TINYSA4
-  int extra_lna;
-  int ultra;
-  int R;
+  bool    extra_lna;
+  uint8_t ultra;    // enum ??
+  int R;            // KM_R
 #endif
-  uint16_t dummy;
+  int test_argument;            // used for tests
   uint32_t checksum;            // must be last and at 4 byte boundary
 }setting_t;
 
@@ -930,12 +940,13 @@ extern setting_t setting;
 
 void reset_settings(int m);
 
-
 #define S_IS_AUTO(x) ((x)&2)
 #define S_STATE(X) ((X)&1)
 enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 
 enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
+
+enum {W_OFF, W_SMALL, W_BIG};
 
 #ifdef __FAST_SWEEP__
 #define MINIMUM_SWEEP_TIME  1800U    // Minimum sweep time on zero span in uS
@@ -1029,7 +1040,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e47 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e48 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
