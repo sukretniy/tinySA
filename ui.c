@@ -143,8 +143,6 @@ static int16_t last_touch_y;
 #define KP_DONE 1
 #define KP_CANCEL 2
 
-void ui_mode_normal(void);
-//static void ui_mode_menu(void);
 static void ui_mode_keypad(int _keypad_mode);
 // static void draw_menu(void);
 static void leave_ui_mode(void);

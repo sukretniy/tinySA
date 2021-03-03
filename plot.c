@@ -150,12 +150,11 @@ void update_grid(void)
   grid_offset = (WIDTH) * ((fstart % grid) / 100) / (fspan / 100);
   grid_width = (WIDTH) * (grid / 100) / (fspan / 1000);
 
-  force_set_markmap();
   if (get_waterfall()){
     ili9341_set_background(LCD_BG_COLOR);
     ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
   }
-  redraw_request |= REDRAW_FREQUENCY;
+  redraw_request |= REDRAW_FREQUENCY | REDRAW_AREA;
 }
 
 #ifdef __VNA__
@@ -1029,13 +1028,6 @@ static float distance_of_index(int idx)
 #endif
 
 static inline void
-mark_map(int x, int y)
-{
-  if (y >= 0 && y < MAX_MARKMAP_Y && x >= 0 && x < MAX_MARKMAP_X)
-    markmap[current_mappage][y] |= 1 << x;
-}
-
-static inline void
 swap_markmap(void)
 {
   current_mappage^= 1;
@@ -1047,24 +1039,27 @@ clear_markmap(void)
   memset(markmap[current_mappage], 0, sizeof markmap[current_mappage]);
 }
 
-void
+static void
 force_set_markmap(void)
 {
   memset(markmap[current_mappage], 0xff, sizeof markmap[current_mappage]);
 }
 
-void
-invalidate_rect(int x0, int y0, int x1, int y1)
+/*
+ * Force region of screen update
+ */
+static void
+invalidate_rect_func(int x0, int y0, int x1, int y1)
 {
-  x0 /= CELLWIDTH;
-  x1 /= CELLWIDTH;
-  y0 /= CELLHEIGHT;
-  y1 /= CELLHEIGHT;
   int x, y;
+  map_t *map = &markmap[current_mappage][0];
   for (y = y0; y <= y1; y++)
-    for (x = x0; x <= x1; x++) 
-      mark_map(x, y);
+    if ((uint32_t)y < MAX_MARKMAP_Y)
+      for (x = x0; x <= x1; x++)
+        map[y]|= 1 << x;
 }
+#define invalidate_rect(x0, y0, x1, y1) invalidate_rect_func((x0)/CELLWIDTH, (y0)/CELLHEIGHT, (x1)/CELLWIDTH, (y1)/CELLHEIGHT)
+
 
 #define SWAP(x,y) {int t=x;x=y;y=t;}
 
@@ -1575,8 +1570,8 @@ draw_cell(int m, int n)
       int x = CELL_X(index) - x0 - X_MARKER_OFFSET;
       int y = CELL_Y(index) - y0 - Y_MARKER_OFFSET;
       // Check marker icon on cell
-      if (x + MARKER_WIDTH >= 0 && x - MARKER_WIDTH < CELLWIDTH &&
-          y + MARKER_HEIGHT >= 0 && y - MARKER_HEIGHT < CELLHEIGHT){
+      if ((uint32_t)(x+MARKER_WIDTH ) < (CELLWIDTH  + MARKER_WIDTH ) &&
+          (uint32_t)(y+MARKER_HEIGHT) < (CELLHEIGHT + MARKER_HEIGHT)){
           // Draw marker plate
           ili9341_set_foreground(LCD_TRACE_1_COLOR + t);
           cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, MARKER_BITMAP(0));
@@ -1723,18 +1718,19 @@ request_to_draw_cells_behind_numeric_input(void)
 }
 
 static void
-cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *bitmap)
+cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *bmp)
 {
   if (x <= -w)
     return;
   uint8_t bits = 0;
   int c = h+y, r;
   for (; y < c; y++) {
-    for (r = 0; r < w; r++) {
-      if ((r&7)==0) bits = *bitmap++;
-      if (y >= 0 && x+r >= 0 && y < CELLHEIGHT && x+r < CELLWIDTH && (0x80 & bits))
-        cell_buffer[y*CELLWIDTH + x + r] = foreground_color;
-      bits <<= 1;
+    for (r = 0; r < w; r++, bits<<=1) {
+      if ((r&7)==0) bits = *bmp++;
+      if ((0x80 & bits) == 0) continue;    // no pixel
+      if ((uint32_t)(y+0) >= CELLHEIGHT) continue; // y   < 0 || y   >= CELLHEIGHT
+      if ((uint32_t)(x+r) >= CELLWIDTH ) continue; // x+r < 0 || x+r >= CELLWIDTH
+      cell_buffer[y*CELLWIDTH + x + r] = foreground_color;
     }
   }
 }
@@ -1742,21 +1738,22 @@ cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *bitmap)
 void
 cell_drawstring(char *str, int x, int y)
 {
-  if (y <= -FONT_GET_HEIGHT || y >= CELLHEIGHT)
+  if ((uint32_t)(y+FONT_GET_HEIGHT) >= CELLHEIGHT + FONT_GET_HEIGHT)
     return;
   while (*str) {
     if (x >= CELLWIDTH)
       return;
-    uint8_t ch = *str++;
+    uint16_t ch = *str++;
     uint16_t w = FONT_GET_WIDTH(ch);
     cell_blit_bitmap(x, y, w, FONT_GET_HEIGHT, FONT_GET_DATA(ch));
     x += w;
   }
 }
-void
+
+static void
 cell_drawstring_7x13(char *str, int x, int y)
 {
-  if (y <= -bFONT_GET_HEIGHT || y >= CELLHEIGHT)
+  if ((uint32_t)(y+bFONT_GET_HEIGHT) >= CELLHEIGHT + bFONT_GET_HEIGHT)
     return;
   while (*str) {
     if (x >= CELLWIDTH)
@@ -1772,7 +1769,7 @@ void
 cell_drawstring_10x14(char *str, int x, int y)
 {
 #ifdef wFONT_GET_DATA
-  if (y <= -wFONT_GET_HEIGHT || y >= CELLHEIGHT)
+  if ((uint32_t)(y+wFONT_GET_HEIGHT) >= CELLHEIGHT + wFONT_GET_HEIGHT)
     return;
   while (*str) {
     if (x >= CELLWIDTH)
@@ -2300,7 +2297,7 @@ int display_test(void)
         spi_buffer[w] = 0;
       }
       ili9341_read_memory(0, h, LCD_WIDTH, 1, LCD_WIDTH, spi_buffer);
-      for (int volatile w = 0; w < LCD_WIDTH; w++) {
+      for (int w = 0; w < LCD_WIDTH; w++) {
         if (spi_buffer[w] != ((w*h) & 0xfff))
           return false;
       }

@@ -1855,17 +1855,10 @@ void set_trace_type(int t, int type)
   }
   if (force) {
     plot_into_index(measured);
-    force_set_markmap();
+    redraw_request |= REDRAW_AREA;
   }
 }
 
-void set_trace_channel(int t, int channel)
-{
-  if (trace[t].channel != channel) {
-    trace[t].channel = channel;
-    force_set_markmap();
-  }
-}
 
 void set_trace_scale(float scale)
 {

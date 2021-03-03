@@ -1118,7 +1118,7 @@ void user_set_scale(float s)
   set_scale(s);
   if (UNIT_IS_LINEAR(setting.unit) && setting.reflevel < setting.scale*NGRIDY)
     set_reflevel(setting.scale*NGRIDY);
-  force_set_markmap();
+  redraw_request|=REDRAW_AREA;
 }
 
 void set_scale(float t) {
@@ -1161,7 +1161,7 @@ void set_offset(float offset)
   min = level_min();
   max = min + level_range();
   plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", min + (int)offset, max + (int)offset);
-  force_set_markmap();
+  redraw_request|=REDRAW_AREA;
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
 }
 
