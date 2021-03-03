@@ -2530,7 +2530,6 @@ int invoke_quick_menu(int y)
         selection = -1;
         menu_current_level = 0;
         menu_push_submenu(quick_menu[i]);
-        draw_menu();
       }
       return TRUE;
     }
