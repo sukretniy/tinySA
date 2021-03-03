@@ -652,13 +652,9 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
   switch (data) {
   case CONFIG_MENUITEM_TOUCH_CAL:
     touch_cal_exec();
-    redraw_frame();
-    request_to_redraw_grid();
     break;
   case CONFIG_MENUITEM_TOUCH_TEST:
     touch_draw_test();
-    redraw_frame();
-    request_to_redraw_grid();
     break;
   case CONFIG_MENUITEM_SELFTEST:
     sweep_mode = 0;         // Suspend sweep to save time
@@ -666,12 +662,13 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
     setting.test = 0;
     setting.test_argument = 0;
     sweep_mode = SWEEP_SELFTEST;
-    break;
+    return;
   case CONFIG_MENUITEM_VERSION:
     show_version();
-    redraw_frame();
-    request_to_redraw_grid();
+    break;
   }
+  redraw_frame();
+  request_to_redraw_grid();
 }
 
 static UI_FUNCTION_CALLBACK(menu_dfu_cb)

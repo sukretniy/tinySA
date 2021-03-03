@@ -693,7 +693,6 @@ void request_to_draw_cells_behind_numeric_input(void);
 void redraw_marker(int marker);
 void markmap_all_markers(void);
 void plot_into_index(measurement_t measured);
-void force_set_markmap(void);
 void draw_frequencies(void);
 void draw_all(bool flush);
 
