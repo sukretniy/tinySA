@@ -1147,7 +1147,6 @@ void ui_init(void);
 void ui_show(void);
 void ui_hide(void);
 
-void touch_start_watchdog(void);
 void touch_position(int *x, int *y);
 void handle_touch_interrupt(void);
 
@@ -1161,26 +1160,20 @@ void enter_dfu(void);
  * adc.c
  */
 #ifdef TINYSA4
- #define rccEnableWWDG(lp) rccEnableAPB1(RCC_APB1ENR_WWDGEN, lp)
+#define rccEnableWWDG(lp) rccEnableAPB1(RCC_APB1ENR_WWDGEN, lp)
 #define ADC_TOUCH_X  ADC_CHANNEL_IN3
 #define ADC_TOUCH_Y  ADC_CHANNEL_IN4
-
-void adc_init(void);
-uint16_t adc_single_read(uint32_t chsel);
-void adc_start_analog_watchdogd(void);
-void adc_stop(void);
-int16_t adc_vbat_read(void);
 #else
 #define ADC_TOUCH_X  ADC_CHSELR_CHSEL6
 #define ADC_TOUCH_Y  ADC_CHSELR_CHSEL7
+#endif
 
 void adc_init(void);
 uint16_t adc_single_read(uint32_t chsel);
-void adc_start_analog_watchdogd(uint32_t chsel);
-void adc_stop(void);
-void adc_interrupt(void);
+void adc_start_analog_watchdog(void);
+void adc_stop_analog_watchdog(void);
 int16_t adc_vbat_read(void);
-#endif
+
 /*
  * misclinous
  */
