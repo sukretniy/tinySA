@@ -2512,11 +2512,11 @@ static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "20
 
 // Quick menu
 #define MAX_QUICK_MENU  20
-enum { ITEM_NO_SPACE = 0, ITEM_NORMAL_SPACE= 1, ITEM_DOUBLE_SPACE = 2 };
+#define MAX_ITEM_SPACE   2
 static uint16_t    quick_menu_y[MAX_QUICK_MENU];
 static menuitem_t  *quick_menu[MAX_QUICK_MENU];
 static uint8_t max_quick_menu = 0;
-static uint8_t item_space = ITEM_NORMAL_SPACE;
+static uint8_t item_space = 0; //
 
 int invoke_quick_menu(int y)
 {
@@ -2542,15 +2542,7 @@ int invoke_quick_menu(int y)
 int add_quick_menu(char *buf, int x, int y, menuitem_t *menu)
 {
   ili9341_drawstring(buf, x, y);
-  y += YSTEP;
-  switch (item_space) {
-  case ITEM_NORMAL_SPACE:
-    y += YSTEP/2 ;
-    break;
-  case ITEM_DOUBLE_SPACE:
-    y += YSTEP;
-    break;
-  }
+  y += YSTEP*item_space/2 + YSTEP;
   if (max_quick_menu<MAX_QUICK_MENU-1) {
     quick_menu_y[max_quick_menu] = y;
     quick_menu[max_quick_menu++] = menu;
@@ -2869,11 +2861,11 @@ redraw_cal_status:
   ili9341_drawstring(buf, x, y);
 
 
-  if (y >= BATTERY_START && item_space > ITEM_NO_SPACE) {
+  if (y >= BATTERY_START && item_space > 0) {
     item_space--;                       // Reduce item spacing
     goto redraw_cal_status;
   }
-  if ((y + (max_quick_menu+1) * YSTEP/2) < BATTERY_START && item_space < ITEM_DOUBLE_SPACE) {
+  if ((y + (max_quick_menu+1) * YSTEP/2) < BATTERY_START && item_space < MAX_ITEM_SPACE) {
     item_space++;                       // Increase item spacing
     goto redraw_cal_status;
   }
