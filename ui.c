@@ -1899,7 +1899,7 @@ draw_menu_buttons(const menuitem_t *menu)
         text_offs = button_start+6+ICON_WIDTH+1;
       }
 //      ili9341_drawstring_size(button.text, text_offs, y+(button_height-2*FONT_GET_HEIGHT)/2, 2);
-      ili9341_drawstring_10x14(button.text, text_offs, y+(button_height-wFONT_GET_HEIGHT)/2 - 2);
+      ili9341_drawstring_10x14(button.text, text_offs, y+(button_height-wFONT_GET_HEIGHT)/2);
 #ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
         blit8BitWidthBitmap(button_start+MENU_FORM_WIDTH-2*FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,& left_icons[((menu[i].data >>4)&0xf)*2*FORM_ICON_HEIGHT]);
