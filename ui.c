@@ -386,7 +386,7 @@ touch_cal_exec(void)
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-1, LCD_HEIGHT-32);
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-1);
   ili9341_line(LCD_WIDTH-1, LCD_HEIGHT-1, LCD_WIDTH-32, LCD_HEIGHT-32);
-  ili9341_drawstring("TOUCH LOWER RIGHT", 210, 200);
+  ili9341_drawstring("TOUCH LOWER RIGHT", LCD_WIDTH-17*(FONT_WIDTH)-30, LCD_HEIGHT-FONT_GET_HEIGHT-35);
 
   touch_wait_released();
  // touch_wait_release();
@@ -472,8 +472,8 @@ show_version(void)
     do {shift>>=1; y+=5;} while (shift&1);
     ili9341_drawstring(info_about[i++], x, y+=5);
   }
+  char buf[96];
 #ifdef TINYSA4
-  static  char buf[96];
 extern const char *states[];
   #define ENABLE_THREADS_COMMAND
 
@@ -499,14 +499,34 @@ extern const char *states[];
   } while (tp != NULL);
 #endif
 
-
 #endif		// TINYSA4
 
+  uint16_t cnt = 0;
   while (true) {
     if (touch_check() == EVT_TOUCH_PRESSED)
       break;
     if (btn_check() & EVT_BUTTON_SINGLE_CLICK)
       break;
+    chThdSleepMilliseconds(40);
+    if ((cnt++)&0x07) continue; // Not update time so fast
+#ifdef __USE_RTC__
+    uint32_t tr = rtc_get_tr_bin(); // TR read first
+    uint32_t dr = rtc_get_dr_bin(); // DR read second
+    plot_printf(buf, sizeof(buf), "Time: 20%02d/%02d/%02d %02d:%02d:%02d" " (LS%c)",
+      RTC_DR_YEAR(dr),
+      RTC_DR_MONTH(dr),
+      RTC_DR_DAY(dr),
+      RTC_TR_HOUR(dr),
+      RTC_TR_MIN(dr),
+      RTC_TR_SEC(dr),
+      (RCC->BDCR & STM32_RTCSEL_MASK) == STM32_RTCSEL_LSE ? 'E' : 'I');
+    ili9341_drawstring(buffer, x, y);
+#endif
+#if 1
+    uint32_t vbat=adc_vbat_read();
+    plot_printf(buf, sizeof(buf), "Batt: %d.%03dV", vbat/1000, vbat%1000);
+    ili9341_drawstring(buf, x, y + FONT_STR_HEIGHT + 2);
+#endif
   }
 
   touch_start_watchdog();
