@@ -1989,15 +1989,16 @@ void set_keypad_value(int v)
 void check_frequency_slider(freq_t slider_freq)
 {
 
-  if ( (maxFreq - minFreq) < (freq_t)setting.slider_span ) {
+  if ( (maxFreq - minFreq) < setting.slider_span ) {
     setting.slider_span = maxFreq - minFreq;                         // absolute mode with max step size
   }
   freq_t half_span = setting.slider_span >> 1;
-  if (minFreq + (freq_t)half_span > slider_freq) {
-    setting.slider_position -= (minFreq + half_span - slider_freq) / (setting.slider_span / (MENU_FORM_WIDTH-8));            // reposition if needed
+  int temp = (setting.slider_span / (MENU_FORM_WIDTH-8));
+  if (minFreq + half_span > slider_freq) {
+    setting.slider_position -= (minFreq + half_span - slider_freq) / temp;            // reposition if needed
   }
-  if (maxFreq < slider_freq + (freq_t)half_span) {
-    setting.slider_position += (slider_freq + half_span - maxFreq) / (setting.slider_span /(MENU_FORM_WIDTH-8));            // reposition if needed
+  if (maxFreq < slider_freq + half_span) {
+    setting.slider_position += (slider_freq + half_span - maxFreq) / temp;            // reposition if needed
   }
 }
 
@@ -2028,7 +2029,7 @@ menu_select_touch(int i, int pos)
         if (touch_x !=  prev_touch_x /* - 1 || prev_touch_x + 1 < touch_x */ ) {
         keypad_mode = keypad;
         fetch_numeric_target();
-        volatile int new_slider = (int)touch_x - LCD_WIDTH/2;   // Can have negative outcome
+        int new_slider = touch_x - LCD_WIDTH/2;   // Can have negative outcome
         if (new_slider < - (MENU_FORM_WIDTH-8)/2)
           new_slider = -(MENU_FORM_WIDTH-8)/2;
         if (new_slider > (MENU_FORM_WIDTH-8)/2)
@@ -2044,9 +2045,7 @@ menu_select_touch(int i, int pos)
             }
           }
           if (mode == SL_MOVE ) {
-              uistat.value =  uistat.value - setting.slider_position * ((int)setting.slider_span/(MENU_FORM_WIDTH-8)) + new_slider * ((int)setting.slider_span/(MENU_FORM_WIDTH-8));
-              if (uistat.value < 0)
-                uistat.value = 0;
+              uistat.value+= (int)(setting.slider_span/(MENU_FORM_WIDTH-8))*(new_slider - setting.slider_position);
               if (uistat.value < minFreq)
                 uistat.value = minFreq;
               if (uistat.value > maxFreq)
@@ -2125,7 +2124,6 @@ menu_select_touch(int i, int pos)
     if (dt > BUTTON_DOWN_LONG_TICKS || do_exit) {
       selection = -1;
       draw_menu();
-      redraw_request = 0;       // Remove request to redraw grid
       return;
     }
     if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
@@ -2151,10 +2149,12 @@ menu_select_touch(int i, int pos)
     } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER) {
       switch (pos) {
       case 0:
-        step = -(int)setting.slider_span;
+        step = setting.slider_span;
+        step =-step;
         break;
       case 1:
-        step = -(int)setting.slider_span/10;
+        step = setting.slider_span/10;
+        step =-step;
         break;
       case 2:
         goto nogo;
@@ -2761,7 +2761,6 @@ ui_process_keypad(void)
     ui_mode_menu(); //Reactivate menu after keypad
     selection = -1;
     ensure_selection();
- //   redraw_request = 0;       // Clear all draw requests
     redraw_request = REDRAW_BATTERY;    // Only redraw battery
   } else {
     ui_mode_normal();

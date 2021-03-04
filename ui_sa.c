@@ -668,6 +668,7 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
     show_version();
     break;
   }
+  ui_mode_normal();
   redraw_frame();
   request_to_redraw_grid();
 }
