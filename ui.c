@@ -26,7 +26,7 @@
 #include <math.h>
 
 #pragma GCC push_options
-#pragma GCC optimize ("Og")
+#pragma GCC optimize ("Os")
 
 uistat_t uistat = {
  digit: 6,
