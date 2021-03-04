@@ -897,7 +897,8 @@ typedef struct setting
   int attack;                     // KM_ATTACK  <   20000
 
   freq_t  slider_span;
-  int16_t slider_position;
+  long_t slider_position;
+
 
   uint32_t rbw_x10;
   uint32_t vbw_x10;
