@@ -1423,7 +1423,7 @@ menu_invoke(int item)
     menuaction_acb_t cb = (menuaction_acb_t)menu->reference;
     if (cb) (*cb)(item, menu->data, NULL);
 //    if (!(menu->type & MT_FORM))
-    redraw_request |= REDRAW_CAL_STATUS;
+    redraw_request |= REDRAW_CAL_STATUS | REDRAW_BATTERY;
     break;
   }
   case MT_SUBMENU:

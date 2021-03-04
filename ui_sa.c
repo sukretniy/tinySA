@@ -802,7 +802,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
     } else {
       b->param_1.text = "MIRROR\nMASKING";
 #ifdef TINYSA4
-      b->icon = AUTO_ICON(setting.mirror_masking);
+      b->icon = AUTO_ICON(setting.mirror_masking);  // mirror_masking does not yet have an auto mode so this is never an auto icon
 #else
       b->icon = setting.mirror_masking == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
 #endif
@@ -2764,7 +2764,7 @@ redraw_cal_status:
   ili9341_drawstring(buf, x, y);
   y += YSTEP + YSTEP/2 ;
 #endif
-#ifdef TINYSA
+#ifdef TINYSA4
   if (setting.extra_lna){
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     y = add_quick_menu("LNA:ON", x, y, (menuitem_t *)menu_level);

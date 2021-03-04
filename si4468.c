@@ -45,11 +45,11 @@
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV64
 //#define SI4432_SPI_SPEED   SPI_BR_DIV32
-#define SI4432_SPI_SPEED   SPI_BR_DIV16
+#define SI4432_SPI_SPEED   SPI_BR_DIV4
 
 //#define ADF_SPI_SPEED   SPI_BR_DIV64
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
-#define ADF_SPI_SPEED   SPI_BR_DIV4
+#define ADF_SPI_SPEED   SPI_BR_DIV2
 
 #define PE_SPI_SPEED   SPI_BR_DIV32
 
@@ -1361,6 +1361,8 @@ static uint8_t SI4463_read_byte( uint8_t ADR )
 {
   uint8_t DATA ;
   set_SPI_mode(SPI_MODE_SI);
+  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+
   SI_CS_LOW;
   shiftOut( ADR );
   DATA = shiftIn();
@@ -1410,6 +1412,7 @@ static uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout
 void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 {
   set_SPI_mode(SPI_MODE_SI);
+  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
 #if 0
   if(SI4463_wait_response(NULL, 0, true)) // Make sure it's ok to send a command
 #else
@@ -1746,6 +1749,8 @@ static uint8_t SI4463_get_device_status(void)
 uint8_t getFRR(uint8_t reg)
 {
   set_SPI_mode(SPI_MODE_SI);
+  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+
   return SI4463_read_byte(reg);
 }
 

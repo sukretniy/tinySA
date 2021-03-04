@@ -1263,9 +1263,9 @@ void calculate_step_delay(void)
       else if (actual_rbw_x10 >= 3000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 200000; }
       else if (actual_rbw_x10 >= 1000) { SI4432_step_delay = 400; SI4432_offset_delay = 100; spur_gate = 100000; }
       else if (actual_rbw_x10 >= 300)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 100000; }
-      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 500; SI4432_offset_delay = 180; spur_gate = 100000; }
+      else if (actual_rbw_x10 >= 100)  { SI4432_step_delay = 400; SI4432_offset_delay = 120; spur_gate = 100000; }
       else if (actual_rbw_x10 >= 30)   { SI4432_step_delay = 900; SI4432_offset_delay = 300; spur_gate = 100000; }
-      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 1000; spur_gate = 100000; }
+      else if (actual_rbw_x10 >= 10)   { SI4432_step_delay = 3000; SI4432_offset_delay = 600; spur_gate = 100000; }
       else                             { SI4432_step_delay = 9000; SI4432_offset_delay =3000; spur_gate = 100000; }
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
@@ -1409,7 +1409,7 @@ void setup_sa(void)
 #ifdef __SI4463__
   SI4463_init_rx();            // Must be before ADF4351_setup!!!!
 #endif
-#ifdef TINYSA
+#ifdef TINYSA4
   ADF4351_Setup();
   enable_extra_lna(false);
   enable_ultra(false);
@@ -2115,7 +2115,7 @@ static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in 
 
 static const int fm_modulation_offset[4] =
 {
-#ifdef TINYSA
+#ifdef TINYSA4
    5000, //85000,
    0, //80000,
    -2700, //165000,
@@ -2885,7 +2885,8 @@ modulation_again:
     RCC->CFGR  = orig_CFGR;
   }
 #define IGNORE_RSSI 30000
-  pureRSSI_t rssi = (RSSI>0 ? RSSI + correct_RSSI + correct_RSSI_freq : IGNORE_RSSI); // add correction
+//  pureRSSI_t rssi = (RSSI>0 ? RSSI + correct_RSSI + correct_RSSI_freq : IGNORE_RSSI); // add correction
+  pureRSSI_t rssi = RSSI + correct_RSSI + correct_RSSI_freq; // add correction
   if (false) {
   abort:
     rssi = 0;
@@ -4352,7 +4353,7 @@ void self_test(int test)
       setting.repeat = 20;
 #endif
       setting.step_delay = setting.step_delay * 5 / 4;
-      setting.offset_delay = setting.step_delay / 2;
+      setting.offset_delay = setting.step_delay ;
       setting.rbw_x10 = force_rbw(j);
 
       shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
@@ -4378,7 +4379,7 @@ void self_test(int test)
  //     }
       shell_printf("Start level = %f, ",peakLevel);
 #if 1                                                                       // Enable for step delay tuning
-      while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 0.5) {
+      while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
         test_prepare(TEST_RBW);
         setting.spur_removal = S_OFF;
         setting.step_delay_mode = SD_NORMAL;
@@ -4391,7 +4392,7 @@ void self_test(int test)
 //        setting.repeat = 10;
         test_acquire(TEST_RBW);                        // Acquire test
         test_validate(TEST_RBW);                       // Validate test
-        //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
+      shell_printf(" Step delay %f, %d\n\r",peakLevel, setting.step_delay);
       }
 
       setting.step_delay = setting.step_delay * 5 / 4;          // back one level
@@ -4400,7 +4401,7 @@ void self_test(int test)
 
 #endif
 #ifdef TINYSA4
-      setting.offset_delay = 5000;
+      setting.offset_delay = 10000;
 #else
       setting.offset_delay = 1600;
 #endif
@@ -4410,7 +4411,7 @@ void self_test(int test)
         while (setting.offset_delay > 0 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
           test_prepare(TEST_RBW);
           setting.step_delay_mode = SD_FAST;
-          setting.offset_delay /= 2;
+          setting.offset_delay = setting.offset_delay * 4 / 5;
           setting.spur_removal = S_OFF;
           if (setting.rbw_x10 < 1000)
             set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * 5000));   // 50 times RBW
@@ -4419,11 +4420,13 @@ void self_test(int test)
 //          setting.repeat = 10;
           test_acquire(TEST_RBW);                        // Acquire test
           test_validate(TEST_RBW);                       // Validate test
-          //      shell_printf(" Step %f, %d",peakLevel, setting.step_delay);
+      shell_printf(" Offset delay %f, %d\n\r",peakLevel, setting.offset_delay);
         }
+        setting.offset_delay = setting.offset_delay * 5 / 4;            // back one level
       }
 #endif
-      shell_printf("End level = %f, step time = %d, fast delay = %d\n\r",peakLevel, setting.step_delay, setting.offset_delay*2);
+      shell_printf("End level = %f, step time = %d, fast delay = %d\n\r",peakLevel, setting.step_delay, setting.offset_delay);
+      shell_printf("---------------------------------------------\n\r");
       if (setting.test_argument != 0)
         break;
     }
