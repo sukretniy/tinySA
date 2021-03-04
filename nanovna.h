@@ -621,6 +621,7 @@ typedef struct config {
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
+  uint8_t high_out_adf4350;
   float sweep_voltage;
   uint32_t    dummy;
 //  uint8_t _reserved[22];

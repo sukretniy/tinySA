@@ -989,6 +989,7 @@ config_t config = {
   .cor_wfm = -55,
   .cor_nfm = -55,
   .ultra = false,
+  .high_out_adf4350 = true,
 #endif
   .sweep_voltage = 3.3,
 };

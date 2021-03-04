@@ -403,22 +403,29 @@ static const keypads_t keypads_time[] = {
 
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, // These must be first to share common help text
-  KM_REFLEVEL, KM_SCALE, KM_ATTENUATION,
-  KM_ACTUALPOWER, KM_IF, KM_SAMPLETIME, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
+  //#5
+  KM_REFLEVEL, KM_SCALE, KM_ATTENUATION, KM_ACTUALPOWER, KM_IF,
+  // #10
+  KM_SAMPLETIME, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
 #ifdef TINYSA4
   KM_30MHZ, 
 #else
   KM_10MHZ, 
 #endif
-  KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME, KM_OFFSET_DELAY,
-  KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION, KM_HIGHOUTLEVEL,
+  // #15
+  KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME,
+  // #20
+  KM_OFFSET_DELAY, KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
+  // #25
+  KM_HIGHOUTLEVEL,
 #ifdef TINYSA4
+  KM_COR_AM,  KM_COR_WFM, KM_COR_NFM,
+  KM_IF2,
+  // #30
   KM_R,KM_MOD,KM_CP,
-  KM_COR_AM,KM_COR_WFM, KM_COR_NFM,
 #endif
   KM_ATTACK,
 #ifdef TINYSA4
-  KM_IF2,
   KM_LPF,
 #endif
   KM_NONE // always at enum end
@@ -433,39 +440,39 @@ static const struct {
   {keypads_freq        , "CENTER"}, // center
   {keypads_freq        , "SPAN"}, // span
   {keypads_freq        , "FREQ"}, // cw freq
-  {keypads_plusmin_unit, "REF\nLEVEL"}, // reflevel
+  {keypads_plusmin_unit, "REF\nLEVEL"}, // reflevel #5
   {keypads_pos_unit    , "SCALE"}, // scale
   {keypads_positive    , "ATTENUATE"}, // attenuation
   {keypads_plusmin_unit, "ACTUAL\nPOWER"}, // actual power
   {keypads_freq        , "IF"}, // IF
-  {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay
+  {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay #10
   {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "DECAY"},    // KM_DECAY
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
   {keypads_freq        , "FREQ"},    // KM_30MHz | KM_10MHz
-  {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA
+  {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA #15
   {keypads_plusmin     , "OFFSET"},    // KM_OFFSET
   {keypads_plusmin_unit, "TRIGGER\nLEVEL"},    // KM_TRIGGER
   {keypads_plusmin     , "LEVEL\nSWEEP"},    // KM_LEVELSWEEP
   {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
-  {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY
+  {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY #20
   {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
   {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
   {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
   {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
-  {keypads_plusmin     , "LEVEL"},    // KM_HIGHOUTLEVEL
-#ifdef TINYSA
+  {keypads_plusmin     , "LEVEL"},    // KM_HIGHOUTLEVEL #25
+#ifdef TINYSA4
   {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
   {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
   {keypads_freq        , "IF2"}, // KM_IF2
-  {keypads_positive    , "R"}, // KM_R
+  {keypads_positive    , "R"}, // KM_R    #30
   {keypads_positive    , "MODULO"}, // KM_MOD
   {keypads_positive    , "CP"}, // KM_CP
 #endif
   {keypads_positive    , "ATTACK"},    // KM_ATTACK
 #ifdef TINYSA4
-  {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
+  {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF #34
 #endif
 };
 #if 0 // Not used
@@ -833,7 +840,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_adf_out_acb)
   (void)data;
   (void)item;
   if (b){
-    b->icon = high_out_adf4350 == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    b->icon = config.high_out_adf4350 == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
     return;
   }
   toggle_high_out_adf4350();
@@ -2232,7 +2239,7 @@ static void fetch_numeric_target(void)
     break;
   case KM_LOWOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
-    int end_level =  ((int32_t)uistat.value)+setting.level_sweep;
+    float end_level =  ((int32_t)uistat.value)+setting.level_sweep;
     if (end_level < level_min())
       end_level = level_min();
     if (end_level > level_max())
@@ -2240,14 +2247,14 @@ static void fetch_numeric_target(void)
     uistat.value += setting.offset;
     end_level += setting.offset;
     if (setting.level_sweep != 0)
-      plot_printf(uistat.text, sizeof uistat.text, "%d to %ddBm", ((int32_t)uistat.value), end_level);
+      plot_printf(uistat.text, sizeof uistat.text, "%.1f to %.1fdBm", uistat.value, end_level);
     else
-      plot_printf(uistat.text, sizeof uistat.text, "%ddBm", ((int32_t)uistat.value));
+      plot_printf(uistat.text, sizeof uistat.text, "%.1fdBm", uistat.value);
     break;
   case KM_HIGHOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
     uistat.value += setting.offset;
-    plot_printf(uistat.text, sizeof uistat.text, "%ddBm", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%.1fdBm", uistat.value);
     break;
   case KM_DECAY:
     uistat.value = setting.decay;
