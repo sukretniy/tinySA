@@ -2260,7 +2260,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       else
         ls -= 0.5;
       float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0;
-      a += PURE_TO_float(get_frequency_correction(f)) - config.low_level_output_offset;
+      a += PURE_TO_float(get_frequency_correction(f));
       if (a != old_a) {
         old_a = a;
         a = a - level_max();                 // convert to all settings maximum power output equals a = zero
