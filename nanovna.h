@@ -896,13 +896,8 @@ typedef struct setting
   int decay;                      // KM_DECAY   < 1000000
   int attack;                     // KM_ATTACK  <   20000
 
-#ifdef TINYSA4
-  int32_t slider_position;
-  int64_t  slider_span;
-#else
-  int32_t slider_position;
-  int32_t slider_span;
-#endif
+  freq_t  slider_span;
+  int16_t slider_position;
 
   uint32_t rbw_x10;
   uint32_t vbw_x10;
