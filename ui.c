@@ -1969,7 +1969,7 @@ void check_frequency_slider(freq_t slider_freq)
 static void
 menu_select_touch(int i, int pos)
 {
-  int32_t step = 0;
+  long_t step = 0;
   int do_exit = false;
   selection = i;
   draw_menu();
