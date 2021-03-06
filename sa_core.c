@@ -665,10 +665,12 @@ static pureRSSI_t get_signal_path_loss(void){
 void set_level(float v)     // Set the output level in dB  in high/low output
 {
   if (setting.mode == M_GENHIGH) {
+    v -= config.high_level_output_offset;
     if (v < SL_GENHIGH_LEVEL_MIN)
       v = SL_GENHIGH_LEVEL_MIN;
     if (v > SL_GENHIGH_LEVEL_MIN + SL_GENHIGH_LEVEL_RANGE)
       v = SL_GENHIGH_LEVEL_MIN + SL_GENHIGH_LEVEL_RANGE;
+    v += config.high_level_output_offset;
 #if 0
     unsigned int d = MIN_DRIVE;
     v = v - config.high_level_output_offset;
@@ -680,10 +682,12 @@ void set_level(float v)     // Set the output level in dB  in high/low output
     set_lo_drive(d);
 #endif
   } else {                  // This MUST be low output level
+    v -= config.low_level_output_offset;
     if (v < SL_GENLOW_LEVEL_MIN)
       v = SL_GENLOW_LEVEL_MIN;
     if (v > SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE)
       v = SL_GENLOW_LEVEL_MIN + SL_GENLOW_LEVEL_RANGE;
+    v += config.low_level_output_offset;
 //    set_attenuation(setting.level - config.low_level_output_offset);
   }
   setting.level = v;
