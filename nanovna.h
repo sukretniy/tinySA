@@ -103,16 +103,16 @@
 #define MARKER_COUNT    4
 
 #define TRACES_MAX 3
-//#define TRACE_AGE       3
-#define TRACE_ACTUAL    2
+#define TRACE_ACTUAL    0
 #define TRACE_STORED    1
-#define TRACE_TEMP      0
+#define TRACE_TEMP      2
+//#define TRACE_AGE       3
 #define TRACE_INVALID  -1
 
-// #define age_t     measured[TRACE_AGE]
-#define stored_t  measured[TRACE_STORED]
 #define actual_t  measured[TRACE_ACTUAL]
+#define stored_t  measured[TRACE_STORED]
 #define temp_t    measured[TRACE_TEMP]
+// #define age_t     measured[TRACE_AGE]
 
 #ifdef TINYSA3
 typedef uint32_t freq_t;
@@ -423,9 +423,6 @@ extern uint16_t graph_bottom;
 #define WIDTH  (LCD_WIDTH - 1 - OFFSETX)
 #define HEIGHT (GRIDY*NGRIDY)
 
-#define CELLWIDTH  (32)
-#define CELLHEIGHT (32)
-
 #define FREQUENCIES_XPOS1 OFFSETX
 #define FREQUENCIES_XPOS2 (LCD_WIDTH-120)
 #define FREQUENCIES_YPOS  (LCD_HEIGHT-8)
@@ -568,11 +565,6 @@ float value(float);
 
 typedef struct trace {
   uint8_t enabled;
-  uint8_t type;
-  uint8_t channel;
-  uint8_t reserved;
-  float scale;
-  float refpos;
 } trace_t;
 
 #define FREQ_MODE_START_STOP    0x0
@@ -633,13 +625,6 @@ extern config_t config;
 //#define settingLevelOffset config.level_offset
 float get_level_offset(void);
 
-void set_trace_type(int t, int type);
-void set_trace_channel(int t, int channel);
-void set_trace_scale(float scale);
-void set_trace_refpos(float refpos);
-float get_trace_scale(int t);
-float get_trace_refpos(int t);
-const char *get_trace_typename(int t);
 extern int in_selftest;
 extern int display_test(void);
 
@@ -723,14 +708,35 @@ extern volatile uint8_t redraw_request;
 /*
  * ili9341.c
  */
+// Set display buffers count for cell render (if use 2 and DMA, possible send data and prepare new in some time)
+
+#ifdef __USE_DISPLAY_DMA__
+// Cell size = sizeof(spi_buffer), but need wait while cell cata send to LCD
+//#define DISPLAY_CELL_BUFFER_COUNT     1
+// Cell size = sizeof(spi_buffer)/2, while one cell send to LCD by DMA, CPU render to next cell
+#define DISPLAY_CELL_BUFFER_COUNT     2
+#else
+// Always one if no DMA mode
+#define DISPLAY_CELL_BUFFER_COUNT     1
+#endif
+
+// One pixel size
+typedef uint16_t pixel_t;
+
+//#define CELLWIDTH  (64/DISPLAY_CELL_BUFFER_COUNT)
+//#define CELLHEIGHT (32)
+#define CELLWIDTH  (16)
+#define CELLHEIGHT (16)
+
+// Define size of screen buffer in pixels (one pixel 16bit size)
+#define SPI_BUFFER_SIZE             (CELLWIDTH*CELLHEIGHT*DISPLAY_CELL_BUFFER_COUNT*2)
+
 // SPI bus revert byte order
 // 16-bit gggBBBbb RRRrrGGG
 #define RGB565(r,g,b)  ( (((g)&0x1c)<<11) | (((b)&0xf8)<<5) | ((r)&0xf8) | (((g)&0xe0)>>5) )
 #define RGBHEX(hex) ( (((hex)&0x001c00)<<3) | (((hex)&0x0000f8)<<5) | (((hex)&0xf80000)>>16) | (((hex)&0x00e000)>>13) )
 #define HEXRGB(hex) ( (((hex)>>3)&0x001c00) | (((hex)>>5)&0x0000f8) | (((hex)<<16)&0xf80000) | (((hex)<<13)&0x00e000) )
 
-// Define size of screen buffer in pixels (one pixel 16bit size)
-#define SPI_BUFFER_SIZE             (CELLWIDTH*CELLHEIGHT)
 
 #ifdef TINYSA4
 #define LCD_WIDTH                   480
@@ -778,9 +784,9 @@ extern volatile uint8_t redraw_request;
 [LCD_MENU_COLOR       ] = RGB565(230,230,230), \
 [LCD_MENU_TEXT_COLOR  ] = RGB565(  0,  0,  0), \
 [LCD_MENU_ACTIVE_COLOR] = RGB565(210,210,210), \
-[LCD_TRACE_1_COLOR    ] = RGB565(255,  0,  0), \
+[LCD_TRACE_1_COLOR    ] = RGB565(255,255,  0), \
 [LCD_TRACE_2_COLOR    ] = RGB565(  0,255,  0), \
-[LCD_TRACE_3_COLOR    ] = RGB565(255,255,  0), \
+[LCD_TRACE_3_COLOR    ] = RGB565(255,  0,  0), \
 [LCD_TRACE_4_COLOR    ] = RGB565(255,  0,255), \
 [LCD_NORMAL_BAT_COLOR ] = RGB565( 31,227,  0), \
 [LCD_LOW_BAT_COLOR    ] = RGB565(255,  0,  0), \
@@ -819,15 +825,17 @@ extern uint16_t spi_buffer[SPI_BUFFER_SIZE];
 
 void ili9341_init(void);
 void ili9341_test(int mode);
-void ili9341_bulk(int x, int y, int w, int h);
+void ili9341_bulk(int x, int y, int w, int h);              // send data to display, in DMA mode use it, but wait DMA complete
+void ili9341_bulk_continue(int x, int y, int w, int h);     // send data to display, in DMA mode use it, no wait DMA complete
+void ili9341_bulk_finish(void);                             // wait DMA complete (need call at end)
 void ili9341_fill(int x, int y, int w, int h);
+pixel_t *ili9341_get_cell_buffer(void);                     // get buffer for cell render
 
 void ili9341_set_foreground(uint16_t fg_idx);
 void ili9341_set_background(uint16_t bg_idx);
 
 void ili9341_clear_screen(void);
-void blit8BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
-void blit16BitWidthBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t *bitmap);
+void ili9341_blitBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap);
 void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
 void ili9341_drawstring_7x13(const char *str, int x, int y);
@@ -836,7 +844,7 @@ void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size);
 void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size);
 void ili9341_drawfont(uint8_t ch, int x, int y);
-void ili9341_read_memory(int x, int y, int w, int h, int len, uint16_t* out);
+void ili9341_read_memory(int x, int y, int w, int h, int len, pixel_t* out);
 void ili9341_line(int x0, int y0, int x1, int y1);
 void show_version(void);
 
@@ -896,9 +904,13 @@ typedef struct setting
   int decay;                      // KM_DECAY   < 1000000
   int attack;                     // KM_ATTACK  <   20000
 
+#ifdef TINYSA4
+  int32_t slider_position;
   freq_t  slider_span;
-  long_t slider_position;
-
+#else
+  int32_t slider_position;
+  int32_t slider_span;
+#endif
 
   uint32_t rbw_x10;
   uint32_t vbw_x10;
@@ -918,6 +930,8 @@ typedef struct setting
   freq_t frequency1;
   freq_t frequency_IF;
 
+  float trace_scale;
+  float trace_refpos;
   trace_t _trace[TRACES_MAX];
   marker_t _markers[MARKERS_MAX];
 
@@ -941,6 +955,11 @@ typedef struct setting
 extern setting_t setting;
 
 void reset_settings(int m);
+
+void set_trace_scale(float scale);
+void set_trace_refpos(float refpos);
+#define get_trace_scale()  setting.trace_scale
+#define get_trace_refpos() setting.trace_refpos
 
 #define S_IS_AUTO(x) ((x)&2)
 #define S_STATE(X) ((X)&1)

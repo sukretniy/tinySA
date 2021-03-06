@@ -495,13 +495,11 @@ static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_top[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_modulation[];
-static const menuitem_t  menu_drive_wide[];
+//static const menuitem_t  menu_drive_wide[];
 #ifdef TINYSA4
 static const menuitem_t  menu_settings3[];
 #endif
 static const menuitem_t  menu_sweep[];
-
-#define AUTO_ICON(S) (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
 
 static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
 {
@@ -883,7 +881,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[0].mtype = M_REFERENCE | M_TRACKING;
       kp_help_text = "Frequency of fundamental";
       ui_mode_keypad(KM_CENTER);
-      ui_process_keypad();
       set_sweep_frequency(ST_START, 0);
       set_sweep_frequency(ST_STOP, uistat.value*5);
       set_measurement(M_IMD);
@@ -898,11 +895,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[1].mtype = M_TRACKING;
       kp_help_text = "Frequency of left signal";
       ui_mode_keypad(KM_CENTER);
-      ui_process_keypad();
       int left =  uistat.value;
       kp_help_text = "Right signal";
       ui_mode_keypad(KM_CENTER);
-      ui_process_keypad();
       int right =  uistat.value;
       set_sweep_frequency(ST_CENTER, (left+right)/2);
       set_sweep_frequency(ST_SPAN, (right - left)*5);
@@ -920,10 +915,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[1].mtype = M_DELTA | M_NOISE;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
-      ui_process_keypad();
       kp_help_text = "Frequency offset";
       ui_mode_keypad(KM_SPAN);
-      ui_process_keypad();
       set_sweep_frequency(ST_SPAN, uistat.value*4);
       set_measurement(M_PHASE_NOISE);
       set_average(4);
@@ -937,10 +930,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[2].mtype = M_DELTA;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
-      ui_process_keypad();
       kp_help_text = "Width of signal";
       ui_mode_keypad(KM_SPAN);
-      ui_process_keypad();
       set_sweep_frequency(ST_SPAN, uistat.value*4);
       set_measurement(M_STOP_BAND);
 //      SetAverage(4);
@@ -956,10 +947,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[2].mtype = M_DELTA;
 //      kp_help_text = "Frequency of signal";
 //      ui_mode_keypad(KM_CENTER);
-//      ui_process_keypad();
 //      kp_help_text = "Width of signal";
 //      ui_mode_keypad(KM_SPAN);
-//      ui_process_keypad();
 //      set_sweep_frequency(ST_SPAN, uistat.value*2);
       set_measurement(M_PASS_BAND);
 //      SetAverage(4);
@@ -980,11 +969,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[0].mtype = M_REFERENCE;// | M_TRACKING;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
-      ui_process_keypad();
       center = uistat.value;
-      kp_help_text = "Modulation frequency, 3 .. 10 kHz";
+      kp_help_text = "Modulation frequency: 3 .. 10kHz";
       ui_mode_keypad(KM_SPAN);
-      ui_process_keypad();
 //      if (uistat.value < 3000)
 //        break;
       span = uistat.value;
@@ -1005,18 +992,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[0].mtype = M_REFERENCE;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
-      ui_process_keypad();
       set_marker_frequency(0, uistat.value);
       kp_help_text = "Modulation frequency: 1 .. 2.5kHz";
       ui_mode_keypad(KM_SPAN);
-      ui_process_keypad();
       if (uistat.value < 1000 || uistat.value > 2500)
         break;
       set_RBW(uistat.value/100);
       // actual_rbw_x10
       kp_help_text = "Frequency deviation: 3 .. 500kHz";
       ui_mode_keypad(KM_SPAN);
-      ui_process_keypad();
       if (uistat.value < 12000)
         uistat.value = 12000;   // minimum span
       set_sweep_frequency(ST_SPAN, uistat.value*4);
@@ -1097,7 +1081,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
       if (setting.subtract_stored) {
         kp_help_text = "Ref level";
         ui_mode_keypad(KM_REFLEVEL);
-        ui_process_keypad();
 //        setting.normalize_level = uistat.value;
       } else
         set_auto_reflevel(true);
@@ -2133,13 +2116,18 @@ static const menuitem_t menu_top[] = {
 
 #define ACTIVE_COLOR RGBHEX(0x007FFF)
 
-int menu_is_form(const menuitem_t *menu)
+static bool menu_is_form(const menuitem_t *menu)
 {
+#if 1
+  // Not good set only one item as form and others as normal
+  return menu[0].type & MT_FORM;
+#else
   int i;
   for (i = 0; MT_MASK(menu[i].type) != MT_NONE; i++)
     if (menu[i].type & MT_FORM)
       return (true);
   return(false);
+#endif
 }
 
 static void menu_item_modify_attribute(
@@ -2530,7 +2518,6 @@ int invoke_quick_menu(int y)
     if (y < quick_menu_y[i]) {
       if ((uint32_t)quick_menu[i] < KM_NONE) {
         ui_mode_keypad((int)quick_menu[i]);
-        ui_process_keypad();
       } else {
         selection = -1;
         menu_current_level = 0;
@@ -2562,9 +2549,7 @@ void draw_cal_status(void)
   int x = 0;
   int y = OFFSETY;
   unsigned int color;
-  int rounding = false;
-  if (!UNIT_IS_LINEAR(setting.unit))
-    rounding  = true;
+  const bool rounding = !UNIT_IS_LINEAR(setting.unit);
   const char * const unit = unit_string[setting.unit];
 redraw_cal_status:
   buf[6]=0;

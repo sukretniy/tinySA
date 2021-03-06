@@ -105,6 +105,10 @@ static const uint8_t slider_bitmap[]=
 #define BUTTON_ICON_GROUP            4
 #define BUTTON_ICON_GROUP_CHECKED    5
 
+#define CHECK_ICON(S) ((S) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK)
+#define GROUP_ICON(S) ((S) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP)
+#define AUTO_ICON(S)  (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
+
 #define BUTTON_BORDER_NONE           0x00
 #define BUTTON_BORDER_WIDTH_MASK     0x0F
 
@@ -794,7 +798,6 @@ menu_velocity_cb(int item, uint8_t data)
       ui_process_numeric();
   } else {
       ui_mode_keypad(KM_VELOCITY_FACTOR);
-      ui_process_keypad();
   }
 }
 
@@ -839,7 +842,6 @@ menu_scale_cb(int item, uint8_t data)
     ui_process_numeric();
   } else {
     ui_mode_keypad(data);
-    ui_process_keypad();
   }
 }
 
@@ -858,7 +860,6 @@ menu_stimulus_cb(int item, uint8_t data)
       ui_process_numeric();
     } else {
       ui_mode_keypad(item);
-      ui_process_keypad();
     }
     break;
   case 5: /* PAUSE */
@@ -1294,7 +1295,8 @@ static void
 ensure_selection(void)
 {
   const menuitem_t *menu = menu_stack[menu_current_level];
-  int i=0;
+  if (selection < 0) {selection = -1; return;}
+  int i;
   if (MT_MASK(menu[0].type) == MT_TITLE && selection == 0) {
     selection = 1;
     return;
@@ -1311,10 +1313,11 @@ menu_move_back(bool leave_ui)
   if (menu_current_level == 0)
     return;
   erase_menu_buttons();
+  if ( menu_is_form(menu_stack[menu_current_level  ]) &&
+      !menu_is_form(menu_stack[menu_current_level-1]))
+    redraw_request|=REDRAW_AREA|REDRAW_BATTERY|REDRAW_FREQUENCY|REDRAW_CAL_STATUS; // redraw all if switch from form to normal menu mode
   menu_current_level--;
-  if (selection >= 0)
-    selection = 0;
-  ensure_selection();
+  selection = -1;
 
   if (leave_ui){
     ui_mode_normal();
@@ -1412,7 +1415,6 @@ menu_invoke(int item)
         kp_help_text = "240..960Mhz";
     }
     ui_mode_keypad(menu->data);
-    ui_process_keypad();
     redraw_request |= REDRAW_CAL_STATUS;
     break;
   }
@@ -1866,13 +1868,13 @@ draw_menu_buttons(const menuitem_t *menu)
       ili9341_set_background(button.bg);
       uint16_t text_offs = button_start + 6;
       if (button.icon >=0){
-        blit8BitWidthBitmap(button_start+3, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
+        ili9341_blitBitmap(button_start+3, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
         text_offs = button_start+6+ICON_WIDTH+1;
       }
 #ifdef __ICONS__
       if (menu[i].type & MT_ICON) {
-        blit8BitWidthBitmap(button_start+MENU_FORM_WIDTH-2*FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,& left_icons[((menu[i].data >>4)&0xf)*2*FORM_ICON_HEIGHT]);
-        blit8BitWidthBitmap(button_start+MENU_FORM_WIDTH-  FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,&right_icons[((menu[i].data >>0)&0xf)*2*FORM_ICON_HEIGHT]);
+        ili9341_blitBitmap(button_start+MENU_FORM_WIDTH-2*FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,& left_icons[((menu[i].data >>4)&0xf)*2*FORM_ICON_HEIGHT]);
+        ili9341_blitBitmap(button_start+MENU_FORM_WIDTH-  FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,&right_icons[((menu[i].data >>0)&0xf)*2*FORM_ICON_HEIGHT]);
       }
 #endif
       int local_slider_positions = 0;
@@ -1901,7 +1903,7 @@ draw_menu_buttons(const menuitem_t *menu)
         draw_slider:
           if (local_slider_positions < button_start)
             local_slider_positions = button_start;
-          blit8BitWidthBitmap(local_slider_positions - 4, y, 7, 5, slider_bitmap);
+          ili9341_blitBitmap(local_slider_positions - 4, y, 7, 5, slider_bitmap);
         } else if (menu[i].data == KM_HIGHOUTLEVEL) {
           local_slider_positions = ((get_level() - level_min() ) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
           goto draw_slider;
@@ -1918,7 +1920,7 @@ draw_menu_buttons(const menuitem_t *menu)
       ili9341_set_background(button.bg);
       uint16_t text_offs = button_start + 7;
       if (button.icon >=0){
-        blit8BitWidthBitmap(button_start+2, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
+        ili9341_blitBitmap(button_start+2, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
         text_offs = button_start+2+ICON_WIDTH;
       }
       int lines = menu_is_multiline(button.text);
@@ -2349,6 +2351,7 @@ ui_mode_keypad(int _keypad_mode)
     draw_menu();
   draw_keypad();
   draw_numeric_area_frame();
+  ui_process_keypad();
 }
 
 void
@@ -2724,11 +2727,8 @@ ui_process_keypad(void)
   if (current_menu_is_form()) {
     ui_mode_menu(); //Reactivate menu after keypad
     selection = -1;
-    ensure_selection();
-//    redraw_request|= REDRAW_BATTERY;    // Only redraw battery
   } else {
     ui_mode_normal();
-//  request_to_redraw_grid();
   }
   //redraw_all();
 }
@@ -2826,38 +2826,28 @@ static int
 touch_lever_mode_select(int touch_x, int touch_y)
 {
   if (touch_y > HEIGHT) {
-    if (touch_x < FREQUENCIES_XPOS2 -50 && uistat.lever_mode == LM_CENTER) {
-      touch_wait_release();
-      if (setting.freq_mode & FREQ_MODE_CENTER_SPAN)
-        ui_mode_keypad(KM_CENTER);
-      else
-        ui_mode_keypad(KM_START);
-      ui_process_keypad();
-      return TRUE;
+    touch_wait_release();
+    // Touch on left frequency field side
+    if (touch_x < FREQUENCIES_XPOS2 - 50) {
+      if (uistat.lever_mode == LM_CENTER){
+        ui_mode_keypad(FREQ_IS_CENTERSPAN() ? KM_CENTER : KM_START);
+        return TRUE;
+      }
     }
-    if (touch_x >  FREQUENCIES_XPOS2 - 50 && touch_x <  FREQUENCIES_XPOS2 +50) {
-      touch_wait_release();
-      if (FREQ_IS_STARTSTOP())
-        setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
-      else if (FREQ_IS_CENTERSPAN())
-        setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
+    else if (touch_x <  FREQUENCIES_XPOS2 + 50) {
+      // toggle frequency mode start/stop <=> center/span
+      setting.freq_mode^= FREQ_MODE_CENTER_SPAN;
       redraw_request |= REDRAW_FREQUENCY;
       return true;
     }
-    if (touch_x >= FREQUENCIES_XPOS2 +50 && uistat.lever_mode == LM_SPAN) {
-      touch_wait_release();
-      if (setting.freq_mode & FREQ_MODE_CENTER_SPAN)
-        ui_mode_keypad(KM_SPAN);
-      else
-        ui_mode_keypad(KM_STOP);
-      ui_process_keypad();
+    else if (uistat.lever_mode == LM_SPAN) {
+      ui_mode_keypad(FREQ_IS_CW() ? KM_SWEEP_TIME : (FREQ_IS_CENTERSPAN() ? KM_SPAN : KM_STOP));
       return TRUE;
     }
     select_lever_mode(touch_x < FREQUENCIES_XPOS2 ? LM_CENTER : LM_SPAN);
-    touch_wait_release();
     return TRUE;
   }
-  if (touch_x <OFFSETX)
+  if (touch_x < OFFSETX)
   {
     return invoke_quick_menu(touch_y);
   }
@@ -2943,7 +2933,6 @@ void ui_process_touch(void)
       // switch menu mode after release
       touch_wait_release();
       selection = -1; // hide keyboard mode selection
-      ensure_selection();
       ui_mode_menu();
       break;
     case UI_MENU:
@@ -2953,11 +2942,11 @@ void ui_process_touch(void)
   }
 }
 
-static int previous_button_state = 0;
+static uint16_t previous_button_state = 0;
 #ifdef __REMOTE_DESKTOP__
-static int previous_mouse_state = 0;
-static int previous_mouse_x = 0;
-static int previous_mouse_y = 0;
+static uint16_t previous_mouse_state = 0;
+static int16_t previous_mouse_x = 0;
+static int16_t previous_mouse_y = 0;
 #endif
 
 void

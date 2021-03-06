@@ -1019,9 +1019,9 @@ config_t config = {
 
 // NanoVNA Default settings
 static const trace_t def_trace[TRACES_MAX] = {//enable, type, channel, reserved, scale, refpos
-    { 0, TRC_LOGMAG, 0, 0, 10.0, (float) NGRIDY+1 },  //Temp
-    { 0, TRC_LOGMAG, 1, 0, 10.0, (float) NGRIDY+1 },  //Stored
-    { 1, TRC_LOGMAG, 2, 0, 10.0, (float) NGRIDY+1 }   //Actual
+ [TRACE_TEMP]   = { 0},  //Temp
+ [TRACE_STORED] = { 0},  //Stored
+ [TRACE_ACTUAL] = { 1}   //Actual
 };
 
 static const marker_t def_markers[MARKERS_MAX] = {
@@ -1049,6 +1049,8 @@ void load_LCD_properties(void)
 //=============================================
   setting._electrical_delay = 0.0;
 #endif
+  setting.trace_scale = 10.0;
+  setting.trace_refpos = 0;
   memcpy(setting._trace, def_trace, sizeof(def_trace));
   memcpy(setting._markers, def_markers, sizeof(def_markers));
 #ifdef __VNA__
@@ -1064,10 +1066,10 @@ void load_LCD_properties(void)
 //setting.checksum = 0;
 }
 
+#ifdef __VNA__
 void
 ensure_edit_config(void)
 {
-#ifdef __VNA__
   if (active_props == &current_props)
     return;
 
@@ -1075,8 +1077,8 @@ ensure_edit_config(void)
   active_props = &current_props;
   // move to uncal state
   cal_status = 0;
-#endif
 }
+#endif
 
 #include "sa_core.c"
 #ifdef __AUDIO__
@@ -1273,81 +1275,57 @@ update_frequencies(void)
 void
 set_sweep_frequency(int type, freq_t freq)
 {
-#ifdef __VNA__
-  int cal_applied = cal_status & CALSTAT_APPLY;
-#endif
-
   // Check frequency for out of bounds (minimum SPAN can be any value)
   if (type != ST_SPAN && freq < START_MIN)
     freq = START_MIN;
   if (freq > STOP_MAX)
     freq = STOP_MAX;
-  // CW mode if span freq = 0
-  if (type == ST_SPAN && freq == 0){
-    type = ST_CW;
-    freq = setting.frequency0 / 2 + setting.frequency1 / 2;
-  }
-  ensure_edit_config();
+  bool cw_mode = FREQ_IS_CW(); // remember old mode
+  freq_t center, span;
   switch (type) {
     case ST_START:
       setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
-      if (setting.frequency0 != freq) {
-        setting.frequency0 = freq;
-        // if start > stop then make start = stop
-        if (setting.frequency1 < freq) setting.frequency1 = freq;
-      }
+      setting.frequency0 = freq;
+      // if start > stop then make start = stop
+      if (setting.frequency1 < freq) setting.frequency1 = freq;
       break;
     case ST_STOP:
       setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
-      if (setting.frequency1 != freq) {
-        setting.frequency1 = freq;
-        // if start > stop then make start = stop
-        if (setting.frequency0 > freq) setting.frequency0 = freq;
-      }
+      setting.frequency1 = freq;
+      // if start > stop then make start = stop
+      if (setting.frequency0 > freq) setting.frequency0 = freq;
       break;
     case ST_CENTER:
       setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
-      freq_t center = setting.frequency0 / 2 + setting.frequency1 / 2;
-      if (center != freq) {
-        freq_t span = setting.frequency1 - setting.frequency0;
-        if (freq < START_MIN + span / 2) {
-          span = (freq - START_MIN) * 2;
-        }
-        if (freq > STOP_MAX - span / 2) {
-          span = (STOP_MAX - freq) * 2;
-        }
-        setting.frequency0 = freq - span / 2;
-        setting.frequency1 = freq + span / 2;
-      }
+      center = setting.frequency0/2 + setting.frequency1/2;
+      span   = (setting.frequency1 - setting.frequency0)/2;
+      if (freq < START_MIN + span)
+        span = (freq - START_MIN);
+      if (freq > STOP_MAX - span)
+        span = (STOP_MAX - freq);
+      setting.frequency0 = freq - span;
+      setting.frequency1 = freq + span;
       break;
     case ST_SPAN:
       setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
-      if (setting.frequency1 - setting.frequency0 != freq) {
-        freq_t center = setting.frequency0 / 2 + setting.frequency1 / 2;
-        if (center < START_MIN + freq / 2) {
-          center = START_MIN + freq / 2;
-        }
-        if (center > STOP_MAX - freq / 2) {
-          center = STOP_MAX - freq / 2;
-        }
-        setting.frequency0 = center - freq / 2;
-        setting.frequency1 = center + freq / 2;
-      }
+      center = setting.frequency0/2 + setting.frequency1/2;
+      span = freq/2;
+      if (center < START_MIN + span)
+        center = START_MIN + span;
+      if (center > STOP_MAX - span)
+        center = STOP_MAX - span;
+      setting.frequency0 = center - span;
+      setting.frequency1 = center + span;
       break;
     case ST_CW:
       setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
-      if (setting.frequency0 != freq || setting.frequency1 != freq) {
-        setting.frequency0 = freq;
-        setting.frequency1 = freq;
-        setting.sweep_time_us = 0; // use minimum as start
-      }
+      setting.frequency0 = freq;
+      setting.frequency1 = freq;
       break;
   }
+  if (!cw_mode && FREQ_IS_CW()) // switch to CW mode
+    setting.sweep_time_us = 0;  // use minimum as start
   update_frequencies();
-#ifdef __VNA__
-  if (cal_auto_interpolate && cal_applied)
-    cal_interpolate(lastsaveid);
-#endif
 }
 
 freq_t
@@ -1825,91 +1803,24 @@ VNA_SHELL_FUNCTION(cmd_recall)
   shell_printf("recall {id}\r\n");
 }
 
-static const struct {
-  const char *name;
-  uint16_t refpos;
-  float scale_unit;
-} trace_info[] = {
-  { "LOGMAG", NGRIDY,  10.0 },
-#ifdef __VNA__
-  { "PHASE",  NGRIDY/2,  90.0 },
-  { "DELAY",  NGRIDY/2,  1e-9 },
-  { "SMITH",         0,  1.00 },
-  { "POLAR",         0,  1.00 },
-  { "LINEAR",        0,  0.125},
-  { "SWR",           0,  0.25 },
-  { "REAL",   NGRIDY/2,  0.25 },
-  { "IMAG",   NGRIDY/2,  0.25 },
-  { "R",      NGRIDY/2, 100.0 },
-  { "X",      NGRIDY/2, 100.0 }
-#endif
-};
-
-#ifdef __VNA__
-static const char * const trc_channel_name[] = {
-  "CH0", "CH1"
-};
-#endif
 const char * const trc_channel_name[] = {
-  "ACTUAL", "STORED", "COMPUTED"
+  [TRACE_ACTUAL] = "ACTUAL",
+  [TRACE_STORED] = "STORED",
+  [TRACE_TEMP]   = "COMPUTED",
 };
-const char *get_trace_typename(int t)
-{
-  return trace_info[trace[t].type].name;
-}
-
-void set_trace_type(int t, int type)
-{
-  int enabled = type != TRC_OFF;
-  int force = FALSE;
-
-  if (trace[t].enabled != enabled) {
-    trace[t].enabled = enabled;
-    force = TRUE;
-  }
-  if (trace[t].type != type) {
-    trace[t].type = type;
-    // Set default trace refpos
-    trace[t].refpos = trace_info[type].refpos;
-    // Set default trace scale
-    trace[t].scale  = trace_info[type].scale_unit;
-    force = TRUE;
-  }
-  if (force) {
-    plot_into_index(measured);
-    redraw_request |= REDRAW_AREA;
-  }
-}
-
 
 void set_trace_scale(float scale)
 {
-  if (trace[TRACE_ACTUAL].scale != scale){
-    trace[TRACE_ACTUAL].scale = scale;
-    trace[TRACE_STORED].scale = scale;
-    trace[TRACE_TEMP].scale = scale;
-    redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
-  }
-}
-
-float get_trace_scale(int t)
-{
-  return trace[t].scale;
+  if (setting.trace_scale == scale) return;
+  setting.trace_scale = scale;
+  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
 }
 
 void set_trace_refpos(float refpos)
 {
-  if (trace[TRACE_ACTUAL].refpos != refpos){
-    trace[TRACE_ACTUAL].refpos = refpos;
-    trace[TRACE_STORED].refpos = refpos;
-    trace[TRACE_TEMP].refpos = refpos;
-    redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
-  }
-}
-
-float get_trace_refpos(int t)
-{
-  return trace[t].refpos;
+  if (setting.trace_refpos == refpos) return;
+  setting.trace_refpos = refpos;
+  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
 }
 
 VNA_SHELL_FUNCTION(cmd_trace)
@@ -1919,9 +1830,9 @@ VNA_SHELL_FUNCTION(cmd_trace)
     for (t = 0; t < TRACES_MAX; t++) {
       if (trace[t].enabled) {
         const char *type = unit_string[setting.unit]; // get_trace_typename(t);
-        const char *channel = trc_channel_name[trace[t].channel];
-        float scale = get_trace_scale(t);
-        float refpos = get_trace_refpos(t);
+        const char *channel = trc_channel_name[t];
+        float scale = get_trace_scale();
+        float refpos = get_trace_refpos();
         shell_printf("%d %s %s %f %f\r\n", t, type, channel, scale, refpos);
       }
     }
@@ -1932,8 +1843,8 @@ VNA_SHELL_FUNCTION(cmd_trace)
     t = my_atoi(argv[0]);
     if (argc != 1 || t < 0 || t >= TRACES_MAX)
       goto usage;
-    const char *type = get_trace_typename(t);
-    const char *channel = trc_channel_name[trace[t].channel];
+    const char *type = "LOGMAG";//unit_string[setting.unit];
+    const char *channel = trc_channel_name[t];
     shell_printf("%d %s %s\r\n", t, type, channel);
     return;
   }
