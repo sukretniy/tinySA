@@ -653,8 +653,8 @@ float level_range(void)
 static pureRSSI_t get_signal_path_loss(void){
 #ifdef TINYSA4
   if (setting.mode == M_LOW)
-    return float_TO_PURE_RSSI(-4);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
-  return float_TO_PURE_RSSI(+19);          // Loss in dB (+ is gain)
+    return float_TO_PURE_RSSI(+3);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+  return float_TO_PURE_RSSI(+29);          // Loss in dB (+ is gain)
 #else
   if (setting.mode == M_LOW)
     return float_TO_PURE_RSSI(-5.5);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
