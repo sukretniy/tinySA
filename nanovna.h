@@ -723,13 +723,11 @@ extern volatile uint8_t redraw_request;
 // One pixel size
 typedef uint16_t pixel_t;
 
-//#define CELLWIDTH  (64/DISPLAY_CELL_BUFFER_COUNT)
-//#define CELLHEIGHT (32)
-#define CELLWIDTH  (16)
-#define CELLHEIGHT (16)
+#define CELLWIDTH  (64/DISPLAY_CELL_BUFFER_COUNT)
+#define CELLHEIGHT (32)
 
 // Define size of screen buffer in pixels (one pixel 16bit size)
-#define SPI_BUFFER_SIZE             (CELLWIDTH*CELLHEIGHT*DISPLAY_CELL_BUFFER_COUNT*2)
+#define SPI_BUFFER_SIZE             (CELLWIDTH*CELLHEIGHT*DISPLAY_CELL_BUFFER_COUNT)
 
 // SPI bus revert byte order
 // 16-bit gggBBBbb RRRrrGGG
