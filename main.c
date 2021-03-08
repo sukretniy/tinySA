@@ -104,8 +104,8 @@ static void transform_domain(void);
 static int8_t drive_strength = DRIVE_STRENGTH_AUTO;
 #endif
 uint8_t sweep_mode = SWEEP_ENABLE;
-volatile uint8_t redraw_request = 0; // contains REDRAW_XXX flags
-volatile int auto_capture = false;
+uint8_t redraw_request = 0; // contains REDRAW_XXX flags
+uint8_t auto_capture = false;
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
   BOARD_NAME,
@@ -122,7 +122,7 @@ const char *info_about[]={
   0 // sentinel
 };
 
-uint16_t dirty = true;
+bool dirty = true;
 
 bool completed = false;
 
@@ -845,15 +845,15 @@ VNA_SHELL_FUNCTION(cmd_refresh)
   }
 }
 
-volatile int mouse_x = 0;
-volatile int mouse_y = 0;
-volatile int mouse_down = false;
+int16_t mouse_x = 0;
+int16_t mouse_y = 0;
+uint8_t mouse_down = false;
 
 VNA_SHELL_FUNCTION(cmd_touch)
 {
   if (argc == 2){
-    mouse_x = (uint32_t)my_atoi(argv[0]);
-    mouse_y = (uint32_t)my_atoi(argv[1]);
+    mouse_x = my_atoi(argv[0]);
+    mouse_y = my_atoi(argv[1]);
     mouse_down = true;
     handle_touch_interrupt();
   }
@@ -862,8 +862,8 @@ VNA_SHELL_FUNCTION(cmd_touch)
 VNA_SHELL_FUNCTION(cmd_release)
 {
   if (argc==2) {
-    mouse_x = (uint32_t)my_atoi(argv[0]);
-    mouse_y = (uint32_t)my_atoi(argv[1]);
+    mouse_x = my_atoi(argv[0]);
+    mouse_y = my_atoi(argv[1]);
   }
   mouse_down = false;
   handle_touch_interrupt();
@@ -2411,7 +2411,7 @@ static const VNAShellCommand commands[] =
     {"touch"       , cmd_touch       , 0},
     {"release"     , cmd_release     , 0},
 #endif
-    {"vbat"        , cmd_vbat        , CMD_WAIT_MUTEX},     // Uses same adc as touch!!!!!
+    {"vbat"        , cmd_vbat        , 0},     // Uses same adc as touch!!!!!
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
     {"vbat_offset" , cmd_vbat_offset , 0},
 #endif

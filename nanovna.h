@@ -130,10 +130,10 @@ extern measurement_t measured;
 #endif
 
 #ifdef __REMOTE_DESKTOP__
-extern volatile int auto_capture;
-extern volatile int mouse_x;
-extern volatile int mouse_y;
-extern volatile int mouse_down;
+extern uint8_t auto_capture;
+extern int16_t mouse_x;
+extern int16_t mouse_y;
+extern uint8_t mouse_down;
 #endif
 
 #ifdef __VNA__
@@ -233,7 +233,14 @@ enum {
 #endif
 #define MODE_HIGH(x)  ((x) == M_HIGH || (x) == M_GENHIGH )
 #define MODE_LOW(x)  ((x) == M_LOW || (x) == M_GENLOW )
+
+#ifdef __SI4432__
+#define MODE_SELECT(x) (MODE_HIGH(x) ? SI4432_LO : SI4432_RX)
+#endif
+#ifdef __SI4468__
+// Not use mode
 #define MODE_SELECT(x) (MODE_HIGH(x) ? 1 : 0)
+#endif
 
 #define SWEEP_ENABLE    0x01
 #define SWEEP_ONCE      0x02
@@ -704,7 +711,7 @@ int marker_search_right_min(int from);
 #define REDRAW_BATTERY    (1<<4)
 #define REDRAW_AREA       (1<<5)
 #define REDRAW_TRIGGER    (1<<6)
-extern volatile uint8_t redraw_request;
+extern  uint8_t redraw_request;
 
 /*
  * ili9341.c
@@ -1226,6 +1233,7 @@ int plot_printf(char *str, int, const char *fmt, ...);
 //extern int actualStepDelay;
 //extern int setting_mode;
 
+#define ARRAY_COUNT(a)    (sizeof(a)/sizeof(*(a)))
 // Speed profile definition
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
 #define RESTART_PROFILE   time = chVTGetSystemTimeX();

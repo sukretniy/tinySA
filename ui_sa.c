@@ -589,7 +589,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
 }
 
 
-extern int dirty;
+extern bool dirty;
 UI_FUNCTION_CALLBACK(menu_autosettings_cb)
 {
   (void)item;
@@ -800,7 +800,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
     } else {
       b->param_1.text = "MIRROR\nMASKING";
 #ifdef TINYSA4
-      b->icon = AUTO_ICON(setting.mirror_masking);  // mirror_masking does not yet have an auto mode so this is never an auto icon
+      b->icon = AUTO_ICON(setting.mirror_masking ? 1 : 0);  // mirror_masking does not yet have an auto mode so this is never an auto icon
 #else
       b->icon = setting.mirror_masking == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
 #endif
@@ -1408,8 +1408,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
     return;
   }
   auto_capture = ! auto_capture;
-//  menu_move_back(true);
-//  draw_cal_status();
+  // Update all screen to CPU
+  if (auto_capture)
+    redraw_request|=REDRAW_AREA|REDRAW_BATTERY|REDRAW_FREQUENCY|REDRAW_CAL_STATUS;
 }
 #endif
 
