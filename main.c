@@ -990,6 +990,7 @@ config_t config = {
   .cor_am = -14,
   .cor_wfm = -17,
   .cor_nfm = -17,
+  .ext_zero_level = 128,
 #endif
 #ifdef TINYSA4
   .vbat_offset = 220,
@@ -1010,6 +1011,7 @@ config_t config = {
   .cor_nfm = -55,
   .ultra = false,
   .high_out_adf4350 = true,
+  .ext_zero_level = 174,
 #endif
   .sweep_voltage = 3.3,
   .switch_offset = 0.0,
@@ -2377,6 +2379,7 @@ static const VNAShellCommand commands[] =
 //  {"gamma"       , cmd_gamma       , 0},
     {"scan"        , cmd_scan        , CMD_WAIT_MUTEX},
     {"scanraw"     , cmd_scanraw     , CMD_WAIT_MUTEX},
+    {"zero"        , cmd_zero        , CMD_WAIT_MUTEX},
     {"sweep"       , cmd_sweep       , 0},
     {"test"        , cmd_test        , 0},
     {"touchcal"    , cmd_touchcal    , CMD_WAIT_MUTEX},

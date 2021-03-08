@@ -616,6 +616,7 @@ typedef struct config {
   uint8_t high_out_adf4350;
   float sweep_voltage;
   float switch_offset;
+  int16_t   ext_zero_level;
   uint32_t    dummy;
 //  uint8_t _reserved[22];
   freq_t checksum;
@@ -1240,12 +1241,7 @@ typedef uint8_t  deviceRSSI_t;
 typedef int16_t  pureRSSI_t;
 
 // RSSI values conversion macro
-// External programm zero level settings (need decrease on this value -)
-#ifdef TINYSA4
-#define EXT_ZERO_LEVEL            (174)
-#else
-#define EXT_ZERO_LEVEL            (128)
-#endif
+
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)
 #define PURE_TO_DEVICE_RSSI(rssi) ((rssi)>>4)
 #define float_TO_PURE_RSSI(rssi)  ((rssi)*32)
