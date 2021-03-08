@@ -991,9 +991,9 @@ config_t config = {
   .high_correction_frequency = { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 },
   .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
   .setting_frequency_10mhz = 10000000,
-  .cor_am = -14,
-  .cor_wfm = -17,
-  .cor_nfm = -17,
+  .cor_am = -8,
+  .cor_wfm = -15,
+  .cor_nfm = -15,
   .ext_zero_level = 128,
 #endif
 #ifdef TINYSA4

@@ -35,7 +35,7 @@
 #endif
 #endif
 // uint8_t dirty = true;
-int scandirty = true;
+uint8_t scandirty = true;
 
 setting_t setting;
 freq_t frequencies[POINTS_COUNT];
@@ -565,7 +565,7 @@ void set_modulation(int m)
 
 void set_modulation_frequency(int f)
 {
-  if (50 <= f && f <= 6000) {
+  if (50 <= f && f <= 7000) {
     setting.modulation_frequency = f;
     dirty = true;
   }
@@ -1074,7 +1074,7 @@ void set_unit(int u)
     if (S_IS_AUTO(setting.lna))
       setting.lna = S_AUTO_OFF;
   } else {
-    r = 10 * round((r*1.2)/10.0);
+    r = 10 * roundf((r*1.2)/10.0);
     set_reflevel(r);
     set_scale(10);
     if (S_IS_AUTO(setting.agc))
@@ -1303,7 +1303,8 @@ static void calculate_step_delay(void)
       SI4432_step_delay = 0;
     } else {
       // Search index in table depend from RBW
-      volatile uint16_t i=0;
+      uint16_t i=0;
+
       for (i=0;i<ARRAY_COUNT(step_delay_table)-1;i++)
         if (actual_rbw_x10 >= step_delay_table[i].rbw_x10)
           break;

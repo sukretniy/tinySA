@@ -1077,7 +1077,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e49 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e4A /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
