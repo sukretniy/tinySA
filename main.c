@@ -914,7 +914,11 @@ void send_region(const char *t, int x, int y, int w, int h)
 void send_buffer(uint8_t * buf, int s)
 {
   if (SDU1.config->usbp->state == USB_ACTIVE) {
-    streamWrite(shell_stream, (void*) buf, s);
+    while (s > 0) {
+      streamWrite(shell_stream, (void*) buf, (s > 128 ? 128 : s));
+      buf = buf+128;
+      s -= 128;
+    }
     streamWrite(shell_stream, (void*)"ch> \r\n", 6);
   }
 }

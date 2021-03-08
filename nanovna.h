@@ -255,9 +255,9 @@ void set_extra_lna(int t);
 // ------------------------------- sa_core.c ----------------------------------
 
 
-extern float level_min(void);
-extern float level_max(void);
-extern float level_range(void);
+extern float level_min;
+extern float level_max;
+extern float level_range;
 
 extern const char * const unit_string[];
 #ifdef TINYSA4

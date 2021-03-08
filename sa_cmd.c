@@ -331,7 +331,6 @@ VNA_SHELL_FUNCTION(cmd_if)
 VNA_SHELL_FUNCTION(cmd_zero)
 {
   if (argc != 1) {
-  usage:
     shell_printf("usage: zero {level}\r\n%ddBm\r\n", config.ext_zero_level);
     return;
   } else {
