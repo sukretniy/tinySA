@@ -116,9 +116,9 @@ float level_range;
 
 
 //int setting.refer = -1;  // Off by default
-const int reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
+const uint32_t reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
-int in_selftest = false;
+uint8_t in_selftest = false;
 
 void update_min_max_freq(void)
 {
@@ -1042,7 +1042,7 @@ void set_AGC_LNA(void) {
   uint8_t v = 0;
   if (!S_STATE(setting.agc))
     v |= 0x80 + 0x20;     // Inverse!!!!
-  if (S_STATE(setting.lna))
+  if (!S_STATE(setting.lna))
     v |= 0x08;     // Inverse!!!!
   SI446x_set_AGC_LNA(v);
   SI4432_old_v[0] = v;
@@ -1286,7 +1286,7 @@ static const struct {
   {   300,       400,          120,      100},
   {   100,       400,          120,      100},
   {    30,       900,          300,      100},
-  {    10,      3000,          600,      100},
+  {    10,      4000,          600,      100},
   {     0,      9000,         3000,      100}
 };
 #endif
@@ -1304,6 +1304,7 @@ static void calculate_step_delay(void)
     } else {
       // Search index in table depend from RBW
       uint16_t i=0;
+
 
       for (i=0;i<ARRAY_COUNT(step_delay_table)-1;i++)
         if (actual_rbw_x10 >= step_delay_table[i].rbw_x10)
@@ -1915,13 +1916,13 @@ void interpolate_maximum(int m)
   markers[m].frequency = frequencies[idx];
   if (idx > 0 && idx < sweep_points-1)
   {
+    const int32_t delta_Hz = (int64_t)frequencies[idx + 0] - frequencies[idx + 1];
     const float y1         = actual_t[idx - 1];
     const float y2         = actual_t[idx + 0];
     const float y3         = actual_t[idx + 1];
-    const float d          = 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
+    const float d          = abs(delta_Hz) * 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
     //const float bin      = (float)idx + d;
-    const int32_t delta_Hz = abs((int64_t)frequencies[idx + 0] - frequencies[idx + 1]);
-    markers[m].frequency   += (int32_t)(delta_Hz * d);
+    markers[m].frequency   += d;
   }
 }
 
@@ -2516,8 +2517,10 @@ modulation_again:
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
     freq_t local_IF;
+#ifdef __SPUR__
     spur_second_pass = false;
     again:                                                              // Spur reduction jumps to here for second measurement
+#endif
 
     local_IF=0;                                                         // to get rid of warning
 #ifdef TINYSA4
@@ -3189,10 +3192,10 @@ sweep_again:                                // stay in sweep loop when output mo
 
 
       // START_PROFILE
-      if (i == 0) {                                          // Prepare peak finding
+      if (i == 0 || frequencies[i] < actual_rbw_x10 * 200) {   // Prepare peak finding
         cur_max = 0;          // Always at least one maximum
         temppeakIndex = 0;
-        temppeakLevel = actual_t[i];
+        temppeakLevel = actual_t[0];
         max_index[0] = 0;
         downslope = true;
       }
@@ -3342,7 +3345,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #endif
   // -------------------------- auto attenuate ----------------------------------
 #ifdef TINYSA4
-#define AUTO_TARGET_LEVEL   -30
+#define AUTO_TARGET_LEVEL   -35
 #else
 #define AUTO_TARGET_LEVEL   -25
 #endif
@@ -4598,9 +4601,9 @@ void reset_calibration(void)
 #define CALIBRATE_RBWS  1
 const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
+#ifdef __CALIBRATE__
 void calibrate(void)
 {
-#ifdef __CALIBRATE__
   int local_test_status;
   int old_sweep_points = setting._sweep_points;
   in_selftest = true;
@@ -4681,8 +4684,8 @@ quit:
   sweep_mode = SWEEP_ENABLE;
   set_refer_output(-1);
   reset_settings(M_LOW);
-#endif
 }
+#endif
 
 #pragma GCC pop_options
 

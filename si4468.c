@@ -203,8 +203,8 @@ static void shiftOutBuf(uint8_t *buf, uint16_t size) {
 }
 #endif
 
-int SI4432_step_delay = 1500;
-int SI4432_offset_delay = 1500;
+uint32_t SI4432_step_delay = 1500;
+uint32_t SI4432_offset_delay = 1500;
 #define MINIMUM_WAIT_FOR_RSSI   280
 
 #ifdef __SI4432__
