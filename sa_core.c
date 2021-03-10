@@ -2365,7 +2365,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           a = -31.5;
         a = -a;
 #ifdef __PE4302__
-        PE4302_Write_Byte((int)(a * 2) );
+        setting.attenuate_x2 = (int)(a * 2);
+        PE4302_Write_Byte(setting.attenuate_x2);
 #endif
       }
     }
