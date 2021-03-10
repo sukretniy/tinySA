@@ -987,7 +987,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //        break;
       span = uistat.value;
 #ifdef TINYSA4
-//      set_RBW(span/300);
+      set_RBW((span * 5 / 50) / 100);
 #endif
       set_sweep_frequency(ST_SPAN, span * 5);
 //      update_frequencies();                     // To ensure markers are positioned right!!!!!!
@@ -1014,7 +1014,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_SPAN);
       if (uistat.value < 1000 || uistat.value > 10000)
         goto no_measurement;
-      set_RBW(uistat.value/100);
+      set_RBW(uistat.value/300);
 #else
       kp_help_text = "Modulation frequency: 1 .. 2.5kHz";
       ui_mode_keypad(KM_SPAN);

@@ -1012,9 +1012,9 @@ config_t config = {
   .high_correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
   .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
   .setting_frequency_30mhz = 30000000,
-  .cor_am = -14,
-  .cor_wfm = -55,
-  .cor_nfm = -55,
+  .cor_am = 0,
+  .cor_wfm = 0,
+  .cor_nfm = 0,
   .ultra = false,
   .high_out_adf4350 = true,
   .ext_zero_level = 174,
@@ -2965,6 +2965,44 @@ int main(void)
   ui_mode_normal();
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
+
+#ifdef TINYSA4
+  reset_settings(M_LOW);
+  set_mode(M_GENLOW);
+  set_sweep_frequency(ST_CENTER, (freq_t)30000000);
+  set_sweep_frequency(ST_SPAN, (freq_t)0);
+  in_selftest = true;
+
+  if (config.cor_am == 0) {
+    setting.modulation = MO_AM;
+    setting.modulation_frequency = 5000;
+    config.cor_am = 0;
+    perform(false,0, 30000000, false);
+    perform(false,1, 30000000, false);
+    config.cor_am = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
+  }
+
+  if (config.cor_nfm == 0) {
+    setting.modulation = MO_NFM;
+    setting.modulation_frequency = 5000;
+    config.cor_nfm = 0;
+    perform(false,0, 30000000, false);
+    perform(false,1, 30000000, false);
+    config.cor_nfm = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
+  }
+
+  if (config.cor_wfm == 0) {
+    setting.modulation = MO_WFM;
+    setting.modulation_frequency = 5000;
+    config.cor_wfm = 0;
+    perform(false,0, 30000000, false);
+    perform(false,1, 30000000, false);
+    config.cor_wfm = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
+  }
+  in_selftest = false;
+  reset_settings(M_LOW);
+#endif
+
 
   while (1) {
     if (SDU1.config->usbp->state == USB_ACTIVE) {

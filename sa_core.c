@@ -3374,7 +3374,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #endif
   // -------------------------- auto attenuate ----------------------------------
 #ifdef TINYSA4
-#define AUTO_TARGET_LEVEL   -30
+#define AUTO_TARGET_LEVEL   (actual_rbw_x10  >= 10 ? -30 : -40)
 #else
 #define AUTO_TARGET_LEVEL   -25
 #endif
