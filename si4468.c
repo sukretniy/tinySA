@@ -1897,7 +1897,8 @@ again:
     SI4463_do_api(data, 1, data, 3);            // TODO no clear of interrups
     if (data[2] == 0) goto again;
     if (data[2] == 255) goto again;
-    age[i]=(char)data[2];
+    if (i >= 0)
+      age[i]=(char)data[2];                     // Skip first RSSI
     if (++i >= sweep_points) break;
     if (t)
       my_microsecond_delay(t);
@@ -1908,7 +1909,7 @@ again:
   __enable_irq();
 
   setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
-  buf_index = start; // Is used to skip 1st entry during level triggering
+  buf_index = (start<=0 ? 0 : start); // Is used to skip 1st entry during level triggering
   buf_read = true;
 }
 #endif
@@ -2484,6 +2485,7 @@ freq_t SI4463_set_freq(freq_t freq)
                        0x10 + (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
     };
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
+    SI4463_frequency_changed = true;
 //    my_microsecond_delay(30000);
   }
 

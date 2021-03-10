@@ -2431,6 +2431,8 @@ static const VNAShellCommand commands[] =
     { "if", cmd_if,    0 },
 #ifdef TINYSA4
     { "if1", cmd_if1,    0 },
+    { "lna2", cmd_lna2,    0 },
+    { "agc", cmd_agc,    0 },
 #endif
     { "attenuate", cmd_attenuate,    0 },
     { "level", cmd_level,    0 },
@@ -2454,6 +2456,7 @@ static const VNAShellCommand commands[] =
     { "deviceid", cmd_deviceid,    0 },
     { "selftest", cmd_selftest,    0 },
     { "correction", cmd_correction,    0 },
+    { "calc", cmd_calc, 0},
  #ifdef ENABLE_THREADS_COMMAND
      {"threads"     , cmd_threads     , 0},
  #endif
