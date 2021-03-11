@@ -171,7 +171,6 @@ void reset_settings(int m)
   drive_dBm = (float *) (setting.mode == M_GENHIGH && config.high_out_adf4350 ? adf_drive_dBm : si_drive_dBm);
 #endif
   update_min_max_freq();
-  disable_waterfall();
   sweep_mode |= SWEEP_ENABLE;
   setting.unit_scale_index = 0;
   setting.unit_scale = 1;
@@ -1092,7 +1091,7 @@ void set_unit(int u)
 }
 
 const float unit_scale_value[]={  1, 0.001,   0.000001, 0.000000001, 0.000000000001};
-const char  unit_scale_text[]= {' ',   'm', '\035',         'n',            'p'};
+const char  unit_scale_text[]= {' ',   'm',     '\035',         'n',            'p'};
 
 void user_set_reflevel(float level)
 {
@@ -4376,6 +4375,9 @@ void self_test(int test)
       else
         goto resume;
     }
+    // Disable waterfall on selftest
+    if (setting.waterfall)
+      disable_waterfall();
     reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     menu_autosettings_cb(0, 0);
