@@ -1285,7 +1285,7 @@ static const struct {
   uint16_t spur_div_1000;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  6000,       250,           50,      400},
+  {  6000,       300,           50,      400},
   {  3000,       400,           50,      200},
   {  1000,       400,          100,      100},
   {   300,       400,          120,      100},
