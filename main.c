@@ -993,9 +993,9 @@ config_t config = {
   .high_correction_frequency = { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 },
   .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
   .setting_frequency_10mhz = 10000000,
-  .cor_am = -10,
-  .cor_wfm = -18,
-  .cor_nfm = -18,
+  .cor_am = 0,// -10,
+  .cor_wfm = 0, //-18,
+  .cor_nfm = 0, //-18,
   .ext_zero_level = 128,
 #endif
 #ifdef TINYSA4
@@ -2967,42 +2967,15 @@ int main(void)
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
-#ifdef TINYSA4
-  reset_settings(M_LOW);
+  reset_settings(M_LOW);                        // Calibrate the modulation frequencies
   set_mode(M_GENLOW);
-  set_sweep_frequency(ST_CENTER, (freq_t)30000000);
   set_sweep_frequency(ST_SPAN, (freq_t)0);
   in_selftest = true;
-
-  if (config.cor_am == 0) {
-    setting.modulation = MO_AM;
-    setting.modulation_frequency = 5000;
-    config.cor_am = 0;
-    perform(false,0, 30000000, false);
-    perform(false,1, 30000000, false);
-    config.cor_am = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
-  }
-
-  if (config.cor_nfm == 0) {
-    setting.modulation = MO_NFM;
-    setting.modulation_frequency = 5000;
-    config.cor_nfm = 0;
-    perform(false,0, 30000000, false);
-    perform(false,1, 30000000, false);
-    config.cor_nfm = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
-  }
-
-  if (config.cor_wfm == 0) {
-    setting.modulation = MO_WFM;
-    setting.modulation_frequency = 5000;
-    config.cor_wfm = 0;
-    perform(false,0, 30000000, false);
-    perform(false,1, 30000000, false);
-    config.cor_wfm = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
-  }
+  calibrate_modulation(MO_AM, &config.cor_am);
+  calibrate_modulation(MO_NFM, &config.cor_nfm);
+  calibrate_modulation(MO_WFM, &config.cor_wfm);
   in_selftest = false;
   reset_settings(M_LOW);
-#endif
 
 
   while (1) {

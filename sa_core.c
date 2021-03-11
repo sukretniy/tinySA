@@ -4697,6 +4697,17 @@ void reset_calibration(void)
   config.low_level_offset = 100;
 }
 
+void calibrate_modulation(int modulation, int8_t *correction)
+{
+  if (*correction == 0) {
+    setting.modulation = modulation;
+    setting.modulation_frequency = 5000;
+    perform(false,0, 30000000, false);
+    perform(false,1, 30000000, false);
+    *correction = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
+  }
+}
+
 #define CALIBRATE_RBWS  1
 const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
