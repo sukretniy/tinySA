@@ -154,10 +154,8 @@ void update_grid(void)
   grid_offset = (WIDTH) * ((fstart % grid) / 100) / (fspan / 100);
   grid_width = (WIDTH) * (grid / 100) / (fspan / 1000);
 
-  if (get_waterfall()){
-    ili9341_set_background(LCD_BG_COLOR);
-    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
-  }
+  if (setting.waterfall)
+    toggle_waterfall();
   redraw_request |= REDRAW_FREQUENCY | REDRAW_AREA;
 }
 
@@ -1634,11 +1632,6 @@ static void update_waterfall(void){
 //  STOP_PROFILE;
 }
 
-int get_waterfall(void)
-{
-  return(setting.waterfall);
-}
-
 //extern float peakLevel;
 //extern float min_level;
 //int w_max = -130;
@@ -1646,30 +1639,21 @@ int get_waterfall(void)
 void
 toggle_waterfall(void)
 {
-  if (setting.waterfall == W_OFF) {
-//    w_min = (int)min_level;
-//    w_max = (int)peakLevel;
-//    if (w_max < w_min + 20)
-//      w_max = w_min + 20;
-    graph_bottom = SMALL_WATERFALL;
-    setting.waterfall = W_SMALL;
-  } else if (setting.waterfall == W_SMALL) {
-    graph_bottom = BIG_WATERFALL;
-    setting.waterfall = W_BIG;
-  } else {
-    graph_bottom = NO_WATERFALL;
-    setting.waterfall = W_OFF;
-  }
+  if (setting.waterfall == W_SMALL)       graph_bottom = SMALL_WATERFALL;
+  else if (setting.waterfall == W_BIG)    graph_bottom = BIG_WATERFALL;
+  else /*if (setting.waterfall == W_OFF)*/graph_bottom = NO_WATERFALL;
   _grid_y = graph_bottom / NGRIDY;
-  ili9341_set_background(LCD_BG_COLOR);
-  ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
+  if (setting.waterfall != W_OFF){
+    ili9341_set_background(LCD_BG_COLOR);
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
+  }
   request_to_redraw_grid();
 }
 
 void
 disable_waterfall(void)
 {
-  setting.waterfall = W_BIG;
+  setting.waterfall = W_OFF;
   toggle_waterfall();
 }
 
