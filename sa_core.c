@@ -171,6 +171,7 @@ void reset_settings(int m)
   drive_dBm = (float *) (setting.mode == M_GENHIGH && config.high_out_adf4350 ? adf_drive_dBm : si_drive_dBm);
 #endif
   update_min_max_freq();
+  disable_waterfall();
   sweep_mode |= SWEEP_ENABLE;
   setting.unit_scale_index = 0;
   setting.unit_scale = 1;
@@ -2553,12 +2554,18 @@ modulation_again:
       if (!setting.auto_IF)
         local_IF = setting.frequency_IF;
       else
-#ifdef TINYSA4	  
-        local_IF = config.frequency_IF1;
+      {
+#ifdef TINYSA4
+        if (f < 2000000 && S_IS_AUTO(setting.spur_removal) && S_IS_AUTO(setting.below_IF))
+
+          local_IF = config.frequency_IF1 + DEFAULT_SPUR_OFFSET;
+        else
+          local_IF = config.frequency_IF1;
 #else
         local_IF = DEFAULT_IF;
 #endif
-		if (setting.mode == M_LOW) {
+    }
+     if (setting.mode == M_LOW) {
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
 #if 0                                                               // Isolation test
           local_IF = lf;
@@ -2961,6 +2968,21 @@ modulation_again:
       }
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
+#ifdef TINYSA4
+    if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
+      int my_step_delay = SI4432_step_delay;
+      if (f < 2000000 && actual_rbw_x10 == 3)
+        my_step_delay = my_step_delay * 2;
+      my_microsecond_delay(my_step_delay * ((setting.R == 0 && old_R > 5 ) ? 8 : 1));
+      ADF4351_frequency_changed = false;
+      SI4463_frequency_changed = false;
+      SI4463_offset_changed = false;
+    } else if (SI4432_offset_delay && SI4463_offset_changed) {
+      my_microsecond_delay(SI4432_offset_delay);
+      SI4463_offset_changed = false;
+    }
+#endif
+
     //else
     {
 #ifdef __SI4432__

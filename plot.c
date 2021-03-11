@@ -1669,12 +1669,8 @@ toggle_waterfall(void)
 void
 disable_waterfall(void)
 {
-  graph_bottom = NO_WATERFALL;
-  setting.waterfall = W_OFF;
-  _grid_y = graph_bottom / NGRIDY;
-  ili9341_set_background(LCD_BG_COLOR);
-  ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
-  request_to_redraw_grid();
+  setting.waterfall = W_BIG;
+  toggle_waterfall();
 }
 
 void

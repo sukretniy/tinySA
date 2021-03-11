@@ -870,8 +870,8 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
     points = my_atoi(argv[2]);
   }
 
-//  if (get_waterfall())
-//    disable_waterfall();            // display dma hangs when waterfall is enabled
+  if (get_waterfall())
+    disable_waterfall();            // display dma hangs when waterfall is enabled
 
   freq_t old_step = setting.frequency_step;
   float f_step = (stop-start)/ points;

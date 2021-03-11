@@ -936,7 +936,7 @@ int debug = 0;
 ioline_t ADF4351_LE[2] = { LINE_LO_SEL, LINE_LO_SEL};
 //int ADF4351_Mux = 7;
 
-int ADF4351_frequency_changed = false;
+bool ADF4351_frequency_changed = false;
 
 //#define DEBUG(X) // Serial.print( X )
 //#define DEBUGLN(X) Serial.println( X )
@@ -964,7 +964,7 @@ volatile int64_t
 
 uint8_t OutputDivider; // Temp
 uint8_t lock=2; //Not used
-static int old_R = 0;
+int old_R = 0;
 
 // Lock = A4
 
@@ -1300,8 +1300,8 @@ void ADF4351_enable_out(int s)
 // ------------------------------ SI4463 -------------------------------------
 
 
-int SI4463_frequency_changed = false;
-int SI4463_offset_changed = false;
+bool SI4463_frequency_changed = false;
+bool SI4463_offset_changed = false;
 int SI4463_offset_value = 0;
 
 static int SI4463_band = -1;
@@ -1934,15 +1934,7 @@ int16_t Si446x_RSSI(void)
                        SI446X_CMD_GET_MODEM_STATUS,
                        0xFF
     };
-    if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
-      my_microsecond_delay(SI4432_step_delay * ((setting.R == 0 && old_R > 5 ) ? 8 : 1));
-      ADF4351_frequency_changed = false;
-      SI4463_frequency_changed = false;
-      SI4463_offset_changed = false;
-    } else if (SI4432_offset_delay && SI4463_offset_changed) {
-      my_microsecond_delay(SI4432_offset_delay);
-      SI4463_offset_changed = false;
-    }
+
 #define SAMPLE_COUNT 1
     int j = SAMPLE_COUNT; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
