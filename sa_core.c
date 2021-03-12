@@ -772,6 +772,33 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
   dirty = true;
 }
 
+#ifdef __LIMITS__
+void limits_update(void)
+{
+  int j = 0;
+  bool active = false;
+  for (int i = 0; i<LIMITS_MAX; i++)
+  {
+    if (setting.limits[i].enabled) {
+      active = true;
+      while (j < sweep_points && (frequencies[j] < setting.limits[i].frequency || setting.limits[i].frequency == 0))
+        stored_t[j++] = setting.limits[i].level;
+    }
+  }
+  if (active)
+  {
+    float old_level = stored_t[j-1];
+    while (j < sweep_points)
+      stored_t[j++] = old_level;
+    setting.show_stored = true;
+    trace[TRACE_STORED].enabled = true;
+  } else {
+    setting.show_stored = false;
+    trace[TRACE_STORED].enabled = false;
+  }
+}
+#endif
+
 void set_storage(void)
 {
   for (int i=0; i<POINTS_COUNT;i++)
@@ -4551,13 +4578,13 @@ void self_test(int test)
 //        goto do_again;
 //      }
 
-      float saved_peakLevel = peakLevel;
  //     if (peakLevel < -35) {
  //       shell_printf("Peak level too low, abort\n\r");
  //       return;
  //     }
       shell_printf("Start level = %f, ",peakLevel);
 #if 0                                                                       // Enable for step delay tuning
+      float saved_peakLevel = peakLevel;
       while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
         test_prepare(TEST_RBW);
         setting.spur_removal = S_OFF;

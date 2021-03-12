@@ -1063,6 +1063,9 @@ void load_LCD_properties(void)
   setting.waterfall = W_OFF;
   memcpy(setting._trace, def_trace, sizeof(def_trace));
   memcpy(setting._markers, def_markers, sizeof(def_markers));
+#ifdef __LIMITS__
+  memset(setting.limits, 0, sizeof(setting.limits));
+#endif
 #ifdef __VNA__
   setting._velocity_factor =  0.7;
 #endif
