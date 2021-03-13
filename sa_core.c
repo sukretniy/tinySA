@@ -2460,7 +2460,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int *current_fm_modulation = 0;
   if (MODE_OUTPUT(setting.mode)) {
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
-      modulation_delay = (1000000/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
+      modulation_delay = ((1000000-65000)/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
       modulation_counter = 0;
       if (setting.modulation == MO_AM)          // -14 default
         modulation_delay += config.cor_am;
@@ -2795,8 +2795,8 @@ modulation_again:
 #endif
     }
 
-#if 1               // No 72MHz spur avoidance yet
-        if (setting.mode == M_LOW && !in_selftest /* && !(SDU1.config->usbp->state == USB_ACTIVE) */ ) {         // Avoid 72MHz spur
+#if 1
+        if (setting.mode == M_LOW && !in_selftest) {         // Avoid 48MHz spur
           int set_below = false;
 #ifdef TINYSA4
           if (lf < 40000000) {
@@ -2808,7 +2808,7 @@ modulation_again:
 #endif
           if (lf > 40000000){
             uint32_t tf = lf;
-            while (tf > 48000000) tf -= 48000000;
+            while (tf > 48000000) tf -= 48000000;       // Wrap between 0-48MHz
             if (tf < 20000000 )
               set_below = true;
           }
@@ -4748,7 +4748,7 @@ void calibrate_modulation(int modulation, int8_t *correction)
     perform(false,0, 30000000, false);
     perform(false,1, 30000000, false);
     in_selftest = false;
-    *correction = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
+    *correction = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency ))/8;
     setting.modulation = M_OFF;
   }
 }

@@ -69,8 +69,8 @@
 #define __QUASI_PEAK__            // Add quasi peak average option
 #define __REMOTE_DESKTOP__        // Add remote desktop option
 #define __LISTEN__
-//#define __LIMITS__
 #ifdef TINYSA4
+#define __LIMITS__
 #define  __HARMONIC__
 #else
 #endif
