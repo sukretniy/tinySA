@@ -2937,6 +2937,7 @@ int main(void)
  * by the Reference Manual.
  */
   dacStart(&DACD2, &dac1cfg1);
+  dacStart(&DACD1, &dac1cfg1);
 
   setup_sa();
   set_sweep_points(POINTS_COUNT);

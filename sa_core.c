@@ -3920,11 +3920,11 @@ enum {
 
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
-#ifdef TINYSA4
-#define CAL_LEVEL   -30
-#else
+//#ifdef TINYSA4
+//#define CAL_LEVEL   -30
+//#else
 #define CAL_LEVEL   -25
-#endif
+//#endif
 
 // TODO made more compact this structure (need use aligned data)
 typedef struct test_case {
@@ -4577,7 +4577,6 @@ void self_test(int test)
 //        setting.step_delay = setting.step_delay * 4 / 5;
 //        goto do_again;
 //      }
-
  //     if (peakLevel < -35) {
  //       shell_printf("Peak level too low, abort\n\r");
  //       return;
@@ -4774,6 +4773,9 @@ void calibrate(void)
 #ifndef TINYSA4
       setting.agc = S_ON;
       setting.lna = S_OFF;
+      set_RBW(6000);
+#else
+      set_RBW(1000);
 #endif
       test_acquire(TEST_POWER);                        // Acquire test
       local_test_status = test_validate(TEST_POWER);                       // Validate test
@@ -4790,11 +4792,11 @@ void calibrate(void)
           ili9341_drawstring_7x13("Calibration failed", 30, 140);
           goto quit;
         } else {
-#ifdef TINYSA4
-          set_actual_power(-30.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
-#else
-          set_actual_power(-25.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
-#endif
+//#ifdef TINYSA4
+//          set_actual_power(-30.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
+//#else
+          set_actual_power(CAL_LEVEL);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
+//#endif
           chThdSleepMilliseconds(1000);
         }
       }
