@@ -154,6 +154,13 @@ static THD_FUNCTION(Thread1, arg)
       } else if (sweep_mode & SWEEP_REMOTE) {
       sweep_remote();
 #endif
+#ifdef __LISTEN__
+      } else if (sweep_mode & SWEEP_LISTEN) {
+      if (markers[active_marker].enabled == M_ENABLED) {
+          perform(false,0,frequencies[markers[active_marker].index], false);
+          SI4432_Listen(MODE_SELECT(setting.mode));
+      }
+#endif
 #ifdef __CALIBRATE__
       } else if (sweep_mode & SWEEP_CALIBRATE) {
       // call from lowest level to save stack space

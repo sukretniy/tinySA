@@ -687,16 +687,31 @@ static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 }
 
 #ifdef __LISTEN__
-static UI_FUNCTION_CALLBACK(menu_listen_cb)
+static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
 {
   (void)data;
   (void)item;
+  if (b){
+    b->icon = (sweep_mode & SWEEP_LISTEN) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  if (sweep_mode & SWEEP_LISTEN) {
+    sweep_mode = SWEEP_ENABLE;
+  } else {
+    sweep_mode = SWEEP_LISTEN;
+  }
+  ui_mode_normal();
+  redraw_frame();
+  request_to_redraw_grid();
+
+#if 0
   if (markers[active_marker].enabled == M_ENABLED) {
     do {
       perform(false,0,frequencies[markers[active_marker].index], false);
       SI4432_Listen(MODE_SELECT(setting.mode));
     } while (ui_process_listen_lever());
   }
+#endif
 }
 #endif
 
@@ -2174,7 +2189,7 @@ static const menuitem_t menu_level[] = {
  #endif
   { MT_SUBMENU,  0,             "TRIGGER",      menu_trigger},
 #ifdef __LISTEN__
-  { MT_CALLBACK, 0,             "LISTEN",       menu_listen_cb},
+  { MT_ADV_CALLBACK, 0,             "LISTEN",       menu_listen_acb},
 #endif
   { MT_CANCEL, 0,               S_LARROW" BACK",NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel

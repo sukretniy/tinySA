@@ -741,7 +741,7 @@ void SI4432_Listen(int s)
         count++;
       v = max - v;
       dacPutChannelX(&DACD2, 0, dBm_to_volt[v] << 4);
-    } while((operation_requested & OP_LEVER) != OP_LEVER);
+    } while(operation_requested == OP_NONE);
   count = 0;
   dacPutChannelX(&DACD2, 0, 0);
 }
