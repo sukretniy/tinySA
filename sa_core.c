@@ -4773,7 +4773,7 @@ void calibrate(void)
 #ifndef TINYSA4
       setting.agc = S_ON;
       setting.lna = S_OFF;
-      set_RBW(6000);
+//      set_RBW(6000);
 #else
       set_RBW(1000);
 #endif
