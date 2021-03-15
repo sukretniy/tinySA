@@ -70,6 +70,7 @@
 #define __REMOTE_DESKTOP__        // Add remote desktop option
 #define __LISTEN__
 #ifdef TINYSA4
+#define __CHANNEL_POWER__
 #define __LIMITS__
 #define  __HARMONIC__
 #else
@@ -271,6 +272,8 @@ void set_extra_lna(int t);
 extern float level_min;
 extern float level_max;
 extern float level_range;
+extern float channel_power[3];
+extern float channel_power_watt[3];
 
 extern const char * const unit_string[];
 #ifdef TINYSA4
@@ -576,6 +579,7 @@ enum unit_type {
 #define UNIT_IS_LOG(T) ( T >= U_VOLT ? false : true)
 
 float value(float);
+float index_to_value(const int i);
 
 typedef struct trace {
   uint8_t enabled;
@@ -1297,13 +1301,14 @@ void self_test(int);
 void wait_user(void);
 void calibrate(void);
 float to_dBm(float);
+float dBm_to_Watt(float);
 uint32_t calc_min_sweep_time_us(void);
 pureRSSI_t perform(bool b, int i, freq_t f, int e);
 void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP,
 };
 
 enum {

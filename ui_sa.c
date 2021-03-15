@@ -908,6 +908,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
   switch(data) {
     case M_OFF:                                     // Off
 //      reset_settings(setting.mode);
+      markers[0].enabled = M_ENABLED;
+      markers[0].mtype = M_REFERENCE | M_TRACKING;
    no_measurement:
       set_measurement(M_OFF);
       break;
@@ -1069,6 +1071,18 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     case M_THD:
       set_measurement(M_THD);
       break;
+#ifdef __CHANNEL_POWER__
+    case M_CP:                             // channel power
+      reset_settings(setting.mode);
+      markers[0].enabled = M_DISABLED;
+      kp_help_text = "Channel frequency";
+      ui_mode_keypad(KM_CENTER);
+      kp_help_text = "Channel width";
+      ui_mode_keypad(KM_SPAN);
+      set_sweep_frequency(ST_SPAN, uistat.value*3);
+      set_measurement(M_CP);
+      break;
+#endif
   }
 #endif
 //  selection = -1;
@@ -2031,7 +2045,10 @@ static const menuitem_t menu_measure2[] = {
   { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_THD,          "THD",           menu_measure_acb},
-#ifdef __LINEARITY__
+#ifdef __CHANNEL_POWER__
+  { MT_ADV_CALLBACK,            M_CP,           "CHANNEL\nPOWER",menu_measure_acb},
+#endif
+  #ifdef __LINEARITY__
   { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
 #endif
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },

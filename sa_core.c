@@ -71,7 +71,7 @@ static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 #endif
 
 #ifdef TINYSA4
-const float si_drive_dBm []     = {-41, -30, -21, -17, -12, -11, -10, -8.5, -7.5, -6.5, -5.5, -4.5, -3.5, -3 ,  -2,  -1.5, -1, -0.5, 0};
+const float si_drive_dBm []     = {-41, -30, -21, -17, -14, -11, -10, -8, -7, -6, -5, -4, -3, -2.5 ,  -2,  -1.5, -1, -0.5, 0};
 const float adf_drive_dBm[]     = {-15,-12,-9,-6};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) adf_drive_dBm;
@@ -92,7 +92,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 #define SL_GENHIGH_LEVEL_MAX    drive_dBm[MAX_DRIVE]
 
 #define SL_GENLOW_LEVEL_MIN    -104
-#define SL_GENLOW_LEVEL_MAX   -14
+#define SL_GENLOW_LEVEL_MAX   -16
 
 
 #else
@@ -114,6 +114,8 @@ float level_min;
 float level_max;
 float level_range;
 
+float channel_power[3];
+float channel_power_watt[3];
 
 //int setting.refer = -1;  // Off by default
 const uint32_t reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
@@ -2276,6 +2278,7 @@ void clock_at_48MHz(void)
     RCC->CR &= RCC_CR_HSICAL;
     RCC->CR |= ( (hsical) << 8 );
     RCC->CR &= RCC_CR_HSITRIM | RCC_CR_HSION; /* CR Reset value.              */
+    RCC->CR |= RCC_CR_HSITRIM_4;
   }
 }
 
@@ -3704,6 +3707,22 @@ sweep_again:                                // stay in sweep loop when output mo
         set_AGC_LNA();
 #endif
       }
+#ifdef __CHANNEL_POWER__
+      } else if (setting.measurement == M_CP) {      // ----------------CHANNEL_POWER measurement
+        int old_unit = setting.unit;
+        setting.unit = U_WATT;
+        for (int c = 0; c < 3 ;c++) {
+          channel_power_watt[c] = 0.0;
+          int sp_div3 = sweep_points/3;
+          for (int i =0; i < sp_div3; i++) {
+            channel_power_watt[c] += index_to_value(i + c*sp_div3);
+          }
+          float rbw_cor =  (float)(get_sweep_frequency(ST_SPAN)/3) / ((float)actual_rbw_x10 * 100.0);
+          channel_power_watt[c] = channel_power_watt[c] * rbw_cor /(float)sp_div3;
+          channel_power[c] = to_dBm(channel_power_watt[c]);
+        }
+        setting.unit = old_unit;
+#endif
     }
 
 #endif
