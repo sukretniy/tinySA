@@ -2186,14 +2186,16 @@ static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };
 #define HWD  256
 #endif
 
+#define S1  1.5
 static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in NFM
 {
- { 2*LND,(int)( 3.5*LND ), 4*LND, (int)(3.5*LND), 2*LND, (int)(0.5*LND), 0, (int)(0.5*LND)},                // Low range, NFM
- { 0*LWD,(int)( 1.5*LWD ), 2*LWD, (int)(1.5*LWD), 0*LWD, (int)(-1.5*LWD), (int)-2*LWD, (int)(-1.5*LWD)},    // Low range, WFM
+ { 2*LND,(int)( (2+S1)*LND ), 4*LND, (int)((2+S1)*LND), 2*LND, (int)((2-S1)*LND), 0, (int)((2-S1)*LND)},                // Low range, NFM
+ { 0*LWD,(int)( S1*LWD ), 2*LWD, (int)(S1*LWD), 0*LWD, (int)(-S1*LWD), (int)-2*LWD, (int)(-S1*LWD)},    // Low range, WFM
  { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},                // High range, NFM
  { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, WFM
 };    // narrow FM modulation avoid sign changes
 
+#undef S1
 static const int fm_modulation_offset[4] =
 {
 #ifdef TINYSA4
@@ -2460,7 +2462,12 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int *current_fm_modulation = 0;
   if (MODE_OUTPUT(setting.mode)) {
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
-      modulation_delay = ((1000000-65000)/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
+#ifdef TINYSA3
+#define MO_FREQ_COR 65000
+#else
+#define MO_FREQ_COR 0
+#endif
+      modulation_delay = ((1000000-MO_FREQ_COR)/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
       modulation_counter = 0;
       if (setting.modulation == MO_AM)          // -14 default
         modulation_delay += config.cor_am;
@@ -3909,7 +3916,7 @@ marker_search_right_min(int from)
 // -------------------- Self testing -------------------------------------------------
 
 enum {
-  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN, TC_DISPLAY,
+  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN, TC_DISPLAY, TC_LEVEL,
 };
 
 enum {
@@ -4004,6 +4011,8 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60),      // 20 Measure atten step accuracy
 #define TEST_SPUR    22
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     96,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
+#define TEST_LEVEL  23
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30,     0,      -25,   145,     -55),      // 23 Measure level
 };
 #endif
 
@@ -4139,6 +4148,29 @@ int validate_flatness(int i) {
   return(TS_PASS);
 }
 
+int validate_level(int i, float a) {
+  int status = TS_PASS;
+  test_fail_cause[i] = "Level ";
+  float summed_peak_level = 0;
+  set_attenuation(a);
+#define LEVEL_TEST_SWEEPS    5
+  for (int k=0; k<LEVEL_TEST_SWEEPS; k++) {
+    test_acquire(TEST_ATTEN);                        // Acquire test
+    float peaklevel = 0.0;
+    for (int n = 0 ; n < sweep_points; n++)
+      peaklevel += actual_t[n];
+    peaklevel /= (sweep_points - 0);
+    summed_peak_level += peaklevel;
+  }
+  peakLevel = summed_peak_level / LEVEL_TEST_SWEEPS;
+#define LEVEL_TEST_CRITERIA 3
+  if (peakLevel - test_case[i].pass <= -LEVEL_TEST_CRITERIA || peakLevel - test_case[i].pass >= LEVEL_TEST_CRITERIA) {
+    status = TS_FAIL;
+  } else
+    test_fail_cause[i] = "";
+  return(status);
+}
+
 
 const float atten_step[7] = { 0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0 };
 
@@ -4247,6 +4279,9 @@ int test_validate(int i)
     break;
   case TC_ATTEN:
     current_test_status = validate_atten(i);
+    break;
+  case TC_LEVEL:
+    current_test_status = validate_level(i, 0.0);
     break;
   case TC_DISPLAY:
     current_test_status = validate_display(i);
@@ -4768,6 +4803,7 @@ void calibrate(void)
     for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
       //    set_RBW(power_rbw[j]);
       //    set_sweep_points(21);
+#if 1
       test_prepare(TEST_POWER);
       setting.step_delay_mode = SD_PRECISE;
 #ifndef TINYSA4
@@ -4779,6 +4815,11 @@ void calibrate(void)
 #endif
       test_acquire(TEST_POWER);                        // Acquire test
       local_test_status = test_validate(TEST_POWER);                       // Validate test
+#else
+      test_prepare(TEST_LEVEL);
+      test_acquire(TEST_LEVEL);                        // Acquire test
+      local_test_status = test_validate(TEST_LEVEL);                       // Validate test
+#endif
       if (k ==0 || k == 1) {
         if (peakLevel < -50) {
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
