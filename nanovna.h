@@ -69,9 +69,9 @@
 #define __QUASI_PEAK__            // Add quasi peak average option
 #define __REMOTE_DESKTOP__        // Add remote desktop option
 #define __LISTEN__
-#ifdef TINYSA4
 #define __CHANNEL_POWER__
 #define __LIMITS__
+#ifdef TINYSA4
 #define  __HARMONIC__
 #else
 #endif
@@ -917,7 +917,7 @@ typedef struct setting
   uint8_t measurement;         // enum
   uint8_t spur_removal;        // enum
 
-  int8_t  tracking;            // -1...1 !!! need convert to bool
+  int8_t  tracking;            // -1...1 Can NOT convert to bool!!!!!!
   uint8_t atten_step;          //  0...1 !!! need convert to bool
   int8_t _active_marker;       // -1...MARKER_MAX
   uint8_t unit_scale_index;    // table index
@@ -956,7 +956,7 @@ typedef struct setting
 
   float reflevel;
   float scale;
-  float offset;
+  float external_gain;
   float trigger_level;
   float level;
   float level_sweep;
@@ -1287,7 +1287,7 @@ void toggle_tracking(void);
 void toggle_hambands(void);
 void reset_calibration(void);
 void set_reflevel(float);
-void set_offset(float);
+void set_external_gain(float);
 void set_unit(int);
 void set_switches(int);
 void set_gridlines(int);

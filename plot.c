@@ -1300,16 +1300,16 @@ static void cell_draw_marker_info(int x0, int y0)
   }
 #ifdef __CHANNEL_POWER__
   if (setting.measurement==M_CP) {
-    char *p_label[3] = { "Left", "Mid", "Right" };
     for (int c=0; c<3;c++) {
-      if (c == 1)
-        plot_printf(buf, sizeof buf, "%s: %4.1fdB %4.1f%%", p_label[c], channel_power[1], 100.0 * (channel_power_watt[1] - channel_power_watt[0] - channel_power_watt[2]) /channel_power_watt[1] );
-      else
-        plot_printf(buf, sizeof buf, "%s: %4.1fdB", p_label[c], channel_power[c]);
+      plot_printf(buf, sizeof buf, "%4.1fdB", channel_power[c]);
       int xpos = 10 + (c)*(WIDTH/3) + CELLOFFSETX - x0;
       int ypos = 1 - y0;
       ili9341_set_foreground(LCD_FG_COLOR);
       cell_drawstring_7x13(buf, xpos, ypos);
+      plot_printf(buf, sizeof buf, "%4.1f%%", 100.0 * channel_power_watt[c] /(channel_power_watt[0] + channel_power_watt[1] + channel_power_watt[2]) );
+      ypos = 14 - y0;
+    ili9341_set_foreground(LCD_FG_COLOR);
+    cell_drawstring_7x13(buf, xpos, ypos);
     }
     return;
   }
@@ -1449,8 +1449,8 @@ static void cell_draw_marker_info(int x0, int y0)
       ili9341_set_background(LCD_BG_COLOR);
       uint16_t color;
       if ((!setting.subtract_stored) &&     // Disabled when normalized
-          ((setting.mode == M_LOW && temppeakLevel - get_attenuation() + setting.offset > -10) ||
-           (setting.mode == M_HIGH && temppeakLevel - get_attenuation()+ setting.offset > -29) ))
+          ((setting.mode == M_LOW && temppeakLevel - get_attenuation() > -10) ||        // Ignore external_gain in overload detection
+           (setting.mode == M_HIGH && temppeakLevel - get_attenuation() > -29) ))
         color = LCD_BRIGHT_COLOR_RED;
       else
         color = marker_color(markers[i].mtype);

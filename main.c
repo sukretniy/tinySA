@@ -2462,7 +2462,7 @@ static const VNAShellCommand commands[] =
     { "ultra_start", cmd_ultra_start, CMD_WAIT_MUTEX },
 #endif
     { "load", cmd_load,    0 },
-    { "offset", cmd_offset, 0},
+    { "ext_gain", cmd_ext_gain, 0},
     { "output", cmd_output,    0 },
     { "deviceid", cmd_deviceid,    0 },
     { "selftest", cmd_selftest,    0 },

@@ -411,7 +411,7 @@ enum {
   KM_10MHZ, 
 #endif
   // #15
-  KM_REPEAT, KM_OFFSET, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME,
+  KM_REPEAT, KM_EXT_GAIN, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME,
   // #20
   KM_OFFSET_DELAY, KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
   // #25
@@ -453,7 +453,7 @@ static const struct {
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
   {keypads_freq        , "FREQ"},    // KM_30MHz | KM_10MHz
   {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA #15
-  {keypads_plusmin     , "OFFSET"},    // KM_OFFSET
+  {keypads_plusmin     , "EXT\nGAIN"},    // KM_EXT_GAIN
   {keypads_plusmin_unit, "TRIGGER\nLEVEL"},    // KM_TRIGGER
   {keypads_plusmin     , "LEVEL\nSWEEP"},    // KM_LEVELSWEEP
   {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
@@ -818,7 +818,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sdrive_acb){
 #ifdef TINYSA4
     b->param_1.i = setting.lo_drive;
 #else
-    b->param_1.i = drive_dBm[setting.lo_drive] + (setting.mode==M_GENHIGH ? setting.offset : 0);
+    b->param_1.i = drive_dBm[setting.lo_drive] + (setting.mode==M_GENHIGH ? setting.external_gain : 0);
 #endif
     return;
   }
@@ -1677,7 +1677,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 //  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
 //  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
 //  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
-  { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "EXTERNAL AMP: %s",   "-100..+100"},
+  { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL AMP: %s",   "-100..+100"},
   { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1697,7 +1697,7 @@ static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
 #endif
-  { MT_FORM | MT_KEYPAD,  KM_OFFSET,            "EXTERNAL AMP: %s",          "-100..+100"},
+  { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL AMP: %s",          "-100..+100"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -2200,7 +2200,7 @@ static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,              "ATTENUATE",    menu_atten},
 //  { MT_SUBMENU,0,             "CALC",         menu_average},
   { MT_SUBMENU, 0,              "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_OFFSET,      "EXTERNAL\nAMP",NULL},
+  { MT_KEYPAD,  KM_EXT_GAIN,      "EXTERNAL\nAMP",NULL},
 #ifdef TINYSA4
   { MT_ADV_CALLBACK | MT_LOW ,0,"LNA",          menu_extra_lna_acb},
  #endif
@@ -2367,8 +2367,8 @@ static void fetch_numeric_target(void)
       end_level = level_min;
     if (end_level > level_max)
       end_level = level_max;
-    uistat.value += setting.offset;
-    end_level += setting.offset;
+    uistat.value += setting.external_gain;
+    end_level += setting.external_gain;
     if (setting.level_sweep != 0)
       plot_printf(uistat.text, sizeof uistat.text, "%.1f to %.1fdBm", uistat.value, end_level);
     else
@@ -2376,7 +2376,7 @@ static void fetch_numeric_target(void)
     break;
   case KM_HIGHOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
-    uistat.value += setting.offset;
+    uistat.value += setting.external_gain;
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdBm", uistat.value);
     break;
   case KM_DECAY:
@@ -2420,8 +2420,8 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
     break;
 #endif
-  case KM_OFFSET:
-    uistat.value = setting.offset;
+  case KM_EXT_GAIN:
+    uistat.value = setting.external_gain;
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
   case KM_LEVELSWEEP:
@@ -2533,10 +2533,10 @@ set_numeric_value(void)
     set_repeat(uistat.value);
     break;
   case KM_LOWOUTLEVEL:
-    set_level(uistat.value - setting.offset);
+    set_level(uistat.value - setting.external_gain);
     break;
   case KM_HIGHOUTLEVEL:
-    set_level(uistat.value - setting.offset);
+    set_level(uistat.value - setting.external_gain);
     break;
   case KM_DECAY:
     set_decay(uistat.value);
@@ -2574,8 +2574,8 @@ set_numeric_value(void)
     set_10mhz(uistat.value);
     break;
 #endif
-  case KM_OFFSET:
-    set_offset(uistat.value);
+  case KM_EXT_GAIN:
+    set_external_gain(uistat.value);
     break;
   case KM_LEVELSWEEP:
     setting.modulation = MO_NONE;
@@ -2925,12 +2925,12 @@ redraw_cal_status:
   }
 
   // Offset
-  if (setting.offset != 0.0) {
+  if (setting.external_gain != 0.0) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Amp:", x, y);
     y += YSTEP;
-    plot_printf(buf, BLEN, "%.1fdB",setting.offset);
-    y = add_quick_menu(buf, x, y,(menuitem_t *)KM_OFFSET);
+    plot_printf(buf, BLEN, "%.1fdB",setting.external_gain);
+    y = add_quick_menu(buf, x, y,(menuitem_t *)KM_EXT_GAIN);
   }
 
   // Repeat
