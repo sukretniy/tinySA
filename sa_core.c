@@ -1218,7 +1218,7 @@ void set_external_gain(float external_gain)
   int min,max;
   min = level_min;
   max = min + level_range;
-  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", min + (int)external_gain, max + (int)external_gain);
+  plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", min - (int)external_gain, max - (int)external_gain);
   redraw_request|=REDRAW_AREA;
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
 }
@@ -3454,7 +3454,7 @@ sweep_again:                                // stay in sweep loop when output mo
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     int delta = 0;
-    int actual_max_level = (max_index[0] == 0 ? -100 :(int) (actual_t[max_index[0]] - get_attenuation()) ) - setting.external_gain; // If no max found reduce attenuation
+    int actual_max_level = (max_index[0] == 0 ? -100 :(int) (actual_t[max_index[0]] - get_attenuation()) ) + setting.external_gain; // If no max found reduce attenuation
     if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate_x2 > 0) {
       delta = - (AUTO_TARGET_LEVEL - actual_max_level);
     } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate_x2 < 60) {
@@ -3497,7 +3497,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #ifdef __SI4432__
   if (!in_selftest && MODE_INPUT(setting.mode)) {
     if (S_IS_AUTO(setting.agc)) {
-      int actual_max_level = actual_t[max_index[0]] - get_attenuation() - setting.external_gain;        // No need to use float
+      int actual_max_level = actual_t[max_index[0]] - get_attenuation() + setting.external_gain;        // No need to use float
       if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
         if (actual_max_level > - 45)
           auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
@@ -3693,7 +3693,7 @@ sweep_again:                                // stay in sweep loop when output mo
     } else if (setting.measurement == M_AM) {      // ----------------AM measurement
       if (S_IS_AUTO(setting.agc )) {
 #ifdef __SI4432__
-        int actual_level = actual_t[max_index[0]] - get_attenuation() - setting.external_gain;  // no need for float
+        int actual_level = actual_t[max_index[0]] - get_attenuation() + setting.external_gain;  // no need for float
         if (actual_level > -20 ) {
           setting.agc = S_AUTO_OFF;
           setting.lna = S_AUTO_OFF;

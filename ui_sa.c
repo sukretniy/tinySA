@@ -1677,7 +1677,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 //  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
 //  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
 //  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
-  { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL AMP: %s",   "-100..+100"},
+  { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",   "-100..+100"},
   { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1697,7 +1697,7 @@ static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
   { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
 #endif
-  { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL AMP: %s",          "-100..+100"},
+  { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",          "-100..+100"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -2200,7 +2200,7 @@ static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,              "ATTENUATE",    menu_atten},
 //  { MT_SUBMENU,0,             "CALC",         menu_average},
   { MT_SUBMENU, 0,              "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_EXT_GAIN,      "EXTERNAL\nAMP",NULL},
+  { MT_KEYPAD,  KM_EXT_GAIN,      "EXTERNAL\nGAIN",NULL},
 #ifdef TINYSA4
   { MT_ADV_CALLBACK | MT_LOW ,0,"LNA",          menu_extra_lna_acb},
  #endif
