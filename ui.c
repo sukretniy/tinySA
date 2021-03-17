@@ -504,6 +504,10 @@ show_version(void)
     do {shift>>=1; y+=5;} while (shift&1);
     ili9341_drawstring(info_about[i++], x, y+=5);
   }
+#ifdef TINYSA3
+  if (has_esd)
+    ili9341_drawstring("ESD protected", x, y+=5);
+#endif
 #ifdef TINYSA4
 extern const char *states[];
   #define ENABLE_THREADS_COMMAND

@@ -835,7 +835,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
   if (argc == 0) {
     shell_printf("index frequency value\r\n");
     for (int i=0; i<CORRECTION_POINTS; i++) {
-      shell_printf("%d %D%.1f\r\n", i, setting.correction_frequency[i], setting.correction_value[i]);
+      shell_printf("%d %D %.1f\r\n", i, setting.correction_frequency[i], setting.correction_value[i]);
     }
     return;
   }

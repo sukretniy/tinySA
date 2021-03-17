@@ -2240,7 +2240,7 @@ static void calculate_static_correction(void)                   // Calculate the
 #ifdef TINYSA4
           - (S_STATE(setting.agc)? 0 : 33)
           - (S_STATE(setting.lna)? 0 : 0)
-          + (setting.extra_lna ? -23.0 : 0)                         // TODO <------------------------- set correct value
+          + (setting.extra_lna ? -25.5 : 0)                         // TODO <------------------------- set correct value
 #endif		  
           - setting.external_gain);
 }
@@ -3946,11 +3946,11 @@ enum {
 
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
-//#ifdef TINYSA4
-//#define CAL_LEVEL   -30
-//#else
-#define CAL_LEVEL   -25
-//#endif
+#ifdef TINYSA4
+#define CAL_LEVEL   -29.5
+#else
+#define CAL_LEVEL   (has_esd ? -26.2 : -25)
+#endif
 
 // TODO made more compact this structure (need use aligned data)
 typedef struct test_case {

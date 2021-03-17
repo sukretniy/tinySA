@@ -1301,7 +1301,7 @@ static void cell_draw_marker_info(int x0, int y0)
 #ifdef __CHANNEL_POWER__
   if (setting.measurement==M_CP) {
     for (int c=0; c<3;c++) {
-      plot_printf(buf, sizeof buf, "%4.1fdB", channel_power[c]);
+      plot_printf(buf, sizeof buf, "%4.1fdBm", channel_power[c]);
       int xpos = 10 + (c)*(WIDTH/3) + CELLOFFSETX - x0;
       int ypos = 1 - y0;
       ili9341_set_foreground(LCD_FG_COLOR);

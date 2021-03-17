@@ -84,7 +84,7 @@
 #define HIGH_MAX_FREQ_MHZ   960
 #endif
 #ifdef TINYSA4
-#define DEFAULT_IF  ((freq_t)977100000)
+#define DEFAULT_IF  ((freq_t)977400000)
 #define DEFAULT_SPUR_OFFSET ((freq_t)1500000)
 #define DEFAULT_MAX_FREQ    ((freq_t)800000000)
 #define HIGH_MIN_FREQ_MHZ   136// 825
@@ -120,6 +120,7 @@
 #ifdef TINYSA3
 typedef uint32_t freq_t;
  typedef int32_t long_t;
+ extern bool has_esd;
 #endif
 #ifdef TINYSA4
  typedef uint64_t freq_t;
