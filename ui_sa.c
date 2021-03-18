@@ -1010,15 +1010,18 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
         markers[i].mtype = M_DELTA;// | M_TRACKING;
 #endif
       }
-      freq_t center, span;
 #ifdef TINYSA4
+      freq_t span;
       markers[0].mtype = M_REFERENCE | M_TRACKING;
 #else
+      freq_t center, span;
       markers[0].mtype = M_REFERENCE;// | M_TRACKING;
 #endif
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
+#ifdef TINYSA3
       center = uistat.value;
+#endif
       kp_help_text = "Modulation frequency: 3 .. 10kHz";
       ui_mode_keypad(KM_SPAN);
 //      if (uistat.value < 3000)
@@ -1286,8 +1289,8 @@ static UI_FUNCTION_CALLBACK(menu_limit_disable_cb)
 #endif
 
 #ifdef TINYSA4
-static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,6000};
-static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300k","600k"};
+static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,8500};
+static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300k","850k"};
 #else
 static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
 #endif
