@@ -2357,14 +2357,14 @@ typedef struct {
 static const RBW_t RBW_choices[] =
 {
 // BW register    corr  freq
- {SI4463_RBW_02kHz, 0,3},
- {SI4463_RBW_1kHz,  0,10},
- {SI4463_RBW_3kHz,  0,30},
- {SI4463_RBW_10kHz, 0,100},
+ {SI4463_RBW_02kHz, 15,3},
+ {SI4463_RBW_1kHz,  14,10},
+ {SI4463_RBW_3kHz,  10,30},
+ {SI4463_RBW_10kHz, 14,100},
  {SI4463_RBW_30kHz, 0,300},
  {SI4463_RBW_100kHz,0,1000},
- {SI4463_RBW_300kHz,0,3000},
- {SI4463_RBW_850kHz,0,8500},
+ {SI4463_RBW_300kHz,1,3000},
+ {SI4463_RBW_850kHz,11,8500},
 };
 
 const uint8_t SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
@@ -2518,15 +2518,17 @@ freq_t SI4463_set_freq(freq_t freq)
    */
   // #define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x41, 0x0D, 0xA9, 0x5A, 0x4E, 0xC5, 0x20, 0xFE
   uint8_t data[] = {
-                    0x11, 0x40, 0x08, 0x00,
+                    0x11, 0x40, 0x06, 0x00,
                     (uint8_t) R,                   //  R data[4]
                     (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
                     (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
                     (uint8_t) ((F    ) & 255),     //  F2,F1,F0 data[5] .. data[7]
                     (uint8_t) ((S>> 8) & 255),     //  Step size data[8] .. data[9]
                     (uint8_t) ((S    ) & 255),     //  Step size data[8] .. data[9]
+#if 1
                     0x20,                   // Window gate
-                    0xFF                    // Adj count
+                    0xFF,                    // Adj count
+#endif
   };
   SI4463_do_api(data, sizeof(data), NULL, 0);
 

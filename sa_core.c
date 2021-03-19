@@ -1313,8 +1313,8 @@ static const struct {
   uint16_t spur_div_1000;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  6000,       300,           50,      400},
-  {  3000,       400,           50,      200},
+  {  6000,       50,            50,      400},
+  {  3000,       100,           50,      200},
   {  1000,       400,          100,      100},
   {   300,       400,          120,      100},
   {   100,       700,          120,      100},
@@ -2723,7 +2723,9 @@ modulation_again:
 #define TXCO_DIV3   10000000
 
         if (setting.R == 0) {
-          if (lf < LOW_MAX_FREQ && lf >= TXCO_DIV3 && MODE_INPUT(setting.mode)) {
+          if (actual_rbw_x10 >= 3000)
+            ADF4351_R_counter(1);
+          else if (lf < LOW_MAX_FREQ && lf >= TXCO_DIV3 && MODE_INPUT(setting.mode)) {
             freq_t tf = ((lf + actual_rbw_x10*1000) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {   // 30MHz
               ADF4351_R_counter(6);
@@ -3788,7 +3790,7 @@ sweep_again:                                // stay in sweep loop when output mo
   palSetPad(GPIOB, GPIOB_LED);
 #endif
 #ifdef TINYSA4
-  palSetLine(LINE_LED);
+//  palSetLine(LINE_LED);
 #endif
   
   return true;
@@ -3950,7 +3952,8 @@ enum {
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
 #ifdef TINYSA4
-#define CAL_LEVEL   -23.5
+//#define CAL_LEVEL   -23.5
+#define CAL_LEVEL   -23
 #else
 #define CAL_LEVEL   (has_esd ? -26.2 : -25)
 #endif
@@ -3989,7 +3992,7 @@ const test_case_t test_case [] =
 #define TEST_END 13
  TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
 #define TEST_POWER  14
- TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       30,     7,      CAL_LEVEL,   10,     -55),      // 12 Measure power level and noise
+ TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       30,     50,      CAL_LEVEL,   10,     -55),      // 12 Measure power level and noise
  TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75),       // 13 Measure powerlevel and noise
  TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
  TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
@@ -4002,6 +4005,10 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60),      // 20 Measure atten step accuracy
 #define TEST_SPUR    23
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
+#define TEST_LEVEL  24
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   145,     -55),      // 23 Measure level
+
 };
 #else
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
@@ -4176,20 +4183,23 @@ int validate_level(int i, float a) {
   test_fail_cause[i] = "Level ";
   float summed_peak_level = 0;
   set_attenuation(a);
-#define LEVEL_TEST_SWEEPS    5
+#define LEVEL_TEST_SWEEPS    10
   for (int k=0; k<LEVEL_TEST_SWEEPS; k++) {
     test_acquire(TEST_ATTEN);                        // Acquire test
     float peaklevel = 0.0;
-    for (int n = 0 ; n < sweep_points; n++)
+#define FROM_START  50
+    for (int n = FROM_START ; n < sweep_points; n++)
       peaklevel += actual_t[n];
-    peaklevel /= (sweep_points - 0);
+    peaklevel /= (sweep_points - FROM_START);
     summed_peak_level += peaklevel;
   }
   peakLevel = summed_peak_level / LEVEL_TEST_SWEEPS;
-#define LEVEL_TEST_CRITERIA 3
+#if 0
+  #define LEVEL_TEST_CRITERIA 3
   if (peakLevel - test_case[i].pass <= -LEVEL_TEST_CRITERIA || peakLevel - test_case[i].pass >= LEVEL_TEST_CRITERIA) {
     status = TS_FAIL;
   } else
+#endif
     test_fail_cause[i] = "";
   return(status);
 }
@@ -4465,6 +4475,8 @@ int add_spur(int f)
 
 //static bool test_wait = false;
 static int test_step = 0;
+freq_t old_ultra_threshold;
+bool old_ultra;
 
 void self_test(int test)
 {
@@ -4476,6 +4488,8 @@ void self_test(int test)
       else
         goto resume;
     }
+    old_ultra_threshold = config.ultra_threshold;
+    old_ultra = config.ultra;
     // Disable waterfall on selftest
     if (setting.waterfall)
       disable_waterfall();
@@ -4531,6 +4545,8 @@ void self_test(int test)
     config.cor_nfm = 0;
     config.cor_wfm = 0;
 #endif
+    config.ultra_threshold = old_ultra_threshold;
+    config.ultra = old_ultra;
     reset_settings(M_LOW);
     set_refer_output(-1);
 #ifdef TINYSA4
@@ -4718,8 +4734,8 @@ void self_test(int test)
     reset_settings(M_LOW);
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
-#ifdef DOESNOTFIT
-  } else if (test == 4) {
+#ifdef TINYSA4
+  } else if (test == 4) {           // Calibrate modulation frequencies
     reset_settings(M_LOW);
     set_mode(M_GENLOW);
     set_sweep_frequency(ST_CENTER, (freq_t)30000000);
@@ -4805,6 +4821,41 @@ void self_test(int test)
       test_validate(TEST_SPUR);                       // Validate test
     }
 #endif
+  } else if (test == 7) {                       // RBW level test
+    in_selftest = true;
+    ui_mode_normal();
+    shell_printf("\n\r");
+    float first_level=0;
+    for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
+      if (setting.test_argument != 0)
+        j = setting.test_argument;
+      test_prepare(TEST_LEVEL);
+      setting.rbw_x10 = force_rbw(j);
+      test_acquire(TEST_LEVEL);                        // Acquire test
+      test_validate(TEST_LEVEL);                       // Validate test
+      if (j == SI4432_RBW_count-1)
+        first_level = peakLevel;
+      shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel + 1.5)*10.0 );
+      if (setting.test_argument != 0)
+        break;
+    }
+
+    shell_printf("\n\r");
+    for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
+      if (setting.test_argument != 0)
+        j = setting.test_argument;
+      test_prepare(TEST_LEVEL+1);
+      setting.rbw_x10 = force_rbw(j);
+      test_acquire(TEST_LEVEL+1);                        // Acquire test
+      test_validate(TEST_LEVEL+1);                       // Validate test
+      if (j == SI4432_RBW_count-1)
+        first_level = peakLevel;
+      shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel + 1.5)*10.0 );
+      if (setting.test_argument != 0)
+        break;
+    }
+
+    reset_settings(M_LOW);
   }
 
   show_test_info = FALSE;
@@ -4848,7 +4899,7 @@ void calibrate(void)
     for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
       //    set_RBW(power_rbw[j]);
       //    set_sweep_points(21);
-#if 1
+#if 0
       test_prepare(TEST_POWER);
       setting.step_delay_mode = SD_PRECISE;
 #ifndef TINYSA4
@@ -4856,12 +4907,14 @@ void calibrate(void)
       setting.lna = S_OFF;
 //      set_RBW(6000);
 #else
-      set_RBW(1000);
+      set_RBW(8500);
+      set_attenuation(10);
 #endif
       test_acquire(TEST_POWER);                        // Acquire test
       local_test_status = test_validate(TEST_POWER);                       // Validate test
 #else
       test_prepare(TEST_LEVEL);
+      set_RBW(8500);
       test_acquire(TEST_LEVEL);                        // Acquire test
       local_test_status = test_validate(TEST_LEVEL);                       // Validate test
 #endif
@@ -4878,11 +4931,7 @@ void calibrate(void)
           ili9341_drawstring_7x13("Calibration failed", 30, 140);
           goto quit;
         } else {
-//#ifdef TINYSA4
-//          set_actual_power(-30.0);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
-//#else
           set_actual_power(CAL_LEVEL);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
-//#endif
           chThdSleepMilliseconds(1000);
         }
       }
