@@ -2639,7 +2639,7 @@ modulation_again:
           if (S_STATE(setting.spur_removal)){         // If in low input mode and spur reduction is on
             if (S_IS_AUTO(setting.below_IF) &&
 #ifdef TINYSA4
-				( lf > ULTRA_MAX_FREQ || lf < local_IF/2 /*  || ( (uint64_t)lf + (uint64_t)local_IF< MAX_LO_FREQ && lf + local_IF > 136000000ULL) */)
+                ( lf > ULTRA_MAX_FREQ || lf < local_IF/2 /*  || ( (uint64_t)lf + (uint64_t)local_IF< MAX_LO_FREQ && lf + local_IF > 136000000ULL) */)
 #else
 				(lf < local_IF / 2  || lf > local_IF) 
 #endif
@@ -2776,7 +2776,7 @@ modulation_again:
           if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
             error_f *= setting.harmonic;
           }
-          if (error_f > actual_rbw_x10 * 5)        //RBW / 4
+//          if (error_f > actual_rbw_x10 * 5)        //RBW / 4
             local_IF += error_f;
         } else if ( real_old_freq[ADF4351_LO] < target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
@@ -2788,7 +2788,7 @@ modulation_again:
           if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
             error_f *= setting.harmonic;
           }
-          if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
+//          if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
             local_IF += error_f;
         }
 #endif
@@ -3037,7 +3037,7 @@ modulation_again:
         pureRSSI = 0;
       else
         pureRSSI = Si446x_RSSI();
-//#define __DEBUG_FREQUENCY_SETTING__
+#define __DEBUG_FREQUENCY_SETTING__
 #ifdef __DEBUG_FREQUENCY_SETTING__                 // For debugging the frequency calculation
   stored_t[i] = -60.0 + (real_old_freq[ADF4351_LO] - f - old_freq[2])/10;
 #endif
@@ -4012,7 +4012,7 @@ const test_case_t test_case [] =
 };
 #else
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
- TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0),         // 1 Zero Hz leakage
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.005,  0.01,   10,      0,      0),         // 1 Zero Hz leakage
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0),         // 2 Phase noise of zero Hz
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90),      // 3
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90),      // 4

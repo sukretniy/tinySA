@@ -913,7 +913,6 @@ float Simulated_SI4432_RSSI(uint32_t i, int s)
 #endif
 //------------------------------- ADF4351 -------------------------------------
 
-#ifdef __ADF4351__
 
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 #define bitSet(value, bit) ((value) |= (1UL << (bit)))
@@ -1207,11 +1206,13 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
       bitWrite (registers[4], 20, 0);
     }
 
+
     volatile uint64_t PFDR = PFDRFout[channel];
-    INTA = (((uint64_t)freq) * OutputDivider) / PFDR;
     MOD = ADF4350_modulo;
+    uint64_t half_spacing = PFDR / MOD / 2 / OutputDivider;
+    INTA = (((uint64_t)freq + half_spacing) * OutputDivider) / PFDR;
     uint64_t f_int = INTA *(uint64_t) MOD;
-    uint64_t f_target = ((((uint64_t)freq) * OutputDivider) * (uint64_t) MOD) / PFDR;
+    uint64_t f_target = ((((uint64_t)freq + half_spacing) * OutputDivider) * (uint64_t) MOD) / PFDR;
     FRAC = f_target - f_int;
     if (FRAC >= MOD) {
       FRAC -= MOD;
@@ -1261,8 +1262,6 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
     bitSet (registers[1], 27); // Prescaler at 8/9
     return actual_freq;
 }
-
-#endif
 
 void ADF4351_enable(int s)
 {
