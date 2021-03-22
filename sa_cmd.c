@@ -823,7 +823,8 @@ return;
 VNA_SHELL_FUNCTION(cmd_u)
 {
   (void)argc;
-  int p = my_atoi(argv[0]);
+  (void)argv;
+//  int p = my_atoi(argv[0]);
   toggle_debug_avoid();
 }
 

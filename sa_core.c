@@ -36,6 +36,7 @@
 #endif
 // uint8_t dirty = true;
 uint8_t scandirty = true;
+bool debug_avoid = false;
 
 setting_t setting;
 freq_t frequencies[POINTS_COUNT];
@@ -56,7 +57,6 @@ int debug_frequencies = false;
 static freq_t old_freq[5] = { 0, 0, 0, 0,0};
 static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
 static long real_offset = 0;
-bool debug_avoid = false;
 
 void clear_frequency_cache(void)
 {
@@ -2649,7 +2649,9 @@ modulation_again:
 #endif
                 )
             {              // below/above IF
+#ifdef TINYSA4
               local_IF  = local_IF + DEFAULT_SPUR_OFFSET/2;    // center IF
+#endif
               if (spur_second_pass)
                 setting.below_IF = S_AUTO_ON;
               else
@@ -4497,8 +4499,10 @@ void self_test(int test)
       else
         goto resume;
     }
+#ifdef TINYSA4
     old_ultra_threshold = config.ultra_threshold;
     old_ultra = config.ultra;
+#endif
     // Disable waterfall on selftest
     if (setting.waterfall)
       disable_waterfall();
@@ -4555,7 +4559,9 @@ void self_test(int test)
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring_7x13("Self test complete", 50, 200);
     ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
+#ifdef TINYSA4
     config.ultra_threshold = 700000000; // just in case the restore fails. Should not be needed
+#endif
    resume2:
     test_wait = true;
     if (!check_touched())
@@ -4570,8 +4576,10 @@ quit:
     config.cor_nfm = 0;
     config.cor_wfm = 0;
 #endif
+#ifdef TINYSA4
     config.ultra_threshold = old_ultra_threshold;
     config.ultra = old_ultra;
+#endif
     reset_settings(M_LOW);
     set_refer_output(-1);
 #ifdef TINYSA4
