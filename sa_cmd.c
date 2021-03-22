@@ -408,7 +408,7 @@ VNA_SHELL_FUNCTION(cmd_zero)
 VNA_SHELL_FUNCTION(cmd_ultra_start)
 {
   if (argc != 1) {
-    shell_printf("usage: ultra_start {0..4290M}\r\n%qHz\r\n", config.ultra_threshold);
+    shell_printf("usage: ultra_start {0..4290M}\r\n%QHz\r\n", config.ultra_threshold);
     return;
   } else {
     freq_t a = (freq_t)my_atoi(argv[0]);
@@ -422,7 +422,7 @@ VNA_SHELL_FUNCTION(cmd_if1)
 {
   if (argc != 1) {
   usage:
-    shell_printf("usage: if1 {975M..979M}\r\n%qHz\r\n", config.frequency_IF1);
+    shell_printf("usage: if1 {975M..979M}\r\n%QHz\r\n", config.frequency_IF1);
     return;
   } else {
     freq_t a = (freq_t)my_atoi(argv[0]);
@@ -818,6 +818,13 @@ VNA_SHELL_FUNCTION(cmd_w)
   int p = my_atoi(argv[0]);
 return;
   set_RBW(p*10);
+}
+
+VNA_SHELL_FUNCTION(cmd_u)
+{
+  (void)argc;
+  int p = my_atoi(argv[0]);
+  toggle_debug_avoid();
 }
 
 VNA_SHELL_FUNCTION(cmd_f)

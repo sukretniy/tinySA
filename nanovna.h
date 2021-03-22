@@ -551,6 +551,15 @@ extern const uint8_t numfont16x22[];
 #define S_OHM      "\036"  // 0x1E
 #define S_DEGREE   "\037"  // 0x1F
 
+// String prefix for select font size (use not printable chars)
+#define  FONT_s     "\001"
+#define _FONT_s     1
+// bold as default
+#define  FONT_b     ""
+#define _FONT_b     2
+#define  FONT_w     "\003"
+#define _FONT_w     3
+
 // Max palette indexes in config
 #define MAX_PALETTE     32
 
@@ -1264,7 +1273,7 @@ int plot_printf(char *str, int, const char *fmt, ...);
 // Speed profile definition
 #define START_PROFILE   systime_t time = chVTGetSystemTimeX();
 #define RESTART_PROFILE   time = chVTGetSystemTimeX();
-#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "%06d", chVTGetSystemTimeX() - time);ili9341_drawstring(string_buf, 0, FREQUENCIES_YPOS);}
+#define STOP_PROFILE    {char string_buf[12];plot_printf(string_buf, sizeof string_buf, "%06d", chVTGetSystemTimeX() - time);ili9341_set_foreground(LCD_FG_COLOR);ili9341_drawstring(string_buf, 0, FREQUENCIES_YPOS);}
 #define DELTA_TIME (time = chVTGetSystemTimeX() - time)
 // Macros for convert define value to string
 #define STR1(x)  #x

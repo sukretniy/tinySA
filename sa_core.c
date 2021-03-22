@@ -56,6 +56,7 @@ int debug_frequencies = false;
 static freq_t old_freq[5] = { 0, 0, 0, 0,0};
 static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
 static long real_offset = 0;
+bool debug_avoid = false;
 
 void clear_frequency_cache(void)
 {
@@ -491,6 +492,12 @@ void set_tracking_output(int t)
 void toggle_tracking_output(void)
 {
   setting.tracking_output = !setting.tracking_output;
+  dirty = true;
+}
+
+void toggle_debug_avoid(void)
+{
+  debug_avoid = !debug_avoid;
   dirty = true;
 }
 
@@ -2111,7 +2118,7 @@ int binary_search(freq_t f)
 #if 1
   if (!setting.auto_IF && setting.frequency_IF-2000000 < f && f < setting.frequency_IF -200000)
     return true;
-  if(config.frequency_IF1 > f-200000 && config.frequency_IF1 < f-200000)
+  if(config.frequency_IF1+200000 > f && config.frequency_IF1 < f+200000)
     return true;
 #endif
   if(4*config.frequency_IF1 > fmin && 4*config.frequency_IF1 < fplus)
@@ -2535,12 +2542,9 @@ modulation_again:
 #endif
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
-#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-#ifdef TINYSA4
-  if (!setting.auto_IF)
-#endif
+  if (debug_avoid){                 // For debugging the spur avoidance control
 	stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
-#endif
+  }
   int t = 0;
   do {
     freq_t lf = f;
@@ -2614,9 +2618,9 @@ modulation_again:
 #ifdef TINYSA3
           if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
             local_IF = spur_alternate_IF;
-#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-            stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
-#endif
+            if (debug_avoid){                 // For debugging the spur avoidance control
+              stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
+            }
 		  }
 #endif
 #ifdef __SI4468__
@@ -2637,22 +2641,23 @@ modulation_again:
           }
 #endif
           if (S_STATE(setting.spur_removal)){         // If in low input mode and spur reduction is on
-            if (S_IS_AUTO(setting.below_IF) &&
+            if (setting.below_IF == S_AUTO_OFF &&       // Auto and not yet in below IF
 #ifdef TINYSA4
-                ( lf > ULTRA_MAX_FREQ || lf < local_IF/2 /*  || ( (uint64_t)lf + (uint64_t)local_IF< MAX_LO_FREQ && lf + local_IF > 136000000ULL) */)
+                ( lf > ULTRA_MAX_FREQ || lf < local_IF/2  || ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > 136000000ULL + local_IF) )
 #else
 				(lf < local_IF / 2  || lf > local_IF) 
 #endif
                 )
-            {              // else low/above IF
+            {              // below/above IF
+              local_IF  = local_IF + DEFAULT_SPUR_OFFSET/2;    // center IF
               if (spur_second_pass)
-                setting.below_IF = S_AUTO_ON;               // use below IF in second pass
+                setting.below_IF = S_AUTO_ON;
               else
-                setting.below_IF = S_AUTO_OFF;              // and above IF in first pass
+                setting.below_IF = S_AUTO_OFF;               // use below IF in second pass
             }
             else
             {
-              if (spur_second_pass) {                       // If second spur pass
+              if (spur_second_pass) {
 #ifdef __SI4432__
                 local_IF  = local_IF + 500000;                  // apply IF spur shift
 #else
@@ -2663,20 +2668,24 @@ modulation_again:
             }
           }
 #ifdef TINYSA4
-		  else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
+		  else if(!in_selftest && avoid_spur(lf) && S_IS_AUTO(setting.spur_removal)) {         // check if alternate IF is needed to avoid spur.
             if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 1000000) {
               setting.below_IF = S_AUTO_ON;
+//              local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
             } else if (setting.auto_IF) {
               local_IF = local_IF + DEFAULT_SPUR_OFFSET;
               //                if (actual_rbw_x10 == 6000 )
               //                  local_IF = local_IF + 50000;
               LO_shifted = true;
             }
-#ifdef __DEBUG_SPUR__                 // For debugging the spur avoidance control
-            if (!setting.auto_IF)
+            if (debug_avoid){            // For debugging the spur avoidance control
               stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
-#endif
-          }
+            }
+		  }
+		  else
+		  {
+            local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
+		  }
 #endif
         }
       } else {              // Output mode
@@ -3037,7 +3046,7 @@ modulation_again:
         pureRSSI = 0;
       else
         pureRSSI = Si446x_RSSI();
-#define __DEBUG_FREQUENCY_SETTING__
+//#define __DEBUG_FREQUENCY_SETTING__
 #ifdef __DEBUG_FREQUENCY_SETTING__                 // For debugging the frequency calculation
   stored_t[i] = -60.0 + (real_old_freq[ADF4351_LO] - f - old_freq[2])/10;
 #endif
@@ -3975,7 +3984,7 @@ typedef struct test_case {
 const test_case_t test_case [] =
 #ifdef TINYSA4
 {//                 Condition   Preparation     Center  Span    Pass    Width(%)Stop
- TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.05,  0.1,   -10,      0,      0),         // 1 Zero Hz leakage
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.05,  0.1,   0,      0,      0),         // 1 Zero Hz leakage
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -70,    0,      0),         // 2 Phase noise of zero Hz
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     1,      -23,   10,     -85),      // 3
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 900,    1,      -75,    10,     -85),      // 4
@@ -4012,7 +4021,7 @@ const test_case_t test_case [] =
 };
 #else
 {// Condition   Preparation     Center  Span    Pass    Width(%)Stop
- TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.005,  0.01,   10,      0,      0),         // 1 Zero Hz leakage
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0),         // 1 Zero Hz leakage
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0),         // 2 Phase noise of zero Hz
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90),      // 3
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90),      // 4
@@ -4074,8 +4083,7 @@ static void test_acquire(int i)
   redraw_request |= REDRAW_CELLS | REDRAW_FREQUENCY;
 }
 
-void cell_drawstring(char *str, int x, int y);
-
+int cell_printf(int16_t x, int16_t y, const char *fmt, ...);
 static char self_test_status_buf[35];
 void cell_draw_test_info(int x0, int y0)
 {
@@ -4090,14 +4098,14 @@ void cell_draw_test_info(int x0, int y0)
     int ypos = 50+i*INFO_SPACING - y0;
     unsigned int color = LCD_FG_COLOR;
     if (i == -1) {
-        plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Self test status:");
+        plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Self test status:");
     } else if (test_case[i].kind == TC_END) {
         if (test_wait)
-          plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Touch screen to continue");
+          plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Touch screen to continue");
         else
           self_test_status_buf[0] = 0;
       } else {
-      plot_printf(self_test_status_buf, sizeof self_test_status_buf, "Test %d: %s%s", i+1, test_fail_cause[i], test_text[test_status[i]] );
+      plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Test %d: %s%s", i+1, test_fail_cause[i], test_text[test_status[i]] );
       if (test_status[i] == TS_PASS)
         color = LCD_BRIGHT_COLOR_GREEN;
       else if (test_status[i] == TS_CRITICAL)
@@ -4108,7 +4116,7 @@ void cell_draw_test_info(int x0, int y0)
         color = LCD_BRIGHT_COLOR_BLUE;
     }
     ili9341_set_foreground(color);
-    cell_drawstring(self_test_status_buf, xpos, ypos);
+    cell_printf(xpos, ypos, self_test_status_buf);
   } while (test_case[i].kind != TC_END);
 }
 
@@ -4373,7 +4381,7 @@ common_silent:
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
 #ifdef TINYSA4
-    setting.frequency_IF = config.frequency_IF1+700000;                // Center on SAW filters
+    setting.frequency_IF = config.frequency_IF1 + 700000;                // Center on SAW filters
     set_refer_output(0);
 #else
     setting.frequency_IF = DEFAULT_IF+210000;                // Center on SAW filters
@@ -4480,6 +4488,7 @@ bool old_ultra;
 
 void self_test(int test)
 {
+  bool no_wait = false;
 //  set_sweep_points(POINTS_COUNT);
   if (test == 0) {
     if (test_wait ) {
@@ -4504,12 +4513,19 @@ void self_test(int test)
     }
     show_test_info = TRUE;
     test_step=0;
-    if (setting.test_argument > 0)
-      test_step=setting.test_argument-1;
+    test_step = setting.test_argument;
+    if (test_step != 0) {
+      if (test_step < 0) {
+        test_step = -test_step;
+        no_wait = true;
+      }
+      test_step -= 1;
+    }
     do {
       test_prepare(test_step);
       test_acquire(test_step);                        // Acquire test
       test_status[test_step] = test_validate(test_step);                       // Validate test
+
       if (test_step == 2) {
         if (peakLevel < -60) {
           test_step = TEST_END;
@@ -4521,6 +4537,10 @@ void self_test(int test)
 
       }
       if (test_status[test_step] != TS_PASS) {
+        if (no_wait) {
+          peakFreq = 0;   // Avoid changing IF
+          goto quit;
+        }
         resume:
         test_wait = true;
         if (!check_touched())
@@ -4529,15 +4549,20 @@ void self_test(int test)
       }
       test_step++;
     } while (test_case[test_step].kind != TC_END && setting.test_argument == 0 );
+    if (no_wait) {
+      goto quit;
+    }
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring_7x13("Self test complete", 50, 200);
     ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
+    config.ultra_threshold = 700000000; // just in case the restore fails. Should not be needed
    resume2:
     test_wait = true;
     if (!check_touched())
       return;
+quit:
     sweep_mode = SWEEP_ENABLE;
-
+    test_wait = false;
     ili9341_clear_screen();
 #ifdef TINYSA4
     config_recall();
@@ -4893,6 +4918,16 @@ void calibrate(void)
   int local_test_status;
   int old_sweep_points = setting._sweep_points;
   in_selftest = true;
+#ifdef TINYSA4
+  freq_t old_ultra_threshold = config.ultra_threshold;
+  setting.test_argument = -7;
+  self_test(0);
+  int if_error = peakFreq - 30000000;
+  if (if_error > -300000 && if_error < 300000) {
+    config.frequency_IF1 += if_error;
+    fill_spur_table();
+  }
+#endif
   reset_calibration();
   reset_settings(M_LOW);
   for (int k = 0; k<2; k++) {
@@ -4972,7 +5007,9 @@ quit:
   wait_user();
   ili9341_clear_screen();
   set_sweep_points(old_sweep_points);
-
+#ifdef TINYSA4
+  config.ultra_threshold = old_ultra_threshold;
+#endif
   in_selftest = false;
   sweep_mode = SWEEP_ENABLE;
   set_refer_output(-1);
