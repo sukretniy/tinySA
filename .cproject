@@ -103,19 +103,11 @@
 			<resource resourceType="PROJECT" workspacePath="/tinySA"/>
 		</configuration>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
-		<buildTargets/>
-	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="0.632494471">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.cross.base.1338786050.2017311615;cdt.managedbuild.toolchain.gnu.cross.base.1338786050.2017311615.;cdt.managedbuild.tool.gnu.cross.cpp.compiler.1546937688;cdt.managedbuild.tool.gnu.cpp.compiler.input.771075410">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.cross.base.1338786050.2017311615;cdt.managedbuild.toolchain.gnu.cross.base.1338786050.2017311615.;cdt.managedbuild.tool.gnu.cross.c.compiler.1120267824;cdt.managedbuild.tool.gnu.c.compiler.input.693059642">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="0.1682776706">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
