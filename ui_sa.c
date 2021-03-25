@@ -894,12 +894,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
     ui_mode_keypad(KM_CENTER);
     if (uistat.value != 4321)
       return;
-    set_sweep_frequency(ST_START, 0);
-    set_sweep_frequency(ST_STOP, 3000000000ULL);
-
   }
   config.ultra = !config.ultra;
-  update_min_max_freq();
+  config_save();
+  reset_settings(M_LOW);
   if (config.ultra){
     set_sweep_frequency(ST_START, 0);
     set_sweep_frequency(ST_STOP, 3000000000ULL);
@@ -1497,7 +1495,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_below_if_acb){
   toggle_below_IF();
 }
 
-#ifdef TINYSA4
+#if 0
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_ultra_acb){
   (void)item;
   (void)data;
@@ -2003,7 +2001,7 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
   { MT_KEYPAD,  KM_CP,  "CP",           "Set CP"},
-  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
+//  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
@@ -2582,6 +2580,7 @@ set_numeric_value(void)
   case KM_LPF:
     config.ultra_threshold = uistat.value;
     config_save();
+    ultra_threshold = config.ultra_threshold;
     break;
 #endif
 #ifdef __LIMITS__

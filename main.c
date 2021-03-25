@@ -1009,7 +1009,7 @@ config_t config = {
   .vbat_offset = 220,
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
-  .ultra_threshold = 800000000,
+  .ultra_threshold = 750000000,
   .low_level_offset =       100.0,    // Uncalibrated
   .high_level_offset =      100.0,    // Uncalibrated
   .low_level_output_offset =   0.0,    // Uncalibrated
@@ -1022,7 +1022,7 @@ config_t config = {
   .cor_am = 0,
   .cor_wfm = 0,
   .cor_nfm = 0,
-  .ultra = true,
+  .ultra = false,
   .high_out_adf4350 = true,
   .ext_zero_level = 174,
 #endif

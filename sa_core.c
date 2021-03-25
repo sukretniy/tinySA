@@ -49,6 +49,8 @@ static float old_a = -150;          // cached value to reduce writes to level re
 int spur_gate = 100;
 
 #ifdef TINYSA4
+freq_t ultra_threshold;
+bool ultra;
 int noise_level;
 uint32_t old_CFGR;
 uint32_t orig_CFGR;
@@ -130,7 +132,7 @@ void update_min_max_freq(void)
   case M_LOW:
     minFreq = 0;
 #ifdef TINYSA4
-    if (config.ultra)
+    if (ultra)
       maxFreq = 9900000000.0; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
     else
       maxFreq =  LOW_MAX_FREQ;
@@ -172,6 +174,8 @@ void reset_settings(int m)
 //  strcpy((char *)spi_buffer, dummy);
   setting.mode = m;
 #ifdef TINYSA4
+  ultra_threshold = config.ultra_threshold;
+  ultra = config.ultra;
   drive_dBm = (float *) (setting.mode == M_GENHIGH && config.high_out_adf4350 ? adf_drive_dBm : si_drive_dBm);
 #endif
   update_min_max_freq();
@@ -256,7 +260,7 @@ void reset_settings(int m)
   case M_LOW:
     set_sweep_frequency(ST_START, minFreq);
     set_sweep_frequency(ST_STOP, maxFreq);
-//    if (config.ultra)
+//    if (ultra)
 //      set_sweep_frequency(ST_STOP, 2900000000);    // TODO <----------------- temp ----------------------
 //    else
 #ifdef TINYSA4
@@ -2553,12 +2557,11 @@ modulation_again:
   }
 #ifdef TINYSA4
   // -------------- set ultra ---------------------------------
-  if (setting.mode == M_LOW && config.ultra) {
-    if ((S_IS_AUTO(setting.ultra)&& f > config.ultra_threshold) || S_STATE(setting.ultra) ) {
-      enable_ultra(true);
-    } else
-      enable_ultra(false);
+  if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
+    enable_ultra(true);
   }
+  else
+    enable_ultra(false);
 #endif
   // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
@@ -2624,8 +2627,8 @@ again:                                                              // Spur redu
 #else
         local_IF = DEFAULT_IF;
 #endif
-    }
-     if (setting.mode == M_LOW) {
+      }
+      if (setting.mode == M_LOW) {
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
 #if 0                                                               // Isolation test
           local_IF = lf;
@@ -2635,17 +2638,9 @@ again:                                                              // Spur redu
           lf = (setting.refer == -1 ? 0 : reffer_freq[setting.refer]);
 #endif
         } else {
-#ifdef TINYSA3
-          if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
-            local_IF = spur_alternate_IF;
-            if (debug_avoid){                 // For debugging the spur avoidance control
-              stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
-            }
-		  }
-#endif
 #ifdef __SI4468__
           if (S_IS_AUTO(setting.spur_removal)) {
-            if (lf >= config.ultra_threshold) {
+            if (ultra && lf >= ultra_threshold) {
               setting.spur_removal= S_AUTO_ON;
             } else {
               setting.spur_removal= S_AUTO_OFF;
@@ -2689,8 +2684,16 @@ again:                                                              // Spur redu
               }
             }
           }
+#ifdef TINYSA3
+          else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
+            local_IF = spur_alternate_IF;
+            if (debug_avoid){                 // For debugging the spur avoidance control
+              stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
+            }
+          }
+#endif
 #ifdef TINYSA4
-		  else if(!in_selftest && avoid_spur(lf) && S_IS_AUTO(setting.spur_removal)) {         // check if alternate IF is needed to avoid spur.
+		  else if(!in_selftest && avoid_spur(lf)) {         // check if alternate IF is needed to avoid spur.
             if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 1000000) {
               setting.below_IF = S_AUTO_ON;
 //              local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
@@ -2704,11 +2707,11 @@ again:                                                              // Spur redu
               stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
             }
 		  }
+#endif
 		  else
 		  {
             local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
 		  }
-#endif
         }
       } else {              // Output mode
         if (setting.modulation == MO_EXTERNAL)    // VERY SPECIAL CASE !!!!!! LO input via high port
@@ -4389,8 +4392,8 @@ void test_prepare(int i)
   setting.atten_step = false;
 #ifdef TINYSA4
   setting.frequency_IF = config.frequency_IF1;                // Default frequency
-  config.ultra = true;
-  config.ultra_threshold = 2000000000;
+  ultra = true;
+  ultra_threshold = 2000000000;
   setting.extra_lna = false;
 #else
   setting.frequency_IF = DEFAULT_IF;                // Default frequency
@@ -4479,7 +4482,7 @@ common_silent:
   switch(test_case[i].setup) {                // Prepare test conditions
 #ifdef TINYSA4
   case TP_30MHZ_ULTRA:
-    config.ultra_threshold = 0;
+    ultra_threshold = 0;
     break;
   case TP_30MHZ_LNA:
     setting.extra_lna = true;
@@ -4523,8 +4526,6 @@ int add_spur(int f)
 
 //static bool test_wait = false;
 static int test_step = 0;
-freq_t old_ultra_threshold;
-bool old_ultra;
 
 void self_test(int test)
 {
@@ -4537,10 +4538,6 @@ void self_test(int test)
       else
         goto resume;
     }
-#ifdef TINYSA4
-    old_ultra_threshold = config.ultra_threshold;
-    old_ultra = config.ultra;
-#endif
     // Disable waterfall on selftest
     if (setting.waterfall)
       disable_waterfall();
@@ -4597,9 +4594,6 @@ void self_test(int test)
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring_7x13("Self test complete", 50, 200);
     ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
-#ifdef TINYSA4
-    config.ultra_threshold = 700000000; // just in case the restore fails. Should not be needed
-#endif
    resume2:
     test_wait = true;
     if (!check_touched())
@@ -4613,10 +4607,6 @@ quit:
     config.cor_am = 0;
     config.cor_nfm = 0;
     config.cor_wfm = 0;
-#endif
-#ifdef TINYSA4
-    config.ultra_threshold = old_ultra_threshold;
-    config.ultra = old_ultra;
 #endif
     reset_settings(M_LOW);
     set_refer_output(-1);
@@ -4965,7 +4955,6 @@ void calibrate(void)
   int old_sweep_points = setting._sweep_points;
   in_selftest = true;
 #ifdef TINYSA4
-  freq_t old_ultra_threshold = config.ultra_threshold;
   setting.test_argument = -7;
   self_test(0);
   int if_error = peakFreq - 30000000;
@@ -5053,9 +5042,6 @@ quit:
   wait_user();
   ili9341_clear_screen();
   set_sweep_points(old_sweep_points);
-#ifdef TINYSA4
-  config.ultra_threshold = old_ultra_threshold;
-#endif
   in_selftest = false;
   sweep_mode = SWEEP_ENABLE;
   set_refer_output(-1);

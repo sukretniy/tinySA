@@ -275,9 +275,10 @@ extern float level_max;
 extern float level_range;
 extern float channel_power[3];
 extern float channel_power_watt[3];
-
 extern const char * const unit_string[];
 #ifdef TINYSA4
+extern freq_t ultra_threshold;
+extern bool ultra;
 extern float *drive_dBm;
 #else
 extern const int8_t drive_dBm [];
