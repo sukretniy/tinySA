@@ -881,6 +881,34 @@ static UI_FUNCTION_ADV_CALLBACK(menu_adf_out_acb)
   ui_mode_normal();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = config.ultra == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  if (!config.ultra) {
+    kp_help_text = "Ultra unlock code";
+    ui_mode_keypad(KM_CENTER);
+    if (uistat.value != 4321)
+      return;
+    set_sweep_frequency(ST_START, 0);
+    set_sweep_frequency(ST_STOP, 3000000000ULL);
+
+  }
+  config.ultra = !config.ultra;
+  update_min_max_freq();
+  if (config.ultra){
+    set_sweep_frequency(ST_START, 0);
+    set_sweep_frequency(ST_STOP, 3000000000ULL);
+  }
+  //  menu_move_back(false);
+  ui_mode_normal();
+}
+
+
 
 static UI_FUNCTION_ADV_CALLBACK(menu_debug_freq_acb)
 {
@@ -1969,6 +1997,7 @@ static const menuitem_t menu_settings3[] =
 #ifdef TINYSA4
 //  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
  { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
+ { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
   { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
@@ -2822,9 +2851,10 @@ redraw_cal_status:
 #ifdef __SPUR__
   if (setting.spur_removal != S_OFF) {
     if (setting.spur_removal == S_ON)
-      ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+      color = LCD_BRIGHT_COLOR_GREEN;
     else
       color = LCD_FG_COLOR;
+    ili9341_set_foreground(color);
 
     ili9341_drawstring("Spur:", x, y);
     y += YSTEP;

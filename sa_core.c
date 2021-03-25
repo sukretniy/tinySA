@@ -46,9 +46,10 @@ uint16_t vbwSteps = 1;
 freq_t minFreq = 0;
 freq_t maxFreq = 520000000;
 static float old_a = -150;          // cached value to reduce writes to level registers
+int spur_gate = 100;
 
 #ifdef TINYSA4
-int spur_gate = 100;
+int noise_level;
 uint32_t old_CFGR;
 uint32_t orig_CFGR;
 
@@ -498,6 +499,13 @@ void toggle_tracking_output(void)
 void toggle_debug_avoid(void)
 {
   debug_avoid = !debug_avoid;
+  if (debug_avoid) {
+    setting.show_stored = true;
+    trace[TRACE_STORED].enabled = true;
+  } else {
+    setting.show_stored = false;
+    trace[TRACE_STORED].enabled = false;
+  }
   dirty = true;
 }
 
@@ -1318,16 +1326,17 @@ static const struct {
   uint16_t step_delay;
   uint16_t offset_delay;
   uint16_t spur_div_1000;
+  int16_t   noise_level;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  6000,       50,            50,      400},
-  {  3000,       100,           50,      200},
-  {  1000,       400,          100,      100},
-  {   300,       400,          120,      100},
-  {   100,       700,          120,      100},
-  {    30,       900,          300,      100},
-  {    10,      4000,          600,      100},
-  {     0,      9000,         3000,      100}
+  {  6000,       200,           50,      400,   -85},
+  {  3000,       200,           50,      200,   -95},
+  {  1000,       400,          100,      100,   -100},
+  {   300,       400,          120,      100,   -105},
+  {   100,       700,          120,      100,   -110},
+  {    30,       900,          300,      100,   -115},
+  {    10,      4000,          600,      100,   -120},
+  {     0,      9000,         3000,      100,   -125}
 };
 #endif
 
@@ -1352,11 +1361,13 @@ static void calculate_step_delay(void)
 #ifdef __SI4432__
       SI4432_step_delay   = step_delay_table[i].step_delay;
       SI4432_offset_delay = step_delay_table[i].offset_delay;
+      spur_gate           = actual_rbw_x10 * (100 / 2);
 #endif
 #ifdef __SI4463__
       SI4432_step_delay   = step_delay_table[i].step_delay;
       SI4432_offset_delay = step_delay_table[i].offset_delay;
       spur_gate           = step_delay_table[i].spur_div_1000 * 1000;
+      noise_level         = step_delay_table[i].noise_level;
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
@@ -1427,6 +1438,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (setting.mode == M_GENHIGH)
     return(0.0);
 #ifdef TINYSA4
+#if 0
   if (setting.extra_lna) {
     if (f > 2100000000U) {
       cv += float_TO_PURE_RSSI(+13);
@@ -1438,6 +1450,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (f > ULTRA_MAX_FREQ) {
     cv += float_TO_PURE_RSSI(+4);       // 4dB loss in harmonic mode
   }
+#endif
 #endif
   int i = 0;
   while (f > setting.correction_frequency[i] && i < CORRECTION_POINTS)
@@ -2098,10 +2111,9 @@ int binary_search(freq_t f)
 {
   int L = 0;
   int R =  (sizeof spur_table)/sizeof(int) - 1;
-#ifdef TINYSA4
   freq_t fmin =  f - spur_gate;
   freq_t fplus = f + spur_gate;
-#else
+#if 0
   freq_t fmin =  f - actual_rbw_x10 * (100 / 2);
   freq_t fplus = f + actual_rbw_x10 * (100 / 2);
 #endif
@@ -2345,6 +2357,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
   }
 
+  // ---------------------------------  Pulse at start of low output sweep --------------------------
+
   #ifdef __SI4432__
   if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// pulse high out
     SI4432_Sel = SI4432_LO ;
@@ -2357,6 +2371,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
   }
 #endif
+
+  // ------------------------------------- Set the output level ----------------------------------
+
   if (( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {     // Initialize or adapt output levels
     if (setting.mode == M_GENLOW) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
       float ls=setting.level_sweep;                                           // calculate and set the output level
@@ -2469,6 +2486,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     if (setting.frequency_step != 0)
       correct_RSSI_freq = get_frequency_correction(f);
   }
+
+  // ----------------------------- Initiate modulation ---------------------------
+
   int *current_fm_modulation = 0;
   if (MODE_OUTPUT(setting.mode)) {
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
@@ -2503,7 +2523,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
   }
 modulation_again:
-  // -----------------------------------------------------  modulation for output modes ---------------------------------------
+  // -----------------------------------------------------  apply modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode)){
     if (setting.modulation == MO_AM) {               // AM modulation
       int p = setting.attenuate_x2 + am_modulation[modulation_counter];
@@ -2525,7 +2545,7 @@ modulation_again:
 #endif
     }
     modulation_counter++;
-    if (modulation_counter == MODULATION_STEPS)  // 3dB modulation depth
+    if (modulation_counter == MODULATION_STEPS)
       modulation_counter = 0;
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) {
       my_microsecond_delay(modulation_delay);
@@ -2579,7 +2599,7 @@ modulation_again:
     freq_t local_IF;
 #ifdef __SPUR__
     spur_second_pass = false;
-    again:                                                              // Spur reduction jumps to here for second measurement
+again:                                                              // Spur reduction jumps to here for second measurement
 #endif
 
     local_IF=0;                                                         // to get rid of warning
@@ -2650,7 +2670,7 @@ modulation_again:
                 )
             {              // below/above IF
 #ifdef TINYSA4
-              local_IF  = local_IF + DEFAULT_SPUR_OFFSET/2;    // center IF
+              local_IF  = local_IF; // + DEFAULT_SPUR_OFFSET/2;    // center IF
 #endif
               if (spur_second_pass)
                 setting.below_IF = S_AUTO_ON;
@@ -2686,7 +2706,7 @@ modulation_again:
 		  }
 		  else
 		  {
-            local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
+            local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
 		  }
 #endif
         }
@@ -2734,9 +2754,12 @@ modulation_again:
 #define TXCO_DIV3   10000000
 
         if (setting.R == 0) {
-          if (actual_rbw_x10 >= 3000)
+          if (actual_rbw_x10 >= 3000) {
+            if (ADF4350_modulo == 0) ADF4351_modulo(1000);
             ADF4351_R_counter(1);
-          else if (lf < LOW_MAX_FREQ && lf >= TXCO_DIV3 && MODE_INPUT(setting.mode)) {
+
+          } else if (lf < LOW_MAX_FREQ && lf >= TXCO_DIV3 && MODE_INPUT(setting.mode)) {
+            if (ADF4350_modulo == 0) ADF4351_modulo(60);
             freq_t tf = ((lf + actual_rbw_x10*1000) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {   // 30MHz
               ADF4351_R_counter(6);
@@ -2750,15 +2773,17 @@ modulation_again:
               } else
                 ADF4351_R_counter(1);
             }
-          } else
+          } else {
+            if (ADF4350_modulo == 0) ADF4351_modulo(60);
             if (setting.frequency_step < 100000)
               ADF4351_R_counter(3);
             else
               ADF4351_R_counter(1);
+          }
         }
-        else
+        else {
           ADF4351_R_counter(setting.R);
-
+        }
 #endif          // __ADF4351__
 #if 0
        freq_t target_f;
@@ -2776,9 +2801,11 @@ modulation_again:
         }
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
+        if (actual_rbw_x10 < 3000 || setting.frequency_step < 100000) {
         int32_t error_f = 0;
         if (real_old_freq[ADF4351_LO] > target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
+
           if (inverted_f) {
             error_f = -error_f;
             goto correct_min;
@@ -2801,6 +2828,7 @@ modulation_again:
           }
 //          if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
             local_IF += error_f;
+        }
         }
 #endif
       } else if (setting.mode == M_HIGH) {
@@ -3026,7 +3054,7 @@ modulation_again:
       int my_step_delay = SI4432_step_delay;
       if (f < 2000000 && actual_rbw_x10 == 3)
         my_step_delay = my_step_delay * 2;
-      if (SI4463_offset_changed)
+      if (LO_shifted) // || SI4463_offset_changed)
         my_step_delay = my_step_delay * 2;
       my_microsecond_delay(my_step_delay * ((setting.R == 0 && old_R > 5 ) ? 8 : 1));
       ADF4351_frequency_changed = false;
@@ -3182,7 +3210,7 @@ sweep_again:                                // stay in sweep loop when output mo
     if (refreshing)
       scandirty = false;
     if (break_on_operation && operation_requested) {                        // break loop if needed
-      if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
+      if (setting.actual_sweep_time_us > ONE_SECOND_TIME /* && MODE_INPUT(setting.mode) */) {
         ili9341_set_background(LCD_BG_COLOR);
         ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);                    // Erase progress bar
       }
@@ -3224,7 +3252,8 @@ sweep_again:                                // stay in sweep loop when output mo
       }
     }
 
-    if (MODE_INPUT(setting.mode)) {
+    //if (MODE_INPUT(setting.mode))
+    {
 #ifdef TINYSA4
       if ((i & 0x07) == 0 && (setting.actual_sweep_time_us > ONE_SECOND_TIME || (chVTGetSystemTimeX() - start_of_sweep_timestamp) > ONE_SECOND_TIME / 100)) {  // if required
 #else
@@ -3369,7 +3398,7 @@ sweep_again:                                // stay in sweep loop when output mo
     }
 //    scandirty = true;                // To show trigger happened
   }
-  if (setting.actual_sweep_time_us > ONE_SECOND_TIME && MODE_INPUT(setting.mode)) {
+  if (setting.actual_sweep_time_us > ONE_SECOND_TIME /* && MODE_INPUT(setting.mode) */) {
     // ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);     // Erase progress bar before updating actual_sweep_time
     ili9341_set_background(LCD_BG_COLOR);
     ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);
@@ -3458,6 +3487,7 @@ sweep_again:                                // stay in sweep loop when output mo
   // -------------------------- auto attenuate ----------------------------------
 #ifdef TINYSA4
 #define AUTO_TARGET_LEVEL   (actual_rbw_x10  >= 10 ? -30 : -40)
+#define LNA_AUTO_TARGET_LEVEL   -45
 #else
 #define AUTO_TARGET_LEVEL   -25
 #endif
@@ -3467,11 +3497,16 @@ sweep_again:                                // stay in sweep loop when output mo
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     int delta = 0;
+    int target_level = AUTO_TARGET_LEVEL;
+#ifdef TINYSA4
+    if (setting.extra_lna)
+      target_level = LNA_AUTO_TARGET_LEVEL;
+#endif
     int actual_max_level = (max_index[0] == 0 ? -100 :(int) (actual_t[max_index[0]] - get_attenuation()) ) + setting.external_gain; // If no max found reduce attenuation
-    if (actual_max_level < AUTO_TARGET_LEVEL && setting.attenuate_x2 > 0) {
-      delta = - (AUTO_TARGET_LEVEL - actual_max_level);
-    } else if (actual_max_level > AUTO_TARGET_LEVEL && setting.attenuate_x2 < 60) {
-      delta = actual_max_level - AUTO_TARGET_LEVEL;
+    if (actual_max_level < target_level && setting.attenuate_x2 > 0) {
+      delta = - (target_level - actual_max_level);
+    } else if (actual_max_level > target_level && setting.attenuate_x2 < 60) {
+      delta = actual_max_level - target_level;
     }
     if ((chVTGetSystemTimeX() - sweep_elapsed > 10000 && delta != 0) || delta > 5 ) {
       setting.attenuate_x2 += delta + delta;
@@ -3572,6 +3607,9 @@ sweep_again:                                // stay in sweep loop when output mo
     } else {
 #define MAX_FIT (NGRIDY-1.2)
       float s_min = value(temp_min_level)/setting.scale;
+      float noise = (noise_level - setting.external_gain - (setting.extra_lna ? 25 : 0))/setting.scale;
+      if (s_min < noise)
+        s_min = noise;
       float s_ref = setting.reflevel/setting.scale;
       if (s_max < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
         if (s_max - s_min < NGRIDY - 2)
@@ -4569,7 +4607,7 @@ void self_test(int test)
 quit:
     sweep_mode = SWEEP_ENABLE;
     test_wait = false;
-    ili9341_clear_screen();
+    if (setting.test_argument == 0) ili9341_clear_screen();
 #ifdef TINYSA4
     config_recall();
     config.cor_am = 0;

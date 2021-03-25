@@ -955,11 +955,11 @@ uint64_t  PFDRFout[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000}; //Reference
 //double  FRACF; // Temp
 
 volatile int64_t
-  INTA,         // Temp
-  ADF4350_modulo = 60,          // Linked to spur table!!!!!
-  MOD,
-  target_freq,
-  FRAC; //Temp
+//  INTA,         // Temp
+  ADF4350_modulo = 0,          // Linked to spur table!!!!!
+//  MOD,
+//  FRAC, //Temp
+  target_freq;
 
 uint8_t OutputDivider; // Temp
 uint8_t lock=2; //Not used
@@ -1207,8 +1207,26 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
     }
 
 
+#if 1
+    volatile uint32_t PFDR = (uint32_t)PFDRFout[channel];
+    uint32_t MOD = ADF4350_modulo;
+    if (MOD == 0)
+      MOD = 60;
+    uint32_t MOD_X2 = MOD<<1;
+    uint32_t INTA_F = ((freq * (uint64_t)OutputDivider) * (uint64_t)MOD_X2/ PFDR) + 1;
+    uint32_t INTA = INTA_F / MOD_X2;
+    uint32_t FRAC = (INTA_F - INTA * MOD_X2)>>1;
+    if (FRAC >= MOD) {
+      FRAC -= MOD;
+      INTA++;
+    }
+
+
+#else
     volatile uint64_t PFDR = PFDRFout[channel];
-    MOD = ADF4350_modulo;
+    uint16_t MOD = ADF4350_modulo;
+    if (MOD == 0)
+      MOD = 60;
     uint64_t half_spacing = PFDR / MOD / 2 / OutputDivider;
     INTA = (((uint64_t)freq + half_spacing) * OutputDivider) / PFDR;
     uint64_t f_int = INTA *(uint64_t) MOD;
@@ -1218,6 +1236,7 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
       FRAC -= MOD;
       INTA++;
     }
+#endif
 #if 0
     while (FRAC > 4095 || MOD > 4095) {
       FRAC = FRAC >> 1;
@@ -1234,7 +1253,7 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
         MOD=2;
     }
 #endif
-    uint64_t actual_freq = (PFDR *(INTA * MOD +FRAC))/OutputDivider / MOD;
+    uint64_t actual_freq = ((uint64_t)PFDR *(INTA * MOD +FRAC))/OutputDivider / MOD;
 #if 0
     volatile int max_delta =  PFDRFout[channel]/OutputDivider/MOD/100;
     if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
@@ -1247,10 +1266,10 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
         my_microsecond_delay(10);
     }
 #endif
-    if (FRAC >= MOD ){
-       while(1)
-         my_microsecond_delay(10);
-    }
+//    if (FRAC >= MOD ){
+//       while(1)
+//         my_microsecond_delay(10);
+//    }
 
     registers[0] = 0;
     registers[0] = INTA << 15; // OK
@@ -2441,10 +2460,11 @@ freq_t SI4463_set_freq(freq_t freq)
     si_set_offset(0);
     SI4463_offset_active = false;
   }
-  int32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
-  int64_t MOD = 524288; // = 2^19
-  int32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
+  uint32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
+  uint64_t MOD = 524288; // = 2^19
+  uint32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
   freq_t actual_freq = (R*MOD + F) * (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)/ SI4463_outdiv/MOD;
+#if 0
   int delta = freq - actual_freq;
   if (delta < -100 || delta > 100 ){
     while(1)
@@ -2454,6 +2474,7 @@ freq_t SI4463_set_freq(freq_t freq)
     while(1)
       my_microsecond_delay(10);
   }
+#endif
   if (false && (SI4463_band == prev_band)) {
     int vco = 2091 + ((((freq / 4 ) * SI4463_outdiv - 850000000)/1000) * 492) / 200000;
 
