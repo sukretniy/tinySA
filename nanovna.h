@@ -121,13 +121,21 @@
 typedef uint32_t freq_t;
  typedef int32_t long_t;
  extern bool has_esd;
+#define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
+#define CORRECTION_LOW  0
+#define CORRECTION_HIGH 1
+#define CORRECTION_SIZE 2
 #endif
 #ifdef TINYSA4
  typedef uint64_t freq_t;
  typedef int64_t long_t;
-#endif
+#define CORRECTION_POINTS  20       // Frequency dependent level correction table entries
+#define CORRECTION_LOW  0
+#define CORRECTION_LNA  1
+#define CORRECTION_HIGH 2
+#define CORRECTION_SIZE 3
+ #endif
 
-#define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
 
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
@@ -620,10 +628,8 @@ typedef struct config {
   float high_level_offset;
   float low_level_output_offset;
   float high_level_output_offset;
-  float  low_correction_value[CORRECTION_POINTS];
-  float  high_correction_value[CORRECTION_POINTS];
-  freq_t low_correction_frequency[CORRECTION_POINTS];
-  freq_t high_correction_frequency[CORRECTION_POINTS];
+  float  correction_value[CORRECTION_SIZE][CORRECTION_POINTS];
+  freq_t correction_frequency[CORRECTION_SIZE][CORRECTION_POINTS];
 #ifdef TINYSA4
   freq_t  setting_frequency_30mhz;
 #else

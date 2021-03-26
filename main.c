@@ -995,10 +995,10 @@ config_t config = {
   .vbat_offset = 500,
   .low_level_offset =       100,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
-  .low_correction_frequency = { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
-  .low_correction_value = { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
-  .high_correction_frequency = { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 },
-  .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
+  .correction_frequency = { { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
+                            { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 }},
+  .correction_value = { { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
+                        { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 } },
   .setting_frequency_10mhz = 10000000,
   .cor_am = 0,// -10,
   .cor_wfm = 0, //-18,
@@ -1014,10 +1014,8 @@ config_t config = {
   .high_level_offset =      100.0,    // Uncalibrated
   .low_level_output_offset =   0.0,    // Uncalibrated
   .high_level_output_offset =  0.0,    // Uncalibrated
-  .low_correction_frequency = { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
-  .low_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
-  .high_correction_frequency = { 10000, 100000, 200000, 500000, 50000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
-  .high_correction_value = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
+  .correction_frequency[0] = { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
+  .correction_value[0] = { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
   .setting_frequency_30mhz = 30000000,
   .cor_am = 0,
   .cor_wfm = 0,

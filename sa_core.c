@@ -275,8 +275,8 @@ void reset_settings(int m)
     setting.lo_drive=1;
     setting.extra_lna = false;
 #endif
-    setting.correction_frequency = config.low_correction_frequency;
-    setting.correction_value = config.low_correction_value;
+    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
+    setting.correction_value = config.correction_value[CORRECTION_LOW];
     break;
   case M_GENLOW:
 #ifdef TINYSA4
@@ -293,8 +293,8 @@ void reset_settings(int m)
 #ifdef TINYSA4
     setting.extra_lna = false;
 #endif
-    setting.correction_frequency = config.low_correction_frequency;
-    setting.correction_value = config.low_correction_value;
+    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
+    setting.correction_value = config.correction_value[CORRECTION_LOW];
     level_min = SL_GENLOW_LEVEL_MIN + config.low_level_output_offset;
     level_max = SL_GENLOW_LEVEL_MAX + config.low_level_output_offset;
     level_range = level_max - level_min;
@@ -306,8 +306,8 @@ void reset_settings(int m)
 #ifdef TINYSA4
     setting.extra_lna = false;
 #endif
-    setting.correction_frequency = config.high_correction_frequency;
-    setting.correction_value = config.high_correction_value;
+    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
+    setting.correction_value = config.correction_value[CORRECTION_HIGH];
     break;
   case M_GENHIGH:
 #ifdef TINYSA4
@@ -322,8 +322,8 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 10*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
-    setting.correction_frequency = config.high_correction_frequency;
-    setting.correction_value = config.high_correction_value;
+    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
+    setting.correction_value = config.correction_value[CORRECTION_HIGH];
     level_min = SL_GENHIGH_LEVEL_MIN + config.high_level_output_offset;
     level_max = SL_GENHIGH_LEVEL_MAX + config.high_level_output_offset;
     level_range = level_max - level_min;
@@ -525,12 +525,19 @@ void toggle_high_out_adf4350(void)
 void toggle_extra_lna(void)
 {
   setting.extra_lna = !setting.extra_lna;
-  dirty = true;
+  set_extra_lna(setting.extra_lna);
 }
 
 void set_extra_lna(int t)
 {
   setting.extra_lna = t;
+  if (setting.extra_lna) {
+    setting.correction_frequency = config.correction_frequency[CORRECTION_LNA];
+    setting.correction_value = config.correction_value[CORRECTION_LNA];
+  } else {
+    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
+    setting.correction_value = config.correction_value[CORRECTION_LOW];
+  }
   dirty = true;
 }
 #endif
@@ -3610,9 +3617,11 @@ sweep_again:                                // stay in sweep loop when output mo
     } else {
 #define MAX_FIT (NGRIDY-1.2)
       float s_min = value(temp_min_level)/setting.scale;
+#ifdef TINYSA4
       float noise = (noise_level - setting.external_gain - (setting.extra_lna ? 25 : 0))/setting.scale;
       if (s_min < noise)
         s_min = noise;
+#endif
       float s_ref = setting.reflevel/setting.scale;
       if (s_max < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
         if (s_max - s_min < NGRIDY - 2)
@@ -4030,7 +4039,7 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.05,  0.1,   0,      0,      0),         // 1 Zero Hz leakage
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -70,    0,      0),         // 2 Phase noise of zero Hz
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     1,      -23,   10,     -85),      // 3
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 900,    1,      -75,    10,     -85),      // 4
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 900,    1,      -75,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
  TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     633,    994,    -85,    0,      0),         // 6 Wide band noise floor high mode
