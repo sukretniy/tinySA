@@ -1340,14 +1340,14 @@ static const struct {
   int16_t   noise_level;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  6000,       200,           50,      400,   -85},
+  {  8500,       200,           50,      400,   -90},
   {  3000,       200,           50,      200,   -95},
-  {  1000,       400,          100,      100,   -100},
-  {   300,       400,          120,      100,   -105},
-  {   100,       700,          120,      100,   -110},
-  {    30,       900,          300,      100,   -115},
-  {    10,      4000,          600,      100,   -120},
-  {     0,      9000,         3000,      100,   -125}
+  {  1000,       400,          100,      100,   -105},
+  {   300,       400,          120,      100,   -110},
+  {   100,       700,          120,      100,   -115},
+  {    30,       900,          300,      100,   -120},
+  {    10,      4000,          600,      100,   -122},
+  {     3,      9000,         3000,      100,   -125}
 };
 #endif
 
@@ -1378,7 +1378,7 @@ static void calculate_step_delay(void)
       SI4432_step_delay   = step_delay_table[i].step_delay;
       SI4432_offset_delay = step_delay_table[i].offset_delay;
       spur_gate           = step_delay_table[i].spur_div_1000 * 1000;
-      noise_level         = step_delay_table[i].noise_level;
+      noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
@@ -3618,7 +3618,7 @@ sweep_again:                                // stay in sweep loop when output mo
 #define MAX_FIT (NGRIDY-1.2)
       float s_min = value(temp_min_level)/setting.scale;
 #ifdef TINYSA4
-      float noise = (noise_level - setting.external_gain - (setting.extra_lna ? 25 : 0))/setting.scale;
+      float noise = (noise_level - setting.external_gain - (setting.extra_lna ? 20 : 0))/setting.scale;
       if (s_min < noise)
         s_min = noise;
 #endif
