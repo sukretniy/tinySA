@@ -628,6 +628,7 @@ typedef struct config {
   float high_level_offset;
   float low_level_output_offset;
   float high_level_output_offset;
+  float lna_level_offset;
   float  correction_value[CORRECTION_SIZE][CORRECTION_POINTS];
   freq_t correction_frequency[CORRECTION_SIZE][CORRECTION_POINTS];
 #ifdef TINYSA4

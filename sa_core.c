@@ -882,7 +882,12 @@ void set_actual_power(float o)              // Set peak level to known value
   if (setting.mode == M_HIGH) {
     config.high_level_offset = new_offset;
   } else if (setting.mode == M_LOW) {
-    config.low_level_offset = new_offset;
+#ifdef TINYSA4
+    if (setting.extra_lna)
+      config.lna_level_offset = new_offset;
+    else
+#endif
+      config.low_level_offset = new_offset;
   }
   dirty = true;
   config_save();
@@ -897,9 +902,18 @@ float get_level_offset(void)
     return(config.high_level_offset);
   }
   if (setting.mode == M_LOW) {
-    if (config.low_level_offset == 100)
-      return 0;
-    return(config.low_level_offset);
+#ifdef TINYSA4
+    if (setting.extra_lna) {
+      if (config.lna_level_offset == 100)
+        return 0;
+      return(config.lna_level_offset);
+    } else
+#endif
+    {
+      if (config.low_level_offset == 100)
+        return 0;
+      return(config.low_level_offset);
+    }
   }
   if (setting.mode == M_GENLOW) {
     return(config.low_level_output_offset);
@@ -914,8 +928,16 @@ int level_is_calibrated(void)
 {
   if (setting.mode == M_HIGH && config.high_level_offset != 100)
     return 1;
-  if (setting.mode == M_LOW && config.low_level_offset != 100)
-    return 1;
+  if (setting.mode == M_LOW) {
+#ifdef TINYSA4
+    if (setting.extra_lna) {
+      if (config.lna_level_offset != 100)
+        return 1;
+    } else
+#endif
+      if (config.low_level_offset != 100)
+        return 1;
+  }
   return(0);
 }
 
@@ -2270,7 +2292,7 @@ static void calculate_static_correction(void)                   // Calculate the
 #ifdef TINYSA4
           - (S_STATE(setting.agc)? 0 : 33)
           - (S_STATE(setting.lna)? 0 : 0)
-          + (setting.extra_lna ? -25.5 : 0)                         // TODO <------------------------- set correct value
+          + (setting.extra_lna ? -23.5 : 0)                         // TODO <------------------------- set correct value
 #endif		  
           - setting.external_gain);
 }
@@ -3200,6 +3222,7 @@ static bool sweep(bool break_on_operation)
 #endif
   }
 
+  bool show_bar = ( MODE_INPUT(setting.mode) ||  setting.frequency_step != 0 || setting.level_sweep != 0.0 ? true : false);
 again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
 //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
@@ -3265,9 +3288,9 @@ sweep_again:                                // stay in sweep loop when output mo
     //if (MODE_INPUT(setting.mode))
     {
 #ifdef TINYSA4
-      if ((i & 0x07) == 0 && (setting.actual_sweep_time_us > ONE_SECOND_TIME || (chVTGetSystemTimeX() - start_of_sweep_timestamp) > ONE_SECOND_TIME / 100)) {  // if required
+      if (show_bar && (i & 0x07) == 0 && (setting.actual_sweep_time_us > ONE_SECOND_TIME || (chVTGetSystemTimeX() - start_of_sweep_timestamp) > ONE_SECOND_TIME / 100)) {  // if required
 #else
-      if ( (i & 0x07) == 0 && setting.actual_sweep_time_us > ONE_SECOND_TIME) {  // if required
+      if ( show_bar && (i & 0x07) == 0 && setting.actual_sweep_time_us > ONE_SECOND_TIME) {  // if required
 #endif
     	int pos = i * (WIDTH+1) / sweep_points;
     	ili9341_set_background(LCD_SWEEP_LINE_COLOR);
@@ -4068,6 +4091,7 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
 #define TEST_LEVEL  24
  TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
  TEST_CASE_STRUCT(TC_LEVEL,   TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   145,     -55),      // 23 Measure level
 
 };
@@ -4374,7 +4398,7 @@ int test_validate(int i)
     current_test_status = validate_atten(i);
     break;
   case TC_LEVEL:
-    current_test_status = validate_level(i, 0.0);
+    current_test_status = validate_level(i, 10.0);
     break;
   case TC_DISPLAY:
     current_test_status = validate_display(i);
@@ -4388,6 +4412,7 @@ int test_validate(int i)
   test_status[i] = current_test_status;     // Must be set before draw_all() !!!!!!!!
   //  draw_frequencies();
 //  draw_cal_status();
+  redraw_request != REDRAW_CAL_STATUS;
   draw_all(TRUE);
   return current_test_status;
 }
@@ -4495,7 +4520,6 @@ common_silent:
     break;
   case TP_30MHZ_LNA:
     setting.extra_lna = true;
-    chThdSleepMilliseconds(200);
     break;
 #endif
   case TP_10MHZ_SWITCH:
@@ -4909,22 +4933,22 @@ quit:
       if (setting.test_argument != 0)
         break;
     }
-
+#if 0               // Does not center on frequency!!!!!
     shell_printf("\n\r");
     for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
-      test_prepare(TEST_LEVEL+1);
+      test_prepare(TEST_LEVEL+2);
       setting.rbw_x10 = force_rbw(j);
-      test_acquire(TEST_LEVEL+1);                        // Acquire test
-      test_validate(TEST_LEVEL+1);                       // Validate test
+      test_acquire(TEST_LEVEL+2);                        // Acquire test
+      test_validate(TEST_LEVEL+2);                       // Validate test
       if (j == SI4432_RBW_count-1)
         first_level = peakLevel;
       shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel + 1.5)*10.0 );
       if (setting.test_argument != 0)
         break;
     }
-
+#endif
     reset_settings(M_LOW);
   }
 
@@ -4938,6 +4962,9 @@ void reset_calibration(void)
 {
   config.high_level_offset = 100;
   config.low_level_offset = 100;
+#ifdef TINYSA4
+  config.lna_level_offset = 100;
+#endif
 }
 
 void calibrate_modulation(int modulation, int8_t *correction)
@@ -4974,28 +5001,38 @@ void calibrate(void)
 #endif
   reset_calibration();
   reset_settings(M_LOW);
+#ifdef TINYSA4
+  bool calibrate_lna = false;
+again:
+#endif
   for (int k = 0; k<2; k++) {
     for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
       //    set_RBW(power_rbw[j]);
       //    set_sweep_points(21);
 #if 0
-      test_prepare(TEST_POWER);
+      int test_case = TEST_POWER;
+      test_prepare(test_case);
       setting.step_delay_mode = SD_PRECISE;
 #ifndef TINYSA4
       setting.agc = S_ON;
       setting.lna = S_OFF;
-//      set_RBW(6000);
+      //      set_RBW(6000);
 #else
       set_RBW(8500);
       set_attenuation(10);
 #endif
-      test_acquire(TEST_POWER);                        // Acquire test
-      local_test_status = test_validate(TEST_POWER);                       // Validate test
+      test_acquire(test_case);                        // Acquire test
+      local_test_status = test_validate(test_case);                       // Validate test
 #else
-      test_prepare(TEST_LEVEL);
+      int test_case = TEST_LEVEL;
+#ifdef TINYSA4
+      if (calibrate_lna)
+        test_case += 1;
+#endif
+      test_prepare(test_case);
       set_RBW(8500);
-      test_acquire(TEST_LEVEL);                        // Acquire test
-      local_test_status = test_validate(TEST_LEVEL);                       // Validate test
+      test_acquire(test_case);                        // Acquire test
+      local_test_status = test_validate(test_case);                       // Validate test also sets attenuation if zero span
 #endif
       if (k ==0 || k == 1) {
         if (peakLevel < -50) {
@@ -5016,7 +5053,13 @@ void calibrate(void)
       }
     }
   }
-#if 0               // No high input calibration as CAL OUTPUT is unreliable
+#ifdef TINYSA4
+  if (!calibrate_lna) {
+    calibrate_lna = true;
+    goto again;
+  }
+#endif
+  #if 0               // No high input calibration as CAL OUTPUT is unreliable
 
   set_RBW(100);
   test_prepare(TEST_POWER+1);

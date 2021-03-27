@@ -2701,6 +2701,7 @@ void enable_extra_lna(int s)
     else
       palClearLine(LINE_LNA);
     old_extra_lna = s;
+    osalThreadSleepMilliseconds(500);
   }
 #else
   (void)s;

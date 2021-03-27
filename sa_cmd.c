@@ -293,7 +293,11 @@ VNA_SHELL_FUNCTION(cmd_levelchange)
 VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   //                                     0    1      2
+#ifdef TINYSA4
   static const char cmd_mode_list[] = "low|high|switch";
+#else
+  static const char cmd_mode_list[] = "low|high|switch|lna";
+#endif
   if (argc == 0) {
     const char *p = "leveloffset %s %.1f\r\n";
     shell_printf(p, "low",          config.low_level_offset);
@@ -301,6 +305,9 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     shell_printf(p, "low output",   config.low_level_output_offset);
     shell_printf(p, "high output",  config.high_level_output_offset);
     shell_printf(p, "switch",       config.switch_offset);
+#ifdef TINYSA4
+    shell_printf(p, "lna",          config.lna_level_offset);
+#endif
     return;
   }
   int mode = get_str_index(argv[0], cmd_mode_list);
@@ -312,6 +319,9 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       case 0: config.low_level_offset = v; break;
       case 1: config.high_level_offset = v; break;
       case 2: config.switch_offset = v; break;
+#ifdef TINYSA4
+      case 3: config.lna_level_offset = v; break;
+#endif
       default: goto usage;
     }
     dirty = true;
