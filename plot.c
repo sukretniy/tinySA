@@ -1349,7 +1349,11 @@ static void trace_print_value_string(     // Only used at one place
     format = FONT_s"%s %.3F%s%s"; // 5 characters incl u, m, etc...
   else
     format = FONT_s"%s %.1f%s%s";
+#ifdef TINYSA4
+  format++; // Skip small prefix for bold output
+#else
   if (bold) format++; // Skip small prefix for bold output
+#endif
   cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""));
 }
 

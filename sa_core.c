@@ -201,7 +201,7 @@ void reset_settings(int m)
   setting.subtract_stored = false;
   setting.normalize_level = 0.0;
 #ifdef TINYSA4
-  setting.lo_drive=1;
+  setting.lo_drive=5;
 #else
   setting.lo_drive=13;
 //  setting.rx_drive=8;		moved to top
@@ -272,7 +272,7 @@ void reset_settings(int m)
     setting.auto_attenuation = true;
     setting.sweep_time_us = 0;
 #ifdef TINYSA4
-    setting.lo_drive=1;
+    setting.lo_drive=5;
     setting.extra_lna = false;
 #endif
     setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
@@ -2334,6 +2334,10 @@ void clock_at_48MHz(void)
   }
 }
 
+#ifdef TINYSA4
+int old_drive = -1;
+#endif
+
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
@@ -2404,7 +2408,20 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
   }
 #endif
-
+#ifdef TINYSA4
+  // ----------------------------- set mixer drive --------------------------------------------
+  if (setting.lo_drive & 0x40 || f >=2000000000UL) {
+    if (old_drive != 3) {
+      ADF4351_drive(3);       // Max drive
+      old_drive = 3;
+    }
+  } else {
+    if (old_drive != setting.lo_drive) {
+      ADF4351_drive(setting.lo_drive);
+      old_drive = setting.lo_drive;
+    }
+  }
+#endif
   // ------------------------------------- Set the output level ----------------------------------
 
   if (( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {     // Initialize or adapt output levels
@@ -4150,11 +4167,21 @@ static void test_acquire(int i)
 {
   (void)i;
   pause_sweep();
-//  SetAverage(4);
-  sweep(false);
-//  sweep(false);
-//  sweep(false);
-//  sweep(false);
+  if (test_case[i].kind == TC_LEVEL) {
+    float summed_peak_level = 0;
+#define LEVEL_TEST_SWEEPS    10
+    for (int k=0; k<LEVEL_TEST_SWEEPS; k++) {
+      sweep(false);
+      float local_peak_level = 0.0;
+#define FROM_START  50
+      for (int n = FROM_START ; n < sweep_points; n++)
+        local_peak_level += actual_t[n];
+      local_peak_level /= (sweep_points - FROM_START);
+      summed_peak_level += local_peak_level;
+    }
+    peakLevel = summed_peak_level / LEVEL_TEST_SWEEPS;
+  } else
+    sweep(false);
   plot_into_index(measured);
   redraw_request |= REDRAW_CELLS | REDRAW_FREQUENCY;
 }
@@ -4262,34 +4289,9 @@ int validate_flatness(int i) {
   return(TS_PASS);
 }
 
-int validate_level(int i, float a) {
-  int status = TS_PASS;
-  test_fail_cause[i] = "Level ";
-  float summed_peak_level = 0;
-  set_attenuation(a);
-#define LEVEL_TEST_SWEEPS    10
-  for (int k=0; k<LEVEL_TEST_SWEEPS; k++) {
-    test_acquire(TEST_ATTEN);                        // Acquire test
-    float peaklevel = 0.0;
-#define FROM_START  50
-    for (int n = FROM_START ; n < sweep_points; n++)
-      peaklevel += actual_t[n];
-    peaklevel /= (sweep_points - FROM_START);
-    summed_peak_level += peaklevel;
-  }
-  peakLevel = summed_peak_level / LEVEL_TEST_SWEEPS;
-#if 0
-  #define LEVEL_TEST_CRITERIA 3
-  if (peakLevel - test_case[i].pass <= -LEVEL_TEST_CRITERIA || peakLevel - test_case[i].pass >= LEVEL_TEST_CRITERIA) {
-    status = TS_FAIL;
-  } else
-#endif
-    test_fail_cause[i] = "";
-  return(status);
-}
-
-
 const float atten_step[7] = { 0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0 };
+
+int test_validate(int i);
 
 int validate_atten(int i) {
   int status = TS_PASS;
@@ -4297,33 +4299,19 @@ int validate_atten(int i) {
   test_fail_cause[i] = "Attenuator ";
 //  for (int j= 0; j < 64; j++ ) {
   for (int j= 0; j < 7; j++ ) {
-//    float a = ((float)j)/2.0;
+    //    float a = ((float)j)/2.0;
     float a = atten_step[j];
     set_attenuation(a);
-    float summed_peak_level = 0;
-#define ATTEN_TEST_SWEEPS    5
-    for (int k=0; k<ATTEN_TEST_SWEEPS; k++) {
-//        setting.sweep_time_us = 1000000;
-        test_acquire(TEST_ATTEN);                        // Acquire test
-//      test_validate(TEST_ATTEN);                       // Validate test
-        float peaklevel = 0.0;
-      for (int n = 0 ; n < sweep_points; n++)
-        peaklevel += actual_t[n];
-      peaklevel /= (sweep_points - 0);
-      summed_peak_level += peaklevel;
-      }
-      summed_peak_level /= ATTEN_TEST_SWEEPS;
+    test_acquire(TEST_LEVEL);                        // Acquire test, does also the averaging.
+    test_validate(TEST_LEVEL);                       // Validate test, does nothing actually
     if (j == 0)
-      reference_peak_level = summed_peak_level;
+      reference_peak_level = peakLevel;
     else {
-//      if (SDU1.config->usbp->state == USB_ACTIVE)  shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",a, summed_peak_level, summed_peak_level - reference_peak_level);
+      //      if (SDU1.config->usbp->state == USB_ACTIVE)  shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",a, summed_peak_level, summed_peak_level - reference_peak_level);
 #define ATTEN_TEST_CRITERIA 1.5
-      if (summed_peak_level - reference_peak_level <= -ATTEN_TEST_CRITERIA || summed_peak_level - reference_peak_level >= ATTEN_TEST_CRITERIA) {
+      if (peakLevel - reference_peak_level <= -ATTEN_TEST_CRITERIA || peakLevel - reference_peak_level >= ATTEN_TEST_CRITERIA) {
         status = TS_FAIL;
- //       draw_all(true);
       }
-
-	  
     }
   }
   if (status == TS_PASS)
@@ -4353,6 +4341,19 @@ int validate_above(int tc) {
   }
   if (status != TS_PASS)
     test_fail_cause[tc] = "Below ";
+  return(status);
+}
+
+int validate_level(int i) {
+  int status = TS_PASS;
+  test_fail_cause[i] = "Level ";
+#if 0
+  #define LEVEL_TEST_CRITERIA 3
+  if (peakLevel - test_case[i].pass <= -LEVEL_TEST_CRITERIA || peakLevel - test_case[i].pass >= LEVEL_TEST_CRITERIA) {
+    status = TS_FAIL;
+  } else
+#endif
+    test_fail_cause[i] = "";
   return(status);
 }
 
@@ -4395,10 +4396,10 @@ int test_validate(int i)
     current_test_status = validate_flatness(i);
     break;
   case TC_ATTEN:
-    current_test_status = validate_atten(i);
+    current_test_status = validate_atten(i);        // Measures and validates the attenuator
     break;
   case TC_LEVEL:
-    current_test_status = validate_level(i, 10.0);
+    current_test_status = validate_level(i);
     break;
   case TC_DISPLAY:
     current_test_status = validate_display(i);
@@ -4412,7 +4413,7 @@ int test_validate(int i)
   test_status[i] = current_test_status;     // Must be set before draw_all() !!!!!!!!
   //  draw_frequencies();
 //  draw_cal_status();
-  redraw_request != REDRAW_CAL_STATUS;
+  redraw_request |= REDRAW_CAL_STATUS;
   draw_all(TRUE);
   return current_test_status;
 }
@@ -4497,7 +4498,7 @@ common_silent:
 #endif
   case TP_30MHZ:
     set_mode(M_LOW);
-    maxFreq = 2000000000;            // needed to measure the LPF rejection
+    maxFreq = 9900000000ULL;            // needed to measure the LPF rejection
     set_refer_output(0);
     dirty = true;
  //   set_step_delay(1);                      // Do not set !!!!!
@@ -4695,28 +4696,24 @@ quit:
   } else if (test == 2) {                                   // Attenuator test
     in_selftest = true;
     reset_settings(M_LOW);
+#if 1
+    float reference_peak_level = 0;
+    for (int j= 0; j < 64; j++ ) {
+      test_prepare(TEST_LEVEL);
+      set_attenuation(((float)j)/2.0);
+      if (setting.test_argument)
+        set_sweep_frequency(ST_CENTER, ((freq_t)setting.test_argument) * 1000000ULL);
+      ultra_threshold = config.ultra_threshold;
+      test_acquire(TEST_LEVEL);                        // Acquire test
+	  test_validate(TEST_LEVEL);                       // Validate test
+      if (j == 0)
+        reference_peak_level = peakLevel;
+      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, peakLevel, peakLevel - reference_peak_level);
+    }
+#else
     test_prepare(TEST_ATTEN);
     test_acquire(TEST_ATTEN);                        // Acquire test
     test_validate(TEST_ATTEN);                       // Validate test
-#if 0
-    float reference_peak_level = 0;
-    for (int j= 0; j < 64; j++ ) {
-      test_prepare(TEST_ATTEN);
-      set_attenuation(((float)j)/2.0);
-      float summed_peak_level = 0;
-      for (int k=0; k<10; k++) {
-			test_acquire(TEST_ATTEN);                        // Acquire test
-			test_validate(TEST_ATTEN);                       // Validate test
-			summed_peak_level += peakLevel;
-      }
-        float peaklevel = 0.0;
-        for (int k = 0 ; k < sweep_points; k++)
-          peaklevel += actual_t[k];
-        peaklevel /= sweep_points;
-      if (j == 0)
-        reference_peak_level = peaklevel;
-      shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, peaklevel, peaklevel - reference_peak_level);
-    }
 #endif
     reset_settings(M_LOW);
 #endif
@@ -4897,7 +4894,7 @@ quit:
       break;
     }
   } else if (test == 6) {
-    in_selftest = true;               // Spur search
+    in_selftest = true;               // MCU Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SPUR);
     set_RBW(300);
@@ -4925,6 +4922,7 @@ quit:
         j = setting.test_argument;
       test_prepare(TEST_LEVEL);
       setting.rbw_x10 = force_rbw(j);
+      osalThreadSleepMilliseconds(200);
       test_acquire(TEST_LEVEL);                        // Acquire test
       test_validate(TEST_LEVEL);                       // Validate test
       if (j == SI4432_RBW_count-1)
@@ -5019,8 +5017,8 @@ again:
       //      set_RBW(6000);
 #else
       set_RBW(8500);
-      set_attenuation(10);
 #endif
+      set_attenuation(10);
       test_acquire(test_case);                        // Acquire test
       local_test_status = test_validate(test_case);                       // Validate test
 #else
@@ -5031,6 +5029,7 @@ again:
 #endif
       test_prepare(test_case);
       set_RBW(8500);
+      set_attenuation(10);
       test_acquire(test_case);                        // Acquire test
       local_test_status = test_validate(test_case);                       // Validate test also sets attenuation if zero span
 #endif

@@ -1149,16 +1149,18 @@ void ADF4351_CP(int p)
 
 void ADF4351_drive(int p)
 {
-      registers[4] &= ~ (((unsigned long)0x3) << 3);
-      registers[4] |= (((unsigned long)p) << 3);
-      ADF4351_Set(0);
+  p &= 0x03;
+  registers[4] &= ~ (((unsigned long)0x3) << 3);
+  registers[4] |= (((unsigned long)p) << 3);
+  ADF4351_Set(0);
 }
 
 void ADF4351_aux_drive(int p)
 {
-      registers[4] &= ~ (((unsigned long)0x3) << 6);
-      registers[4] |= (((unsigned long)p) << 6);
-      ADF4351_Set(0);
+  p &= 0x03;
+  registers[4] &= ~ (((unsigned long)0x3) << 6);
+  registers[4] |= (((unsigned long)p) << 6);
+  ADF4351_Set(0);
 }
 #if 0
 static uint32_t gcd(uint32_t x, uint32_t y)

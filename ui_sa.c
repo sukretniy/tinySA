@@ -1652,6 +1652,7 @@ static const menuitem_t menu_load_preset[] =
 };
 #ifdef TINYSA4
 static const menuitem_t menu_mixer_drive[] = {
+  { MT_ADV_CALLBACK, 5, "Auto",     menu_mixer_drive_acb},
   { MT_ADV_CALLBACK, 3, "%+ddBm",   menu_mixer_drive_acb},
   { MT_ADV_CALLBACK, 2, "%+ddBm",   menu_mixer_drive_acb},
   { MT_ADV_CALLBACK, 1, "%+ddBm",   menu_mixer_drive_acb},
