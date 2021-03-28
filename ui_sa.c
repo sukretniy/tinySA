@@ -1269,21 +1269,24 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
   {
     if (data == M_NORMAL) {
       markers[active_marker].mtype = M_NORMAL;
-    } else if (data == M_REFERENCE) {
+    }
+    if (data == M_REFERENCE) {
       for (int i = 0; i<MARKER_COUNT; i++ ) {
-        if (markers[i].mtype & M_REFERENCE)
+        if (i != active_marker && markers[i].mtype & M_REFERENCE)
           markers[i].mtype &= ~M_REFERENCE;
       }
-      markers[active_marker].mtype |= M_REFERENCE;
       markers[active_marker].mtype &= ~M_DELTA;
-    } else {
-      if (data == M_DELTA && (markers[active_marker].mtype & M_REFERENCE))
+    }
+    if (data == M_DELTA)
         markers[active_marker].mtype &= ~M_REFERENCE;
+#if 1
+    markers[active_marker].mtype ^= data;
+#else
       if (markers[active_marker].mtype & data)
         markers[active_marker].mtype &= ~data;
       else
         markers[active_marker].mtype |= data;
-    }
+#endif
   }
   markmap_all_markers();
 //  redraw_marker(active_marker, TRUE);
@@ -1841,7 +1844,7 @@ const menuitem_t menu_marker_search[] = {
   { MT_CALLBACK, 2, "MAX\n" S_LARROW" LEFT",  menu_marker_search_cb },
   { MT_CALLBACK, 3, "MAX\n" S_RARROW" RIGHT", menu_marker_search_cb },
   { MT_KEYPAD,  KM_MARKER,          "ENTER\nFREQUENCY",         NULL},
-  { MT_ADV_CALLBACK, 0,            "TRACKING",menu_marker_tracking_acb },
+  { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING",menu_marker_modify_acb },
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1850,8 +1853,8 @@ const menuitem_t menu_marker_modify[] = {
   { MT_ADV_CALLBACK, M_REFERENCE,   "REFER",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_DELTA,       "DELTA",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_NOISE,       "NOISE",    menu_marker_modify_acb},
-  { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING", menu_marker_tracking_acb},
-  { MT_ADV_CALLBACK, M_NORMAL,      "NORMAL",   menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING", menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_STORED,      "STORED",   menu_marker_modify_acb},
   { MT_SUBMENU,  0,                 "SEARCH",   menu_marker_search},
   { MT_CALLBACK, M_DELETE,          "DELETE",   menu_marker_delete_cb},
   { MT_CANCEL,   0,          S_LARROW" BACK", NULL },

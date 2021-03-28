@@ -4498,7 +4498,11 @@ common_silent:
 #endif
   case TP_30MHZ:
     set_mode(M_LOW);
+#ifdef TINYSA4
     maxFreq = 9900000000ULL;            // needed to measure the LPF rejection
+#else
+    maxFreq = 2000000000;            // needed to measure the LPF rejection
+#endif
     set_refer_output(0);
     dirty = true;
  //   set_step_delay(1);                      // Do not set !!!!!

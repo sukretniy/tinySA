@@ -909,24 +909,33 @@ draw_cell(int m, int n)
 //  PULSE;
 // draw marker symbols on each trace (<10 system ticks for all screen calls)
 #if 1
-  if (trace[TRACE_ACTUAL].enabled) {
+  for (int t = TRACE_ACTUAL; t <= TRACE_STORED; t++ ) {
+  if (trace[t].enabled) {
     for (i = 0; i < MARKERS_MAX; i++) {
       if (!markers[i].enabled)
         continue;
+      if (markers[i].mtype & M_STORED) {
+        if (t == TRACE_ACTUAL)
+          continue;
+      } else {
+        if (t == TRACE_STORED)
+          continue;
+      }
       int idx = markers[i].index;
       int x = trace_index_x[idx] - x0 - X_MARKER_OFFSET;
-      int y = trace_index_y[TRACE_ACTUAL][idx] - y0 - Y_MARKER_OFFSET;
+      int y = trace_index_y[t][idx] - y0 - Y_MARKER_OFFSET;
       // Check marker icon on cell
       if ((uint32_t)(x+MARKER_WIDTH ) < (CELLWIDTH  + MARKER_WIDTH ) &&
           (uint32_t)(y+MARKER_HEIGHT) < (CELLHEIGHT + MARKER_HEIGHT)){
           // Draw marker plate
-          ili9341_set_foreground(LCD_TRACE_1_COLOR + TRACE_ACTUAL);
+          ili9341_set_foreground(LCD_TRACE_1_COLOR + t);
           cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, MARKER_BITMAP(0));
           // Draw marker number
           ili9341_set_foreground(LCD_BG_COLOR);
           cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, MARKER_BITMAP(i+1));
       }
     }
+  }
   }
 #endif
 // Draw trace and marker info on the top (50 system ticks for all screen calls)
@@ -1486,9 +1495,16 @@ static void cell_draw_marker_info(int x0, int y0)
 #endif
     if (!markers[i].enabled)
       continue;
-    for (t = TRACE_ACTUAL; t <= TRACE_ACTUAL; t++) { // Only show info on actual trace
+    for (t = TRACE_ACTUAL; t <= TRACE_STORED; t++) { // Only show info on actual trace
       if (!trace[t].enabled)
         continue;
+      if (markers[i].mtype & M_STORED) {
+        if (t == TRACE_ACTUAL)
+          continue;
+      } else {
+        if (t == TRACE_STORED)
+          continue;
+      }
       uint16_t color;
       int level = temppeakLevel - get_attenuation() + setting.external_gain;
       if ((!setting.subtract_stored) &&     // Disabled when normalized

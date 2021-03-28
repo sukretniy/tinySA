@@ -986,6 +986,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
 //    select_lever_mode(LM_SEARCH); // Jump from maximum to maximum
 }
 
+#if 0
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb){
   (void)item;
   (void)data;
@@ -996,6 +997,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb){
   }
   markers[active_marker].mtype ^= M_TRACKING;
 }
+#endif
 
 #ifdef __VNA__
 static void
