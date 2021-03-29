@@ -1362,8 +1362,8 @@ static const struct {
   int16_t   noise_level;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  8500,       200,           50,      400,   -90},
-  {  3000,       200,           50,      200,   -95},
+  {  8500,       250,           50,      400,   -90},
+  {  3000,       250,           50,      200,   -95},
   {  1000,       400,          100,      100,   -105},
   {   300,       400,          120,      100,   -110},
   {   100,       700,          120,      100,   -115},
@@ -1445,8 +1445,8 @@ static const float correction_value[CORRECTION_POINTS] =
  * The frequency steps between correction factors is assumed to be maximum 500MHz or 0x2000000 and minimum 100kHz or > 0x10000
  * The divider 1/m is pre-calculated into delta_div as 2^scale_factor * correction_step/frequency_step
  */
-
-#define SCALE_FACTOR 14     // min scaled correction = 2^15, max scaled correction = 256 * 2^15
+#define FREQ_SCALE_FACTOR 10
+#define SCALE_FACTOR 5     // min scaled correction = 2^15, max scaled correction = 256 * 2^15
                             // min scaled f = 6, max scaled f =  1024
 
 static int32_t scaled_correction_multi[CORRECTION_POINTS];
@@ -1458,8 +1458,8 @@ static void calculate_correction(void)
   for (int i = 1; i < CORRECTION_POINTS; i++) {
     scaled_correction_value[i] = setting.correction_value[i]  * (1 << (SCALE_FACTOR));
     int32_t m = scaled_correction_value[i] - scaled_correction_value[i-1];
-    int32_t d = (setting.correction_frequency[i] - setting.correction_frequency[i-1]) >> SCALE_FACTOR;
-    scaled_correction_multi[i] = (int32_t) ( m / d );
+//    int32_t d = (setting.correction_frequency[i] - setting.correction_frequency[i-1]) >> SCALE_FACTOR;
+    scaled_correction_multi[i] = m; // (int32_t) ( m / d );
   }
 }
 #pragma GCC push_options
@@ -1502,8 +1502,12 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   float multi = (setting.correction_value[i] - setting.correction_value[i-1]) * (1 << (SCALE_FACTOR -1)) / (float)m;
   float cv = setting.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
 #else
-  int32_t scaled_f = f >> SCALE_FACTOR;
-  cv += (scaled_correction_value[i-1] + (scaled_f * scaled_correction_multi[i])) >> (SCALE_FACTOR - 5) ;
+  int32_t scaled_f = f >> FREQ_SCALE_FACTOR;
+  int32_t scaled_f_divider = (setting.correction_frequency[i] - setting.correction_frequency[i-1]) >> FREQ_SCALE_FACTOR;
+  if (scaled_f_divider!=0)
+    cv += (scaled_correction_value[i-1] + ((scaled_f * scaled_correction_multi[i])/scaled_f_divider)) >> (SCALE_FACTOR - 5) ;
+  else
+    cv += scaled_correction_value[i-1] >> (SCALE_FACTOR - 5) ;
 #endif
 done:
   return(cv);
@@ -2410,10 +2414,15 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #endif
 #ifdef TINYSA4
   // ----------------------------- set mixer drive --------------------------------------------
-  if (setting.lo_drive & 0x40 || f >=2000000000UL) {
-    if (old_drive != 3) {
-      ADF4351_drive(3);       // Max drive
-      old_drive = 3;
+  if (setting.lo_drive & 0x40){
+    int target_drive = 1;
+    if (f >=400000000ULL)
+      target_drive = 2;
+    else if (f >=2000000000ULL)
+      target_drive = 3;
+    if (old_drive != target_drive) {
+      ADF4351_drive(target_drive);       // Max drive
+      old_drive = target_drive;
     }
   } else {
     if (old_drive != setting.lo_drive) {
