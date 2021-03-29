@@ -92,8 +92,10 @@ uint16_t marker_color(int mtype)
 {
   if (mtype & M_REFERENCE)
     return LCD_M_REFERENCE;
-  if (mtype & M_DELTA)
+  if (mtype & M_STORED)
     return LCD_M_DELTA;
+//  if (mtype & M_DELTA)
+//    return LCD_BRIGHT_COLOR_RED;
   if (mtype & M_NOISE)
     return LCD_M_NOISE;
   return LCD_M_DEFAULT;

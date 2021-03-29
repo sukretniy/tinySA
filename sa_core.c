@@ -4201,13 +4201,13 @@ void cell_draw_test_info(int x0, int y0)
     int ypos = 50+i*INFO_SPACING - y0;
     unsigned int color = LCD_FG_COLOR;
     if (i == -1) {
-        plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Self test status:");
+      plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Self test status:");
     } else if (test_case[i].kind == TC_END) {
-        if (test_wait)
-          plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Touch screen to continue");
-        else
-          self_test_status_buf[0] = 0;
-      } else {
+      if (test_wait)
+        plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Touch screen to continue");
+      else
+        self_test_status_buf[0] = 0;
+    } else {
       plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Test %d: %s%s", i+1, test_fail_cause[i], test_text[test_status[i]] );
       if (test_status[i] == TS_PASS)
         color = LCD_BRIGHT_COLOR_GREEN;
@@ -4413,7 +4413,8 @@ int test_validate(int i)
   test_status[i] = current_test_status;     // Must be set before draw_all() !!!!!!!!
   //  draw_frequencies();
 //  draw_cal_status();
-  redraw_request |= REDRAW_CAL_STATUS;
+//  redraw_request |= REDRAW_CAL_STATUS;
+  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
   draw_all(TRUE);
   return current_test_status;
 }
@@ -4629,8 +4630,9 @@ void self_test(int test)
     if (no_wait) {
       goto quit;
     }
+//    draw_all(TRUE);
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    ili9341_drawstring_7x13("Self test complete", 50, 200);
+    ili9341_drawstring_7x13("Self test complete", 50, 202);
     ili9341_drawstring_7x13("Touch screen to continue", 50, 215);
    resume2:
     test_wait = true;
