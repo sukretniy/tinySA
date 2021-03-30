@@ -981,7 +981,7 @@ config_t config = {
   .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
 #endif
 #ifdef TINYSA4
-  .touch_cal =          { 261, 605, 115, 146 }, // 4 inch panel
+  .touch_cal =          { 278, 513, 115, 154 }, // 4 inch panel
 #endif
   ._mode     = _MODE_USB,
   ._serial_speed = USART_SPEED_SETTING(SERIAL_DEFAULT_BITRATE),
