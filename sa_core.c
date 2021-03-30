@@ -2722,9 +2722,9 @@ again:                                                              // Spur redu
 #ifdef TINYSA4
         local_IF = config.frequency_IF1;
         if ( S_IS_AUTO(setting.below_IF)) {
-          if (f < 2000000 && S_IS_AUTO(setting.spur_removal))
-            local_IF += DEFAULT_SPUR_OFFSET;
-          else // if (lf > ULTRA_MAX_FREQ || lf < local_IF/2  || ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > 136000000ULL + local_IF) )
+//          if (f < 2000000 && S_IS_AUTO(setting.spur_removal))
+//            local_IF += DEFAULT_SPUR_OFFSET;
+//          else // if (lf > ULTRA_MAX_FREQ || lf < local_IF/2  || ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > 136000000ULL + local_IF) )
             local_IF += DEFAULT_SPUR_OFFSET/2;
         }
 #else
@@ -2768,7 +2768,7 @@ again:                                                              // Spur redu
                 )
             {              // below/above IF
 #ifdef TINYSA4
-//              local_IF  = local_IF + DEFAULT_SPUR_OFFSET/2;    // center IF
+              local_IF  = local_IF - DEFAULT_SPUR_OFFSET/4;    // shift a bit to avoid multiple IF spurs
 #endif
               if (spur_second_pass)
                 setting.below_IF = S_AUTO_ON;
@@ -2799,7 +2799,7 @@ again:                                                              // Spur redu
                   stored_t[i] = -70.0;                                       // Display when to do spur shift in the stored trace
                 }
               } else {
-                if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 1000000) {
+                if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
                   setting.below_IF = S_AUTO_ON;
                   local_IF = local_IF;                          // No spure removal and no spur, center in IF
                 } else if (setting.auto_IF) {
