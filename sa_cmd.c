@@ -485,7 +485,7 @@ VNA_SHELL_FUNCTION(cmd_selftest)
   if (argc == 1)
     setting.test_argument = 0;
   else
-    setting.test_argument = my_atoi(argv[1]);
+    setting.test_argument = my_atoui(argv[1]);
   sweep_mode = SWEEP_SELFTEST;
 }
 

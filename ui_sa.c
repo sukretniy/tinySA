@@ -1536,6 +1536,40 @@ static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
 //  draw_cal_status();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_shift_acb)
+{
+  (void) data;
+  (void) item;
+  if (b){
+    b->icon = setting.frequency_offset != 0 ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  if (setting.frequency_offset != 0) {
+    setting.frequency_offset = 0;
+  } else {
+    if (FREQ_IS_STARTSTOP()) {
+      freq_t old_start = get_sweep_frequency(ST_START);
+      freq_t old_stop = get_sweep_frequency(ST_STOP);
+      kp_help_text = "Actual start frequency";
+      ui_mode_keypad(KM_START);
+      setting.frequency_offset = uistat.value - old_start;
+      set_sweep_frequency(ST_START, old_start);
+      set_sweep_frequency(ST_STOP, old_stop);
+    } else {
+      freq_t old_center = get_sweep_frequency(ST_CENTER);
+      freq_t old_span = get_sweep_frequency(ST_SPAN);
+      kp_help_text = "Actual center frequency";
+      ui_mode_keypad(KM_CENTER);
+      setting.frequency_offset = uistat.value - old_center;
+      set_sweep_frequency(ST_CENTER, old_center);
+      set_sweep_frequency(ST_SPAN, old_span);
+    }
+  }
+  ui_mode_normal();
+//  menu_move_back(true);
+//  draw_cal_status();
+}
+
 #ifdef __REMOTE_DESKTOP__
 static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
 {
@@ -2165,6 +2199,7 @@ static const menuitem_t menu_config[] = {
 #ifdef __USE_SERIAL_CONSOLE__
   { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
+  { MT_ADV_CALLBACK,0,"SHIFT\nFREQ",    menu_shift_acb},
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
@@ -2333,15 +2368,15 @@ static void fetch_numeric_target(void)
 {
   switch (keypad_mode) {
   case KM_START:
-    uistat.value = get_sweep_frequency(ST_START);
+    uistat.value = get_sweep_frequency(ST_START) + setting.frequency_offset;
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_STOP:
-    uistat.value = get_sweep_frequency(ST_STOP);
+    uistat.value = get_sweep_frequency(ST_STOP) + setting.frequency_offset;
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_CENTER:
-    uistat.value = get_sweep_frequency(ST_CENTER);
+    uistat.value = get_sweep_frequency(ST_CENTER) + setting.frequency_offset;
     plot_printf(uistat.text, sizeof uistat.text, "%3.4fMHz", uistat.value / 1000000.0);
     break;
   case KM_SPAN:
@@ -2349,7 +2384,7 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_CW:
-    uistat.value = get_sweep_frequency(ST_CW);
+    uistat.value = get_sweep_frequency(ST_CW) + setting.frequency_offset;
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
     break;
   case KM_SCALE:
@@ -2503,20 +2538,20 @@ set_numeric_value(void)
 {
   switch (keypad_mode) {
   case KM_START:
-    set_sweep_frequency(ST_START, (freq_t)uistat.value);
+    set_sweep_frequency(ST_START, (freq_t)uistat.value - setting.frequency_offset);
     break;
   case KM_STOP:
-    set_sweep_frequency(ST_STOP, (freq_t)uistat.value);
+    set_sweep_frequency(ST_STOP, (freq_t)uistat.value - setting.frequency_offset);
     break;
   case KM_CENTER:
-    set_sweep_frequency(ST_CENTER, (freq_t)uistat.value);
+    set_sweep_frequency(ST_CENTER, (freq_t)uistat.value - setting.frequency_offset);
     break;
   case KM_SPAN:
     setting.modulation = MO_NONE;
     set_sweep_frequency(ST_SPAN, (freq_t)uistat.value);
     break;
   case KM_CW:
-    set_sweep_frequency(ST_CW, (freq_t)uistat.value);
+    set_sweep_frequency(ST_CW, (freq_t)uistat.value - setting.frequency_offset);
     break;
   case KM_SCALE:
     user_set_scale(uistat.value);
@@ -2589,7 +2624,7 @@ set_numeric_value(void)
 #endif
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
-    setting.limits[active_limit].frequency = uistat.value;
+    setting.limits[active_limit].frequency = uistat.value - setting.frequency_offset;
     limits_update();
     break;
   case KM_LIMIT_LEVEL:
@@ -2631,7 +2666,7 @@ set_numeric_value(void)
     set_gridlines(uistat.value);
     break;
   case KM_MARKER:
-    set_marker_frequency(active_marker, (freq_t)uistat.value);
+    set_marker_frequency(active_marker, (freq_t)uistat.value - setting.frequency_offset);
     break;
   case KM_MODULATION:
     set_modulation_frequency((int)uistat.value);
@@ -3038,11 +3073,11 @@ redraw_cal_status:
 
   // Version
   y += YSTEP + YSTEP/2 ;
-//#ifdef TINYSA4
-//  strncpy(buf,&VERSION[11], BLEN-1);
-//#else
+#ifdef TINYSA4
   strncpy(buf,&VERSION[9], BLEN-1);
-//#endif
+#else
+  strncpy(buf,&VERSION[8], BLEN-1);
+#endif
   ili9341_drawstring(buf, x, y);
 
 

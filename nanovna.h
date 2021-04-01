@@ -986,6 +986,7 @@ typedef struct setting
   freq_t frequency0;
   freq_t frequency1;
   freq_t frequency_IF;
+  long_t frequency_offset;
 
   float trace_scale;
   float trace_refpos;
@@ -1007,7 +1008,7 @@ typedef struct setting
   uint8_t ultra;    // enum ??
   int R;            // KM_R
 #endif
-  int test_argument;            // used for tests
+  int64_t test_argument;            // used for tests
   uint32_t checksum;            // must be last and at 4 byte boundary
 }setting_t;
 

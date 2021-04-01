@@ -506,7 +506,7 @@ show_version(void)
   }
 #ifdef TINYSA3
   if (has_esd)
-    ili9341_drawstring("ESD protected", x, y+=5);
+    ili9341_drawstring("ESD protected", x, y+=10);
 #endif
 #ifdef TINYSA4
 extern const char *states[];

@@ -230,6 +230,7 @@ void reset_settings(int m)
 #else
   setting.frequency_IF = DEFAULT_IF;
 #endif
+  setting.frequency_offset = 0;
   setting.auto_IF = true;
   set_external_gain(0.0);  // This also updates the help text!!!!!
   //setting.external_gain = 0.0;
@@ -1452,6 +1453,19 @@ static const float correction_value[CORRECTION_POINTS] =
 static int32_t scaled_correction_multi[CORRECTION_POINTS];
 static int32_t scaled_correction_value[CORRECTION_POINTS];
 
+#if 0                       // Not implemented
+static int8_t scaled_atten_correction[16][16] =
+{
+ {0, -1, -2, -2, -3, -4, -3, -1, 0, 3, 7, 14, 21, 30, 42, 54 },                     // 2.6G dB*8, 16 levels
+ {0, -2, -4, -6, -7, -9, -8, -8, -11, -9, -9, -8, -7, -4, 2, 8 },                   // 3.2G
+ {0, 0, 0, -1, -8, -10, -10, -12, -22, -24, -28, -30, -37, -34, -24, -13, },        // 3.8G
+ {0, 0, 0, -1, -8, -10, -10, -12, -22, -24, -28, -30, -37, -34, -24, -13, },        // 4.3G
+ {0, 0, 0, 1, -4, -2, 0, 0, -3, 0, 1, 6, 5, 10, 16, 22, },                          // 4.8G
+ {0, 0, 1, 2, -9, -7, -6, -5, -18, -18, -17, -17, -23, -24, -25, -27, },            // 5.4G
+ {0, -1, -3, -3, -21, -20, -20, -20, -31, -29, -24, -18, -4, 4, 19, 30, },          // 5.9G
+};
+#endif
+
 static void calculate_correction(void)
 {
   scaled_correction_value[0] = setting.correction_value[0]  * (1 << (SCALE_FACTOR));
@@ -1471,6 +1485,15 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (setting.mode == M_GENHIGH)
     return(0.0);
 #ifdef TINYSA4
+#if 0                       // Not implemented
+  int cf = (((f >> 28)+1)>>1) - 5;   // Correction starts at 2,684,354,560Hz round to closest correction frequency
+  int ca = setting.attenuate_x2 >> 2; // One data point per 2dB step
+  if (cf >= 0 && cf < 16)
+    cv -= scaled_atten_correction[cf][ca]<<2;  // Shift is +5(pure RSSI) - 3 (scaled correction) = 2
+#endif
+#endif
+
+
 #if 0
   if (setting.extra_lna) {
     if (f > 2100000000U) {
@@ -1483,7 +1506,6 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (f > ULTRA_MAX_FREQ) {
     cv += float_TO_PURE_RSSI(+4);       // 4dB loss in harmonic mode
   }
-#endif
 #endif
   int i = 0;
   while (f > setting.correction_frequency[i] && i < CORRECTION_POINTS)
@@ -2706,15 +2728,13 @@ modulation_again:
 again:                                                              // Spur reduction jumps to here for second measurement
 #endif
 
-    local_IF=0;                                                         // to get rid of warning
+    local_IF=0;                                                     // For all high modes
 #ifdef TINYSA4
     int LO_shifted = false;
     int LO_mirrored = false;
     int LO_harmonic = false;
 #endif
-    if (MODE_HIGH(setting.mode)) {
-      local_IF = 0;
-    } else if (MODE_LOW(setting.mode)){                                              // All low mode
+    if (MODE_LOW(setting.mode)){                                       // All low mode
       if (!setting.auto_IF)
         local_IF = setting.frequency_IF;
       else
@@ -3626,7 +3646,7 @@ sweep_again:                                // stay in sweep loop when output mo
     } else if (actual_max_level > target_level && setting.attenuate_x2 < 60) {
       delta = actual_max_level - target_level;
     }
-    if ((chVTGetSystemTimeX() - sweep_elapsed > 10000 && delta != 0) || delta > 5 ) {
+    if ((chVTGetSystemTimeX() - sweep_elapsed > 10000 && ( delta < -5 || delta > +5)) || delta > 10 ) {
       setting.attenuate_x2 += delta + delta;
       if (setting.attenuate_x2 < 0)
         setting.attenuate_x2= 0;
@@ -4151,7 +4171,7 @@ const test_case_t test_case [] =
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
  TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     633,    994,    -85,    0,      0),         // 6 Wide band noise floor high mode
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -20,    27,     -70),      // 7 BPF loss and stop band
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -23,    27,     -70),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       900,    1,     -90,    0,      -90),       // 9 LPF cutoff
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -29,    10,     -50),      // 10 Switch isolation using high attenuation
@@ -4772,18 +4792,28 @@ quit:
     reset_settings(M_LOW);
 #if 1
     float reference_peak_level = 0;
-    for (int j= 0; j < 64; j++ ) {
+    int c = 0;
+    for (int j= 0; j < 64; j += 4 ) {
       test_prepare(TEST_LEVEL);
       set_attenuation(((float)j)/2.0);
       if (setting.test_argument)
-        set_sweep_frequency(ST_CENTER, ((freq_t)setting.test_argument) * 1000000ULL);
+        set_sweep_frequency(ST_CENTER, ((freq_t)setting.test_argument));
       ultra_threshold = config.ultra_threshold;
       test_acquire(TEST_LEVEL);                        // Acquire test
 	  test_validate(TEST_LEVEL);                       // Validate test
       if (j == 0)
         reference_peak_level = peakLevel;
       shell_printf("Attenuation %.2fdB, measured level %.2fdBm, delta %.2fdB\n\r",((float)j)/2.0, peakLevel, peakLevel - reference_peak_level);
+      if ((j % 4)  == 0) {
+        age[c++] = (uint8_t)((int)((peakLevel - reference_peak_level) * 8)+128);
+      }
+
     }
+    shell_printf("  {");
+    for (int i=0; i < 16;i++)
+      shell_printf("%d, ", (int)(((int)age[i])-128));
+    shell_printf("}\n\r");
+
 #else
     test_prepare(TEST_ATTEN);
     test_acquire(TEST_ATTEN);                        // Acquire test
@@ -5162,9 +5192,9 @@ again:
 
   config_save();
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Calibration complete", 30, 140);
+  ili9341_drawstring_7x13("Calibration complete", 40, 140);
 quit:
-  ili9341_drawstring_7x13("Touch screen to continue", 30, 200);
+  ili9341_drawstring_7x13("Touch screen to continue", 40, 200);
   wait_user();
   ili9341_clear_screen();
   set_sweep_points(old_sweep_points);

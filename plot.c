@@ -129,7 +129,7 @@ float2int(float v)
 void update_grid(void)
 {
   freq_t gdigit = 1000000000;
-  freq_t fstart = get_sweep_frequency(ST_START);
+  freq_t fstart = get_sweep_frequency(ST_START) + setting.frequency_offset;
   freq_t fspan  = get_sweep_frequency(ST_SPAN);
   freq_t grid;
 
@@ -209,7 +209,7 @@ const ham_bands_t ham_bands[] =
 
 int ham_band(int x)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
-  freq_t f = frequencies[x];
+  freq_t f = frequencies[x]  + setting.frequency_offset;
   int L = 0;
   int R =  (sizeof ham_bands)/sizeof(freq_t) - 1;
   while (L <= R) {
@@ -1347,7 +1347,8 @@ static void trace_print_value_string(     // Only used at one place
     if (ridx > idx) {freq = ref_freq - freq; idx = ridx - idx; *ptr2++ = '-';}
     else            {freq = freq - ref_freq; idx = idx - ridx; *ptr2++ = '+';}
     v-= value(coeff[ridx]);
-  }
+  } else
+    freq += setting.frequency_offset;
 
   // For CW mode output time
   if (FREQ_IS_CW()) {
@@ -1541,16 +1542,16 @@ draw_frequencies(void)
     return;
 
   if (FREQ_IS_CW()) {
-    plot_printf(buf1, sizeof(buf1), " CW %QHz", get_sweep_frequency(ST_CW));
+    plot_printf(buf1, sizeof(buf1), " CW %QHz", get_sweep_frequency(ST_CW) + setting.frequency_offset);
     // Show user actual select sweep time?
     uint32_t t = setting.actual_sweep_time_us;
     plot_printf(buf2, sizeof(buf2), " TIME %.3Fs", (float)t/ONE_SECOND_TIME);
 
   } else if (FREQ_IS_STARTSTOP()) {
-    plot_printf(buf1, sizeof(buf1), " START %.3QHz    %5.1QHz/", get_sweep_frequency(ST_START), grid_span);
-    plot_printf(buf2, sizeof(buf2), " STOP %.3QHz", get_sweep_frequency(ST_STOP));
+    plot_printf(buf1, sizeof(buf1), " START %.3QHz    %5.1QHz/", get_sweep_frequency(ST_START) + setting.frequency_offset, grid_span);
+    plot_printf(buf2, sizeof(buf2), " STOP %.3QHz", get_sweep_frequency(ST_STOP) + setting.frequency_offset);
   } else if (FREQ_IS_CENTERSPAN()) {
-    plot_printf(buf1, sizeof(buf1), " CENTER %.3QHz    %5.1QHz/", get_sweep_frequency(ST_CENTER), grid_span);
+    plot_printf(buf1, sizeof(buf1), " CENTER %.3QHz    %5.1QHz/", get_sweep_frequency(ST_CENTER) + setting.frequency_offset, grid_span);
     plot_printf(buf2, sizeof(buf2), " SPAN %.3QHz", get_sweep_frequency(ST_SPAN));
   }
   ili9341_set_foreground(LCD_FG_COLOR);
