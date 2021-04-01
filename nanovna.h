@@ -986,8 +986,8 @@ typedef struct setting
   freq_t frequency0;
   freq_t frequency1;
   freq_t frequency_IF;
-  long_t frequency_offset;
-
+  freq_t frequency_offset;
+#define FREQUENCY_SHIFT 100000000   // 100MHz upconversion maximum
   float trace_scale;
   float trace_refpos;
   trace_t _trace[TRACES_MAX];

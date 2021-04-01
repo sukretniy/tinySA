@@ -88,7 +88,7 @@ static char *long_to_string_with_divisor(char *p,
 #define FREQ_PREFIX_SPACE   4
 
 static char *
-ulong_freq(char *p, long_t freq, uint32_t precision)
+ulong_freq(char *p, ulong_t freq, uint32_t precision)
 {
   uint8_t flag = FREQ_PSET;
   flag|= precision == 0 ? FREQ_PREFIX_SPACE : FREQ_NO_SPACE;

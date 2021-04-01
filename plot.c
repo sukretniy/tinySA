@@ -129,7 +129,7 @@ float2int(float v)
 void update_grid(void)
 {
   freq_t gdigit = 1000000000;
-  freq_t fstart = get_sweep_frequency(ST_START) + setting.frequency_offset;
+  freq_t fstart = get_sweep_frequency(ST_START) + (setting.frequency_offset - FREQUENCY_SHIFT);
   freq_t fspan  = get_sweep_frequency(ST_SPAN);
   freq_t grid;
 
@@ -209,7 +209,7 @@ const ham_bands_t ham_bands[] =
 
 int ham_band(int x)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
-  freq_t f = frequencies[x]  + setting.frequency_offset;
+  freq_t f = frequencies[x]  + (setting.frequency_offset - FREQUENCY_SHIFT);
   int L = 0;
   int R =  (sizeof ham_bands)/sizeof(freq_t) - 1;
   while (L <= R) {
@@ -1348,7 +1348,7 @@ static void trace_print_value_string(     // Only used at one place
     else            {freq = freq - ref_freq; idx = idx - ridx; *ptr2++ = '+';}
     v-= value(coeff[ridx]);
   } else
-    freq += setting.frequency_offset;
+    freq += (setting.frequency_offset - FREQUENCY_SHIFT);
 
   // For CW mode output time
   if (FREQ_IS_CW()) {
@@ -1534,24 +1534,25 @@ static void cell_draw_marker_info(int x0, int y0)
 void
 draw_frequencies(void)
 {
-  char buf1[32];
+  char buf1[40];
   char buf2[32];
   if (MODE_OUTPUT(setting.mode))     // No frequencies during output
     return;
   if (current_menu_is_form() && !in_selftest)
     return;
 
+  char *shift = (setting.frequency_offset == FREQUENCY_SHIFT ? "" : "shifted");
   if (FREQ_IS_CW()) {
-    plot_printf(buf1, sizeof(buf1), " CW %QHz", get_sweep_frequency(ST_CW) + setting.frequency_offset);
+    plot_printf(buf1, sizeof(buf1), " CW %QHz", get_sweep_frequency(ST_CW) + (setting.frequency_offset - FREQUENCY_SHIFT));
     // Show user actual select sweep time?
     uint32_t t = setting.actual_sweep_time_us;
     plot_printf(buf2, sizeof(buf2), " TIME %.3Fs", (float)t/ONE_SECOND_TIME);
 
   } else if (FREQ_IS_STARTSTOP()) {
-    plot_printf(buf1, sizeof(buf1), " START %.3QHz    %5.1QHz/", get_sweep_frequency(ST_START) + setting.frequency_offset, grid_span);
-    plot_printf(buf2, sizeof(buf2), " STOP %.3QHz", get_sweep_frequency(ST_STOP) + setting.frequency_offset);
+    plot_printf(buf1, sizeof(buf1), " START %.3QHz    %5.1QHz/ %s", get_sweep_frequency(ST_START) + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span, shift);
+    plot_printf(buf2, sizeof(buf2), " STOP %.3QHz", get_sweep_frequency(ST_STOP) + (setting.frequency_offset - FREQUENCY_SHIFT));
   } else if (FREQ_IS_CENTERSPAN()) {
-    plot_printf(buf1, sizeof(buf1), " CENTER %.3QHz    %5.1QHz/", get_sweep_frequency(ST_CENTER) + setting.frequency_offset, grid_span);
+    plot_printf(buf1, sizeof(buf1), " CENTER %.3QHz    %5.1QHz/ %s", get_sweep_frequency(ST_CENTER) + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span, shift);
     plot_printf(buf2, sizeof(buf2), " SPAN %.3QHz", get_sweep_frequency(ST_SPAN));
   }
   ili9341_set_foreground(LCD_FG_COLOR);
@@ -1567,6 +1568,12 @@ draw_frequencies(void)
 //  }
   ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);
   ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
+#ifdef TINYSA4
+  if (get_sweep_frequency(ST_STOP) > 2000000000ULL && setting.attenuate_x2 >= 16 ) {
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
+    ili9341_drawstring("REDUCED LINEARITY", p2 - 18*7, FREQUENCIES_YPOS);
+  }
+#endif
 }
 
 // Draw battery level
@@ -1642,7 +1649,7 @@ int display_test(void)
   return true;
 }
 
-//#define _USE_WATERFALL_PALETTE
+#define _USE_WATERFALL_PALETTE
 #ifdef  _USE_WATERFALL_PALETTE
 #include "waterfall.c"
 #endif
@@ -1664,12 +1671,12 @@ static void update_waterfall(void){
   for (i=0; i< sweep_points; i++) {			// Add new topline
     uint16_t color;
 #ifdef _USE_WATERFALL_PALETTE
-    uint16_t y = _PALETTE_ALIGN(CELL_Y(index[i])); // should be always in range 0 - graph_bottom
+    uint16_t y = _PALETTE_ALIGN(256 - graph_bottom + index[i]); // should be always in range 0 - graph_bottom
 //    y = (uint8_t)i;  // for test
     color = waterfall_palette[y];
-#elif 0
+#elif 1
     uint16_t y = index[i]; // should be always in range 0 - graph_bottom
-    uint16_t ratio = (graph_bottom - y)*2;
+    uint16_t ratio = (graph_bottom - y)*4;
 //    ratio = (i*2);    // Uncomment for testing the waterfall colors
     int16_t b = 255 - ratio;
     if (b > 255) b = 255;

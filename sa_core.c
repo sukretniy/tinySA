@@ -230,7 +230,7 @@ void reset_settings(int m)
 #else
   setting.frequency_IF = DEFAULT_IF;
 #endif
-  setting.frequency_offset = 0;
+  setting.frequency_offset = FREQUENCY_SHIFT;
   setting.auto_IF = true;
   set_external_gain(0.0);  // This also updates the help text!!!!!
   //setting.external_gain = 0.0;
@@ -2482,11 +2482,13 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #endif
 #ifdef TINYSA4
   // ----------------------------- set mixer drive --------------------------------------------
-  if (setting.lo_drive & 0x40){
-    int target_drive = 1;
-    if (f >=400000000ULL)
+  if (setting.lo_drive & 0x04){
+    int target_drive;
+    if (f < 400000000ULL)
+      target_drive = 1;
+    else if (f < 2000000000ULL)
       target_drive = 2;
-    else if (f >=2000000000ULL)
+    else
       target_drive = 3;
     if (old_drive != target_drive) {
       ADF4351_drive(target_drive);       // Max drive
