@@ -85,7 +85,7 @@
 #endif
 #ifdef TINYSA4
 #define DEFAULT_IF  ((freq_t)977400000)
-#define DEFAULT_SPUR_OFFSET ((freq_t)1500000)
+#define DEFAULT_SPUR_OFFSET ((freq_t)1300000)
 #define DEFAULT_MAX_FREQ    ((freq_t)800000000)
 #define HIGH_MIN_FREQ_MHZ   136// 825
 #define HIGH_MAX_FREQ_MHZ   1130
@@ -93,6 +93,7 @@
 //#define ULTRA_MAX_FREQ      2900000000ULL
 #define MAX_LO_FREQ         4350000000ULL
 #define LOW_MAX_FREQ         800000000ULL
+#define MIN_BELOW_LO         550000000ULL
 #endif
 /*
  * main.c
@@ -222,6 +223,7 @@ void send_region(const char *t, int16_t x, int16_t y, int16_t w, int16_t h);
 void send_buffer(uint8_t * buf, int s);
 #endif
 void set_marker_frequency(int m, freq_t f);
+void set_marker_time(int m, float f);
 void toggle_sweep(void);
 void toggle_mute(void);
 void load_default_properties(void);
@@ -1348,7 +1350,7 @@ extern void ADF4351_modulo(int m);
 extern void ADF4351_csr(int c);
 extern void ADF4351_fastlock(int c);
 extern int SI4463_R;
-extern volatile int64_t ADF4350_modulo;
+extern int64_t ADF4350_modulo;
 extern void SI446x_set_AGC_LNA(uint8_t v);
 extern void SI4463_init_rx(void);
 extern void SI4463_init_tx(void);

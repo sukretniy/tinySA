@@ -1771,7 +1771,7 @@ case M_LOW:     // Mixed into 0
     set_AGC_LNA();
 #ifdef TINYSA4
     ADF4351_enable(true);
-    ADF4351_drive(setting.lo_drive);
+//    ADF4351_drive(setting.lo_drive);
     if (setting.tracking_output)
       ADF4351_enable_aux_out(true);
     else
@@ -1856,7 +1856,7 @@ case M_GENLOW:  // Mixed output from 0
 #endif
 #ifdef TINYSA4
     ADF4351_enable_out(true);
-    ADF4351_drive(setting.lo_drive);
+//    ADF4351_drive(setting.lo_drive);
     ADF4351_enable(true);
     ADF4351_enable_aux_out(false);
 
@@ -2484,9 +2484,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   // ----------------------------- set mixer drive --------------------------------------------
   if (setting.lo_drive & 0x04){
     int target_drive;
-    if (f < 400000000ULL)
+    if (f < 2400000000ULL)
       target_drive = 1;
-    else if (f < 2000000000ULL)
+    else if (f < 3000000000ULL)
       target_drive = 2;
     else
       target_drive = 3;
@@ -2783,7 +2783,7 @@ again:                                                              // Spur redu
           if (S_STATE(setting.spur_removal)){         // If in low input mode and spur reduction is on
             if (setting.below_IF == S_AUTO_OFF &&       // Auto and not yet in below IF
 #ifdef TINYSA4
-                ( lf > ULTRA_MAX_FREQ || lf < local_IF/2  || ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > 136000000ULL + local_IF) )
+                ( lf > ULTRA_MAX_FREQ || lf < local_IF/2  || ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > MIN_BELOW_LO + local_IF) )
 #else
 				(lf < local_IF / 2  || lf > local_IF) 
 #endif
@@ -2898,7 +2898,12 @@ again:                                                              // Spur redu
             ADF4351_R_counter(1);
 
           } else if (lf < LOW_MAX_FREQ && lf >= TXCO_DIV3 && MODE_INPUT(setting.mode)) {
-            if (ADF4350_modulo == 0) ADF4351_modulo(60);
+            if (ADF4350_modulo == 0) {
+              if (actual_rbw_x10 >= 3000)
+                ADF4351_modulo(1000);
+              else
+                ADF4351_modulo(60);
+            }
             freq_t tf = ((lf + actual_rbw_x10*1000) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {   // 30MHz
               ADF4351_R_counter(6);
@@ -2913,7 +2918,12 @@ again:                                                              // Spur redu
                 ADF4351_R_counter(1);
             }
           } else {
-            if (ADF4350_modulo == 0) ADF4351_modulo(60);
+            if (ADF4350_modulo == 0) {
+              if (actual_rbw_x10 >= 3000)
+                ADF4351_modulo(1000);
+              else
+                ADF4351_modulo(60);
+            }
             if (setting.frequency_step < 100000)
               ADF4351_R_counter(3);
             else
@@ -3350,6 +3360,7 @@ sweep_again:                                // stay in sweep loop when output mo
     if (refreshing)
       scandirty = false;
     if (break_on_operation && operation_requested) {                        // break loop if needed
+      abort:
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME /* && MODE_INPUT(setting.mode) */) {
         ili9341_set_background(LCD_BG_COLOR);
         ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);                    // Erase progress bar
@@ -3387,8 +3398,15 @@ sweep_again:                                // stay in sweep loop when output mo
       if (setting.additional_step_delay_us && (MODE_INPUT(setting.mode) || setting.modulation == MO_NONE)) {     // No delay when modulation is active
         if (setting.additional_step_delay_us < 30*ONE_MS_TIME)                                                   // Maximum delay time using my_microsecond_delay
           my_microsecond_delay(setting.additional_step_delay_us);
-        else
-          osalThreadSleepMilliseconds(setting.additional_step_delay_us / ONE_MS_TIME);
+        else {
+          int tm = setting.additional_step_delay_us / ONE_MS_TIME;
+          do {
+            osalThreadSleepMilliseconds(tm>100?100:tm);
+            if (break_on_operation && operation_requested)
+              goto abort;
+            tm -= 100;
+          } while (tm > 0);
+        }
       }
     }
 

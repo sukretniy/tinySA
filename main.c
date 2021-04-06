@@ -424,7 +424,7 @@ VNA_SHELL_FUNCTION(cmd_reset)
 {
   (void)argc;
   (void)argv;
-
+#ifndef TINYSA4
   if (argc == 1) {
     if (get_str_index(argv[0], "dfu") == 0) {
       shell_printf("Performing reset to DFU mode\r\n");
@@ -432,6 +432,7 @@ VNA_SHELL_FUNCTION(cmd_reset)
       return;
     }
   }
+#endif
   shell_printf("Performing reset\r\n");
 
   rccEnableWWDG(FALSE);
@@ -1017,8 +1018,8 @@ config_t config = {
   .high_level_output_offset =  0.0,    // Uncalibrated
   .correction_frequency = {{ 1000000, 500000000, 1000000000, 1500000000, 2000000000, 2500000000, 3000000000, 3500000000, 4000000000, 4500000000, 5000000000, 5500000000, 6000000000, 6500000000, 7000000000, 7500000000, 8000000000, 8500000000, 9000000000, 10000000000  },
                            { 1000000, 500000000, 1000000000, 1500000000, 2000000000, 2500000000, 3000000000, 3500000000, 4000000000, 4500000000, 5000000000, 5500000000, 6000000000, 6500000000, 7000000000, 7500000000, 8000000000, 8500000000, 9000000000, 10000000000  }},
-  .correction_value =     {{ 0,       +1.5,      +4,         +4,         +2,         +3.5,       +8,         +12,        +15,        +13,        +12,        +23,         +26,       +26,        +26,        +26,        +26,        +27,         +27,       +27    },
-                           { 0,       +1,        +4.5,       +1,         +2.5,       +6.5,       +9,         +15,        +15.5,      +28,        +29,        +41,         +48,       +48,        +48,        +48,        +48,        +48,         +48,       +48    }},
+  .correction_value =     {{ 0,       +1.5,      +2,         +4,         +2,         +3.5,       +6.5,         +9.5,        +10,        +9,        +9,        +23,         +24,       +24,        +24,        +24,        +24,        +24,         +24,       +24    },
+                           { 0,       +1,        +2.5,       +1,         +2.5,       +6,       +9,         +11.5,        +14.5,      +23,        +25,        +36,         +46,       +46,        +46,        +46,        +46,        +46,         +46,       +46    }},
   .setting_frequency_30mhz = 30000000,
   .cor_am = 0,
   .cor_wfm = 0,
@@ -1251,6 +1252,18 @@ void set_marker_frequency(int m, freq_t f)
     }
     i++;
   }
+}
+
+void set_marker_time(int m, float f)
+{
+  if (m == MARKER_INVALID || !markers[m].enabled)
+    return;
+  markers[m].mtype &= ~M_TRACKING;
+  int i = f * (float)(sweep_points-1)* ONE_SECOND_TIME / setting.actual_sweep_time_us;
+  if (i >= sweep_points)
+    return;
+  markers[m].index = i;
+  markers[m].frequency = 0;
 }
 
 static void

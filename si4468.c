@@ -931,6 +931,9 @@ uint32_t registers[6] =  {0xC80000, 0x8008011, 0x1800C642, 0x48963,0xA5003C , 0x
 #else
 uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
 #endif
+uint32_t old_registers[6];
+
+bool     reg_dirty[6] = {true, true, true, true, true, true};
 int debug = 0;
 ioline_t ADF4351_LE[2] = { LINE_LO_SEL, LINE_LO_SEL};
 //int ADF4351_Mux = 7;
@@ -954,7 +957,7 @@ uint64_t  PFDRFout[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000}; //Reference
 //uint64_t  Chrystal[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000};
 //double  FRACF; // Temp
 
-volatile int64_t
+int64_t
 //  INTA,         // Temp
   ADF4350_modulo = 0,          // Linked to spur table!!!!!
 //  MOD,
@@ -1013,11 +1016,16 @@ void ADF4351_Setup(void)
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
-  registers[value & 0x07] = value;
-  for (int i = 3; i >= 0; i--) shiftOut((value >> (8 * i)) & 0xFF);
-  palSetLine(ADF4351_LE[channel]);
-  my_microsecond_delay(1);        // Must
-  palClearLine(ADF4351_LE[channel]);
+//  if (reg_dirty[value & 0x07] || (value & 0x07) == 0) {
+  if (old_registers[value & 0x07] != registers[value & 0x07] ||  (value & 0x07) == 0 ) {
+    registers[value & 0x07] = value;
+    for (int i = 3; i >= 0; i--) shiftOut((value >> (8 * i)) & 0xFF);
+    palSetLine(ADF4351_LE[channel]);
+    my_microsecond_delay(1);        // Must
+    palClearLine(ADF4351_LE[channel]);
+//    reg_dirty[value & 0x07] = false;
+    old_registers[value & 0x07] = registers[value & 0x07];
+  }
 }
 
 void ADF4351_Set(int channel)
@@ -1038,12 +1046,14 @@ void ADF4351_Set(int channel)
 void ADF4351_disable_output(void)
 {
     bitClear (registers[4], 5); // main output
+    reg_dirty[4] = true;
     ADF4351_Set(0);
 }
 
 void ADF4351_enable_output(void)
 {
     bitSet (registers[4], 5); // main output
+    reg_dirty[4] = true;
     ADF4351_Set(0);
 }
 #endif
@@ -1090,6 +1100,7 @@ void ADF4351_spur_mode(int S)
       bitSet (registers[2], 30); // R set to 8
     else
       bitClear (registers[2], 30); // R set to 8
+    reg_dirty[2] = true;
     ADF4351_Set(0);
 }
 
@@ -1116,6 +1127,8 @@ void ADF4351_R_counter(int R)
       clear_frequency_cache();                              // When R changes the possible frequencies will change
       registers[2] &= ~ (((unsigned long)0x3FF) << 14);
       registers[2] |= (((unsigned long)R) << 14);
+      reg_dirty[2] = true;
+
       ADF4351_Set(0);
 }
 
@@ -1123,6 +1136,7 @@ void ADF4351_mux(int R)
 {
       registers[2] &= ~ (((unsigned long)0x7) << 26);
       registers[2] |= (((unsigned long)R & (unsigned long)0x07) << 26);
+      reg_dirty[2] = true;
       ADF4351_Set(0);
 }
 
@@ -1130,6 +1144,7 @@ void ADF4351_csr(int c)
 {
       registers[3] &= ~ (((unsigned long)0x1) << 18);
       registers[3] |= (((unsigned long)c & (unsigned long)0x01) << 18);
+      reg_dirty[3] = true;
       ADF4351_Set(0);
 }
 
@@ -1137,6 +1152,7 @@ void ADF4351_fastlock(int c)
 {
       registers[3] &= ~ (((unsigned long)0x3) << 15);
       registers[3] |= (((unsigned long)c & (unsigned long)0x03) << 15);
+      reg_dirty[3] = true;
       ADF4351_Set(0);
 }
 
@@ -1144,6 +1160,7 @@ void ADF4351_CP(int p)
 {
       registers[2] &= ~ (((unsigned long)0xF) << 9);
       registers[2] |= (((unsigned long)p) << 9);
+      reg_dirty[2] = true;
       ADF4351_Set(0);
 }
 
@@ -1152,6 +1169,7 @@ void ADF4351_drive(int p)
   p &= 0x03;
   registers[4] &= ~ (((unsigned long)0x3) << 3);
   registers[4] |= (((unsigned long)p) << 3);
+  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 
@@ -1160,6 +1178,7 @@ void ADF4351_aux_drive(int p)
   p &= 0x03;
   registers[4] &= ~ (((unsigned long)0x3) << 6);
   registers[4] |= (((unsigned long)p) << 6);
+  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 #if 0
@@ -1207,10 +1226,11 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 0);
     }
+    reg_dirty[4] = true;
 
 
 #if 1
-    volatile uint32_t PFDR = (uint32_t)PFDRFout[channel];
+     uint32_t PFDR = (uint32_t)PFDRFout[channel];
     uint32_t MOD = ADF4350_modulo;
     if (MOD == 0)
       MOD = 60;
@@ -1225,7 +1245,7 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 
 
 #else
-    volatile uint64_t PFDR = PFDRFout[channel];
+     uint64_t PFDR = PFDRFout[channel];
     uint16_t MOD = ADF4350_modulo;
     if (MOD == 0)
       MOD = 60;
@@ -1257,7 +1277,7 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 #endif
     uint64_t actual_freq = ((uint64_t)PFDR *(INTA * MOD +FRAC))/OutputDivider / MOD;
 #if 0
-    volatile int max_delta =  PFDRFout[channel]/OutputDivider/MOD/100;
+     int max_delta =  PFDRFout[channel]/OutputDivider/MOD/100;
     if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
        while(1)
          my_microsecond_delay(10);
@@ -1276,11 +1296,13 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
     registers[0] = 0;
     registers[0] = INTA << 15; // OK
     registers[0] = registers[0] + (FRAC << 3);
+    reg_dirty[0] = true;
     if (MOD == 1) MOD = 2;
     registers[1] = 0;
     registers[1] = MOD << 3;
     registers[1] = registers[1] + 1 ; // restore address "001"
     bitSet (registers[1], 27); // Prescaler at 8/9
+    reg_dirty[1] = true;
     return actual_freq;
 }
 
@@ -1290,6 +1312,7 @@ void ADF4351_enable(int s)
     bitClear(registers[4], 11);     // Inverse logic!!!!!
   else
     bitSet(registers[4], 11);
+  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 
@@ -1299,6 +1322,7 @@ void ADF4351_enable_aux_out(int s)
     bitSet(registers[4], 8);
   else
     bitClear(registers[4], 8);
+  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 
@@ -1313,6 +1337,8 @@ void ADF4351_enable_out(int s)
     bitSet(registers[2], 5);        // Enable power down
     bitSet(registers[2], 11);        // Enable VCO power down
   }
+  reg_dirty[2] = true;
+  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 
@@ -1585,7 +1611,7 @@ void SI4463_set_output_level(int t)
 }
 void SI4463_start_tx(uint8_t CHANNEL)
 {
-//  volatile si446x_state_t s;
+//   si446x_state_t s;
 #if 0
   s = SI4463_get_state();
   if (s == SI446X_STATE_RX){
@@ -1649,7 +1675,7 @@ void SI4463_start_tx(uint8_t CHANNEL)
 
 void SI4463_start_rx(uint8_t CHANNEL)
 {
-  volatile si446x_state_t s = SI4463_get_state();
+   si446x_state_t s = SI4463_get_state();
   if (s == SI446X_STATE_TX){
     SI4463_set_state(SI446X_STATE_READY);
   }
@@ -2626,7 +2652,7 @@ void SI4463_init_rx(void)
   clear_frequency_cache();
   SI4463_start_rx(SI4463_channel);
 #if 0
-volatile si446x_state_t s ;
+ si446x_state_t s ;
 
 again:
   Si446x_getInfo(&SI4463_info);
@@ -2675,7 +2701,7 @@ reset:
 #endif
   SI4463_start_tx(0);
 #if 0
-volatile si446x_state_t s ;
+ si446x_state_t s ;
 
 again:
   Si446x_getInfo(&SI4463_info);

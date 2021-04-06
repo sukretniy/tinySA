@@ -567,6 +567,7 @@ extern const char *states[];
   }
 }
 
+#ifndef TINYSA4
 void
 enter_dfu(void)
 {
@@ -581,6 +582,7 @@ enter_dfu(void)
   *((unsigned long *)BOOT_FROM_SYTEM_MEMORY_MAGIC_ADDRESS) = BOOT_FROM_SYTEM_MEMORY_MAGIC;
   NVIC_SystemReset();
 }
+#endif
 
 static void
 select_lever_mode(int mode)

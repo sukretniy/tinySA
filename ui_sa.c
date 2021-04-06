@@ -429,6 +429,7 @@ enum {
 #ifdef __LIMITS__
   KM_LIMIT_FREQ, KM_LIMIT_LEVEL,
 #endif
+  KM_MARKER_TIME,
   // #35
   KM_NONE // always at enum end
 };
@@ -480,6 +481,7 @@ static const struct {
   {keypads_freq         , "END\nFREQ"},  // KM_LIMIT_FREQ
   {keypads_plusmin_unit , "LEVEL"},  // KM_LIMIT_LEVEL
 #endif
+  {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
 };
 #if 0 // Not used
 
@@ -501,6 +503,7 @@ static const menuitem_t  menu_highoutputmode[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_top[];
 static const menuitem_t  menu_reffer[];
+static const menuitem_t  menu_sweep_points[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_limit_modify[];
 //static const menuitem_t  menu_drive_wide[];
@@ -678,13 +681,14 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
   redraw_frame();
   request_to_redraw_grid();
 }
-
+#ifndef TINYSA4
 static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 {
   (void)data;
   (void)item;
   enter_dfu();
 }
+#endif
 
 #ifdef __LISTEN__
 static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
@@ -1597,6 +1601,20 @@ static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
   toggle_mute();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_enter_marker_acb)
+{
+  (void) data;
+  (void) item;
+  if(b){
+    b->param_1.text = FREQ_IS_CW() ? "TIME" : "FREQUENCY";
+    return;
+  }
+  if (FREQ_IS_CW())
+    ui_mode_keypad(KM_MARKER_TIME);
+  else
+    ui_mode_keypad(KM_MARKER);
+}
+
 #ifdef TINYSA4
 static const uint16_t points_setting[] = {51, 101, 201, 290, 450};
 #else
@@ -1724,6 +1742,7 @@ static const menuitem_t  menu_sweep[] = {
   { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
+  { MT_FORM | MT_SUBMENU,  0,                   "SWEEP POINTS",   menu_sweep_points},
   { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1877,7 +1896,7 @@ const menuitem_t menu_marker_search[] = {
   { MT_CALLBACK, 1, "MIN\n" S_RARROW" RIGHT", menu_marker_search_cb },
   { MT_CALLBACK, 2, "MAX\n" S_LARROW" LEFT",  menu_marker_search_cb },
   { MT_CALLBACK, 3, "MAX\n" S_RARROW" RIGHT", menu_marker_search_cb },
-  { MT_KEYPAD,  KM_MARKER,          "ENTER\nFREQUENCY",         NULL},
+  { MT_ADV_CALLBACK, 0, "ENTER\n%s",          menu_enter_marker_acb},
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING",menu_marker_modify_acb },
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
@@ -1960,11 +1979,13 @@ static const menuitem_t menu_marker[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+#ifndef TINYSA4
 static const menuitem_t menu_dfu[] = {
   { MT_FORM | MT_CALLBACK, 0, "ENTER DFU",      menu_dfu_cb},
   { MT_FORM | MT_CANCEL,   0, S_LARROW" BACK",  NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
+#endif
 
 #ifdef __HARMONIC__
 static const menuitem_t menu_harmonic[] =
@@ -2095,10 +2116,14 @@ static const menuitem_t menu_settings2[] =
 static const menuitem_t menu_settings[] =
 {
   { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
+#ifndef TINYSA4
   { MT_KEYPAD, KM_ACTUALPOWER,  "ACTUAL\nPOWER",  NULL},
+#endif
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "0=auto IF"},
   { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
+#ifndef TINYSA4
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
+#endif
 #ifdef TINYSA4
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
 #else
@@ -2203,7 +2228,14 @@ static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
+#ifndef TINYSA4
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
+#endif
+#ifdef TINYSA4
+  { MT_KEYPAD, KM_ACTUALPOWER,  "ACTUAL\nPOWER",  NULL},
+  { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
+#endif
+
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -2667,6 +2699,9 @@ set_numeric_value(void)
     break;
   case KM_MARKER:
     set_marker_frequency(active_marker, (freq_t)uistat.value - (setting.frequency_offset - FREQUENCY_SHIFT));
+    break;
+  case KM_MARKER_TIME:
+    set_marker_time(active_marker, uistat.value);
     break;
   case KM_MODULATION:
     set_modulation_frequency((int)uistat.value);
