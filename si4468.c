@@ -2055,12 +2055,15 @@ int16_t Si446x_RSSI(void)
     int RSSI_RAW_ARRAY[3];
     do{
     again:
-      __disable_irq();
+#if 1
+    __disable_irq();
       data[0] = SI446X_CMD_GET_MODEM_STATUS;
       data[1] = 0xFF;
       SI4463_do_api(data, 2, data, 3);          // TODO no clear of interrupts
       __enable_irq();
-
+#else
+      data[2] = getFRR(SI446X_CMD_READ_FRR_A);
+#endif
       if (data[2] == 255) {
         my_microsecond_delay(10);
         goto again;

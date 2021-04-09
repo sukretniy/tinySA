@@ -504,6 +504,7 @@ static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_top[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_sweep_points[];
+static const menuitem_t  menu_sweep_points_form[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_limit_modify[];
 //static const menuitem_t  menu_drive_wide[];
@@ -1739,10 +1740,10 @@ static const menuitem_t  menu_modulation[] = {
 };
 
 static const menuitem_t  menu_sweep[] = {
-  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
-  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
+  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         VARIANT("0..350MHz", "0..800MHz")},
+  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", VARIANT("-70..70","-90..90")},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
-  { MT_FORM | MT_SUBMENU,  0,                   "SWEEP POINTS",   menu_sweep_points},
+  { MT_FORM | MT_SUBMENU,  0,                   "SWEEP POINTS",   menu_sweep_points_form},
   { MT_FORM | MT_CANCEL,   0,                 S_LARROW" BACK",NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -1756,7 +1757,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 #ifdef TINYSA4
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
 #endif
-  { MT_FORM | MT_KEYPAD,   KM_CENTER,           center_text,         "10kHz..350MHz"},
+  { MT_FORM | MT_KEYPAD,   KM_CENTER,           center_text,         VARIANT("10kHz..350MHz","10kHz..850MHz")},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        low_level_help_text},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
@@ -1773,7 +1774,7 @@ static const menuitem_t  menu_highoutputmode[] = {
 #ifdef TINYSA4
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
 #endif
-  { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         "240MHz..960MHz"},
+  { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz","136MHz..4350MHz")},
 //  { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
   { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
@@ -2025,6 +2026,18 @@ static const menuitem_t menu_sweep_points[] = {
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_sweep_points_form[] = {
+  { MT_FORM | MT_ADV_CALLBACK, 0, "%3d point", menu_points_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 1, "%3d point", menu_points_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 2, "%3d point", menu_points_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 3, "%3d point", menu_points_acb },
+#ifdef TINYSA4
+  { MT_FORM | MT_ADV_CALLBACK, 4, "%3d point", menu_points_acb },
+#endif
+  { MT_FORM | MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
 static const menuitem_t menu_sweep_speed[] =
 {
  { MT_ADV_CALLBACK,     SD_NORMAL,     "NORMAL",          menu_scanning_speed_acb},    // order must match definition of enum
@@ -2087,7 +2100,7 @@ static const menuitem_t menu_settings4[] =
 #ifdef __HARMONIC__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
-  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
+//  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -2106,7 +2119,7 @@ static const menuitem_t menu_settings2[] =
   { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
 #endif
 #ifdef TINYSA4
-  { MT_KEYPAD,   KM_30MHZ,      "ACTUAL\n30MHz", "Enter actual l0MHz frequency"},
+  { MT_KEYPAD,   KM_30MHZ,      "ACTUAL\n30MHz", "Enter actual 30MHz frequency"},
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
@@ -2227,13 +2240,13 @@ static const menuitem_t menu_config[] = {
 #ifdef __USE_SERIAL_CONSOLE__
   { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
-  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
-#ifndef TINYSA4
-  { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
-#endif
 #ifdef TINYSA4
   { MT_KEYPAD, KM_ACTUALPOWER,  "ACTUAL\nPOWER",  NULL},
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
+#endif
+  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
+#ifndef TINYSA4
+  { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
 #endif
 
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },

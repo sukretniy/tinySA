@@ -226,7 +226,7 @@ void reset_settings(int m)
   setting.measurement = M_OFF;
 #ifdef TINYSA4
   setting.ultra = S_AUTO_OFF;
-  setting.frequency_IF = config.frequency_IF1;
+  setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2; ;
 #else
   setting.frequency_IF = DEFAULT_IF;
 #endif
@@ -338,6 +338,7 @@ void reset_settings(int m)
   markers[0].mtype = M_REFERENCE | M_TRACKING;
   markers[0].enabled = M_ENABLED;
   setting._active_marker = 0;
+  set_external_gain(0.0);  // This also updates the help text!!!!! Must be below level_min and level_max being set
   set_sweep_points(POINTS_COUNT);
   dirty = true;
 }
@@ -609,9 +610,14 @@ void set_repeat(int r)
 
 void set_IF(int f)
 {
-  if (f == 0)
+  if (f == 0) {
     setting.auto_IF = true;
-  setting.frequency_IF = f;
+#ifdef TINYSA4
+    setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
+#endif
+  } else {
+    setting.frequency_IF = f;
+  }
   dirty = true;
 }
 
@@ -1363,8 +1369,8 @@ static const struct {
   int16_t   noise_level;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  8500,       250,           50,      400,   -90},
-  {  3000,       250,           50,      200,   -95},
+  {  8500,       100,           50,      400,   -90},
+  {  3000,       200,           50,      200,   -95},
   {  1000,       400,          100,      100,   -105},
   {   300,       400,          120,      100,   -110},
   {   100,       700,          120,      100,   -115},
@@ -1932,7 +1938,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   vbwSteps = 1;                 // starting number for all modes
   if (!MODE_INPUT(setting.mode)) {
     actual_rbw_x10 = 1;         // To force substepping of the SI4463
-    return;
+    goto done;
   }
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
     setting.vbw_x10 = (setting.frequency_step)/100;
@@ -1986,7 +1992,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 #ifdef TINYSA4
     if (setting.vbw_x10 > actual_rbw_x10)
 	  vbwSteps = 1+(setting.vbw_x10 / actual_rbw_x10); //((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
-      vbwSteps += vbwSteps>>1;
+      vbwSteps += vbwSteps;
 #else
 	vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
 #endif
@@ -1997,6 +2003,8 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   } else {                      // in all other modes
     setting.vbw_x10 = actual_rbw_x10;
   }
+done:
+  fill_spur_table();    // IF frequency depends on selected RBW
 }
 
 #ifdef TINYSA4
@@ -2207,7 +2215,14 @@ void fill_spur_table(void)
 {
   for (uint8_t i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
   {
-   freq_t corr_IF = config.frequency_IF1;
+
+   freq_t corr_IF;
+   if (!setting.auto_IF)
+     corr_IF = setting.frequency_IF;
+   else {
+     corr_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2 - DEFAULT_SPUR_OFFSET/2;
+     setting.frequency_IF = corr_IF;
+   }
    if (i != 4)
      corr_IF -= IF_OFFSET;
    else
@@ -2742,13 +2757,15 @@ again:                                                              // Spur redu
       else
       {
 #ifdef TINYSA4
-        local_IF = config.frequency_IF1;
+        local_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2; ;
+#if 0
         if ( S_IS_AUTO(setting.below_IF)) {
 //          if (f < 2000000 && S_IS_AUTO(setting.spur_removal))
 //            local_IF += DEFAULT_SPUR_OFFSET;
 //          else // if (lf > ULTRA_MAX_FREQ || lf < local_IF/2  || ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > 136000000ULL + local_IF) )
             local_IF += DEFAULT_SPUR_OFFSET/2;
         }
+#endif
 #else
         local_IF = DEFAULT_IF;
 #endif
@@ -3771,13 +3788,13 @@ sweep_again:                                // stay in sweep loop when output mo
         s_min = noise;
 #endif
       float s_ref = setting.reflevel/setting.scale;
-      if (s_max < s_ref  - NGRIDY || s_min > s_ref) { //Completely outside
+      if (s_max < s_ref  - NGRIDY || s_min > s_ref  || s_max > s_ref  + 2.0) { //Completely outside or way too low
         if (s_max - s_min < NGRIDY - 2)
           set_reflevel(setting.scale*(floorf(s_min+8.8+ 1)));
         else
           set_reflevel(setting.scale*(floorf(s_max)+1));
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
-      }else if (s_max > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
+      } else if (s_max > s_ref  - 0.5 || s_min > s_ref - 8.8 ) { // maximum to high or minimum to high
         set_reflevel(setting.reflevel + setting.scale);
         //        dirty = true;                               // Must be  above if(scandirty!!!!!)
       } else if (s_min < s_ref - 10.1 && s_max < s_ref -  1.5) { // minimum too low and maximum can move up
@@ -4535,7 +4552,7 @@ void test_prepare(int i)
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
 #ifdef TINYSA4
-  setting.frequency_IF = config.frequency_IF1;                // Default frequency
+  setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;                // Default frequency
   ultra = true;
   ultra_threshold = 2000000000;
   setting.extra_lna = false;
@@ -4568,7 +4585,7 @@ common_silent:
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
 #ifdef TINYSA4
-    setting.frequency_IF = config.frequency_IF1 + DEFAULT_SPUR_OFFSET/2;                // Center on SAW filters
+    setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;                // Center on SAW filters
     set_refer_output(0);
 #else
     setting.frequency_IF = DEFAULT_IF+210000;                // Center on SAW filters
@@ -4597,7 +4614,11 @@ common_silent:
     for (int j = 0; j < setting._sweep_points/2 - W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].stop;
     for (int j = setting._sweep_points/2 + W2P(test_case[i].width); j < setting._sweep_points; j++)
+#ifdef TINYSA4
+      stored_t[j] = test_case[i].stop;
+#else
       stored_t[j] = test_case[i].stop - (i == 6?3:0);
+#endif
     for (int j = setting._sweep_points/2 - W2P(test_case[i].width); j < setting._sweep_points/2 + W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].pass;
     break;
@@ -4766,7 +4787,7 @@ quit:
     test_prepare(TEST_SILENCE);
     setting.auto_IF = false;
 #ifdef TINYSA4
-    setting.frequency_IF=config.frequency_IF1;
+    setting.frequency_IF=config.frequency_IF1+ STATIC_DEFAULT_SPUR_OFFSET/2;
 #else
    setting.frequency_IF=DEFAULT_IF;
  #endif
@@ -4848,7 +4869,7 @@ quit:
 //    reset_settings(M_LOW);
     setting.auto_IF = false;
 #ifdef TINYSA4
-    setting.frequency_IF=config.frequency_IF1;
+    setting.frequency_IF=config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
     setting.step_delay = 15000;
 #else
     setting.frequency_IF=DEFAULT_IF;

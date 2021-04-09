@@ -1418,9 +1418,9 @@ menu_invoke(int item)
     kp_help_text = (char *)menu->reference;
     if (menu->data <= KM_CW) {      // One of the frequency input keypads
       if (MODE_LOW(setting.mode))
-        kp_help_text = "0..350MHz";
+        kp_help_text = VARIANT("0..350MHz","0..800MHz");
       else
-        kp_help_text = "240..960Mhz";
+        kp_help_text = VARIANT("240..960Mhz","136..4350MHz");
     }
     ui_mode_keypad(menu->data);
     redraw_request |= REDRAW_CAL_STATUS;

@@ -77,6 +77,7 @@
 #endif
 
 #ifdef TINYSA3
+#define VARIANT(X,Y) (X)
 #define DEFAULT_IF  433800000
 #define DEFAULT_SPUR_IF 434000000
 #define DEFAULT_MAX_FREQ    350000000
@@ -84,8 +85,10 @@
 #define HIGH_MAX_FREQ_MHZ   960
 #endif
 #ifdef TINYSA4
+#define VARIANT(X,Y) (Y)
 #define DEFAULT_IF  ((freq_t)977400000)
-#define DEFAULT_SPUR_OFFSET ((freq_t)1300000)
+#define DEFAULT_SPUR_OFFSET ((freq_t)(actual_rbw_x10 > 3000 ? 1500000 : 1000000))
+#define STATIC_DEFAULT_SPUR_OFFSET ((freq_t) 1500000)
 #define DEFAULT_MAX_FREQ    ((freq_t)800000000)
 #define HIGH_MIN_FREQ_MHZ   136// 825
 #define HIGH_MAX_FREQ_MHZ   1130
