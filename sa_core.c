@@ -95,7 +95,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 #define SL_GENHIGH_LEVEL_MIN    (drive_dBm[MIN_DRIVE] - (config.high_out_adf4350 ? 0: 37 - config.switch_offset))
 #define SL_GENHIGH_LEVEL_MAX    drive_dBm[MAX_DRIVE]
 
-#define SL_GENLOW_LEVEL_MIN    -104
+#define SL_GENLOW_LEVEL_MIN    -124
 #define SL_GENLOW_LEVEL_MAX   -16
 
 
@@ -2551,6 +2551,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0;
       a += PURE_TO_float(get_frequency_correction(f));
       if (a != old_a) {
+        int very_low_flag = false;
         old_a = a;
         a = a - level_max;                 // convert to all settings maximum power output equals a = zero
         if (a < -SWITCH_ATTENUATION) {
@@ -2560,6 +2561,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           set_switch_receive();
 #else
           enable_rx_output(false);
+          very_low_flag = true;
 #endif
         } else {
 #ifdef TINYSA3
@@ -2567,11 +2569,16 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           set_switch_transmit();
 #else
           enable_rx_output(true);
+
 #endif
         }
-
+#ifdef TINYSA4
+#define LOWEST_LEVEL (very_low_flag ? 0 : MIN_DRIVE)
+#else
+#define LOWEST_LEVEL MIN_DRIVE
+#endif
         int d = MAX_DRIVE;        // Reduce level till it fits in attenuator range
-        while (a - BELOW_MAX_DRIVE(d) < - 31 && d > MIN_DRIVE) {
+        while (a - BELOW_MAX_DRIVE(d) < - 31 && d > LOWEST_LEVEL) {
           d--;
         }
         a -= BELOW_MAX_DRIVE(d);
