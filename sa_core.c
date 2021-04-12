@@ -294,8 +294,8 @@ void reset_settings(int m)
 #ifdef TINYSA4
     setting.extra_lna = false;
 #endif
-    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
-    setting.correction_value = config.correction_value[CORRECTION_LOW];
+    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_OUT];
+    setting.correction_value = config.correction_value[CORRECTION_LOW_OUT];
     level_min = SL_GENLOW_LEVEL_MIN + config.low_level_output_offset;
     level_max = SL_GENLOW_LEVEL_MAX + config.low_level_output_offset;
     level_range = level_max - level_min;
@@ -1369,14 +1369,14 @@ static const struct {
   int16_t   noise_level;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  8500,       100,           50,      400,   -90},
-  {  3000,       200,           50,      200,   -95},
-  {  1000,       400,          100,      100,   -105},
+  {  8500,       150,           50,      400,   -90},
+  {  3000,       150,           50,      200,   -95},
+  {  1000,       300,          100,      100,   -105},
   {   300,       400,          120,      100,   -110},
-  {   100,       700,          120,      100,   -115},
-  {    30,       900,          300,      100,   -120},
-  {    10,      4000,          600,      100,   -122},
-  {     3,      9000,         3000,      100,   -125}
+  {   100,       600,          120,      100,   -115},
+  {    30,      1100,          300,      100,   -120},
+  {    10,      5000,          600,      100,   -122},
+  {     3,      10000,         3000,      100,   -125}
 };
 #endif
 
@@ -1490,6 +1490,23 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   pureRSSI_t cv = 0;
   if (setting.mode == M_GENHIGH)
     return(0.0);
+#ifdef TINYSA4
+  if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
+#if 0
+    freq_t local_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
+    if ( f > local_IF && f < local_IF + MIN_BELOW_LO) { // Jump at local_IF + MIN_BELOW_LO = 978 - 550 = 1527MHz
+      cv += ( float_TO_PURE_RSSI(1.5) * (f - local_IF) ) / MIN_BELOW_LO;     // +2.5dB correction.
+    }
+    if ( f > MAX_LO_FREQ - local_IF && f < ULTRA_MAX_FREQ) { // = 4350 - 978 = 3372MHz up to 5350MHz
+      cv += float_TO_PURE_RSSI(1);                                        // +1dB correction.
+    }
+#endif
+    if ( f > ULTRA_MAX_FREQ) {
+      cv += float_TO_PURE_RSSI(9);                                        // +9dB correction.
+    }
+  }
+#endif
+
 #ifdef TINYSA4
 #if 0                       // Not implemented
   int cf = (((f >> 28)+1)>>1) - 5;   // Correction starts at 2,684,354,560Hz round to closest correction frequency
@@ -2362,6 +2379,12 @@ static systime_t sweep_elapsed = 0;                             // Time since fi
 uint8_t signal_is_AM = false;
 static uint8_t check_for_AM = false;
 static int is_below = false;
+#ifdef TINYSA4
+static int LO_shifted;
+static int LO_mirrored;
+static int LO_harmonic;
+static int LO_shifting;
+#endif
 
 static void calculate_static_correction(void)                   // Calculate the static part of the RSSI correction
 {
@@ -2747,9 +2770,10 @@ again:                                                              // Spur redu
 
     local_IF=0;                                                     // For all high modes
 #ifdef TINYSA4
-    int LO_shifted = false;
-    int LO_mirrored = false;
-    int LO_harmonic = false;
+    LO_shifted = false;
+    LO_mirrored = false;
+    LO_harmonic = false;
+    LO_shifting = false;
 #endif
     if (MODE_LOW(setting.mode)){                                       // All low mode
       if (!setting.auto_IF)
@@ -2757,7 +2781,7 @@ again:                                                              // Spur redu
       else
       {
 #ifdef TINYSA4
-        local_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2; ;
+        local_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
 #if 0
         if ( S_IS_AUTO(setting.below_IF)) {
 //          if (f < 2000000 && S_IS_AUTO(setting.spur_removal))
@@ -2816,6 +2840,9 @@ again:                                                              // Spur redu
             }
             else
             {
+#ifdef TINYSA4
+              LO_shifting = true;
+#endif
               if (spur_second_pass) {
 #ifdef TINYSA4
                 local_IF  = local_IF + DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
@@ -3220,8 +3247,13 @@ again:                                                              // Spur redu
       int my_step_delay = SI4432_step_delay;
       if (f < 2000000 && actual_rbw_x10 == 3)
         my_step_delay = my_step_delay * 2;
-      if (LO_shifted) // || SI4463_offset_changed)
-        my_step_delay = my_step_delay * 2;
+//      if (LO_shifted) // || SI4463_offset_changed)
+//        my_step_delay = my_step_delay * 2;
+      if (actual_rbw_x10 >= 1000 && SI4463_frequency_changed && ADF4351_frequency_changed) {
+        my_step_delay -= 200;                   // compensate for additional delay of setting SI4463
+        if (my_step_delay < 0)
+          my_step_delay = 0;
+      }
       my_microsecond_delay(my_step_delay * ((setting.R == 0 && old_R > 5 ) ? 8 : 1));
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
@@ -3266,6 +3298,11 @@ again:                                                              // Spur redu
       }
     }
 #endif
+
+    if (LO_shifting)
+      pureRSSI -= float_TO_PURE_RSSI(config.shift_level_offset);
+    if (LO_harmonic)
+      pureRSSI -= float_TO_PURE_RSSI(config.harmonic_level_offset);
 
     if (RSSI < pureRSSI)                                     // Take max during subscanning
       RSSI = pureRSSI;

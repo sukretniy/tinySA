@@ -294,9 +294,9 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   //                                     0    1      2
 #ifdef TINYSA4
-  static const char cmd_mode_list[] = "low|high|switch";
+  static const char cmd_mode_list[] = "low|high|switch|lna|harmonic|shift";
 #else
-  static const char cmd_mode_list[] = "low|high|switch|lna";
+  static const char cmd_mode_list[] = "low|high|switch";
 #endif
   if (argc == 0) {
     const char *p = "leveloffset %s %.1f\r\n";
@@ -307,6 +307,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     shell_printf(p, "switch",       config.switch_offset);
 #ifdef TINYSA4
     shell_printf(p, "lna",          config.lna_level_offset);
+    shell_printf(p, "harmonic",     config.harmonic_level_offset);
+    shell_printf(p, "shift",        config.shift_level_offset);
 #endif
     return;
   }
@@ -321,6 +323,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       case 2: config.switch_offset = v; break;
 #ifdef TINYSA4
       case 3: config.lna_level_offset = v; break;
+      case 4: config.harmonic_level_offset = v; break;
+      case 5: config.shift_level_offset = v; break;
 #endif
       default: goto usage;
     }
@@ -714,6 +718,19 @@ VNA_SHELL_FUNCTION(cmd_y)
   shell_printf("\r\n");
 #endif
 }
+#ifdef TINYSA4
+VNA_SHELL_FUNCTION(cmd_z)
+{
+  if (argc != 1) {
+    shell_printf("usage: z 0..30000\r\n%d\r\n", SI4432_step_delay);
+    return;
+  }
+  if (argc == 1) {
+    setting.step_delay = atoi(argv[0]);
+    dirty = true;
+  }
+}
+#endif
 #if 0       // not used
 VNA_SHELL_FUNCTION(cmd_z)
 {
@@ -851,7 +868,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
 {
   (void)argc;
 #ifdef TINYSA4
-  static const char cmd[] = "low|lna|high";
+  static const char cmd[] = "low|lna|out|high";
   static const char range[] = "0-19";
 #else
   static const char cmd[] = "low|high";

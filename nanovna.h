@@ -134,10 +134,11 @@ typedef uint32_t freq_t;
  typedef uint64_t freq_t;
  typedef int64_t long_t;
 #define CORRECTION_POINTS  20       // Frequency dependent level correction table entries
-#define CORRECTION_LOW  0
-#define CORRECTION_LNA  1
-#define CORRECTION_HIGH 2
-#define CORRECTION_SIZE 3
+#define CORRECTION_LOW      0
+#define CORRECTION_LNA      1
+#define CORRECTION_LOW_OUT  2
+#define CORRECTION_HIGH     3
+#define CORRECTION_SIZE     4
  #endif
 
 
@@ -633,7 +634,11 @@ typedef struct config {
   float high_level_offset;
   float low_level_output_offset;
   float high_level_output_offset;
+#ifdef TINYSA4
   float lna_level_offset;
+  float harmonic_level_offset;
+  float shift_level_offset;
+#endif
   float  correction_value[CORRECTION_SIZE][CORRECTION_POINTS];
   freq_t correction_frequency[CORRECTION_SIZE][CORRECTION_POINTS];
 #ifdef TINYSA4
