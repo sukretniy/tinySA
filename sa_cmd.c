@@ -886,6 +886,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
     for (int i=0; i<CORRECTION_POINTS; i++) {
       config.correction_value[m][i] = 0.0;
     }
+    dirty = true;       // recalculate intermediate table
     shell_printf("correction table %s reset\r\n", argv[0]);
     return;
   }
@@ -975,6 +976,36 @@ VNA_SHELL_FUNCTION(cmd_caloutput)
   if (m != -1)
     set_refer_output(m - 1);
 }
+
+#ifdef TINYSA4
+VNA_SHELL_FUNCTION(cmd_q)
+{
+  static const char cmd[] = "s|d|a";
+  if (argc < 1) {
+    usage:
+    shell_printf("usage: q s|d 0..18|a 0..63  %s\r\n", cmd);
+    test_output=false;
+    return;
+  }
+  int i = 0;
+  test_output=true;
+  test_output_switch = false;
+  test_output_drive = MAX_DRIVE;
+  test_output_attenuate = 0;
+  again:
+  if (argc == 0)
+    return;
+  int m = get_str_index(argv[i++], cmd);
+  argc--;
+  switch (m) {
+  case -1: goto usage;
+  case 0:  test_output_switch = true; break;
+  case 1: test_output_drive = MAX_DRIVE - atoi(argv[i++]); argc--; break;
+  case 2: test_output_attenuate = atoi(argv[i++]); argc--; break;
+  }
+  goto again;
+}
+#endif
 
 
 #pragma GCC pop_options

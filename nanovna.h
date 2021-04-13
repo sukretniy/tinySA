@@ -294,6 +294,10 @@ extern const char * const unit_string[];
 extern freq_t ultra_threshold;
 extern bool ultra;
 extern float *drive_dBm;
+extern int test_output;
+extern int test_output_switch;
+extern int test_output_drive;
+extern int test_output_attenuate;
 #else
 extern const int8_t drive_dBm [];
 #endif
