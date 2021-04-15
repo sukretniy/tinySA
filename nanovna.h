@@ -392,8 +392,14 @@ void set_IF2(int f);
 void set_R(int f);
 extern void set_modulo(uint32_t f);
 extern void fill_spur_table(void);
+extern float low_out_offset(void);
+extern float high_out_offset(void);
+#define LOW_OUT_OFFSET low_out_offset()
+#define HIGH_OUT_OFFSET high_out_offset()
 #else
 void set_10mhz(freq_t);
+#define LOW_OUT_OFFSET config.low_level_output_offset
+#define HIGH_OUT_OFFSET config.high_level_output_offset
 #endif
 
 #ifdef __AUDIO__

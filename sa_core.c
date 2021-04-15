@@ -296,8 +296,8 @@ void reset_settings(int m)
 #endif
     setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_OUT];
     setting.correction_value = config.correction_value[CORRECTION_LOW_OUT];
-    level_min = SL_GENLOW_LEVEL_MIN + config.low_level_output_offset;
-    level_max = SL_GENLOW_LEVEL_MAX + config.low_level_output_offset;
+    level_min = SL_GENLOW_LEVEL_MIN + LOW_OUT_OFFSET;
+    level_max = SL_GENLOW_LEVEL_MAX + LOW_OUT_OFFSET;
     level_range = level_max - level_min;
     break;
   case M_HIGH:
@@ -668,7 +668,7 @@ float level_min(void)
 {
   int l;
   if (setting.mode == M_GENLOW)
-    l = SL_GENLOW_LEVEL_MIN + config.low_level_output_offset;
+    l = SL_GENLOW_LEVEL_MIN + LOW_OUT_OFFSET;
   else
     l = SL_GENHIGH_LEVEL_MIN + config.high_level_output_offset;
   return l;
@@ -677,7 +677,7 @@ float level_min(void)
 float level_max(void)
 {
   if (setting.mode == M_GENLOW)
-    return SL_GENLOW_LEVEL_MAX + config.low_level_output_offset;
+    return SL_GENLOW_LEVEL_MAX + LOW_OUT_OFFSET;
   else
     return SL_GENHIGH_LEVEL_MAX + config.high_level_output_offset;
 }
@@ -687,6 +687,33 @@ float level_range(void)
   int r;
   r = level_max() - level_min();
   return r;
+}
+#endif
+
+
+#ifdef TINYSA4
+float low_out_offset()
+{
+  if (config.low_level_output_offset == 100)
+  {
+    if (config.low_level_offset == 100)
+      return 0;
+    else
+      return config.low_level_offset;
+  } else
+    return config.low_level_output_offset;
+}
+
+float high_out_offset()
+{
+  if (config.high_level_output_offset == 100)
+  {
+    if (config.high_level_offset == 100)
+      return 0;
+    else
+      return config.high_level_offset;
+  } else
+    return config.high_level_output_offset;
 }
 #endif
 
@@ -722,13 +749,13 @@ void set_level(float v)     // Set the output level in dB  in high/low output
     set_lo_drive(d);
 #endif
   } else {                  // This MUST be low output level
-    v -= config.low_level_output_offset;
+    v -= LOW_OUT_OFFSET;
     if (v < SL_GENLOW_LEVEL_MIN)
       v = SL_GENLOW_LEVEL_MIN;
     if (v > SL_GENLOW_LEVEL_MAX)
       v = SL_GENLOW_LEVEL_MAX;
-    v += config.low_level_output_offset;
-//    set_attenuation(setting.level - config.low_level_output_offset);
+    v += LOW_OUT_OFFSET;
+//    set_attenuation(setting.level - LOW_OUT_OFFSET);
   }
   setting.level = v;
   dirty = true;
@@ -740,7 +767,7 @@ float get_level(void)
   if (setting.mode == M_GENHIGH) {
     return v; // drive_dBm[setting.lo_drive] + config.high_level_output_offset;
   } else {
-//    setting.level = get_attenuation() + config.low_level_output_offset;
+//    setting.level = get_attenuation() + LOW_OUT_OFFSET;
     return setting.level;
   }
 #endif
@@ -923,7 +950,7 @@ float get_level_offset(void)
     }
   }
   if (setting.mode == M_GENLOW) {
-    return(config.low_level_output_offset);
+    return(LOW_OUT_OFFSET);
   }
   if (setting.mode == M_GENHIGH) {
     return(config.high_level_output_offset);
@@ -2562,7 +2589,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           ls -= 0.5;
         float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0;
         correct_RSSI_freq = get_frequency_correction(f);
-        a += PURE_TO_float(correct_RSSI_freq);
+        a += PURE_TO_float(correct_RSSI_freq) + 3.0;        // Always 3dB in attenuator
         if (a != old_a) {
           int very_low_flag = false;
           old_a = a;
@@ -2602,11 +2629,12 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef __SI4463__
           SI4463_set_output_level(d);
 #endif
+          a -= 3.0;                 // Always at least 3dB attenuation
           if (a > 0)
             a = 0;
           if (a < -31.5)
             a = -31.5;
-          a = -a;
+          a = -a - 0.25;        // Rounding
 #ifdef __PE4302__
           setting.attenuate_x2 = (int)(a * 2);
           PE4302_Write_Byte(setting.attenuate_x2);
@@ -2674,10 +2702,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     if (setting.frequency_step != 0)
       correct_RSSI_freq = get_frequency_correction(f);
   }
-//#define DEBUG_CORRECTION
+// #define DEBUG_CORRECTION
 #ifdef DEBUG_CORRECTION
   if (SDU1.config->usbp->state == USB_ACTIVE) {
-    shell_printf ("%d:%Q %d\r\n", i, f, correct_RSSI_freq);
+    shell_printf ("%d:%Q %f\r\n", i, f, PURE_TO_float(correct_RSSI_freq));
     osalThreadSleepMilliseconds(2);
 }
 #endif
