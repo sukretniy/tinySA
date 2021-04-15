@@ -75,7 +75,7 @@ static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 #endif
 
 #ifdef TINYSA4
-const float si_drive_dBm []     = {-43, -30.1, -19.5, -15.5, -13, -11, -9.5, -8.1, -6.9, -5.9, -5, -4.2, -3.5, -2.8 ,  -2.2,  -1.7, -1, -0.5, 0};
+const float si_drive_dBm []     = {-43.8, -30.0, -21.8, -17.2, -14.2, -11.9, -10.1, -8.6, -7.3, -6.2, -5.2, -4.3, -3.5, -2.8 ,  -2.2,  -1.5, -1, -0.5, 0};
 const float adf_drive_dBm[]     = {-15,-12,-9,-6};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) adf_drive_dBm;
@@ -293,9 +293,12 @@ void reset_settings(int m)
     setting.step_delay_mode = SD_FAST;
 #ifdef TINYSA4
     setting.extra_lna = false;
-#endif
     setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_OUT];
     setting.correction_value = config.correction_value[CORRECTION_LOW_OUT];
+#else
+    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
+    setting.correction_value = config.correction_value[CORRECTION_LOW];
+#endif
     level_min = SL_GENLOW_LEVEL_MIN + LOW_OUT_OFFSET;
     level_max = SL_GENLOW_LEVEL_MAX + LOW_OUT_OFFSET;
     level_range = level_max - level_min;
@@ -1982,7 +1985,11 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   vbwSteps = 1;                 // starting number for all modes
   if (!MODE_INPUT(setting.mode)) {
     actual_rbw_x10 = 1;         // To force substepping of the SI4463
+#ifdef TINYSA4
     goto done;
+#else
+    return;
+#endif
   }
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
     setting.vbw_x10 = (setting.frequency_step)/100;
@@ -2047,8 +2054,10 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   } else {                      // in all other modes
     setting.vbw_x10 = actual_rbw_x10;
   }
+#ifdef TINYSA4
 done:
   fill_spur_table();    // IF frequency depends on selected RBW
+#endif
 }
 
 #ifdef TINYSA4
@@ -2591,7 +2600,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         correct_RSSI_freq = get_frequency_correction(f);
         a += PURE_TO_float(correct_RSSI_freq) + 3.0;        // Always 3dB in attenuator
         if (a != old_a) {
+#ifdef TINYSA4
           int very_low_flag = false;
+#endif
           old_a = a;
           a = a - level_max;                 // convert to all settings maximum power output equals a = zero
           if (a < -SWITCH_ATTENUATION) {
@@ -2617,8 +2628,12 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #else
 #define LOWEST_LEVEL MIN_DRIVE
 #endif
-          int d = MAX_DRIVE;        // Reduce level till it fits in attenuator range
-          while (a - BELOW_MAX_DRIVE(d) < - 31 && d > LOWEST_LEVEL) {
+          int d = MAX_DRIVE-8;        // Start in the middle
+
+          while (a - BELOW_MAX_DRIVE(d) > 0 && d < MAX_DRIVE) { // Increase if needed
+            d++;
+          }
+          while (a - BELOW_MAX_DRIVE(d) < - 31 && d > LOWEST_LEVEL) { // reduce till it fits attenuator
             d--;
           }
           a -= BELOW_MAX_DRIVE(d);
@@ -3356,10 +3371,12 @@ again:                                                              // Spur redu
     }
 #endif
 
+#ifdef TINYSA4
     if (LO_shifting)
       pureRSSI -= float_TO_PURE_RSSI(config.shift_level_offset);
     if (LO_harmonic)
       pureRSSI -= float_TO_PURE_RSSI(config.harmonic_level_offset);
+#endif
 
     if (RSSI < pureRSSI)                                     // Take max during subscanning
       RSSI = pureRSSI;

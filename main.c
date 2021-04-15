@@ -2546,6 +2546,22 @@ VNA_SHELL_FUNCTION(cmd_help)
 /*
  * VNA shell functions
  */
+// Check USB connection status
+static bool usb_IsActive(void){
+  return usbGetDriverStateI(&USBD1) == USB_ACTIVE;
+}
+
+// Check active connection for Shell
+static bool shell_check_connect(void){
+#ifdef __USE_SERIAL_CONSOLE__
+  // Serial connection always active
+  if (config._mode & _MODE_SERIAL)
+    return true;
+#endif
+  // USB connection can be USB_SUSPENDED
+  return usb_IsActive();
+}
+
 // Check Serial connection requirements
 #ifdef __USE_SERIAL_CONSOLE__
 #if HAL_USE_SERIAL == FALSE
@@ -2563,10 +2579,6 @@ void shell_update_speed(void){
   sdStart(&SD1, &s_config);  // USART config
 }
 
-// Check USB connection status
-static bool usb_IsActive(void){
-  return usbGetDriverStateI(&USBD1) == USB_ACTIVE;
-}
 void shell_reset_console(void){
   // Reset I/O queue over USB (for USB need also connect/disconnect)
   if (usb_IsActive()){
@@ -2580,14 +2592,6 @@ void shell_reset_console(void){
   iqResetI(&SD1.iqueue);
 }
 
-// Check active connection for Shell
-static bool shell_check_connect(void){
-  // Serial connection always active
-  if (config._mode & _MODE_SERIAL)
-    return true;
-  // USB connection can be USB_SUSPENDED
-  return usb_IsActive();
-}
 
 static void shell_init_connection(void){
 /*
@@ -3018,7 +3022,8 @@ int main(void)
 
 
   while (1) {
-    if (SDU1.config->usbp->state == USB_ACTIVE) {
+//    if (SDU1.config->usbp->state == USB_ACTIVE) {
+    if (shell_check_connect()) {
 #ifdef VNA_SHELL_THREAD
 #if CH_CFG_USE_WAITEXIT == FALSE
 #error "VNA_SHELL_THREAD use chThdWait, need enable CH_CFG_USE_WAITEXIT in chconf.h"
@@ -3035,7 +3040,8 @@ int main(void)
           VNAShell_executeLine(shell_line);
         else
           chThdSleepMilliseconds(200);
-      } while (SDU1.config->usbp->state == USB_ACTIVE);
+//      } while (SDU1.config->usbp->state == USB_ACTIVE);
+      } while (shell_check_connect());
 #endif
     }
     chThdSleepMilliseconds(1000);
