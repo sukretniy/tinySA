@@ -396,6 +396,8 @@ extern float low_out_offset(void);
 extern float high_out_offset(void);
 #define LOW_OUT_OFFSET low_out_offset()
 #define HIGH_OUT_OFFSET high_out_offset()
+extern bool debug_avoid;
+extern void toggle_debug_avoid(void);
 #else
 void set_10mhz(freq_t);
 #define LOW_OUT_OFFSET config.low_level_output_offset

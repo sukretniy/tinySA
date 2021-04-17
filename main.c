@@ -1012,10 +1012,10 @@ config_t config = {
   .frequency_IF2 = 0,
   .ultra_threshold = 750000000,
   .low_level_offset =       100.0,    // Uncalibrated
-  .high_level_offset =      100.0,    // Uncalibrated
+  .high_level_offset =      100,      // Uncalibrated
   .lna_level_offset = 100,
   .low_level_output_offset =   100.0,    // Uncalibrated
-  .high_level_output_offset =  100.0,    // Uncalibrated
+  .high_level_output_offset =  0,    // Uncalibrated, but checking code is not yet present
   .correction_frequency =
   {
     { 10000, 100000, 300000, 1000000, 30000000, 500000000, 750000000, 750000010, 1000000000, 1500000000, 1520000000, 2000000000, 2500000000, 3000000000, 3500000000, 4000000000, 4500000000, 5000000000, 5500000000, 6000000000 },
@@ -1986,7 +1986,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
-        shell_printf("%d %d %D %f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
+        shell_printf("%d %d %D %f\r\n", t+1, markers[t].index, markers[t].frequency, marker_to_value(t));
       }
     }
     return;
@@ -2003,7 +2003,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     goto usage;
   if (argc == 1) {
   display_marker:
-    shell_printf("%d %d %D %.2f\r\n", t+1, markers[t].index, markers[t].frequency, value(actual_t[markers[t].index]));
+    shell_printf("%d %d %D %.2f\r\n", t+1, markers[t].index, markers[t].frequency, marker_to_value(t));
     active_marker = t;
     // select active marker
     markers[t].enabled = TRUE;

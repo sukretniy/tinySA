@@ -37,6 +37,7 @@
 // uint8_t dirty = true;
 uint8_t scandirty = true;
 bool debug_avoid = false;
+bool debug_avoid_second = false;
 
 setting_t setting;
 freq_t frequencies[POINTS_COUNT];
@@ -511,9 +512,11 @@ void toggle_debug_avoid(void)
   if (debug_avoid) {
     setting.show_stored = true;
     trace[TRACE_STORED].enabled = true;
+    trace[TRACE_TEMP].enabled = true;
   } else {
     setting.show_stored = false;
     trace[TRACE_STORED].enabled = false;
+    trace[TRACE_TEMP].enabled = false;
   }
   dirty = true;
 }
@@ -2182,6 +2185,8 @@ static  freq_t spur_table[] =                                 // Frequencies to 
  487541650,             // OK This is linked to the MODULO of the ADF4350
  650687000,             // OK
  731780000,             // OK
+ 977400000,
+ 977400000*2,
 #else
 // 580000,            // 433.8 MHz table
 // 880000,    //?
@@ -2264,18 +2269,20 @@ int binary_search(freq_t f)
 static const uint8_t spur_div[] = {4, 3, 3, 2, 3, 4};
 static const uint8_t spur_mul[] = {1, 1, 1, 1, 2, 3};
 #define IF_OFFSET   468750*4        //
+
 void fill_spur_table(void)
 {
-  for (uint8_t i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
+  uint8_t i;
+  freq_t corr_IF;
+  for (i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
   {
 
-   freq_t corr_IF;
-   if (!setting.auto_IF)
-     corr_IF = setting.frequency_IF;
-   else {
-     corr_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2 - DEFAULT_SPUR_OFFSET/2;
-     setting.frequency_IF = corr_IF;
-   }
+    if (!setting.auto_IF)
+      corr_IF = setting.frequency_IF;
+    else {
+      corr_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2 - DEFAULT_SPUR_OFFSET/2;
+      setting.frequency_IF = corr_IF;
+    }
    if (i != 4)
      corr_IF -= IF_OFFSET;
    else
@@ -2293,6 +2300,13 @@ void fill_spur_table(void)
    else
      spur_table[i] = target;
   }
+  if (!setting.auto_IF)
+    corr_IF = setting.frequency_IF;
+  else {
+    corr_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2 - DEFAULT_SPUR_OFFSET/2;
+  }
+  spur_table[i++] = corr_IF - IF_OFFSET*3/2;
+  spur_table[i++] = corr_IF*2 - IF_OFFSET;
 }
 #endif
 
@@ -2334,8 +2348,9 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
     else
     {
 #ifdef TINYSA4
-      fmin =  f - spur_gate;
-      fplus = f + spur_gate;
+      int w = (m >= sizeof(spur_div)/sizeof(uint8_t) ? 3 : 1);
+      fmin =  f - spur_gate*w;
+      fplus = f + spur_gate*w;
       if (spur_table[m] < fmin || spur_table[m] > fplus)
         return F_NEAR_SPUR; // index is m
       else
@@ -2803,15 +2818,26 @@ modulation_again:
   if (debug_avoid){                 // For debugging the spur avoidance control
 	stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
   }
+  int local_vbw_steps = vbwSteps;
+  freq_t local_IF;
+#ifdef TINYSA4
+  local_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
+  if (setting.mode == M_LOW && ultra &&
+      ((f < ULTRA_MAX_FREQ &&  f > MAX_LO_FREQ - local_IF) ||
+       ( f > config.ultra_threshold && f < MIN_BELOW_LO + local_IF))
+      ) {
+    local_vbw_steps *= 2;
+  }
+#endif
   int t = 0;
   do {
     freq_t lf = f;
-    if (vbwSteps > 1) {          // Calculate sub steps
+    if (local_vbw_steps > 1) {          // Calculate sub steps
 #ifdef TINYSA4
-	int offs_div10 = (t - (vbwSteps >> 1)) * 100;    // steps of x10 * settings.
-      if ((vbwSteps & 1) == 0)                           // Uneven steps, center
+	int offs_div10 = (t - (local_vbw_steps >> 1)) * 100;    // steps of x10 * settings.
+      if ((local_vbw_steps & 1) == 0)                           // Uneven steps, center
         offs_div10+= 50;                              // Even, shift half step
-      int offs = (offs_div10 * (int32_t)setting.vbw_x10 )/ vbwSteps;
+      int offs = (offs_div10 * (int32_t)setting.vbw_x10 )/ local_vbw_steps;
  //     if (setting.step_delay_mode == SD_PRECISE)
  //       offs>>=1;                                        // steps of a quarter rbw
  //     if (lf > -offs)                                   // No negative frequencies
@@ -2820,8 +2846,8 @@ modulation_again:
 //        if (lf > MAX_LO_FREQ)
 //          lf = 0;
 #else
-     int offs_div10 = (t - (vbwSteps >> 1)) * 500 / 10; // steps of half the rbw
-      if ((vbwSteps & 1) == 0)                           // Uneven steps, center
+     int offs_div10 = (t - (local_vbw_steps >> 1)) * 500 / 10; // steps of half the rbw
+      if ((local_vbw_steps & 1) == 0)                           // Uneven steps, center
         offs_div10+= 250 / 10;                           // Even, shift half step
       int offs = offs_div10 * actual_rbw_x10;
       if (setting.step_delay_mode == SD_PRECISE)
@@ -2834,7 +2860,6 @@ modulation_again:
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
-    freq_t local_IF;
 #ifdef __SPUR__
     spur_second_pass = false;
 again:                                                              // Spur reduction jumps to here for second measurement
@@ -2902,25 +2927,39 @@ again:                                                              // Spur redu
 #endif
                 )
             {              // below/above IF
-#ifdef TINYSA4
-              local_IF  = local_IF - DEFAULT_SPUR_OFFSET/4;    // shift a bit to avoid multiple IF spurs
-#endif
-              if (spur_second_pass)
+              if ((debug_avoid && debug_avoid_second) || spur_second_pass) {
                 setting.below_IF = S_AUTO_ON;
-              else
+#ifdef TINYSA4
+                local_IF  = local_IF + DEFAULT_SPUR_OFFSET/4;    // apply IF spur shift
+#endif
+              } else {
                 setting.below_IF = S_AUTO_OFF;               // use below IF in second pass
+#ifdef TINYSA4
+                local_IF  = local_IF - DEFAULT_SPUR_OFFSET/4;    // apply IF spur shift
+#endif
+              }
             }
-            else
+            else if (setting.auto_IF)
             {
 #ifdef TINYSA4
               LO_shifting = true;
 #endif
-              if (spur_second_pass) {
+              if ((debug_avoid && debug_avoid_second) || spur_second_pass) {
 #ifdef TINYSA4
-                local_IF  = local_IF + DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
+                if (config.frequency_IF1-6500000 < f && f < config.frequency_IF1+500000 ) {
+                  local_IF  = local_IF + DEFAULT_SPUR_OFFSET*3/4;    // apply IF spur shift
+                  if (debug_avoid)
+                    stored_t[i] = -90.0;                                       // Display when to do spur shift in the stored trace
+                } else {
+                  local_IF  = local_IF + DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
+                }
                 LO_shifted = true;
               } else {
-                local_IF  = local_IF - DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
+                if (config.frequency_IF1-6500000 < f && f < config.frequency_IF1+500000) {
+                  local_IF  = local_IF - DEFAULT_SPUR_OFFSET*3/4;    // apply IF spur shift
+                } else {
+                  local_IF  = local_IF - DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
+                }
               }
 #else
                 local_IF  = local_IF + 500000;                  // apply IF spur shift
@@ -2930,12 +2969,31 @@ again:                                                              // Spur redu
           } else {
             int spur_flag = avoid_spur(lf);
 #ifdef TINYSA4
+            if (debug_avoid) {
+              if (spur_flag == F_NEAR_SPUR) {
+                stored_t[i] = -70.0;                                       // Display when to do spur shift in the stored trace
+                local_IF -= DEFAULT_SPUR_OFFSET/2;
+              } else if (spur_flag == F_AT_SPUR){
+                stored_t[i] = -60.0;
+                // Display when to do spur shift in the stored trace
+                if (debug_avoid_second) {
+                  if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
+                    setting.below_IF = S_AUTO_ON;
+                    local_IF = local_IF;                          // No spure removal and no spur, center in IF
+                  } else if (setting.auto_IF) {
+                    local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
+                    //                if (actual_rbw_x10 == 6000 )
+                    //                  local_IF = local_IF + 50000;
+                    LO_shifted = true;
+                  }
+                }
+              } else {
+                stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
+              }
+            } else
             if(spur_flag) {         // check if alternate IF is needed to avoid spur.
               if (spur_flag == F_NEAR_SPUR) {
                 local_IF -= DEFAULT_SPUR_OFFSET/2;
-                if (debug_avoid){            // For debugging the spur avoidance control
-                  stored_t[i] = -70.0;                                       // Display when to do spur shift in the stored trace
-                }
               } else {
                 if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
                   setting.below_IF = S_AUTO_ON;
@@ -2945,9 +3003,6 @@ again:                                                              // Spur redu
                   //                if (actual_rbw_x10 == 6000 )
                   //                  local_IF = local_IF + 50000;
                   LO_shifted = true;
-                }
-                if (debug_avoid){            // For debugging the spur avoidance control
-                  stored_t[i] = -60.0;                                       // Display when to do spur shift in the stored trace
                 }
               }
             }
@@ -3358,7 +3413,7 @@ again:                                                              // Spur redu
 //   }
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
-    if (setting.mode == M_LOW && S_STATE(setting.spur_removal)) {
+    if (setting.mode == M_LOW && S_STATE(setting.spur_removal) && !debug_avoid) {
       if (!spur_second_pass) {                                        // If first spur pass
         spur_RSSI = pureRSSI;                                       // remember measure RSSI
         spur_second_pass = true;
@@ -3383,7 +3438,7 @@ again:                                                              // Spur redu
     t++;                                                    // one subscan done
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
-  } while (t < vbwSteps);                                   // till all sub steps done
+  } while (t < local_vbw_steps);                                   // till all sub steps done
 #ifdef TINYSA4
   if (old_CFGR != orig_CFGR) {
     old_CFGR = orig_CFGR;
@@ -3476,6 +3531,9 @@ sweep_again:                                // stay in sweep loop when output mo
 
   // ------------------------- start sweep loop -----------------------------------
   for (int i = 0; i < sweep_points; i++) {
+    debug_avoid_second = false;
+  debug_avoid_label:
+    debug_avoid_second = debug_avoid_second;
     // --------------------- measure -------------------------
     pureRSSI_t rssi = perform(break_on_operation, i, frequencies[i], setting.tracking);   // Measure RSSI for one of the frequencies
 #ifdef TINYSA4
@@ -3550,6 +3608,16 @@ sweep_again:                                // stay in sweep loop when output mo
         ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
         ili9341_set_background(LCD_BG_COLOR);
         ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
+      }
+      // -----------------------  debug avoid --------------------------------
+      if (debug_avoid) {
+        if (!debug_avoid_second) {
+          temp_t[i] = RSSI;
+          debug_avoid_second = true;
+          goto debug_avoid_label;
+        } else {
+          debug_avoid_second = false;
+        }
       }
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------

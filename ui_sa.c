@@ -913,6 +913,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
 
 
 
+static UI_FUNCTION_ADV_CALLBACK(menu_debug_avoid_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = debug_avoid == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  toggle_debug_avoid();
+  //  menu_move_back();
+  ui_mode_normal();
+}
+
 static UI_FUNCTION_ADV_CALLBACK(menu_debug_freq_acb)
 {
   (void)data;
@@ -2092,6 +2105,7 @@ static const menuitem_t menu_settings3[] =
 static const menuitem_t menu_settings4[] =
 {
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
+ { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
 #if 1                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},

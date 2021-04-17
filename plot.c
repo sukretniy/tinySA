@@ -292,6 +292,17 @@ index_to_value(const int i)
   return(value(actual_t[i]));
 }
 
+float
+marker_to_value(const int i)
+{
+  float *ref_marker_levels;
+  if (markers[i].mtype & M_STORED )
+    ref_marker_levels = stored_t;
+  else
+    ref_marker_levels = actual_t;
+  return(value(ref_marker_levels[markers[i].index]));
+}
+
 // Function for convert to different type of values from dBm
 // Replaced some equal functions and use recalculated constants:
 // powf(10,x) =  expf(x * logf(10))
@@ -1342,11 +1353,11 @@ static void trace_print_value_string(     // Only used at one place
   if (mtype & M_DELTA) {
     *ptr2++ = S_DELTA[0];
     unit_index+= 5;
-    int ridx = markers[ri].index;
     freq_t  ref_freq = markers[ri].frequency;
+    int ridx = markers[ri].index;
     if (ridx > idx) {freq = ref_freq - freq; idx = ridx - idx; *ptr2++ = '-';}
     else            {freq = freq - ref_freq; idx = idx - ridx; *ptr2++ = '+';}
-    v-= value(coeff[ridx]);
+    v-= marker_to_value(ri);
   } else
     freq += (setting.frequency_offset - FREQUENCY_SHIFT);
 
@@ -1417,7 +1428,7 @@ static void cell_draw_marker_info(int x0, int y0)
 #ifdef AM_IN_VOLT
         int old_unit = setting.unit;
         setting.unit = U_VOLT;
-        float level = (index_to_value(markers[1].index) + index_to_value(markers[2].index))/2 / index_to_value(markers[0].index);
+        float level = (marker_to_value(1) + marker_to_value(2))/2 / marker_to_value(0);
         setting.unit = old_unit;
         int depth = (int)( level * 2.0 * 80.0) + 20;
 #else
@@ -1448,13 +1459,13 @@ static void cell_draw_marker_info(int x0, int y0)
       } else if (setting.measurement == M_THD && markers[0].enabled && (markers[0].index << 5) > sweep_points ) {
         int old_unit = setting.unit;
         setting.unit = U_WATT;
-        float p = index_to_value(markers[0].index);
+        float p = marker_to_value(0);
         int h_i = 2;
         freq_t f = markers[0].frequency;
         float h = 0.0;
         while (f * h_i < frequencies[sweep_points-1]) {
           if (search_maximum(1, f*h_i, 4*h_i) )             // use marker 1 for searching harmonics
-            h += index_to_value(markers[1].index);
+            h += marker_to_value(1);
           h_i++;
         }
         float thd = 100.0 * sqrtf(h/p);
@@ -1468,10 +1479,10 @@ static void cell_draw_marker_info(int x0, int y0)
       }
     } else
     if (i >= 2 && setting.measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
-      float il = index_to_value(markers[2].index);
-      float ir = index_to_value(markers[3].index);
-      float sl = index_to_value(markers[0].index);
-      float sr = index_to_value(markers[1].index);
+      float il = marker_to_value(2);
+      float ir = marker_to_value(3);
+      float sl = marker_to_value(0);
+      float sr = marker_to_value(1);
 
       float ip = sl+ (sr - il)/2;
       j = 2;
