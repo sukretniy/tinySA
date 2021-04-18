@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -617,6 +617,7 @@ enum unit_type {
 
 float value(float);
 float index_to_value(const int i);
+float marker_to_value(const int i);
 
 typedef struct trace {
   uint8_t enabled;

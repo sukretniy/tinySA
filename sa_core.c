@@ -2611,7 +2611,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           ls += 0.5;
         else
           ls -= 0.5;
-        float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0;
+        float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0 + get_level_offset();
         correct_RSSI_freq = get_frequency_correction(f);
         a += PURE_TO_float(correct_RSSI_freq) + 3.0;        // Always 3dB in attenuator
         if (a != old_a) {
@@ -3523,6 +3523,14 @@ static bool sweep(bool break_on_operation)
   }
 
   bool show_bar = ( MODE_INPUT(setting.mode) ||  setting.frequency_step != 0 || setting.level_sweep != 0.0 ? true : false);
+
+#if 0
+#ifdef TINYSA4
+  float vbw_factor  =  (float)setting.frequency_step / ((float) actual_rbw_x10*50.0);
+  float vbw_rssi;
+#endif
+#endif
+
 again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
 //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
@@ -3541,6 +3549,7 @@ sweep_again:                                // stay in sweep loop when output mo
       RSSI = -174.0;
     else
 #endif
+
       RSSI = PURE_TO_float(rssi);
     // if break back to top level to handle ui operation
     if (refreshing)
@@ -3619,6 +3628,20 @@ sweep_again:                                // stay in sweep loop when output mo
           debug_avoid_second = false;
         }
       }
+
+#if 0
+      // -------------------------- smoothing -----------------------------------------
+#ifdef TINYSA4
+      if (vbw_factor < 1) {
+        if (i == 0) {
+          RSSI = /* vbw_factor * */ RSSI;
+        } else {
+          RSSI = vbw_factor * RSSI + (1-vbw_factor)* vbw_rssi;
+        }
+        vbw_rssi = RSSI;
+      }
+#endif
+#endif
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------
 
@@ -3802,6 +3825,25 @@ sweep_again:                                // stay in sweep loop when output mo
   }
 
   // ---------------------- sweep finished,  do all postprocessing ---------------------
+
+#ifdef TINYSA4
+  // ------------------------ do VBW processing ------------------------------
+
+    int vbw_count_div2 = actual_rbw_x10 * 50 / setting.frequency_step;
+    while(vbw_count_div2-- > 0){
+      pureRSSI_t prev = actual_t[0];
+      int j;
+      // first point smooth
+      actual_t[0] = (prev + prev + actual_t[1])/3.0f;
+      for (j=1;j<sweep_points-1;j++){
+        pureRSSI_t old = actual_t[j]; // save current data point for next point smooth
+        actual_t[j] = (prev + actual_t[j] + actual_t[j] + actual_t[j+1])/4;
+        prev = old;
+      }
+      // last point smooth
+      actual_t[j] = (actual_t[j] + actual_t[j] + prev)/3;
+    }
+#endif
 
   if (scandirty) {
     scandirty = false;
