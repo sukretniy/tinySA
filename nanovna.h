@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -73,6 +73,7 @@
 #define __LIMITS__
 #ifdef TINYSA4
 #define  __HARMONIC__
+#define __VBW__
 #else
 #endif
 
@@ -327,6 +328,9 @@ int is_paused(void);
 void set_actual_power(float);
 void SetGenerate(int);
 void set_RBW(uint32_t rbw_x10);
+#ifdef __VBW__
+void set_VBW(uint32_t vbw_x10);
+#endif
 void set_lo_drive(int d);
 void set_rx_drive(int d);
 void set_IF(int f);

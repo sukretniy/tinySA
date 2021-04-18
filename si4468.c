@@ -1930,8 +1930,8 @@ void SI446x_Fill(int s, int start)
 #endif
 
   uint32_t t = setting.additional_step_delay_us;
-  systime_t measure = chVTGetSystemTimeX();
   __disable_irq();
+  systime_t measure = chVTGetSystemTimeX();
 
 #if 1
     int i = start;
@@ -1952,9 +1952,9 @@ again:
 #else
   shiftInBuf(sel, SI4432_REG_RSSI, &age[start], sweep_points - start, t);
 #endif
-  __enable_irq();
 
   setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
+  __enable_irq();
   buf_index = (start<=0 ? 0 : start); // Is used to skip 1st entry during level triggering
   buf_read = true;
 }

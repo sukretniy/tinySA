@@ -43,6 +43,7 @@ setting_t setting;
 freq_t frequencies[POINTS_COUNT];
 
 uint16_t actual_rbw_x10 = 0;
+freq_t frequency_step_x10 = 0;
 uint16_t vbwSteps = 1;
 freq_t minFreq = 0;
 freq_t maxFreq = 520000000;
@@ -216,7 +217,7 @@ void reset_settings(int m)
   setting.step_delay = 0;
   setting.offset_delay = 0;
   setting.step_delay_mode = SD_NORMAL;
-  setting.vbw_x10 = 0;
+  setting.vbw_x10 = 0;      // Auto mode
   setting.auto_reflevel = true;     // Must be after SetReflevel
   setting.decay=20;
   setting.attack=1;
@@ -987,6 +988,14 @@ void set_RBW(uint32_t rbw_x10)
   update_rbw();
   dirty = true;
 }
+
+#ifdef __VBW__
+void set_VBW(uint32_t vbw_x10)
+{
+  setting.vbw_x10 = vbw_x10;
+  dirty = true;
+}
+#endif
 
 #ifdef __SPUR__
 void set_spur(int v)
@@ -1994,30 +2003,28 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
     return;
 #endif
   }
+  frequency_step_x10 = 3000;  // default value for zero span
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
-    setting.vbw_x10 = (setting.frequency_step)/100;
-  } else {
-    setting.vbw_x10 = 3000; // trick to get right default rbw in zero span mode
+    frequency_step_x10 = (setting.frequency_step)/100;
   }
-  freq_t temp_actual_rbw_x10 = setting.rbw_x10;     // requested rbw , 32 bit !!!!!!
+
+  freq_t temp_actual_rbw_x10 = setting.rbw_x10;
   if (temp_actual_rbw_x10 == 0) {        // if auto rbw
+
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
 #ifdef __SI4432__
       if (setting.fast_speedup > 2)
-        temp_actual_rbw_x10 = 6*setting.vbw_x10; // rbw is six times the frequency step to ensure no gaps in coverage as there are some weird jumps
+        temp_actual_rbw_x10 = 6*frequency_step_x10; // rbw is six times the frequency step to ensure no gaps in coverage as there are some weird jumps
       else
-        temp_actual_rbw_x10 = 4*setting.vbw_x10; // rbw is four times the frequency step to ensure no gaps in coverage as there are some weird jumps
+        temp_actual_rbw_x10 = 4*frequency_step_x10; // rbw is four times the frequency step to ensure no gaps in coverage as there are some weird jumps
 #endif
 #ifdef __SI4463__
-      temp_actual_rbw_x10 = setting.vbw_x10;
+      temp_actual_rbw_x10 = frequency_step_x10;
 #endif
-    } else
-#ifdef TINYSA4
-	temp_actual_rbw_x10 = 2*setting.vbw_x10; // rbw is NOT twice the frequency step to ensure no gaps in coverage
-#else
-      temp_actual_rbw_x10 = 2*setting.vbw_x10; // rbw is twice the frequency step to ensure no gaps in coverage
-#endif
-	}
+    } else {
+      temp_actual_rbw_x10 = 2*frequency_step_x10; // rbw is twice the frequency step to ensure no gaps in coverage
+    }
+  }
 #ifdef __SI4432__
   if (temp_actual_rbw_x10 < 26)
     temp_actual_rbw_x10 = 26;
@@ -2044,18 +2051,18 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
 #ifdef TINYSA4
-    if (setting.vbw_x10 > actual_rbw_x10)
-	  vbwSteps = 1+(setting.vbw_x10 / actual_rbw_x10); //((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
+    if (frequency_step_x10 > actual_rbw_x10)
+	  vbwSteps = 1+(frequency_step_x10 / actual_rbw_x10); //((int)(2 * (frequency_step_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
       vbwSteps += vbwSteps;
 #else
-	vbwSteps = ((int)(2 * (setting.vbw_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
+	vbwSteps = ((int)(2 * (frequency_step_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
 #endif
     if (setting.step_delay_mode==SD_PRECISE)    // if in Precise scanning
       vbwSteps *= 2;                            // use twice as many steps
     if (vbwSteps < 1)                            // at least one step, should never happen
       vbwSteps = 1;
   } else {                      // in all other modes
-    setting.vbw_x10 = actual_rbw_x10;
+    frequency_step_x10 = actual_rbw_x10;
   }
 #ifdef TINYSA4
 done:
@@ -2837,7 +2844,7 @@ modulation_again:
 	int offs_div10 = (t - (local_vbw_steps >> 1)) * 100;    // steps of x10 * settings.
       if ((local_vbw_steps & 1) == 0)                           // Uneven steps, center
         offs_div10+= 50;                              // Even, shift half step
-      int offs = (offs_div10 * (int32_t)setting.vbw_x10 )/ local_vbw_steps;
+      int offs = (offs_div10 * (int32_t)frequency_step_x10 )/ local_vbw_steps;
  //     if (setting.step_delay_mode == SD_PRECISE)
  //       offs>>=1;                                        // steps of a quarter rbw
  //     if (lf > -offs)                                   // No negative frequencies
@@ -3531,16 +3538,16 @@ static bool sweep(bool break_on_operation)
 #endif
 #endif
 
-again:                          // Waiting for a trigger jumps back to here
+  again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
-//  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
+  //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
 
-sweep_again:                                // stay in sweep loop when output mode and modulation on.
+  sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
   // ------------------------- start sweep loop -----------------------------------
   for (int i = 0; i < sweep_points; i++) {
     debug_avoid_second = false;
-  debug_avoid_label:
+    debug_avoid_label:
     debug_avoid_second = debug_avoid_second;
     // --------------------- measure -------------------------
     pureRSSI_t rssi = perform(break_on_operation, i, frequencies[i], setting.tracking);   // Measure RSSI for one of the frequencies
@@ -3604,30 +3611,56 @@ sweep_again:                                // stay in sweep loop when output mo
         }
       }
     }
-
-    //if (MODE_INPUT(setting.mode))
-    {
+    if (
 #ifdef TINYSA4
-      if (show_bar && (i & 0x07) == 0 && (setting.actual_sweep_time_us > ONE_SECOND_TIME || (chVTGetSystemTimeX() - start_of_sweep_timestamp) > ONE_SECOND_TIME / 100)) {  // if required
+        show_bar && (i & 0x07) == 0 && (setting.actual_sweep_time_us > ONE_SECOND_TIME || (chVTGetSystemTimeX() - start_of_sweep_timestamp) > ONE_SECOND_TIME / 100)  // if required
 #else
-      if ( show_bar && (i & 0x07) == 0 && setting.actual_sweep_time_us > ONE_SECOND_TIME) {  // if required
+        show_bar && (i & 0x07) == 0 && setting.actual_sweep_time_us > ONE_SECOND_TIME // if required
 #endif
-    	int pos = i * (WIDTH+1) / sweep_points;
-    	ili9341_set_background(LCD_SWEEP_LINE_COLOR);
-        ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
-        ili9341_set_background(LCD_BG_COLOR);
-        ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
+    ) {
+      int pos = i * (WIDTH+1) / sweep_points;
+      ili9341_set_background(LCD_SWEEP_LINE_COLOR);
+      ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
+      ili9341_set_background(LCD_BG_COLOR);
+      ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
+    }
+    // -----------------------  debug avoid --------------------------------
+    if (debug_avoid) {
+      if (!debug_avoid_second) {
+        temp_t[i] = RSSI;
+        debug_avoid_second = true;
+        goto debug_avoid_label;
+      } else {
+        debug_avoid_second = false;
       }
-      // -----------------------  debug avoid --------------------------------
-      if (debug_avoid) {
-        if (!debug_avoid_second) {
-          temp_t[i] = RSSI;
-          debug_avoid_second = true;
-          goto debug_avoid_label;
-        } else {
-          debug_avoid_second = false;
-        }
+    }
+    temp_t[i] = RSSI;
+  }
+
+  // -------------------------------- Scan finished, do all postprocessing --------------------
+  if (MODE_INPUT(setting.mode)) {
+
+#ifdef __VBW__
+  // ------------------------ do VBW processing ------------------------------
+
+    int vbw_count_div2 = actual_rbw_x10 * 100 / setting.frequency_step / (setting.vbw_x10 == 0 ? 10 : setting.vbw_x10);
+    while(vbw_count_div2-- > 0){
+      pureRSSI_t prev = temp_t[0];
+      int j;
+      // first point smooth
+      temp_t[0] = (prev + prev + temp_t[1])/3.0f;
+      for (j=1;j<sweep_points-1;j++){
+        pureRSSI_t old = temp_t[j]; // save current data point for next point smooth
+        temp_t[j] = (prev + temp_t[j] + temp_t[j] + temp_t[j+1])/4;
+        prev = old;
       }
+      // last point smooth
+      temp_t[j] = (temp_t[j] + temp_t[j] + prev)/3;
+    }
+#endif
+
+
+    for (int i = 0; i < sweep_points; i++) {
 
 #if 0
       // -------------------------- smoothing -----------------------------------------
@@ -3644,14 +3677,12 @@ sweep_again:                                // stay in sweep loop when output mo
 #endif
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------
-
-      if (setting.average != AV_OFF)
-        temp_t[i] = RSSI;
+      RSSI = temp_t[i];
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] + setting.normalize_level;
       }
 #ifdef __SI4432__
-//#define __DEBUG_AGC__
+      //#define __DEBUG_AGC__
 #ifdef __DEBUG_AGC__                 // For debugging the AGC control
       stored_t[i] = (SI4432_Read_Byte(0x69) & 0x01f) * 3.0 - 90.0; // Display the AGC value in the stored trace
 #endif
@@ -3687,17 +3718,17 @@ sweep_again:                                // stay in sweep loop when output mo
         case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
 #ifdef __QUASI_PEAK__
         case AV_QUASI:
-          { static float old_RSSI = -150.0;
-          if (i == 0) old_RSSI = actual_t[sweep_points-1];
-          if (RSSI > old_RSSI && setting.attack > 1)
-             old_RSSI += (RSSI - old_RSSI)/setting.attack;
-          else if (RSSI < old_RSSI && setting.decay > 1)
-            old_RSSI += (RSSI - old_RSSI)/setting.decay;
-          else
-            old_RSSI = RSSI;
-          actual_t[i] = old_RSSI;
-          }
-          break;
+        { static float old_RSSI = -150.0;
+        if (i == 0) old_RSSI = actual_t[sweep_points-1];
+        if (RSSI > old_RSSI && setting.attack > 1)
+          old_RSSI += (RSSI - old_RSSI)/setting.attack;
+        else if (RSSI < old_RSSI && setting.decay > 1)
+          old_RSSI += (RSSI - old_RSSI)/setting.decay;
+        else
+          old_RSSI = RSSI;
+        actual_t[i] = old_RSSI;
+        }
+        break;
 #endif
         }
       }
@@ -3756,8 +3787,8 @@ sweep_again:                                // stay in sweep loop when output mo
           downslope = true;
         }
       }        // end of peak finding
-    }           // end of input specific processing
-  }  // ---------------------- end of sweep loop -----------------------------
+    }
+  }  // ---------------------- end of postprocessing -----------------------------
 
   if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE) { // if in output mode with modulation
     if (!in_selftest)
@@ -3825,25 +3856,6 @@ sweep_again:                                // stay in sweep loop when output mo
   }
 
   // ---------------------- sweep finished,  do all postprocessing ---------------------
-
-#ifdef TINYSA4
-  // ------------------------ do VBW processing ------------------------------
-
-    int vbw_count_div2 = actual_rbw_x10 * 50 / setting.frequency_step;
-    while(vbw_count_div2-- > 0){
-      pureRSSI_t prev = actual_t[0];
-      int j;
-      // first point smooth
-      actual_t[0] = (prev + prev + actual_t[1])/3.0f;
-      for (j=1;j<sweep_points-1;j++){
-        pureRSSI_t old = actual_t[j]; // save current data point for next point smooth
-        actual_t[j] = (prev + actual_t[j] + actual_t[j] + actual_t[j+1])/4;
-        prev = old;
-      }
-      // last point smooth
-      actual_t[j] = (actual_t[j] + actual_t[j] + prev)/3;
-    }
-#endif
 
   if (scandirty) {
     scandirty = false;

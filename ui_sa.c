@@ -1341,6 +1341,10 @@ static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300
 #else
 static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
 #endif
+#ifdef __VBW__
+static const uint16_t vbwsel_x10[]={0,1,3,10,30,100};
+static const char* vbwsel_text[]={"auto","0.1", "0.3","   ","  3","10"};
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
 {
@@ -1357,6 +1361,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
   set_RBW(rbwsel_x10[data]);
   menu_move_back(true);
 }
+
+#ifdef __VBW__
+static UI_FUNCTION_ADV_CALLBACK(menu_vbw_acb)
+{
+  (void)item;
+  if (b){
+  b->param_1.text = vbwsel_text[data];
+  b->icon = setting.vbw_x10 == vbwsel_x10[data] ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+  set_VBW(vbwsel_x10[data]);
+  menu_move_back(true);
+}
+
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_unit_acb)
 {
@@ -1839,6 +1858,19 @@ static const menuitem_t menu_rbw[] = {
   { MT_NONE,      0, NULL, NULL } // sentinel
 };
 
+#ifdef __VBW__
+static const menuitem_t menu_vbw[] = {
+  { MT_ADV_CALLBACK, 0, "     AUTO",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 1, "%s RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 2, "%s RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 3, "%s RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 4, "%s RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 5, "%s RBW",   menu_vbw_acb},
+  { MT_CANCEL,  0, S_LARROW" BACK", NULL },
+  { MT_NONE,      0, NULL, NULL } // sentinel
+};
+#endif
+
 #if 0
 static const menuitem_t menu_scale_per2[] = {
   { MT_ADV_CALLBACK, 6, "0.1 /",   menu_scale_per_acb},
@@ -2283,6 +2315,9 @@ static const menuitem_t menu_display[] = {
 //  { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
 //  { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
 //  { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
+#ifdef __VBW__
+  { MT_SUBMENU,     0,          "VBW",              menu_vbw},
+#endif
 #ifdef __LIMITS__
   { MT_SUBMENU,     0,          "LIMITS",          menu_limit_select},
 #endif
