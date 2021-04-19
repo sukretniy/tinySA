@@ -3642,20 +3642,21 @@ static bool sweep(bool break_on_operation)
 
 #ifdef __VBW__
   // ------------------------ do VBW processing ------------------------------
-
-    int vbw_count_div2 = actual_rbw_x10 * 100 / setting.frequency_step / (setting.vbw_x10 == 0 ? 10 : setting.vbw_x10);
-    while(vbw_count_div2-- > 0){
-      pureRSSI_t prev = temp_t[0];
-      int j;
-      // first point smooth
-      temp_t[0] = (prev + prev + temp_t[1])/3.0f;
-      for (j=1;j<sweep_points-1;j++){
-        pureRSSI_t old = temp_t[j]; // save current data point for next point smooth
-        temp_t[j] = (prev + temp_t[j] + temp_t[j] + temp_t[j+1])/4;
-        prev = old;
+    if (setting.frequency_step) {
+      int vbw_count_div2 = actual_rbw_x10 * 100 / setting.frequency_step / (setting.vbw_x10 == 0 ? 10 : setting.vbw_x10);
+      while(vbw_count_div2-- > 0){
+        pureRSSI_t prev = temp_t[0];
+        int j;
+        // first point smooth
+        temp_t[0] = (prev + prev + temp_t[1])/3.0f;
+        for (j=1;j<sweep_points-1;j++){
+          pureRSSI_t old = temp_t[j]; // save current data point for next point smooth
+          temp_t[j] = (prev + temp_t[j] + temp_t[j] + temp_t[j+1])/4;
+          prev = old;
+        }
+        // last point smooth
+        temp_t[j] = (temp_t[j] + temp_t[j] + prev)/3;
       }
-      // last point smooth
-      temp_t[j] = (temp_t[j] + temp_t[j] + prev)/3;
     }
 #endif
 

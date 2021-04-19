@@ -3024,17 +3024,21 @@ redraw_cal_status:
   plot_printf(buf, BLEN, "%.1FHz", actual_rbw_x10*100.0);
   y = add_quick_menu(buf, x, y,(menuitem_t *)menu_rbw);
 
-#if 0
+#ifdef __VBW__
   // VBW
   if (setting.frequency_step > 0) {
-    ili9341_set_foreground(LCD_FG_COLOR);
-    y += YSTEP + YSTEP/2 ;
+    int vbw = setting.vbw_x10;
+    if (vbw != 0)
+      color = LCD_BRIGHT_COLOR_GREEN;
+    else {
+      color = LCD_FG_COLOR;
+      vbw = 10;
+    }
+    ili9341_set_foreground(color);
     ili9341_drawstring("VBW:", x, y);
-
     y += YSTEP;
-    plot_printf(buf, BLEN, "%dkHz",(int)setting.vbw_x10/10.0);
-    buf[6]=0;
-    ili9341_drawstring(buf, x, y);
+    plot_printf(buf, BLEN, "%.1FHz", actual_rbw_x10*100.0 *vbw/10.0);
+    y = add_quick_menu(buf, x, y,(menuitem_t *)menu_vbw);
   }
 #endif
   // Sweep time

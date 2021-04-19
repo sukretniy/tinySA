@@ -1919,6 +1919,7 @@ void si_fm_offset(int16_t offset)
 extern deviceRSSI_t age[POINTS_COUNT];
 static int buf_index = 0;
 static bool  buf_read = false;
+uint32_t old_t = 0;
 
 void SI446x_Fill(int s, int start)
 {
@@ -1930,6 +1931,10 @@ void SI446x_Fill(int s, int start)
 #endif
 
   uint32_t t = setting.additional_step_delay_us;
+  if (t < old_t +100 && t + 100 > old_t) {
+    t = (t + old_t) >> 1;
+  }
+  old_t = t;
   __disable_irq();
   systime_t measure = chVTGetSystemTimeX();
 
