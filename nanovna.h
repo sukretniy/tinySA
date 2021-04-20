@@ -29,14 +29,14 @@
 #define TINYSA4_PROTO
 #endif
 
-//#ifdef TINYSA_F072
+#ifdef TINYSA_F072
 #ifdef TINYSA_F303
 #error "Remove comment for #ifdef TINYSA_F072"
 #endif
 #ifndef TINYSA3
 #define TINYSA3
 #endif
-//#endif
+#endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 

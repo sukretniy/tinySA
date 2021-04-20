@@ -108,6 +108,7 @@ void stop_SI4432_SPI_mode(void){
 static void shiftOut(uint8_t val)
 {
 #ifdef USE_HARDWARE_SPI_MODE
+//  while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
   SPI_WRITE_8BIT(SI4432_SPI, val);
   while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
     (void)SPI_READ_8BIT(SI4432_SPI);
@@ -127,9 +128,10 @@ static void shiftOut(uint8_t val)
 static uint8_t shiftIn(void)
 {
 #ifdef USE_HARDWARE_SPI_MODE
+//  while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
   SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
   while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-  while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
+    while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
   return SPI_READ_8BIT(SI4432_SPI);
 #else
   uint32_t value = 0;
@@ -207,598 +209,6 @@ uint32_t SI4432_step_delay = 1500;
 uint32_t SI4432_offset_delay = 1500;
 #define MINIMUM_WAIT_FOR_RSSI   280
 
-#ifdef __SI4432__
-#define CS_SI0_HIGH     palSetPad(GPIOC, GPIO_RX_SEL)
-#define CS_SI1_HIGH     palSetPad(GPIOC, GPIO_LO_SEL)
-
-#define RF_POWER_HIGH   palSetPad(GPIOB, GPIO_RF_PWR)
-
-
-#define CS_SI0_LOW     palClearPad(GPIOC, GPIO_RX_SEL)
-#define CS_SI1_LOW     palClearPad(GPIOC, GPIO_LO_SEL)
-
-
-const uint16_t SI_nSEL[MAX_SI4432+1] = { GPIO_RX_SEL, GPIO_LO_SEL, 0}; // #3 is dummy!!!!!!
-
-volatile int SI4432_Sel = 0;         // currently selected SI4432
-// volatile int SI4432_guard = 0;
-
-#ifdef __SI4432_H__
-#define SELECT_DELAY 10
-void SI4432_Write_Byte(uint8_t ADR, uint8_t DATA )
-{
-  set_SPI_mode(SPI_MODE_SI);
-//  if (SI4432_guard)
-//    while(1) ;
-//  SI4432_guard = 1;
-//  SPI1_CLK_LOW;
-  palClearPad(GPIOB, SI_nSEL[SI4432_Sel]);
-//  my_microsecond_delay(SELECT_DELAY);
-  ADR |= 0x80 ; // RW = 1
-  shiftOut( ADR );
-  shiftOut( DATA );
-  palSetPad(GPIOB, SI_nSEL[SI4432_Sel]);
-//  SI4432_guard = 0;
-}
-
-void SI4432_Write_2_Byte(uint8_t ADR, uint8_t DATA1, uint8_t DATA2)
-{
-//  if (SI4432_guard)
-//    while(1) ;
-//  SI4432_guard = 1;
-//  SPI2_CLK_LOW;
-  palClearPad(GPIOC, SI_nSEL[SI4432_Sel]);
-//  chThdSleepMicroseconds(SELECT_DELAY);
-  ADR |= 0x80 ; // RW = 1
-  shiftOut( ADR );
-  shiftOut( DATA1 );
-  shiftOut( DATA2 );
-  palSetPad(GPIOC, SI_nSEL[SI4432_Sel]);
-//  SI4432_guard = 0;
-}
-
-void SI4432_Write_3_Byte(uint8_t ADR, uint8_t DATA1, uint8_t DATA2, uint8_t DATA3 )
-{
-  set_SPI_mode(SPI_MODE_SI);
-//  if (SI4432_guard)
-//    while(1) ;
-//  SI4432_guard = 1;
-//  SPI1_CLK_LOW;
-  palClearPad(GPIOB, SI_nSEL[SI4432_Sel]);
-//  my_microsecond_delay(SELECT_DELAY);
-  ADR |= 0x80 ; // RW = 1
-  shiftOut( ADR );
-  shiftOut( DATA1 );
-  shiftOut( DATA2 );
-  shiftOut( DATA3 );
-  palSetPad(GPIOB, SI_nSEL[SI4432_Sel]);
-//  SI4432_guard = 0;
-}
-
-uint8_t SI4432_Read_Byte( uint8_t ADR )
-{
-  set_SPI_mode(SPI_MODE_SI);
-  uint8_t DATA ;
-//  if (SI4432_guard)
-//    while(1) ;
-//  SI4432_guard = 1;
-//  SPI1_CLK_LOW;
-  palClearPad(GPIOB, SI_nSEL[SI4432_Sel]);
-  shiftOut( ADR );
-  DATA = shiftIn();
-  palSetPad(GPIOB, SI_nSEL[SI4432_Sel]);
-//  SI4432_guard = 0;
-  return DATA ;
-}
-
-
-
-void SI4432_Reset(void)
-{
-  int count = 0;
-  SI4432_Read_Byte (SI4432_INT_STATUS1);    // Clear pending interrupts
-  SI4432_Read_Byte (SI4432_INT_STATUS2);
-  // always perform a system reset (don't send 0x87)
-  SI4432_Write_Byte(SI4432_STATE, 0x80);
-  chThdSleepMilliseconds(10);
-  // wait for chiprdy bit
-  while (count++ < 100 && ( SI4432_Read_Byte (SI4432_INT_STATUS2) & 0x02 ) == 0) {
-    chThdSleepMilliseconds(10);
-  }
-}
-
-void SI4432_Drive(int d)
-{
-  SI4432_Write_Byte(SI4432_TX_POWER, (uint8_t) (0x18+(d & 7)));
-}
-
-void SI4432_Transmit(int d)
-{
-  int count = 0;
-  SI4432_Drive(d);
-  if (( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) == 2)
-    return; // Already in transmit mode
-  chThdSleepMilliseconds(3);
-  SI4432_Write_Byte(SI4432_STATE, 0x02);
-  chThdSleepMilliseconds(3);
-  SI4432_Write_Byte(SI4432_STATE, 0x0b);
-  chThdSleepMilliseconds(10);
-  while (count++ < 100 && ( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) != 2) {
-    chThdSleepMilliseconds(10);
-  }
-}
-
-void SI4432_Receive(void)
-{
-  int count = 0;
-  if (( SI4432_Read_Byte (SI4432_DEV_STATUS) & 0x03 ) == 1)
-    return; // Already in receive mode
-  chThdSleepMilliseconds(3);
-  SI4432_Write_Byte(SI4432_STATE, 0x02);
-  chThdSleepMilliseconds(3);
-  SI4432_Write_Byte(SI4432_STATE, 0x07);
-  chThdSleepMilliseconds(10);
-  while (count++ < 100 && ( SI4432_Read_Byte(SI4432_DEV_STATUS) & 0x03 ) != 1) {
-    chThdSleepMilliseconds(5);
-  }
-}
-
-// User asks for an RBW of WISH, go through table finding the last triple
-// for which WISH is greater than the first entry, use those values,
-// Return the first entry of the following triple for the RBW actually achieved
-#define IF_BW(dwn3, ndec, filset) (((dwn3)<<7)|((ndec)<<4)|(filset))
-typedef struct {
-  uint8_t  reg;                   // IF_BW(dwn3, ndec, filset)
-  int8_t   RSSI_correction_x_10;  // Correction * 10
-  uint16_t RBWx10;                // RBW * 10 in kHz
-}RBW_t; // sizeof(RBW_t) = 4 bytes
-RBW_t RBW_choices[] = {
-// BW register    corr  freq
-//                              {IF_BW(0,5,1),0,26},
-//                              {IF_BW(0,5,2),0,28},
-                              {IF_BW(0,5,3),3,31},
-                              {IF_BW(0,5,4),-3,32},
-                              {IF_BW(0,5,5),6,37},
-                              {IF_BW(0,5,6),5,42},
-                              {IF_BW(0,5,7),5,45},
-                              {IF_BW(0,4,1),0,49},
-                              {IF_BW(0,4,2),0,54},
-                              {IF_BW(0,4,3),0,59},
-                              {IF_BW(0,4,4),0,61},
-                              {IF_BW(0,4,5),5,72},
-                              {IF_BW(0,4,6),5,82},
-                              {IF_BW(0,4,7),5,88},
-                              {IF_BW(0,3,1),0,95},
-                              {IF_BW(0,3,2),0,106},
-                              {IF_BW(0,3,3),2,115},
-                              {IF_BW(0,3,4),0,121},
-                              {IF_BW(0,3,5),5,142},
-                              {IF_BW(0,3,6),5,162},
-                              {IF_BW(0,3,7),5,175},
-                              {IF_BW(0,2,1),0,189},
-                              {IF_BW(0,2,2),0,210},
-                              {IF_BW(0,2,3),3,227},
-                              {IF_BW(0,2,4),0,240},
-                              {IF_BW(0,2,5),5,282},
-                              {IF_BW(0,2,6),5,322},
-                              {IF_BW(0,2,7),5,347},
-                              {IF_BW(0,1,1),0,377},
-                              {IF_BW(0,1,2),0,417},
-                              {IF_BW(0,1,3),1,452},
-                              {IF_BW(0,1,4),0,479},
-                              {IF_BW(0,1,5),5,562},
-                              {IF_BW(0,1,6),5,641},
-                              {IF_BW(0,1,7),5,692},
-                              {IF_BW(0,0,1),0,752},
-                              {IF_BW(0,0,2),0,832},
-                              {IF_BW(0,0,3),0,900},
-                              {IF_BW(0,0,4),-1,953},
-                              {IF_BW(0,0,5),9,1121},
-                              {IF_BW(0,0,6),2,1279},
-                              {IF_BW(0,0,7),5,1379},
-                              {IF_BW(1,1,4),20,1428},
-                              {IF_BW(1,1,5),26,1678},
-                              {IF_BW(1,1,9),-50,1811},
-                              {IF_BW(1,0,15),-100,1915},
-                              {IF_BW(1,0,1),20,2251},
-                              {IF_BW(1,0,2),22,2488},
-                              {IF_BW(1,0,3),21,2693},
-                              {IF_BW(1,0,4),15,2849},
-                              {IF_BW(1,0,8),-15,3355},
-                              {IF_BW(1,0,9),-53,3618},
-                              {IF_BW(1,0,10),-15,4202},
-                              {IF_BW(1,0,11),-13,4684},
-                              {IF_BW(1,0,12),-20,5188},
-                              {IF_BW(1,0,13),-14,5770},
-                              {IF_BW(1,0,14),-9,6207},
-
-
-};
-
-const int SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
-
-static pureRSSI_t SI4432_RSSI_correction = float_TO_PURE_RSSI(-120);
-
-uint16_t force_rbw(int i)
-{
-  SI4432_Write_Byte(SI4432_IF_FILTER_BW, RBW_choices[i].reg);                     // Write RBW settings to Si4432
-  SI4432_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[i].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
-//  SI4432_RSSI_correction = float_TO_PURE_RSSI( - 1200)/10;  // Set RSSI correction
-  return RBW_choices[i].RBWx10;                                                   // RBW achieved by Si4432 in kHz * 10
-}
-
-uint16_t set_rbw(uint16_t WISH)  {
-  int i;
-  for (i=0; i < SI4432_RBW_count - 1; i++)
-    if (WISH <= RBW_choices[i].RBWx10) 
-      break; 
-  return force_rbw(i);
-}
-
-
-int SI4432_frequency_changed = false;
-int SI4432_offset_changed = false;
-
-// #define __CACHE_BAND__  // Is not reliable!!!!!!
-
-#ifdef __CACHE_BAND__
-static int old_freq_band[2] = {-1,-1};
-static int written[2]= {0,0};
-#endif
-
-void SI4432_Set_Frequency ( freq_t Freq ) {
-//  int mode = SI4432_Read_Byte(0x02) & 0x03;           // Disabled as unreliable
-//  SI4432_Write_Byte(0x07, 0x02);    // Switch to tune mode
-
-//  Freq = (Freq / 1000 ) * 1000; // force freq to 1000 grid
-
-  uint8_t hbsel;
-  if (0) shell_printf("%d: Freq %q\r\n", SI4432_Sel, Freq);
-  if (Freq >= 480000000U) {
-    hbsel = 1<<5;
-    Freq>>=1;
-  } else {
-    hbsel = 0;
-  }
-  uint8_t sbsel = 1 << 6;
-  uint32_t N = (Freq / config.setting_frequency_10mhz - 24)&0x1F;
-  uint32_t K = Freq % config.setting_frequency_10mhz;
-  uint32_t Carrier = (K<<2) / 625;
-  uint8_t Freq_Band = N | hbsel | sbsel;
-//  int count = 0;
-//  my_microsecond_delay(200);
-//  int s;
-//  while (count++ < 100 && ( (s = SI4432_Read_Byte ( 0x02 )) & 0x03 ) != 0) {
-//    my_microsecond_delay(100);
-//  }
-
-#ifdef __CACHE_BAND__
-  if (old_freq_band[SI4432_Sel] == Freq_Band) {
-    if (written[SI4432_Sel] < 4) {
-      SI4432_Write_Byte ( 0x75, Freq_Band );
-      written[SI4432_Sel]++;
-    }
-    SI4432_Write_Byte(SI4432_FREQCARRIER_H, (Carrier>>8) & 0xFF );
-    SI4432_Write_Byte(SI4432_FREQCARRIER_L, Carrier & 0xFF  );
-  } else {
-#endif
-#if 0       // Do not use multi byte write
-    SI4432_Write_Byte(SI4432_FREQBAND, Freq_Band);                          // Freq band must be written first !!!!!!!!!!!!
-    SI4432_Write_Byte(SI4432_FREQCARRIER_H, (Carrier>>8) & 0xFF );
-    SI4432_Write_Byte(SI4432_FREQCARRIER_L, Carrier & 0xFF  );
-#else
-    SI4432_Write_3_Byte (SI4432_FREQBAND, Freq_Band, (Carrier>>8) & 0xFF, Carrier & 0xFF);
-#endif
-#ifdef __CACHE_BAND__
-    old_freq_band[SI4432_Sel] = Freq_Band;
-    written[SI4432_Sel] = 0;
-  }
-#endif
-  SI4432_frequency_changed = true;
-//  if (mode == 1)        // RX mode            Disabled as unreliable
-//    SI4432_Write_Byte( 0x07, 0x07);
-//  else
-//    SI4432_Write_Byte( 0x07, 0x0B);
-}
-
-//extern int setting.repeat;
-
-#ifdef __FAST_SWEEP__
-extern deviceRSSI_t age[POINTS_COUNT];
-static int buf_index = 0;
-static int buf_end = 0;
-static bool  buf_read = false;
-
-#if 0
-int SI4432_is_fast_mode(void)
-{
-  return buf_read;
-}
-#endif
-
-
-//--------------------------- Trigger -------------------
-// ************** trigger mode if need
-// trigger on measure 4 point
-#define T_POINTS            4
-#define T_LEVEL_UNDEF       (1<<(16-T_POINTS)) // should drop after 4 shifts left
-#define T_LEVEL_BELOW       1
-#define T_LEVEL_ABOVE       0
-// Trigger mask, should have width T_POINTS bit
-#define T_DOWN_MASK         (0b0011)           // 2 from up 2 to bottom
-#define T_UP_MASK           (0b1100)           // 2 from bottom 2 to up
-#define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
-
-enum { ST_ARMING, ST_WAITING, ST_FILLING };
-
-void SI4432_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigger_mode)
-{
-  SI4432_Sel = s;
-  uint8_t rssi;
-  uint16_t sel = SI_nSEL[SI4432_Sel];
-  uint32_t t = setting.additional_step_delay_us;
-  systime_t measure = chVTGetSystemTimeX();
-  int waiting = ST_ARMING;
-//  __disable_irq();
-  SPI2_CLK_LOW;
-  int i = 0;
-
-  register uint16_t t_mode;
-  uint16_t data_level = T_LEVEL_UNDEF;
-  if (up_direction)
-    t_mode = T_UP_MASK;
-  else
-    t_mode = T_DOWN_MASK;
-  do {
-    palClearPad(GPIOC, sel);
-    shiftOut(SI4432_REG_RSSI);
-    if (operation_requested)                        // allow aborting a wait for trigger
-      return;                                                           // abort
-    // Store data level bitfield (remember only last 2 states)
-    // T_LEVEL_UNDEF mode bit drop after 2 shifts
-    rssi = shiftIn();
-    palSetPad(GPIOC, sel);
-    age[i] = rssi;
-    i++;
-    if (i >= sweep_points)
-      i = 0;
-    switch (waiting) {
-    case ST_ARMING:
-      if (i == sweep_points-1) {
-        waiting = ST_WAITING;
-        setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
-      }
-      break;
-    case ST_WAITING:
-#if 1
-      if (rssi < trigger_lvl) {
-        data_level = ((data_level<<1) | (T_LEVEL_BELOW))&(T_LEVEL_CLEAN);
-      } else {
-        data_level = ((data_level<<1) | (T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
-      }
-#else
-      data_level = ((data_level<<1) | (rssi < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
-#endif
-      if (data_level == t_mode) {  // wait trigger
- //     if (i == 128) {  // wait trigger
-        waiting = ST_FILLING;
-        switch (trigger_mode) {
-        case T_PRE:                // Trigger at the begin of the scan
-          buf_index = i;
-          goto fill_rest;
-          break;
-        case T_POST:               // Trigger at the end of the scan
-          buf_index = i;
-          goto done;
-          break;
-        case T_MID:                // Trigger in the middle of the scan
-          buf_index = i + sweep_points/2;
-          if (buf_index >= sweep_points)
-            buf_index -= sweep_points;
-          break;
-        }
-      }
-      break;
-    case ST_FILLING:
-      if (i == buf_index)
-        goto done;
-    }
-fill_rest:
-    if (t)
-      my_microsecond_delay(t);
-  }while(1);
-done:
-  buf_end = buf_index;
-  buf_read = true;
-}
-
-void SI4432_Fill(int s, int start)
-{
-  set_SPI_mode(SPI_MODE_SI);
-  SI4432_Sel = s;
-  uint16_t sel = SI_nSEL[SI4432_Sel];
-#if 0
-  uint32_t t = calc_min_sweep_time_us(); // Time to delay in uS for all sweep
-  if (t < setting.sweep_time_us){
-    t = setting.sweep_time_us - t;
-    t = t / (sweep_points - 1);          // Now in uS per point
-  }
-  else
-    t = 0;
-#endif
-  uint32_t t = setting.additional_step_delay_us;
-  systime_t measure = chVTGetSystemTimeX();
-//  __disable_irq();
-#if 1
-  SPI2_CLK_LOW;
-  int i = start;
-  do {
-    palClearPad(GPIOC, sel);
-    shiftOut(SI4432_REG_RSSI);
-    age[i]=(char)shiftIn();
-    palSetPad(GPIOC, sel);
-    if (++i >= sweep_points) break;
-    if (t)
-      my_microsecond_delay(t);
-  } while(1);
-#else
-  shiftInBuf(sel, SI4432_REG_RSSI, &age[start], sweep_points - start, t);
-#endif
-//  __enable_irq();
-  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
-  buf_index = start; // Is used to skip 1st entry during level triggering
-  buf_end = sweep_points - 1;
-  buf_read = true;
-}
-#endif
-
-
-pureRSSI_t getSI4432_RSSI_correction(void){
-  return SI4432_RSSI_correction;
-};
-
-pureRSSI_t SI4432_RSSI(uint32_t i, int s)
-{
-  (void) i;
-  int32_t RSSI_RAW;
-  (void) i;
-  // SEE DATASHEET PAGE 61
-#ifdef USE_SI4463           // Not used!!!!!!!
-  if (SI4432_Sel == 2) {
-    RSSI_RAW = Si446x_getRSSI();
-  } else
-#endif
-//START_PROFILE
-#ifdef __FAST_SWEEP__
-  if (buf_read) {
-    pureRSSI_t val = DEVICE_TO_PURE_RSSI(age[buf_index++]);
-    if (buf_index >= sweep_points)
-      buf_index = 0;
-    if (buf_index == buf_end)
-      buf_read = false;
-    return val;
-  }
-#endif
-  SI4432_Sel = s;
-  int stepdelay = SI4432_step_delay;
-  if (SI4432_frequency_changed) {
-    if (stepdelay < MINIMUM_WAIT_FOR_RSSI) {
-      stepdelay = MINIMUM_WAIT_FOR_RSSI;
-    }
-    SI4432_frequency_changed = false;
-  } else if (SI4432_offset_changed) {
-//    stepdelay = MINIMUM_WAIT_FOR_RSSI + (stepdelay - MINIMUM_WAIT_FOR_RSSI)/8;
-    stepdelay = SI4432_offset_delay;
-    SI4432_offset_changed = false;
-  }
-  if (stepdelay)
-    my_microsecond_delay(stepdelay);
-    // my_microsecond_delay(SI4432_step_delay);
-  i = setting.repeat;
-  RSSI_RAW  = 0;
-  do{
-    RSSI_RAW += DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
-    if (--i == 0) break;
-//    my_microsecond_delay(100);
-  }while(1);
-
-  if (setting.repeat > 1)
-    RSSI_RAW = RSSI_RAW / setting.repeat;
- //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
- //     SI4432_Init();
-#ifdef __SIMULATION__
-#error "Fixme!!! add correct simulation in pureRSSI_t type"
-  RSSI_RAW = Simulated_SI4432_RSSI(i,s);
-#endif
-//STOP_PROFILE
-  // Serial.println(dBm,2);
-  return RSSI_RAW;
-}
-
-static uint8_t SI4432_init_script[] =
-{
-  SI4432_INT_ENABLE1, 0x0,
-  SI4432_INT_ENABLE2, 0x0,
-  SI4432_CLOCK_RECOVERY_GEARSHIFT, 0x00,
-  SI4432_AGC_OVERRIDE, 0x60,
-  SI4432_AFC_LOOP_GEARSHIFT_OVERRIDE, 0x00,
-  SI4432_AFC_TIMING_CONTROL, 0x02,
-  SI4432_CLOCK_RECOVERY_GEARSHIFT, 0x03,
-  SI4432_CLOCK_RECOVERY_OFFSET2, 0x01,
-  SI4432_CLOCK_RECOVERY_OFFSET1, 0x11,
-  SI4432_CLOCK_RECOVERY_OFFSET0, 0x11,
-  SI4432_CLOCK_RECOVERY_TIMING_GAIN1, 0x01,
-  SI4432_CLOCK_RECOVERY_TIMING_GAIN0, 0x13,
-  SI4432_AFC_LIMITER, 0xFF,
-  SI4432_DATAACCESS_CONTROL, 0x61, // Disable all packet handling
-  SI4432_AGC_OVERRIDE, 0x60, // AGC, no LNA, fast gain increment
-  SI4432_GPIO0_CONF, 0x12, // Normal
-  SI4432_GPIO1_CONF, 0x15,
-  SI4432_GPIO2_CONF, 0x1F
-};
-
-
-void SI4432_Sub_Init(void)
-{
-  SI4432_Reset();
-  uint8_t *p = SI4432_init_script;
-  while (*p) {
-    uint8_t r = *p++;
-    uint8_t v = *p++;
-    SI4432_Write_Byte (r,v);
-  }
-  // IF Filter Bandwidth
-//  set_rbw(100) ;
-
-//  SI4432_Receive();
-
-}
-
-#define V0_XTAL_CAPACITANCE 0x64
-#define V1_XTAL_CAPACITANCE 0x64
-
-
-
-void SI4432_Init()
-{
-  return;
-#if 1
-
-  CS_SI0_LOW;                       // Drop CS so power can be removed
-  CS_SI1_LOW;                       // Drop CS so power can be removed
-  CS_PE_LOW;                        // low is the default safe state
-  SPI1_CLK_LOW;                     // low is the default safe state
-  SPI1_SDI_LOW;                     // will be set with any data out
-
-  palClearPad(GPIOA, GPIOA_RF_PWR);  // Drop power
-  chThdSleepMilliseconds(10);      // Wait
-  palSetPad(GPIOA, GPIOA_RF_PWR);    // Restore power
-  CS_SI0_HIGH;                      // And set chip select lines back to inactive
-  CS_SI1_HIGH;
-  chThdSleepMilliseconds(10);      // Wait
-#endif
-  SPI1_CLK_LOW;
-  //DebugLine("IO set");
-  SI4432_Sel = SI4432_RX;
-  SI4432_Sub_Init();
-
-  SI4432_Sel = SI4432_LO;
-  SI4432_Sub_Init();
-//DebugLine("1 init done");
-}
-
-void set_calibration_freq(int freq)
-{
-  SI4432_Sel = SI4432_LO;         //Select Lo module
-  if (freq < 0 || freq > 7 ) {
-    SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 to GND
-  } else {
-    SI4432_Write_Byte(SI4432_GPIO2_CONF, 0xC0) ; // Set GPIO2 maximumdrive and clock output
-    SI4432_Write_Byte(Si4432_UC_OUTPUT_CLOCK, freq & 0x07) ; // Set GPIO2 frequency
-  }
-}
-#endif
-#endif
 
 //------------PE4302 -----------------------------------------------
 #ifdef __PE4302__
@@ -1409,10 +819,13 @@ static uint8_t SI4463_read_byte( uint8_t ADR )
   set_SPI_mode(SPI_MODE_SI);
   SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
 
+  __disable_irq();
   SI_CS_LOW;
   shiftOut( ADR );
   DATA = shiftIn();
   SI_CS_HIGH;
+  __enable_irq();
+
   return DATA ;
 }
 
@@ -1459,42 +872,59 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 {
   set_SPI_mode(SPI_MODE_SI);
   SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
-#if 0
-  if(SI4463_wait_response(NULL, 0, true)) // Make sure it's ok to send a command
-#else
-  if (SI4463_wait_for_cts())
-#endif
-    {
-//   SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
+
+  while (!SI4463_READ_CTS) { my_microsecond_delay(1); }         // Wait for CTS
+
+  {
+    //   SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
 
     __disable_irq();
     SI_CS_LOW;
     for(uint8_t i=0;i<len;i++) {
+#if 1                                               // Inline transfer
+      while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
+      SPI_WRITE_8BIT(SI4432_SPI, ((uint8_t*)data)[i]);
+      while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+        SPI_READ_8BIT(SI4432_SPI);
+#else
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
+#endif
     }
-//    SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
+    //    SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
     SI_CS_HIGH;
     __enable_irq();
-#if 0
-    if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
-#if 0
-      SI4463_wait_response(NULL, 0, false);
-#else
-      SI4463_wait_for_cts();
-#endif
-    else
-#endif
-#if 0
-     if (((uint8_t*)data)[0] == SI446X_CMD_GET_MODEM_STATUS)
-      chThdSleepMicroseconds(2000);
-#endif
-#if 1
-    SI4463_wait_for_cts();
-#endif
+
+    while (!SI4463_READ_CTS) { my_microsecond_delay(1); }         // Wait for CTS
+
     if(out != NULL) { // If we have an output buffer then read command response into it
-//      if (((uint8_t*)data)[0] == SI446X_CMD_GET_MODEM_STATUS)
-//        my_microsecond_delay(18);   // Prevent extra wait cycles
-      SI4463_wait_response(out, outLen, true);
+
+      __disable_irq();
+//      again:
+      SI_CS_LOW;
+      shiftOut( SI446X_CMD_READ_CMD_BUFF );
+      //          uint8_t cts = (shiftIn() == 0xFF);
+      shiftIn();                        // Should always be 0xFF
+//      uint8_t cts = 0xFF;
+//      if (cts)
+      {
+        // Get response data
+        for(uint8_t i=0;i<outLen;i++) {
+#if 1                                               // Inline transfer
+          SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
+          while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+            while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
+          ((uint8_t*)out)[i] = SPI_READ_8BIT(SI4432_SPI);
+#else
+          ((uint8_t*)out)[i] = shiftIn();
+#endif
+        }
+      }
+//      else {
+//        SI_CS_HIGH;
+//        goto again;
+//      }
+      SI_CS_HIGH;
+      __enable_irq();
     }
   }
 }
@@ -1520,28 +950,27 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 
 #include "SI446x_cmd.h"
 
-#if 0
-#include "SI4463_radio_config.h"
-static const uint8_t SI4463_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
-#endif
-
 #ifdef __SI4468__
 #include "radio_config_Si4468_undef.h"
 #undef RADIO_CONFIGURATION_DATA_ARRAY
 #include "radio_config_Si4468_default.h"
 
+
+// Used in RBW setting
 #define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 #define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
+// ---------------------------------------------------------------------------------------------------- v ------------  RSSI control byte
+#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x18, 0x10, 0x40
+// -----------------------------------------------------------------------------------------------------^ --------------
+#define GLOBAL_RF_MODEM_AGC_CONTROL 0x11, 0x20, 0x01, 0x35, 0xF1             // Override AGC gain increase
 
-//#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-//#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x18, 0x10, 0x40
 
-//#undef RF_MODEM_AGC_CONTROL_1
-//#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0x92             // Override AGC gain increase
 #undef RF_MODEM_AGC_CONTROL_1
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE0 + 0x10 + 0x08 // slow AGC
-//#undef RF_MODEM_RSSI_JUMP_THRESH_4
-//#define RF_MODEM_RSSI_JUMP_THRESH_4 0x11, 0x20, 0x04, 0x4B, 0x06, 0x09, 0x10, 0x45  // Increase RSSI reported value with 2.5dB
+#define RF_MODEM_AGC_CONTROL_1 GLOBAL_RF_MODEM_AGC_CONTROL
+
+#undef RF_MODEM_AGC_WINDOW_SIZE_12_1
+#define RF_MODEM_AGC_WINDOW_SIZE_12_1 0x11, 0x20, 0x0C, 0x38, 0x11, 0x07, 0x07, 0x80, 0x02, 0x4C, 0xCD, 0x00, 0x27, 0x0C, 0x84, 0x23
+
 
 #undef RF_GPIO_PIN_CFG
 #define RF_GPIO_PIN_CFG GLOBAL_GPIO_PIN_CFG
@@ -1740,7 +1169,7 @@ void set_calibration_freq(int ref)
 #endif
 
     if (ref >= 0) {
-      SI4463_set_gpio(0, 7);                            // GPIO 0 dic clock out
+      SI4463_set_gpio(0, 7);                            // GPIO 0 is clock out
 
       uint8_t data2[5] = {
                         0x11, 0x00, 0x01, 0x01, 0x40                      // GLOBAL_CLK_CFG Clock config
@@ -1813,6 +1242,7 @@ static si446x_state_t SI4463_get_state(void)
 #endif
    uint8_t state = SI4463_get_device_status();
 #else
+
 again:
    SI4463_wait_for_cts();
    uint8_t state = getFRR(SI446X_CMD_READ_FRR_B);
@@ -1898,7 +1328,7 @@ void si_fm_offset(int16_t offset)
   //   MODEM_FREQ_OFFSET1 - High byte of the offset
   //   MODEM_FREQ_OFFSET2 - Low byte of the offset
   //
-  // #define RF_MODEM_RSSI_COMP_1 0x11, 0x20, 0x01, 0x4E, 0x40
+
   offset = SI4463_offset_value + offset;
   uint8_t data[] = {
       0x11,
@@ -1935,12 +1365,19 @@ void SI446x_Fill(int s, int start)
     t = (t + old_t) >> 1;
   }
   old_t = t;
-  __disable_irq();
+ // __disable_irq();
   systime_t measure = chVTGetSystemTimeX();
 
 #if 1
-    int i = start;
-  uint8_t data[3];
+  if (0) {
+    uint8_t data[] = {0x12, 0x02, 0x04, 0x00};
+//    SI4463_do_api(data, sizeof(data), NULL, 0 );
+//    data[0] = 0x12;
+    SI4463_do_api(data, 4, data, 4 );
+    age[0] = getFRR(SI446X_CMD_READ_FRR_A);
+  }
+  int i = start;
+  uint8_t data[4];
   do {
 again:
 #if 1
@@ -1957,10 +1394,11 @@ again:
     if (i >= 0)
       age[i]=(char)data[2];                     // Skip first RSSI
 #else
-    if (i>=0)
+    if (i>=0) {
+      SI4463_wait_for_cts();
       age[i] = getFRR(SI446X_CMD_READ_FRR_A);
 //    else
-
+    }
 #endif
     if (++i >= sweep_points) break;
     if (t)
@@ -1971,7 +1409,7 @@ again:
 #endif
 
   setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
-  __enable_irq();
+//  __enable_irq();
   buf_index = (start<=0 ? 0 : start); // Is used to skip 1st entry during level triggering
   buf_read = true;
 }
@@ -2028,9 +1466,9 @@ void SI4432_Listen(int s)
                          0xFF
       };
       uint8_t out[3];
-      __disable_irq();
+//      __disable_irq();        // Already in do_api
       SI4463_do_api(data, 2, out, 3);          // TODO no clear of interrupts
-      __enable_irq();
+//      __enable_irq();
       v = out[2];
       if (max < v)                // Peak
         max = v;
@@ -2073,11 +1511,11 @@ int16_t Si446x_RSSI(void)
     do{
     again:
 #if 1
-    __disable_irq();
+//    __disable_irq();
       data[0] = SI446X_CMD_GET_MODEM_STATUS;
       data[1] = 0xFF;
       SI4463_do_api(data, 2, data, 3);          // TODO no clear of interrupts
-      __enable_irq();
+//      __enable_irq();
 #else
       data[2] = getFRR(SI446X_CMD_READ_FRR_A);
 #endif
@@ -2160,187 +1598,6 @@ static uint16_t getADC(uint8_t adc_en, uint8_t adc_cfg, uint8_t part)
 }
 #endif
 
-#ifndef __SI4468__
-// -------------- 0.2 kHz ----------------------------
-
-#undef RF_MODEM_TX_RAMP_DELAY_8_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
-#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0xF0, 0x10, 0x74, 0xE8, 0x00, 0xA9
-// #define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0xF0, 0x11
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0x0C, 0x01, 0xE4, 0xB9, 0x86, 0x55, 0x2B, 0x0B, 0xF8, 0xEF, 0xEF, 0xF2
-//#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xC6, 0xC1, 0xB2, 0x9C, 0x80, 0x63, 0x47, 0x2F, 0x1B, 0x0E, 0x05, 0x00
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xF8, 0xFC, 0x05, 0x00, 0xFF, 0x0F, 0x0C, 0x01, 0xE4, 0xB9, 0x86, 0x55
-//#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x0F, 0xC6, 0xC1, 0xB2, 0x9C, 0x80, 0x63
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0x2B, 0x0B, 0xF8, 0xEF, 0xEF, 0xF2, 0xF8, 0xFC, 0x05, 0x00, 0xFF, 0x0F
-//#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0x47, 0x2F, 0x1B, 0x0E, 0x05, 0x00, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x0F
-
-#define RF_MODEM_RAW_SEARCH2_2_1 0x11, 0x20, 0x02, 0x50, 0x94, 0x0A
-
-#define RF_GLOBAL_CONFIG_1_1 0x11, 0x00, 0x01, 0x03, 0x20
-
-uint8_t SI4463_RBW_02kHz[] =
-{
- 6, RF_MODEM_RAW_SEARCH2_2_1, \
- 5, RF_GLOBAL_CONFIG_1_1, \
- 0x0C, RF_MODEM_TX_RAMP_DELAY_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
- 0x00
-};
-// -------------- 1kHz ----------------------------
-
-#undef RF_MODEM_TX_RAMP_DELAY_8_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
-#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0xF0, 0x11
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xC6, 0xC1, 0xB2, 0x9C, 0x80, 0x63, 0x47, 0x2F, 0x1B, 0x0E, 0x05, 0x00
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x0F, 0xC6, 0xC1, 0xB2, 0x9C, 0x80, 0x63
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0x47, 0x2F, 0x1B, 0x0E, 0x05, 0x00, 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x0F
-
-uint8_t SI4463_RBW_1kHz[] =
-{
- 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
- 0x00
-};
-
-// -------------- 3 kHz ----------------------------
-
-#undef RF_MODEM_TX_RAMP_DELAY_8_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
-#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0xF0, 0x11
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00
-
-uint8_t SI4463_RBW_3kHz[] =
-{
- 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
- 0x00
-};
-
-// -------------- 10 kHz ----------------------------
-
-#undef RF_MODEM_TX_RAMP_DELAY_8_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
-#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0xB0, 0x20
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00
-
-
-uint8_t SI4463_RBW_10kHz[] =
-{
- 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
- 0x00
-};
-
-// -------------- 30 kHz ----------------------------
-
-#undef RF_MODEM_TX_RAMP_DELAY_8_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
-#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0x30, 0x10
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F
-
-uint8_t SI4463_RBW_30kHz[] =
-{
- 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
- 0x00
-};
-
-// -------------- 100kHz ----------------------------
-
-#undef RF_MODEM_TX_RAMP_DELAY_8_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
-#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0x20, 0x20
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F
-
-uint8_t SI4463_RBW_100kHz[] =
-{
- 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
- 0x00
-};
-
-// -------------- 300kHz ----------------------------
-
-#undef RF_MODEM_TX_RAMP_DELAY_8_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
-#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x80, 0x08, 0x03, 0x80, 0x00, 0x00, 0x20
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00, 0xCC, 0xA1, 0x30, 0xA0, 0x21, 0xD1
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xB9, 0xC9, 0xEA, 0x05, 0x12, 0x11, 0x0A, 0x04, 0x15, 0xFC, 0x03, 0x00
-
-uint8_t SI4463_RBW_300kHz[] =
-{
- 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
- 0x00
-};
-
-
-
-// -------------- 850kHz ----------------------------
-
-#undef RF_MODEM_TX_RAMP_DELAY_8_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
-#undef RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
-#undef RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
-
-#define RF_MODEM_TX_RAMP_DELAY_8_1 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0x00, 0x30
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F, 0xFF, 0xBA, 0x0F, 0x51, 0xCF, 0xA9
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xC9, 0xFC, 0x1B, 0x1E, 0x0F, 0x01, 0xFC, 0xFD, 0x15, 0xFF, 0x00, 0x0F
-
-uint8_t SI4463_RBW_850kHz[] =
-{
- 0x0C, RF_MODEM_TX_RAMP_DELAY_8_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1, \
- 0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1, \
- 0x00
-};
-#else
 // -------------- 0.2 kHz ----------------------------
 
 #include "radio_config_Si4468_undef.h"
@@ -2409,7 +1666,6 @@ static const uint8_t SI4463_RBW_300kHz[] =
 static const uint8_t SI4463_RBW_850kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
 
-#endif
 // User asks for an RBW of WISH, go through table finding the last triple
 // for which WISH is greater than the first entry, use those values,
 // Return the first entry of the following triple for the RBW actually achieved

@@ -1,9 +1,8 @@
-#undef RF_MODEM_RAW_CONTROL_10                      // Override RSSI averaging
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x18, 0x10, 0x40
-
+#undef RF_MODEM_RAW_CONTROL_10
+#define RF_MODEM_RAW_CONTROL_10 GLOBAL_RF_MODEM_RAW_CONTROL
 
 #undef RF_MODEM_AGC_CONTROL_1
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xF1             // Override AGC gain increase
+#define RF_MODEM_AGC_CONTROL_1 GLOBAL_RF_MODEM_AGC_CONTROL
 
 #undef RF_GPIO_PIN_CFG
 #define RF_GPIO_PIN_CFG GLOBAL_GPIO_PIN_CFG
