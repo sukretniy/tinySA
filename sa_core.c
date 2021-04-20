@@ -116,9 +116,9 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 
 #define RECEIVE_SWITCH_ATTENUATION  21      // TODO differentiate for tinySA3 and tinySA4
 
-float level_min;
-float level_max;
-float level_range;
+//float level_min;
+//float level_max;
+//float level_range;
 
 float channel_power[3];
 float channel_power_watt[3];
@@ -301,9 +301,9 @@ void reset_settings(int m)
     setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
     setting.correction_value = config.correction_value[CORRECTION_LOW];
 #endif
-    level_min = SL_GENLOW_LEVEL_MIN + LOW_OUT_OFFSET;
-    level_max = SL_GENLOW_LEVEL_MAX + LOW_OUT_OFFSET;
-    level_range = level_max - level_min;
+//    level_min = SL_GENLOW_LEVEL_MIN + LOW_OUT_OFFSET;
+//    level_max = SL_GENLOW_LEVEL_MAX + LOW_OUT_OFFSET;
+//    level_range = level_max - level_min;
     break;
   case M_HIGH:
     set_sweep_frequency(ST_START, minFreq);
@@ -330,12 +330,12 @@ void reset_settings(int m)
     setting.step_delay_mode = SD_FAST;
     setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
     setting.correction_value = config.correction_value[CORRECTION_HIGH];
-    level_min = SL_GENHIGH_LEVEL_MIN + config.high_level_output_offset;
-    level_max = SL_GENHIGH_LEVEL_MAX + config.high_level_output_offset;
-    level_range = level_max - level_min;
+//    level_min = SL_GENHIGH_LEVEL_MIN + config.high_level_output_offset;
+//    level_max = SL_GENHIGH_LEVEL_MAX + config.high_level_output_offset;
+//    level_range = level_max - level_min;
     break;
   }
-  setting.level =  level_max;     // This is the level with above settings.
+  setting.level =  level_max();     // This is the level with above settings.
   for (uint8_t i = 0; i< MARKERS_MAX; i++) {
     markers[i].enabled = M_DISABLED;
     markers[i].mtype = M_NORMAL;
@@ -670,7 +670,7 @@ void set_auto_reflevel(bool v)
   setting.auto_reflevel = v;
 }
 
-#if 0
+#if 1
 float level_min(void)
 {
   int l;
@@ -786,7 +786,7 @@ float get_attenuation(void)
 {
   float actual_attenuation = setting.attenuate_x2 / 2.0;
   if (setting.mode == M_GENLOW) {
-    return (float)( level_max - actual_attenuation  + BELOW_MAX_DRIVE(setting.rx_drive) - ( setting.atten_step ? SWITCH_ATTENUATION : 0) );
+    return (float)( level_max() - actual_attenuation  + BELOW_MAX_DRIVE(setting.rx_drive) - ( setting.atten_step ? SWITCH_ATTENUATION : 0) );
   } else if (setting.atten_step) {
     if (setting.mode == M_LOW)
       return actual_attenuation + RECEIVE_SWITCH_ATTENUATION;
@@ -800,7 +800,7 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
 {
 #if 0
   if (setting.mode == M_GENLOW) {
-    a = a - level_max;               // Move to zero for max power
+    a = a - level_max();               // Move to zero for max power
     if (a > 0)
       a = 0;
     if( a <  - SWITCH_ATTENUATION) {
@@ -1168,7 +1168,7 @@ void set_AGC_LNA(void) {
   if (!S_STATE(setting.agc))
     v |= 0x80 + 0x20;     // Inverse!!!!
   if (S_STATE(setting.lna))
-    v |= 0x08;     // Inverse!!!!
+    v |= 0x0F;     // Inverse!!!!
   SI446x_set_AGC_LNA(v);
   SI4432_old_v[0] = v;
 }
@@ -1313,8 +1313,8 @@ void set_external_gain(float external_gain)
 {
   setting.external_gain = external_gain;
   int min,max;
-  min = level_min;
-  max = min + level_range;
+  min = level_min();
+  max = min + level_range();
   plot_printf(low_level_help_text, sizeof low_level_help_text, "%+d..%+d", min - (int)external_gain, max - (int)external_gain);
   redraw_request|=REDRAW_AREA;
   dirty = true;             // No HW update required, only status panel refresh but need to ensure the cached value is updated in the calculation of the RSSI
@@ -2459,7 +2459,7 @@ static void calculate_static_correction(void)                   // Calculate the
           + get_attenuation()
 #ifdef TINYSA4
           - (S_STATE(setting.agc)? 0 : 33)
-          - (S_STATE(setting.lna)? 0 : 0)
+          - (S_STATE(setting.lna)? 12 : 0)
           + (setting.extra_lna ? -23.5 : 0)                         // TODO <------------------------- set correct value
 #endif		  
           - setting.external_gain);
@@ -2618,7 +2618,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           ls += 0.5;
         else
           ls -= 0.5;
-        float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0 + get_level_offset();
+        float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0 /* + get_level_offset() */ ;
         correct_RSSI_freq = get_frequency_correction(f);
         a += PURE_TO_float(correct_RSSI_freq) + 3.0;        // Always 3dB in attenuator
         if (a != old_a) {
@@ -2626,7 +2626,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           int very_low_flag = false;
 #endif
           old_a = a;
-          a = a - level_max;                 // convert to all settings maximum power output equals a = zero
+          a = a - level_max();                 // convert to all settings maximum power output equals a = zero
           if (a < -SWITCH_ATTENUATION) {
             a = a + SWITCH_ATTENUATION;
 #ifdef TINYSA3
@@ -2680,7 +2680,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       }
     }
     else if (setting.mode == M_GENHIGH) {
-      float a = setting.level - level_max;
+      float a = setting.level - level_max();
       if (a <= -SWITCH_ATTENUATION) {
         setting.atten_step = true;
         a = a + SWITCH_ATTENUATION;
@@ -2707,7 +2707,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       }
 
       unsigned int d = MIN_DRIVE;
-      while (drive_dBm[d] - level_max < a && d < MAX_DRIVE)       // Find level equal or above requested level
+      while (drive_dBm[d] - level_max() < a && d < MAX_DRIVE)       // Find level equal or above requested level
         d++;
       //    if (d == 8 && v < -12)  // Round towards closest level
       //      d = 7;

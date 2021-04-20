@@ -425,6 +425,7 @@ enum {
   KM_ATTACK,
 #ifdef TINYSA4
   KM_LPF,
+  KM_LEVEL,
 #endif
 #ifdef __LIMITS__
   KM_LIMIT_FREQ, KM_LIMIT_LEVEL,
@@ -449,7 +450,7 @@ static const struct {
   {keypads_plusmin_unit, "ACTUAL\nPOWER"}, // actual power
   {keypads_freq        , "IF"}, // IF
   {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay #10
-  {keypads_plusmin     , "LEVEL"},    // KM_LOWOUTLEVEL
+  {keypads_plusmin     , "OUTPUT\nLEVEL"},    // KM_LOWOUTLEVEL
   {keypads_positive    , "DECAY"},    // KM_DECAY
   {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
   {keypads_freq        , "FREQ"},    // KM_30MHz | KM_10MHz
@@ -463,7 +464,7 @@ static const struct {
   {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
   {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
   {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
-  {keypads_plusmin     , "LEVEL"},    // KM_HIGHOUTLEVEL #25
+  {keypads_plusmin     , "OUTPUT\nLEVEL"},    // KM_HIGHOUTLEVEL #25
 #ifdef TINYSA4
   {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
   {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
@@ -476,6 +477,7 @@ static const struct {
   {keypads_positive    , "ATTACK"},    // KM_ATTACK
 #ifdef TINYSA4
   {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
+  {keypads_plusmin     , "LEVEL"}, // KM_LEVEL
 #endif
 #ifdef __LIMITS__
   {keypads_freq         , "END\nFREQ"},  // KM_LIMIT_FREQ
@@ -531,6 +533,71 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
   }
   menu_push_submenu(menu_sweep);
 }
+
+static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
+{
+  (void)item;
+  if (b){
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz %+.1fdB",
+                  config.correction_frequency[CORRECTION_LOW_OUT][data],
+                  config.correction_value[CORRECTION_LOW_OUT][data]);
+    b->param_1.text = uistat.text;
+    return;
+  }
+  if (config.low_level_output_offset == 100)
+    return;
+  int old_m = setting.mode;
+  reset_settings(M_GENLOW);
+  set_level(-35);
+  set_sweep_frequency(ST_CW, config.correction_frequency[CORRECTION_LOW_OUT][data]);
+  setting.mute = false;
+  perform(false, 0, config.correction_frequency[CORRECTION_LOW_OUT][data], false);
+  perform(false, 1, config.correction_frequency[CORRECTION_LOW_OUT][data], false);
+  plot_printf(uistat.text, sizeof uistat.text, "Level of %.3QHz output",
+                config.correction_frequency[CORRECTION_LOW_OUT][data]);
+  kp_help_text = uistat.text;
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+
+  if (kp_buf[0] != 0) {
+    float new_offset = (-35.0) - uistat.value + config.correction_value[CORRECTION_LOW_OUT][data];        // calculate offset based on difference between measured peak level and known peak level
+    if (new_offset > -25 && new_offset < 25) {
+      config.correction_value[CORRECTION_LOW_OUT][data] = new_offset;
+      config_save();
+    }
+  }
+  reset_settings(old_m);
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
+{
+  (void)item;
+  (void)data;
+  if (b){
+    return;
+  }
+  int old_m = setting.mode;
+  reset_settings(M_GENLOW);
+  set_level(-25);
+  set_sweep_frequency(ST_CW, 30000000);
+  setting.mute = false;
+  perform(false, 0, 30000000, false);
+  perform(false, 1, 30000000, false);
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    float old_offset = config.low_level_output_offset;
+    if (old_offset == 100) old_offset = 0;
+    float new_offset = uistat.value - (-25.0) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
+    if (uistat.value == 100) new_offset = 100;
+    if ((new_offset > -5 && new_offset < 5) || new_offset == 100) {
+      config.low_level_output_offset = new_offset;
+      config_save();
+    }
+  }
+  reset_settings(old_m);
+}
+
 
 
 static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
@@ -2172,12 +2239,61 @@ static const menuitem_t menu_settings2[] =
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
+//#ifdef TINYSA4
+static const menuitem_t menu_curve3[] = {
+  { MT_FORM | MT_ADV_CALLBACK, 14, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 15, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 16, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 17, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 18, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 19, "%s", menu_curve_acb },
+  { MT_FORM | MT_CANCEL,       0,  S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_curve2[] = {
+  { MT_FORM | MT_ADV_CALLBACK, 7, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 8, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 9, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 10, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 11, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 12, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 13, "%s", menu_curve_acb },
+  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve3},
+  { MT_FORM | MT_CANCEL,       0,  S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_curve[] = {
+  { MT_FORM | MT_ADV_CALLBACK, 0, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 1, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 2, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 3, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 4, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 5, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 6, "%s", menu_curve_acb },
+  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve2},
+  { MT_FORM | MT_CANCEL,       0,  S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+//#endif
+
+static const menuitem_t menu_actual_power[] =
+{
+ { MT_KEYPAD, KM_ACTUALPOWER,  "INPUT\nLEVEL",  "dBm"},
+ { MT_ADV_CALLBACK, 0,         "OUTPUT\nLEVEL", menu_output_level_acb},
+#ifdef TINYSA4
+ { MT_SUBMENU | MT_LOW,0,      "OUTPUT\nCURVE",  menu_curve},
+#endif
+  { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
+  { MT_NONE,     0, NULL, NULL } // sentinel
+};
+
+
 static const menuitem_t menu_settings[] =
 {
   { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
-#ifndef TINYSA4
-  { MT_KEYPAD, KM_ACTUALPOWER,  "ACTUAL\nPOWER",  NULL},
-#endif
+  { MT_SUBMENU, 0,              "ACTUAL\nPOWER",  menu_actual_power},
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "0=auto IF"},
   { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
 #ifndef TINYSA4
@@ -2287,7 +2403,6 @@ static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
 #ifdef TINYSA4
-  { MT_KEYPAD, KM_ACTUALPOWER,  "ACTUAL\nPOWER",  NULL},
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
 #endif
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
@@ -2526,10 +2641,10 @@ static void fetch_numeric_target(void)
   case KM_LOWOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
     float end_level =  ((int32_t)uistat.value)+setting.level_sweep;
-    if (end_level < level_min)
-      end_level = level_min;
-    if (end_level > level_max)
-      end_level = level_max;
+    if (end_level < level_min())
+      end_level = level_min();
+    if (end_level > level_max())
+      end_level = level_max();
     uistat.value += setting.external_gain;
     end_level += setting.external_gain;
     if (setting.level_sweep != 0)
@@ -2714,6 +2829,8 @@ set_numeric_value(void)
     config.ultra_threshold = uistat.value;
     config_save();
     ultra_threshold = config.ultra_threshold;
+    break;
+  case KM_LEVEL:
     break;
 #endif
 #ifdef __LIMITS__

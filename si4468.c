@@ -1467,14 +1467,14 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
     {
 //   SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
 
-//    __disable_irq();
+    __disable_irq();
     SI_CS_LOW;
     for(uint8_t i=0;i<len;i++) {
       shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
     }
 //    SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
     SI_CS_HIGH;
-//    __enable_irq();
+    __enable_irq();
 #if 0
     if(((uint8_t*)data)[0] == SI446X_CMD_IRCAL) // If we're doing an IRCAL then wait for its completion without a timeout since it can sometimes take a few seconds
 #if 0
@@ -1943,13 +1943,25 @@ void SI446x_Fill(int s, int start)
   uint8_t data[3];
   do {
 again:
+#if 1
     data[0] = SI446X_CMD_GET_MODEM_STATUS;
     data[1] = 0xFF;
     SI4463_do_api(data, 1, data, 3);            // TODO no clear of interrups
-    if (data[2] == 0) goto again;
+    if (data[2] == 0) {
+      if (i > 0)
+        data[2] = age[i-1];
+      else
+        goto again;
+    }
     if (data[2] == 255) goto again;
     if (i >= 0)
       age[i]=(char)data[2];                     // Skip first RSSI
+#else
+    if (i>=0)
+      age[i] = getFRR(SI446X_CMD_READ_FRR_A);
+//    else
+
+#endif
     if (++i >= sweep_points) break;
     if (t)
       my_microsecond_delay(t);

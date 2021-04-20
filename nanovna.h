@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -285,9 +285,9 @@ void set_extra_lna(int t);
 // ------------------------------- sa_core.c ----------------------------------
 
 
-extern float level_min;
-extern float level_max;
-extern float level_range;
+extern float level_min(void);
+extern float level_max(void);
+extern float level_range(void);
 extern float channel_power[3];
 extern float channel_power_watt[3];
 extern const char * const unit_string[];
