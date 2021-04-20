@@ -2620,7 +2620,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           ls -= 0.5;
         float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0 /* + get_level_offset() */ ;
         correct_RSSI_freq = get_frequency_correction(f);
-        a += PURE_TO_float(correct_RSSI_freq) + 3.0;        // Always 3dB in attenuator
+        a += PURE_TO_float(correct_RSSI_freq);
+#ifdef TINYSA4
+        a += 3.0;        // Always 3dB in attenuator
+#endif
         if (a != old_a) {
 #ifdef TINYSA4
           int very_low_flag = false;
@@ -2650,7 +2653,12 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #else
 #define LOWEST_LEVEL MIN_DRIVE
 #endif
-          int d = MAX_DRIVE-8;        // Start in the middle
+          int d;
+#ifdef TINYSA4
+          d = MAX_DRIVE-8;        // Start in the middle
+#else
+          d = MAX_DRIVE-3;        // Start in the middle
+#endif
 
           while (a - BELOW_MAX_DRIVE(d) > 0 && d < MAX_DRIVE) { // Increase if needed
             d++;
@@ -2666,7 +2674,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef __SI4463__
           SI4463_set_output_level(d);
 #endif
+#ifdef TINYSA4
           a -= 3.0;                 // Always at least 3dB attenuation
+#endif
           if (a > 0)
             a = 0;
           if (a < -31.5)

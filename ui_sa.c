@@ -425,8 +425,8 @@ enum {
   KM_ATTACK,
 #ifdef TINYSA4
   KM_LPF,
-  KM_LEVEL,
 #endif
+  KM_LEVEL,
 #ifdef __LIMITS__
   KM_LIMIT_FREQ, KM_LIMIT_LEVEL,
 #endif
@@ -477,8 +477,8 @@ static const struct {
   {keypads_positive    , "ATTACK"},    // KM_ATTACK
 #ifdef TINYSA4
   {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
-  {keypads_plusmin     , "LEVEL"}, // KM_LEVEL
 #endif
+  {keypads_plusmin     , "LEVEL"}, // KM_LEVEL
 #ifdef __LIMITS__
   {keypads_freq         , "END\nFREQ"},  // KM_LIMIT_FREQ
   {keypads_plusmin_unit , "LEVEL"},  // KM_LIMIT_LEVEL
@@ -533,7 +533,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
   }
   menu_push_submenu(menu_sweep);
 }
-
+#ifdef TINYSA4
 static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
 {
   (void)item;
@@ -568,6 +568,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
   }
   reset_settings(old_m);
 }
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
 {
@@ -2239,7 +2240,7 @@ static const menuitem_t menu_settings2[] =
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-//#ifdef TINYSA4
+#ifdef TINYSA4
 static const menuitem_t menu_curve3[] = {
   { MT_FORM | MT_ADV_CALLBACK, 14, "%s", menu_curve_acb },
   { MT_FORM | MT_ADV_CALLBACK, 15, "%s", menu_curve_acb },
@@ -2276,7 +2277,7 @@ static const menuitem_t menu_curve[] = {
   { MT_FORM | MT_CANCEL,       0,  S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
-//#endif
+#endif
 
 static const menuitem_t menu_actual_power[] =
 {
@@ -2830,9 +2831,9 @@ set_numeric_value(void)
     config_save();
     ultra_threshold = config.ultra_threshold;
     break;
+#endif
   case KM_LEVEL:
     break;
-#endif
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
     setting.limits[active_limit].frequency = uistat.value - (setting.frequency_offset - FREQUENCY_SHIFT);
