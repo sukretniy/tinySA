@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -64,6 +64,11 @@
 //#define __HAM_BAND__
 #define __SPUR__                  // Does spur reduction by shifting IF
 //#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
+#ifdef __USE_SERIAL_CONSOLE__
+#if (HAL_USE_SERIAL != TRUE)
+//#error "HAL_USE_SERIAL must be set to true"
+#endif
+#endif
 #define __SINGLE_LETTER__         // Add fast console commands
 #define __NICE_BIG_FONT__         // Add not scaled big font for menus
 #define __QUASI_PEAK__            // Add quasi peak average option
@@ -74,6 +79,7 @@
 #ifdef TINYSA4
 #define  __HARMONIC__
 #define __VBW__
+#define __SWEEP_RESTART__
 #else
 #endif
 
@@ -946,6 +952,7 @@ typedef struct setting
   bool tracking_output;        // bool
   bool mute;                   // bool
   bool auto_IF;                // bool
+  bool sweep;                  // bool
 
   uint8_t mode;                // enum
   uint8_t below_IF;            // enum
@@ -1203,9 +1210,11 @@ void menu_push_lowoutput(void);
 void menu_push_highoutput(void);
 void menu_move_top(void);
 void draw_menu(void);
+void refres_sweep_menu(void);
 int check_touched(void);
 int invoke_quick_menu(int);
 bool ui_process_listen_lever(void);
+void refresh_sweep_menu(int i);
 
 // Irq operation process set
 #define OP_NONE       0x00
@@ -1319,7 +1328,7 @@ int plot_printf(char *str, int, const char *fmt, ...);
 
 typedef uint8_t  deviceRSSI_t;
 typedef int16_t  pureRSSI_t;
-
+extern int current_index;
 // RSSI values conversion macro
 
 #define DEVICE_TO_PURE_RSSI(rssi) ((rssi)<<4)

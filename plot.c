@@ -1320,6 +1320,7 @@ static void trace_print_value_string(     // Only used at one place
 	int ri,  // reference Marker number
 	float coeff[POINTS_COUNT])
 {
+  (void) bold;
   int mtype = markers[mi].mtype;
   int   idx = markers[mi].index;
   float v   = value(coeff[idx]);

@@ -1005,6 +1005,15 @@ VNA_SHELL_FUNCTION(cmd_q)
   }
   goto again;
 }
+
+extern float Si446x_get_temp(void);
+VNA_SHELL_FUNCTION(cmd_k)
+{
+  float value;
+  shell_printf("temperature: %f\r\n", Si446x_get_temp());
+}
+
+
 #endif
 
 

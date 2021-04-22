@@ -509,11 +509,17 @@ static const menuitem_t  menu_sweep_points[];
 static const menuitem_t  menu_sweep_points_form[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_limit_modify[];
+#ifdef __USE_SERIAL_CONSOLE__
+static const menuitem_t  menu_connection[];
+#endif
 //static const menuitem_t  menu_drive_wide[];
 #ifdef TINYSA4
 static const menuitem_t  menu_settings3[];
+static const menuitem_t  menu_curve[];
+static const menuitem_t  menu_curve_confirm[];
 #endif
 static const menuitem_t  menu_sweep[];
+extern bool dirty;
 
 static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
 {
@@ -533,41 +539,139 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
   }
   menu_push_submenu(menu_sweep);
 }
-#ifdef TINYSA4
-static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
-{
+
+#ifdef __SWEEP_RESTART__
+static UI_FUNCTION_ADV_CALLBACK(menu_restart_acb){
   (void)item;
+  (void)data;
+  if(b){
+    if (current_index >= 0 && setting.sweep) {
+      float current_level = setting.level + ((float)current_index)* setting.level_sweep / (float)sweep_points;
+      plot_printf(uistat.text, sizeof uistat.text, "STOP %5.3QHz %+.1fdBm", frequencies[current_index], current_level);
+      b->param_1.text = uistat.text;
+    } else {
+      b->param_1.text = "START SWEEP";
+    }
+    return;
+  }
+  setting.sweep = !setting.sweep;
+  dirty = true;
+}
+#endif
+
+#ifdef TINYSA4
+
+float local_actual_level;
+int current_curve;
+int current_curve_index;
+
+static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
+        {
+  (void)item;
+  int old_m;
   if (b){
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz %+.1fdB",
-                  config.correction_frequency[CORRECTION_LOW_OUT][data],
-                  config.correction_value[CORRECTION_LOW_OUT][data]);
+                config.correction_frequency[current_curve][data],
+                config.correction_value[current_curve][data]);
     b->param_1.text = uistat.text;
     return;
   }
-  if (config.low_level_output_offset == 100)
-    return;
-  int old_m = setting.mode;
-  reset_settings(M_GENLOW);
-  set_level(-35);
-  set_sweep_frequency(ST_CW, config.correction_frequency[CORRECTION_LOW_OUT][data]);
-  setting.mute = false;
-  perform(false, 0, config.correction_frequency[CORRECTION_LOW_OUT][data], false);
-  perform(false, 1, config.correction_frequency[CORRECTION_LOW_OUT][data], false);
-  plot_printf(uistat.text, sizeof uistat.text, "Level of %.3QHz output",
-                config.correction_frequency[CORRECTION_LOW_OUT][data]);
-  kp_help_text = uistat.text;
-  kp_buf[0]=0;
-  ui_mode_keypad(KM_LEVEL);
+  switch(current_curve) {
+  case CORRECTION_LOW_OUT:
+    old_m = setting.mode;
+    reset_settings(M_GENLOW);
+    set_level(-35);
+    set_sweep_frequency(ST_CW, config.correction_frequency[current_curve][data]);
+    setting.mute = false;
+    perform(false, 0, config.correction_frequency[current_curve][data], false);
+    perform(false, 1, config.correction_frequency[current_curve][data], false);
+    plot_printf(uistat.text, sizeof uistat.text, "Level of %.3QHz output",
+                config.correction_frequency[current_curve][data]);
+    kp_help_text = uistat.text;
+    kp_buf[0]=0;
+    ui_mode_keypad(KM_LEVEL);
 
-  if (kp_buf[0] != 0) {
-    float new_offset = (-35.0) - uistat.value + config.correction_value[CORRECTION_LOW_OUT][data];        // calculate offset based on difference between measured peak level and known peak level
+    if (kp_buf[0] != 0) {
+      float new_offset = (-35.0) - uistat.value + config.correction_value[current_curve][data];        // calculate offset based on difference between measured peak level and known peak level
+      if (new_offset > -25 && new_offset < 25) {
+        config.correction_value[current_curve][data] = new_offset;
+        config_save();
+      }
+    }
+    reset_settings(old_m);
+    break;
+  case CORRECTION_LNA:
+    reset_settings(M_LOW);
+    setting.extra_lna = true;
+    goto common;
+  case CORRECTION_LOW:
+    reset_settings(M_LOW);
+    common:
+    set_sweep_frequency(ST_SPAN,   1000000);
+    set_sweep_frequency(ST_CENTER, config.correction_frequency[current_curve][data]);
+    current_curve_index = data;
+    menu_push_submenu(menu_curve_confirm);
+    break;
+  }
+}
+
+extern float peakLevel;
+
+UI_FUNCTION_CALLBACK(menu_curve_confirm_cb)
+{
+  (void)item;
+  if (data) {
+    float new_offset = local_actual_level - peakLevel + config.correction_value[current_curve][current_curve_index];        // calculate offset based on difference between measured peak level and known peak level
     if (new_offset > -25 && new_offset < 25) {
-      config.correction_value[CORRECTION_LOW_OUT][data] = new_offset;
+      config.correction_value[current_curve][current_curve_index] = new_offset;
       config_save();
     }
   }
-  reset_settings(old_m);
+  menu_move_back(false);
 }
+
+static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (config.low_level_offset == 100)
+    return;
+  kp_help_text = "Enter actual input level";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    local_actual_level = uistat.value;
+    current_curve = CORRECTION_LOW;
+    menu_push_submenu(menu_curve);
+  }
+}
+
+static UI_FUNCTION_CALLBACK(menu_lna_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (config.low_level_offset == 100)
+    return;
+  kp_help_text = "Enter actual input level";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    local_actual_level = uistat.value;
+    current_curve = CORRECTION_LNA;
+    menu_push_submenu(menu_curve);
+  }
+}
+
+static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (config.low_level_output_offset == 100)
+    return;
+  current_curve = CORRECTION_LOW_OUT;
+  menu_push_submenu(menu_curve);
+}
+
 #endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
@@ -668,8 +772,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
   menu_move_back(true);
 }
 
-
-extern bool dirty;
 UI_FUNCTION_CALLBACK(menu_autosettings_cb)
 {
   (void)item;
@@ -1854,37 +1956,34 @@ char center_text[18] = "FREQ: %s";
 static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
 //  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
-#ifdef TINYSA4
-  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
-#endif
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           center_text,         VARIANT("10kHz..350MHz","10kHz..850MHz")},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        low_level_help_text},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
-//  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         "0..350MHz"},
-//  { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", "-70..70"},
-//  { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
+#ifdef __SWEEP_RESTART__
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_restart_acb},
+#endif
   { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",   "-100..+100"},
+#ifdef TINYSA4
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
+#endif
   { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
+  { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz","136MHz..4350MHz")},
+  { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
+  { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
+#ifdef __SWEEP_RESTART__
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_restart_acb},
+#endif
+  { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",          "-100..+100"},
 #ifdef TINYSA4
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
 #endif
-  { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz","136MHz..4350MHz")},
-//  { MT_FORM | MT_ADV_CALLBACK,   0,     "LEVEL: %+ddBm",    menu_sdrive_acb},
-  { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
-  { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
-#ifdef TINYSA4
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
-#else
-  { MT_FORM | MT_KEYPAD,    KM_SPAN,    "SPAN: %s",         NULL},
-  { MT_FORM | MT_KEYPAD,  KM_SWEEP_TIME,"SWEEP TIME: %s",   "0..600 seconds"},
-#endif
-  { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",          "-100..+100"},
   { MT_FORM | MT_CANCEL,    0,          "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -2194,6 +2293,9 @@ static const menuitem_t menu_settings3[] =
 #else
   { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
   { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+#ifdef __USE_SERIAL_CONSOLE__
+  { MT_SUBMENU,  0, "CONNECTION", menu_connection},
+#endif
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
@@ -2277,14 +2379,23 @@ static const menuitem_t menu_curve[] = {
   { MT_FORM | MT_CANCEL,       0,  S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
+
+static const menuitem_t menu_curve_confirm[] = {
+  { MT_CALLBACK, 1,               "OK",       menu_curve_confirm_cb },
+  { MT_CALLBACK, 0,               "CANCEL",   menu_curve_confirm_cb },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
 #endif
 
 static const menuitem_t menu_actual_power[] =
 {
- { MT_KEYPAD, KM_ACTUALPOWER,  "INPUT\nLEVEL",  "dBm"},
- { MT_ADV_CALLBACK, 0,         "OUTPUT\nLEVEL", menu_output_level_acb},
+ { MT_KEYPAD,           KM_ACTUALPOWER, "INPUT\nLEVEL",  "dBm"},
+ { MT_ADV_CALLBACK,     0,              "OUTPUT\nLEVEL", menu_output_level_acb},
 #ifdef TINYSA4
- { MT_SUBMENU | MT_LOW,0,      "OUTPUT\nCURVE",  menu_curve},
+ { MT_CALLBACK,     0,                  "INPUT\nCURVE",  menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "LNA\nCURVE",    menu_lna_curve_prepare_cb},
+ { MT_SUBMENU | MT_LOW, 0,              "OUTPUT\nCURVE", menu_output_curve_prepare_cb},
 #endif
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -2374,7 +2485,7 @@ const menuitem_t menu_serial_speed[] = {
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
-const menuitem_t menu_connection[] = {
+static const menuitem_t menu_connection[] = {
   { MT_ADV_CALLBACK, _MODE_USB,    "USB",    menu_connection_acb },
   { MT_ADV_CALLBACK, _MODE_SERIAL, "SERIAL", menu_connection_acb },
   { MT_SUBMENU,  0, "SERIAL\nSPEED", menu_serial_speed },
@@ -2399,9 +2510,6 @@ static const menuitem_t menu_config[] = {
   { MT_CALLBACK, CONFIG_MENUITEM_VERSION,  "VERSION",   menu_config_cb},
 #ifdef __SPUR__
   { MT_ADV_CALLBACK,0,          "%s",          menu_spur_acb},
-#endif
-#ifdef __USE_SERIAL_CONSOLE__
-  { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
 #ifdef TINYSA4
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},

@@ -1820,7 +1820,7 @@ static const char *step_text[5] = {"-10dB", "-1dB", "set", "+1dB", "+10dB"};
 static char step_text_freq[5][10] = { "-100MHz", "-10MHz", "set", "+10MHz", "+100MHz" };
 
 static void
-draw_menu_buttons(const menuitem_t *menu)
+draw_menu_buttons(const menuitem_t *menu, int only)
 {
   int i = 0;
   int y = 0;
@@ -1830,6 +1830,14 @@ draw_menu_buttons(const menuitem_t *menu)
       continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
+#ifdef __SWEEP_RESTART__
+    if (only != -1 && only != i) {
+      y += MENU_BUTTON_HEIGHT;
+      continue;
+    }
+#else
+    (void)only;
+#endif
     button.icon = BUTTON_ICON_NONE;
     // Border width
     button.border = MENU_BUTTON_BORDER;
@@ -2204,8 +2212,26 @@ menu_apply_touch(int touch_x, int touch_y)
 void
 draw_menu(void)
 {
-  draw_menu_buttons(menu_stack[menu_current_level]);
+  draw_menu_buttons(menu_stack[menu_current_level], -1);
 }
+
+#ifdef __SWEEP_RESTART__
+systime_t old_sweep_time;
+
+void
+refresh_sweep_menu(int i)
+{
+  current_index = i;
+  systime_t new_sweep_time = chVTGetSystemTimeX();
+  if (new_sweep_time - old_sweep_time > ONE_SECOND_TIME/200 && i >= 0) {
+    old_sweep_time = new_sweep_time;
+    if (menu_stack[menu_current_level] == menu_lowoutputmode)
+      draw_menu_buttons(menu_stack[menu_current_level], 5);
+    if (menu_stack[menu_current_level] == menu_highoutputmode)
+      draw_menu_buttons(menu_stack[menu_current_level], 5);
+  }
+}
+#endif
 
 static void
 erase_menu_buttons(void)

@@ -1207,6 +1207,16 @@ void Si446x_getInfo(si446x_info_t* info)
     info->patch         = (data[3]<<8) | data[4];
     info->func          = data[5];
 }
+
+float Si446x_get_temp(void)
+{
+    uint8_t data[6] = { SI446X_CMD_GET_ADC_READING, 0x10 };
+    SI4463_do_api(data, 2, data, 6);
+    float t = (data[4] << 8) + data[5];
+    t = (899.0 * t /4096.0) - 293.0;
+    return t;
+}
+
 #ifdef notused
 static uint8_t SI4463_get_device_status(void)
 {

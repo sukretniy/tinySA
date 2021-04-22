@@ -38,6 +38,7 @@
 uint8_t scandirty = true;
 bool debug_avoid = false;
 bool debug_avoid_second = false;
+int current_index = -1;
 
 setting_t setting;
 freq_t frequencies[POINTS_COUNT];
@@ -175,6 +176,7 @@ void reset_settings(int m)
 {
 //  strcpy((char *)spi_buffer, dummy);
   setting.mode = m;
+  setting.sweep = false;
 #ifdef TINYSA4
   ultra_threshold = config.ultra_threshold;
   ultra = config.ultra;
@@ -2355,7 +2357,7 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
     else
     {
 #ifdef TINYSA4
-      int w = (m >= sizeof(spur_div)/sizeof(uint8_t) ? 3 : 1);
+      int w = ((unsigned int)m >= sizeof(spur_div)/sizeof(uint8_t) ? 3 : 1);
       fmin =  f - spur_gate*w;
       fplus = f + spur_gate*w;
       if (spur_table[m] < fmin || spur_table[m] > fplus)
@@ -3571,11 +3573,18 @@ static bool sweep(bool break_on_operation)
     // if break back to top level to handle ui operation
     if (refreshing)
       scandirty = false;
-    if (break_on_operation && operation_requested) {                        // break loop if needed
+    if ((break_on_operation && operation_requested )
+#ifdef __SWEEP_RESTART__
+        || (MODE_OUTPUT(setting.mode) && !setting.sweep && (setting.level_sweep != 0 || get_sweep_frequency(ST_SPAN) != 0))
+#endif
+            ) {                        // break loop if needed
       abort:
       if (setting.actual_sweep_time_us > ONE_SECOND_TIME /* && MODE_INPUT(setting.mode) */) {
         ili9341_set_background(LCD_BG_COLOR);
         ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);                    // Erase progress bar
+#ifdef __SWEEP_RESTART__
+        refresh_sweep_menu(-1);
+#endif
       }
       return false;
     }
@@ -3621,18 +3630,20 @@ static bool sweep(bool break_on_operation)
         }
       }
     }
-    if (
-#ifdef TINYSA4
-        show_bar && (i & 0x07) == 0 && (setting.actual_sweep_time_us > ONE_SECOND_TIME || (chVTGetSystemTimeX() - start_of_sweep_timestamp) > ONE_SECOND_TIME / 100)  // if required
-#else
-        show_bar && (i & 0x07) == 0 && setting.actual_sweep_time_us > ONE_SECOND_TIME // if required
-#endif
-    ) {
+    systime_t local_sweep_time = (chVTGetSystemTimeX() - start_of_sweep_timestamp)*100 ;
+    if (setting.actual_sweep_time_us > ONE_SECOND_TIME)
+      local_sweep_time = setting.actual_sweep_time_us;
+    if (show_bar && (( local_sweep_time > ONE_SECOND_TIME && (i & 0x07) == 0) || ( local_sweep_time > ONE_SECOND_TIME*10)) )
+    {
       int pos = i * (WIDTH+1) / sweep_points;
       ili9341_set_background(LCD_SWEEP_LINE_COLOR);
       ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
       ili9341_set_background(LCD_BG_COLOR);
       ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
+#ifdef __SWEEP_RESTART__
+      if (MODE_OUTPUT(setting.mode) && (setting.level_sweep != 0 || get_sweep_frequency(ST_SPAN) != 0))
+        refresh_sweep_menu(i);
+#endif
     }
     // -----------------------  debug avoid --------------------------------
     if (debug_avoid) {
@@ -3821,6 +3832,9 @@ static bool sweep(bool break_on_operation)
     // ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1, 0);     // Erase progress bar before updating actual_sweep_time
     ili9341_set_background(LCD_BG_COLOR);
     ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);
+#ifdef __SWEEP_RESTART__
+    refresh_sweep_menu(-1);
+#endif
   }
   // ---------------------- process measured actual sweep time -----------------
   // For CW mode value calculated in SI4432_Fill
