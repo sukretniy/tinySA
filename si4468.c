@@ -868,65 +868,65 @@ static uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout
   return 1;
 }
 
+#define SI_FAST_SPEED    SPI_BR_DIV2
+
 void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 {
   set_SPI_mode(SPI_MODE_SI);
-  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+  SPI_BR_SET(SI4432_SPI, SI_FAST_SPEED);
 
-  while (!SI4463_READ_CTS) { my_microsecond_delay(1); }         // Wait for CTS
+#define SHORT_DELAY my_microsecond_delay(1)
+//#define SHORT_DELAY
 
-  {
-    //   SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
+  while (!SI4463_READ_CTS) {SHORT_DELAY; }         // Wait for CTS
 
-    __disable_irq();
-    SI_CS_LOW;
-    for(uint8_t i=0;i<len;i++) {
+  __disable_irq();
+  SI_CS_LOW;
+
+  for(uint8_t i=0;i<len;i++) {
 #if 1                                               // Inline transfer
-      while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
-      SPI_WRITE_8BIT(SI4432_SPI, ((uint8_t*)data)[i]);
-      while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-        SPI_READ_8BIT(SI4432_SPI);
+//    while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
+    SPI_WRITE_8BIT(SI4432_SPI, ((uint8_t*)data)[i]);
+    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+      SPI_READ_8BIT(SI4432_SPI);
 #else
-      shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
+    shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
 #endif
-    }
-    //    SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
-    SI_CS_HIGH;
-    __enable_irq();
-
-    while (!SI4463_READ_CTS) { my_microsecond_delay(1); }         // Wait for CTS
-
-    if(out != NULL) { // If we have an output buffer then read command response into it
-
-      __disable_irq();
-//      again:
-      SI_CS_LOW;
-      shiftOut( SI446X_CMD_READ_CMD_BUFF );
-      //          uint8_t cts = (shiftIn() == 0xFF);
-      shiftIn();                        // Should always be 0xFF
-//      uint8_t cts = 0xFF;
-//      if (cts)
-      {
-        // Get response data
-        for(uint8_t i=0;i<outLen;i++) {
-#if 1                                               // Inline transfer
-          SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
-          while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-            while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
-          ((uint8_t*)out)[i] = SPI_READ_8BIT(SI4432_SPI);
-#else
-          ((uint8_t*)out)[i] = shiftIn();
-#endif
-        }
-      }
-//      else {
-//        SI_CS_HIGH;
-//        goto again;
-//      }
-      SI_CS_HIGH;
-      __enable_irq();
-    }
   }
+  //    SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
+  SI_CS_HIGH;
+  //    __enable_irq();
+
+  while (!SI4463_READ_CTS) { SHORT_DELAY; }         // Wait for CTS
+
+  if(out != NULL) { // If we have an output buffer then read command response into it
+    SI_CS_LOW;
+    SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+#if 1
+    SPI_WRITE_8BIT(SI4432_SPI,SI446X_CMD_READ_CMD_BUFF);
+    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+      SPI_READ_8BIT(SI4432_SPI);
+    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
+    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+      SPI_READ_8BIT(SI4432_SPI);
+#else
+    shiftOut( SI446X_CMD_READ_CMD_BUFF );
+    shiftIn();                        // Should always be 0xFF
+#endif
+    // Get response data
+    for(uint8_t i=0;i<outLen;i++) {
+#if 1                                               // Inline transfer
+     SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
+      while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+        while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
+      ((uint8_t*)out)[i] = SPI_READ_8BIT(SI4432_SPI);
+#else
+      ((uint8_t*)out)[i] = shiftIn();
+#endif
+    }
+    SI_CS_HIGH;
+  }
+  __enable_irq();
 }
 
 #ifdef notused
@@ -1210,9 +1210,12 @@ void Si446x_getInfo(si446x_info_t* info)
 
 float Si446x_get_temp(void)
 {
-    uint8_t data[6] = { SI446X_CMD_GET_ADC_READING, 0x10 };
-    SI4463_do_api(data, 2, data, 6);
-    float t = (data[4] << 8) + data[5];
+    uint8_t data[8] = { SI446X_CMD_GET_ADC_READING, 0x10, 0 };
+    SI4463_do_api(data, 3, data, 8);
+    int i = 4;
+    if (MODE_OUTPUT(setting.mode))
+      i = 6;
+    float t = (data[i] << 8) + data[i+1];
     t = (899.0 * t /4096.0) - 293.0;
     return t;
 }

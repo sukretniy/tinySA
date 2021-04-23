@@ -1073,6 +1073,8 @@ void set_offset_delay(int d)                  // override RSSI measurement delay
 
 void set_average(int v)
 {
+  if (setting.average == v)
+    dirty = true;
   setting.average = v;
   trace[TRACE_TEMP].enabled = ((v != 0)
 #ifdef __QUASI_PEAK__

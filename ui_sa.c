@@ -570,7 +570,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
   (void)item;
   int old_m;
   if (b){
-    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz %+.1fdB",
+    plot_printf(uistat.text, sizeof uistat.text, "%8.3QHz %+4.1fdB",
                 config.correction_frequency[current_curve][data],
                 config.correction_value[current_curve][data]);
     b->param_1.text = uistat.text;
@@ -609,6 +609,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     common:
     set_sweep_frequency(ST_SPAN,   1000000);
     set_sweep_frequency(ST_CENTER, config.correction_frequency[current_curve][data]);
+    setting.step_delay_mode = SD_PRECISE;
     current_curve_index = data;
     menu_push_submenu(menu_curve_confirm);
     break;
@@ -1401,7 +1402,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_average_acb)
     return;
   }
   set_average(data);
-  menu_move_back(true);
+//  menu_move_back(true);
 }
 
 extern const menuitem_t menu_marker_modify[];
@@ -2395,7 +2396,7 @@ static const menuitem_t menu_actual_power[] =
 #ifdef TINYSA4
  { MT_CALLBACK,     0,                  "INPUT\nCURVE",  menu_input_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "LNA\nCURVE",    menu_lna_curve_prepare_cb},
- { MT_SUBMENU | MT_LOW, 0,              "OUTPUT\nCURVE", menu_output_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "OUTPUT\nCURVE", menu_output_curve_prepare_cb},
 #endif
   { MT_CANCEL,   0,             S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel

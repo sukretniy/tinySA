@@ -303,6 +303,29 @@ marker_to_value(const int i)
   return(value(ref_marker_levels[markers[i].index]));
 }
 
+#ifdef TINYSA3
+float sa_sqrtf(const float x)
+{
+  union
+  {
+    int i;
+    float x;
+  } u;
+  u.x = x;
+  u.i = (1<<29) + (u.i >> 1) - (1<<22);
+
+  // Two Babylonian Steps (simplified from:)
+  // u.x = 0.5f * (u.x + x/u.x);
+  // u.x = 0.5f * (u.x + x/u.x);
+  u.x =       u.x + x/u.x;
+  u.x = 0.25f*u.x + x/u.x;
+
+  return u.x;
+}
+#else
+#define sa_sqrtf(x) sqrtf(x)
+#endif
+
 // Function for convert to different type of values from dBm
 // Replaced some equal functions and use recalculated constants:
 // powf(10,x) =  expf(x * logf(10))
@@ -1469,7 +1492,7 @@ static void cell_draw_marker_info(int x0, int y0)
             h += marker_to_value(1);
           h_i++;
         }
-        float thd = 100.0 * sqrtf(h/p);
+        float thd = 100.0 * sa_sqrtf(h/p);
         setting.unit = old_unit;
         ili9341_set_foreground(marker_color(markers[0].mtype));
 //        j = 1;
