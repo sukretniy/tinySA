@@ -1213,7 +1213,7 @@ float Si446x_get_temp(void)
     uint8_t data[8] = { SI446X_CMD_GET_ADC_READING, 0x10, 0 };
     SI4463_do_api(data, 3, data, 8);
     int i = 4;
-    if (MODE_OUTPUT(setting.mode))
+    if (data[0]==255)
       i = 6;
     float t = (data[i] << 8) + data[i+1];
     t = (899.0 * t /4096.0) - 293.0;

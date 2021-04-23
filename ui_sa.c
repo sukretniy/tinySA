@@ -1402,6 +1402,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_average_acb)
     return;
   }
   set_average(data);
+  ui_mode_normal();
 //  menu_move_back(true);
 }
 
@@ -3435,7 +3436,8 @@ redraw_cal_status:
     else
       color = LCD_BRIGHT_COLOR_RED;
     ili9341_set_foreground(color);
-    ili9341_drawstring(buf, x, y);
+    y = add_quick_menu(buf, x, y,(menuitem_t *)menu_average);
+//    ili9341_drawstring(buf, x, y);
   }
 }
 

@@ -293,7 +293,7 @@ void reset_settings(int m)
 #endif
     set_sweep_frequency(ST_CENTER, 10000000);
     set_sweep_frequency(ST_SPAN, 0);
-    setting.sweep_time_us = 10*ONE_SECOND_TIME;
+    setting.sweep_time_us = 2*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
 #ifdef TINYSA4
     setting.extra_lna = false;
@@ -328,7 +328,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_CENTER, 300000000);
 #endif
     set_sweep_frequency(ST_SPAN, 0);
-    setting.sweep_time_us = 10*ONE_SECOND_TIME;
+    setting.sweep_time_us = 2*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
     setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
     setting.correction_value = config.correction_value[CORRECTION_HIGH];
@@ -1073,7 +1073,7 @@ void set_offset_delay(int d)                  // override RSSI measurement delay
 
 void set_average(int v)
 {
-  if (setting.average == v)
+  if (setting.average == v)     // Clear calc on second click
     dirty = true;
   setting.average = v;
   trace[TRACE_TEMP].enabled = ((v != 0)
@@ -2512,6 +2512,7 @@ int test_output = false;
 int test_output_switch = false;
 int test_output_drive = 0;
 int test_output_attenuate = 0;
+int start_temperature = 0;
 #endif
 
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -2557,8 +2558,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       if (!in_selftest) clock_above_48MHz();
       is_below = false;
       correct_RSSI_freq = get_frequency_correction(f);  // for i == 0 and freq_step == 0;
-    } else
+    } else {
       clock_at_48MHz();
+      start_temperature = Si446x_get_temp();
+    }
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
     // Update grid and status after
@@ -2626,6 +2629,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         correct_RSSI_freq = get_frequency_correction(f);
         a += PURE_TO_float(correct_RSSI_freq);
 #ifdef TINYSA4
+        a += (Si446x_get_temp() - 34.0) * 0.0433;  // Temperature correction
         a += 3.0;        // Always 3dB in attenuator
 #endif
         if (a != old_a) {
@@ -2695,6 +2699,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
     else if (setting.mode == M_GENHIGH) {
       float a = setting.level - level_max();
+#ifdef TINYSA4
+      if (!config.high_out_adf4350)
+        a += (Si446x_get_temp() - 34.0) * 0.0433;  // Temperature correction
+#endif
       if (a <= -SWITCH_ATTENUATION) {
         setting.atten_step = true;
         a = a + SWITCH_ATTENUATION;

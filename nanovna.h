@@ -1401,5 +1401,6 @@ extern bool ADF4351_frequency_changed;
 extern bool SI4463_frequency_changed;
 extern bool SI4463_offset_changed;
 extern int old_R;
+extern float Si446x_get_temp(void);
 #endif
 /*EOF*/
