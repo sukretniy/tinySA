@@ -2509,7 +2509,7 @@ static const VNAShellCommand commands[] =
 #endif
    { "e", cmd_e,	CMD_WAIT_MUTEX },
    { "s", cmd_s,	CMD_WAIT_MUTEX },
-   { "m", cmd_m,	CMD_WAIT_MUTEX },
+   { "m", cmd_m,	0 },
    { "p", cmd_p,    CMD_WAIT_MUTEX },
    { "w", cmd_w,	CMD_WAIT_MUTEX },
    { "o", cmd_o,    CMD_WAIT_MUTEX },

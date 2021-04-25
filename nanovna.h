@@ -80,6 +80,9 @@
 #define  __HARMONIC__
 #define __VBW__
 #define __SWEEP_RESTART__
+#define DB_PER_DEGREE_BELOW               0.056
+#define DB_PER_DEGREE_ABOVE               0.069
+#define CENTER_TEMPERATURE          34.0
 #else
 #endif
 
@@ -305,6 +308,7 @@ extern int test_output;
 extern int test_output_switch;
 extern int test_output_drive;
 extern int test_output_attenuate;
+extern bool level_error;
 #else
 extern const int8_t drive_dBm [];
 #endif

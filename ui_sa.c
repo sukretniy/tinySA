@@ -3114,6 +3114,14 @@ redraw_cal_status:
   ili9341_fill(0, 0, OFFSETX, LCD_HEIGHT);
   max_quick_menu = 0;
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
+#ifdef TINYSA4
+    if (level_error) {
+      color = LCD_BRIGHT_COLOR_RED;
+      ili9341_set_foreground(color);
+      ili9341_drawstring("LEVEL", 0 , 80);
+      ili9341_drawstring("ERROR", 0 , 90);
+    }
+#endif
     return;
   }
 

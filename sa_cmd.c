@@ -808,7 +808,9 @@ VNA_SHELL_FUNCTION(cmd_m)
 //  update_rbw();
   chThdSleepMilliseconds(10);
   sweep_mode = SWEEP_REMOTE;
-//  update_rbw();
+  while (sweep_mode != 0)
+    chThdSleepMilliseconds(10);
+  //  update_rbw();
 }
 
 VNA_SHELL_FUNCTION(cmd_p)
@@ -1000,7 +1002,7 @@ VNA_SHELL_FUNCTION(cmd_q)
   switch (m) {
   case -1: goto usage;
   case 0:  test_output_switch = true; break;
-  case 1: test_output_drive = MAX_DRIVE - atoi(argv[i++]); argc--; break;
+  case 1: test_output_drive = atoi(argv[i++]); argc--; break;
   case 2: test_output_attenuate = atoi(argv[i++]); argc--; break;
   }
   goto again;
@@ -1009,8 +1011,9 @@ VNA_SHELL_FUNCTION(cmd_q)
 extern float Si446x_get_temp(void);
 VNA_SHELL_FUNCTION(cmd_k)
 {
-  float value;
-  shell_printf("temperature: %f\r\n", Si446x_get_temp());
+  (void)argc;
+  (void)argv;
+  shell_printf("%.2f\r\n", Si446x_get_temp());
 }
 
 

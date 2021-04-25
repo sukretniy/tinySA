@@ -108,7 +108,7 @@ void stop_SI4432_SPI_mode(void){
 static void shiftOut(uint8_t val)
 {
 #ifdef USE_HARDWARE_SPI_MODE
-//  while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
+  while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
   SPI_WRITE_8BIT(SI4432_SPI, val);
   while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
     (void)SPI_READ_8BIT(SI4432_SPI);
@@ -130,8 +130,8 @@ static uint8_t shiftIn(void)
 #ifdef USE_HARDWARE_SPI_MODE
 //  while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
   SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
-  while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-    while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
+  while (SPI_IS_BUSY(SI4432_SPI) || SPI_RX_IS_EMPTY(SI4432_SPI)) ; // drop rx and wait tx
+//    while (); //wait rx data in buffer
   return SPI_READ_8BIT(SI4432_SPI);
 #else
   uint32_t value = 0;
@@ -703,6 +703,8 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 //         my_microsecond_delay(10);
 //    }
 
+    bitWrite (registers[4], 10, 1);     // Mute till lock detect
+
     registers[0] = 0;
     registers[0] = INTA << 15; // OK
     registers[0] = registers[0] + (FRAC << 3);
@@ -868,7 +870,7 @@ static uint8_t SI4463_wait_response(void* buff, uint8_t len, uint8_t use_timeout
   return 1;
 }
 
-#define SI_FAST_SPEED    SPI_BR_DIV2
+#define SI_FAST_SPEED    SPI_BR_DIV4
 
 void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 {
@@ -883,8 +885,10 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   __disable_irq();
   SI_CS_LOW;
 
+  while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
+
   for(uint8_t i=0;i<len;i++) {
-#if 1                                               // Inline transfer
+#if 0                                               // Inline transfer
 //    while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
     SPI_WRITE_8BIT(SI4432_SPI, ((uint8_t*)data)[i]);
     while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
@@ -902,7 +906,7 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   if(out != NULL) { // If we have an output buffer then read command response into it
     SI_CS_LOW;
     SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
-#if 1
+#if 0
     SPI_WRITE_8BIT(SI4432_SPI,SI446X_CMD_READ_CMD_BUFF);
     while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
       SPI_READ_8BIT(SI4432_SPI);
@@ -911,11 +915,11 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
       SPI_READ_8BIT(SI4432_SPI);
 #else
     shiftOut( SI446X_CMD_READ_CMD_BUFF );
-    shiftIn();                        // Should always be 0xFF
+    while (shiftIn() != 0xff);                        // Should always be 0xFF
 #endif
     // Get response data
     for(uint8_t i=0;i<outLen;i++) {
-#if 1                                               // Inline transfer
+#if 0                                               // Inline transfer
      SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
       while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
         while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
@@ -1035,8 +1039,23 @@ static void SI4463_clear_FIFO(void)
 void SI4463_set_output_level(int t)
 {
   SI4463_output_level = t;
-  if (SI4463_in_tx_mode)
+  if (SI4463_in_tx_mode) {
+#if 1
+    {
+      uint8_t data[] =
+      {
+       0x11, 0x22, 0x04, 0x00,        // PA_MODE
+       0x08,  // Coarse PA mode and class E PA        Fine PA mode = 0x04
+       (uint8_t)SI4463_output_level,  // Level
+       0x00,  // Duty
+       0x00   // Ramp
+      };
+      SI4463_do_api(data, sizeof(data), NULL, 0);
+    }
+#else
     SI4463_start_tx(0);         // Refresh output level
+#endif
+  }
 }
 void SI4463_start_tx(uint8_t CHANNEL)
 {
@@ -1067,7 +1086,7 @@ void SI4463_start_tx(uint8_t CHANNEL)
     uint8_t data[] =
     {
      0x11, 0x22, 0x04, 0x00,        // PA_MODE
-     0x08,  // Coarse PA mode and class E PA
+     0x08,  // Coarse PA mode and class E PA        Fine PA mode = 0x04
      (uint8_t)SI4463_output_level,  // Level
      0x00,  // Duty
      0x00   // Ramp
@@ -1374,7 +1393,7 @@ void SI446x_Fill(int s, int start)
 #endif
 
   uint32_t t = setting.additional_step_delay_us;
-  if (t < old_t +100 && t + 100 > old_t) {
+  if (t < old_t +100 && t + 100 > old_t) {          // avoid oscillation
     t = (t + old_t) >> 1;
   }
   old_t = t;
@@ -1397,6 +1416,7 @@ again:
     data[0] = SI446X_CMD_GET_MODEM_STATUS;
     data[1] = 0xFF;
     SI4463_do_api(data, 1, data, 3);            // TODO no clear of interrups
+#if 0
     if (data[2] == 0) {
       if (i > 0)
         data[2] = age[i-1];
@@ -1404,6 +1424,7 @@ again:
         goto again;
     }
     if (data[2] == 255) goto again;
+#endif
     if (i >= 0)
       age[i]=(char)data[2];                     // Skip first RSSI
 #else
@@ -1513,7 +1534,7 @@ int16_t Si446x_RSSI(void)
   int32_t RSSI_RAW  = 0;
   do{
     //   if (MODE_INPUT(setting.mode) && RSSI_R
-    uint8_t data[3] = {
+    uint8_t data[4] = {
                        SI446X_CMD_GET_MODEM_STATUS,
                        0xFF
     };
@@ -1527,14 +1548,15 @@ int16_t Si446x_RSSI(void)
 //    __disable_irq();
       data[0] = SI446X_CMD_GET_MODEM_STATUS;
       data[1] = 0xFF;
-      SI4463_do_api(data, 2, data, 3);          // TODO no clear of interrupts
+      SI4463_do_api(data, 2, data, 4);          // TODO no clear of interrupts
 //      __enable_irq();
 #else
       data[2] = getFRR(SI446X_CMD_READ_FRR_A);
 #endif
-      if (data[2] == 255) {
+      if (data[0] == 255) {
         my_microsecond_delay(10);
         goto again;
+//        data[2] = data[3];
       }
 #if 0
       if (data[2] == 0) {

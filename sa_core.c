@@ -285,7 +285,7 @@ void reset_settings(int m)
     break;
   case M_GENLOW:
 #ifdef TINYSA4
-    setting.rx_drive=MAX_DRIVE;
+    setting.rx_drive= MAX_DRIVE;
     setting.lo_drive=1;
 #else
 //    setting.rx_drive=8;
@@ -2513,6 +2513,7 @@ int test_output_switch = false;
 int test_output_drive = 0;
 int test_output_attenuate = 0;
 int start_temperature = 0;
+bool level_error = false;
 #endif
 
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -2629,7 +2630,13 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         correct_RSSI_freq = get_frequency_correction(f);
         a += PURE_TO_float(correct_RSSI_freq);
 #ifdef TINYSA4
-        a += (Si446x_get_temp() - 34.0) * 0.0433;  // Temperature correction
+        {
+          float dt = Si446x_get_temp() - CENTER_TEMPERATURE;
+          if (dt > 0)
+            a += dt * DB_PER_DEGREE_ABOVE;  // Temperature correction
+          else
+            a += dt * DB_PER_DEGREE_BELOW;  // Temperature correction
+        }
         a += 3.0;        // Always 3dB in attenuator
 #endif
         if (a != old_a) {
@@ -2671,7 +2678,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           while (a - BELOW_MAX_DRIVE(d) > 0 && d < MAX_DRIVE) { // Increase if needed
             d++;
           }
-          while (a - BELOW_MAX_DRIVE(d) < - 31 && d > LOWEST_LEVEL) { // reduce till it fits attenuator
+          while (a - BELOW_MAX_DRIVE(d) < - 28 && d > LOWEST_LEVEL) { // reduce till it fits attenuator (31 - 3)
             d--;
           }
           a -= BELOW_MAX_DRIVE(d);
@@ -2685,8 +2692,18 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef TINYSA4
           a -= 3.0;                 // Always at least 3dB attenuation
 #endif
-          if (a > 0)
+          if (a > 0) {
             a = 0;
+#ifdef TINYSA4
+            if (!level_error) redraw_request |= REDRAW_CAL_STATUS;
+            level_error = true;
+#endif
+          } else {
+#ifdef TINYSA4
+            if (level_error) redraw_request |= REDRAW_CAL_STATUS;
+            level_error = false;
+#endif
+          }
           if (a < -31.5)
             a = -31.5;
           a = -a - 0.25;        // Rounding
@@ -2698,10 +2715,22 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       }
     }
     else if (setting.mode == M_GENHIGH) {
+#ifdef TINYSA4
+      if (test_output) {
+        enable_rx_output(!test_output_switch);
+        SI4463_set_output_level(test_output_drive);
+      } else
+#endif
+      {
       float a = setting.level - level_max();
 #ifdef TINYSA4
-      if (!config.high_out_adf4350)
-        a += (Si446x_get_temp() - 34.0) * 0.0433;  // Temperature correction
+      if (!config.high_out_adf4350) {
+        float dt = Si446x_get_temp() - CENTER_TEMPERATURE;
+        if (dt > 0)
+          a += dt * DB_PER_DEGREE_ABOVE;  // Temperature correction
+        else
+          a += dt * DB_PER_DEGREE_BELOW;  // Temperature correction
+      }
 #endif
       if (a <= -SWITCH_ATTENUATION) {
         setting.atten_step = true;
@@ -2745,7 +2774,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         else
           SI4463_set_output_level(d);
 #endif
-
+      }
     }
   }
 #ifdef __SI4432__
