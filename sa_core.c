@@ -2512,7 +2512,6 @@ int test_output = false;
 int test_output_switch = false;
 int test_output_drive = 0;
 int test_output_attenuate = 0;
-int start_temperature = 0;
 bool level_error = false;
 #endif
 
@@ -2561,7 +2560,6 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       correct_RSSI_freq = get_frequency_correction(f);  // for i == 0 and freq_step == 0;
     } else {
       clock_at_48MHz();
-      start_temperature = Si446x_get_temp();
     }
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
@@ -3636,12 +3634,12 @@ static bool sweep(bool break_on_operation)
 #ifdef __SI4432__
     if (!in_selftest && setting.mode == M_HIGH && S_IS_AUTO(setting.agc) && UNIT_IS_LOG(setting.unit)) {
 #define AGC_RSSI_THRESHOLD  (-55+get_attenuation())
-
-      if (RSSI > AGC_RSSI_THRESHOLD && RSSI > agc_prev_rssi) {
+      float local_rssi = RSSI +setting.external_gain;
+      if (local_rssi > AGC_RSSI_THRESHOLD && local_rssi > agc_prev_rssi) {
         agc_peak_freq = frequencies[i];
-        agc_peak_rssi = agc_prev_rssi = RSSI;
+        agc_peak_rssi = agc_prev_rssi = local_rssi;
       }
-      if (RSSI < AGC_RSSI_THRESHOLD)
+      if (local_rssi < AGC_RSSI_THRESHOLD)
         agc_prev_rssi = -150;
       freq_t delta_freq = frequencies[i] - agc_peak_freq;
       if (agc_peak_freq != 0 &&  delta_freq < 2000000) {
@@ -4858,6 +4856,7 @@ void test_prepare(int i)
 #endif
   setting.auto_IF = true;
   setting.auto_attenuation = false;
+  setting.attenuate_x2 = 0;
   setting.spur_removal = S_OFF;
   in_selftest = true;
 
