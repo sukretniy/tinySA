@@ -1227,6 +1227,9 @@ void Si446x_getInfo(si446x_info_t* info)
     info->func          = data[5];
 }
 
+float old_temp = -100;
+#define TEMP_HISTERESE 0.5
+
 float Si446x_get_temp(void)
 {
     uint8_t data[8] = { SI446X_CMD_GET_ADC_READING, 0x10, 0 };
@@ -1236,6 +1239,10 @@ float Si446x_get_temp(void)
       i = 6;
     float t = (data[i] << 8) + data[i+1];
     t = (899.0 * t /4096.0) - 293.0;
+    if (t > old_temp - TEMP_HISTERESE && t < old_temp + TEMP_HISTERESE) {
+      return(old_temp);
+    }
+    old_temp = t;
     return t;
 }
 

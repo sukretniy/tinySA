@@ -419,8 +419,6 @@ void set_gridlines(int d)
   update_grid();
 }
 
-//int setting_frequency_10mhz = 10000000;
-
 #ifdef TINYSA4
 void set_30mhz(freq_t f)
 {
@@ -4157,7 +4155,7 @@ static bool sweep(bool break_on_operation)
       markers[2].enabled = search_maximum(2, frequencies[markers[0].index]*3, 12);
       markers[3].enabled = search_maximum(3, frequencies[markers[0].index]*4, 16);
 #ifdef TINYSA4
-    } else if (setting.measurement == M_AM  && markers[0].index > 10) { // ----------IOP measurement
+    } else if (setting.measurement == M_AM  && markers[0].index > 10) { // ----------AM measurement
       int l = markers[1].index;
       int r = markers[2].index;
       if (r < l) {

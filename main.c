@@ -2470,6 +2470,7 @@ static const VNAShellCommand commands[] =
     { "if1", cmd_if1,    0 },
     { "lna2", cmd_lna2,    0 },
     { "agc", cmd_agc,    0 },
+    { "actual_freq", cmd_actual_freq, CMD_WAIT_MUTEX },
 #endif
     { "attenuate", cmd_attenuate,    0 },
     { "level", cmd_level,    0 },
