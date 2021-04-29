@@ -517,6 +517,7 @@ static long_t my_atoi(const char *p)
 //  default dec radix
 freq_t my_atoui(const char *p)
 {
+  int d = 1;
   freq_t value = 0, radix = 10, c;
   if (*p == '+') p++;
   if (*p == '0') {
@@ -530,17 +531,23 @@ freq_t my_atoui(const char *p)
   }
 calculate:
   while (1) {
-    c = *p++ - '0';
-    // c = to_upper(*p) - 'A' + 10
+    c = *p++;
+    if (c == '.') { d = 0; continue; }
+    c = c - '0';
     if (c >= 'A' - '0') c = (c&(~0x20)) - ('A' - '0') + 10;
     if (c >= radix) break;
+    if (d<=0) d--;
     value = value * radix + c;
   }
+  if (d == 1)
+    d = 0;
   switch (*(--p)) {
-  case 'k': value *= 1000; break;
-  case 'M': value *= 1000000; break;
-  case 'G': value *= 1000000000; break;
+  case 'k': d += 3; break;
+  case 'M': d += 6; break;
+  case 'G': d += 9; break;
   }
+  while (d-->0)
+    value *= radix;
   return value;
 }
 
@@ -556,7 +563,7 @@ my_atof(const char *p)
   while (_isdigit((int)*p))
     p++;
   if (*p == '.') {
-    float d = 1.0f;
+    float d = 1.0;
     p++;
     while (_isdigit((int)*p)) {
       d /= 10;
@@ -1223,6 +1230,8 @@ update_marker_index(void)
   freq_t fstop  = get_sweep_frequency(ST_STOP);
   for (m = 0; m < MARKERS_MAX; m++) {
     if (!markers[m].enabled)
+      continue;
+    if (markers[m].mtype & M_STORED)
       continue;
     freq_t f = markers[m].frequency;
     if (f == 0) idx = markers[m].index; // Not need update index in no freq

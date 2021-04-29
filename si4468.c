@@ -472,6 +472,7 @@ static freq_t prev_actual_freq = 0;
 
 void ADF4351_force_refresh(void) {
   prev_actual_freq = 0;
+//  old_R = -1;               // Force updating from config.actual_frequency_30MHz
 }
 
 void ADF4351_modulo(int m)
@@ -541,6 +542,14 @@ void ADF4351_R_counter(int R)
 
       ADF4351_Set(0);
 }
+
+void ADF4351_recalculate_PFDRFout(void){
+  int local_r = old_R;
+  old_R = -1;
+  ADF4351_R_counter(local_r);
+}
+
+
 
 void ADF4351_mux(int R)
 {

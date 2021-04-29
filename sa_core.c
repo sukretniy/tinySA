@@ -425,6 +425,7 @@ void set_30mhz(freq_t f)
   if (f < 29000000 || f > 31000000)
     return;
   config.setting_frequency_30mhz = f;
+  ADF4351_recalculate_PFDRFout();
   config_save();
   dirty = true;
   update_grid();
@@ -1420,7 +1421,7 @@ static const struct {
   {   100,       600,          120,      100,   -115},
   {    30,      1100,          300,      100,   -120},
   {    10,      5000,          600,      100,   -122},
-  {     3,      10000,         3000,      100,   -125}
+  {     3,     14000,         3000,      100,   -125}
 };
 #endif
 
@@ -2103,10 +2104,15 @@ void interpolate_maximum(int m)
   if (idx > 0 && idx < sweep_points-1)
   {
     const int32_t delta_Hz = (int64_t)frequencies[idx + 0] - frequencies[idx + 1];
-    const float y1         = actual_t[idx - 1];
-    const float y2         = actual_t[idx + 0];
-    const float y3         = actual_t[idx + 1];
-    const float d          = abs(delta_Hz) * 0.5f * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12f);
+#ifdef TINYSA4
+#define INTER_TYPE  double
+#else
+#define INTER_TYPE  float
+#endif
+    const INTER_TYPE y1         = actual_t[idx - 1];
+    const INTER_TYPE y2         = actual_t[idx + 0];
+    const INTER_TYPE y3         = actual_t[idx + 1];
+    const INTER_TYPE d          = abs(delta_Hz) * 0.5 * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12);
     //const float bin      = (float)idx + d;
     markers[m].frequency   += d;
   }
@@ -2876,7 +2882,7 @@ modulation_again:
   freq_t local_IF;
 #ifdef TINYSA4
   local_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
-  if (setting.mode == M_LOW && ultra &&
+  if (setting.mode == M_LOW && setting.frequency_step > 0 && ultra &&
       ((f < ULTRA_MAX_FREQ &&  f > MAX_LO_FREQ - local_IF) ||
        ( f > config.ultra_threshold && f < MIN_BELOW_LO + local_IF))
       ) {
@@ -4107,29 +4113,6 @@ static bool sweep(bool break_on_operation)
       while (m < MARKERS_MAX) {
         if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
           markers[m].index = max_index[i];
-          interpolate_maximum(m);
-          // markers[m].frequency = frequencies[markers[m].index];
-#if 0
-          float v = actual_t[markers[m].index] - 10.0;              // -10dB points
-          int index = markers[m].index;
-          freq_t f = markers[m].frequency;
-          uint32_t s = actual_rbw_x10 * 200;                        // twice the selected RBW
-          int left = index, right = index;
-          while (t > 0 && actual_t[t+1] > v && markers[t].frequency > f - s)                                        // Find left point
-            t--;
-          if (t > 0) {
-            left = t;
-          }
-          t = setting._sweep_points-1;;
-          while (t > setting._sweep_points-1 && actual_t[t+1] > v)                // find right -3dB point
-            t++;
-          if (t > index) {
-            right = t;
-            markers[2].frequency = frequencies[t];
-          }
-
-#endif
-
           interpolate_maximum(m);
           m++;
           break;                          // Next maximum

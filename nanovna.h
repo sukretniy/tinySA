@@ -1387,6 +1387,7 @@ extern void ADF4351_CP(int p);
 extern void ADF4351_modulo(int m);
 extern void ADF4351_csr(int c);
 extern void ADF4351_fastlock(int c);
+extern void ADF4351_recalculate_PFDRFout(void);
 extern int SI4463_R;
 extern int64_t ADF4350_modulo;
 extern void SI446x_set_AGC_LNA(uint8_t v);
