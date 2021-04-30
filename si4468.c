@@ -268,60 +268,6 @@ bool PE4302_Write_Byte(unsigned char DATA )
 
 #endif
 
-#if 0
-//-----------------SI4432 dummy------------------
-void SI4432_Write_Byte(unsigned char ADR, unsigned char DATA ) {}
-unsigned char SI4432_Read_Byte(unsigned char ADR) {return ADR;}
-float set_rbw(float WISH) {return (WISH > 600.0?600: (WISH<3.0?3:WISH));}
-void set_calibration_freq(int p) {}
-void SI4432_Set_Frequency(long f) {}
-void PE4302_Write_Byte(unsigned char DATA ) {}
-void PE4302_init(void) {}
-#endif
-
-#ifdef __SIMULATION__
-unsigned long seed = 123456789;
-extern float actual_rbw;
-float myfrand(void)
-{
-  seed = (unsigned int) (1103515245 * seed + 12345) ;
-  return ((float) seed) / 1000000000.0;
-}
-#define NOISE  ((myfrand()-2) * 2)  // +/- 4 dBm noise
-extern int settingAttenuate;
-
-//#define LEVEL(i, f, v) (v * (1-(fabs(f - frequencies[i])/actual_rbw/1000)))
-
-float LEVEL(uint32_t i, freq_t f, int v)
-{
-  float dv;
-  float df = fabs((float)f - (float)i);
-  if (df < actual_rbw*1000)
-    dv = df/(actual_rbw*1000);
-  else
-    dv =  1 + 50*(df - actual_rbw*1000)/(actual_rbw*1000);
-  return (v - dv - settingAttenuate);
-}
-
-float Simulated_SI4432_RSSI(uint32_t i, int s)
-{
-  SI4432_Sel = s;
-  float v = -100 + log10(actual_rbw)*10 + NOISE;
-  if(s == 0) {
-    v = fmax(LEVEL(i,10000000,-20),v);
-    v = fmax(LEVEL(i,20000000,-40),v);
-    v = fmax(LEVEL(i,30000000,-30),v);
-    v = fmax(LEVEL(i,40000000,-90),v);
-  } else {
-    v = fmax(LEVEL(i,320000000,-20),v);
-    v = fmax(LEVEL(i,340000000,-40),v);
-    v = fmax(LEVEL(i,360000000,-30),v);
-    v = fmax(LEVEL(i,380000000,-90),v);
-  }
-  return(v);
-}
-
-#endif
 //------------------------------- ADF4351 -------------------------------------
 
 
@@ -452,22 +398,6 @@ void ADF4351_Set(int channel)
   }
   SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
 }
-
-#if 0
-void ADF4351_disable_output(void)
-{
-    bitClear (registers[4], 5); // main output
-    reg_dirty[4] = true;
-    ADF4351_Set(0);
-}
-
-void ADF4351_enable_output(void)
-{
-    bitSet (registers[4], 5); // main output
-    reg_dirty[4] = true;
-    ADF4351_Set(0);
-}
-#endif
 
 static freq_t prev_actual_freq = 0;
 
@@ -614,9 +544,6 @@ static uint32_t gcd(uint32_t x, uint32_t y)
 }
 #endif
 
-#if 0
-#endif
-
 uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
   target_freq = freq;
@@ -648,8 +575,6 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
     }
     reg_dirty[4] = true;
 
-
-#if 1
      uint32_t PFDR = (uint32_t)PFDRFout[channel];
     uint32_t MOD = ADF4350_modulo;
     if (MOD == 0)
@@ -662,31 +587,7 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
       FRAC -= MOD;
       INTA++;
     }
-
-
-#else
-     uint64_t PFDR = PFDRFout[channel];
-    uint16_t MOD = ADF4350_modulo;
-    if (MOD == 0)
-      MOD = 60;
-    uint64_t half_spacing = PFDR / MOD / 2 / OutputDivider;
-    INTA = (((uint64_t)freq + half_spacing) * OutputDivider) / PFDR;
-    uint64_t f_int = INTA *(uint64_t) MOD;
-    uint64_t f_target = ((((uint64_t)freq + half_spacing) * OutputDivider) * (uint64_t) MOD) / PFDR;
-    FRAC = f_target - f_int;
-    if (FRAC >= MOD) {
-      FRAC -= MOD;
-      INTA++;
-    }
-#endif
-#if 0
-    while (FRAC > 4095 || MOD > 4095) {
-      FRAC = FRAC >> 1;
-      MOD = MOD >> 1;
- //   Serial.println( "MOD/FRAC reduced");
-    }
-#endif
-#if 0
+#if 0   // No visible performance improvement
     uint32_t reduce = gcd(MOD, FRAC);
     if (reduce>1) {
       FRAC /= reduce;
@@ -696,7 +597,8 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
     }
 #endif
     uint64_t actual_freq = ((uint64_t)PFDR *(INTA * MOD +FRAC))/OutputDivider / MOD;
-#if 0
+
+#if 0       // Only for debugging
      int max_delta =  PFDRFout[channel]/OutputDivider/MOD/100;
     if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
        while(1)
@@ -707,11 +609,11 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
       while(1)
         my_microsecond_delay(10);
     }
+    if (FRAC >= MOD ){
+      while(1)
+        my_microsecond_delay(10);
+    }
 #endif
-//    if (FRAC >= MOD ){
-//       while(1)
-//         my_microsecond_delay(10);
-//    }
 
     bitWrite (registers[4], 10, 1);     // Mute till lock detect
 
@@ -765,7 +667,7 @@ void ADF4351_enable_out(int s)
 }
 
 
-// ------------------------------ SI4463 -------------------------------------
+// ------------------------------ SI4468 -------------------------------------
 
 
 bool SI4463_frequency_changed = false;
@@ -947,7 +849,6 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 
 #include "SI446x_cmd.h"
 
-#ifdef __SI4468__
 #include "radio_config_Si4468_undef.h"
 #undef RADIO_CONFIGURATION_DATA_ARRAY
 #include "radio_config_Si4468_default.h"
@@ -957,7 +858,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 #define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 #define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
 // ---------------------------------------------------------------------------------------------------- v ------------  RSSI control byte
-#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x18, 0x10, 0x40
+#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x03, 0x10, 0x40
 // -----------------------------------------------------------------------------------------------------^ --------------
 #define GLOBAL_RF_MODEM_AGC_CONTROL 0x11, 0x20, 0x01, 0x35, 0xF1             // Override AGC gain increase
 
@@ -977,7 +878,6 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 // Remember to change RF_MODEM_AFC_LIMITER_1_3_1 !!!!!!!!!
 
 static const uint8_t SI4468_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
-#endif
 
 // Set new state
 static void SI4463_set_state(si446x_state_t newState)
@@ -1151,6 +1051,10 @@ void SI4463_start_rx(uint8_t CHANNEL)
     goto retry;
   }
 #endif
+  {
+    uint8_t data2[] = { 0x11, 0x20, 0x01, 0x58, 0x10 };  // set FAST_DELAY to 0x10
+    SI4463_do_api(data2, sizeof(data2), NULL, 0);
+  }
   SI4463_in_tx_mode = false;
 }
 
@@ -1303,9 +1207,6 @@ void set_RSSI_comp(void)
   // Start ID:                 0x4E
   // Default values:           0x40,
   // Descriptions:
-  //   MODEM_RSSI_JUMP_THRESH - Configures the RSSI Jump Detection threshold.
-  //   MODEM_RSSI_CONTROL - Control of the averaging modes and latching time for reporting RSSI value(s).
-  //   MODEM_RSSI_CONTROL2 - RSSI Jump Detection control.
   //   MODEM_RSSI_COMP - RSSI compensation value.
   //
   // #define RF_MODEM_RSSI_COMP_1 0x11, 0x20, 0x01, 0x4E, 0x40
@@ -1334,7 +1235,7 @@ void si_set_offset(int16_t offset)
   //   MODEM_FREQ_OFFSET1 - High byte of the offset
   //   MODEM_FREQ_OFFSET2 - Low byte of the offset
   //
-  // #define RF_MODEM_RSSI_COMP_1 0x11, 0x20, 0x01, 0x4E, 0x40
+
   SI4463_offset_value = offset;
   uint8_t data[] = {
       0x11,
@@ -1383,7 +1284,7 @@ static int buf_index = 0;
 static bool  buf_read = false;
 uint32_t old_t = 0;
 
-//#define __USE_FFR_FOR_RSSI__
+// #define __USE_FFR_FOR_RSSI__
 
 static char Si446x_readRSSI(void){
 #ifdef __USE_FFR_FOR_RSSI__
@@ -1407,10 +1308,11 @@ static char Si446x_readRSSI(void){
   SPI_WRITE_16BIT(SI4432_SPI, 0x00);     // begin read 2 bytes
   SPI_WRITE_16BIT(SI4432_SPI, 0x00);     // next  read 2 bytes
   while (SPI_IS_BUSY(SI4432_SPI));       // wait tx
+  SPI_READ_8BIT(SI4432_SPI);             // read CMD_ COMPLETE
   SPI_READ_8BIT(SI4432_SPI);             // MODEM_PEND
   SPI_READ_8BIT(SI4432_SPI);             // MODEM_STATUS
-  SPI_READ_8BIT(SI4432_SPI);             // CURR_RSSI
-  char rssi = SPI_READ_8BIT(SI4432_SPI); // LATCH_RSSI
+  char rssi = SPI_READ_8BIT(SI4432_SPI); // CURR_RSSI
+//  char rssi = SPI_READ_8BIT(SI4432_SPI); // LATCH_RSSI
   SI_CS_HIGH;
 #endif
   return rssi;
@@ -1419,6 +1321,17 @@ static char Si446x_readRSSI(void){
 void SI446x_Fill(int s, int start)
 {
   (void)s;
+
+#if 0       // Only for testing
+  uint8_t data2[] = {
+     0x11, 0x20, 0x01, 0x4C, 0x03   // set RSSI control
+  };
+  SI4463_do_api(data2, sizeof(data2), NULL, 0);
+  uint8_t data[] = {
+     0x12, 0x20, 0x01, 0x4C   // get RSSI control
+  };
+  SI4463_do_api(data, sizeof(data), data, 1);
+#endif
 
   SPI_BR_SET(SI4432_SPI, SI4432_SPI_FASTSPEED);
   uint32_t t = setting.additional_step_delay_us;
