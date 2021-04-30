@@ -784,10 +784,6 @@ static int SI4463_output_level = 0x20;
 static si446x_state_t SI4463_get_state(void);
 static void SI4463_set_state(si446x_state_t);
 
-
-#define MIN_DELAY   2
-#define my_deleted_delay(T)
-
 #include <string.h>
 
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
@@ -841,6 +837,7 @@ static uint8_t SI4463_read_byte( uint8_t ADR )
   return DATA ;
 }
 
+#ifdef NOTUSED
 static uint8_t SI4463_get_response(void* buff, uint8_t len)
 {
     uint8_t cts = 0;
@@ -864,6 +861,7 @@ static uint8_t SI4463_get_response(void* buff, uint8_t len)
 //    __enable_irq();
     return cts;
 }
+#endif
 
 #define SI_FAST_SPEED    SPI_BR_DIV4
 
@@ -1385,7 +1383,18 @@ static int buf_index = 0;
 static bool  buf_read = false;
 uint32_t old_t = 0;
 
+//#define __USE_FFR_FOR_RSSI__
+
 static char Si446x_readRSSI(void){
+#ifdef __USE_FFR_FOR_RSSI__
+  SI_CS_LOW;
+  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
+  SPI_WRITE_8BIT(SI4432_SPI, 0x00);     // begin read 1 bytes
+  while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
+  SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
+  char rssi = SPI_READ_8BIT(SI4432_SPI);     // Get FRR A
+  SI_CS_HIGH;
+#else
   SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_GET_MODEM_STATUS);
   while (SPI_IS_BUSY(SI4432_SPI)) ; // wait tx
@@ -1403,6 +1412,7 @@ static char Si446x_readRSSI(void){
   SPI_READ_8BIT(SI4432_SPI);             // CURR_RSSI
   char rssi = SPI_READ_8BIT(SI4432_SPI); // LATCH_RSSI
   SI_CS_HIGH;
+#endif
   return rssi;
 }
 
@@ -1812,7 +1822,6 @@ freq_t SI4463_set_freq(freq_t freq)
 #endif
   refresh_count=0;
   SI4463_set_state(SI446X_STATE_READY);
-  my_deleted_delay(100);
 
   /*
   // Set properties:           RF_FREQ_CONTROL_INTE_8
