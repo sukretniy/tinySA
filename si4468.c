@@ -790,7 +790,21 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 #define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 #define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
 // ---------------------------------------------------------------------------------------------------- v ------------  RSSI control byte
-#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0xFF, 0x06, 0x03, 0x10, 0x40
+#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x06, 0x03, 0x10, 0x40
+//0x11 SI446X_CMD_SET_PROPERTY
+//0x20  SI446X_PROP_GROUP_MODEM
+//0x0A  10 Count
+//0x45  Start register
+//0x03  [0x45] MODEM_RAW_CONTROL
+//0x00  [0x46] RAWEYE[10:8]
+//0x00  [0x47] RAWEYE[7:0]
+//0x01  [0x48] MODEM_ANT_DIV_MODE
+//0x00  [0x49] MODEM_ANT_DIV_CONTROL
+//0xFF  [0x4A] MODEM_RSSI_THRESH
+//0x06  [0x4B] MODEM_RSSI_JUMP_THRESH
+//0x03  [0x4C] MODEM_RSSI_CONTROL
+//0x10  [0x4D] MODEM_RSSI_CONTROL2
+//0x40  [0x4E] MODEM_RSSI_COMP
 // -----------------------------------------------------------------------------------------------------^ --------------
 #define GLOBAL_RF_MODEM_AGC_CONTROL 0x11, 0x20, 0x01, 0x35, 0xF1             // Override AGC gain increase
 
@@ -969,7 +983,7 @@ void SI4463_start_rx(uint8_t CHANNEL)
     0,
     0,
     0,
-    0,// 8,
+    8,// 8,
     0,// SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
     0, //SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
   };
@@ -1195,6 +1209,9 @@ void si_fm_offset(int16_t offset)
   //
 
   offset = SI4463_offset_value + offset;
+
+
+
   uint8_t data[] = {
       0x11,
       0x20,
@@ -1207,31 +1224,35 @@ void si_fm_offset(int16_t offset)
   SI4463_offset_changed = true;
   SI4463_offset_active = (offset != 0);
 }
-
-
-
 #ifdef __FAST_SWEEP__
 extern deviceRSSI_t age[POINTS_COUNT];
 static int buf_index = 0;
 static bool  buf_read = false;
-uint32_t old_t = 0;
 
 //#define __USE_FFR_FOR_RSSI__
 
 static char Si446x_readRSSI(void){
+  char rssi;
 #ifdef __USE_FFR_FOR_RSSI__
   SI_CS_LOW;
-  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
-  SPI_WRITE_8BIT(SI4432_SPI, 0x00);     // begin read 1 bytes
+  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
   SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
-  char rssi = SPI_READ_8BIT(SI4432_SPI);     // Get FRR A
+  SI_CS_HIGH;
+
+  SI_CS_LOW;
+  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
+  SPI_WRITE_8BIT(SI4432_SPI, 0x00);      // begin read 1 bytes
+  while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
+  SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
+  rssi = SPI_READ_8BIT(SI4432_SPI);      // Get FRR A
   SI_CS_HIGH;
 #else
   SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_GET_MODEM_STATUS);
   while (SPI_IS_BUSY(SI4432_SPI)) ; // wait tx
   SI_CS_HIGH;
+
   while (!SI4463_READ_CTS);         // Wait for CTS
   SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_CMD_BUFF); // read answer
@@ -1243,8 +1264,10 @@ static char Si446x_readRSSI(void){
   SPI_READ_8BIT(SI4432_SPI);             // read CMD_ COMPLETE
   SPI_READ_8BIT(SI4432_SPI);             // MODEM_PEND
   SPI_READ_8BIT(SI4432_SPI);             // MODEM_STATUS
-  char rssi = SPI_READ_8BIT(SI4432_SPI); // CURR_RSSI
-//  char rssi = SPI_READ_8BIT(SI4432_SPI); // LATCH_RSSI
+  rssi = SPI_READ_8BIT(SI4432_SPI);      // CURR_RSSI
+//  SPI_WRITE_8BIT(SI4432_SPI, 0x00);
+//  while (SPI_IS_BUSY(SI4432_SPI)) ;    // wait tx
+//  rssi = SPI_READ_8BIT(SI4432_SPI);    // LATCH_RSSI
   SI_CS_HIGH;
 #endif
   return rssi;
@@ -1266,25 +1289,55 @@ void SI446x_Fill(int s, int start)
 #endif
 
 //  SPI_BR_SET(SI4432_SPI, SI4432_SPI_FASTSPEED);
-
   uint32_t t = setting.additional_step_delay_us;
+
+  static uint32_t old_t = 0;
   if (t < old_t +100 && t + 100 > old_t) {          // avoid oscillation
     t = (t + old_t) >> 1;
   }
   old_t = t;
- // __disable_irq();
+
   systime_t measure = chVTGetSystemTimeX();
   int i = start;
   while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
+#if 0
   while (!SI4463_READ_CTS);         // Wait for CTS
+#endif
+  __disable_irq();
   do {
+#if 0
     age[i] = Si446x_readRSSI();
     if (++i >= sweep_points) break;
     if (t)
       my_microsecond_delay(t);
+#else
+#if 0
+    SI_CS_LOW;
+  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
+  while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
+  SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
+  SI_CS_HIGH;
+#endif
+  if (t)
+    my_microsecond_delay(t);
+  again:
+  SI_CS_LOW;
+  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
+  SPI_WRITE_8BIT(SI4432_SPI, 0x00);      // begin read 1 bytes
+  while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
+  SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
+  age[i] = SPI_READ_8BIT(SI4432_SPI);    // Get FRR A
+  SI_CS_HIGH;
+
+//  volatile uint8_t state = getFRR(SI446X_CMD_READ_FRR_B);
+
+  if (age[i] == 0) goto again;
+  if (++i >= sweep_points) break;
+#endif
+
   } while(1);
+  __enable_irq();
   setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
-//  __enable_irq();
   buf_index = (start<=0 ? 0 : start); // Is used to skip 1st entry during level triggering
   buf_read = true;
 }
@@ -1605,10 +1658,9 @@ freq_t SI4463_set_freq(freq_t freq)
 #endif
   } else
     return 0;
-  if (SI4463_offset_active) {
-    si_set_offset(0);
-    SI4463_offset_active = false;
-  }
+
+  si_set_offset(0);
+
   uint32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
   uint64_t MOD = 524288; // = 2^19
   uint32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
@@ -1724,27 +1776,10 @@ freq_t SI4463_set_freq(freq_t freq)
 
 
   //  SI4463_clear_int_status();
-#if 0
-  retry:
-#endif
   if (SI4463_in_tx_mode)
     SI4463_start_tx(0);
   else {
     SI4463_start_rx(SI4463_channel);
-#if 0
-    si446x_state_t s = SI4463_get_state();
-    if (s != SI446X_STATE_RX) {
-      SI4463_start_rx(SI4463_channel);
-      my_microsecond_delay(1000);
-#if 1
-      si446x_state_t s = SI4463_get_state();
-      if (s != SI446X_STATE_RX) {
-        my_microsecond_delay(3000);
-        goto retry;
-      }
-#endif
-    }
-#endif
   }
   SI4463_wait_for_cts();
 //  SI4463_set_gpio(3,GPIO_LOW);
@@ -1771,9 +1806,7 @@ void SI4463_init_rx(void)
 #endif
   clear_frequency_cache();
   SI4463_start_rx(SI4463_channel);
-
-  Si446x_getInfo(&SI4463_info);
-
+  // Si446x_getInfo(&SI4463_info);
   prev_band = -1; // 433MHz
 }
 
