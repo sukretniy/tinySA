@@ -967,12 +967,22 @@ void SI4463_start_rx(uint8_t CHANNEL)
     SI4463_set_state(SI446X_STATE_READY);
   }
   SI4463_refresh_gpio();
+
+
+
+
 #if 0
   {
     uint8_t data[] =
     {
-     0x11, 0x20, 0x01, 0x00,
-     0x0A,  // Restore 2FSK mode
+       0x11, 0x10, 0x01, 0x03, 0xf0
+    };
+    SI4463_do_api(data, sizeof(data), NULL, 0); // Send PREAMBLE_CONFIG_STD_2 for long timeout
+  }
+  {
+    uint8_t data[] =
+    {
+     0x11, 0x20, 0x01, 0x00, 0x09,  // Restore OOK mode
     };
     SI4463_do_api(data, sizeof(data), NULL, 0);
   }
@@ -983,7 +993,7 @@ void SI4463_start_rx(uint8_t CHANNEL)
     0,
     0,
     0,
-    8,// 8,
+    0,// 8,
     0,// SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
     0, //SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
   };
@@ -1300,18 +1310,18 @@ void SI446x_Fill(int s, int start)
   systime_t measure = chVTGetSystemTimeX();
   int i = start;
   while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
-#if 0
+#if 1
   while (!SI4463_READ_CTS);         // Wait for CTS
 #endif
   __disable_irq();
   do {
-#if 0
+#if 1
     age[i] = Si446x_readRSSI();
     if (++i >= sweep_points) break;
     if (t)
       my_microsecond_delay(t);
 #else
-#if 0
+#if 1
     SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
