@@ -24,7 +24,7 @@
 #include "spi.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("Og")
+#pragma GCC optimize ("O2")
 
 // Define for use hardware SPI mode
 #define USE_HARDWARE_SPI_MODE
@@ -45,8 +45,7 @@
 #define SI4432_SPI         SPI1
 //#define SI4432_SPI_SPEED   SPI_BR_DIV64
 //#define SI4432_SPI_SPEED   SPI_BR_DIV32
-#define SI4432_SPI_SPEED       SPI_BR_DIV4
-#define SI4432_SPI_FASTSPEED   SPI_BR_DIV2
+#define SI4432_SPI_SPEED       SPI_BR_DIV2
 
 //#define ADF_SPI_SPEED   SPI_BR_DIV64
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
@@ -147,65 +146,6 @@ static uint8_t shiftIn(void)
 #endif
 }
 
-static inline void shiftInBuf(uint16_t sel, uint8_t addr, deviceRSSI_t *buf, uint16_t size, uint16_t delay) {
-#ifdef USE_HARDWARE_SPI_MODE
-  do{
-    palClearPad(GPIOB, sel);
-    SPI_WRITE_8BIT(SI4432_SPI, addr);
-    while (SPI_IS_BUSY(SI4432_SPI))      // drop rx and wait tx
-      (void)SPI_READ_8BIT(SI4432_SPI);
-
-    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
-    while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
-    *buf++=SPI_READ_8BIT(SI4432_SPI);
-    palSetPad(GPIOB, sel);
-    if (delay)
-      my_microsecond_delay(delay);
-  }while(--size);
-#else
-  uint8_t i = 0;
-  do{
-    uint32_t value = addr;
-    palClearPad(GPIOB, sel);
-    do {
-      if (value & 0x80)
-        SPI1_SDI_HIGH;
-      SPI1_CLK_HIGH;
-      SPI1_RESET;
-      value<<=1;
-    }while((++i) & 0x07);
-    value = 0;
-    do {
-      SPI1_CLK_HIGH;
-      value<<=1;
-      value|=SPI1_portSDO;
-      SPI1_CLK_LOW;
-    }while((++i) & 0x07);
-    palSetPad(GPIOB, sel);
-    *buf++=value>>GPIOB_SPI_MISO;
-    if (delay)
-      my_microsecond_delay(delay);
-  }while(--size);
-#endif
-}
-#if 0
-static void shiftOutBuf(uint8_t *buf, uint16_t size) {
-  uint8_t i = 0;
-  do{
-    uint8_t val = *buf++;
-    do{
-      if (val & 0x80)
-        SPI1_SDI_HIGH;
-      else
-        SPI1_SDI_LOW;
-      val<<=1;
-      SPI1_CLK_HIGH;
-      SPI1_CLK_LOW;
-    }while((++i) & 0x07);
-  }while(--size);
-}
-#endif
-
 uint32_t SI4432_step_delay = 1500;
 uint32_t SI4432_offset_delay = 1500;
 #define MINIMUM_WAIT_FOR_RSSI   280
@@ -254,7 +194,8 @@ bool PE4302_Write_Byte(unsigned char DATA )
 //  PE4302_shiftOut(DATA);
 
   set_SPI_mode(SPI_MODE_SI);
-  SPI_BR_SET(SI4432_SPI, PE_SPI_SPEED);
+  if (SI4432_SPI_SPEED != PE_SPI_SPEED)
+    SPI_BR_SET(SI4432_SPI, PE_SPI_SPEED);
 
   shiftOut(DATA);
 //  my_microsecond_delay(PE4302_DELAY);
@@ -262,7 +203,8 @@ bool PE4302_Write_Byte(unsigned char DATA )
 //  my_microsecond_delay(PE4302_DELAY);
   CS_PE_LOW;
 //  my_microsecond_delay(PE4302_DELAY);
-  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+  if (SI4432_SPI_SPEED != PE_SPI_SPEED)
+    SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
   return true;
 }
 
@@ -388,7 +330,9 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
 void ADF4351_Set(int channel)
 {
   set_SPI_mode(SPI_MODE_SI);
-  SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
+  if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
+    SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
+
 //  my_microsecond_delay(1);
   palClearLine(ADF4351_LE[channel]);
 //  my_microsecond_delay(1);
@@ -396,7 +340,8 @@ void ADF4351_Set(int channel)
   for (int i = 5; i >= 0; i--) {
     ADF4351_WriteRegister32(channel, registers[i]);
   }
-  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+  if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
+    SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
 }
 
 static freq_t prev_actual_freq = 0;
@@ -686,8 +631,6 @@ static int SI4463_output_level = 0x20;
 static si446x_state_t SI4463_get_state(void);
 static void SI4463_set_state(si446x_state_t);
 
-#include <string.h>
-
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
 
 static int SI4463_wait_for_cts(void)
@@ -765,64 +708,53 @@ static uint8_t SI4463_get_response(void* buff, uint8_t len)
 }
 #endif
 
-#define SI_FAST_SPEED    SPI_BR_DIV4
 
 void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 {
+  uint8_t *ptr = (uint8_t *)data;
   set_SPI_mode(SPI_MODE_SI);
-//  SPI_BR_SET(SI4432_SPI, SI_FAST_SPEED);
 
-#define SHORT_DELAY my_microsecond_delay(1)
+//#define SHORT_DELAY my_microsecond_delay(1)
 //#define SHORT_DELAY
 
-  while (!SI4463_READ_CTS) {SHORT_DELAY; }         // Wait for CTS
-
-//  __disable_irq();
+  while (!SI4463_READ_CTS);// {SHORT_DELAY; }         // Wait for CTS
   SI_CS_LOW;
-
-  while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
-
-  for(uint8_t i=0;i<len;i++) {
-#if 0                                               // Inline transfer
-//    while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
-    SPI_WRITE_8BIT(SI4432_SPI, ((uint8_t*)data)[i]);
-    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-      SPI_READ_8BIT(SI4432_SPI);
-#else
-    shiftOut(((uint8_t*)data)[i]); // (pgm_read_byte(&((uint8_t*)data)[i]));
-#endif
+#if 1                                               // Inline transfer
+  while (len-- > 0) {
+    while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
+    SPI_WRITE_8BIT(SI4432_SPI, *ptr++);
   }
-  //    SPI_BR_SET(SI4432_SPI, SPI_BR_DIV8);
+  while (SPI_IS_BUSY(SI4432_SPI));
+#else
+  while (len-- > 0)
+    shiftOut(*ptr++); // (pgm_read_byte(&((uint8_t*)data)[i]));
+#endif
   SI_CS_HIGH;
-  //    __enable_irq();
 
-  while (!SI4463_READ_CTS) { SHORT_DELAY; }         // Wait for CTS
+  if(out == NULL) return; // If we have an output buffer then read command response into it
+  while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
+  while (!SI4463_READ_CTS);// { SHORT_DELAY; }         // Wait for CTS
 
-  if(out != NULL) { // If we have an output buffer then read command response into it
-    SI_CS_LOW;
-//    SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
-#if 0
-    SPI_WRITE_8BIT(SI4432_SPI,SI446X_CMD_READ_CMD_BUFF);
-    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-      SPI_READ_8BIT(SI4432_SPI);
-    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
-    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-      SPI_READ_8BIT(SI4432_SPI);
+  SI_CS_LOW;
+#if 1
+  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_CMD_BUFF);
+  SPI_WRITE_8BIT(SI4432_SPI, 0x00);
+  while (SPI_IS_BUSY(SI4432_SPI));
+  SPI_READ_16BIT(SI4432_SPI);        // drop SI446X_CMD_READ_CMD_BUFF and CTS 0xFF
 #else
-    shiftOut( SI446X_CMD_READ_CMD_BUFF );
-    while (shiftIn() != 0xff);                        // Should always be 0xFF
+  shiftOut( SI446X_CMD_READ_CMD_BUFF );
+  shiftIn();                         // Should always be 0xFF
 #endif
-    // Get response data
-    for(uint8_t i=0;i<outLen;i++) {
-#if 0                                               // Inline transfer
-     SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
-      while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-        while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
-      ((uint8_t*)out)[i] = SPI_READ_8BIT(SI4432_SPI);
+  // Get response data
+  ptr = (uint8_t *)out;
+  while (outLen-- > 0) {
+#if 1                                               // Inline transfer
+    SPI_WRITE_8BIT(SI4432_SPI, 0x00);
+    while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
+    *ptr++ = SPI_READ_8BIT(SI4432_SPI);
 #else
-      ((uint8_t*)out)[i] = shiftIn();
+    *ptr++ = shiftIn();
 #endif
-    }
     SI_CS_HIGH;
   }
 //  __enable_irq();
@@ -1284,7 +1216,7 @@ static int buf_index = 0;
 static bool  buf_read = false;
 uint32_t old_t = 0;
 
-// #define __USE_FFR_FOR_RSSI__
+//#define __USE_FFR_FOR_RSSI__
 
 static char Si446x_readRSSI(void){
 #ifdef __USE_FFR_FOR_RSSI__
@@ -1333,7 +1265,8 @@ void SI446x_Fill(int s, int start)
   SI4463_do_api(data, sizeof(data), data, 1);
 #endif
 
-  SPI_BR_SET(SI4432_SPI, SI4432_SPI_FASTSPEED);
+//  SPI_BR_SET(SI4432_SPI, SI4432_SPI_FASTSPEED);
+
   uint32_t t = setting.additional_step_delay_us;
   if (t < old_t +100 && t + 100 > old_t) {          // avoid oscillation
     t = (t + old_t) >> 1;
@@ -1350,7 +1283,6 @@ void SI446x_Fill(int s, int start)
     if (t)
       my_microsecond_delay(t);
   } while(1);
-//  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
   setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
 //  __enable_irq();
   buf_index = (start<=0 ? 0 : start); // Is used to skip 1st entry during level triggering
@@ -1839,22 +1771,9 @@ void SI4463_init_rx(void)
 #endif
   clear_frequency_cache();
   SI4463_start_rx(SI4463_channel);
-#if 0
- si446x_state_t s ;
 
-again:
   Si446x_getInfo(&SI4463_info);
-// s = SI4463_get_state();
-//  SI4463_clear_int_status();
-  my_microsecond_delay(15000);
-  s = SI4463_get_state();
-  if (s != SI446X_STATE_RX) {
-    ili9341_drawstring_7x13("Waiting for RX", 50, 200);
-    osalThreadSleepMilliseconds(3000);
-    goto reset;
-  }
-  ili9341_drawstring_7x13("Waiting ready     ", 50, 200);
-#endif
+
   prev_band = -1; // 433MHz
 }
 

@@ -63,11 +63,11 @@
 // #define __AUDIO__
 //#define __HAM_BAND__
 #define __SPUR__                  // Does spur reduction by shifting IF
-//#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
+#define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 #ifdef __USE_SERIAL_CONSOLE__
-#if (HAL_USE_SERIAL != TRUE)
+//#if (HAL_USE_SERIAL != TRUE)
 //#error "HAL_USE_SERIAL must be set to true"
-#endif
+//#endif
 #endif
 #define __SINGLE_LETTER__         // Add fast console commands
 #define __NICE_BIG_FONT__         // Add not scaled big font for menus
