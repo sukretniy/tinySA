@@ -720,13 +720,13 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   while (!SI4463_READ_CTS);// {SHORT_DELAY; }         // Wait for CTS
   SI_CS_LOW;
 #if 1                                               // Inline transfer
-  while (len-- > 0) {
+  while (len--){
     while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
     SPI_WRITE_8BIT(SI4432_SPI, *ptr++);
   }
   while (SPI_IS_BUSY(SI4432_SPI));
 #else
-  while (len-- > 0)
+  while (len--)
     shiftOut(*ptr++); // (pgm_read_byte(&((uint8_t*)data)[i]));
 #endif
   SI_CS_HIGH;
@@ -747,7 +747,7 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 #endif
   // Get response data
   ptr = (uint8_t *)out;
-  while (outLen-- > 0) {
+  while (outLen--){
 #if 1                                               // Inline transfer
     SPI_WRITE_8BIT(SI4432_SPI, 0x00);
     while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
@@ -755,9 +755,8 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 #else
     *ptr++ = shiftIn();
 #endif
-    SI_CS_HIGH;
   }
-//  __enable_irq();
+  SI_CS_HIGH;
 }
 
 #ifdef notused
@@ -967,22 +966,12 @@ void SI4463_start_rx(uint8_t CHANNEL)
     SI4463_set_state(SI446X_STATE_READY);
   }
   SI4463_refresh_gpio();
-
-
-
-
 #if 0
   {
     uint8_t data[] =
     {
-       0x11, 0x10, 0x01, 0x03, 0xf0
-    };
-    SI4463_do_api(data, sizeof(data), NULL, 0); // Send PREAMBLE_CONFIG_STD_2 for long timeout
-  }
-  {
-    uint8_t data[] =
-    {
-     0x11, 0x20, 0x01, 0x00, 0x09,  // Restore OOK mode
+     0x11, 0x20, 0x01, 0x00,
+     0x0A,  // Restore 2FSK mode
     };
     SI4463_do_api(data, sizeof(data), NULL, 0);
   }
@@ -1310,7 +1299,7 @@ void SI446x_Fill(int s, int start)
   systime_t measure = chVTGetSystemTimeX();
   int i = start;
   while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
-#if 1
+#if 0
   while (!SI4463_READ_CTS);         // Wait for CTS
 #endif
   __disable_irq();
@@ -1321,8 +1310,8 @@ void SI446x_Fill(int s, int start)
     if (t)
       my_microsecond_delay(t);
 #else
-#if 1
-    SI_CS_LOW;
+#if 0
+  SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
   SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
