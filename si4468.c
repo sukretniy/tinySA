@@ -68,7 +68,7 @@
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
 #define ADF_SPI_SPEED   SPI_BR_DIV2
 
-#define PE_SPI_SPEED   SPI_BR_DIV32
+#define PE_SPI_SPEED   SPI_BR_DIV2
 
 static uint32_t old_spi_settings;
 #else
@@ -148,7 +148,7 @@ static uint8_t shiftIn(void)
 #ifdef USE_HARDWARE_SPI_MODE
 //  while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
   SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
-  while (SPI_IS_BUSY(SI4432_SPI) || SPI_RX_IS_EMPTY(SI4432_SPI)) ; // drop rx and wait tx
+  while (SPI_RX_IS_EMPTY(SI4432_SPI)) ; // drop rx and wait tx
   return SPI_READ_8BIT(SI4432_SPI);
 #else
   uint32_t value = 0;
@@ -170,16 +170,9 @@ uint32_t SI4432_offset_delay = 1500;
 
 //------------PE4302 -----------------------------------------------
 #ifdef __PE4302__
-
-// Comment out this define to use parallel mode PE4302
-
-#define PE4302_en 10
-
 void PE4302_init(void) {
   CS_PE_LOW;
 }
-
-#define PE4302_DELAY 100
 
 static unsigned char old_attenuation = 255;
 bool PE4302_Write_Byte(unsigned char DATA )
@@ -191,15 +184,18 @@ bool PE4302_Write_Byte(unsigned char DATA )
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != PE_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, PE_SPI_SPEED);
-
+#if 1
+  SPI_WRITE_8BIT(SI4432_SPI, DATA);
+  while (SPI_IS_BUSY(SI4432_SPI));
+#else
   shiftOut(DATA);
+#endif
   CS_PE_HIGH;
   CS_PE_LOW;
   if (SI4432_SPI_SPEED != PE_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
   return true;
 }
-
 #endif
 
 //------------------------------- ADF4351 -------------------------------------
@@ -281,10 +277,18 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
     // Select chip
     CS_ADF_LOW(ADF4351_LE[channel]);
     // Send 32 bit register
+#if 1
+    SPI_WRITE_8BIT(SI4432_SPI, (value >> 24));
+    SPI_WRITE_8BIT(SI4432_SPI, (value >> 16));
+    SPI_WRITE_8BIT(SI4432_SPI, (value >>  8));
+    SPI_WRITE_8BIT(SI4432_SPI, (value >>  0));
+    while (SPI_IS_BUSY(SI4432_SPI)); // drop rx and wait tx
+#else
     shiftOut((value >> 24) & 0xFF);
     shiftOut((value >> 16) & 0xFF);
     shiftOut((value >>  8) & 0xFF);
     shiftOut((value >>  0) & 0xFF);
+#endif
     // unselect
     CS_ADF_HIGH(ADF4351_LE[channel]);
     old_registers[value & 0x07] = registers[value & 0x07];
@@ -568,15 +572,7 @@ static si446x_state_t SI4463_get_state(void);
 static void SI4463_set_state(si446x_state_t);
 
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
-
-static int SI4463_wait_for_cts(void)
-{
-  while (!SI4463_READ_CTS) {            //CTS is read through GPIO
-//    chThdSleepMicroseconds(100);
-    my_microsecond_delay(1);
-  }
-  return 1;
-}
+#define SI4463_WAIT_CTS       while (!SI4463_READ_CTS);
 
 #if 0   // not used
 static void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
@@ -605,15 +601,10 @@ static uint8_t SI4463_read_byte( uint8_t ADR )
 {
   uint8_t DATA ;
   set_SPI_mode(SPI_MODE_SI);
-//  SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
-
-//  __disable_irq();
   SI_CS_LOW;
   shiftOut( ADR );
   DATA = shiftIn();
   SI_CS_HIGH;
-//  __enable_irq();
-
   return DATA ;
 }
 
@@ -648,11 +639,7 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 {
   uint8_t *ptr = (uint8_t *)data;
   set_SPI_mode(SPI_MODE_SI);
-
-//#define SHORT_DELAY my_microsecond_delay(1)
-//#define SHORT_DELAY
-
-  while (!SI4463_READ_CTS);// {SHORT_DELAY; }         // Wait for CTS
+  SI4463_WAIT_CTS;         // Wait for CTS
   SI_CS_LOW;
 #if 1                                               // Inline transfer
   while (len--){
@@ -667,8 +654,10 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
   SI_CS_HIGH;
 
   if(out == NULL) return; // If we have an output buffer then read command response into it
-  while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
-  while (!SI4463_READ_CTS);// { SHORT_DELAY; }         // Wait for CTS
+
+  while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
+    (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes from SPI RX buffer
+  SI4463_WAIT_CTS;                        // Wait for CTS
 
   SI_CS_LOW;
 #if 1
@@ -1168,6 +1157,7 @@ static bool  buf_read = false;
 
 static char Si446x_readRSSI(void){
   char rssi;
+  SI4463_WAIT_CTS;                       // Wait for CTS
 #ifdef __USE_FFR_FOR_RSSI__
   SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
@@ -1188,11 +1178,13 @@ static char Si446x_readRSSI(void){
   while (SPI_IS_BUSY(SI4432_SPI)) ; // wait tx
   SI_CS_HIGH;
 
-  while (!SI4463_READ_CTS);         // Wait for CTS
+  while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
+    (void)SPI_READ_8BIT(SI4432_SPI);     // Remove lingering bytes
+  SI4463_WAIT_CTS;                       // Wait for CTS
   SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_CMD_BUFF); // read answer
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
-  SPI_READ_16BIT(SI4432_SPI);            // Drop SI446X_CMD_GET_MODEM_STATUS read and SI446X_CMD_READ_CMD_BUFF read
+  SPI_READ_8BIT(SI4432_SPI);             // Drop SI446X_CMD_READ_CMD_BUFF read
   SPI_WRITE_16BIT(SI4432_SPI, 0xFFFF);   // begin read 2 bytes
   SPI_WRITE_16BIT(SI4432_SPI, 0xFFFF);   // next  read 2 bytes
   while (SPI_IS_BUSY(SI4432_SPI));       // wait tx
@@ -1239,9 +1231,10 @@ void SI446x_Fill(int s, int start)
 
   systime_t measure = chVTGetSystemTimeX();
   int i = start;
+// For SI446X_CMD_READ_FRR_A need drop Rx buffer
+#if 0
+  SI4463_WAIT_CTS;                       // Wait for CTS
   while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
-#if 1
-  while (!SI4463_READ_CTS);         // Wait for CTS
 #endif
   __disable_irq();
   do {
@@ -1327,8 +1320,7 @@ void SI4432_Listen(int s)
   uint8_t max = 0;
   uint16_t count = 0;
   operation_requested = OP_NONE;
-  while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
-  while (!SI4463_READ_CTS);         // Wait for CTS
+//  SI4463_WAIT_CTS;                // Wait for CTS
   do {
       uint8_t v = Si446x_readRSSI();
       if (max < v)                // Peak
@@ -1359,8 +1351,7 @@ int16_t Si446x_RSSI(void)
 
   int i = setting.repeat;
   int32_t RSSI_RAW  = 0;
-  while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
-  while (!SI4463_READ_CTS);         // Wait for CTS
+//  SI4463_WAIT_CTS;         // Wait for CTS
   do{
     //   if (MODE_INPUT(setting.mode) && RSSI_R
 #define SAMPLE_COUNT 1
