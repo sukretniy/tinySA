@@ -919,7 +919,7 @@ void toggle_normalize(void)
 extern float peakLevel;
 void set_actual_power(float o)              // Set peak level to known value
 {
-  float new_offset = o - peakLevel + get_level_offset();        // calculate offset based on difference between measured peak level and known peak level
+  float new_offset = o - peakLevel + get_level_offset();        //  offset based on difference between measured peak level and known peak level
   if (o == 100) new_offset = 0;
   if (setting.mode == M_HIGH) {
     config.high_level_offset = new_offset;
@@ -1416,8 +1416,8 @@ static const struct {
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
   {  8500,       150,           50,      400,   -90},
   {  3000,       150,           50,      200,   -95},
-  {  1000,       300,          100,      100,   -105},
-  {   300,       400,          120,      100,   -110},
+  {  1000,       500,          100,      100,   -105},
+  {   300,       500,          120,      100,   -110},
   {   100,       600,          120,      100,   -115},
   {    30,      1500,          300,      100,   -120},
   {    10,      5000,          600,      100,   -122},
