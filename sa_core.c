@@ -2559,11 +2559,15 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
     if (MODE_INPUT(setting.mode)) {
       calculate_static_correction();
+#ifdef __MCU_CLOCK_SHIFT__
       if (!in_selftest) clock_above_48MHz();
+#endif
       is_below = false;
       correct_RSSI_freq = get_frequency_correction(f);  // for i == 0 and freq_step == 0;
     } else {
+#ifdef __MCU_CLOCK_SHIFT__
       clock_at_48MHz();
+#endif
     }
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
@@ -3226,7 +3230,7 @@ again:                                                              // Spur redu
 #endif
     }
 
-#if 1
+#ifdef __MCU_CLOCK_SHIFT__
         if (setting.mode == M_LOW && !in_selftest) {         // Avoid 48MHz spur
           int set_below = false;
 #ifdef TINYSA4
@@ -3239,6 +3243,7 @@ again:                                                              // Spur redu
 #endif
           if (lf > 40000000){
             uint32_t tf = lf;
+            while (tf > 240000000) tf -= 240000000;       // Wrap between 0-48MHz
             while (tf > 48000000) tf -= 48000000;       // Wrap between 0-48MHz
             if (tf < 20000000 )
               set_below = true;
