@@ -912,10 +912,12 @@ void SI4463_start_rx(uint8_t CHANNEL)
     goto retry;
   }
 #endif
+#if 0
   {
     uint8_t data2[] = { 0x11, 0x20, 0x01, 0x58, 0x10 };  // set FAST_DELAY to 0x10,
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
   }
+#endif
   SI4463_in_tx_mode = false;
 }
 
@@ -1542,8 +1544,6 @@ uint16_t set_rbw(uint16_t WISH)  {
 
 #define Npresc 1    // 0=low / 1=High performance mode
 
-static int refresh_count = 0;
-
 freq_t SI4463_set_freq(freq_t freq)
 {
 //  SI4463_set_gpio(3,GPIO_HIGH);       // For measuring duration of set_freq
@@ -1590,12 +1590,14 @@ freq_t SI4463_set_freq(freq_t freq)
       my_microsecond_delay(10);
   }
 #endif
-  if (false && (SI4463_band == prev_band)) {
+
+#if 0               // Hopping is fast but frequency setting is not yet reliable !!!!!
+  if (SI4463_band == prev_band) {
     int vco = 2091 + ((((freq / 4 ) * SI4463_outdiv - 850000000)/1000) * 492) / 200000;
 
     if (SI4463_in_tx_mode) {
       uint8_t data[] = {
-                      0x37,
+                       SI446X_CMD_ID_TX_HOP,
                       (uint8_t) R,                   //  R data[4]
                       (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
                       (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
@@ -1609,7 +1611,7 @@ freq_t SI4463_set_freq(freq_t freq)
     } else {
 
       uint8_t data[] = {
-                      0x36,
+                       SI446X_CMD_ID_RX_HOP,
                       (uint8_t) R,                   //  R data[4]
                       (uint8_t) ((F>>16) & 255),     //  F2,F1,F0 data[5] .. data[7]
                       (uint8_t) ((F>> 8) & 255),     //  F2,F1,F0 data[5] .. data[7]
@@ -1623,15 +1625,8 @@ freq_t SI4463_set_freq(freq_t freq)
 //    SI4463_set_gpio(3,GPIO_LOW);   // For measuring duration of set_freq
     return actual_freq;
   }
-#if 0
-  static int old_R = -1;    // What about TX/RX switching?
-  static int old_F = -1;
-  if (old_R == R || old_F == F)
-    return;
-  old_R = R;
-  old_F = f;
 #endif
-  refresh_count=0;
+
   SI4463_set_state(SI446X_STATE_READY);
 
   /*
@@ -1682,20 +1677,15 @@ freq_t SI4463_set_freq(freq_t freq)
                        0x10 + (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
     };
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
-    SI4463_frequency_changed = true;
-//    my_microsecond_delay(30000);
+    prev_band = SI4463_band;
   }
-
-
   if (SI4463_in_tx_mode)
     SI4463_start_tx(0);
   else {
     SI4463_start_rx(SI4463_channel);
   }
-//  SI4463_wait_for_cts();
 //  SI4463_set_gpio(3,GPIO_LOW);        // For measuring duration of set_freq
   SI4463_frequency_changed = true;
-  prev_band = SI4463_band;
   return actual_freq;
 }
 
