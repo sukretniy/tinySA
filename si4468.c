@@ -55,8 +55,14 @@
 #ifdef USE_HARDWARE_SPI_MODE
 #define SI4432_SPI         SPI1
 
-//#define SI4432_SPI_SPEED       SPI_BR_DIV4 // for 72M MCU
-#define SI4432_SPI_SPEED       SPI_BR_DIV2 // for 48M MCU
+// Check device SPI clock speed
+#if STM32_PCLK2 > 48000000   // 48 or 72M MCU
+// On 72M MCU STM32_PCLK2 = 72M, SPI = 72M/4 = 18M
+#define SI4432_SPI_SPEED       SPI_BR_DIV4
+#else
+// On 48M MCU STM32_PCLK2 = 48M, SPI = 48M/2 = 24M
+#define SI4432_SPI_SPEED       SPI_BR_DIV2
+#endif
 
 //#define ADF_SPI_SPEED   SPI_BR_DIV64
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
