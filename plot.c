@@ -376,6 +376,23 @@ dBm_to_Watt(const float v)
   return   logf(v*1000.0)*(10.0/logf(10.0));
 }
 
+static float fast_expf(float x)
+{
+  union { float f; int32_t i; } v;
+  v.i = (int32_t)(12102203.0f*x) + 0x3F800000;
+  int32_t m = (v.i >> 7) & 0xFFFF;  // copy mantissa
+#if 1
+  // cubic spline approximation
+  // empirical values for small maximum relative error (8.34e-5):
+  v.i += ((((((((1277*m) >> 14) + 14825)*m) >> 14) - 79749)*m) >> 11) - 626;
+#else
+  // quartic spline approximation
+  // empirical values for small maximum relative error (1.21e-5):
+  v.i += (((((((((((3537*m) >> 16) + 13668)*m) >> 18) + 15817)*m) >> 14) - 80470)*m) >> 11);
+#endif
+  return v.f;
+}
+
 static void
 trace_into_index_x_array(index_x_t *x, uint16_t points){
   // Not need update if index calculated for this points count
@@ -417,7 +434,7 @@ trace_into_index_y_array(index_y_t *y, float *array, int points)
   int max = NGRIDY * GRIDY, i;
   for (i=0;i<points;i++){
     float value = array[i];
-    if (mult) value = expf(value*mult);
+    if (mult) value = fast_expf(value*mult);
     value = ref - value * scale;
     int v = value;
          if (v <   0) v = 0;
