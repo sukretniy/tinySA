@@ -163,35 +163,13 @@ void PE4302_init(void) {
 }
 
 #define PE4302_DELAY 100
-#if 0
-void PE4302_shiftOut(uint8_t val)
-{
-     uint8_t i;
-     SI4432_log(SI4432_Sel);
-     SI4432_log(val);
-     for (i = 0; i < 8; i++)  {
-           if (val & (1 << (7 - i)))
-             SPI1_SDI_HIGH;
-           else
-             SPI1_SDI_LOW;
-//           my_microsecond_delay(PE4302_DELAY);
-           SPI1_CLK_HIGH;
-//           my_microsecond_delay(PE4302_DELAY);
-           SPI1_CLK_LOW;
-//           my_microsecond_delay(PE4302_DELAY);
-     }
-}
-#endif
 
 static unsigned char old_attenuation = 255;
 bool PE4302_Write_Byte(unsigned char DATA )
 {
   if (old_attenuation == DATA)
     return false;
-//  my_microsecond_delay(PE4302_DELAY);
-//  SPI1_CLK_LOW;
-//  my_microsecond_delay(PE4302_DELAY);
-//  PE4302_shiftOut(DATA);
+  old_attenuation = DATA;
 
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != PE_SPI_SPEED)
@@ -224,15 +202,9 @@ bool PE4302_Write_Byte(unsigned char DATA )
 #define CS_ADF0_LOW     palClearLine(LINE_LO_SEL)
 #define CS_ADF1_LOW     palClearLine(LINE_LO_SEL)
 
-//uint32_t t_R[6] =  {0x320000, 0x8008011, 0x4E42, 0x4B3,0x8C803C , 0x580005} ;         //25 MHz ref
-#ifdef TINYSA4_PROTO
 uint32_t registers[6] =  {0xC80000, 0x8008011, 0x1800C642, 0x48963,0xA5003C , 0x580005} ;         //10 MHz ref
-#else
-uint32_t registers[6] =  {0xA00000, 0x8000011, 0x4E42, 0x4B3,0xDC003C , 0x580005} ;         //10 MHz ref
-#endif
 uint32_t old_registers[6];
 
-bool     reg_dirty[6] = {true, true, true, true, true, true};
 int debug = 0;
 ioline_t ADF4351_LE[2] = { LINE_LO_SEL, LINE_LO_SEL};
 //int ADF4351_Mux = 7;
@@ -246,28 +218,14 @@ bool ADF4351_frequency_changed = false;
 #define DEBUG(X)
 #define DEBUGLN(X)
 
-#ifdef TINYSA4_PROTO
-#define XTAL    29999960
-#else
-#define XTAL    26000000
-#endif
-//double RFout; //Output freq in MHz
+#define XTAL    30000000
 uint64_t  PFDRFout[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000}; //Reference freq in MHz
-//uint64_t  Chrystal[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000};
-//double  FRACF; // Temp
 
 int64_t
-//  INTA,         // Temp
   ADF4350_modulo = 0,          // Linked to spur table!!!!!
-//  MOD,
-//  FRAC, //Temp
   target_freq;
 
-uint8_t OutputDivider; // Temp
-uint8_t lock=2; //Not used
 int old_R = 0;
-
-// Lock = A4
 
 void ADF4351_Setup(void)
 {
@@ -297,26 +255,11 @@ void ADF4351_Setup(void)
   ADF4351_mux(2);   // No led
 //    ADF4351_mux(6);   // Show lock on led
 
-//  ADF4351_set_frequency(1,150000000,0);
-//  ADF4351_Set(0);
-//  ADF4351_Set(1);
-//  chThdSleepMilliseconds(1000);
-//  }
-//  bitSet (registers[2], 17); // R set to 8
-//  bitClear (registers[2], 14); // R set to 8
-//  for (int i=0; i<6; i++) pinMode(ADF4351_LE[i], OUTPUT);          // Setup pins
-//  for (int i=0; i<6; i++) digitalWrite(ADF4351_LE[i], HIGH);
-//  pinMode(ADF4351_Mux, INPUT);
-//  SPI.begin();                          // Init SPI bus
-//  SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0));
-  //SPI.setDataMode(SPI_MODE0);           // CPHA = 0  Clock positive
-  //SPI.setBitOrder(MSBFIRST);
 }
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
-//  if (reg_dirty[value & 0x07] || (value & 0x07) == 0) {
-  if (old_registers[value & 0x07] != registers[value & 0x07] ||  (value & 0x07) == 0 ) {
+  if (old_registers[value & 0x07] != registers[value & 0x07] ||  (value & 0x07) == 0 ) {        // Always write register zero
     registers[value & 0x07] = value;
     palClearLine(ADF4351_LE[channel]);
     shiftOut((value >> 24) & 0xFF);
@@ -344,7 +287,6 @@ static freq_t prev_actual_freq = 0;
 
 void ADF4351_force_refresh(void) {
   prev_actual_freq = 0;
-//  old_R = -1;               // Force updating from config.actual_frequency_30MHz
 }
 
 void ADF4351_modulo(int m)
@@ -355,20 +297,12 @@ void ADF4351_modulo(int m)
 
 uint64_t ADF4351_set_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
-//  freq -= 71000;
-//  SI4463_set_gpio(3,GPIO_HIGH);
-
-//  uint32_t offs = ((freq / 1000)* ( 0) )/ 1000;
-  uint32_t offs = 0;
-  uint64_t actual_freq = ADF4351_prepare_frequency(channel,freq + offs);
-//  SI4463_set_gpio(3,GPIO_LOW);
+  uint64_t actual_freq = ADF4351_prepare_frequency(channel,freq);
   if (actual_freq != prev_actual_freq) {
-//START_PROFILE;
     ADF4351_frequency_changed = true;
     ADF4351_Set(channel);
     prev_actual_freq = actual_freq;
   }
-//STOP_PROFILE;
   return actual_freq;
 }
 
@@ -383,7 +317,6 @@ void ADF4351_spur_mode(int S)
       bitSet (registers[2], 30); // R set to 8
     else
       bitClear (registers[2], 30); // R set to 8
-    reg_dirty[2] = true;
     ADF4351_Set(0);
 }
 
@@ -410,7 +343,6 @@ void ADF4351_R_counter(int R)
       clear_frequency_cache();                              // When R changes the possible frequencies will change
       registers[2] &= ~ (((unsigned long)0x3FF) << 14);
       registers[2] |= (((unsigned long)R) << 14);
-      reg_dirty[2] = true;
 
       ADF4351_Set(0);
 }
@@ -427,7 +359,6 @@ void ADF4351_mux(int R)
 {
       registers[2] &= ~ (((unsigned long)0x7) << 26);
       registers[2] |= (((unsigned long)R & (unsigned long)0x07) << 26);
-      reg_dirty[2] = true;
       ADF4351_Set(0);
 }
 
@@ -435,7 +366,6 @@ void ADF4351_csr(int c)
 {
       registers[3] &= ~ (((unsigned long)0x1) << 18);
       registers[3] |= (((unsigned long)c & (unsigned long)0x01) << 18);
-      reg_dirty[3] = true;
       ADF4351_Set(0);
 }
 
@@ -443,7 +373,6 @@ void ADF4351_fastlock(int c)
 {
       registers[3] &= ~ (((unsigned long)0x3) << 15);
       registers[3] |= (((unsigned long)c & (unsigned long)0x03) << 15);
-      reg_dirty[3] = true;
       ADF4351_Set(0);
 }
 
@@ -451,7 +380,6 @@ void ADF4351_CP(int p)
 {
       registers[2] &= ~ (((unsigned long)0xF) << 9);
       registers[2] |= (((unsigned long)p) << 9);
-      reg_dirty[2] = true;
       ADF4351_Set(0);
 }
 
@@ -460,7 +388,6 @@ void ADF4351_drive(int p)
   p &= 0x03;
   registers[4] &= ~ (((unsigned long)0x3) << 3);
   registers[4] |= (((unsigned long)p) << 3);
-  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 
@@ -469,7 +396,6 @@ void ADF4351_aux_drive(int p)
   p &= 0x03;
   registers[4] &= ~ (((unsigned long)0x3) << 6);
   registers[4] |= (((unsigned long)p) << 6);
-  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 #if 0
@@ -487,6 +413,7 @@ static uint32_t gcd(uint32_t x, uint32_t y)
 
 uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
+  uint8_t OutputDivider;
   target_freq = freq;
   if (freq >= 2200000000) {
       OutputDivider = 1;
@@ -514,7 +441,6 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 0);
     }
-    reg_dirty[4] = true;
 
      uint32_t PFDR = (uint32_t)PFDRFout[channel];
     uint32_t MOD = ADF4350_modulo;
@@ -561,13 +487,11 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
     registers[0] = 0;
     registers[0] = INTA << 15; // OK
     registers[0] = registers[0] + (FRAC << 3);
-    reg_dirty[0] = true;
     if (MOD == 1) MOD = 2;
     registers[1] = 0;
     registers[1] = MOD << 3;
-    registers[1] = registers[1] + 1 ; // restore address "001"
+    registers[1] = registers[1] + 1 ; // restore register address "001"
     bitSet (registers[1], 27); // Prescaler at 8/9
-    reg_dirty[1] = true;
     return actual_freq;
 }
 
@@ -577,7 +501,6 @@ void ADF4351_enable(int s)
     bitClear(registers[4], 11);     // Inverse logic!!!!!
   else
     bitSet(registers[4], 11);
-  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 
@@ -587,7 +510,6 @@ void ADF4351_enable_aux_out(int s)
     bitSet(registers[4], 8);
   else
     bitClear(registers[4], 8);
-  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 
@@ -602,8 +524,6 @@ void ADF4351_enable_out(int s)
     bitSet(registers[2], 5);        // Enable power down
     bitSet(registers[2], 11);        // Enable VCO power down
   }
-  reg_dirty[2] = true;
-  reg_dirty[4] = true;
   ADF4351_Set(0);
 }
 
@@ -631,8 +551,7 @@ static void SI4463_set_state(si446x_state_t);
 
 static int SI4463_wait_for_cts(void)
 {
-//  set_SPI_mode(SPI_MODE_SI);
-  while (!SI4463_READ_CTS) {
+  while (!SI4463_READ_CTS) {            //CTS is read through GPIO
 //    chThdSleepMicroseconds(100);
     my_microsecond_delay(1);
   }
@@ -834,13 +753,6 @@ static uint8_t gpio_state[4] = { 7,8,0,0 };
 
 void SI4463_refresh_gpio(void)
 {
-#ifndef TINYSA4_PROTO               // Force clock to max frequency for ADF
-  uint8_t data[] =
-  {
-    0x11, 0x00, 0x01, 0x01, 0x40 // GLOBAL_CLK_CFG     Enable divided clock
-  };
-  SI4463_do_api(data, sizeof(data), NULL, 0);
-#endif
   uint8_t data2[] =
   {
     0x13, gpio_state[0], gpio_state[1], gpio_state[2], gpio_state[3], 0, 0, 0
@@ -944,7 +856,7 @@ void SI4463_start_tx(uint8_t CHANNEL)
   }
   SI4463_in_tx_mode = true;
   my_microsecond_delay(1000);
-#if 0
+#if 0       // Check state for debugging
   s = SI4463_get_state();
   if (s != SI446X_STATE_TX){
     my_microsecond_delay(1000);
@@ -962,8 +874,6 @@ void SI4463_start_rx(uint8_t CHANNEL)
     SI4463_set_state(SI446X_STATE_READY);
   }
   SI4463_refresh_gpio();
-
-
 
 
 #if 0
@@ -995,7 +905,7 @@ void SI4463_start_rx(uint8_t CHANNEL)
 //retry:
   SI4463_do_api(data, sizeof(data), NULL, 0);
 
-#if 0
+#if 0       // Get state for debugging
   si446x_state_t s = SI4463_get_state();
   if (s != SI446X_STATE_RX) {
     my_microsecond_delay(1000);
@@ -1003,7 +913,7 @@ void SI4463_start_rx(uint8_t CHANNEL)
   }
 #endif
   {
-    uint8_t data2[] = { 0x11, 0x20, 0x01, 0x58, 0x10 };  // set FAST_DELAY to 0x10
+    uint8_t data2[] = { 0x11, 0x20, 0x01, 0x58, 0x10 };  // set FAST_DELAY to 0x10,
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
   }
   SI4463_in_tx_mode = false;
@@ -1031,48 +941,44 @@ void SI4463_clear_int_status(void)
 
 void set_calibration_freq(int ref)
 {
-#ifndef TINYSA4_PROTO
-  ref = 0;   // <--------------------- DISABLED FOR PROTOTYPE!!!!!!!!!!!!!!!!!!!!!!!!!
-#endif
+  if (ref >= 0) {
+    SI4463_set_gpio(0, 7);                            // GPIO 0 is clock out
 
-    if (ref >= 0) {
-      SI4463_set_gpio(0, 7);                            // GPIO 0 is clock out
-
-      uint8_t data2[5] = {
+    uint8_t data2[5] = {
                         0x11, 0x00, 0x01, 0x01, 0x40                      // GLOBAL_CLK_CFG Clock config
-      };
-      data2[4] |= ref<<3;
-      SI4463_do_api(data2, 5, NULL, 0);
-    } else {
-      SI4463_set_gpio(0, 1);                            // stop clock out
-    }
+    };
+    data2[4] |= ref<<3;
+    SI4463_do_api(data2, 5, NULL, 0);
+  } else {
+    SI4463_set_gpio(0, 1);                            // stop clock out
+  }
 }
 
 si446x_info_t SI4463_info;
 
 void Si446x_getInfo(si446x_info_t* info)
 {
-    uint8_t data[8] = {
-        SI446X_CMD_PART_INFO
-    };
-    SI4463_do_api(data, 1, data, 8);
+  uint8_t data[8] = {
+                     SI446X_CMD_PART_INFO
+  };
+  SI4463_do_api(data, 1, data, 8);
 
-    info->chipRev   = data[0];
-    info->part      = (data[1]<<8) | data[2];
-    info->partBuild = data[3];
-    info->id        = (data[4]<<8) | data[5];
-    info->customer  = data[6];
-    info->romId     = data[7];
+  info->chipRev   = data[0];
+  info->part      = (data[1]<<8) | data[2];
+  info->partBuild = data[3];
+  info->id        = (data[4]<<8) | data[5];
+  info->customer  = data[6];
+  info->romId     = data[7];
 
 
-    data[0] = SI446X_CMD_FUNC_INFO;
-    SI4463_do_api(data, 1, data, 6);
+  data[0] = SI446X_CMD_FUNC_INFO;
+  SI4463_do_api(data, 1, data, 6);
 
-    info->revExternal   = data[0];
-    info->revBranch     = data[1];
-    info->revInternal   = data[2];
-    info->patch         = (data[3]<<8) | data[4];
-    info->func          = data[5];
+  info->revExternal   = data[0];
+  info->revBranch     = data[1];
+  info->revInternal   = data[2];
+  info->patch         = (data[3]<<8) | data[4];
+  info->func          = data[5];
 }
 
 float old_temp = -100;
@@ -1080,18 +986,18 @@ float old_temp = -100;
 
 float Si446x_get_temp(void)
 {
-    uint8_t data[8] = { SI446X_CMD_GET_ADC_READING, 0x10, 0 };
-    SI4463_do_api(data, 3, data, 8);
-    int i = 4;
-    if (data[0]==255)
-      i = 6;
-    float t = (data[i] << 8) + data[i+1];
-    t = (899.0 * t /4096.0) - 293.0;
-    if (t > old_temp - TEMP_HISTERESE && t < old_temp + TEMP_HISTERESE) {
-      return(old_temp);
-    }
-    old_temp = t;
-    return t;
+  uint8_t data[8] = { SI446X_CMD_GET_ADC_READING, 0x10, 0 };
+  SI4463_do_api(data, 3, data, 8);
+  int i = 4;
+  if (data[0]==255)
+    i = 6;
+  float t = (data[i] << 8) + data[i+1];
+  t = (899.0 * t /4096.0) - 293.0;
+  if (t > old_temp - TEMP_HISTERESE && t < old_temp + TEMP_HISTERESE) {
+    return(old_temp);
+  }
+  old_temp = t;
+  return t;
 }
 
 #ifdef notused
@@ -1134,10 +1040,12 @@ again:
    SI4463_wait_for_cts();
    uint8_t state = getFRR(SI446X_CMD_READ_FRR_B);
 #endif
+#if 0 // Only for debugging
    if (state == 255) {
      my_microsecond_delay(100);
      goto again;
    }
+#endif
    if(state == SI446X_STATE_TX_TUNE)
         state = SI446X_STATE_TX;
     else if(state == SI446X_STATE_RX_TUNE)
@@ -1638,7 +1546,7 @@ static int refresh_count = 0;
 
 freq_t SI4463_set_freq(freq_t freq)
 {
-//  SI4463_set_gpio(3,GPIO_HIGH);
+//  SI4463_set_gpio(3,GPIO_HIGH);       // For measuring duration of set_freq
   int S = 4 ;               // Approx 100 Hz channels
   SI4463_channel = 0;
   if (freq >= 822000000 && freq <= 1130000000)         {       // 822 to 1130MHz
@@ -1671,7 +1579,7 @@ freq_t SI4463_set_freq(freq_t freq)
   uint64_t MOD = 524288; // = 2^19
   uint32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
   freq_t actual_freq = (R*MOD + F) * (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)/ SI4463_outdiv/MOD;
-#if 0
+#if 0       // Only for debugging
   int delta = freq - actual_freq;
   if (delta < -100 || delta > 100 ){
     while(1)
@@ -1712,7 +1620,7 @@ freq_t SI4463_set_freq(freq_t freq)
       SI4463_do_api(data, sizeof(data), NULL, 0);
     }
     SI4463_frequency_changed = true;
-//    SI4463_set_gpio(3,GPIO_LOW);
+//    SI4463_set_gpio(3,GPIO_LOW);   // For measuring duration of set_freq
     return actual_freq;
   }
 #if 0
@@ -1779,16 +1687,13 @@ freq_t SI4463_set_freq(freq_t freq)
   }
 
 
-
-
-  //  SI4463_clear_int_status();
   if (SI4463_in_tx_mode)
     SI4463_start_tx(0);
   else {
     SI4463_start_rx(SI4463_channel);
   }
-  SI4463_wait_for_cts();
-//  SI4463_set_gpio(3,GPIO_LOW);
+//  SI4463_wait_for_cts();
+//  SI4463_set_gpio(3,GPIO_LOW);        // For measuring duration of set_freq
   SI4463_frequency_changed = true;
   prev_band = SI4463_band;
   return actual_freq;
@@ -1803,71 +1708,26 @@ void SI4463_init_rx(void)
   my_microsecond_delay(1000);
   SI_SDN_LOW;
   my_microsecond_delay(1000);
-#ifdef __SI4468__
   for(uint16_t i=0;i<sizeof(SI4468_config);i++)
   {
     SI4463_do_api((void *)&SI4468_config[i+1], SI4468_config[i], NULL, 0);
     i += SI4468_config[i];
   }
-#endif
   clear_frequency_cache();
   SI4463_start_rx(SI4463_channel);
   // Si446x_getInfo(&SI4463_info);
   prev_band = -1; // 433MHz
 }
 
-
-
-#if 0
-#include "radio_config_Si4468_undef.h"
-#include "radio_config_Si4468_tx.h"
-
-static const uint8_t SI4463_config_tx[] =
-    RADIO_CONFIGURATION_DATA_ARRAY;
-
-#endif
-
 void SI4463_init_tx(void)
 {
-#if 0
-reset:
-  SI_SDN_LOW;
-  my_microsecond_delay(100);
-  SI_SDN_HIGH;
-  my_microsecond_delay(1000);
-  SI_SDN_LOW;
-  my_microsecond_delay(1000);
-#ifdef __SI4468__
-  for(uint16_t i=0;i<sizeof(SI4463_config_tx);i++)
-  {
-    SI4463_do_api((void *)&SI4463_config_tx[i+1], SI4463_config_tx[i], NULL, 0);
-    i += SI4463_config_tx[i];
-  }
-#endif
-#endif
-  SI4463_start_tx(0);
-#if 0
- si446x_state_t s ;
 
-again:
-  Si446x_getInfo(&SI4463_info);
-// s = SI4463_get_state();
-//  SI4463_clear_int_status();
-  my_microsecond_delay(15000);
-  s = SI4463_get_state();
-  if (s != SI446X_STATE_RX) {
-    ili9341_drawstring_7x13("Waiting for RX", 50, 200);
-    osalThreadSleepMilliseconds(3000);
-    goto reset;
-  }
-  ili9341_drawstring_7x13("Waiting ready     ", 50, 200);
-#endif
+  SI4463_start_tx(0);
   prev_band = -1; // 433MHz
 }
 
 void enable_extra_lna(int s)
 {
-#ifdef TINYSA4_PROTO
   static int old_extra_lna = -1;
   if (s != old_extra_lna) {
     if (s)
@@ -1877,14 +1737,10 @@ void enable_extra_lna(int s)
     old_extra_lna = s;
     osalThreadSleepMilliseconds(500);
   }
-#else
-  (void)s;
-#endif
 }
 
 void enable_ultra(int s)
 {
-#ifdef TINYSA4_PROTO
 static int old_ultra = -1;
   if (s != old_ultra) {
     if (s)
@@ -1893,9 +1749,6 @@ static int old_ultra = -1;
       palSetLine(LINE_ULTRA);
     old_ultra = s;
   }
-#else
-  (void)s;
-#endif
 }
 
 void enable_rx_output(int s)
