@@ -76,6 +76,7 @@
 #define __LISTEN__
 #define __CHANNEL_POWER__
 #define __LIMITS__
+#define __MCU_CLOCK_SHIFT__
 #ifdef TINYSA4
 #define  __HARMONIC__
 #define __VBW__
