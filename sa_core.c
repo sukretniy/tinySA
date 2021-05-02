@@ -1416,9 +1416,9 @@ static const struct {
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
   {  8500,       150,           50,      400,   -90},
   {  3000,       150,           50,      200,   -95},
-  {  1000,       500,          100,      100,   -105},
-  {   300,       500,          120,      100,   -110},
-  {   100,       600,          120,      100,   -115},
+  {  1000,       800,          100,      100,   -105},
+  {   300,       800,          120,      100,   -110},
+  {   100,       800,          120,      100,   -115},
   {    30,      1500,          300,      100,   -120},
   {    10,      5000,          600,      100,   -122},
   {     3,     19000,         3000,      100,   -125}
@@ -3534,7 +3534,6 @@ static uint8_t sweep_counter = 0;           // Only used for HW refresh
 static bool sweep(bool break_on_operation)
 {
   float RSSI;
-  int16_t downslope;
 #ifdef __SI4432__
   freq_t agc_peak_freq = 0;
   float agc_peak_rssi = -150;
@@ -3552,9 +3551,7 @@ static bool sweep(bool break_on_operation)
 #ifdef TINYSA4
   palClearLine(LINE_LED);
 #endif
-  downslope = true;             // Initialize the peak search algorithm
-  temppeakLevel = -150;
-  float temp_min_level = 100;
+//  float temp_min_level = 100;
 
   //  spur_old_stepdelay = 0;
   //  shell_printf("\r\n");
@@ -3705,7 +3702,13 @@ static bool sweep(bool break_on_operation)
   }
 
   // -------------------------------- Scan finished, do all postprocessing --------------------
+  float temp_min_level = 100;
+
   if (MODE_INPUT(setting.mode)) {
+
+    int16_t downslope = true;             // Initialize the peak search algorithm
+    temppeakLevel = -150;
+
 
 #ifdef __VBW__
   // ------------------------ do VBW processing ------------------------------
@@ -3726,7 +3729,6 @@ static bool sweep(bool break_on_operation)
       }
     }
 #endif
-
 
     for (int i = 0; i < sweep_points; i++) {
 
