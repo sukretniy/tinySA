@@ -1058,8 +1058,8 @@ static si446x_state_t SI4463_get_state(void)
    uint8_t state = SI4463_get_device_status();
 #else
 
-again:
-   SI4463_wait_for_cts();
+//again:
+//   SI4463_wait_for_cts();
    uint8_t state = getFRR(SI446X_CMD_READ_FRR_B);
 #endif
 #if 0 // Only for debugging
@@ -1551,7 +1551,7 @@ uint16_t force_rbw(int f)
   }
   SI4463_clear_int_status();
   SI4463_short_start_rx();           // This can cause recalibration
-  SI4463_wait_for_cts();
+//  SI4463_wait_for_cts();
   set_RSSI_comp();
 //  prev_band = -1;
   SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
