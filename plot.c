@@ -323,7 +323,8 @@ float sa_sqrtf(const float x)
   return u.x;
 }
 #else
-#define sa_sqrtf(x) sqrtf(x)
+//#define sa_sqrtf(x) sqrtf(x)
+__attribute__((always_inline)) __STATIC_INLINE float sa_sqrtf(float x){__asm__ ("vsqrt.f32 %0, %1" : "=t"(x) : "t"(x)); return x;}
 #endif
 
 // Function for convert to different type of values from dBm
