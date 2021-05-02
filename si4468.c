@@ -318,11 +318,12 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
 //  if (reg_dirty[value & 0x07] || (value & 0x07) == 0) {
   if (old_registers[value & 0x07] != registers[value & 0x07] ||  (value & 0x07) == 0 ) {
     registers[value & 0x07] = value;
-    for (int i = 3; i >= 0; i--) shiftOut((value >> (8 * i)) & 0xFF);
-    palSetLine(ADF4351_LE[channel]);
-    my_microsecond_delay(1);        // Must
     palClearLine(ADF4351_LE[channel]);
-//    reg_dirty[value & 0x07] = false;
+    shiftOut((value >> 24) & 0xFF);
+    shiftOut((value >> 16) & 0xFF);
+    shiftOut((value >>  8) & 0xFF);
+    shiftOut((value >>  0) & 0xFF);
+    palSetLine(ADF4351_LE[channel]);
     old_registers[value & 0x07] = registers[value & 0x07];
   }
 }
@@ -332,11 +333,6 @@ void ADF4351_Set(int channel)
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
-
-//  my_microsecond_delay(1);
-  palClearLine(ADF4351_LE[channel]);
-//  my_microsecond_delay(1);
-
   for (int i = 5; i >= 0; i--) {
     ADF4351_WriteRegister32(channel, registers[i]);
   }
@@ -789,7 +785,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 #define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 #define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
 // ---------------------------------------------------------------------------------------------------- v ------------  RSSI control byte
-#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x06, 0x03, 0x10, 0x40
+#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x06, 0x18, 0x10, 0x40
 //0x11 SI446X_CMD_SET_PROPERTY
 //0x20  SI446X_PROP_GROUP_MODEM
 //0x0A  10 Count
@@ -801,7 +797,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 //0x00  [0x49] MODEM_ANT_DIV_CONTROL
 //0xFF  [0x4A] MODEM_RSSI_THRESH
 //0x06  [0x4B] MODEM_RSSI_JUMP_THRESH
-//0x03  [0x4C] MODEM_RSSI_CONTROL
+//0x18  [0x4C] MODEM_RSSI_CONTROL
 //0x10  [0x4D] MODEM_RSSI_CONTROL2
 //0x40  [0x4E] MODEM_RSSI_COMP
 // -----------------------------------------------------------------------------------------------------^ --------------
@@ -966,12 +962,22 @@ void SI4463_start_rx(uint8_t CHANNEL)
     SI4463_set_state(SI446X_STATE_READY);
   }
   SI4463_refresh_gpio();
+
+
+
+
 #if 0
   {
     uint8_t data[] =
     {
-     0x11, 0x20, 0x01, 0x00,
-     0x0A,  // Restore 2FSK mode
+       0x11, 0x10, 0x01, 0x03, 0xf0
+    };
+    SI4463_do_api(data, sizeof(data), NULL, 0); // Send PREAMBLE_CONFIG_STD_2 for long timeout
+  }
+  {
+    uint8_t data[] =
+    {
+     0x11, 0x20, 0x01, 0x00, 0x09,  // Restore OOK mode
     };
     SI4463_do_api(data, sizeof(data), NULL, 0);
   }
@@ -1299,7 +1305,7 @@ void SI446x_Fill(int s, int start)
   systime_t measure = chVTGetSystemTimeX();
   int i = start;
   while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
-#if 0
+#if 1
   while (!SI4463_READ_CTS);         // Wait for CTS
 #endif
   __disable_irq();
@@ -1310,7 +1316,7 @@ void SI446x_Fill(int s, int start)
     if (t)
       my_microsecond_delay(t);
 #else
-#if 0
+#if 1
   SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
@@ -1657,9 +1663,10 @@ freq_t SI4463_set_freq(freq_t freq)
 #endif
   } else
     return 0;
-
-  si_set_offset(0);
-
+  if (SI4463_offset_active) {
+    si_set_offset(0);
+    SI4463_offset_active = false;
+  }
   uint32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
   uint64_t MOD = 524288; // = 2^19
   uint32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
