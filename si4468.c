@@ -758,13 +758,24 @@ static void SI4463_set_state(si446x_state_t newState)
   SI4463_do_api(data, sizeof(data), NULL, 0);
 }
 
-static uint8_t gpio_state[4] = { 7,8,0,0 };
+static uint8_t gpio_state[4] = {
+  SI446X_GPIO_MODE_DIV_CLK,
+  SI446X_GPIO_MODE_CTS,
+  SI446X_GPIO_MODE_DONOTHING,
+  SI446X_GPIO_MODE_DONOTHING
+};
 
 void SI4463_refresh_gpio(void)
 {
-  uint8_t data2[] =
-  {
-    0x13, gpio_state[0], gpio_state[1], gpio_state[2], gpio_state[3], 0, 0, 0
+  uint8_t data2[] = {
+    SI446X_CMD_GPIO_PIN_CFG,
+    gpio_state[0], // GPIO[0]
+    gpio_state[1], // GPIO[1]
+    gpio_state[2], // GPIO[2]
+    gpio_state[3], // GPIO[3]
+    0,             // NIRQ
+    0,             // SDO
+    0              // GEN_CONFIG
   };
   SI4463_do_api(data2, sizeof(data2), NULL, 0);
 }
@@ -797,9 +808,8 @@ void SI4463_set_output_level(int t)
   if (SI4463_in_tx_mode) {
 #if 1
     {
-      uint8_t data[] =
-      {
-       0x11, 0x22, 0x04, 0x00,        // PA_MODE
+      uint8_t data[] = {
+       SI446X_CMD_SET_PROPERTY, 0x22, 0x04, 0x00,        // PA_MODE
        0x08,  // Coarse PA mode and class E PA        Fine PA mode = 0x04
        (uint8_t)SI4463_output_level,  // Level
        0x00,  // Duty
@@ -828,9 +838,8 @@ void SI4463_start_tx(uint8_t CHANNEL)
 #endif
 #if 1
   {
-    uint8_t data[] =
-    {
-     0x11, 0x20, 0x01, 0x00,
+    uint8_t data[] = {
+     SI446X_CMD_SET_PROPERTY, 0x20, 0x01, 0x00,
      0x00,  // CW mode
     };
     SI4463_do_api(data, sizeof(data), NULL, 0);
@@ -838,9 +847,8 @@ void SI4463_start_tx(uint8_t CHANNEL)
 #endif
 #if 1
   {
-    uint8_t data[] =
-    {
-     0x11, 0x22, 0x04, 0x00,        // PA_MODE
+    uint8_t data[] = {
+     SI446X_CMD_SET_PROPERTY, 0x22, 0x04, 0x00,        // PA_MODE
      0x08,  // Coarse PA mode and class E PA        Fine PA mode = 0x04
      (uint8_t)SI4463_output_level,  // Level
      0x00,  // Duty
@@ -878,7 +886,7 @@ void SI4463_start_tx(uint8_t CHANNEL)
 
 void SI4463_start_rx(uint8_t CHANNEL)
 {
-   si446x_state_t s = SI4463_get_state();
+  si446x_state_t s = SI4463_get_state();
   if (s == SI446X_STATE_TX){
     SI4463_set_state(SI446X_STATE_READY);
   }
@@ -953,15 +961,14 @@ void SI4463_clear_int_status(void)
 void set_calibration_freq(int ref)
 {
   if (ref >= 0) {
-    SI4463_set_gpio(0, 7);                            // GPIO 0 is clock out
-
-    uint8_t data2[5] = {
-                        0x11, 0x00, 0x01, 0x01, 0x40                      // GLOBAL_CLK_CFG Clock config
+    SI4463_set_gpio(0, SI446X_GPIO_MODE_DIV_CLK);     // GPIO 0 is clock out
+    uint8_t data2[5] = {  // GLOBAL_CLK_CFG Clock config
+      SI446X_CMD_SET_PROPERTY, SI446X_PROP_GROUP_GLOBAL, 0x01, 0x01,
+      0x40|(ref<<3)// DIVIDED_CLK_EN = 1, DIVIDED_CLK_SEL = ref, CLK_32K_SEL = 0
     };
-    data2[4] |= ref<<3;
     SI4463_do_api(data2, 5, NULL, 0);
   } else {
-    SI4463_set_gpio(0, 1);                            // stop clock out
+    SI4463_set_gpio(0, SI446X_GPIO_MODE_TRISTATE);    // stop clock out
   }
 }
 
@@ -969,9 +976,7 @@ si446x_info_t SI4463_info;
 
 void Si446x_getInfo(si446x_info_t* info)
 {
-  uint8_t data[8] = {
-                     SI446X_CMD_PART_INFO
-  };
+  uint8_t data[8] = {SI446X_CMD_PART_INFO};
   SI4463_do_api(data, 1, data, 8);
 
   info->chipRev   = data[0];
