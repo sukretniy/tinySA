@@ -204,7 +204,7 @@ bool PE4302_Write_Byte(unsigned char DATA )
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 #define bitSet(value, bit) ((value) |= (1UL << (bit)))
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
-#define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
+#define bitWrite(value, bit, bitvalue) ((bitvalue) ? bitSet(value, bit) : bitClear(value, bit))
 
 #define CS_ADF0_HIGH     {palSetLine(LINE_LO_SEL);ADF_CS_DELAY;}
 #define CS_ADF1_HIGH     {ADF_CS_DELAY;palSetLine(LINE_LO_SEL);}
@@ -272,27 +272,30 @@ void ADF4351_Setup(void)
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
-  if (old_registers[value & 0x07] != registers[value & 0x07] ||  (value & 0x07) == 0 ) {        // Always write register zero
-    registers[value & 0x07] = value;
-    // Select chip
-    CS_ADF_LOW(ADF4351_LE[channel]);
-    // Send 32 bit register
+  uint32_t reg_n = value & 0x07;
+  if (reg_n && old_registers[reg_n] == value) return; // Always write register zero
+  // update cache
+  old_registers[reg_n] = value;
+  // For debug !! update stored value if enter from console
+  registers[reg_n] = value;
+
+  // Select chip
+  CS_ADF_LOW(ADF4351_LE[channel]);
+  // Send 32 bit register
 #if 1
-    SPI_WRITE_8BIT(SI4432_SPI, (value >> 24));
-    SPI_WRITE_8BIT(SI4432_SPI, (value >> 16));
-    SPI_WRITE_8BIT(SI4432_SPI, (value >>  8));
-    SPI_WRITE_8BIT(SI4432_SPI, (value >>  0));
-    while (SPI_IS_BUSY(SI4432_SPI)); // drop rx and wait tx
+  SPI_WRITE_8BIT(SI4432_SPI, (value >> 24));
+  SPI_WRITE_8BIT(SI4432_SPI, (value >> 16));
+  SPI_WRITE_8BIT(SI4432_SPI, (value >>  8));
+  SPI_WRITE_8BIT(SI4432_SPI, (value >>  0));
+  while (SPI_IS_BUSY(SI4432_SPI)); // drop rx and wait tx
 #else
-    shiftOut((value >> 24) & 0xFF);
-    shiftOut((value >> 16) & 0xFF);
-    shiftOut((value >>  8) & 0xFF);
-    shiftOut((value >>  0) & 0xFF);
+  shiftOut((value >> 24) & 0xFF);
+  shiftOut((value >> 16) & 0xFF);
+  shiftOut((value >>  8) & 0xFF);
+  shiftOut((value >>  0) & 0xFF);
 #endif
-    // unselect
-    CS_ADF_HIGH(ADF4351_LE[channel]);
-    old_registers[value & 0x07] = registers[value & 0x07];
-  }
+  // unselect
+  CS_ADF_HIGH(ADF4351_LE[channel]);
 }
 
 void ADF4351_Set(int channel)
@@ -300,9 +303,10 @@ void ADF4351_Set(int channel)
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
-  for (int i = 5; i >= 0; i--) {
+
+  for (int i = 5; i >= 0; i--)
     ADF4351_WriteRegister32(channel, registers[i]);
-  }
+
   if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
 }
@@ -332,16 +336,9 @@ uint64_t ADF4351_set_frequency(int channel, uint64_t freq)  // freq / 10Hz
 
 void ADF4351_spur_mode(int S)
 {
-    if (S & 1) {
-      bitSet (registers[2], 29); // R set to 8
-    } else {
-      bitClear (registers[2], 29); // R set to 8
-    }
-    if (S & 2)
-      bitSet (registers[2], 30); // R set to 8
-    else
-      bitClear (registers[2], 30); // R set to 8
-    ADF4351_Set(0);
+  bitWrite(registers[2], 29, S & 1);
+  bitWrite(registers[2], 30, S & 2);
+  ADF4351_Set(0);
 }
 
 void ADF4351_R_counter(int R)
@@ -350,25 +347,21 @@ void ADF4351_R_counter(int R)
     return;
   old_R = R;
   int dbl = false;
-      if (R < 0) {
-        dbl = true;
-        R = -R;
-      }
-      if (R<1)
-        return;
-      if (dbl) {
-        bitSet (registers[2], 25); // Reference doubler
-      } else {
-        bitClear (registers[2], 25); // Reference doubler
-      }
-      for (int channel=0; channel < 6; channel++) {
-        PFDRFout[channel] = (config.setting_frequency_30mhz * (dbl?2:1)) / R;
-      }
-      clear_frequency_cache();                              // When R changes the possible frequencies will change
-      registers[2] &= ~ (((unsigned long)0x3FF) << 14);
-      registers[2] |= (((unsigned long)R) << 14);
+  if (R < 0) {
+    dbl = true;
+    R = -R;
+  }
+  if (R<1)
+    return;
 
-      ADF4351_Set(0);
+  bitWrite(registers[2], 25, dbl); // Reference doubler
+  for (int channel=0; channel < 6; channel++) {
+    PFDRFout[channel] = (config.setting_frequency_30mhz * (dbl?2:1)) / R;
+  }
+  clear_frequency_cache();                              // When R changes the possible frequencies will change
+  registers[2] &= ~(((uint32_t)0x3FF) << 14);
+  registers[2] |=  (((uint32_t)    R) << 14);
+  ADF4351_Set(0);
 }
 
 void ADF4351_recalculate_PFDRFout(void){
@@ -377,49 +370,47 @@ void ADF4351_recalculate_PFDRFout(void){
   ADF4351_R_counter(local_r);
 }
 
-
-
 void ADF4351_mux(int R)
 {
-      registers[2] &= ~ (((unsigned long)0x7) << 26);
-      registers[2] |= (((unsigned long)R & (unsigned long)0x07) << 26);
-      ADF4351_Set(0);
+  registers[2] &= ~(((uint32_t)     0x7) << 26);
+  registers[2] |=  (((uint32_t)R & 0x07) << 26);
+  ADF4351_Set(0);
 }
 
 void ADF4351_csr(int c)
 {
-      registers[3] &= ~ (((unsigned long)0x1) << 18);
-      registers[3] |= (((unsigned long)c & (unsigned long)0x01) << 18);
-      ADF4351_Set(0);
+  registers[3] &= ~(((uint32_t)     0x1) << 18);
+  registers[3] |=  (((uint32_t)c & 0x01) << 18);
+  ADF4351_Set(0);
 }
 
 void ADF4351_fastlock(int c)
 {
-      registers[3] &= ~ (((unsigned long)0x3) << 15);
-      registers[3] |= (((unsigned long)c & (unsigned long)0x03) << 15);
-      ADF4351_Set(0);
+  registers[3] &= ~(((uint32_t)     0x3) << 15);
+  registers[3] |=  (((uint32_t)c & 0x03) << 15);
+  ADF4351_Set(0);
 }
 
 void ADF4351_CP(int p)
 {
-      registers[2] &= ~ (((unsigned long)0xF) << 9);
-      registers[2] |= (((unsigned long)p) << 9);
-      ADF4351_Set(0);
+  registers[2] &= ~(((uint32_t)0xF) << 9);
+  registers[2] |=  (((uint32_t)  p) << 9);
+  ADF4351_Set(0);
 }
 
 void ADF4351_drive(int p)
 {
   p &= 0x03;
-  registers[4] &= ~ (((unsigned long)0x3) << 3);
-  registers[4] |= (((unsigned long)p) << 3);
+  registers[4] &= ~(((uint32_t)0x3) << 3);
+  registers[4] |=  (((uint32_t)  p) << 3);
   ADF4351_Set(0);
 }
 
 void ADF4351_aux_drive(int p)
 {
   p &= 0x03;
-  registers[4] &= ~ (((unsigned long)0x3) << 6);
-  registers[4] |= (((unsigned long)p) << 6);
+  registers[4] &= ~(((uint32_t)0x3) << 6);
+  registers[4] |=  (((uint32_t)  p) << 6);
   ADF4351_Set(0);
 }
 #if 0
@@ -713,7 +704,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 #define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 #define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
 // ---------------------------------------------------------------------------------------------------- v ------------  RSSI control byte
-#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x06, 0x18, 0x10, 0x40
+#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x18, 0x10, 0x40
 //0x11 SI446X_CMD_SET_PROPERTY
 //0x20  SI446X_PROP_GROUP_MODEM
 //0x0A  10 Count
@@ -1090,7 +1081,6 @@ void set_RSSI_comp(void)
     0x40   // RSSI_COMP
   };
   SI4463_do_api(data, sizeof(data), NULL, 0);
-
 }
 
 static bool SI4463_offset_active = false;
@@ -1378,7 +1368,6 @@ int16_t Si446x_RSSI(void)
 
 void SI446x_set_AGC_LNA(uint8_t v)
 {
-
   uint8_t data[2] = {
       0xd0,                 // AGC_OVERRIDE
       v
