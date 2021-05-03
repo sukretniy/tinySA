@@ -1421,7 +1421,7 @@ static const struct {
   {   100,       800,          120,      100,   -115},
   {    30,      1500,          300,      100,   -120},
   {    10,      5000,          600,      100,   -122},
-  {     3,     19000,         3000,      100,   -125}
+  {     3,     19000,        12000,      100,   -125}
 };
 #endif
 
@@ -2054,9 +2054,9 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
   if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
 #ifdef TINYSA4
-    if (frequency_step_x10 > actual_rbw_x10)
-	  vbwSteps = 1+(frequency_step_x10 / actual_rbw_x10); //((int)(2 * (frequency_step_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
-      vbwSteps += vbwSteps;
+    if (frequency_step_x10 > actual_rbw_x10) {
+	  vbwSteps = 1+((frequency_step_x10 + actual_rbw_x10 - 1) / actual_rbw_x10); //((int)(2 * (frequency_step_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
+    }
 #else
 	vbwSteps = ((int)(2 * (frequency_step_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
 #endif

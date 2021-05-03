@@ -741,6 +741,18 @@ VNA_SHELL_FUNCTION(cmd_z)
     dirty = true;
   }
 }
+
+VNA_SHELL_FUNCTION(cmd_n)
+{
+  if (argc != 1) {
+    shell_printf("usage: z 0..30000\r\n%d\r\n", SI4432_offset_delay);
+    return;
+  }
+  if (argc == 1) {
+    setting.offset_delay = atoi(argv[0]);
+    dirty = true;
+  }
+}
 #endif
 #if 0       // not used
 VNA_SHELL_FUNCTION(cmd_z)
