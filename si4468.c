@@ -1093,7 +1093,7 @@ void set_RSSI_comp(void)
 
 }
 
-bool SI4463_offset_active = false;
+static bool SI4463_offset_active = false;
 static void SI4463_set_offset(int16_t offset){
   // Set properties:           MODEM_FREQ_OFFSET
   // Number of properties:     2
@@ -1118,14 +1118,13 @@ static void SI4463_set_offset(int16_t offset){
 }
 
 // Set offset for frequency
-void si_set_offset(int16_t offset)
-{
+void si_set_offset(int16_t offset) {
   SI4463_offset_value = offset;
   SI4463_set_offset(offset);
 }
+
 // Set additional offset for fm modulation output
-void si_fm_offset(int16_t offset)
-{
+void si_fm_offset(int16_t offset) {
   SI4463_set_offset(offset + SI4463_offset_value);
 }
 
