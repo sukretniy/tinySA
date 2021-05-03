@@ -704,7 +704,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 #define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 #define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
 // ---------------------------------------------------------------------------------------------------- v ------------  RSSI control byte
-#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x18, 0x10, 0x40
+#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x10, 0x40
 //0x11 SI446X_CMD_SET_PROPERTY
 //0x20  SI446X_PROP_GROUP_MODEM
 //0x0A  10 Count
@@ -1130,17 +1130,24 @@ static char Si446x_readRSSI(void){
   SI4463_WAIT_CTS;                       // Wait for CTS
 #ifdef __USE_FFR_FOR_RSSI__
   SI_CS_LOW;
+  while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
+    (void)SPI_READ_8BIT(SI4432_SPI);     // Remove lingering bytes
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
   SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
   SI_CS_HIGH;
-
   SI_CS_LOW;
-  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
-  SPI_WRITE_8BIT(SI4432_SPI, 0xFF);      // begin read 1 bytes
-  while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
-  SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
-  rssi = SPI_READ_8BIT(SI4432_SPI);      // Get FRR A
+  do {
+#if 0
+    SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);                      // This does not work
+    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);      // begin read 1 bytes
+    while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
+    SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
+    rssi = SPI_READ_8BIT(SI4432_SPI);      // Get FRR A
+#else
+    rssi = getFRR(SI446X_CMD_READ_FRR_A);                                   // This works!!!
+#endif
+  } while (rssi == 0);                  // Wait for latch to happen
   SI_CS_HIGH;
 #elif 1
   SI_CS_LOW;
