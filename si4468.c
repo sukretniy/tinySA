@@ -1082,74 +1082,53 @@ void set_RSSI_comp(void)
   //   MODEM_RSSI_COMP - RSSI compensation value.
   //
   // #define RF_MODEM_RSSI_COMP_1 0x11, 0x20, 0x01, 0x4E, 0x40
-
   uint8_t data[5] = {
-      0x11,
-      0x20,
-      0x01,
-      0x4E,
-      0x40
+    SI446X_CMD_SET_PROPERTY,
+    SI446X_PROP_GROUP_MODEM,
+    0x01,
+    0x4E,  // MODEM_RSSI_COMP set as
+    0x40   // RSSI_COMP
   };
   SI4463_do_api(data, sizeof(data), NULL, 0);
 
 }
 
-int SI4463_offset_active = false;
+bool SI4463_offset_active = false;
+static void SI4463_set_offset(int16_t offset){
+  // Set properties:           MODEM_FREQ_OFFSET
+  // Number of properties:     2
+  // Group ID:                 0x20
+  // Start ID:                 0x0d
+  // Default values:           0x00, 0x00
+  // Descriptions:
+  //   MODEM_FREQ_OFFSET1 - High byte of the offset
+  //   MODEM_FREQ_OFFSET2 - Low byte of the offset
+  //
+  uint8_t data[] = {
+    SI446X_CMD_SET_PROPERTY,
+    SI446X_PROP_GROUP_MODEM,
+    0x02,
+    0x0d,      // MODEM_FREQ_OFFSET
+    (uint8_t) ((offset>>8) & 0xff),
+    (uint8_t) ((offset) & 0xff)
+  };
+  SI4463_do_api(data, sizeof(data), NULL, 0);
+  SI4463_offset_changed = true;
+  SI4463_offset_active = (offset != 0);
+}
 
+// Set offset for frequency
 void si_set_offset(int16_t offset)
 {
-  // Set properties:           MODEM_FREQ_OFFSET
-  // Number of properties:     2
-  // Group ID:                 0x20
-  // Start ID:                 0x0d
-  // Default values:           0x00, 0x00
-  // Descriptions:
-  //   MODEM_FREQ_OFFSET1 - High byte of the offset
-  //   MODEM_FREQ_OFFSET2 - Low byte of the offset
-  //
-
   SI4463_offset_value = offset;
-  uint8_t data[] = {
-      0x11,
-      0x20,
-      0x02,
-      0x0d,
-      (uint8_t) ((offset>>8) & 0xff),
-      (uint8_t) ((offset) & 0xff)
-  };
-  SI4463_do_api(data, sizeof(data), NULL, 0);
-  SI4463_offset_changed = true;
-  SI4463_offset_active = (offset != 0);
+  SI4463_set_offset(offset);
 }
-
+// Set additional offset for fm modulation output
 void si_fm_offset(int16_t offset)
 {
-  // Set properties:           MODEM_FREQ_OFFSET
-  // Number of properties:     2
-  // Group ID:                 0x20
-  // Start ID:                 0x0d
-  // Default values:           0x00, 0x00
-  // Descriptions:
-  //   MODEM_FREQ_OFFSET1 - High byte of the offset
-  //   MODEM_FREQ_OFFSET2 - Low byte of the offset
-  //
-
-  offset = SI4463_offset_value + offset;
-
-
-
-  uint8_t data[] = {
-      0x11,
-      0x20,
-      0x02,
-      0x0d,
-      (uint8_t) ((offset>>8) & 0xff),
-      (uint8_t) ((offset) & 0xff)
-  };
-  SI4463_do_api(data, sizeof(data), NULL, 0);
-  SI4463_offset_changed = true;
-  SI4463_offset_active = (offset != 0);
+  SI4463_set_offset(offset + SI4463_offset_value);
 }
+
 #ifdef __FAST_SWEEP__
 extern deviceRSSI_t age[POINTS_COUNT];
 static int buf_index = 0;
