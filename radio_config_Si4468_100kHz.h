@@ -19,15 +19,15 @@
 
 // INPUT DATA
 /*
-// Crys_freq(Hz): 30000000    Crys_tol(ppm): 0    IF_mode: 2    High_perf_Ch_Fil: 1    OSRtune: 0    Ch_Fil_Bw_AFC: 0    ANT_DIV: 0    PM_pattern: 15    
-// MOD_type: 2    Rsymb(sps): 180000    Fdev(Hz): 300000    RXBW(Hz): 100000    Manchester: 0    AFC_en: 3    Rsymb_error: 0.15    Chip-Version: 2    
-// RF Freq.(MHz): 977    API_TC: 29    fhst: 250000    inputBW: 1    BERT: 0    RAW_dout: 0    D_source: 1    Hi_pfm_div: 1    
-// API_ARR_Det_en: 1    Fdev_error: 0    API_ETSI: 1    
+// Crys_freq(Hz): 30000000    Crys_tol(ppm): 0    IF_mode: 2    High_perf_Ch_Fil: 1    OSRtune: 0    Ch_Fil_Bw_AFC: 0    ANT_DIV: 0    PM_pattern: 0    
+// MOD_type: 2    Rsymb(sps): 50000    Fdev(Hz): 25000    RXBW(Hz): 100000    Manchester: 0    AFC_en: 0    Rsymb_error: 0.0    Chip-Version: 2    
+// RF Freq.(MHz): 977    API_TC: 29    fhst: 100000    inputBW: 1    BERT: 1    RAW_dout: 0    D_source: 1    Hi_pfm_div: 1    
+// API_ARR_Det_en: 0    Fdev_error: 0    API_ETSI: 1    
 // 
 // # RX IF frequency is  -468750 Hz
-// # WB filter 15 (BW = 103.75 kHz);  NB-filter 15 (BW = 103.75 kHz)
+// # WB filter 2 (BW = 103.06 kHz);  NB-filter 2 (BW = 103.06 kHz)
 // 
-// Modulation index: 3.333
+// Modulation index: 1
 */
 
 
@@ -51,7 +51,7 @@
 // Command:                  RF_GPIO_PIN_CFG
 // Description:              Configures the GPIO pins.
 */
-#define RF_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
+#define RF_GPIO_PIN_CFG 0x13, 0x11, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00
 
 /*
 // Set properties:           RF_GLOBAL_XO_TUNE_1
@@ -161,7 +161,7 @@
 //   MODEM_AFC_GAIN_1 - Sets the gain of the PLL-based AFC acquisition loop, and provides miscellaneous control bits for AFC functionality.
 //   MODEM_AFC_GAIN_0 - Sets the gain of the PLL-based AFC acquisition loop, and provides miscellaneous control bits for AFC functionality.
 */
-#define RF_MODEM_BCR_NCO_OFFSET_2_12 0x11, 0x20, 0x0C, 0x24, 0x06, 0x8D, 0xB9, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x12, 0x00, 0x11
+#define RF_MODEM_BCR_NCO_OFFSET_2_12 0x11, 0x20, 0x0C, 0x24, 0x06, 0x8D, 0xB9, 0x00, 0x00, 0x02, 0xC0, 0x08, 0x00, 0x12, 0x00, 0x11
 
 /*
 // Set properties:           RF_MODEM_AFC_LIMITER_1_3
@@ -222,7 +222,7 @@
 //   MODEM_ANT_DIV_MODE - Antenna diversity mode settings.
 //   MODEM_ANT_DIV_CONTROL - Specifies controls for the Antenna Diversity algorithm.
 */
-#define RF_MODEM_RAW_CONTROL_5 0x11, 0x20, 0x05, 0x45, 0x83, 0x00, 0x85, 0x01, 0x00
+#define RF_MODEM_RAW_CONTROL_5 0x11, 0x20, 0x05, 0x45, 0x03, 0x00, 0x85, 0x01, 0x00
 
 /*
 // Set properties:           RF_MODEM_RSSI_JUMP_THRESH_4
@@ -260,7 +260,7 @@
 //   MODEM_SPIKE_DET - Configures the threshold for (G)FSK Spike Detection.
 //   MODEM_ONE_SHOT_AFC - Configures parameters for th e One Shot AFC function and for BCR timing/acquisition.
 */
-#define RF_MODEM_SPIKE_DET_2 0x11, 0x20, 0x02, 0x54, 0x83, 0x07
+#define RF_MODEM_SPIKE_DET_2 0x11, 0x20, 0x02, 0x54, 0x03, 0x07
 
 /*
 // Set properties:           RF_MODEM_RSSI_MUTE_1
@@ -286,7 +286,7 @@
 //   MODEM_DSA_RSSI - Signal Arrival Detect RSSI Qualifier Config
 //   MODEM_DSA_MISC - Miscellaneous detection of signal arrival bits.
 */
-#define RF_MODEM_DSA_CTRL1_5 0x11, 0x20, 0x05, 0x5B, 0x61, 0x04, 0x04, 0x78, 0x20
+#define RF_MODEM_DSA_CTRL1_5 0x11, 0x20, 0x05, 0x5B, 0x40, 0x04, 0x04, 0x78, 0x20
 
 /*
 // Set properties:           RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12
@@ -398,7 +398,7 @@
 //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
 //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
 */
-#define RF_FREQ_CONTROL_INTE_8 0x11, 0x40, 0x08, 0x00, 0x41, 0x08, 0x80, 0x00, 0x22, 0x22, 0x20, 0xFF
+#define RF_FREQ_CONTROL_INTE_8 0x11, 0x40, 0x08, 0x00, 0x41, 0x08, 0x80, 0x00, 0x0D, 0xA7, 0x20, 0xFF
 
 /*
 // Command:                  RF_START_RX
@@ -474,7 +474,7 @@
 // Descriptions:
 //   PREAMBLE_CONFIG_STD_1 - Configuration of reception of a packet with a Standard Preamble pattern.
 */
-#define RF_PREAMBLE_CONFIG_STD_1_1 0x11, 0x10, 0x01, 0x01, 0x14
+#define RF_PREAMBLE_CONFIG_STD_1_1 0x11, 0x10, 0x01, 0x01, 0x88
 
 /*
 // Set properties:           RF_PKT_CONFIG1_1
@@ -507,7 +507,7 @@
 //   MODEM_FREQ_DEV_2 - 17-bit unsigned TX frequency deviation word.
 //   MODEM_FREQ_DEV_1 - 17-bit unsigned TX frequency deviation word.
 */
-#define RF_MODEM_MOD_TYPE_12_1 0x11, 0x20, 0x0C, 0x00, 0x0A, 0x00, 0x07, 0x1B, 0x77, 0x40, 0x01, 0xC9, 0xC3, 0x80, 0x00, 0x28
+#define RF_MODEM_MOD_TYPE_12_1 0x11, 0x20, 0x0C, 0x00, 0x0A, 0x00, 0x07, 0x07, 0xA1, 0x20, 0x01, 0xC9, 0xC3, 0x80, 0x00, 0x03
 
 /*
 // Set properties:           RF_MODEM_FREQ_DEV_0_1_1
@@ -518,7 +518,7 @@
 // Descriptions:
 //   MODEM_FREQ_DEV_0 - 17-bit unsigned TX frequency deviation word.
 */
-#define RF_MODEM_FREQ_DEV_0_1_1 0x11, 0x20, 0x01, 0x0C, 0xF6
+#define RF_MODEM_FREQ_DEV_0_1_1 0x11, 0x20, 0x01, 0x0C, 0x6A
 
 /*
 // Set properties:           RF_MODEM_TX_RAMP_DELAY_12_1
@@ -540,7 +540,7 @@
 //   MODEM_BCR_OSR_1 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 //   MODEM_BCR_OSR_0 - RX BCR/Slicer oversampling rate (12-bit unsigned number).
 */
-#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x80, 0x09, 0x03, 0xC0, 0x00, 0x00, 0x20, 0x00, 0xB5, 0x00, 0x53
+#define RF_MODEM_TX_RAMP_DELAY_12_1 0x11, 0x20, 0x0C, 0x18, 0x01, 0x00, 0x09, 0x03, 0xC0, 0x00, 0x20, 0x20, 0x00, 0xB5, 0x00, 0x4B
 
 /*
 // Set properties:           RF_MODEM_BCR_NCO_OFFSET_2_12_1
@@ -562,7 +562,7 @@
 //   MODEM_AFC_GAIN_1 - Sets the gain of the PLL-based AFC acquisition loop, and provides miscellaneous control bits for AFC functionality.
 //   MODEM_AFC_GAIN_0 - Sets the gain of the PLL-based AFC acquisition loop, and provides miscellaneous control bits for AFC functionality.
 */
-#define RF_MODEM_BCR_NCO_OFFSET_2_12_1 0x11, 0x20, 0x0C, 0x24, 0x06, 0x24, 0xDD, 0x03, 0x16, 0x00, 0xC3, 0x00, 0x54, 0x23, 0x80, 0xAA
+#define RF_MODEM_BCR_NCO_OFFSET_2_12_1 0x11, 0x20, 0x0C, 0x24, 0x06, 0xD3, 0xA0, 0x06, 0xD4, 0x02, 0xC0, 0x08, 0x00, 0x12, 0x00, 0xDA
 
 /*
 // Set properties:           RF_MODEM_AFC_LIMITER_1_3_1
@@ -575,7 +575,7 @@
 //   MODEM_AFC_LIMITER_0 - Set the AFC limiter value.
 //   MODEM_AFC_MISC - Specifies miscellaneous AFC control bits.
 */
-#define RF_MODEM_AFC_LIMITER_1_3_1 0x11, 0x20, 0x03, 0x30, 0x03, 0x0C, 0x80
+#define RF_MODEM_AFC_LIMITER_1_3_1 0x11, 0x20, 0x03, 0x30, 0x01, 0xCC, 0xA0
 
 /*
 // Set properties:           RF_MODEM_AGC_CONTROL_1_1
@@ -608,7 +608,7 @@
 //   MODEM_OOK_CNT1 - OOK control.
 //   MODEM_OOK_MISC - Selects the detector(s) used for demodulation of an OOK signal, or for demodulation of a (G)FSK signal when using the asynchronous demodulator.
 */
-#define RF_MODEM_AGC_WINDOW_SIZE_12_1 0x11, 0x20, 0x0C, 0x38, 0x11, 0x12, 0x12, 0x80, 0x02, 0xD5, 0x55, 0x00, 0x28, 0x0C, 0x84, 0x23
+#define RF_MODEM_AGC_WINDOW_SIZE_12_1 0x11, 0x20, 0x0C, 0x38, 0x11, 0x10, 0x10, 0x80, 0x02, 0x40, 0x00, 0x00, 0x28, 0x0C, 0xA4, 0x23
 
 /*
 // Set properties:           RF_MODEM_RAW_CONTROL_10
@@ -628,7 +628,7 @@
 //   MODEM_RSSI_CONTROL2 - RSSI Jump Detection control.
 //   MODEM_RSSI_COMP - RSSI compensation value.
 */
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x8F, 0x04, 0xFE, 0x01, 0x00, 0xFF, 0x06, 0x08, 0x1A, 0x40
+#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x03, 0x01, 0xAA, 0x01, 0x00, 0x00, 0x06, 0x00, 0x10, 0x40
 
 /*
 // Set properties:           RF_MODEM_RAW_SEARCH2_2_1
@@ -652,7 +652,7 @@
 //   MODEM_SPIKE_DET - Configures the threshold for (G)FSK Spike Detection.
 //   MODEM_ONE_SHOT_AFC - Configures parameters for th e One Shot AFC function and for BCR timing/acquisition.
 */
-#define RF_MODEM_SPIKE_DET_2_1 0x11, 0x20, 0x02, 0x54, 0x90, 0xA7
+#define RF_MODEM_SPIKE_DET_2_1 0x11, 0x20, 0x02, 0x54, 0x05, 0x07
 
 /*
 // Set properties:           RF_MODEM_RSSI_MUTE_1_1
@@ -678,7 +678,7 @@
 //   MODEM_DSA_RSSI - Signal Arrival Detect RSSI Qualifier Config
 //   MODEM_DSA_MISC - Miscellaneous detection of signal arrival bits.
 */
-#define RF_MODEM_DSA_CTRL1_5_1 0x11, 0x20, 0x05, 0x5B, 0x62, 0x44, 0x25, 0x78, 0x20
+#define RF_MODEM_DSA_CTRL1_5_1 0x11, 0x20, 0x05, 0x5B, 0x40, 0x04, 0x0C, 0x78, 0x20
 
 /*
 // Set properties:           RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1
@@ -700,7 +700,7 @@
 //   MODEM_CHFLT_RX1_CHFLT_COE3_7_0 - Filter coefficients for the first set of RX filter coefficients.
 //   MODEM_CHFLT_RX1_CHFLT_COE2_7_0 - Filter coefficients for the first set of RX filter coefficients.
 */
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xA2, 0xA0, 0x97, 0x8A, 0x79, 0x66, 0x52, 0x3F, 0x2E, 0x1F, 0x14, 0x0B
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12_1 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xC4, 0x30, 0x7F, 0xF5, 0xB5, 0xB8, 0xDE, 0x05, 0x17, 0x16, 0x0C
 
 /*
 // Set properties:           RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1
@@ -722,7 +722,7 @@
 //   MODEM_CHFLT_RX2_CHFLT_COE9_7_0 - Filter coefficients for the second set of RX filter coefficients.
 //   MODEM_CHFLT_RX2_CHFLT_COE8_7_0 - Filter coefficients for the second set of RX filter coefficients.
 */
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0xA2, 0xA0, 0x97, 0x8A, 0x79, 0x66
+#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12_1 0x11, 0x21, 0x0C, 0x0C, 0x03, 0x00, 0x15, 0xFF, 0x00, 0x00, 0xFF, 0xC4, 0x30, 0x7F, 0xF5, 0xB5
 
 /*
 // Set properties:           RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1
@@ -744,7 +744,7 @@
 //   MODEM_CHFLT_RX2_CHFLT_COEM2 - Filter coefficients for the second set of RX filter coefficients.
 //   MODEM_CHFLT_RX2_CHFLT_COEM3 - Filter coefficients for the second set of RX filter coefficients.
 */
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0x52, 0x3F, 0x2E, 0x1F, 0x14, 0x0B, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00
+#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12_1 0x11, 0x21, 0x0C, 0x18, 0xB8, 0xDE, 0x05, 0x17, 0x16, 0x0C, 0x03, 0x00, 0x15, 0xFF, 0x00, 0x00
 
 /*
 // Set properties:           RF_PA_TC_1_1
@@ -755,7 +755,7 @@
 // Descriptions:
 //   PA_TC - Configuration of PA ramping parameters.
 */
-#define RF_PA_TC_1_1 0x11, 0x22, 0x01, 0x03, 0x5D
+#define RF_PA_TC_1_1 0x11, 0x22, 0x01, 0x03, 0x3D
 
 /*
 // Set properties:           RF_SYNTH_PFDCP_CPFF_7_1
@@ -790,7 +790,7 @@
 //   FREQ_CONTROL_W_SIZE - Set window gating period (in number of crystal reference clock cycles) for counting VCO frequency during calibration.
 //   FREQ_CONTROL_VCOCNT_RX_ADJ - Adjust target count for VCO calibration in RX mode.
 */
-#define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x40, 0x09, 0x11, 0x11, 0x22, 0x22, 0x20, 0xFF
+#define RF_FREQ_CONTROL_INTE_8_1 0x11, 0x40, 0x08, 0x00, 0x40, 0x09, 0x11, 0x11, 0x0D, 0xA7, 0x20, 0xFF
 
 
 // AUTOMATICALLY GENERATED CODE! 
