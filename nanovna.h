@@ -78,7 +78,9 @@
 #define __LIMITS__
 #define __MCU_CLOCK_SHIFT__
 #ifdef TINYSA4
-#define  __HARMONIC__
+#define __USE_RTC__               // Enable RTC clock
+#define __USE_SD_CARD__           // Enable SD card support
+#define __HARMONIC__
 #define __VBW__
 #define __SWEEP_RESTART__
 #define DB_PER_DEGREE_BELOW               0.056
@@ -514,6 +516,9 @@ extern uint16_t graph_bottom;
 #define MENU_BUTTON_BORDER      1
 #define KEYBOARD_BUTTON_BORDER  2
 #define FORM_BUTTON_BORDER      2
+
+// Define message box width
+#define MESSAGE_BOX_WIDTH     180
 
 // Form button (at center screen better be less LCD_WIDTH - 2*OFFSETX)
 #define MENU_FORM_WIDTH    (LCD_WIDTH - 2*OFFSETX)
@@ -1307,6 +1312,45 @@ uint16_t adc_single_read(uint32_t chsel);
 void adc_start_analog_watchdog(void);
 void adc_stop_analog_watchdog(void);
 int16_t adc_vbat_read(void);
+
+/*
+ * rtc.c
+ */
+#ifdef __USE_RTC__
+#define RTC_START_YEAR          2000
+
+#define RTC_DR_YEAR(dr)         (((dr)>>16)&0xFF)
+#define RTC_DR_MONTH(dr)        (((dr)>> 8)&0xFF)
+#define RTC_DR_DAY(dr)          (((dr)>> 0)&0xFF)
+
+#define RTC_TR_HOUR(dr)         (((tr)>>16)&0xFF)
+#define RTC_TR_MIN(dr)          (((tr)>> 8)&0xFF)
+#define RTC_TR_SEC(dr)          (((tr)>> 0)&0xFF)
+
+// Init RTC
+void rtc_init(void);
+// Then read time and date TR should read first, after DR !!!
+// Get RTC time as bcd structure in 0x00HHMMSS
+#define rtc_get_tr_bcd() (RTC->TR & 0x007F7F7F)
+// Get RTC date as bcd structure in 0x00YYMMDD (remove day of week information!!!!)
+#define rtc_get_dr_bcd() (RTC->DR & 0x00FF1F3F)
+// read TR as 0x00HHMMSS in bin (TR should be read first for sync)
+uint32_t rtc_get_tr_bin(void);
+// read DR as 0x00YYMMDD in bin (DR should be read second)
+uint32_t rtc_get_dr_bin(void);
+// Read time in FAT filesystem format
+uint32_t rtc_get_FAT(void);
+// Write date and time (need in bcd format!!!)
+void rtc_set_time(uint32_t dr, uint32_t tr);
+#endif
+
+// SD Card support, discio functions for FatFS lib implemented in ili9341.c
+#ifdef  __USE_SD_CARD__
+#include "../FatFs/ff.h"
+#include "../FatFs/diskio.h"
+bool SD_Inserted(void);
+void testLog(void);        // debug log
+#endif
 
 /*
  * misclinous

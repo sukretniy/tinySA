@@ -26,7 +26,7 @@
 
 // Compact STM32 RTC time library
 #if HAL_USE_RTC == TRUE
-#error "Error VNA use self RTC lib, define HAL_USE_RTC = FALSE in halconf.h"
+//#error "Error VNA use self RTC lib, define HAL_USE_RTC = FALSE in halconf.h"
 #endif
 
 // Get RTC time as binary structure in 0x00HHMMSS
@@ -149,6 +149,7 @@ void rtc_init(void){
   // see hal_lld_backup_domain_init() in hal_lld.c for every CPU
   // Default RTC clock is LSE, but it possible not launch if no quartz installed
 #endif
+#if HAL_USE_RTC == FALSE
   uint32_t src = RCC->BDCR & STM32_RTCSEL_MASK;
   if (src == STM32_RTCSEL_NOCLOCK) return;
   // If calendar has not been initialized yet or different PRER settings then proceed with the initial setup.
@@ -170,5 +171,6 @@ void rtc_init(void){
   }
   else
     RTC->ISR &= ~RTC_ISR_RSF;
+#endif
 }
 #endif // __USE_RTC__

@@ -1505,7 +1505,7 @@ static int32_t scaled_correction_multi[CORRECTION_POINTS];
 static int32_t scaled_correction_value[CORRECTION_POINTS];
 
 #if 0                       // Not implemented
-static int8_t scaled_atten_correction[16][16] =
+static const int8_t scaled_atten_correction[16][16] =
 {
  {0, -1, -2, -2, -3, -4, -3, -1, 0, 3, 7, 14, 21, 30, 42, 54 },                     // 2.6G dB*8, 16 levels
  {0, -2, -4, -6, -7, -9, -8, -8, -11, -9, -9, -8, -7, -4, 2, 8 },                   // 3.2G

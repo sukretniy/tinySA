@@ -260,7 +260,7 @@ CPPWARN = -Wall -Wextra -Wundef
 ifeq ($(TARGET),F303)
  UDEFS = -DARM_MATH_CM4 -DVERSION=\"$(VERSION)\" -DTINYSA_F303 -D__FPU_PRESENT -D__FPU_USED -DST7796S -DTINYSA4
 #Enable if install external 32.768kHz clock quartz on PC14 and PC15 pins on STM32 CPU
-#UDEFS+= -DVNA_USE_LSE
+UDEFS+= -DVNA_USE_LSE
 # Use R as usb pullup
 UDEFS+= -DUSB_DP_R_VDD
 #-DCH_DBG_STATISTICS 

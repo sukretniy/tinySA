@@ -68,6 +68,19 @@ volatile uint8_t operation_requested = OP_NONE;
 
 int8_t previous_marker = MARKER_INVALID;
 
+#ifdef __USE_SD_CARD__
+#if SPI_BUFFER_SIZE < 2048
+#error "SPI_BUFFER_SIZE for SD card support need size >= 2048"
+#else
+// Fat file system work area (at the end of spi_buffer)
+static FATFS *fs_volume   = (FATFS *)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS));
+// FatFS file object (at the end of spi_buffer)
+static FIL   *fs_file     = (   FIL*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL));
+// Filename object (at the end of spi_buffer)
+static char  *fs_filename = (  char*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL) - FF_LFN_BUF - 4);
+#endif
+#endif
+
 enum {
   UI_NORMAL, UI_MENU, UI_KEYPAD
 };
@@ -498,21 +511,34 @@ show_version(void)
   ili9341_set_background(LCD_BG_COLOR);
 
   ili9341_clear_screen();
-  uint16_t shift = 0b0000010000111110;
+  uint16_t shift = 0b00000100001;
+// Version text for tinySA3
+#ifdef TINYSA3
   ili9341_drawstring_10x14(info_about[i++], x , y);
+  y+=FONT_GET_HEIGHT*3+3-5;
   while (info_about[i]) {
     do {shift>>=1; y+=5;} while (shift&1);
-    ili9341_drawstring(info_about[i++], x, y+=5);
+    ili9341_drawstring(info_about[i++], x, y+=FONT_STR_HEIGHT+3-5);
   }
-#ifdef TINYSA3
   if (has_esd)
-    ili9341_drawstring("ESD protected", x, y+=10);
-#endif
-#ifdef TINYSA4
-extern const char *states[];
-  #define ENABLE_THREADS_COMMAND
+    ili9341_drawstring("ESD protected", x, y+=FONT_STR_HEIGHT + 2);
 
+  y+=FONT_STR_HEIGHT + 1;
+#endif
+// Version text for tinySA4
+#ifdef TINYSA4
+  ili9341_drawstring_10x14(info_about[i++], x , y);
+  y+=FONT_GET_HEIGHT*3+2-5;
+  ili9341_drawstring_7x13(info_about[i++], x , y);
+  while (info_about[i]) {
+    do {shift>>=1; y+=5;} while (shift&1);
+    ili9341_drawstring_7x13(info_about[i++], x, y+=bFONT_STR_HEIGHT+2-5);
+  }
+
+extern const char *states[];
+#define ENABLE_THREADS_COMMAND
 #ifdef ENABLE_THREADS_COMMAND
+  y+=FONT_STR_HEIGHT + 1;
   thread_t *tp;
   tp = chRegFirstThread();
   do {
@@ -530,13 +556,12 @@ extern const char *states[];
              stklimit, (uint32_t)tp->ctx.sp, max_stack_use, (uint32_t)tp,
              (uint32_t)tp->refs - 1, (uint32_t)tp->prio, states[tp->state],
              tp->name == NULL ? "" : tp->name);
-    ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
+    ili9341_drawstring_7x13(buf, x, y+=bFONT_STR_HEIGHT);
     tp = chRegNextThread(tp);
   } while (tp != NULL);
 #endif
-
-#endif		// TINYSA4
-
+  y+=bFONT_STR_HEIGHT + 1;
+#endif  // TINYSA4
   uint16_t cnt = 0;
   while (true) {
     if (touch_check() == EVT_TOUCH_PRESSED)
@@ -545,6 +570,8 @@ extern const char *states[];
       break;
     chThdSleepMilliseconds(40);
     if ((cnt++)&0x07) continue; // Not update time so fast
+
+#ifdef TINYSA4
 #ifdef __USE_RTC__
     uint32_t tr = rtc_get_tr_bin(); // TR read first
     uint32_t dr = rtc_get_dr_bin(); // DR read second
@@ -557,13 +584,14 @@ extern const char *states[];
       RTC_TR_MIN(dr),
       RTC_TR_SEC(dr),
       (RCC->BDCR & STM32_RTCSEL_MASK) == STM32_RTCSEL_LSE ? 'E' : 'I');
-    ili9341_drawstring(buffer, x, y);
+    ili9341_drawstring_7x13(buf, x, y);
 #endif
 #if 0
     uint32_t vbat=adc_vbat_read();
     plot_printf(buf, sizeof(buf), "Batt: %d.%03dV", vbat/1000, vbat%1000);
-    ili9341_drawstring(buf, x, y + FONT_STR_HEIGHT + 2);
+    ili9341_drawstring_7x13(buf, x, y + bFONT_STR_HEIGHT + 1);
 #endif
+#endif // TINYSA4
   }
 }
 
@@ -1546,6 +1574,7 @@ static void
 draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
 {
   uint16_t bw = b->border&BUTTON_BORDER_WIDTH_MASK;
+  ili9341_set_foreground(b->fg);
   ili9341_set_background(b->bg);ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2));
   if (bw==0) return;
   uint16_t br = LCD_RISE_EDGE_COLOR;
@@ -1555,6 +1584,23 @@ draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
   ili9341_set_background(type&BUTTON_BORDER_RIGHT  ? br : bd);ili9341_fill(x + w - bw, y,          bw,  h); // right
   ili9341_set_background(type&BUTTON_BORDER_LEFT   ? br : bd);ili9341_fill(x,          y,          bw,  h); // left
   ili9341_set_background(type&BUTTON_BORDER_BOTTOM ? br : bd);ili9341_fill(x,          y + h - bw,  w, bw); // bottom
+  // Set colors for button text after
+  ili9341_set_background(b->bg);
+}
+
+static void drawMessageBox(char *header, char *text, uint32_t delay){
+  ui_button_t b;
+  b.bg = LCD_MENU_COLOR;
+  b.fg = LCD_MENU_TEXT_COLOR;
+  b.border = BUTTON_BORDER_FLAT|1;
+  // Draw header
+  draw_button((LCD_WIDTH-MESSAGE_BOX_WIDTH)/2, LCD_HEIGHT/2-40, MESSAGE_BOX_WIDTH, 60, &b);
+  ili9341_drawstring_7x13(header, (LCD_WIDTH-MESSAGE_BOX_WIDTH)/2 + 10, LCD_HEIGHT/2-40 + 5);
+  // Draw window
+  ili9341_set_background(LCD_FG_COLOR);
+  ili9341_fill((LCD_WIDTH-MESSAGE_BOX_WIDTH)/2+3, LCD_HEIGHT/2-40+bFONT_STR_HEIGHT+8, MESSAGE_BOX_WIDTH-6, 60-bFONT_STR_HEIGHT-8-3);
+  ili9341_drawstring_7x13(text, (LCD_WIDTH-MESSAGE_BOX_WIDTH)/2 + 20, LCD_HEIGHT/2-40 + bFONT_STR_HEIGHT + 8 + 14);
+  chThdSleepMilliseconds(delay);
 }
 
 static void
@@ -1574,8 +1620,6 @@ draw_keypad(void)
     int x = KP_GET_X(keypads[i].x);
     int y = KP_GET_Y(keypads[i].y);
     draw_button(x, y, KP_WIDTH, KP_HEIGHT, &button);
-    ili9341_set_foreground(button.fg);
-    ili9341_set_background(button.bg);
     if (keypads[i].c < KP_0) { // KP_0
       ili9341_drawfont(keypads[i].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
@@ -1881,9 +1925,6 @@ draw_menu_buttons(const menuitem_t *menu, int only)
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen
       int button_height = MENU_BUTTON_HEIGHT;
       draw_button(button_start, y, button_width, button_height, &button);
-
-      ili9341_set_foreground(button.fg);
-      ili9341_set_background(button.bg);
       uint16_t text_offs = button_start + 6;
       if (button.icon >=0){
         ili9341_blitBitmap(button_start+3, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
@@ -1934,8 +1975,6 @@ draw_menu_buttons(const menuitem_t *menu, int only)
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
       int button_height = MENU_BUTTON_HEIGHT;
       draw_button(button_start, y, button_width, button_height, &button);
-      ili9341_set_foreground(button.fg);
-      ili9341_set_background(button.bg);
       uint16_t text_offs = button_start + 7;
       if (button.icon >=0){
         ili9341_blitBitmap(button_start+2, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
@@ -2838,6 +2877,87 @@ static int touch_quick_menu(int touch_x, int touch_y)
   return FALSE;
 }
 
+#ifdef __USE_SD_CARD__
+//*******************************************************************************************
+// Bitmap file header for LCD_WIDTH x LCD_HEIGHT image 16bpp (v4 format allow set RGB mask)
+//*******************************************************************************************
+#define BMP_UINT32(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF, ((val)>>16)&0xFF, ((val)>>24)&0xFF
+#define BMP_H1_SIZE      (14)                        // BMP header 14 bytes
+#define BMP_V4_SIZE      (56)                        // v4  header 56 bytes
+#define BMP_HEAD_SIZE    (BMP_H1_SIZE + BMP_V4_SIZE) // Size of all headers
+#define BMP_SIZE         (2*LCD_WIDTH*LCD_HEIGHT)    // Bitmap size = 2*w*h
+#define BMP_FILE_SIZE    (BMP_SIZE + BMP_HEAD_SIZE)  // File size = headers + bitmap
+static const uint8_t bmp_header_v4[14+56] = {
+// BITMAPFILEHEADER (14 byte size)
+  0x42, 0x4D,                // BM signature
+  BMP_UINT32(BMP_FILE_SIZE), // File size (h + v4 + bitmap)
+  0x00, 0x00,                // reserved
+  0x00, 0x00,                // reserved
+  BMP_UINT32(BMP_HEAD_SIZE), // Size of all headers (h + v4)
+// BITMAPINFOv4 (56 byte size)
+  BMP_UINT32(BMP_V4_SIZE),   // Data offset after this point (v4 size)
+  BMP_UINT32(LCD_WIDTH),     // Width
+  BMP_UINT32(LCD_HEIGHT),    // Height
+  0x01, 0x00,                // Planes
+  0x10, 0x00,                // 16bpp
+  0x03, 0x00, 0x00, 0x00,    // Compression (BI_BITFIELDS)
+  BMP_UINT32(BMP_SIZE),      // Bitmap size (w*h*2)
+  0xC4, 0x0E, 0x00, 0x00,    // x Resolution (96 DPI = 96 * 39.3701 inches per metre = 0x0EC4)
+  0xC4, 0x0E, 0x00, 0x00,    // y Resolution (96 DPI = 96 * 39.3701 inches per metre = 0x0EC4)
+  0x00, 0x00, 0x00, 0x00,    // Palette size
+  0x00, 0x00, 0x00, 0x00,    // Palette used
+// Extend v4 header data (color mask for RGB565)
+  0x00, 0xF8, 0x00, 0x00,    // R mask = 0b11111000 00000000
+  0xE0, 0x07, 0x00, 0x00,    // G mask = 0b00000111 11100000
+  0x1F, 0x00, 0x00, 0x00,    // B mask = 0b00000000 00011111
+  0x00, 0x00, 0x00, 0x00     // A mask = 0b00000000 00000000
+};
+
+static bool
+made_screenshot(int touch_x, int touch_y)
+{
+  int y, i;
+  UINT size;
+  if (touch_y < HEIGHT || touch_x < FREQUENCIES_XPOS2-100 || touch_x > FREQUENCIES_XPOS2)
+    return FALSE;
+  touch_wait_release();
+//  uint32_t time = chVTGetSystemTimeX();
+//  shell_printf("Screenshot\r\n");
+  FRESULT res = f_mount(fs_volume, "", 1);
+  // fs_volume, fs_file and fs_filename stored at end of spi_buffer!!!!!
+  uint16_t *buf = (uint16_t *)spi_buffer;
+//  shell_printf("Mount = %d\r\n", res);
+  if (res != FR_OK)
+    return TRUE;
+#if FF_USE_LFN >= 1
+  uint32_t tr = rtc_get_tr_bcd(); // TR read first
+  uint32_t dr = rtc_get_dr_bcd(); // DR read second
+  plot_printf(fs_filename, FF_LFN_BUF, "VNA_%06x_%06x.bmp", dr, tr);
+#else
+  plot_printf(fs_filename, FF_LFN_BUF, "%08x.bmp", rtc_get_FAT());
+#endif
+  res = f_open(fs_file, fs_filename, FA_CREATE_ALWAYS | FA_READ | FA_WRITE);
+//  shell_printf("Open %s, result = %d\r\n", fs_filename, res);
+  if (res == FR_OK){
+    res = f_write(fs_file, bmp_header_v4, sizeof(bmp_header_v4), &size);
+    for (y = LCD_HEIGHT-1; y >= 0 && res == FR_OK; y--) {
+      ili9341_read_memory(0, y, LCD_WIDTH, 1, buf);
+      for (i = 0; i < LCD_WIDTH; i++)
+        buf[i] = __REVSH(buf[i]); // swap byte order (example 0x10FF to 0xFF10)
+      res = f_write(fs_file, buf, LCD_WIDTH*sizeof(uint16_t), &size);
+    }
+    res = f_close(fs_file);
+//    shell_printf("Close %d\r\n", res);
+//    testLog();
+  }
+//  time = chVTGetSystemTimeX() - time;
+//  shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, (LCD_WIDTH*LCD_HEIGHT*sizeof(uint16_t)+sizeof(bmp_header_v4))*10000/time);
+  drawMessageBox("SCREENSHOT", res == FR_OK ? fs_filename : "  Fail write  ", 2000);
+  redraw_request|= REDRAW_AREA;
+  return TRUE;
+}
+#endif
+
 static int
 touch_lever_mode_select(int touch_x, int touch_y)
 {
@@ -2940,6 +3060,10 @@ void ui_process_touch(void)
         break;
       if (touch_marker_select(touch_x, touch_y))
         break;
+#ifdef __USE_SD_CARD__
+      if (made_screenshot(touch_x, touch_y))
+        break;
+#endif
       // Try select lever mode (top and bottom screen)
       if (touch_lever_mode_select(touch_x, touch_y)) {
 //        touch_wait_release();
