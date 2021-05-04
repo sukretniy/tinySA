@@ -26,6 +26,9 @@
 #pragma GCC push_options
 #pragma GCC optimize ("O2")
 
+//#define __USE_FFR_FOR_RSSI__
+
+
 // Define for use hardware SPI mode
 #define USE_HARDWARE_SPI_MODE
 
@@ -704,7 +707,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 #define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 #define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
 // ---------------------------------------------------------------------------------------------------- v ------------  RSSI control byte
-#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x10, 0x40
+#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x07, 0x10, 0x40
 //0x11 SI446X_CMD_SET_PROPERTY
 //0x20  SI446X_PROP_GROUP_MODEM
 //0x0A  10 Count
@@ -906,9 +909,13 @@ void SI4463_start_rx(uint8_t CHANNEL)
     0,
     0,
     0,
-    0,// 8,
-    0,// SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
-    0, //SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
+#ifdef __USE_FFR_FOR_RSSI__
+    SI446X_CMD_START_RX_ARG_NEXT_STATE1_RXTIMEOUT_STATE_ENUM_RX,
+#else
+    SI446X_CMD_START_RX_ARG_NEXT_STATE1_RXTIMEOUT_STATE_ENUM_NOCHANGE,
+#endif
+    SI446X_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_RX,
+    SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
   };
 //retry:
   SI4463_do_api(data, sizeof(data), NULL, 0);
@@ -1123,34 +1130,36 @@ extern deviceRSSI_t age[POINTS_COUNT];
 static int buf_index = 0;
 static bool  buf_read = false;
 
-//#define __USE_FFR_FOR_RSSI__
-
 static char Si446x_readRSSI(void){
   char rssi;
-  SI4463_WAIT_CTS;                       // Wait for CTS
 #ifdef __USE_FFR_FOR_RSSI__
-  SI_CS_LOW;
   while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
     (void)SPI_READ_8BIT(SI4432_SPI);     // Remove lingering bytes
+  SI_CS_LOW;
+#if 0               // Restart RX, not needed as modem stays inRX mode
+  SI4463_WAIT_CTS;                       // Wait for CTS
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
   SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
-  SI_CS_HIGH;
-  SI_CS_LOW;
-  do {
-#if 0
-    SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);                      // This does not work
-    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);      // begin read 1 bytes
-    while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
-    SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
-    rssi = SPI_READ_8BIT(SI4432_SPI);      // Get FRR A
-#else
-    rssi = getFRR(SI446X_CMD_READ_FRR_A);                                   // This works!!!
 #endif
-  } while (rssi == 0);                  // Wait for latch to happen
   SI_CS_HIGH;
+  do {
+    set_SPI_mode(SPI_MODE_SI);
+    __disable_irq();                        // Needed because sometimes interrupt causes SPI but to corrupt
+    SI_CS_LOW;
+    while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));                    // shiftout
+    SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
+    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
+      (void)SPI_READ_8BIT(SI4432_SPI);
+    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);               // shiftin
+    while (SPI_RX_IS_EMPTY(SI4432_SPI)) ; // drop rx and wait tx
+    rssi = SPI_READ_8BIT(SI4432_SPI);
+    __enable_irq();
+    SI_CS_HIGH;
+  } while (rssi == 0);                  // Wait for latch to happen
 #elif 1
   SI_CS_LOW;
+  SI4463_WAIT_CTS;                       // Wait for CTS
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_GET_MODEM_STATUS);
   while (SPI_IS_BUSY(SI4432_SPI)) ; // wait tx
   SI_CS_HIGH;
