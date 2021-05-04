@@ -1140,23 +1140,17 @@ static char Si446x_readRSSI(void){
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
   SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
 #endif
-  SI_CS_HIGH;                   // <------------------- This should not be needed but without it does not work!!!!!!
   while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
     (void)SPI_READ_8BIT(SI4432_SPI);     // Remove lingering bytes
   do {
-    set_SPI_mode(SPI_MODE_SI);
-    __disable_irq();                        // Needed because sometimes interrupt causes SPI bus corruption and rssi is 0xff
     SI_CS_LOW;
-    while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));                    // shiftout
     SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
-    while (SPI_IS_BUSY(SI4432_SPI)) // drop rx and wait tx
-      (void)SPI_READ_8BIT(SI4432_SPI);
-    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);               // shiftin
-    while (SPI_RX_IS_EMPTY(SI4432_SPI)) ; // drop rx and wait tx
-    rssi = SPI_READ_8BIT(SI4432_SPI);
-    __enable_irq();
+    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);       // read FRR_A
+    while (SPI_IS_BUSY(SI4432_SPI));        // wait
+    SPI_READ_8BIT(SI4432_SPI);
+    rssi = SPI_READ_8BIT(SI4432_SPI);       // get last byte as FRR_A (rssi)
     SI_CS_HIGH;
-  } while (rssi == 0);                  // Wait for latch to happen
+  } while (rssi == 0);                      // Wait for latch to happen
 #elif 1
   SI_CS_LOW;
   SI4463_WAIT_CTS;                       // Wait for CTS
@@ -1218,28 +1212,30 @@ void SI446x_Fill(int s, int start)
   systime_t measure = chVTGetSystemTimeX();
   int i = start;
 // For SI446X_CMD_READ_FRR_A need drop Rx buffer
-#if 0
+#ifdef __USE_FFR_FOR_RSSI__
   SI4463_WAIT_CTS;                       // Wait for CTS
   while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
+  // Get first point data
+  pureRSSI_t last;
+  do{
+    SI_CS_LOW;
+    SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
+    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);      // begin read 1 bytes
+    while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
+    SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
+    last = SPI_READ_8BIT(SI4432_SPI);      // Get FRR A
+    SI_CS_HIGH;
+  } while (last == 0);
 #endif
   __disable_irq();
   do {
-#if 1
+#ifndef  __USE_FFR_FOR_RSSI__
     age[i] = Si446x_readRSSI();
     if (++i >= sweep_points) break;
     if (t)
       my_microsecond_delay(t);
 #else
-#if 1
-  SI_CS_LOW;
-  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
-  while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
-  SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
-  SI_CS_HIGH;
-#endif
-  if (t)
-    my_microsecond_delay(t);
-  again:
+ // DEBUG!! restart
   SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
   SPI_WRITE_8BIT(SI4432_SPI, 0xFF);      // begin read 1 bytes
@@ -1247,10 +1243,11 @@ void SI446x_Fill(int s, int start)
   SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
   age[i] = SPI_READ_8BIT(SI4432_SPI);    // Get FRR A
   SI_CS_HIGH;
-
-//  volatile uint8_t state = getFRR(SI446X_CMD_READ_FRR_B);
-
-  if (age[i] == 0) goto again;
+  // latched RSSI reset for next measure - use last known data, for stable measure time
+  if (age[i] == 0) age[i] = last;
+  last = age[i];
+  if (t)
+    my_microsecond_delay(t);
   if (++i >= sweep_points) break;
 #endif
 
