@@ -730,7 +730,8 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 #define RF_MODEM_AGC_CONTROL_1 GLOBAL_RF_MODEM_AGC_CONTROL
 
 #undef RF_MODEM_AGC_WINDOW_SIZE_12_1
-#define RF_MODEM_AGC_WINDOW_SIZE_12_1 0x11, 0x20, 0x0C, 0x38, 0x11, 0x07, 0x07, 0x80, 0x02, 0x4C, 0xCD, 0x00, 0x27, 0x0C, 0x84, 0x23
+//#define RF_MODEM_AGC_WINDOW_SIZE_12_1 0x11, 0x20, 0x0C, 0x38, 0x11, 0x07, 0x07, 0x80, 0x02, 0x4C, 0xCD, 0x00, 0x27, 0x0C, 0x84, 0x23
+#define RF_MODEM_AGC_WINDOW_SIZE_12_1 0x11, 0x20, 0x0C, 0x38, 0x11, 0x07, 0x07, 0x80, 0x1C, 0x4C, 0xCD, 0x00, 0x27, 0x0C, 0x84, 0x23
 
 
 #undef RF_GPIO_PIN_CFG
@@ -1133,19 +1134,18 @@ static bool  buf_read = false;
 static char Si446x_readRSSI(void){
   char rssi;
 #ifdef __USE_FFR_FOR_RSSI__
-  while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
-    (void)SPI_READ_8BIT(SI4432_SPI);     // Remove lingering bytes
-  SI_CS_LOW;
-#if 0               // Restart RX, not needed as modem stays inRX mode
+#if 0               // Restart RX, not needed as modem stays in RX mode
   SI4463_WAIT_CTS;                       // Wait for CTS
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
   SPI_READ_8BIT(SI4432_SPI);             // Skip command byte response
 #endif
-  SI_CS_HIGH;
+  SI_CS_HIGH;                   // <------------------- This should not be needed but without it does not work!!!!!!
+  while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
+    (void)SPI_READ_8BIT(SI4432_SPI);     // Remove lingering bytes
   do {
     set_SPI_mode(SPI_MODE_SI);
-    __disable_irq();                        // Needed because sometimes interrupt causes SPI but to corrupt
+    __disable_irq();                        // Needed because sometimes interrupt causes SPI bus corruption and rssi is 0xff
     SI_CS_LOW;
     while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));                    // shiftout
     SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_FRR_A);
