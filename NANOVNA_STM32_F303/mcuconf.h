@@ -75,6 +75,12 @@
 /*
  * RTC driver system settings for stm32f303
  */
+#define RTC_PRER(a, s)              ((((a) - 1) << 16) | ((s) - 1))
+
+// LSE for 32768 quartz
+#define STM32_RTC_LSE_PRER                  RTC_PRER(128,  256)
+// LSI 40k
+#define STM32_RTC_LSI_PRER                  RTC_PRER( 40, 1000)
 
 #ifndef VNA_USE_LSE
 // Use 40kHz LSI

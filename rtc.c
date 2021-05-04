@@ -26,7 +26,7 @@
 
 // Compact STM32 RTC time library
 #if HAL_USE_RTC == TRUE
-//#error "Error VNA use self RTC lib, define HAL_USE_RTC = FALSE in halconf.h"
+#error "Error VNA use self RTC lib, define HAL_USE_RTC = FALSE in halconf.h"
 #endif
 
 // Get RTC time as binary structure in 0x00HHMMSS

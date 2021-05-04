@@ -2890,7 +2890,12 @@ int main(void)
 {
   halInit();
   chSysInit();
-
+ /*
+  * Initialize RTC library (not used ChibiOS RTC module)
+  */
+  #ifdef __USE_RTC__
+    rtc_init();
+  #endif
   //palSetPadMode(GPIOB, 8, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
   //palSetPadMode(GPIOB, 9, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
 #ifdef __VNA__
