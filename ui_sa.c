@@ -212,25 +212,6 @@ const uint8_t right_icons [] =
   _BMP16(0b0000000000000000),
 };
 
-const uint8_t sd_icon [] = {
-_BMP16(0b1111111111111100),  //
-_BMP16(0b1000000000000100),  // 1
-_BMP16(0b1000000000000100),  // 2
-_BMP16(0b1000110011100100),  // 5
-_BMP16(0b1001001010010100),  // 6
-_BMP16(0b1000100010010100),  // 7
-_BMP16(0b1000010010010100),  // 8
-_BMP16(0b1001001010010100),  // 9
-_BMP16(0b1000110011100100),  //10
-_BMP16(0b0100000000000100),  // 3
-_BMP16(0b0100000000000100),  // 4
-_BMP16(0b1100000000000100),  //11
-_BMP16(0b1000000000000100),  //12
-_BMP16(0b1000000000000100),  //13
-_BMP16(0b0101010101010100),  //14
-_BMP16(0b0111111111111100)   //
-};
-
 #define KP_X(x) (48*(x) + 2 + (LCD_WIDTH-BUTTON_WIDTH-192))
 #define KP_Y(y) (48*(y) + 2)
 
@@ -3433,15 +3414,7 @@ redraw_cal_status:
   strncpy(buf,&VERSION[8], BLEN-1);
 #endif
   ili9341_drawstring(buf, x, y);
-#ifdef  __USE_SD_CARD__
-  y += YSTEP + YSTEP/2 ;
-  if (SD_Inserted()){
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    ili9341_blitBitmap(x+4, y, FORM_ICON_HEIGHT, FORM_ICON_HEIGHT, sd_icon);
-//  ili9341_drawstring("-SD-", x, y);
-  }
-  y+=12;
-#endif
+
   if (y >= BATTERY_START && item_space > 0) {
     item_space--;                       // Reduce item spacing
     goto redraw_cal_status;

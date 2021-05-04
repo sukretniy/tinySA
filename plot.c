@@ -1636,6 +1636,35 @@ draw_frequencies(void)
 
 static void draw_battery_status(void)
 {
+#ifdef  __USE_SD_CARD__
+static const uint8_t sd_icon [] = {
+  _BMP16(0b1111111111111000),  //
+  _BMP16(0b1000000000001000),  // 1
+  _BMP16(0b1000000000001000),  // 2
+  _BMP16(0b1000000000001000),  // 3
+  _BMP16(0b1001100111001000),  // 4
+  _BMP16(0b1010010100101000),  // 5
+  _BMP16(0b1001000100101000),  // 6
+  _BMP16(0b1000100100101000),  // 7
+  _BMP16(0b1010010100101000),  // 8
+  _BMP16(0b1001100111001000),  // 9
+  _BMP16(0b0100000000001000),  //10
+  _BMP16(0b0100000000001000),  //11
+  _BMP16(0b1100000000001000),  //12
+  _BMP16(0b1000000000001000),  //13
+  _BMP16(0b0101010101011000),  //14
+  _BMP16(0b0111111111111000)   //
+  };
+  if (SD_Inserted()){
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_blitBitmap(4, SD_CARD_START, 16, 16, sd_icon);
+//  ili9341_drawstring("-SD-", x, SD_CARD_START);
+  }
+  else{
+    ili9341_set_background(LCD_BG_COLOR);
+    ili9341_fill(4, SD_CARD_START, 16, 16);
+  }
+#endif
   int16_t vbat = adc_vbat_read();
   if (vbat <= 0)
     return;

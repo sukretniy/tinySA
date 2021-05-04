@@ -2918,7 +2918,7 @@ made_screenshot(int touch_x, int touch_y)
 {
   int y, i;
   UINT size;
-  if (touch_y < HEIGHT || touch_x < FREQUENCIES_XPOS2-100 || touch_x > FREQUENCIES_XPOS2)
+  if (touch_y < SD_CARD_START || touch_y > SD_CARD_START + 20 || touch_x > OFFSETX)
     return FALSE;
   touch_wait_release();
 //  uint32_t time = chVTGetSystemTimeX();
@@ -3053,6 +3053,10 @@ void ui_process_touch(void)
     touch_position(&touch_x, &touch_y);
     switch (ui_mode) {
     case UI_NORMAL:
+#ifdef __USE_SD_CARD__
+      if (made_screenshot(touch_x, touch_y))
+        break;
+#endif
       if (touch_quick_menu(touch_x, touch_y))
         break;
       // Try drag marker
@@ -3060,10 +3064,6 @@ void ui_process_touch(void)
         break;
       if (touch_marker_select(touch_x, touch_y))
         break;
-#ifdef __USE_SD_CARD__
-      if (made_screenshot(touch_x, touch_y))
-        break;
-#endif
       // Try select lever mode (top and bottom screen)
       if (touch_lever_mode_select(touch_x, touch_y)) {
 //        touch_wait_release();
