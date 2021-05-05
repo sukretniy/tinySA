@@ -518,6 +518,7 @@ static const menuitem_t  menu_curve_confirm[];
 #endif
 static const menuitem_t  menu_sweep[];
 extern bool dirty;
+char range_text[20];
 
 static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
 {
@@ -1942,7 +1943,7 @@ static const menuitem_t  menu_modulation[] = {
 };
 
 static const menuitem_t  menu_sweep[] = {
-  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         VARIANT("0..350MHz", "0..800MHz")},
+  { MT_FORM | MT_KEYPAD,   KM_SPAN,             "SPAN: %s",         VARIANT("0..350MHz", range_text)},
   { MT_FORM | MT_KEYPAD | MT_LOW, KM_LEVELSWEEP,"LEVEL CHANGE: %s", VARIANT("-70..70","-90..90")},
   { MT_FORM | MT_KEYPAD,   KM_SWEEP_TIME,       "SWEEP TIME: %s",   "0..600 seconds"},
   { MT_FORM | MT_SUBMENU,  0,                   "SWEEP POINTS",   menu_sweep_points_form},
@@ -1973,7 +1974,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 
 static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
-  { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz","136MHz..4350MHz")},
+  { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz",range_text)},
   { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
   { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},

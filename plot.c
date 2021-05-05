@@ -24,7 +24,7 @@
 #include "nanovna.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("O2")      // Makes the code just a bit faster, disable during debugging.
+#pragma GCC optimize ("Og")      // Makes the code just a bit faster, disable during debugging.
 
 #ifdef __SCROLL__
 uint16_t _grid_y = (CHART_BOTTOM / NGRIDY);
@@ -489,6 +489,8 @@ mark_cells_from_index(void)
   for (t = 0; t < TRACES_MAX; t++) {
     if (!trace[t].enabled)
       continue;
+    if ((CLEAR_ACTUAL << t ) & redraw_request )
+      continue; // dirty, do not draw
     index_y_t *index_y = trace_index_y[t];
     int m0 = index_x[0] / CELLWIDTH;
     int n0 = index_y[0] / CELLHEIGHT;
@@ -823,6 +825,9 @@ plot_into_index(measurement_t measured)
   for (t = 0; t < TRACES_MAX; t++) {
     if (!trace[t].enabled)
       continue;
+    if ((CLEAR_ACTUAL << t ) & redraw_request ) {
+      continue; // dirty, do not draw
+    }
     trace_into_index_y_array(trace_index_y[t], measured[t], sweep_points);
   }
 //  STOP_PROFILE
@@ -945,6 +950,9 @@ draw_cell(int m, int n)
   for (t = 0; t < TRACES_MAX; t++) {
     if (!trace[t].enabled)
       continue;
+    if ((CLEAR_ACTUAL << t ) & redraw_request )
+      continue; // dirty, do not draw
+
     c = GET_PALTETTE_COLOR(LCD_TRACE_1_COLOR + t);
     index_y_t *index_y = trace_index_y[t];
     for (i = i0; i < i1; i++) {

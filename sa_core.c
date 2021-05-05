@@ -142,6 +142,9 @@ void update_min_max_freq(void)
 #else
     maxFreq = DEFAULT_MAX_FREQ;
 #endif
+#ifdef TINYSA4
+    plot_printf(range_text, sizeof range_text, "%QHz to %QHz", minFreq, maxFreq);
+#endif
     break;
   case M_GENLOW:
     minFreq = 0;
@@ -170,6 +173,9 @@ void update_min_max_freq(void)
 #endif
     break;
   }
+#ifdef TINYSA4
+    plot_printf(range_text, sizeof range_text, "%.3QHz to %.3QHz", minFreq, maxFreq);
+#endif
 }
 
 void reset_settings(int m)
@@ -1080,11 +1086,7 @@ void set_average(int v)
       && (v != AV_QUASI)
 #endif
       );
-  if (trace[TRACE_TEMP].enabled) {
-    for (int i=0; i<sweep_points; i++)
-      temp_t[i] = 0;
-    redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
-  }
+   if (trace[TRACE_TEMP].enabled)  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS | CLEAR_ACTUAL | CLEAR_TEMP;
   //dirty = true;             // No HW update required, only status panel refresh
 }
 

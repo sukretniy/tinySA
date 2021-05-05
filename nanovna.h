@@ -124,7 +124,7 @@
 #define MARKER_COUNT    4
 
 #define TRACES_MAX 3
-#define TRACE_ACTUAL    0
+#define TRACE_ACTUAL    0           // order linked to redraw_request flags!!!!!
 #define TRACE_STORED    1
 #define TRACE_TEMP      2
 //#define TRACE_AGE       3
@@ -797,7 +797,10 @@ int marker_search_right_min(int from);
 #define REDRAW_BATTERY    (1<<4)
 #define REDRAW_AREA       (1<<5)
 #define REDRAW_TRIGGER    (1<<6)
-extern  uint8_t redraw_request;
+#define CLEAR_ACTUAL      (1<<7)
+#define CLEAR_STORED      (1<<8)
+#define CLEAR_TEMP        (1<<9)
+extern  uint16_t redraw_request;
 
 /*
  * ili9341.c
@@ -1296,6 +1299,10 @@ void handle_touch_interrupt(void);
 void touch_cal_exec(void);
 void touch_draw_test(void);
 void enter_dfu(void);
+
+#ifdef TINYSA4
+extern char range_text[20];
+#endif
 
 /*
  * adc.c

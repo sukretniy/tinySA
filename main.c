@@ -104,7 +104,7 @@ static void transform_domain(void);
 static int8_t drive_strength = DRIVE_STRENGTH_AUTO;
 #endif
 uint8_t sweep_mode = SWEEP_ENABLE;
-uint8_t redraw_request = 0; // contains REDRAW_XXX flags
+uint16_t redraw_request = 0; // contains REDRAW_XXX flags
 uint8_t auto_capture = false;
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
@@ -192,7 +192,7 @@ static THD_FUNCTION(Thread1, arg)
       ui_process();
     // Process collected data, calculate trace coordinates and plot only if scan
     // completed
-    if (/* sweep_mode & SWEEP_ENABLE && */ completed) {
+    if ((redraw_request & (CLEAR_ACTUAL | CLEAR_STORED | CLEAR_TEMP) ) || completed) {
 //      START_PROFILE;
       // Prepare draw graphics, cache all lines, mark screen cells for redraw
       plot_into_index(measured);
