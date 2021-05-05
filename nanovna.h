@@ -641,10 +641,6 @@ float value(float);
 float index_to_value(const int i);
 float marker_to_value(const int i);
 
-typedef struct trace {
-  uint8_t enabled;
-} trace_t;
-
 #define FREQ_MODE_START_STOP    0x0
 #define FREQ_MODE_CENTER_SPAN   0x1
 #define FREQ_MODE_DOTTED_GRID   0x2
@@ -738,6 +734,22 @@ enum {
   M_DISABLED = false, M_ENABLED = true
 };
 
+
+// Flags/macros for enable/disable traces
+#define TRACE_ACTUAL_FLAG (1<<(TRACE_ACTUAL))
+#define TRACE_STORED_FLAG (1<<(TRACE_STORED))
+#define TRACE_TEMP_FLAG   (1<<(TRACE_TEMP))
+
+#define TRACE_ENABLE(t_mask)  {setting._traces|= (t_mask);}
+#define TRACE_DISABLE(t_mask) {setting._traces&=~(t_mask);}
+
+#define IS_TRACES_ENABLED(t_mask) (setting._traces&(t_mask))
+#define IS_TRACE_ENABLE(t)        (setting._traces&(1<<(t)))
+#define IS_TRACE_DISABLE(t)      !(setting._traces&(1<<(t)))
+
+// Enable trace for show only after sweep complete (disable it at call)
+void enableTracesAtComplete(uint8_t mask);
+
 typedef struct {
   uint8_t enabled;
   uint8_t mtype;
@@ -797,9 +809,6 @@ int marker_search_right_min(int from);
 #define REDRAW_BATTERY    (1<<4)
 #define REDRAW_AREA       (1<<5)
 #define REDRAW_TRIGGER    (1<<6)
-#define CLEAR_ACTUAL      (1<<7)
-#define CLEAR_STORED      (1<<8)
-#define CLEAR_TEMP        (1<<9)
 extern  uint16_t redraw_request;
 
 /*
@@ -995,6 +1004,7 @@ typedef struct setting
   uint8_t test;                // current test number
   uint8_t harmonic;            // used harmonic number 1...5
   uint8_t fast_speedup;        // 0 - 20
+  uint8_t  _traces;            // enabled traces flags
 
   uint16_t linearity_step;     // range equal POINTS_COUNT
   uint16_t _sweep_points;
@@ -1039,7 +1049,6 @@ typedef struct setting
 #define FREQUENCY_SHIFT 100000000   // 100MHz upconversion maximum
   float trace_scale;
   float trace_refpos;
-  trace_t _trace[TRACES_MAX];
   marker_t _markers[MARKERS_MAX];
 #ifdef __LIMITS__
   limit_t limits[LIMITS_MAX];
@@ -1191,7 +1200,6 @@ extern int16_t lastsaveid;
 #define cal_data active_props->_cal_data
 #define electrical_delay current_props._electrical_delay
 #endif
-#define trace setting._trace
 #define markers setting._markers
 #define active_marker setting._active_marker
 #ifdef __VNA__

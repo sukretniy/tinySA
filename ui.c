@@ -2834,7 +2834,7 @@ touch_pickup_marker(int touch_x, int touch_y)
   int min_dist = MARKER_PICKUP_DISTANCE * MARKER_PICKUP_DISTANCE;
   // Search closest marker to touch position
   for (t = 0; t < TRACES_MAX; t++) {
-    if (!trace[t].enabled)
+    if (IS_TRACE_DISABLE(t))
       continue;
     for (m = 0; m < MARKERS_MAX; m++) {
       if (!markers[m].enabled)

@@ -487,10 +487,8 @@ mark_cells_from_index(void)
   map_t *map = &markmap[current_mappage][0];
   index_x_t *index_x = trace_index_x;
   for (t = 0; t < TRACES_MAX; t++) {
-    if (!trace[t].enabled)
+    if (IS_TRACE_DISABLE(t))
       continue;
-    if ((CLEAR_ACTUAL << t ) & redraw_request )
-      continue; // dirty, do not draw
     index_y_t *index_y = trace_index_y[t];
     int m0 = index_x[0] / CELLWIDTH;
     int n0 = index_y[0] / CELLHEIGHT;
@@ -772,7 +770,7 @@ markmap_marker(int marker)
 {
   if (!markers[marker].enabled)
     return;
-  if (!trace[TRACE_ACTUAL].enabled)
+  if (IS_TRACE_DISABLE(TRACE_ACTUAL))
     return;
   int idx = markers[marker].index;
   int x = trace_index_x[idx] - X_MARKER_OFFSET;
@@ -823,11 +821,8 @@ plot_into_index(measurement_t measured)
 //  START_PROFILE
   trace_into_index_x_array(trace_index_x, sweep_points);
   for (t = 0; t < TRACES_MAX; t++) {
-    if (!trace[t].enabled)
+    if (IS_TRACE_DISABLE(t))
       continue;
-    if ((CLEAR_ACTUAL << t ) & redraw_request ) {
-      continue; // dirty, do not draw
-    }
     trace_into_index_y_array(trace_index_y[t], measured[t], sweep_points);
   }
 //  STOP_PROFILE
@@ -885,11 +880,10 @@ draw_cell(int m, int n)
   c = GET_PALTETTE_COLOR(LCD_GRID_COLOR);
   // Generate grid type list
   uint32_t trace_type = 0;
-  for (t = 0; t < TRACES_MAX; t++) {
-    if (trace[t].enabled) {
-      trace_type |= RECTANGULAR_GRID_MASK;
-    }
-  }
+
+  if (IS_TRACES_ENABLED(TRACE_ACTUAL_FLAG|TRACE_STORED_FLAG|TRACE_TEMP_FLAG))
+    trace_type |= RECTANGULAR_GRID_MASK;
+
   // Draw rectangular plot (40 system ticks for all screen calls)
   if (trace_type & RECTANGULAR_GRID_MASK) {
     for (x = 0; x < w; x++) {
@@ -948,10 +942,8 @@ draw_cell(int m, int n)
   index_x_t *index_x = trace_index_x;
   search_index_range_x(x0, x0 + w, &i0, &i1);
   for (t = 0; t < TRACES_MAX; t++) {
-    if (!trace[t].enabled)
+    if (IS_TRACE_DISABLE(t))
       continue;
-    if ((CLEAR_ACTUAL << t ) & redraw_request )
-      continue; // dirty, do not draw
 
     c = GET_PALTETTE_COLOR(LCD_TRACE_1_COLOR + t);
     index_y_t *index_y = trace_index_y[t];
@@ -972,7 +964,7 @@ draw_cell(int m, int n)
 // draw marker symbols on each trace (<10 system ticks for all screen calls)
 #if 1
   for (int t = TRACE_ACTUAL; t <= TRACE_STORED; t++ ) {
-  if (trace[t].enabled) {
+  if (IS_TRACE_ENABLE(t)) {
     for (i = 0; i < MARKERS_MAX; i++) {
       if (!markers[i].enabled)
         continue;
@@ -1560,7 +1552,7 @@ static void cell_draw_marker_info(int x0, int y0)
     if (!markers[i].enabled)
       continue;
     for (t = TRACE_ACTUAL; t <= TRACE_STORED; t++) { // Only show info on actual trace
-      if (!trace[t].enabled)
+      if (IS_TRACE_DISABLE(t))
         continue;
       if (markers[i].mtype & M_STORED) {
         if (t == TRACE_ACTUAL)

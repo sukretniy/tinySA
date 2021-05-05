@@ -124,6 +124,7 @@ const char *info_about[]={
 
 bool dirty = true;
 bool completed = false;
+uint8_t enable_after_complete = 0;
 
 #ifdef TINYSA4
 static THD_WORKING_AREA(waThread1, 1124);
@@ -192,7 +193,12 @@ static THD_FUNCTION(Thread1, arg)
       ui_process();
     // Process collected data, calculate trace coordinates and plot only if scan
     // completed
-    if ((redraw_request & (CLEAR_ACTUAL | CLEAR_STORED | CLEAR_TEMP) ) || completed) {
+    if (completed) {
+      // Enable traces at sweep complete for redraw
+      if (enable_after_complete){
+        TRACE_ENABLE(enable_after_complete);
+        enable_after_complete = 0;
+      }
 //      START_PROFILE;
       // Prepare draw graphics, cache all lines, mark screen cells for redraw
       plot_into_index(measured);
@@ -219,6 +225,12 @@ static THD_FUNCTION(Thread1, arg)
 #pragma GCC push_options
 #pragma GCC optimize ("Os")
 
+void enableTracesAtComplete(uint8_t mask){
+  // Disable this traces
+  TRACE_DISABLE(mask);
+  enable_after_complete|=mask;
+  redraw_request|=REDRAW_AREA;
+}
 
 int
 is_paused(void)
@@ -1050,12 +1062,7 @@ config_t config = {
 //properties_t current_props;
 //properties_t *active_props = &current_props;
 
-// NanoVNA Default settings
-static const trace_t def_trace[TRACES_MAX] = {//enable, type, channel, reserved, scale, refpos
- [TRACE_TEMP]   = { 0},  //Temp
- [TRACE_STORED] = { 0},  //Stored
- [TRACE_ACTUAL] = { 1}   //Actual
-};
+
 
 static const marker_t def_markers[MARKERS_MAX] = {
     { M_ENABLED,            M_REFERENCE | M_TRACKING,   30, 0 },
@@ -1085,7 +1092,7 @@ void load_LCD_properties(void)
   setting.trace_scale = 10.0;
   setting.trace_refpos = 0;
   setting.waterfall = W_OFF;
-  memcpy(setting._trace, def_trace, sizeof(def_trace));
+  setting._traces = TRACE_ACTUAL_FLAG;
   memcpy(setting._markers, def_markers, sizeof(def_markers));
 #ifdef __LIMITS__
   memset(setting.limits, 0, sizeof(setting.limits));
@@ -1879,7 +1886,7 @@ VNA_SHELL_FUNCTION(cmd_trace)
   int t;
   if (argc == 0) {
     for (t = 0; t < TRACES_MAX; t++) {
-      if (trace[t].enabled) {
+      if (IS_TRACE_ENABLE(t)) {
         const char *type = unit_string[setting.unit]; // get_trace_typename(t);
         const char *channel = trc_channel_name[t];
         float scale = get_trace_scale();

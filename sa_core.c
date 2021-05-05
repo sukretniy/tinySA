@@ -250,8 +250,7 @@ void reset_settings(int m)
   setting.fast_speedup = 0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
-  trace[TRACE_STORED].enabled = false;
-  trace[TRACE_TEMP].enabled = false;
+  TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
 //  setting.refer = -1;             // do not reset reffer when switching modes
   setting.mute = true;
 #ifdef __SPUR__
@@ -453,7 +452,7 @@ void set_measurement(int m)
   setting.measurement = m;
 #ifdef __LINEARITY__
   if (m == M_LINEARITY) {
-    trace[TRACE_STORED].enabled = true;
+    TRACE_ENABLE(TRACE_STORED_FLAG);
     for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = -150;
     setting.linearity_step = 0;
@@ -519,12 +518,10 @@ void toggle_debug_avoid(void)
   debug_avoid = !debug_avoid;
   if (debug_avoid) {
     setting.show_stored = true;
-    trace[TRACE_STORED].enabled = true;
-    trace[TRACE_TEMP].enabled = true;
+    TRACE_ENABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
   } else {
     setting.show_stored = false;
-    trace[TRACE_STORED].enabled = false;
-    trace[TRACE_TEMP].enabled = false;
+    TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
   }
   dirty = true;
 }
@@ -867,10 +864,10 @@ void limits_update(void)
     while (j < sweep_points)
       stored_t[j++] = old_level;
     setting.show_stored = true;
-    trace[TRACE_STORED].enabled = true;
+    TRACE_ENABLE(TRACE_STORED_FLAG);
   } else {
     setting.show_stored = false;
-    trace[TRACE_STORED].enabled = false;
+    TRACE_DISABLE(TRACE_STORED_FLAG);
   }
 }
 #endif
@@ -880,7 +877,7 @@ void set_storage(void)
   for (int i=0; i<POINTS_COUNT;i++)
     stored_t[i] = actual_t[i];
   setting.show_stored = true;
-  trace[TRACE_STORED].enabled = true;
+  TRACE_ENABLE(TRACE_STORED_FLAG);
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -888,7 +885,7 @@ void set_clear_storage(void)
 {
   setting.show_stored = false;
   setting.subtract_stored = false;
-  trace[TRACE_STORED].enabled = false;
+  TRACE_DISABLE(TRACE_STORED_FLAG);
   // dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -1081,12 +1078,15 @@ void set_average(int v)
   if (setting.average == v)     // Clear calc on second click
     dirty = true;
   setting.average = v;
-  trace[TRACE_TEMP].enabled = ((v != 0)
+  bool enable = ((v != 0)
 #ifdef __QUASI_PEAK__
       && (v != AV_QUASI)
 #endif
       );
-   if (trace[TRACE_TEMP].enabled)  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS | CLEAR_ACTUAL | CLEAR_TEMP;
+  if (enable)
+    enableTracesAtComplete(TRACE_TEMP_FLAG);
+  else
+    TRACE_DISABLE(TRACE_TEMP_FLAG);
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -4958,7 +4958,7 @@ common_silent:
   default:
     set_attenuation(0.0);
   }
-  trace[TRACE_STORED].enabled = true;
+  TRACE_ENABLE(TRACE_STORED_FLAG);
   set_reflevel(test_case[i].pass+10);
   set_sweep_frequency(ST_CENTER, (freq_t)(test_case[i].center * 1000000));
   set_sweep_frequency(ST_SPAN, (freq_t)(test_case[i].span * 1000000));
