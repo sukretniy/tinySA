@@ -1080,6 +1080,11 @@ void set_average(int v)
       && (v != AV_QUASI)
 #endif
       );
+  if (trace[TRACE_TEMP].enabled) {
+    for (int i=0; i<sweep_points; i++)
+      temp_t[i] = 0;
+    redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
+  }
   //dirty = true;             // No HW update required, only status panel refresh
 }
 

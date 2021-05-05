@@ -458,6 +458,17 @@ VNA_SHELL_FUNCTION(cmd_actual_freq)
 }
 #endif
 
+#ifdef TINYSA3
+VNA_SHELL_FUNCTION(cmd_actual_freq)
+{
+  if (argc != 1) {
+    shell_printf("%DHz\r\n", config.setting_frequency_10mhz);
+    return;
+  } else {
+    set_10mhz(my_atoui(argv[0]));
+  }
+}
+#endif
 
 VNA_SHELL_FUNCTION(cmd_trigger)
 {
