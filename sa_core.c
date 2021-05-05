@@ -877,7 +877,7 @@ void set_storage(void)
   for (int i=0; i<POINTS_COUNT;i++)
     stored_t[i] = actual_t[i];
   setting.show_stored = true;
-  TRACE_ENABLE(TRACE_STORED_FLAG);
+  enableTracesAtComplete(TRACE_STORED_FLAG);
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
