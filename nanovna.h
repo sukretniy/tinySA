@@ -86,6 +86,7 @@
 #define DB_PER_DEGREE_BELOW               0.056
 #define DB_PER_DEGREE_ABOVE               0.069
 #define CENTER_TEMPERATURE          34.0
+#define __WAIT_CTS_WHILE_SLEEPING__
 #else
 #endif
 

@@ -2920,6 +2920,8 @@ made_screenshot(int touch_x, int touch_y)
   UINT size;
   if (touch_y < SD_CARD_START || touch_y > SD_CARD_START + 20 || touch_x > OFFSETX)
     return FALSE;
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_fill(4, SD_CARD_START, 16, 16);
   touch_wait_release();
 //  uint32_t time = chVTGetSystemTimeX();
 //  shell_printf("Screenshot\r\n");
@@ -2952,7 +2954,7 @@ made_screenshot(int touch_x, int touch_y)
   }
 //  time = chVTGetSystemTimeX() - time;
 //  shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, (LCD_WIDTH*LCD_HEIGHT*sizeof(uint16_t)+sizeof(bmp_header_v4))*10000/time);
-  drawMessageBox("SCREENSHOT", res == FR_OK ? fs_filename : "  Fail write  ", 2000);
+  drawMessageBox("SCREENSHOT", res == FR_OK ? fs_filename : "  Write failed  ", 2000);
   redraw_request|= REDRAW_AREA;
   return TRUE;
 }
@@ -3118,7 +3120,8 @@ static void extcb1(EXTDriver *extp, expchannel_t channel)
 {
   (void)extp;
   (void)channel;
-  operation_requested|=OP_LEVER;
+  if (channel != 9)
+    operation_requested|=OP_LEVER;
   // cur_button = READ_PORT() & BUTTON_MASK;
 }
 
@@ -3133,7 +3136,11 @@ static const EXTConfig extcfg = {
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},
+#ifdef __WAIT_CTS_WHILE_SLEEPING__
+    {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOB, extcb1},
+#else
     {EXT_CH_MODE_DISABLED, NULL},
+#endif
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},

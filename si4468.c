@@ -566,7 +566,11 @@ static si446x_state_t SI4463_get_state(void);
 static void SI4463_set_state(si446x_state_t);
 
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
-#define SI4463_WAIT_CTS       while (!SI4463_READ_CTS);
+#ifdef __WAIT_CTS_WHILE_SLEEPING__
+#define SI4463_WAIT_CTS       while (!SI4463_READ_CTS) __WFI();
+#else
+#define SI4463_WAIT_CTS       while (!SI4463_READ_CTS) ;
+#endif
 
 #if 0   // not used
 static void SI4463_write_byte(uint8_t ADR, uint8_t DATA)
