@@ -3003,7 +3003,6 @@ int main(void)
   dacStart(&DACD2, &dac1cfg1);
   dacStart(&DACD1, &dac1cfg1);
 
-  setup_sa();
   set_sweep_points(POINTS_COUNT);
 
   #ifdef __AUDIO__
@@ -3021,6 +3020,7 @@ int main(void)
   //Initialize graph plotting
   plot_init();
 
+  setup_sa();
 //  if (setting.mode != -1) {
 //    menu_mode_cb(setting.mode,0);
 //  }
