@@ -82,7 +82,7 @@ static char *long_to_string_with_divisor(char *p,
 
 // default prescision = 13
 // g.mmm kkk hhh
-#define MAX_FREQ_PRESCISION 13
+#define MAX_FREQ_PRESCISION 15
 #define FREQ_PSET           1
 #define FREQ_NO_SPACE       2
 #define FREQ_PREFIX_SPACE   4

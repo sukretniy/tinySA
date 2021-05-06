@@ -136,7 +136,7 @@ void update_min_max_freq(void)
     minFreq = 0;
 #ifdef TINYSA4
     if (ultra)
-      maxFreq = 9900000000.0; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
+      maxFreq = 12000000000; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
     else
       maxFreq =  LOW_MAX_FREQ;
 #else
