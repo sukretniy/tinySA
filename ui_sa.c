@@ -1689,6 +1689,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_bpf_acb){
   toggle_tracking();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_settings_pulse_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = setting.pulse ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  toggle_pulse();
+}
+
 #ifdef __HAM_BAND__
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_ham_bands){
   (void)item;
@@ -2302,6 +2312,7 @@ static const menuitem_t menu_settings3[] =
 #else
   { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
   { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+  { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
 #ifdef __USE_SERIAL_CONSOLE__
   { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
@@ -2422,7 +2433,11 @@ static const menuitem_t menu_settings[] =
 #endif
 #ifdef TINYSA4
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
-#else
+  { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
+#ifdef __USE_SERIAL_CONSOLE__
+  { MT_SUBMENU,  0, "CONNECTION", menu_connection},
+#endif
+  #else
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings2},

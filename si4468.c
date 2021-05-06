@@ -1548,7 +1548,7 @@ uint16_t set_rbw(uint16_t WISH)  {
 
 freq_t SI4463_set_freq(freq_t freq)
 {
-//  SI4463_set_gpio(3,GPIO_HIGH);       // For measuring duration of set_freq
+//  SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE1);       // For measuring duration of set_freq
   int S = 4 ;               // Approx 100 Hz channels
   SI4463_channel = 0;
   if (freq >= 822000000 && freq <= 1130000000)         {       // 822 to 1130MHz
@@ -1624,7 +1624,7 @@ freq_t SI4463_set_freq(freq_t freq)
       SI4463_do_api(data, sizeof(data), NULL, 0);
     }
     SI4463_frequency_changed = true;
-//    SI4463_set_gpio(3,GPIO_LOW);   // For measuring duration of set_freq
+//    SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE0);   // For measuring duration of set_freq
     return actual_freq;
   }
 #endif
@@ -1686,7 +1686,7 @@ freq_t SI4463_set_freq(freq_t freq)
   else {
     SI4463_start_rx(SI4463_channel);
   }
-//  SI4463_set_gpio(3,GPIO_LOW);        // For measuring duration of set_freq
+//  SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE0);        // For measuring duration of set_freq
   SI4463_frequency_changed = true;
   return actual_freq;
 }

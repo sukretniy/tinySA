@@ -244,6 +244,7 @@ void set_marker_frequency(int m, freq_t f);
 void set_marker_time(int m, float f);
 void toggle_sweep(void);
 void toggle_mute(void);
+void toggle_pulse(void);
 void load_default_properties(void);
 
 enum {
@@ -977,6 +978,7 @@ typedef struct setting
   bool mute;                   // bool
   bool auto_IF;                // bool
   bool sweep;                  // bool
+  bool pulse;                  // bool
 
   uint8_t mode;                // enum
   uint8_t below_IF;            // enum

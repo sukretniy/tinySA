@@ -513,6 +513,12 @@ void toggle_tracking_output(void)
   dirty = true;
 }
 
+void toggle_pulse(void)
+{
+  setting.pulse = !setting.pulse;
+  dirty = true;
+}
+
 void toggle_debug_avoid(void)
 {
   debug_avoid = !debug_avoid;
@@ -2589,18 +2595,28 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 
   // ---------------------------------  Pulse at start of low output sweep --------------------------
 
-  #ifdef __SI4432__
-  if (setting.mode == M_GENLOW && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// pulse high out
-    SI4432_Sel = SI4432_LO ;
+  if ((setting.mode == M_GENLOW || (setting.pulse && setting.mode == M_LOW)) && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// pulse high out
+#ifdef __SI4432__
+      SI4432_Sel = SI4432_LO ;
+#endif
     if (i == 0) {
 //      set_switch_transmit();
-      SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1D) ; // Set GPIO2 output to ground
+#ifdef __SI4432__
+      SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1D) ; // Set GPIO2 output to high
+#endif
+#ifdef __SI4463__
+      SI4463_set_gpio(0, SI446X_GPIO_MODE_DRIVE1);
+#endif
     } else if (i == 1) {
 //      set_switch_off();
+#ifdef __SI4432__
       SI4432_Write_Byte(SI4432_GPIO2_CONF, 0x1F) ; // Set GPIO2 output to ground
+#endif
+#ifdef __SI4463__
+      SI4463_set_gpio(0, SI446X_GPIO_MODE_DRIVE0);
+#endif
     }
   }
-#endif
 #ifdef TINYSA4
   // ----------------------------- set mixer drive --------------------------------------------
   if (setting.lo_drive & 0x04){
