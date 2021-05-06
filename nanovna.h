@@ -1238,6 +1238,7 @@ int check_touched(void);
 int invoke_quick_menu(int);
 bool ui_process_listen_lever(void);
 void refresh_sweep_menu(int i);
+void save_to_sd(int mask);
 
 // Irq operation process set
 #define OP_NONE       0x00

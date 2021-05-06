@@ -2913,6 +2913,33 @@ static const uint8_t bmp_header_v4[14+56] = {
   0x00, 0x00, 0x00, 0x00     // A mask = 0b00000000 00000000
 };
 
+FRESULT open_file(char *ext)
+{
+  FRESULT res = f_mount(fs_volume, "", 1);
+  // fs_volume, fs_file and fs_filename stored at end of spi_buffer!!!!!
+//  shell_printf("Mount = %d\r\n", res);
+  if (res != FR_OK)
+    return res;
+#if FF_USE_LFN >= 1
+  uint32_t tr = rtc_get_tr_bcd(); // TR read first
+  uint32_t dr = rtc_get_dr_bcd(); // DR read second
+  plot_printf(fs_filename, FF_LFN_BUF, "SA_%06x_%06x.%s", dr, tr, ext);
+#else
+  plot_printf(fs_filename, FF_LFN_BUF, "%08x.%s", rtc_get_FAT(), ext);
+#endif
+  res = f_open(fs_file, fs_filename, FA_CREATE_ALWAYS | FA_READ | FA_WRITE);
+ return res;
+}
+
+void close_file(FRESULT res)
+{
+  if (res == FR_OK)
+    res = f_close(fs_file);
+//  time = chVTGetSystemTimeX() - time;
+//  shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, (LCD_WIDTH*LCD_HEIGHT*sizeof(uint16_t)+sizeof(bmp_header_v4))*10000/time);
+  drawMessageBox("Save", res == FR_OK ? fs_filename : "  Write failed  ", 2000);
+  redraw_request|= REDRAW_AREA;
+}
 static bool
 made_screenshot(int touch_x, int touch_y)
 {
@@ -2925,20 +2952,8 @@ made_screenshot(int touch_x, int touch_y)
   touch_wait_release();
 //  uint32_t time = chVTGetSystemTimeX();
 //  shell_printf("Screenshot\r\n");
-  FRESULT res = f_mount(fs_volume, "", 1);
-  // fs_volume, fs_file and fs_filename stored at end of spi_buffer!!!!!
+  FRESULT res = open_file("bmp");
   uint16_t *buf = (uint16_t *)spi_buffer;
-//  shell_printf("Mount = %d\r\n", res);
-  if (res != FR_OK)
-    return TRUE;
-#if FF_USE_LFN >= 1
-  uint32_t tr = rtc_get_tr_bcd(); // TR read first
-  uint32_t dr = rtc_get_dr_bcd(); // DR read second
-  plot_printf(fs_filename, FF_LFN_BUF, "SA_%06x_%06x.bmp", dr, tr);
-#else
-  plot_printf(fs_filename, FF_LFN_BUF, "%08x.bmp", rtc_get_FAT());
-#endif
-  res = f_open(fs_file, fs_filename, FA_CREATE_ALWAYS | FA_READ | FA_WRITE);
 //  shell_printf("Open %s, result = %d\r\n", fs_filename, res);
   if (res == FR_OK){
     res = f_write(fs_file, bmp_header_v4, sizeof(bmp_header_v4), &size);
@@ -2952,12 +2967,30 @@ made_screenshot(int touch_x, int touch_y)
 //    shell_printf("Close %d\r\n", res);
 //    testLog();
   }
-//  time = chVTGetSystemTimeX() - time;
-//  shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, (LCD_WIDTH*LCD_HEIGHT*sizeof(uint16_t)+sizeof(bmp_header_v4))*10000/time);
-  drawMessageBox("SCREENSHOT", res == FR_OK ? fs_filename : "  Write failed  ", 2000);
-  redraw_request|= REDRAW_AREA;
+  close_file(res);
   return TRUE;
 }
+
+void save_to_sd(int mask)
+{
+  FRESULT res = open_file("csv");
+  UINT size;
+  if (res == FR_OK) {
+    for (int i = 0; i < sweep_points; i++) {
+      char *buf = (char *)spi_buffer;
+      if (mask & 1) buf += plot_printf(buf, 100, "%U, ", frequencies[i]);
+      if (mask & 2) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
+      if (mask & 4) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
+      if (mask & 8) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
+      buf += plot_printf(buf, 100, "\r\n");
+      res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
+      if (res != FR_OK)
+        break;
+    }
+  }
+  close_file(res);
+}
+
 #endif
 
 static int

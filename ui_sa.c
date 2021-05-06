@@ -1376,6 +1376,14 @@ static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
       } else
         set_auto_reflevel(true);
       break;
+#ifdef TINYSA4
+    case 4:
+      save_to_sd(1+2);      // frequencies + actual
+      break;
+    case 5:
+      save_to_sd(1+4);      // frequencies + stored
+      break;
+#endif
   }
   ui_mode_normal();
 //  draw_cal_status();
@@ -2529,6 +2537,10 @@ static const menuitem_t menu_storage[] = {
   { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
   { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
   { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
+#ifdef TINYSA4
+  { MT_ADV_CALLBACK,4,          "ACTUAL\n"S_RARROW"SD",       menu_storage_acb},
+  { MT_ADV_CALLBACK,5,          "STORED\n"S_RARROW"SD",       menu_storage_acb},
+#endif
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
