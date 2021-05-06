@@ -91,7 +91,7 @@ enum {
 };
 #endif
 
-#define NUMINPUT_LEN 10
+#define NUMINPUT_LEN 12
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
 static char    kp_buf[NUMINPUT_LEN+1];
@@ -1653,7 +1653,7 @@ draw_numeric_input(const char *buf)
 
   ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
   ili9341_set_background(LCD_INPUT_BG_COLOR);
-  for (i = 0, x = 64; i < 10 && buf[i]; i++, xsim<<=1) {
+  for (i = 0, x = 64; i < NUMINPUT_LEN && buf[i]; i++, xsim<<=1) {
     int c = buf[i];
     if (c == '.')
       c = KP_PERIOD;

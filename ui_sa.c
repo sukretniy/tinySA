@@ -2588,9 +2588,9 @@ static const menuitem_t menu_display[] = {
 #endif
   { MT_ADV_CALLBACK,4,          "WATER\nFALL",     menu_waterfall_acb},
   { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
-#ifdef __REMOTE_DESKTOP__
-  { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
-#endif
+//#ifdef __REMOTE_DESKTOP__
+//  { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
+//#endif
 //  { MT_KEYPAD,  KM_SWEEP_TIME,  "SWEEP\nTIME",    NULL},
 
   { MT_CANCEL, 0,           S_LARROW" BACK", NULL },
