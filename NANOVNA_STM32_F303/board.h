@@ -151,13 +151,13 @@
                                      PIN_MODE_INPUT(1U) |           \
                                      PIN_MODE_INPUT(2U) |           \
                                      PIN_MODE_INPUT(3U) |           \
-                                     PIN_MODE_OUTPUT(4U) |           \
+                                     PIN_MODE_INPUT(GPIO_SD_DAT2) |           \
                                      PIN_MODE_ANALOG(GPIOA_DAC2) |  \
                                      PIN_MODE_ANALOG(GPIOA_XP) |    \
                                      PIN_MODE_ANALOG(GPIOA_YP) |    \
                                      PIN_MODE_OUTPUT(8U) | \
-                                     PIN_MODE_OUTPUT(9U) |           \
-                                     PIN_MODE_INPUT(10U) | \
+                                     PIN_MODE_ALTERNATE(GPIO_UART_TX) |           \
+                                     PIN_MODE_ALTERNATE(GPIO_UART_RX) | \
                                      PIN_MODE_ALTERNATE(GPIOA_USB_DM) |  \
                                      PIN_MODE_ALTERNATE(GPIOA_USB_DP) |  \
                                      PIN_MODE_ALTERNATE(GPIOA_JTMS) |    \
@@ -167,13 +167,13 @@
                                      PIN_OTYPE_PUSHPULL(1U) |       \
                                      PIN_OTYPE_PUSHPULL(2U) |   \
                                      PIN_OTYPE_PUSHPULL(3U) |   \
-                                     PIN_OTYPE_PUSHPULL(4U) |       \
+                                     PIN_OTYPE_PUSHPULL(GPIO_SD_DAT2) |       \
                                      PIN_OTYPE_PUSHPULL(5U) |       \
                                      PIN_OTYPE_PUSHPULL(6U) |       \
                                      PIN_OTYPE_PUSHPULL(7U) |       \
                                      PIN_OTYPE_PUSHPULL(8U) |       \
-                                     PIN_OTYPE_PUSHPULL(9) |       \
-                                     PIN_OTYPE_PUSHPULL(10) | \
+                                     PIN_OTYPE_PUSHPULL(GPIO_UART_TX) |       \
+                                     PIN_OTYPE_PUSHPULL(GPIO_UART_RX) | \
                                      PIN_OTYPE_PUSHPULL(GPIOA_USB_DM) |  \
                                      PIN_OTYPE_PUSHPULL(GPIOA_USB_DP) |  \
                                      PIN_OTYPE_PUSHPULL(GPIOA_JTMS) |      \
@@ -183,13 +183,13 @@
                                      PIN_OSPEED_2M(1) |          \
                                      PIN_OSPEED_2M(2) |       \
                                      PIN_OSPEED_2M(3) |       \
-                                     PIN_OSPEED_2M(4) |          \
+                                     PIN_OSPEED_2M(GPIO_SD_DAT2) |          \
                                      PIN_OSPEED_2M(5) |           \
                                      PIN_OSPEED_2M(6) |          \
                                      PIN_OSPEED_2M(7) |          \
                                      PIN_OSPEED_2M(8U) | \
-                                     PIN_OSPEED_100M(9) |          \
-                                     PIN_OSPEED_100M(10) |         \
+                                     PIN_OSPEED_100M(GPIO_UART_TX) |          \
+                                     PIN_OSPEED_100M(GPIO_UART_RX) |         \
                                      PIN_OSPEED_100M(GPIOA_USB_DM) |     \
                                      PIN_OSPEED_100M(GPIOA_USB_DP) |     \
                                      PIN_OSPEED_100M(GPIOA_JTMS) |         \
@@ -199,13 +199,13 @@
                                      PIN_PUPDR_PULLDOWN(1) | \
                                      PIN_PUPDR_PULLDOWN(2) | \
                                      PIN_PUPDR_PULLDOWN(3) | \
-                                     PIN_PUPDR_PULLUP(4) |         \
+                                     PIN_PUPDR_FLOATING(GPIO_SD_DAT2) |         \
                                      PIN_PUPDR_FLOATING(5) |         \
                                      PIN_PUPDR_FLOATING(6) |         \
                                      PIN_PUPDR_FLOATING(7) |         \
                                      PIN_PUPDR_PULLUP(8U) | \
-                                     PIN_PUPDR_PULLUP(9) |         \
-                                     PIN_PUPDR_PULLUP(10) | \
+                                     PIN_PUPDR_FLOATING(GPIO_UART_TX) |         \
+                                     PIN_PUPDR_FLOATING(GPIO_UART_RX) | \
                                      PIN_PUPDR_FLOATING(GPIOA_USB_DM) | \
                                      PIN_PUPDR_FLOATING(GPIOA_USB_DP) | \
                                      PIN_PUPDR_PULLDOWN(GPIOA_JTMS) |   \
@@ -215,13 +215,13 @@
                                      PIN_ODR_HIGH(1) |             \
                                      PIN_ODR_HIGH(2) |         \
                                      PIN_ODR_HIGH(3) |         \
-                                     PIN_ODR_HIGH(4) |             \
+                                     PIN_ODR_HIGH(GPIO_SD_DAT2) |             \
                                      PIN_ODR_LOW(5) |              \
                                      PIN_ODR_HIGH(6) |             \
                                      PIN_ODR_HIGH(7) |             \
                                      PIN_ODR_HIGH(8U) |     \
-                                     PIN_ODR_HIGH(9) |             \
-                                     PIN_ODR_HIGH(10) | \
+                                     PIN_ODR_LOW(GPIO_UART_TX) |             \
+                                     PIN_ODR_LOW(GPIO_UART_RX) | \
                                      PIN_ODR_HIGH(GPIOA_USB_DM) |   \
                                      PIN_ODR_HIGH(GPIOA_USB_DP) |   \
                                      PIN_ODR_HIGH(GPIOA_JTMS) |     \
@@ -231,13 +231,13 @@
                                      PIN_AFIO_AF(1, 0) |           \
                                      PIN_AFIO_AF(2, 0) |       \
                                      PIN_AFIO_AF(3, 0) |       \
-                                     PIN_AFIO_AF(4, 0) |           \
+                                     PIN_AFIO_AF(GPIO_SD_DAT2, 0) |           \
                                      PIN_AFIO_AF(5, 0) |           \
                                      PIN_AFIO_AF(6, 0) |           \
                                      PIN_AFIO_AF(7, 0))
 #define VAL_GPIOA_AFRH              (PIN_AFIO_AF(8U, 0) |           \
-                                     PIN_AFIO_AF(9, 0) |           \
-                                     PIN_AFIO_AF(10, 0) |          \
+                                     PIN_AFIO_AF(GPIO_UART_TX, 7) |           \
+                                     PIN_AFIO_AF(GPIO_UART_RX, 7) |          \
                                      PIN_AFIO_AF(GPIOA_USB_DM, 14) |     \
                                      PIN_AFIO_AF(GPIOA_USB_DP, 14) |     \
                                      PIN_AFIO_AF(GPIOA_JTMS, 0) |          \
