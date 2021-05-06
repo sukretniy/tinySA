@@ -1588,7 +1588,7 @@ draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
   ili9341_set_background(b->bg);
 }
 
-static void drawMessageBox(char *header, char *text, uint32_t delay){
+void drawMessageBox(char *header, char *text, uint32_t delay){
   ui_button_t b;
   b.bg = LCD_MENU_COLOR;
   b.fg = LCD_MENU_TEXT_COLOR;
@@ -2934,7 +2934,7 @@ made_screenshot(int touch_x, int touch_y)
 #if FF_USE_LFN >= 1
   uint32_t tr = rtc_get_tr_bcd(); // TR read first
   uint32_t dr = rtc_get_dr_bcd(); // DR read second
-  plot_printf(fs_filename, FF_LFN_BUF, "VNA_%06x_%06x.bmp", dr, tr);
+  plot_printf(fs_filename, FF_LFN_BUF, "SA_%06x_%06x.bmp", dr, tr);
 #else
   plot_printf(fs_filename, FF_LFN_BUF, "%08x.bmp", rtc_get_FAT());
 #endif
