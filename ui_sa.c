@@ -1081,6 +1081,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
   ui_mode_normal();
 }
 
+#ifdef __WAIT_CTS_WHILE_SLEEPING__
 int sleep = 0;
 static UI_FUNCTION_ADV_CALLBACK(menu_sleep_acb)
 {
@@ -1092,8 +1093,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sleep_acb)
   }
   sleep = !sleep;
 }
-
-
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_debug_avoid_acb)
 {
@@ -2316,7 +2316,9 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
   { MT_KEYPAD,  KM_CP,  "CP",           "Set CP"},
+#ifdef __WAIT_CTS_WHILE_SLEEPING__
   { MT_ADV_CALLBACK,     0,     "SLEEP\nWAIT",    menu_sleep_acb},
+#endif
 //  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
