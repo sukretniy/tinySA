@@ -2668,6 +2668,7 @@ keypad_click(int key)
 {
   int c = keypads[key].c;
   if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u || c == KP_n) {
+#if 0
     float scale = 1.0;
     if (c >= KP_X1 && c <= KP_G) {
       int n = c - KP_X1;
@@ -2682,6 +2683,18 @@ keypad_click(int key)
     }
     /* numeric input done */
     uistat.value = my_atof(kp_buf) * scale;
+#else
+    char modifier = 0;
+    if (c == KP_K) modifier = 'k';
+    else if (c == KP_M) modifier = 'M';
+    else if (c == KP_G) modifier = 'G';
+    else if (c == KP_m) modifier = 'm';
+    else if (c == KP_u) modifier = 'u';
+    else if (c == KP_n) modifier = 'n';
+    if (modifier) kp_buf[kp_index++] = modifier;
+    kp_buf[kp_index++] = 0;
+    uistat.value = my_atof(kp_buf);
+#endif
     set_numeric_value();
     return KP_DONE;
   } else if (c <= 9 && kp_index < NUMINPUT_LEN) {
@@ -2963,7 +2976,7 @@ made_screenshot(int touch_x, int touch_y)
         buf[i] = __REVSH(buf[i]); // swap byte order (example 0x10FF to 0xFF10)
       res = f_write(fs_file, buf, LCD_WIDTH*sizeof(uint16_t), &size);
     }
-    res = f_close(fs_file);
+//   res = f_close(fs_file);
 //    shell_printf("Close %d\r\n", res);
 //    testLog();
   }

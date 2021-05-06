@@ -1081,6 +1081,18 @@ static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
   ui_mode_normal();
 }
 
+int sleep = 0;
+static UI_FUNCTION_ADV_CALLBACK(menu_sleep_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = sleep == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  sleep = !sleep;
+}
+
 
 
 static UI_FUNCTION_ADV_CALLBACK(menu_debug_avoid_acb)
@@ -2304,6 +2316,7 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
   { MT_KEYPAD,  KM_CP,  "CP",           "Set CP"},
+  { MT_ADV_CALLBACK,     0,     "SLEEP\nWAIT",    menu_sleep_acb},
 //  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
@@ -2882,22 +2895,25 @@ static void fetch_numeric_target(void)
 static void
 set_numeric_value(void)
 {
+  if (kp_buf[0] == 0)
+    return;
+  freq_t freq = my_atoui(kp_buf);
   switch (keypad_mode) {
   case KM_START:
-    set_sweep_frequency(ST_START, (freq_t)uistat.value - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_START, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_STOP:
-    set_sweep_frequency(ST_STOP, (freq_t)uistat.value - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_STOP, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_CENTER:
-    set_sweep_frequency(ST_CENTER, (freq_t)uistat.value - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_CENTER, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_SPAN:
     setting.modulation = MO_NONE;
-    set_sweep_frequency(ST_SPAN, (freq_t)uistat.value);
+    set_sweep_frequency(ST_SPAN, freq);
     break;
   case KM_CW:
-    set_sweep_frequency(ST_CW, (freq_t)uistat.value - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_CW, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_SCALE:
     user_set_scale(uistat.value);
@@ -2915,12 +2931,12 @@ set_numeric_value(void)
     break;
   case KM_IF:
     setting.auto_IF = false;
-    set_IF(uistat.value);
+    set_IF(freq);
 //    config_save();
     break;
 #ifdef TINYSA4
   case KM_IF2:
-    set_IF2(uistat.value);
+    set_IF2(freq);
 //    config_save();
     break;
   case KM_R:
@@ -2972,7 +2988,7 @@ set_numeric_value(void)
     break;
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
-    setting.limits[active_limit].frequency = uistat.value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    setting.limits[active_limit].frequency = freq - (setting.frequency_offset - FREQUENCY_SHIFT);
     limits_update();
     break;
   case KM_LIMIT_LEVEL:
@@ -2985,11 +3001,11 @@ set_numeric_value(void)
     break;
 #ifdef TINYSA4
   case KM_30MHZ:
-    set_30mhz(uistat.value);
+    set_30mhz(freq);
     break;
 #else
   case KM_10MHZ:
-    set_10mhz(uistat.value);
+    set_10mhz(freq);
     break;
 #endif
   case KM_EXT_GAIN:
@@ -3014,7 +3030,7 @@ set_numeric_value(void)
     set_gridlines(uistat.value);
     break;
   case KM_MARKER:
-    set_marker_frequency(active_marker, (freq_t)uistat.value - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_marker_frequency(active_marker, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_MARKER_TIME:
     set_marker_time(active_marker, uistat.value);

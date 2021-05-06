@@ -235,6 +235,7 @@ void set_sweep_frequency(int type, freq_t frequency);
 freq_t get_sweep_frequency(int type);
 void my_microsecond_delay(int t);
 float my_atof(const char *p);
+freq_t my_atoui(const char *p);
 int shell_printf(const char *fmt, ...);
 #ifdef __REMOTE_DESKTOP__
 void send_region(const char *t, int16_t x, int16_t y, int16_t w, int16_t h);
