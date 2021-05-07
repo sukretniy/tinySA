@@ -24,13 +24,7 @@
 //#include "hal_serial.h"
 
 #include "usbcfg.h"
-#ifdef __VNA__
-#include "si5351.h"
-#endif
 #include "nanovna.h"
-#ifdef __VNA__
-#include "fft.h"
-#endif
 
 #include <chprintf.h>
 #include <string.h>
@@ -84,25 +78,16 @@ static volatile vna_shellcmd_t  shell_function = 0;
 #ifdef __USE_SERIAL_CONSOLE__
 #define ENABLE_USART_COMMAND
 #endif
-#ifdef __VNA__
-static void apply_error_term_at(int i);
-static void apply_edelay_at(int i);
-static void cal_interpolate(int s);
+
+#ifdef __USE_SD_CARD__
+// Enable SD card console command
+#define ENABLE_SD_CARD_CMD
 #endif
+
 void update_frequencies(void);
 static void set_frequencies(freq_t start, freq_t stop, uint16_t points);
 static bool sweep(bool break_on_operation);
-#ifdef __VNA__
-static void transform_domain(void);
 
-#define DRIVE_STRENGTH_AUTO (-1)
-#define FREQ_HARMONICS (config.harmonic_freq_threshold)
-#define IS_HARMONIC_MODE(f) ((f) > FREQ_HARMONICS)
-// Obsolete, always use interpolate
-#define  cal_auto_interpolate  TRUE
-
-static int8_t drive_strength = DRIVE_STRENGTH_AUTO;
-#endif
 uint8_t sweep_mode = SWEEP_ENABLE;
 uint16_t redraw_request = 0; // contains REDRAW_XXX flags
 uint8_t auto_capture = false;
@@ -256,104 +241,6 @@ toggle_sweep(void)
   sweep_mode ^= SWEEP_ENABLE;
 }
 
-#ifdef __VNA__
-static float
-bessel0(float x)
-{
-  const float eps = 0.0001;
-
-  float ret = 0;
-  float term = 1;
-  float m = 0;
-
-  while (term  > eps * ret) {
-    ret += term;
-    ++m;
-    term *= (x*x) / (4*m*m);
-  }
-  return ret;
-}
-
-static float
-kaiser_window(float k, float n, float beta)
-{
-  if (beta == 0.0) return 1.0;
-  float r = (2 * k) / (n - 1) - 1;
-  return bessel0(beta * sqrt(1 - r * r)) / bessel0(beta);
-}
-
-static void
-transform_domain(void)
-{
-  // use spi_buffer as temporary buffer
-  // and calculate ifft for time domain
-  float* tmp = (float*)spi_buffer;
-
-  uint8_t window_size = POINTS_COUNT, offset = 0;
-  uint8_t is_lowpass = FALSE;
-  switch (domain_mode & TD_FUNC) {
-    case TD_FUNC_BANDPASS:
-      offset = 0;
-      window_size = POINTS_COUNT;
-      break;
-    case TD_FUNC_LOWPASS_IMPULSE:
-    case TD_FUNC_LOWPASS_STEP:
-      is_lowpass = TRUE;
-      offset = POINTS_COUNT;
-      window_size = POINTS_COUNT * 2;
-      break;
-  }
-
-  float beta = 0.0;
-  switch (domain_mode & TD_WINDOW) {
-    case TD_WINDOW_MINIMUM:
-      beta = 0.0;  // this is rectangular
-      break;
-    case TD_WINDOW_NORMAL:
-      beta = 6.0;
-      break;
-    case TD_WINDOW_MAXIMUM:
-      beta = 13;
-      break;
-  }
-
-  for (int ch = 0; ch < 2; ch++) {
-    memcpy(tmp, measured[ch], sizeof(measured[0]));
-    for (int i = 0; i < POINTS_COUNT; i++) {
-      float w = kaiser_window(i + offset, window_size, beta);
-      tmp[i * 2 + 0] *= w;
-      tmp[i * 2 + 1] *= w;
-    }
-    for (int i = POINTS_COUNT; i < FFT_SIZE; i++) {
-      tmp[i * 2 + 0] = 0.0;
-      tmp[i * 2 + 1] = 0.0;
-    }
-    if (is_lowpass) {
-      for (int i = 1; i < POINTS_COUNT; i++) {
-        tmp[(FFT_SIZE - i) * 2 + 0] = tmp[i * 2 + 0];
-        tmp[(FFT_SIZE - i) * 2 + 1] = -tmp[i * 2 + 1];
-      }
-    }
-
-    fft256_inverse((float(*)[2])tmp);
-    memcpy(measured[ch], tmp, sizeof(measured[0]));
-    for (int i = 0; i < POINTS_COUNT; i++) {
-      measured[ch][i][0] /= (float)FFT_SIZE;
-      if (is_lowpass) {
-        measured[ch][i][1] = 0.0;
-      } else {
-        measured[ch][i][1] /= (float)FFT_SIZE;
-      }
-    }
-    if ((domain_mode & TD_FUNC) == TD_FUNC_LOWPASS_STEP) {
-      for (int i = 1; i < POINTS_COUNT; i++) {
-        measured[ch][i][0] += measured[ch][i - 1][0];
-      }
-    }
-  }
-}
-#endif
-
 // Shell commands output
 int shell_printf(const char *fmt, ...)
 {
@@ -425,10 +312,6 @@ VNA_SHELL_FUNCTION(cmd_resume)
 
   // restore frequencies array and cal
   update_frequencies();
-#ifdef __VNA__
-  if (cal_auto_interpolate && (cal_status & CALSTAT_APPLY))
-    cal_interpolate(lastsaveid);
-#endif
   resume_sweep();
 }
 
@@ -456,46 +339,9 @@ VNA_SHELL_FUNCTION(cmd_reset)
     ;
 }
 
-#ifdef __VNA__
-const int8_t gain_table[] = {
-  0,  // 0 ~ 300MHz
-  40, // 300 ~ 600MHz
-  50, // 600 ~ 900MHz
-  75, // 900 ~ 1200MHz
-  85, // 1200 ~ 1500MHz
-  95, // 1500MHz ~
-  95, // 1800MHz ~
-  95, // 2100MHz ~
-  95  // 2400MHz ~
-};
-
-#define DELAY_GAIN_CHANGE 2
-
-static int
-adjust_gain(uint32_t newfreq)
-{
-  int new_order = newfreq / FREQ_HARMONICS;
-  int old_order = si5351_get_frequency() / FREQ_HARMONICS;
-  if (new_order != old_order) {
-    tlv320aic3204_set_gain(gain_table[new_order], gain_table[new_order]);
-    return DELAY_GAIN_CHANGE;
-  }
-  return 0;
-}
-#endif
-
 int set_frequency(freq_t freq)
 {
   (void) freq;
-#ifdef __VNA__  
-  int delay = adjust_gain(freq);
-  int8_t ds = drive_strength;
-  if (ds == DRIVE_STRENGTH_AUTO) {
-    ds = freq > FREQ_HARMONICS ? SI5351_CLK_DRIVE_STRENGTH_8MA : SI5351_CLK_DRIVE_STRENGTH_2MA;
-  }
-  delay += si5351_set_frequency(freq, ds);
-  return delay;
-#endif
   return 1;
 }
 
@@ -953,6 +799,108 @@ void send_buffer(uint8_t * buf, int s)
     streamWrite(shell_stream, (void*)"ch> \r\n", 6);
   }
 }
+
+#ifdef ENABLE_SD_CARD_CMD
+#ifndef __USE_SD_CARD__
+#error "Need enable SD card support __USE_SD_CARD__ in nanovna.h, for use ENABLE_SD_CARD_CMD"
+#endif
+// Fat file system work area (at the end of spi_buffer)
+static FATFS *fs_volume   = (FATFS *)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS));
+// FatFS file object (at the end of spi_buffer)
+static FIL   *fs_file     = (   FIL*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL));
+
+static FRESULT cmd_sd_card_mount(void){
+  const FRESULT res = f_mount(fs_volume, "", 1);
+  if (res != FR_OK)
+    shell_printf("error: card not mounted\r\n");
+  return res;
+}
+
+VNA_SHELL_FUNCTION(cmd_sd_list)
+{
+  (void)argc;
+  (void)argv;
+
+  DIR dj;
+  FILINFO fno;
+  FRESULT res;
+  shell_printf("sd_list:\r\n");
+  res = cmd_sd_card_mount();
+  if (res != FR_OK)
+    return;
+  char *search;
+  switch (argc){
+    case 0: search =   "*.*";break;
+    case 1: search = argv[0];break;
+    default: shell_printf("usage: sd_list {pattern}\r\n"); return;
+  }
+  res = f_findfirst(&dj, &fno, "", search);
+  while (res == FR_OK && fno.fname[0])
+  {
+    shell_printf("%s %u\r\n", fno.fname, fno.fsize);
+    res = f_findnext(&dj, &fno);
+  }
+  f_closedir(&dj);
+}
+
+VNA_SHELL_FUNCTION(cmd_sd_read)
+{
+  FRESULT res;
+  char *buf = (char *)spi_buffer;
+  if (argc < 1)
+  {
+     shell_printf("usage: sd_read {filename}\r\n");
+     return;
+  }
+  const char *filename = argv[0];
+  res = cmd_sd_card_mount();
+  if (res != FR_OK)
+    goto error_open;
+  res = f_open(fs_file, filename, FA_OPEN_EXISTING | FA_READ);
+  if (res != FR_OK)
+    goto error_open;
+  // shell_printf("sd_read: %s\r\n", filename);
+
+  // number of bytes to follow (file size)
+  const uint32_t filesize = f_size(fs_file);
+  streamWrite(shell_stream, (void *)&filesize, 4);
+
+  // file data (send all data from file)
+  while (1)
+  {
+    UINT size = 0;
+    res = f_read(fs_file, buf, 512, &size);
+    if (res != FR_OK || size == 0)
+      break;
+    streamWrite(shell_stream, (void *)buf, size);
+  }
+  res = f_close(fs_file);
+  return;
+error_open:
+  shell_printf("Error\r\n");
+  return;
+}
+
+VNA_SHELL_FUNCTION(cmd_sd_delete)
+{
+  FRESULT res;
+  if (argc < 1)
+  {
+     shell_printf("usage: sd_delete {filename}\r\n");
+     return;
+  }
+  res = cmd_sd_card_mount();
+  if (res != FR_OK)
+    goto error_delete;
+  const char *filename = argv[0];
+  res = f_unlink(filename);
+  shell_printf("delete: %s %s\r\n", filename, res == FR_OK ? "OK" : "error");
+  return;
+error_delete:
+  shell_printf("Error\r\n");
+  return;
+}
+#endif
 
 #if 0
 VNA_SHELL_FUNCTION(cmd_gamma)
@@ -2513,11 +2461,16 @@ static const VNAShellCommand commands[] =
     { "selftest", cmd_selftest,    0 },
     { "correction", cmd_correction,    0 },
     { "calc", cmd_calc, 0},
- #ifdef ENABLE_THREADS_COMMAND
-     {"threads"     , cmd_threads     , 0},
- #endif
+#ifdef ENABLE_SD_CARD_CMD
+    { "sd_list",   cmd_sd_list,   CMD_WAIT_MUTEX },
+    { "sd_read",   cmd_sd_read,   CMD_WAIT_MUTEX },
+    { "sd_delete", cmd_sd_delete, CMD_WAIT_MUTEX },
+#endif
+#ifdef ENABLE_THREADS_COMMAND
+    {"threads"     , cmd_threads     , 0},
+#endif
 #ifdef __SINGLE_LETTER__
-    { "y", cmd_y,    CMD_WAIT_MUTEX },
+   { "y", cmd_y,    CMD_WAIT_MUTEX },
    { "i", cmd_i,	CMD_WAIT_MUTEX },
    { "v", cmd_v,	CMD_WAIT_MUTEX },
    { "a", cmd_a,	CMD_WAIT_MUTEX },
