@@ -812,7 +812,7 @@ static FIL   *fs_file     = (   FIL*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE]))
 static FRESULT cmd_sd_card_mount(void){
   const FRESULT res = f_mount(fs_volume, "", 1);
   if (res != FR_OK)
-    shell_printf("error: card not mounted\r\n");
+    shell_printf("err: no card\r\n");
   return res;
 }
 
@@ -824,9 +824,7 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
   DIR dj;
   FILINFO fno;
   FRESULT res;
-  shell_printf("sd_list:\r\n");
-  res = cmd_sd_card_mount();
-  if (res != FR_OK)
+  if (cmd_sd_card_mount() != FR_OK)
     return;
   char *search;
   switch (argc){
@@ -834,6 +832,7 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
     case 1: search = argv[0];break;
     default: shell_printf("usage: sd_list {pattern}\r\n"); return;
   }
+  shell_printf("sd_list:\r\n");
   res = f_findfirst(&dj, &fno, "", search);
   while (res == FR_OK && fno.fname[0])
   {
@@ -847,18 +846,19 @@ VNA_SHELL_FUNCTION(cmd_sd_read)
 {
   FRESULT res;
   char *buf = (char *)spi_buffer;
-  if (argc < 1)
+  if (argc != 1)
   {
      shell_printf("usage: sd_read {filename}\r\n");
      return;
   }
   const char *filename = argv[0];
-  res = cmd_sd_card_mount();
-  if (res != FR_OK)
-    goto error_open;
-  res = f_open(fs_file, filename, FA_OPEN_EXISTING | FA_READ);
-  if (res != FR_OK)
-    goto error_open;
+  if (cmd_sd_card_mount() != FR_OK)
+    return;
+
+  if (f_open(fs_file, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK){
+    shell_printf("err: no file\r\n");
+    return;
+  }
   // shell_printf("sd_read: %s\r\n", filename);
 
   // number of bytes to follow (file size)
@@ -876,28 +876,20 @@ VNA_SHELL_FUNCTION(cmd_sd_read)
   }
   res = f_close(fs_file);
   return;
-error_open:
-  shell_printf("Error\r\n");
-  return;
 }
 
 VNA_SHELL_FUNCTION(cmd_sd_delete)
 {
   FRESULT res;
-  if (argc < 1)
-  {
+  if (argc != 1) {
      shell_printf("usage: sd_delete {filename}\r\n");
      return;
   }
-  res = cmd_sd_card_mount();
-  if (res != FR_OK)
-    goto error_delete;
+  if (cmd_sd_card_mount() != FR_OK)
+    return;
   const char *filename = argv[0];
   res = f_unlink(filename);
-  shell_printf("delete: %s %s\r\n", filename, res == FR_OK ? "OK" : "error");
-  return;
-error_delete:
-  shell_printf("Error\r\n");
+  shell_printf("delete: %s %s\r\n", filename, res == FR_OK ? "OK" : "err");
   return;
 }
 #endif
