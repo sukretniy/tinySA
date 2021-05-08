@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -670,6 +670,7 @@ typedef struct config {
   float high_level_output_offset;
 #ifdef TINYSA4
   float lna_level_offset;
+  float receive_switch_offset;
   float harmonic_level_offset;
   float shift_level_offset;
 #endif

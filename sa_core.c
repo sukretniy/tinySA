@@ -88,7 +88,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 
 #ifdef TINYSA4
 #define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 35.8 - config.switch_offset)
-#define RECEIVE_SWITCH_ATTENUATION  21
+#define RECEIVE_SWITCH_ATTENUATION  (38 - config.receive_switch_offset)
 //#define POWER_OFFSET    -18             // Max level with all enabled
 //#define POWER_RANGE     70
 #define MAX_DRIVE   ((setting.mode == M_GENHIGH && config.high_out_adf4350 ) ? 3 : 18)
@@ -656,8 +656,11 @@ void set_R(int f)
   dirty = true;
 }
 
+uint32_t local_modulo = 0;
+
 void set_modulo(uint32_t f)
 {
+  local_modulo = f;
   ADF4351_modulo(f);
   clear_frequency_cache();
   dirty = true;
@@ -1877,7 +1880,6 @@ case M_LOW:     // Mixed into 0
     // set_calibration_freq(setting.refer);
 #endif
 #ifdef TINYSA4
-    enable_rx_output(false);
     enable_high(false);
     enable_extra_lna(setting.extra_lna);
     enable_ultra(false);
@@ -3157,12 +3159,15 @@ again:                                                              // Spur redu
 #define TXCO_DIV3   10000000
 
         if (setting.R == 0) {
+#if 0
           if (actual_rbw_x10 >= 3000) {
-            if (ADF4350_modulo == 0) ADF4351_modulo(1000);
+            if (local_modulo == 0) ADF4351_modulo(1000);
             ADF4351_R_counter(1);
 
-          } else if (lf < LOW_MAX_FREQ && lf >= TXCO_DIV3 && MODE_INPUT(setting.mode)) {
-            if (ADF4350_modulo == 0) {
+          } else
+#endif
+          if (lf < 1000000000 /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
+            if (local_modulo == 0) {
               if (actual_rbw_x10 >= 3000)
                 ADF4351_modulo(1000);
               else
@@ -3182,7 +3187,7 @@ again:                                                              // Spur redu
                 ADF4351_R_counter(1);
             }
           } else {
-            if (ADF4350_modulo == 0) {
+            if (local_modulo == 0) {
               if (actual_rbw_x10 >= 3000)
                 ADF4351_modulo(1000);
               else
@@ -3470,12 +3475,12 @@ again:                                                              // Spur redu
         my_step_delay = my_step_delay * 2;
 //      if (LO_shifted) // || SI4463_offset_changed)
 //        my_step_delay = my_step_delay * 2;
-      if (actual_rbw_x10 >= 1000 && SI4463_frequency_changed && ADF4351_frequency_changed) {
+      if (old_R < 4 && actual_rbw_x10 >= 1000 && SI4463_frequency_changed && ADF4351_frequency_changed) {
         my_step_delay -= 200;                   // compensate for additional delay of setting SI4463
         if (my_step_delay < 0)
           my_step_delay = 0;
       }
-      my_microsecond_delay(my_step_delay * ((setting.R == 0 && old_R > 5 ) ? 8 : 1));
+      my_microsecond_delay(my_step_delay * (old_R > 5  ? 8 : 1));
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
       SI4463_offset_changed = false;

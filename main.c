@@ -1059,6 +1059,7 @@ config_t config = {
 #endif
   .sweep_voltage = 3.3,
   .switch_offset = 0.0,
+  .receive_switch_offset = 0.0,
 };
 
 //properties_t current_props;
