@@ -21,8 +21,6 @@
 #include "ch.h"
 #include "hal.h"
 
-//#include "hal_serial.h"
-
 #include "usbcfg.h"
 #include "nanovna.h"
 
@@ -458,17 +456,6 @@ my_atof(const char *p)
   return x;
 }
 
-#ifdef __VNA__
-VNA_SHELL_FUNCTION(cmd_offset)
-{
-  if (argc != 1) {
-    shell_printf("usage: offset {frequency offset(Hz)}\r\n");
-    return;
-  }
-  si5351_set_frequency_offset(my_atoi(argv[0]));
-}
-#endif
-
 VNA_SHELL_FUNCTION(cmd_freq)
 {
   if (argc != 1) {
@@ -482,18 +469,6 @@ VNA_SHELL_FUNCTION(cmd_freq)
 usage:
   shell_printf("usage: freq {frequency(Hz)}\r\n");
 }
-#ifdef __VNA__
-VNA_SHELL_FUNCTION(cmd_power)
-{
-  if (argc != 1) {
-    shell_printf("usage: power {0-3|-1}\r\n");
-    return;
-  }
-  (void)argv;
-  drive_strength = my_atoi(argv[0]);
-//  set_frequency(frequency);
-}
-#endif
 
 #ifdef __USE_RTC__
 VNA_SHELL_FUNCTION(cmd_time)
@@ -539,20 +514,6 @@ VNA_SHELL_FUNCTION(cmd_dac)
   config.dac_value = value;
   dacPutChannelX(&DACD2, 0, value);
 }
-
-#ifdef __VNA__
-VNA_SHELL_FUNCTION(cmd_threshold)
-{
-  uint32_t value;
-  if (argc != 1) {
-    shell_printf("usage: threshold {frequency in harmonic mode}\r\n"\
-                 "current: %d\r\n", config.harmonic_freq_threshold);
-    return;
-  }
-  value = my_atoui(argv[0]);
-  config.harmonic_freq_threshold = value;
-}
-#endif
 
 VNA_SHELL_FUNCTION(cmd_saveconfig)
 {
@@ -894,47 +855,6 @@ VNA_SHELL_FUNCTION(cmd_sd_delete)
 }
 #endif
 
-#if 0
-VNA_SHELL_FUNCTION(cmd_gamma)
-{
-  float gamma[2];
-  (void)argc;
-  (void)argv;
-  
-  pause_sweep();
-  chMtxLock(&mutex);
-  wait_dsp(4);  
-  calculate_gamma(gamma);
-  chMtxUnlock(&mutex);
-
-  shell_printf("%d %d\r\n", gamma[0], gamma[1]);
-}
-#endif
-#ifdef __VNA__
-static void (*sample_func)(float *gamma) = calculate_gamma;
-
-VNA_SHELL_FUNCTION(cmd_sample)
-{
-  if (argc != 1) goto usage;
-  //                                         0    1   2
-  static const char cmd_sample_list[] = "gamma|ampl|ref";
-  switch (get_str_index(argv[0], cmd_sample_list)) {
-    case 0:
-      sample_func = calculate_gamma;
-      return;
-    case 1:
-      sample_func = fetch_amplitude;
-      return;
-    case 2:
-      sample_func = fetch_amplitude_ref;
-      return;
-    default:
-      break;
-  }
-usage:
-  shell_printf("usage: sample {%s}\r\n", cmd_sample_list);
-}
-#endif
 config_t config = {
   .magic =             CONFIG_MAGIC,
   .dac_value =         1922,
@@ -947,9 +867,6 @@ config_t config = {
 #endif
   ._mode     = _MODE_USB,
   ._serial_speed = USART_SPEED_SETTING(SERIAL_DEFAULT_BITRATE),
-#ifdef __VNA__
-  .harmonic_freq_threshold = 300000000,
-#endif
   .lcd_palette = LCD_DEFAULT_PALETTE,
 #ifdef TINYSA4
 #endif
@@ -1021,16 +938,7 @@ void load_LCD_properties(void)
 //  current_props._setting.frequency0   =         0;    // start =  0Hz
 //  current_props._setting.frequency1   = 350000000;    // end   = 350MHz
 //  current_props._setting.frequency_IF=  433800000,
-
   setting._sweep_points = POINTS_COUNT;
-  #ifdef VNA__
-  setting._cal_status   = 0;
-//This data not loaded by default
-//setting._frequencies[POINTS_COUNT];
-//setting._cal_data[5][POINTS_COUNT][2];
-//=============================================
-  setting._electrical_delay = 0.0;
-#endif
   setting.trace_scale = 10.0;
   setting.trace_refpos = 0;
   setting.waterfall = W_OFF;
@@ -1039,83 +947,16 @@ void load_LCD_properties(void)
 #ifdef __LIMITS__
   memset(setting.limits, 0, sizeof(setting.limits));
 #endif
-#ifdef __VNA__
-  setting._velocity_factor =  0.7;
-#endif
   setting._active_marker   = 0;
-#ifdef __VNA__
-  setting._domain_mode     = 0;
-  setting._marker_smith_format = MS_RLC;
-#endif
   reset_settings(M_LOW);
 //Checksum add on caldata_save
 //setting.checksum = 0;
 }
 
-#ifdef __VNA__
-void
-ensure_edit_config(void)
-{
-  if (active_props == &current_props)
-    return;
-
-  //memcpy(&current_props, active_props, sizeof(config_t));
-  active_props = &current_props;
-  // move to uncal state
-  cal_status = 0;
-}
-#endif
-
 #include "sa_core.c"
 #ifdef __AUDIO__
 #define DSP_START(delay) wait_count = delay;
 #define DSP_WAIT_READY   while (wait_count) __WFI();
-#endif
-#ifdef __VNA__
-#define DELAY_CHANNEL_CHANGE 2
-
-// main loop for measurement
-bool sweep(bool break_on_operation)
-{
-  int i, delay;
-  // blink LED while scanning
-  palClearPad(GPIOB, GPIOB_LED);
-  // Power stabilization after LED off, also align timings on i == 0
-  for (i = 0; i < sweep_points; i++) {         // 5300
-    if (frequencies[i] == 0) break;
-    delay = set_frequency(frequencies[i]);     // 700
-    tlv320aic3204_select(0);                   // 60 CH0:REFLECT, reset and begin measure
-    dsp_start(delay + ((i == 0) ? 1 : 0));     // 1900
-    //================================================
-    // Place some code thats need execute while delay
-    //================================================
-    dsp_wait();
-    // calculate reflection coefficient
-    (*sample_func)(measured[0][i]);            // 60
-
-    tlv320aic3204_select(1);                   // 60 CH1:TRANSMISSION, reset and begin measure
-    dsp_start(DELAY_CHANNEL_CHANGE);           // 1700
-    //================================================
-    // Place some code thats need execute while delay
-    //================================================
-    dsp_wait();
-    // calculate transmission coefficient
-    (*sample_func)(measured[1][i]);            // 60
-                                               // ======== 170 ===========
-    if (cal_status & CALSTAT_APPLY)
-      apply_error_term_at(i);
-
-    if (electrical_delay != 0)
-      apply_edelay_at(i);
-
-    // back to toplevel to handle ui operation
-    if (operation_requested && break_on_operation)
-      return false;
-  }
-  // blink LED while scanning
-  palSetPad(GPIOB, GPIOB_LED);
-  return true;
-}
 #endif
 
 void set_sweep_points(uint16_t points){
@@ -1150,10 +991,6 @@ VNA_SHELL_FUNCTION(cmd_scan)
     }
   }
   set_frequencies(start, stop, points);
-#ifdef __VNA__
-  if (cal_auto_interpolate && (cal_status & CALSTAT_APPLY))
-    cal_interpolate(lastsaveid);
-#endif
   pause_sweep();
   sweep(false);
   // Output data after if set (faster data recive)
@@ -1384,391 +1221,6 @@ usage:
                "\tsweep {%s} {freq(Hz)}\r\n", sweep_cmd);
 }
 
-#ifdef __VNA__
-static void
-eterm_set(int term, float re, float im)
-{
-  int i;
-  for (i = 0; i < sweep_points; i++) {
-    cal_data[term][i][0] = re;
-    cal_data[term][i][1] = im;
-  }
-}
-
-static void
-eterm_copy(int dst, int src)
-{
-  memcpy(cal_data[dst], cal_data[src], sizeof cal_data[dst]);
-}
-
-#if 0
-const struct open_model {
-  float c0;
-  float c1;
-  float c2;
-  float c3;
-} open_model = { 50, 0, -300, 27 };
-#endif
-
-#if 0
-static void
-adjust_ed(void)
-{
-  int i;
-  for (i = 0; i < sweep_points; i++) {
-    // z=1/(jwc*z0) = 1/(2*pi*f*c*z0)  Note: normalized with Z0
-    // s11ao = (z-1)/(z+1) = (1-1/z)/(1+1/z) = (1-jwcz0)/(1+jwcz0)
-    // prepare 1/s11ao to avoid dividing complex
-    float c = 1000e-15;
-    float z0 = 50;
-    //float z = 2 * VNA_PI * frequencies[i] * c * z0;
-    float z = 0.02;
-    cal_data[ETERM_ED][i][0] += z;
-  }
-}
-#endif
-
-static void
-eterm_calc_es(void)
-{
-  int i;
-  for (i = 0; i < sweep_points; i++) {
-    // z=1/(jwc*z0) = 1/(2*pi*f*c*z0)  Note: normalized with Z0
-    // s11ao = (z-1)/(z+1) = (1-1/z)/(1+1/z) = (1-jwcz0)/(1+jwcz0)
-    // prepare 1/s11ao for effeiciency
-    float c = 50e-15;
-    //float c = 1.707e-12;
-    float z0 = 50;
-    float z = 2 * VNA_PI * frequencies[i] * c * z0;
-    float sq = 1 + z*z;
-    float s11aor = (1 - z*z) / sq;
-    float s11aoi = 2*z / sq;
-
-    // S11mo’= S11mo - Ed
-    // S11ms’= S11ms - Ed
-    float s11or = cal_data[CAL_OPEN][i][0] - cal_data[ETERM_ED][i][0];
-    float s11oi = cal_data[CAL_OPEN][i][1] - cal_data[ETERM_ED][i][1];
-    float s11sr = cal_data[CAL_SHORT][i][0] - cal_data[ETERM_ED][i][0];
-    float s11si = cal_data[CAL_SHORT][i][1] - cal_data[ETERM_ED][i][1];
-    // Es = (S11mo'/s11ao + S11ms’)/(S11mo' - S11ms’)
-    float numr = s11sr + s11or * s11aor - s11oi * s11aoi;
-    float numi = s11si + s11oi * s11aor + s11or * s11aoi;
-    float denomr = s11or - s11sr;
-    float denomi = s11oi - s11si;
-    sq = denomr*denomr+denomi*denomi;
-    cal_data[ETERM_ES][i][0] = (numr*denomr + numi*denomi)/sq;
-    cal_data[ETERM_ES][i][1] = (numi*denomr - numr*denomi)/sq;
-  }
-  cal_status &= ~CALSTAT_OPEN;
-  cal_status |= CALSTAT_ES;
-}
-
-static void
-eterm_calc_er(int sign)
-{
-  int i;
-  for (i = 0; i < sweep_points; i++) {
-    // Er = sign*(1-sign*Es)S11ms'
-    float s11sr = cal_data[CAL_SHORT][i][0] - cal_data[ETERM_ED][i][0];
-    float s11si = cal_data[CAL_SHORT][i][1] - cal_data[ETERM_ED][i][1];
-    float esr = cal_data[ETERM_ES][i][0];
-    float esi = cal_data[ETERM_ES][i][1];
-    if (sign > 0) {
-      esr = -esr;
-      esi = -esi;
-    }
-    esr = 1 + esr;
-    float err = esr * s11sr - esi * s11si;
-    float eri = esr * s11si + esi * s11sr;
-    if (sign < 0) {
-      err = -err;
-      eri = -eri;
-    }
-    cal_data[ETERM_ER][i][0] = err;
-    cal_data[ETERM_ER][i][1] = eri;
-  }
-  cal_status &= ~CALSTAT_SHORT;
-  cal_status |= CALSTAT_ER;
-}
-
-// CAUTION: Et is inversed for efficiency
-static void
-eterm_calc_et(void)
-{
-  int i;
-  for (i = 0; i < sweep_points; i++) {
-    // Et = 1/(S21mt - Ex)
-    float etr = cal_data[CAL_THRU][i][0] - cal_data[CAL_ISOLN][i][0];
-    float eti = cal_data[CAL_THRU][i][1] - cal_data[CAL_ISOLN][i][1];
-    float sq = etr*etr + eti*eti;
-    float invr = etr / sq;
-    float invi = -eti / sq;
-    cal_data[ETERM_ET][i][0] = invr;
-    cal_data[ETERM_ET][i][1] = invi;
-  }
-  cal_status &= ~CALSTAT_THRU;
-  cal_status |= CALSTAT_ET;
-}
-
-#if 0
-void apply_error_term(void)
-{
-  int i;
-  for (i = 0; i < sweep_points; i++) {
-    // S11m' = S11m - Ed
-    // S11a = S11m' / (Er + Es S11m')
-    float s11mr = measured[0][i][0] - cal_data[ETERM_ED][i][0];
-    float s11mi = measured[0][i][1] - cal_data[ETERM_ED][i][1];
-    float err = cal_data[ETERM_ER][i][0] + s11mr * cal_data[ETERM_ES][i][0] - s11mi * cal_data[ETERM_ES][i][1];
-    float eri = cal_data[ETERM_ER][i][1] + s11mr * cal_data[ETERM_ES][i][1] + s11mi * cal_data[ETERM_ES][i][0];
-    float sq = err*err + eri*eri;
-    float s11ar = (s11mr * err + s11mi * eri) / sq;
-    float s11ai = (s11mi * err - s11mr * eri) / sq;
-    measured[0][i][0] = s11ar;
-    measured[0][i][1] = s11ai;
-
-    // CAUTION: Et is inversed for efficiency
-    // S21m' = S21m - Ex
-    // S21a = S21m' (1-EsS11a)Et
-    float s21mr = measured[1][i][0] - cal_data[ETERM_EX][i][0];
-    float s21mi = measured[1][i][1] - cal_data[ETERM_EX][i][1];
-    float esr = 1 - (cal_data[ETERM_ES][i][0] * s11ar - cal_data[ETERM_ES][i][1] * s11ai);
-    float esi = - (cal_data[ETERM_ES][i][1] * s11ar + cal_data[ETERM_ES][i][0] * s11ai);
-    float etr = esr * cal_data[ETERM_ET][i][0] - esi * cal_data[ETERM_ET][i][1];
-    float eti = esr * cal_data[ETERM_ET][i][1] + esi * cal_data[ETERM_ET][i][0];
-    float s21ar = s21mr * etr - s21mi * eti;
-    float s21ai = s21mi * etr + s21mr * eti;
-    measured[1][i][0] = s21ar;
-    measured[1][i][1] = s21ai;
-  }
-}
-#endif
-
-static void apply_error_term_at(int i)
-{
-    // S11m' = S11m - Ed
-    // S11a = S11m' / (Er + Es S11m')
-    float s11mr = measured[0][i][0] - cal_data[ETERM_ED][i][0];
-    float s11mi = measured[0][i][1] - cal_data[ETERM_ED][i][1];
-    float err = cal_data[ETERM_ER][i][0] + s11mr * cal_data[ETERM_ES][i][0] - s11mi * cal_data[ETERM_ES][i][1];
-    float eri = cal_data[ETERM_ER][i][1] + s11mr * cal_data[ETERM_ES][i][1] + s11mi * cal_data[ETERM_ES][i][0];
-    float sq = err*err + eri*eri;
-    float s11ar = (s11mr * err + s11mi * eri) / sq;
-    float s11ai = (s11mi * err - s11mr * eri) / sq;
-    measured[0][i][0] = s11ar;
-    measured[0][i][1] = s11ai;
-
-    // CAUTION: Et is inversed for efficiency
-    // S21m' = S21m - Ex
-    // S21a = S21m' (1-EsS11a)Et
-    float s21mr = measured[1][i][0] - cal_data[ETERM_EX][i][0];
-    float s21mi = measured[1][i][1] - cal_data[ETERM_EX][i][1];
-    float esr = 1 - (cal_data[ETERM_ES][i][0] * s11ar - cal_data[ETERM_ES][i][1] * s11ai);
-    float esi = - (cal_data[ETERM_ES][i][1] * s11ar + cal_data[ETERM_ES][i][0] * s11ai);
-    float etr = esr * cal_data[ETERM_ET][i][0] - esi * cal_data[ETERM_ET][i][1];
-    float eti = esr * cal_data[ETERM_ET][i][1] + esi * cal_data[ETERM_ET][i][0];
-    float s21ar = s21mr * etr - s21mi * eti;
-    float s21ai = s21mi * etr + s21mr * eti;
-    measured[1][i][0] = s21ar;
-    measured[1][i][1] = s21ai;
-}
-
-static void apply_edelay_at(int i)
-{
-  float w = 2 * VNA_PI * electrical_delay * frequencies[i] * 1E-12;
-  float s = sin(w);
-  float c = cos(w);
-  float real = measured[0][i][0];
-  float imag = measured[0][i][1];
-  measured[0][i][0] = real * c - imag * s;
-  measured[0][i][1] = imag * c + real * s;
-  real = measured[1][i][0];
-  imag = measured[1][i][1];
-  measured[1][i][0] = real * c - imag * s;
-  measured[1][i][1] = imag * c + real * s;
-}
-
-void
-cal_collect(int type)
-{
-  ensure_edit_config();
-  int dst, src;
-  switch (type) {
-    case CAL_LOAD:  cal_status|= CALSTAT_LOAD;  dst = CAL_LOAD;  src = 0; break;
-    case CAL_OPEN:  cal_status|= CALSTAT_OPEN;  dst = CAL_OPEN;  src = 0; cal_status&= ~(CALSTAT_ES|CALSTAT_APPLY); break;
-    case CAL_SHORT: cal_status|= CALSTAT_SHORT; dst = CAL_SHORT; src = 0; cal_status&= ~(CALSTAT_ER|CALSTAT_APPLY); break;
-    case CAL_THRU:  cal_status|= CALSTAT_THRU;  dst = CAL_THRU;  src = 1; break;
-    case CAL_ISOLN: cal_status|= CALSTAT_ISOLN; dst = CAL_ISOLN; src = 1; break;
-    default:
-      return;
-  }
-  // Run sweep for collect data
-  sweep(false);
-  // Copy calibration data
-  memcpy(cal_data[dst], measured[src], sizeof measured[0]);
-  redraw_request |= REDRAW_CAL_STATUS;
-}
-
-void
-cal_done(void)
-{
-  ensure_edit_config();
-  if (!(cal_status & CALSTAT_LOAD))
-    eterm_set(ETERM_ED, 0.0, 0.0);
-  //adjust_ed();
-  if ((cal_status & CALSTAT_SHORT) && (cal_status & CALSTAT_OPEN)) {
-    eterm_calc_es();
-    eterm_calc_er(-1);
-  } else if (cal_status & CALSTAT_OPEN) {
-    eterm_copy(CAL_SHORT, CAL_OPEN);
-    eterm_set(ETERM_ES, 0.0, 0.0);
-    eterm_calc_er(1);
-  } else if (cal_status & CALSTAT_SHORT) {
-    eterm_set(ETERM_ES, 0.0, 0.0);
-    cal_status &= ~CALSTAT_SHORT;
-    eterm_calc_er(-1);
-  } else {
-    eterm_set(ETERM_ER, 1.0, 0.0);
-    eterm_set(ETERM_ES, 0.0, 0.0);
-  }
-    
-  if (!(cal_status & CALSTAT_ISOLN))
-    eterm_set(ETERM_EX, 0.0, 0.0);
-  if (cal_status & CALSTAT_THRU) {
-    eterm_calc_et();
-  } else {
-    eterm_set(ETERM_ET, 1.0, 0.0);
-  }
-
-  cal_status |= CALSTAT_APPLY;
-  redraw_request |= REDRAW_CAL_STATUS;
-}
-
-static void
-cal_interpolate(int s)
-{
-  const properties_t *src = caldata_ref(s);
-  int i, j;
-  int eterm;
-  if (src == NULL)
-    return;
-
-  ensure_edit_config();
-
-  // lower than start freq of src range
-  for (i = 0; i < sweep_points; i++) {
-    if (frequencies[i] >= src->_frequencies[0])
-      break;
-
-    // fill cal_data at head of src range
-    for (eterm = 0; eterm < 5; eterm++) {
-      cal_data[eterm][i][0] = src->_cal_data[eterm][0][0];
-      cal_data[eterm][i][1] = src->_cal_data[eterm][0][1];
-    }
-  }
-
-  j = 0;
-  for (; i < sweep_points; i++) {
-    uint32_t f = frequencies[i];
-    if (f == 0) goto interpolate_finish;
-    for (; j < src->_sweep_points-1; j++) {
-      if (src->_frequencies[j] <= f && f < src->_frequencies[j+1]) {
-        // found f between freqs at j and j+1
-        float k1 = (float)(f - src->_frequencies[j])
-                        / (src->_frequencies[j+1] - src->_frequencies[j]);
-
-        // avoid glitch between freqs in different harmonics mode
-        if (IS_HARMONIC_MODE(src->_frequencies[j]) != IS_HARMONIC_MODE(src->_frequencies[j+1])) {
-          // assume f[j] < f[j+1]
-          k1 = IS_HARMONIC_MODE(f) ? 1.0 : 0.0;
-        }
-
-        float k0 = 1.0 - k1;
-        for (eterm = 0; eterm < 5; eterm++) {
-          cal_data[eterm][i][0] = src->_cal_data[eterm][j][0] * k0 + src->_cal_data[eterm][j+1][0] * k1;
-          cal_data[eterm][i][1] = src->_cal_data[eterm][j][1] * k0 + src->_cal_data[eterm][j+1][1] * k1;
-        }
-        break;
-      }
-    }
-    if (j == src->_sweep_points-1)
-      break;
-  }
-
-  // upper than end freq of src range
-  for (; i < sweep_points; i++) {
-    // fill cal_data at tail of src
-    for (eterm = 0; eterm < 5; eterm++) {
-      cal_data[eterm][i][0] = src->_cal_data[eterm][src->_sweep_points-1][0];
-      cal_data[eterm][i][1] = src->_cal_data[eterm][src->_sweep_points-1][1];
-    }
-  }
-interpolate_finish:
-  cal_status |= src->_cal_status | CALSTAT_APPLY | CALSTAT_INTERPOLATED;
-  redraw_request |= REDRAW_CAL_STATUS;
-}
-
-VNA_SHELL_FUNCTION(cmd_cal)
-{
-  static const char *items[] = { "load", "open", "short", "thru", "isoln", "Es", "Er", "Et", "cal'ed" };
-
-  if (argc == 0) {
-    int i;
-    for (i = 0; i < 9; i++) {
-      if (cal_status & (1<<i))
-        shell_printf("%s ", items[i]);
-    }
-    shell_printf("\r\n");
-    return;
-  }
-  redraw_request|=REDRAW_CAL_STATUS;
-  //                                     0    1     2    3     4    5  6   7     8    9 10
-  static const char cmd_cal_list[] = "load|open|short|thru|isoln|done|on|off|reset|data|in";
-  switch (get_str_index(argv[0], cmd_cal_list)) {
-    case 0:
-      cal_collect(CAL_LOAD);
-      return;
-    case 1:
-      cal_collect(CAL_OPEN);
-      return;
-    case 2:
-      cal_collect(CAL_SHORT);
-      return;
-    case 3:
-      cal_collect(CAL_THRU);
-      return;
-    case 4:
-      cal_collect(CAL_ISOLN);
-      return;
-    case 5:
-      cal_done();
-      return;
-    case 6:
-      cal_status |= CALSTAT_APPLY;
-      return;
-    case 7:
-      cal_status &= ~CALSTAT_APPLY;
-      return;
-    case 8:
-      cal_status = 0;
-      return;
-    case 9:
-      shell_printf("%f %f\r\n", cal_data[CAL_LOAD][0][0], cal_data[CAL_LOAD][0][1]);
-      shell_printf("%f %f\r\n", cal_data[CAL_OPEN][0][0], cal_data[CAL_OPEN][0][1]);
-      shell_printf("%f %f\r\n", cal_data[CAL_SHORT][0][0], cal_data[CAL_SHORT][0][1]);
-      shell_printf("%f %f\r\n", cal_data[CAL_THRU][0][0], cal_data[CAL_THRU][0][1]);
-      shell_printf("%f %f\r\n", cal_data[CAL_ISOLN][0][0], cal_data[CAL_ISOLN][0][1]);
-      return;
-    case 10:
-      cal_interpolate((argc > 1) ? my_atoi(argv[1]) : 0);
-      return;
-    default:
-      break;
-  }
-  shell_printf("usage: cal [%s]\r\n", cmd_cal_list);
-}
-#endif
-
 VNA_SHELL_FUNCTION(cmd_save)
 {
   if (argc != 1)
@@ -1909,35 +1361,6 @@ usage:
                "trace {%s} {value|auto}\r\n", cmd_store_list, cmd_type_list, cmd_scale_ref_list);
 }
 
-
-#ifdef __VNA__
-void set_electrical_delay(float picoseconds)
-{
-  if (electrical_delay != picoseconds) {
-    electrical_delay = picoseconds;
-    force_set_markmap();
-  }
-  redraw_request |= REDRAW_MARKER;
-}
-
-float get_electrical_delay(void)
-{
-  return electrical_delay;
-}
-
-VNA_SHELL_FUNCTION(cmd_edelay)
-{
-  if (argc == 0) {
-    shell_printf("%f\r\n", electrical_delay);
-    return;
-  }
-  if (argc > 0) {
-    set_electrical_delay(my_atof(argv[0]));
-  }
-}
-#endif
-
-
 VNA_SHELL_FUNCTION(cmd_marker)
 {
   int t;
@@ -2033,73 +1456,6 @@ VNA_SHELL_FUNCTION(cmd_frequencies)
   }
 }
 
-#ifdef __VNA__
-static void
-set_domain_mode(int mode) // accept DOMAIN_FREQ or DOMAIN_TIME
-{
-  if (mode != (domain_mode & DOMAIN_MODE)) {
-    domain_mode = (domain_mode & ~DOMAIN_MODE) | (mode & DOMAIN_MODE);
-    redraw_request |= REDRAW_FREQUENCY;
-    uistat.lever_mode = LM_MARKER;
-  }
-}
-
-static void
-set_timedomain_func(int func) // accept TD_FUNC_LOWPASS_IMPULSE, TD_FUNC_LOWPASS_STEP or TD_FUNC_BANDPASS
-{
-  domain_mode = (domain_mode & ~TD_FUNC) | (func & TD_FUNC);
-}
-
-static void
-set_timedomain_window(int func) // accept TD_WINDOW_MINIMUM/TD_WINDOW_NORMAL/TD_WINDOW_MAXIMUM
-{
-  domain_mode = (domain_mode & ~TD_WINDOW) | (func & TD_WINDOW);
-}
-
-VNA_SHELL_FUNCTION(cmd_transform)
-{
-  int i;
-  if (argc == 0) {
-    goto usage;
-  }
-  //                                         0   1       2    3        4       5      6       7
-  static const char cmd_transform_list[] = "on|off|impulse|step|bandpass|minimum|normal|maximum";
-  for (i = 0; i < argc; i++) {
-    switch (get_str_index(argv[i], cmd_transform_list)) {
-      case 0:
-        set_domain_mode(DOMAIN_TIME);
-        return;
-      case 1:
-        set_domain_mode(DOMAIN_FREQ);
-        return;
-      case 2:
-        set_timedomain_func(TD_FUNC_LOWPASS_IMPULSE);
-        return;
-      case 3:
-        set_timedomain_func(TD_FUNC_LOWPASS_STEP);
-        return;
-      case 4:
-        set_timedomain_func(TD_FUNC_BANDPASS);
-        return;
-      case 5:
-        set_timedomain_window(TD_WINDOW_MINIMUM);
-        return;
-      case 6:
-        set_timedomain_window(TD_WINDOW_NORMAL);
-        return;
-      case 7:
-        set_timedomain_window(TD_WINDOW_MAXIMUM);
-        return;
-      default:
-        goto usage;
-    }
-  }
-  return;
-usage:
-  shell_printf("usage: transform {%s} [...]\r\n", cmd_transform_list);
-}
-#endif
-
 VNA_SHELL_FUNCTION(cmd_test)
 {
   (void)argc;
@@ -2155,69 +1511,6 @@ VNA_SHELL_FUNCTION(cmd_test)
     chThdSleepMilliseconds(200);
   }
 }
-
-#ifdef __VNA__
-VNA_SHELL_FUNCTION(cmd_gain)
-{
-  int rvalue;
-  int lvalue = 0;
-  if (argc != 1 && argc != 2) {
-    shell_printf("usage: gain {lgain(0-95)} [rgain(0-95)]\r\n");
-    return;
-  }
-  rvalue = my_atoi(argv[0]);
-  if (argc == 2) 
-    lvalue = my_atoi(argv[1]);
-  tlv320aic3204_set_gain(lvalue, rvalue);
-}
-
-VNA_SHELL_FUNCTION(cmd_port)
-{
-  int port;
-  if (argc != 1) {
-    shell_printf("usage: port {0:TX 1:RX}\r\n");
-    return;
-  }
-  port = my_atoi(argv[0]);
-  tlv320aic3204_select(port);
-}
-
-VNA_SHELL_FUNCTION(cmd_stat)
-{
-  int16_t *p = &rx_buffer[0];
-  int32_t acc0, acc1;
-  int32_t ave0, ave1;
-  int32_t count = AUDIO_BUFFER_LEN;
-  int i;
-  (void)argc;
-  (void)argv;
-  acc0 = acc1 = 0;
-  for (i = 0; i < AUDIO_BUFFER_LEN*2; i += 2) {
-    acc0 += p[i];
-    acc1 += p[i+1];
-  }
-  ave0 = acc0 / count;
-  ave1 = acc1 / count;
-  acc0 = acc1 = 0;
-  for (i = 0; i < AUDIO_BUFFER_LEN*2; i += 2) {
-    acc0 += (p[i] - ave0)*(p[i] - ave0);
-    acc1 += (p[i+1] - ave1)*(p[i+1] - ave1);
-  }
-  stat.rms[0] = sqrtf(acc0 / count);
-  stat.rms[1] = sqrtf(acc1 / count);
-  stat.ave[0] = ave0;
-  stat.ave[1] = ave1;
-
-  shell_printf("average: %d %d\r\n", stat.ave[0], stat.ave[1]);
-  shell_printf("rms: %d %d\r\n", stat.rms[0], stat.rms[1]);
-  shell_printf("callback count: %d\r\n", stat.callback_count);
-  //shell_printf("interval cycle: %d\r\n", stat.interval_cycles);
-  //shell_printf("busy cycle: %d\r\n", stat.busy_cycles);
-  //shell_printf("load: %d\r\n", stat.busy_cycles * 100 / stat.interval_cycles);
-//  extern int awd_count;
-//  shell_printf("awd: %d\r\n", awd_count);
-}
-#endif
 
 #ifndef VERSION
 #define VERSION "unknown"
@@ -2355,9 +1648,6 @@ static const VNAShellCommand commands[] =
     {"version"     , cmd_version     , 0},
     {"reset"       , cmd_reset       , 0},
     {"freq"        , cmd_freq        , CMD_WAIT_MUTEX},
-#ifdef __VNA__
-    {"offset"      , cmd_offset      , 0},
-#endif
 #ifdef __USE_RTC__
     {"time"        , cmd_time        , 0},
 #endif
@@ -2370,13 +1660,6 @@ static const VNAShellCommand commands[] =
     {"dump"        , cmd_dump        , 0},
 #endif
     {"frequencies" , cmd_frequencies , 0},
-#ifdef __VNA__
-    {"port"        , cmd_port        , 0},
-    {"stat"        , cmd_stat        , 0},
-    {"gain"        , cmd_gain        , 0},
-    {"power"       , cmd_power       , 0},
-    {"sample"      , cmd_sample      , 0},
-#endif
 //  {"gamma"       , cmd_gamma       , 0},
     {"scan"        , cmd_scan        , CMD_WAIT_MUTEX},
     {"scanraw"     , cmd_scanraw     , CMD_WAIT_MUTEX},
@@ -2388,9 +1671,6 @@ static const VNAShellCommand commands[] =
     {"pause"       , cmd_pause       , CMD_WAIT_MUTEX},
     {"resume"      , cmd_resume      , CMD_WAIT_MUTEX},
     {"caloutput"   , cmd_caloutput   , 0},
-#ifdef __VNA__
-    {"cal"         , cmd_cal         , CMD_WAIT_MUTEX},
-#endif
     {"save"        , cmd_save        , 0},
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX},
     {"trace"       , cmd_trace       , CMD_WAIT_MUTEX},
@@ -2398,9 +1678,6 @@ static const VNAShellCommand commands[] =
     {"marker"      , cmd_marker      , 0},
 #ifdef ENABLE_USART_COMMAND
     {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
-#endif
-#ifdef __VNA__
-    {"edelay"      , cmd_edelay      , 0},
 #endif
     {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
 #ifdef __REMOTE_DESKTOP__
@@ -2411,10 +1688,6 @@ static const VNAShellCommand commands[] =
     {"vbat"        , cmd_vbat        , 0},     // Uses same adc as touch!!!!!
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
     {"vbat_offset" , cmd_vbat_offset , 0},
-#endif
-#ifdef __VNA__
-    {"transform"   , cmd_transform   , 0},
-    {"threshold"   , cmd_threshold   , 0},
 #endif
     {"help"        , cmd_help        , 0},
 #ifdef ENABLE_INFO_COMMAND
