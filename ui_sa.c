@@ -1082,7 +1082,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
 }
 
 #ifdef __WAIT_CTS_WHILE_SLEEPING__
-int sleep = 0;
+volatile int sleep = 0;
 static UI_FUNCTION_ADV_CALLBACK(menu_sleep_acb)
 {
   (void)data;
@@ -1809,6 +1809,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_shift_acb)
 }
 
 #ifdef __REMOTE_DESKTOP__
+#if 0   // Not used in UI
 static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
 {
   (void) data;
@@ -1822,6 +1823,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_send_display_acb)
   if (auto_capture)
     redraw_request|=REDRAW_AREA|REDRAW_BATTERY|REDRAW_FREQUENCY|REDRAW_CAL_STATUS;
 }
+#endif
 #endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_outputmode_acb)
@@ -1886,6 +1888,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_connection_acb)
   }
   config._mode&=~_MODE_CONNECTION_MASK;
   config._mode|=data;
+  config_save();
   shell_reset_console();
 }
 #endif

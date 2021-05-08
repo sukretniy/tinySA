@@ -88,6 +88,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 
 #ifdef TINYSA4
 #define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 35.8 - config.switch_offset)
+#define RECEIVE_SWITCH_ATTENUATION  21
 //#define POWER_OFFSET    -18             // Max level with all enabled
 //#define POWER_RANGE     70
 #define MAX_DRIVE   ((setting.mode == M_GENHIGH && config.high_out_adf4350 ) ? 3 : 18)
@@ -104,6 +105,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 
 #else
 #define SWITCH_ATTENUATION  (29 - config.switch_offset)
+#define RECEIVE_SWITCH_ATTENUATION  24
 #define POWER_OFFSET    15
 #define MAX_DRIVE   (setting.mode == M_GENHIGH ? 15 : 11)
 #define MIN_DRIVE   8
@@ -115,7 +117,6 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 
 #define BELOW_MAX_DRIVE(X) (drive_dBm[X] - drive_dBm[MAX_DRIVE])
 
-#define RECEIVE_SWITCH_ATTENUATION  21      // TODO differentiate for tinySA3 and tinySA4
 
 //float level_min;
 //float level_max;
@@ -938,7 +939,12 @@ void set_actual_power(float o)              // Set peak level to known value
       config.lna_level_offset = new_offset;
     else
 #endif
-      config.low_level_offset = new_offset;
+    {
+ //     if (get_attennuation() > 32)
+ //       config.receive_switch_offset = new_offset;
+ //     else
+        config.low_level_offset = new_offset;
+    }
   }
   dirty = true;
   config_save();
@@ -4469,11 +4475,11 @@ marker_search_right_min(int from)
 // -------------------- Self testing -------------------------------------------------
 
 enum {
-  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN, TC_DISPLAY, TC_LEVEL,
+  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN, TC_DISPLAY, TC_LEVEL, TC_SWITCH
 };
 
 enum {
-  TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_10MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH,
+  TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_30MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH,
 #ifdef TINYSA4
   TP_30MHZ_ULTRA, TP_30MHZ_LNA,
 #endif
@@ -4517,7 +4523,7 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -23,    27,     -70),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       900,    1,     -90,    0,      -90),       // 9 LPF cutoff
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -29,    10,     -50),      // 10 Switch isolation using high attenuation
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      -23,    10,     -50),      // 10 Switch isolation using high attenuation
  TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60),      // 11 test display
  TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    145,     -60),      // 12 Measure atten step accuracy
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_LNA,       30,     5,      -23,   10,     -75),      // 13 Measure LNA
@@ -4544,19 +4550,19 @@ const test_case_t test_case [] =
 
 };
 #else
-{// Condition   Preparation     Center  Span    Pass    Width(%)Stop
+{//               Condition     Preparation     Center  Span    Pass    Width(%)Stop
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.005,  0.01,   0,      0,      0),         // 1 Zero Hz leakage
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.015,   0.01,   -30,    0,      0),         // 2 Phase noise of zero Hz
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ,       20,     7,      -39,    10,     -90),      // 3
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     7,      -25,    10,     -90),      // 3
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ,       30,     7,      -34,    10,     -90),      // 4
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -75,    0,      0),         // 5  Wide band noise floor low mode
  TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     600,    720,    -75,    0,      0),         // 6 Wide band noise floor high mode
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  10,     7,      -20,    27,     -80),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  10,     4,      -18,    9,     -60),       // 8 BPF pass band flatness
- TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       400,    60,     -75,    0,      -75),       // 9 LPF cutoff
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZ_SWITCH,20,     7,      -39,    10,     -60),      // 10 Switch isolation using high attenuation
- TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60),      // 11 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       450,    80,     -75,    0,      -75),       // 9 LPF cutoff
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH, 30,     7,      -25,    10,     -60),      // 10 Switch isolation using high attenuation
+ TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60),      // 11 Test display
  TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      -25,    145,     -60),      // 12 Measure atten step accuracy
 #define TEST_END 12
  TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
@@ -4883,9 +4889,9 @@ common_silent:
       stored_t[j] = test_case[i].pass;
     in_selftest = false;                    // Otherwise spurs will be visible
     break;
-  case TP_10MHZ_SWITCH:
+  case TP_30MHZ_SWITCH:
     set_mode(M_LOW);
-    set_refer_output(2);
+    set_refer_output(0);
     goto common;
   case TP_10MHZEXTRA:                         // Swept receiver
     set_mode(M_LOW);
@@ -4964,7 +4970,7 @@ common_silent:
     setting.extra_lna = true;
     break;
 #endif
-  case TP_10MHZ_SWITCH:
+  case TP_30MHZ_SWITCH:
     set_attenuation(32);                        // This forces the switch to transmit so isolation can be tested
     break;
   case TPH_30MHZ_SWITCH:

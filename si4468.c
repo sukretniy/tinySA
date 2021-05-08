@@ -567,8 +567,18 @@ static void SI4463_set_state(si446x_state_t);
 
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
 #ifdef __WAIT_CTS_WHILE_SLEEPING__
-extern int sleep;
-#define SI4463_WAIT_CTS       while (!SI4463_READ_CTS) if (sleep) __WFI();
+extern volatile int sleep;
+#if 0
+#define SI4463_WAIT_CTS       while (!SI4463_READ_CTS) {\
+  if (sleep) {\
+    CS_PE_HIGH;\
+    __WFI();\
+    CS_PE_LOW;\
+  } \
+  };
+#else
+#define SI4463_WAIT_CTS       while (!SI4463_READ_CTS) ;
+#endif
 #else
 #define SI4463_WAIT_CTS       while (!SI4463_READ_CTS) ;
 #endif
@@ -1165,7 +1175,19 @@ static char Si446x_readRSSI(void){
 
   while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
     (void)SPI_READ_8BIT(SI4432_SPI);     // Remove lingering bytes
+#if 0
   SI4463_WAIT_CTS;                       // Wait for CTS
+#else
+  while (!SI4463_READ_CTS) {
+    if (sleep) {
+      __disable_irq();
+//      CS_PE_HIGH;
+       __WFI();
+//       CS_PE_LOW;
+       __enable_irq();
+    }
+  }
+  #endif
   SI_CS_LOW;
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_CMD_BUFF); // read answer
   while (SPI_IS_BUSY(SI4432_SPI)) ;      // wait tx
