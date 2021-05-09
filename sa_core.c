@@ -3159,13 +3159,10 @@ again:                                                              // Spur redu
 #define TXCO_DIV3   10000000
 
         if (setting.R == 0) {
-#if 0
-          if (actual_rbw_x10 >= 3000) {
+          if (setting.mode == M_GENLOW) {
             if (local_modulo == 0) ADF4351_modulo(1000);
             ADF4351_R_counter(1);
-
           } else
-#endif
           if (lf < 1000000000 /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
             if (local_modulo == 0) {
               if (actual_rbw_x10 >= 3000)

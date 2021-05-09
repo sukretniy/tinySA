@@ -517,6 +517,7 @@ static const menuitem_t  menu_curve[];
 static const menuitem_t  menu_curve_confirm[];
 #endif
 static const menuitem_t  menu_sweep[];
+static const menuitem_t  menu_settings[];
 extern bool dirty;
 char range_text[20];
 
@@ -1999,7 +2000,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 #endif
   { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",   "-100..+100"},
 #ifdef TINYSA4
-  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings3},
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings},
 #endif
   { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
@@ -2443,7 +2444,7 @@ static const menuitem_t menu_actual_power[] =
 static const menuitem_t menu_settings[] =
 {
   { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
-  { MT_SUBMENU, 0,              "ACTUAL\nPOWER",  menu_actual_power},
+  { MT_SUBMENU, 0,              "LEVEL\nCORRECTION",  menu_actual_power},
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "0=auto IF"},
   { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
 #ifndef TINYSA4
@@ -3339,6 +3340,8 @@ redraw_cal_status:
   else
     strcpy(&buf[0],"Scan:");
   ili9341_drawstring(buf, x, y);
+
+  if (dirty) setting.actual_sweep_time_us = calc_min_sweep_time_us();
 
 #if 0                   // Activate for sweep time debugging
   y += YSTEP;
