@@ -19,7 +19,6 @@
 /----------------------------------------------------------------------------*/
 
 
-#include <string.h>
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of device I/O functions */
 
@@ -697,6 +696,58 @@ static void st_qword (BYTE* ptr, QWORD val)	/* Store an 8-byte word in little-en
 /*-----------------------------------------------------------------------*/
 /* String functions                                                      */
 /*-----------------------------------------------------------------------*/
+#if FF_USE_STRINGLIB == 1
+#include <string.h>
+#else
+// Redefine default tu use self string functions
+#define memcpy mem_cpy
+#define memset mem_set
+#define memcmp mem_cmp
+#define strchr chk_chr
+/* Copy memory to memory */
+static void mem_cpy (void* dst, const void* src, UINT cnt)
+{
+	BYTE *d = (BYTE*)dst;
+	const BYTE *s = (const BYTE*)src;
+
+	if (cnt != 0) {
+		do {
+			*d++ = *s++;
+		} while (--cnt);
+	}
+}
+
+/* Fill memory block */
+static void mem_set (void* dst, int val, UINT cnt)
+{
+	BYTE *d = (BYTE*)dst;
+
+	do {
+		*d++ = (BYTE)val;
+	} while (--cnt);
+}
+
+
+/* Compare memory block */
+static int mem_cmp (const void* dst, const void* src, UINT cnt)	/* ZR:same, NZ:different */
+{
+	const BYTE *d = (const BYTE *)dst, *s = (const BYTE *)src;
+	int r = 0;
+
+	do {
+		r = *d++ - *s++;
+	} while (--cnt && r == 0);
+
+	return r;
+}
+
+/* Check if chr is contained in the string */
+static int chk_chr (const char* str, int chr)	/* NZ:contained, ZR:not contained */
+{
+	while (*str && *str != chr) str++;
+	return *str;
+}
+#endif
 
 /* Test if the byte is DBC 1st byte */
 static int dbc_1st (BYTE c)
