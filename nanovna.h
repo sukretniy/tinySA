@@ -401,6 +401,7 @@ void set_measurement(int);
 // extern int settingSpeed;
 //extern int setting.step_delay;
 void sweep_remote(void);
+void calculate_step_delay(void);
 extern int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv);
 
 #ifdef TINYSA4
@@ -1184,7 +1185,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e4e /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e4f /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

@@ -1447,7 +1447,7 @@ static const struct {
 };
 #endif
 
-static void calculate_step_delay(void)
+void calculate_step_delay(void)
 {
   if (setting.step_delay_mode == SD_MANUAL || setting.step_delay != 0) {        // The latter part required for selftest 3
     SI4432_step_delay = setting.step_delay;
@@ -3111,7 +3111,11 @@ again:                                                              // Spur redu
 #endif
             else
             {
+#ifdef TINYSA4
+              local_IF = local_IF - DEFAULT_SPUR_OFFSET/4;                  // No spure removal and no spur, center in IF but avoid mirror
+#else
               local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
+#endif
             }
           }
         }
@@ -3174,7 +3178,7 @@ again:                                                              // Spur redu
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {   // 30MHz
               ADF4351_R_counter(6);
             } else {
-              if (setting.frequency_step < 100000) {
+              if (actual_rbw_x10 < 1000) {
                 freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
                 if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
                   ADF4351_R_counter(4);

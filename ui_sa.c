@@ -3302,7 +3302,7 @@ redraw_cal_status:
   else
     color = LCD_FG_COLOR;
   ili9341_set_foreground(color);
-
+  if (dirty) update_rbw();
   ili9341_drawstring("RBW:", x, y);
   y += YSTEP;
   plot_printf(buf, BLEN, "%.1FHz", actual_rbw_x10*100.0);
@@ -3341,7 +3341,10 @@ redraw_cal_status:
     strcpy(&buf[0],"Scan:");
   ili9341_drawstring(buf, x, y);
 
-  if (dirty) setting.actual_sweep_time_us = calc_min_sweep_time_us();
+  if (dirty) {
+    calculate_step_delay();
+    setting.actual_sweep_time_us = calc_min_sweep_time_us();
+  }
 
 #if 0                   // Activate for sweep time debugging
   y += YSTEP;
