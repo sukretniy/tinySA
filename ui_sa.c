@@ -1702,6 +1702,39 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_bpf_acb){
   toggle_tracking();
 }
 
+#ifdef __LCD_BRIGHTNESS__
+static UI_FUNCTION_CALLBACK(menu_brightness_cb)
+{
+  (void)item;
+  (void)data;
+  int16_t value = config._brightness;
+  ili9341_set_foreground(LCD_MENU_TEXT_COLOR);
+  ili9341_set_background(LCD_MENU_COLOR);
+  ili9341_fill(LCD_WIDTH/2-80, LCD_HEIGHT/2-20, 160, 40);
+  ili9341_drawstring_7x13("BRIGHTNESS", LCD_WIDTH/2-35, LCD_HEIGHT/2-13);
+  ili9341_drawstring_7x13(S_LARROW" USE LEVELER BUTTON "S_RARROW, LCD_WIDTH/2-72, LCD_HEIGHT/2+2);
+  while (TRUE) {
+    int status = btn_check();
+    if (status & (EVT_UP|EVT_DOWN)) {
+      do {
+        if (status & EVT_UP  ) value+=5;
+        if (status & EVT_DOWN) value-=5;
+        if (value <   0) value =   0;
+        if (value > 100) value = 100;
+        lcd_setBrightness(value);
+        status = btn_wait_release();
+      } while (status != 0);
+    }
+    if (status == EVT_BUTTON_SINGLE_CLICK)
+      break;
+  }
+  config._brightness = (uint8_t)value;
+  lcd_setBrightness(value);
+  redraw_request|= REDRAW_AREA;
+  ui_mode_normal();
+}
+#endif
+
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_pulse_acb){
   (void)item;
   (void)data;
@@ -2561,7 +2594,9 @@ static const menuitem_t menu_config[] = {
 #ifndef TINYSA4
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
 #endif
-
+#ifdef __LCD_BRIGHTNESS__
+  { MT_CALLBACK, 0, "BRIGHTHESS", menu_brightness_cb},
+#endif
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };

@@ -501,9 +501,37 @@ static const uint8_t ili9341_init_seq[] = {
 #define LCD_INIT ili9341_init_seq
 #endif
 
+#ifdef __LCD_BRIGHTNESS__
+#if HAL_USE_DAC == FALSE
+#error "Need set HAL_USE_DAC in halconf.h for use __LCD_BRIGHTNESS__"
+#endif
+
+static const DACConfig dac1cfg1 = {
+  init:         0,
+  datamode:     DAC_DHRM_12BIT_RIGHT
+};
+
+static void lcd_initBrightness(void){
+  dacStart(&DACD2, &dac1cfg1);
+}
+
+#define BRIGHTNESS_MIN_LEVEL    0
+#define BRIGHTNESS_MAX_LEVEL 3300
+// Brightness control range 0 - 100
+void lcd_setBrightness(uint16_t b){
+  b = BRIGHTNESS_MIN_LEVEL + b*((BRIGHTNESS_MAX_LEVEL-BRIGHTNESS_MIN_LEVEL)/100);
+  dacPutChannelX(&DACD2, 0, b);
+}
+#else
+#define lcd_initBrightness()
+#endif
+
 void ili9341_init(void)
 {
   spi_init();
+  // Init Brightness if LCD support
+  lcd_initBrightness();
+
   LCD_DC_DATA;
   LCD_RESET_ASSERT;
   chThdSleepMilliseconds(10);
@@ -514,7 +542,7 @@ void ili9341_init(void)
     p += 2 + p[1];
     chThdSleepMilliseconds(5);
   }
-//  ili9341_clear_screen();
+  ili9341_clear_screen();
   LCD_CS_HIGH;
 }
 
