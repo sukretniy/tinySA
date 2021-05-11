@@ -80,6 +80,7 @@
 #ifdef TINYSA4
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
+#define __LCD_BRIGHTNESS__        // LCD or hardware allow change brightness, add menu item for this
 #define __HARMONIC__
 #define __VBW__
 #define __SWEEP_RESTART__
@@ -696,6 +697,7 @@ typedef struct config {
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
+  uint8_t  _brightness;
   uint8_t high_out_adf4350;
   float sweep_voltage;
   float switch_offset;
@@ -858,6 +860,9 @@ typedef uint16_t pixel_t;
 #define LCD_HEIGHT                  240
 #endif
 
+// Default LCD brightness if display support it
+#define DEFAULT_BRIGHTNESS       70
+
 #define LCD_BG_COLOR             0
 #define LCD_FG_COLOR             1
 #define LCD_GRID_COLOR           2
@@ -967,6 +972,7 @@ void ili9341_drawfont(uint8_t ch, int x, int y);
 void ili9341_read_memory(int x, int y, int w, int h, uint16_t* out);
 void ili9341_line(int x0, int y0, int x1, int y1);
 void show_version(void);
+void lcd_setBrightness(uint16_t b);
 
 /*
  * flash.c
@@ -1186,7 +1192,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4f4f /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e50 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

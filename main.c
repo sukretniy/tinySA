@@ -885,6 +885,7 @@ config_t config = {
   .ext_zero_level = 128,
 #endif
 #ifdef TINYSA4
+  ._brightness  = DEFAULT_BRIGHTNESS,
   .vbat_offset = 220,
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
@@ -2264,6 +2265,13 @@ int main(void)
   set_refer_output(-1);
 //  ui_mode_menu();       // Show menu when autostarting mode
   ui_mode_normal();
+
+  /*
+   * Set LCD display brightness
+   */
+  #ifdef  __LCD_BRIGHTNESS__
+    lcd_setBrightness(config._brightness);
+  #endif
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
