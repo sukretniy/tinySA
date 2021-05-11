@@ -2434,6 +2434,8 @@ ui_mode_normal(void)
 {
   if (ui_mode == UI_NORMAL)
     return;
+  if (current_menu_is_form())
+    return;
   leave_ui_mode();
   area_width  = AREA_WIDTH_NORMAL;
   area_height = AREA_HEIGHT_NORMAL;
