@@ -428,8 +428,8 @@ void set_gridlines(int d)
 #ifdef TINYSA4
 void set_30mhz(freq_t f)
 {
-  if (f < 29000000 || f > 31000000)
-    return;
+//  if (f < 29000000 || f > 31000000)
+//    return;
   config.setting_frequency_30mhz = f;
   ADF4351_recalculate_PFDRFout();
   config_save();

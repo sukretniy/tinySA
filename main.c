@@ -906,17 +906,17 @@ config_t config = {
     { 10.5,  +4.9,   +1.6,   +0.6,    0,       0,        +2,         +0,          +2,        +2,         +2,          +2,         +6,         +9,         +11.5,       +14.5,      +23,      +25,       +36,          +46,}, // LNA in
     { 11.5,  7,      6,      3.5,      1.5,       0.5,       -0.2,     0,         0,         -0.5,       +1.5,        +2,         +4,         +6.5,       +9,         +13,        +13,        +13,         +13,       +13,     }, // low out
   },
-  .setting_frequency_30mhz = 30000000,
+  .setting_frequency_30mhz = 30000000ULL * FREQ_MULTIPLIER,
   .cor_am = 0,
   .cor_wfm = 0,
   .cor_nfm = 0,
   .ultra = false,
   .high_out_adf4350 = true,
   .ext_zero_level = 174,
+  .receive_switch_offset = 0.0,
 #endif
   .sweep_voltage = 3.3,
   .switch_offset = 0.0,
-  .receive_switch_offset = 0.0,
 };
 
 //properties_t current_props;
@@ -2312,7 +2312,7 @@ void HardFault_Handler(void)
 
 void hard_fault_handler_c(uint32_t *sp)
 {
-#ifdef TINYSA4
+#ifndef TINYSA4
   uint32_t r0  = sp[0];
   uint32_t r1  = sp[1];
   uint32_t r2  = sp[2];

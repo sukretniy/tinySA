@@ -234,7 +234,7 @@ bool ADF4351_frequency_changed = false;
 #define DEBUG(X)
 #define DEBUGLN(X)
 
-#define XTAL    30000000
+#define XTAL    300000000
 uint64_t  PFDRFout[6] = {XTAL,XTAL,XTAL,10000000,10000000,10000000}; //Reference freq in MHz
 
 int64_t
@@ -429,32 +429,33 @@ static uint32_t gcd(uint32_t x, uint32_t y)
 }
 #endif
 
+
 uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
-  uint8_t OutputDivider;
+  uint32_t output_divider;
   target_freq = freq;
   if (freq >= 2200000000) {
-      OutputDivider = 1;
+      output_divider = 1 * FREQ_MULTIPLIER;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 0);
     } else if (freq >= 1100000000) {
-      OutputDivider = 2;
+      output_divider = 2 * FREQ_MULTIPLIER;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 1);
     } else if (freq >= 550000000) {
-      OutputDivider = 4;
+      output_divider = 4 * FREQ_MULTIPLIER;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 1);
       bitWrite (registers[4], 20, 0);
     } else if (freq >= 275000000)  {
-      OutputDivider = 8;
+      output_divider = 8 * FREQ_MULTIPLIER;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 1);
       bitWrite (registers[4], 20, 1);
     } else {                        // > 137500000
-      OutputDivider = 16;
+      output_divider = 16 * FREQ_MULTIPLIER;
       bitWrite (registers[4], 22, 1);
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 0);
@@ -465,7 +466,7 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
     if (MOD == 0)
       MOD = 60;
     uint32_t MOD_X2 = MOD<<1;
-    uint32_t INTA_F = ((freq * (uint64_t)OutputDivider) * (uint64_t)MOD_X2/ PFDR) + 1;
+    uint32_t INTA_F = ((freq * (uint64_t)output_divider) * (uint64_t)MOD_X2/ PFDR) + 1;
     uint32_t INTA = INTA_F / MOD_X2;
     uint32_t FRAC = (INTA_F - INTA * MOD_X2)>>1;
     if (FRAC >= MOD) {
@@ -481,10 +482,10 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
         MOD=2;
     }
 #endif
-    uint64_t actual_freq = ((uint64_t)PFDR *(INTA * MOD +FRAC))/OutputDivider / MOD;
+    uint64_t actual_freq = ((uint64_t)PFDR *(INTA * MOD +FRAC))/output_divider / MOD;
 
 #if 0       // Only for debugging
-     int max_delta =  PFDRFout[channel]/OutputDivider/MOD/100;
+     int max_delta =  PFDRFout[channel]/output_divider/MOD/100;
     if (actual_freq < freq - max_delta || actual_freq > freq + max_delta ){
        while(1)
          my_microsecond_delay(10);
@@ -554,7 +555,6 @@ bool SI4463_offset_changed = false;
 int SI4463_offset_value = 0;
 
 static int SI4463_band = -1;
-static int64_t SI4463_outdiv = -1;
 //static freq_t SI4463_prev_freq = 0;
 //static float SI4463_step_size = 100;        // Will be recalculated once used
 static uint8_t SI4463_channel = 0;
@@ -1571,28 +1571,29 @@ uint16_t set_rbw(uint16_t WISH)  {
 
 freq_t SI4463_set_freq(freq_t freq)
 {
+  uint32_t output_divider;
 //  SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE1);       // For measuring duration of set_freq
   int S = 4 ;               // Approx 100 Hz channels
   SI4463_channel = 0;
   if (freq >= 822000000 && freq <= 1130000000)         {       // 822 to 1130MHz
     SI4463_band = 0;
-    SI4463_outdiv = 4;
+    output_divider = 4 * FREQ_MULTIPLIER;
   } else if (freq >= 411000000 && freq <= 566000000) {    // 411 to  568MHz
     SI4463_band = 2;
-    SI4463_outdiv = 8;
+    output_divider = 8 * FREQ_MULTIPLIER ;
   } else if (freq >= 329000000 && freq <= 454000000) {    // 329 to 454MHz
     SI4463_band = 1;
-    SI4463_outdiv = 10;
+    output_divider = 10 * FREQ_MULTIPLIER;
   } else if (freq >= 274000000 && freq <= 378000000) {    // 274 to 378
     SI4463_band = 3;
-    SI4463_outdiv = 12;
+    output_divider = 12 * FREQ_MULTIPLIER;
   } else if (freq >= 137000000 && freq <= 189000000){ // 137 to 189
     SI4463_band = 5;
-    SI4463_outdiv = 24;
+    output_divider = 24 * FREQ_MULTIPLIER;
 #if 0                           // Band 4, 6 and 7 do not function
   } else if (freq >= 137000000 && freq <= 189000000){ // 220 to 266
     SI4463_band = 4;
-    SI4463_outdiv = 12;
+    output_divider = 12;
 #endif
   } else
     return 0;
@@ -1600,10 +1601,10 @@ freq_t SI4463_set_freq(freq_t freq)
     si_set_offset(0);
     SI4463_offset_active = false;
   }
-  uint32_t R = (freq * SI4463_outdiv) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
+  uint32_t R = (freq * output_divider) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
   uint64_t MOD = 524288; // = 2^19
-  uint32_t  F = ((freq * SI4463_outdiv*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
-  freq_t actual_freq = (R*MOD + F) * (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)/ SI4463_outdiv/MOD;
+  uint32_t  F = ((freq * output_divider*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
+  freq_t actual_freq = (R*MOD + F) * (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)/ output_divider/MOD;
 #if 0       // Only for debugging
   int delta = freq - actual_freq;
   if (delta < -100 || delta > 100 ){
@@ -1618,7 +1619,7 @@ freq_t SI4463_set_freq(freq_t freq)
 
 #if 0               // Hopping is fast but frequency setting is not yet reliable !!!!!
   if (SI4463_band == prev_band) {
-    int vco = 2091 + ((((freq / 4 ) * SI4463_outdiv - 850000000)/1000) * 492) / 200000;
+    int vco = 2091 + ((((freq / 4 ) * output_divider - 850000000)/1000) * 492) / 200000;
 
     if (SI4463_in_tx_mode) {
       uint8_t data[] = {
