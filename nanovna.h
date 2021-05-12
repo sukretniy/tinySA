@@ -1033,13 +1033,8 @@ typedef struct setting
   int decay;                      // KM_DECAY   < 1000000
   int attack;                     // KM_ATTACK  <   20000
 
-#ifdef TINYSA4
   int32_t slider_position;
   freq_t  slider_span;
-#else
-  int32_t slider_position;
-  int32_t slider_span;
-#endif
 
   uint32_t rbw_x10;
   uint32_t vbw_x10;
@@ -1273,6 +1268,7 @@ enum marker_smithvalue {
 
 typedef struct uistat {
   float value; // for editing at numeric input area
+  freq_t freq_value; // for editing frequencies that do not fit in float;
   int8_t digit; /* 0~5 */
   int8_t digit_mode;
   int8_t current_trace; /* 0..3 */

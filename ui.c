@@ -2053,10 +2053,10 @@ menu_select_touch(int i, int pos)
         keypad_mode = keypad;
         fetch_numeric_target();
         int new_slider = touch_x - LCD_WIDTH/2;   // Can have negative outcome
-        if (new_slider < - (MENU_FORM_WIDTH-8)/2)
-          new_slider = -(MENU_FORM_WIDTH-8)/2;
-        if (new_slider > (MENU_FORM_WIDTH-8)/2)
-          new_slider = (MENU_FORM_WIDTH-8)/2;
+        if (new_slider < - (MENU_FORM_WIDTH-8)/2 - 1)
+          new_slider = -(MENU_FORM_WIDTH-8)/2 - 1;
+        if (new_slider > (MENU_FORM_WIDTH-8)/2 + 1)
+          new_slider = (MENU_FORM_WIDTH-8)/2 + 1;
         if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER){
 #define TOUCH_DEAD_ZONE 40
           if (mode == SL_UNKNOWN ) {
@@ -2068,20 +2068,24 @@ menu_select_touch(int i, int pos)
             }
           }
           if (mode == SL_MOVE ) {
-              uistat.value+= (int)(setting.slider_span/(MENU_FORM_WIDTH-8))*(new_slider - setting.slider_position);
-              if (uistat.value < minFreq)
-                uistat.value = minFreq;
-              if (uistat.value > maxFreq)
-                uistat.value = maxFreq;
-              setting.slider_position = new_slider;
-              set_keypad_value(keypad);
-              dirty = false;
-              perform(false, 0, (freq_t)uistat.value, false);
-              draw_menu();
+            long_t freq_delta = (setting.slider_span/(MENU_FORM_WIDTH-8))*(new_slider - setting.slider_position);
+            if (freq_delta < 0 && uistat.freq_value < (freq_t)(-freq_delta))
+              uistat.freq_value = 0;
+            else
+              uistat.freq_value+= freq_delta;
+            if (uistat.freq_value < minFreq)
+              uistat.freq_value = minFreq;
+            if (uistat.freq_value > maxFreq)
+              uistat.freq_value = maxFreq;
+            setting.slider_position = new_slider;
+            set_keypad_value(keypad);
+            dirty = false;
+            perform(false, 0, uistat.freq_value, false);
+            draw_menu();
           } else if (mode == SL_SPAN ){
-              freq_t slider_freq;
+            freq_t slider_freq;
             first_span:
-              slider_freq = (freq_t) uistat.value;
+              slider_freq = uistat.freq_value;
               int pw=new_slider + LCD_WIDTH/2;
               setting.slider_position = pw - LCD_WIDTH/2;   // Show delta on slider
               setting.slider_span = 10;
@@ -2101,7 +2105,7 @@ menu_select_touch(int i, int pos)
                 setting.slider_span = (maxFreq - minFreq);
               freq_t old_minFreq = minFreq;           // Save when in high mode
               minFreq = 0;                              // And set minFreq to 0 for span display
-              uistat.value = setting.slider_span;
+              uistat.freq_value = setting.slider_span;
               set_keypad_value(keypad);
 #if 1
               plot_printf(center_text, sizeof center_text, "RANGE: %%s");
@@ -2113,7 +2117,7 @@ menu_select_touch(int i, int pos)
 #endif
               draw_menu();                               // Show slider span
               minFreq = old_minFreq;                     // and restore minFreq
-              uistat.value = (float) slider_freq;        // and restore current slider freq
+              uistat.freq_value = slider_freq;        // and restore current slider freq
               set_keypad_value(keypad);
 #if 1
               plot_printf(center_text, sizeof center_text, "FREQ: %%s");
@@ -2190,12 +2194,12 @@ menu_select_touch(int i, int pos)
         break;
       }
       if (step < 0 && get_sweep_frequency(ST_CENTER) < (freq_t)(-step))
-        uistat.value = 0;
+        uistat.freq_value = 0;
       else
-        uistat.value = get_sweep_frequency(ST_CENTER) + step;
+        uistat.freq_value = get_sweep_frequency(ST_CENTER) + step;
       do_exit = true;
       setting.slider_position = 0;                         // reset slider after step
-      check_frequency_slider(uistat.value);
+      check_frequency_slider(uistat.freq_value);
       goto apply_step;
     }
 
@@ -2696,6 +2700,7 @@ keypad_click(int key)
     if (modifier) kp_buf[kp_index++] = modifier;
     kp_buf[kp_index++] = 0;
     uistat.value = my_atof(kp_buf);
+    uistat.freq_value = my_atoui(kp_buf);
 #endif
     set_numeric_value();
     return KP_DONE;

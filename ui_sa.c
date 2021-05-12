@@ -1132,13 +1132,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
   }
   menu_move_back(false);
 #ifdef __MEASURE__
+//  set_measurement(data);
   switch(data) {
     case M_OFF:                                     // Off
 //      reset_settings(setting.mode);
+      no_measurement:
+      for (int i = 0; i< MARKERS_MAX; i++) {
+        markers[i].enabled = M_DISABLED;
+        markers[i].mtype = M_NORMAL;
+      }
       markers[0].enabled = M_ENABLED;
       markers[0].mtype = M_REFERENCE | M_TRACKING;
-   no_measurement:
-      set_measurement(M_OFF);
+      set_average(AV_OFF);
+//      set_measurement(M_OFF);
       break;
     case M_IMD:                                     // IMD
       reset_settings(setting.mode);
@@ -1151,7 +1157,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_CENTER);
       set_sweep_frequency(ST_START, 0);
       set_sweep_frequency(ST_STOP, uistat.value*5);
-      set_measurement(M_IMD);
+//      set_measurement(M_IMD);
       break;
     case M_OIP3:                                     // OIP3
       reset_settings(setting.mode);
@@ -1169,7 +1175,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       int right =  uistat.value;
       set_sweep_frequency(ST_CENTER, (left+right)/2);
       set_sweep_frequency(ST_SPAN, (right - left)*5);
-      set_measurement(M_OIP3);
+//      set_measurement(M_OIP3);
       break;
     case M_PHASE_NOISE:                             // Phase noise
       reset_settings(setting.mode);
@@ -1186,8 +1192,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       kp_help_text = "Frequency offset";
       ui_mode_keypad(KM_SPAN);
       set_sweep_frequency(ST_SPAN, uistat.value*4);
-      set_measurement(M_PHASE_NOISE);
-      set_average(4);
+//      set_measurement(M_PHASE_NOISE);
+      set_average(AV_4);
 
       break;
     case M_STOP_BAND:                             // STop band measurement
@@ -1201,7 +1207,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       kp_help_text = "Width of signal";
       ui_mode_keypad(KM_SPAN);
       set_sweep_frequency(ST_SPAN, uistat.value*4);
-      set_measurement(M_STOP_BAND);
+//      set_measurement(M_STOP_BAND);
 //      SetAverage(4);
 
       break;
@@ -1224,7 +1230,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
 #ifdef __LINEARITY__
     case M_LINEARITY:
-      set_measurement(M_LINEARITY);
+//      set_measurement(M_LINEARITY);
       break;
 #endif
     case M_AM:                                     // AM
@@ -1259,13 +1265,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 #endif
       set_sweep_frequency(ST_SPAN, span * 5);
 //      update_frequencies();                     // To ensure markers are positioned right!!!!!!
-      set_measurement(M_AM);
+//      set_measurement(M_AM);
 #ifndef TINYSA4
       set_marker_frequency(0, center);
       set_marker_frequency(1, center-span);
       set_marker_frequency(2, center+span);
 #endif
-      set_average(4);
+      set_average(AV_4);
       break;
     case M_FM:                                     // FM
       reset_settings(setting.mode);
@@ -1296,10 +1302,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       if (uistat.value < 12000)
         uistat.value = 12000;   // minimum span
       set_sweep_frequency(ST_SPAN, uistat.value*4);
-      set_measurement(M_FM);
+//      set_measurement(M_FM);
       break;
     case M_THD:
-      set_measurement(M_THD);
+//      set_measurement(M_THD);
       break;
 #ifdef __CHANNEL_POWER__
     case M_CP:                             // channel power
@@ -1310,10 +1316,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       kp_help_text = "Channel width";
       ui_mode_keypad(KM_SPAN);
       set_sweep_frequency(ST_SPAN, uistat.value*3);
-      set_measurement(M_CP);
+//      set_measurement(M_CP);
       break;
 #endif
   }
+  set_measurement(data);
+
 #endif
 //  selection = -1;
   ui_mode_normal();
@@ -2768,24 +2776,24 @@ static void fetch_numeric_target(void)
 {
   switch (keypad_mode) {
   case KM_START:
-    uistat.value = get_sweep_frequency(ST_START) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = get_sweep_frequency(ST_START) + (setting.frequency_offset - FREQUENCY_SHIFT);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_STOP:
-    uistat.value = get_sweep_frequency(ST_STOP) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = get_sweep_frequency(ST_STOP) + (setting.frequency_offset - FREQUENCY_SHIFT);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_CENTER:
-    uistat.value = get_sweep_frequency(ST_CENTER) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.4fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = get_sweep_frequency(ST_CENTER) + (setting.frequency_offset - FREQUENCY_SHIFT);
+    plot_printf(uistat.text, sizeof uistat.text, "%QHz", uistat.freq_value);
     break;
   case KM_SPAN:
-    uistat.value = get_sweep_frequency(ST_SPAN);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = get_sweep_frequency(ST_SPAN);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_CW:
-    uistat.value = get_sweep_frequency(ST_CW) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = get_sweep_frequency(ST_CW) + (setting.frequency_offset - FREQUENCY_SHIFT);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_SCALE:
     uistat.value = setting.scale;
@@ -2804,13 +2812,13 @@ static void fetch_numeric_target(void)
     plot_printf(uistat.text, sizeof uistat.text, "%ddB", ((int32_t)uistat.value));
     break;
   case KM_IF:
-    uistat.value = setting.frequency_IF;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = setting.frequency_IF;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
     break;
 #ifdef TINYSA4
   case KM_IF2:
-    uistat.value = config.frequency_IF2;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = config.frequency_IF2;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_R:
     uistat.value = SI4463_R;
@@ -2860,14 +2868,14 @@ static void fetch_numeric_target(void)
 #endif
 #ifdef TINYSA4
   case KM_LPF:
-    uistat.value = config.ultra_threshold;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = config.ultra_threshold;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
     break;
 #endif
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
-    uistat.value = setting.limits[active_limit].frequency;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = setting.limits[active_limit].frequency;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_LIMIT_LEVEL:
     uistat.value = setting.limits[active_limit].level;
@@ -2880,13 +2888,13 @@ static void fetch_numeric_target(void)
     break;
 #ifdef TINYSA4
   case KM_30MHZ:
-    uistat.value = config.setting_frequency_30mhz;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = config.setting_frequency_30mhz;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
     break;
 #else
   case KM_10MHZ:
-    uistat.value = config.setting_frequency_10mhz;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.value / 1000000.0);
+    uistat.freq_value = config.setting_frequency_10mhz;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
     break;
 #endif
   case KM_EXT_GAIN:
@@ -2911,8 +2919,8 @@ static void fetch_numeric_target(void)
     break;
   case KM_MARKER:
     if (active_marker >=0) {
-      uistat.value = markers[active_marker].frequency;
-      plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.value / 1000000.0);
+      uistat.freq_value = markers[active_marker].frequency;
+      plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
     }
     break;
   case KM_MODULATION:
@@ -2936,25 +2944,22 @@ static void fetch_numeric_target(void)
 static void
 set_numeric_value(void)
 {
-  if (kp_buf[0] == 0)
-    return;
-  freq_t freq = my_atoui(kp_buf);
   switch (keypad_mode) {
   case KM_START:
-    set_sweep_frequency(ST_START, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_START, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_STOP:
-    set_sweep_frequency(ST_STOP, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_STOP, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_CENTER:
-    set_sweep_frequency(ST_CENTER, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_CENTER, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_SPAN:
     setting.modulation = MO_NONE;
-    set_sweep_frequency(ST_SPAN, freq);
+    set_sweep_frequency(ST_SPAN, uistat.freq_value);
     break;
   case KM_CW:
-    set_sweep_frequency(ST_CW, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_CW, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_SCALE:
     user_set_scale(uistat.value);
@@ -2972,12 +2977,12 @@ set_numeric_value(void)
     break;
   case KM_IF:
     setting.auto_IF = false;
-    set_IF(freq);
+    set_IF(uistat.freq_value);
 //    config_save();
     break;
 #ifdef TINYSA4
   case KM_IF2:
-    set_IF2(freq);
+    set_IF2(uistat.freq_value);
 //    config_save();
     break;
   case KM_R:
@@ -3029,7 +3034,7 @@ set_numeric_value(void)
     break;
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
-    setting.limits[active_limit].frequency = freq - (setting.frequency_offset - FREQUENCY_SHIFT);
+    setting.limits[active_limit].frequency = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     limits_update();
     break;
   case KM_LIMIT_LEVEL:
@@ -3042,11 +3047,11 @@ set_numeric_value(void)
     break;
 #ifdef TINYSA4
   case KM_30MHZ:
-    set_30mhz(freq);
+    set_30mhz(uistat.freq_value);
     break;
 #else
   case KM_10MHZ:
-    set_10mhz(freq);
+    set_10mhz(uistat.freq_value);
     break;
 #endif
   case KM_EXT_GAIN:
@@ -3071,7 +3076,7 @@ set_numeric_value(void)
     set_gridlines(uistat.value);
     break;
   case KM_MARKER:
-    set_marker_frequency(active_marker, freq - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_marker_frequency(active_marker, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_MARKER_TIME:
     set_marker_time(active_marker, uistat.value);
