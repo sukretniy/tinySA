@@ -1630,9 +1630,10 @@ draw_frequencies(void)
 }
 
 // Draw battery level
-#define BATTERY_TOP_LEVEL       4100
+#define BATTERY_TOP_LEVEL       4200
 #define BATTERY_BOTTOM_LEVEL    3200
 #define BATTERY_WARNING_LEVEL   3300
+#define BATTERY_MID_LEVEL       3600
 
 static void draw_battery_status(void)
 {
@@ -1670,7 +1671,7 @@ static const uint8_t sd_icon [] = {
     return;
   uint8_t string_buf[16];
   // Set battery color
-  ili9341_set_foreground(vbat < BATTERY_WARNING_LEVEL ? LCD_LOW_BAT_COLOR : LCD_NORMAL_BAT_COLOR);
+  ili9341_set_foreground(vbat < BATTERY_WARNING_LEVEL ? LCD_LOW_BAT_COLOR : (vbat < BATTERY_MID_LEVEL ? LCD_TRACE_1_COLOR : LCD_NORMAL_BAT_COLOR));
   ili9341_set_background(LCD_BG_COLOR);
 
   // Prepare battery bitmap image

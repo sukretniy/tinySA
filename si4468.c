@@ -303,10 +303,15 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
 
 void ADF4351_Set(int channel)
 {
+  for (int i = 5; i >= 0; i--) {
+    if (registers[i] != old_registers[i])
+      goto update;
+  }
+  return;
+update:
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
-
   for (int i = 5; i >= 0; i--)
     ADF4351_WriteRegister32(channel, registers[i]);
 

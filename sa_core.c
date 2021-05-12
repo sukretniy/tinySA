@@ -448,8 +448,19 @@ void set_10mhz(freq_t f)
 }
 #endif
 
+#if 0
+static setting_t saved_setting;
+#endif
+
 void set_measurement(int m)
 {
+#if 0
+  if (m != M_OFF && setting.measurement == M_OFF ) {
+    saved_setting = setting;
+  } else if (m == M_OFF && setting.measurement != M_OFF ) {
+    setting = saved_setting;
+  }
+#endif
   setting.measurement = m;
 #ifdef __LINEARITY__
   if (m == M_LINEARITY) {
@@ -3481,7 +3492,7 @@ again:                                                              // Spur redu
         if (my_step_delay < 0)
           my_step_delay = 0;
       }
-      my_microsecond_delay(my_step_delay * (old_R > 5  ? 8 : 1));
+      my_microsecond_delay(my_step_delay * (old_R > 5  ? 8 : (old_R > 3  ? 2 : 1)));
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
       SI4463_offset_changed = false;
