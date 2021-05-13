@@ -2320,7 +2320,7 @@ void HardFault_Handler(void)
 
 void hard_fault_handler_c(uint32_t *sp)
 {
-#ifndef TINYSA4
+#ifdef TINYSA4
   uint32_t r0  = sp[0];
   uint32_t r1  = sp[1];
   uint32_t r2  = sp[2];
