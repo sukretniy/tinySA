@@ -722,22 +722,10 @@ extern int display_test(void);
 //
 // Shell config functions and macros
 // Serial connect definitions not used if Serial mode disabled
-// Minimum speed - USART_SPEED_MULTIPLIER
-// Maximum speed - USART_SPEED_MULTIPLIER * 256
-// Can be: 19200, 38400, 57600, 76800, 115200, 230400, 460800, 921600, 1843200, 3686400
-#define USART_SPEED_MULTIPLIER          19200
-#define USART_SPEED_SETTING(speed)     ((speed)/USART_SPEED_MULTIPLIER - 1)
-#define USART_GET_SPEED(idx)           (((idx) + 1) * USART_SPEED_MULTIPLIER)
 void shell_update_speed(void);
 void shell_reset_console(void);
 int  shell_serial_printf(const char *fmt, ...);
 
-
-#ifdef __VNA
-void set_electrical_delay(float picoseconds);
-float get_electrical_delay(void);
-float groupdelay_from_array(int i, float array[POINTS_COUNT][2]);
-#endif
 // marker
 enum {
   M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_STORED=8, M_TRACKING=16, M_DELETE=32  // Tracking must be last.
@@ -1192,7 +1180,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e50 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e51 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

@@ -866,7 +866,7 @@ config_t config = {
   .touch_cal =          { 278, 513, 115, 154 }, // 4 inch panel
 #endif
   ._mode     = _MODE_USB,
-  ._serial_speed = USART_SPEED_SETTING(SERIAL_DEFAULT_BITRATE),
+  ._serial_speed = SERIAL_DEFAULT_BITRATE,
   .lcd_palette = LCD_DEFAULT_PALETTE,
 #ifdef TINYSA4
 #endif
@@ -1617,6 +1617,17 @@ VNA_SHELL_FUNCTION(cmd_threads)
 #endif
 
 #ifdef ENABLE_USART_COMMAND
+VNA_SHELL_FUNCTION(cmd_usart_cfg)
+{
+  if (argc != 1) goto result;
+  uint32_t speed = my_atoui(argv[0]);
+  if (speed < 300) speed = 300;
+  config._serial_speed = speed;
+  shell_update_speed();
+result:
+  shell_printf("Serial: %u baud\r\n", config._serial_speed);
+}
+
 VNA_SHELL_FUNCTION(cmd_usart)
 {
   uint32_t time = 2000; // 200ms wait answer by default
@@ -1680,6 +1691,7 @@ static const VNAShellCommand commands[] =
     {"marker"      , cmd_marker      , 0},
 #ifdef ENABLE_USART_COMMAND
     {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
+    {"usart_cfg"   , cmd_usart_cfg   , CMD_WAIT_MUTEX},
 #endif
     {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
 #ifdef __REMOTE_DESKTOP__
@@ -1817,7 +1829,7 @@ static bool shell_check_connect(void){
 // Update Serial connection speed and settings
 void shell_update_speed(void){
   // Update Serial speed settings
-  SerialConfig s_config = {USART_GET_SPEED(config._serial_speed), 0, USART_CR2_STOP1_BITS, 0 };
+  SerialConfig s_config = {config._serial_speed, 0, USART_CR2_STOP1_BITS, 0 };
   sdStop(&SD1);
   sdStart(&SD1, &s_config);  // USART config
 }

@@ -1919,13 +1919,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_points_acb){
 #ifdef __USE_SERIAL_CONSOLE__
 static UI_FUNCTION_ADV_CALLBACK(menu_serial_speed_acb)
 {
+  static const uint32_t usart_speed[] = {19200, 38400, 57600, 115200, 230400, 460800, 921600, 1843200, 2000000, 3000000};
   (void)item;
+  uint32_t speed = usart_speed[data];
   if (b){
     b->icon = config._serial_speed == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
-    b->param_1.u = USART_GET_SPEED(data);
+    b->param_1.u = speed;
     return;
   }
-  config._serial_speed = data;
+  config._serial_speed = speed;
   shell_update_speed();
 }
 
@@ -2554,28 +2556,17 @@ static const menuitem_t menu_calibrate[] =
 #endif
 
 #ifdef __USE_SERIAL_CONSOLE__
-//19200, 38400, 57600, 74800, 115200, 230400, 460800, 921600, 1843200, 3686400
-#if 0
-const menuitem_t menu_serial_speed2[] = {
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 460800), "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 921600), "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING(1843200), "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING(3686400), "%u", menu_serial_speed_acb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-#endif
-
 const menuitem_t menu_serial_speed[] = {
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 19200), "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 38400), "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 57600), "%u", menu_serial_speed_acb },
-//  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 76800), "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING(115200), "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING(230400), "%u", menu_serial_speed_acb },
-//  { MT_SUBMENU, 0, S_RARROW" MORE", menu_serial_speed2 },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 460800), "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, USART_SPEED_SETTING( 921600), "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 0, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 1, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 2, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 3, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 4, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 5, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 6, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 7, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 8, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK, 9, "%u", menu_serial_speed_acb },
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
