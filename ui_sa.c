@@ -1923,7 +1923,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_serial_speed_acb)
   (void)item;
   uint32_t speed = usart_speed[data];
   if (b){
-    b->icon = config._serial_speed == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->icon = config._serial_speed == speed ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     b->param_1.u = speed;
     return;
   }
