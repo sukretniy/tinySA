@@ -517,22 +517,18 @@ extern uint16_t graph_bottom;
 // Menu Button
 // Maximum menu buttons count
 #ifdef TINYSA4
-#define MENU_BUTTON_MAX        12
-#define MENU_BUTTON_HEIGHT     (LCD_HEIGHT/ 9-1)
-#define MENU_BUTTON_HEIGHT_10  (LCD_HEIGHT/10-1)
-#define MENU_BUTTON_HEIGHT_11  (LCD_HEIGHT/11-1)
-#define MENU_BUTTON_HEIGHT_12  (LCD_HEIGHT/12-1)
+#define MENU_BUTTON_MAX        16
+#define MENU_BUTTON_MIN         9
 #else
-#define MENU_BUTTON_MAX        12
-#define MENU_BUTTON_HEIGHT     (LCD_HEIGHT/ 8-1)
-#define MENU_BUTTON_HEIGHT_10  (LCD_HEIGHT/10-1)
-#define MENU_BUTTON_HEIGHT_11  (LCD_HEIGHT/11-1)
-#define MENU_BUTTON_HEIGHT_12  (LCD_HEIGHT/12-1)
+#define MENU_BUTTON_MAX        16
+#define MENU_BUTTON_MIN         8
 #endif
 #define MENU_BUTTON_WIDTH      80
 #define MENU_BUTTON_BORDER      1
 #define KEYBOARD_BUTTON_BORDER  2
 #define FORM_BUTTON_BORDER      2
+
+#define MENU_BUTTON_HEIGHT_N(n)   (LCD_HEIGHT/(n)-1)
 
 // Define message box width
 #define MESSAGE_BOX_WIDTH     180

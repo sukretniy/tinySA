@@ -2090,7 +2090,7 @@ static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 7, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 8, "%sHz",   menu_rbw_acb},
   { MT_CANCEL,  0, S_LARROW" BACK", NULL },
-  { MT_NONE, MENU_BUTTON_HEIGHT_10, NULL, NULL } // sentinel
+  { MT_NONE, 0, NULL, NULL } // sentinel
 #else
   { MT_ADV_CALLBACK, 1, "%4dkHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 2, "%4dkHz",   menu_rbw_acb},
