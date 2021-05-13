@@ -3504,9 +3504,15 @@ redraw_cal_status:
   // Version
   y += YSTEP + YSTEP/2 ;
 #ifdef TINYSA4
-  strncpy(buf,&VERSION[9], BLEN-1);
+  strncpy(buf,&TINYSA_VERSION[9], BLEN+1);
+  if (buf[7]=='-') {
+    buf[3] = buf[4];
+    buf[4] = buf[5];
+    buf[5] = buf[6];
+  }
+  buf[6] = 0;
 #else
-  strncpy(buf,&VERSION[8], BLEN-1);
+  strncpy(buf,&TINYSA_VERSION[8], BLEN-1);
 #endif
   ili9341_drawstring(buf, x, y);
 

@@ -1518,13 +1518,13 @@ VNA_SHELL_FUNCTION(cmd_test)
 #define VERSION "unknown"
 #endif
 
-const char NANOVNA_VERSION[] = VERSION;
+const char TINYSA_VERSION[] = VERSION;
 
 VNA_SHELL_FUNCTION(cmd_version)
 {
   (void)argc;
   (void)argv;
-  shell_printf("%s\r\n", NANOVNA_VERSION);
+  shell_printf("%s\r\n", TINYSA_VERSION);
 }
 
 VNA_SHELL_FUNCTION(cmd_vbat)

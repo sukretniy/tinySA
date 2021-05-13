@@ -275,13 +275,6 @@ void ADF4351_Setup(void)
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
-  uint32_t reg_n = value & 0x07;
-  if (reg_n && old_registers[reg_n] == value) return; // Always write register zero
-  // update cache
-  old_registers[reg_n] = value;
-  // For debug !! update stored value if enter from console
-  registers[reg_n] = value;
-
   // Select chip
   CS_ADF_LOW(ADF4351_LE[channel]);
   // Send 32 bit register
@@ -303,18 +296,25 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
 
 void ADF4351_Set(int channel)
 {
+#if 0
   for (int i = 5; i >= 0; i--) {
     if (registers[i] != old_registers[i])
       goto update;
   }
   return;
 update:
+#endif
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
-  for (int i = 5; i >= 0; i--)
-    ADF4351_WriteRegister32(channel, registers[i]);
+  for (int i = 5; i >= 0; i--) {
+#if 0
+    if (i == 0 || registers[i] != old_registers[i])
+#endif
+      ADF4351_WriteRegister32(channel, registers[i]);
+    old_registers[i] = registers[i];
 
+  }
   if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
 }
@@ -323,6 +323,8 @@ static freq_t prev_actual_freq = 0;
 
 void ADF4351_force_refresh(void) {
   prev_actual_freq = 0;
+  for (int i = 5; i >= 0; i--)
+    old_registers[i] = 0;
 }
 
 void ADF4351_modulo(int m)

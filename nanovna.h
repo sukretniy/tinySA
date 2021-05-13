@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -162,6 +162,8 @@ typedef uint32_t freq_t;
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
 #endif
+
+extern const char TINYSA_VERSION[];
 
 #ifdef __REMOTE_DESKTOP__
 extern uint8_t auto_capture;
