@@ -3123,7 +3123,7 @@ again:                                                              // Spur redu
             else
             {
 #ifdef TINYSA4
-              local_IF = local_IF - DEFAULT_SPUR_OFFSET/4;                  // No spure removal and no spur, center in IF but avoid mirror
+              local_IF = local_IF - 800000 + actual_rbw_x10*100;                  // No spure removal and no spur, center in IF but avoid mirror
 #else
               local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
 #endif
