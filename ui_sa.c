@@ -1989,7 +1989,7 @@ static const menuitem_t menu_load_preset[] =
   { MT_ADV_CALLBACK, 3, "LOAD %d"  ,    menu_load_preset_acb},
   { MT_ADV_CALLBACK, 4, "LOAD %d"  ,    menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset},
-  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
 };
 #ifdef TINYSA4
@@ -1999,8 +1999,8 @@ static const menuitem_t menu_mixer_drive[] = {
   { MT_ADV_CALLBACK, 2, "%+ddBm",   menu_mixer_drive_acb},
   { MT_ADV_CALLBACK, 1, "%+ddBm",   menu_mixer_drive_acb},
   { MT_ADV_CALLBACK, 0, "%+ddBm",   menu_mixer_drive_acb},
-  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
 };
 #else
 static const menuitem_t menu_lo_drive[] = {
@@ -2008,7 +2008,7 @@ static const menuitem_t menu_lo_drive[] = {
   { MT_ADV_CALLBACK, 14, "%+ddBm",   menu_lo_drive_acb},
   { MT_ADV_CALLBACK, 13, "%+ddBm",   menu_lo_drive_acb},
   { MT_ADV_CALLBACK, 12, "%+ddBm",   menu_lo_drive_acb},
-  { MT_CANCEL,   255, S_LARROW" BACK", NULL },
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 #endif
@@ -2097,6 +2097,8 @@ static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 6, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 7, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 8, "%sHz",   menu_rbw_acb},
+  { MT_CANCEL,  0, S_LARROW" BACK", NULL },
+  { MT_NONE, MENU_BUTTON_HEIGHT_10, NULL, NULL } // sentinel
 #else
   { MT_ADV_CALLBACK, 1, "%4dkHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 2, "%4dkHz",   menu_rbw_acb},
@@ -2104,9 +2106,10 @@ static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 4, "%4dkHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 5, "%4dkHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 6, "%4dkHz",   menu_rbw_acb},
-#endif  
   { MT_CANCEL,  0, S_LARROW" BACK", NULL },
-  { MT_NONE,      0, NULL, NULL } // sentinel
+  { MT_NONE,    0, NULL, NULL } // sentinel
+#endif  
+
 };
 
 #ifdef __VBW__

@@ -47,10 +47,10 @@ uistat_t uistat = {
 #define EVT_DOWN                0x20
 #define EVT_REPEAT              0x40
 
-#define BUTTON_DOWN_LONG_TICKS      5000   /* 500ms */
-#define BUTTON_DOUBLE_TICKS         2500   /* 250ms */
-#define BUTTON_REPEAT_TICKS         400    /*  40ms */
-#define BUTTON_DEBOUNCE_TICKS       200
+#define BUTTON_DOWN_LONG_TICKS      MS2ST(500)   // 500ms
+#define BUTTON_DOUBLE_TICKS         MS2ST(250)   // 250ms
+#define BUTTON_REPEAT_TICKS         MS2ST( 40)   //  40ms
+#define BUTTON_DEBOUNCE_TICKS       MS2ST(  2)   //   2ms
 
 /* lever switch assignment */
 #define BIT_UP1     3
@@ -64,6 +64,7 @@ static uint16_t last_button = 0b0000;
 static uint32_t last_button_down_ticks;
 static uint32_t last_button_repeat_ticks;
 
+static uint16_t menu_button_height = MENU_BUTTON_HEIGHT;
 volatile uint8_t operation_requested = OP_NONE;
 
 int8_t previous_marker = MARKER_INVALID;
@@ -647,265 +648,6 @@ typedef void (*menuaction_cb_t)(int item, uint16_t data);
 typedef void (*menuaction_acb_t)(int item, uint16_t data, ui_button_t *b);
 #define UI_FUNCTION_ADV_CALLBACK(ui_function_name) void ui_function_name(int item, uint16_t data, ui_button_t *b)
 
-#ifdef __VNA__
-static void
-menu_calop_cb(int item, uint8_t data)
-{
-  cal_collect(data);
-  selection = item+1;
-  draw_cal_status();
-  draw_menu();
-}
-
-static void
-menu_caldone_cb(int item, uint8_t data)
-{
-  extern const menuitem_t menu_save[];
-  //extern const menuitem_t menu_cal[];
-  (void)item;
-  (void)data;
-  cal_done();
-  draw_cal_status();
-  menu_move_back(false);
-  menu_push_submenu(menu_save);
-}
-
-static void
-menu_cal2_cb(int item, uint8_t data)
-{
-  (void)data;
-  switch (item) {
-  case 2: // RESET
-    cal_status = 0;
-    break;
-  case 3: // CORRECTION
-    // toggle applying correction
-    cal_status ^= CALSTAT_APPLY;
-    break;
-  }
-  draw_menu();
-  draw_cal_status();
-  //menu_move_back(false);
-}
-
-static void
-menu_recall_cb(int item, uint8_t data)
-{
-  (void)item;
-  caldata_recall(data);
-  menu_move_back(false);
-  ui_mode_normal();
-  update_grid();
-  draw_cal_status();
-}
-
-static void
-menu_config_cb(int item, uint8_t data)
-{
-  (void)data;
-  switch (item) {
-  case 0:
-      touch_cal_exec();
-      break;
-  case 1:
-      touch_draw_test();
-      break;
-  case 3:
-      show_version();
-      break;
-  }
-  redraw_frame();
-  request_to_redraw_grid();
-  draw_menu();
-}
-
-static void
-menu_config_save_cb(int item, uint8_t data)
-{
-  (void)item;
-  (void)data;
-  config_save();
-  menu_move_back(false);
-  ui_mode_normal();
-}
-
-static void
-menu_dfu_cb(int item, uint8_t data)
-{
-  (void)item;
-  (void)data;
-  enter_dfu();
-}
-
-static void
-menu_save_cb(int item, uint8_t data)
-{
-  (void)item;
-  if (caldata_save(data) == 0) {
-    menu_move_back(false);
-    ui_mode_normal();
-    draw_cal_status();
-  }
-}
-
-static void 
-choose_active_trace(void)
-{
-  int i;
-  if (trace[uistat.current_trace].enabled)
-    // do nothing
-    return;
-  for (i = 0; i < TRACES_MAX; i++)
-    if (trace[i].enabled) {
-      uistat.current_trace = i;
-      return;
-    }
-}
-
-static void
-menu_trace_cb(int item, uint8_t data)
-{
-  (void)item;
-  if (trace[data].enabled) {
-    if (data == uistat.current_trace) {
-      // disable if active trace is selected
-      trace[data].enabled = FALSE;
-      choose_active_trace();
-    } else {
-      // make active selected trace
-      uistat.current_trace = data;
-    }
-  } else {
-    trace[data].enabled = TRUE;
-    uistat.current_trace = data;
-  }
-  request_to_redraw_grid();
-  draw_menu();
-}
-
-static void
-menu_format_cb(int item, uint8_t data)
-{
-  (void)item;
-  set_trace_type(uistat.current_trace, data);
-  request_to_redraw_grid();
-  ui_mode_normal();
-  //redraw_all();
-}
-
-static void
-menu_channel_cb(int item, uint8_t data)
-{
-  (void)item;
-  set_trace_channel(uistat.current_trace, data);
-  menu_move_back(false);
-  ui_mode_normal();
-}
-
-static void
-menu_transform_window_cb(int item, uint8_t data)
-{
-  (void)item;
-  // TODO
-  domain_mode = (domain_mode & ~TD_WINDOW) | data;
-  ui_mode_normal();
-}
-
-static void
-menu_transform_cb(int item, uint8_t data)
-{
-  (void)item;
-  (void)data;
-  domain_mode ^= DOMAIN_TIME;
-  select_lever_mode(LM_MARKER);
-  draw_frequencies();
-  ui_mode_normal();
-}
-
-static void
-menu_velocity_cb(int item, uint8_t data)
-{
-  (void)item;
-  (void)data;
-  if (btn_wait_release() & EVT_BUTTON_DOWN_LONG) {
-      ui_mode_numeric(KM_VELOCITY_FACTOR);
-      ui_process_numeric();
-  } else {
-      ui_mode_keypad(KM_VELOCITY_FACTOR);
-  }
-}
-
-static void
-menu_transform_filter_cb(int item, uint8_t data)
-{
-  (void)item;
-  domain_mode = (domain_mode & ~TD_FUNC) | data;
-  ui_mode_normal();
-}
-
-static void
-menu_bandwidth_cb(int item)
-{
-  bandwidth = item;
-  draw_menu();
-}
-
-static void 
-choose_active_marker(void)
-{
-  int i;
-  for (i = 0; i < MARKERS_MAX; i++)
-    if (markers[i].enabled) {
-      active_marker = i;
-      return;
-    }
-  active_marker = -1;
-}
-
-static void
-menu_scale_cb(int item, uint8_t data)
-{
-  (void)item;
-#ifdef __VNA__
-  if (data == KM_SCALE && trace[uistat.current_trace].type == TRC_DELAY) {
-    data = KM_SCALEDELAY;
-  }
-#endif
-  if (btn_wait_release() & EVT_BUTTON_DOWN_LONG) {
-    ui_mode_numeric(data);
-    ui_process_numeric();
-  } else {
-    ui_mode_keypad(data);
-  }
-}
-
-static void
-menu_stimulus_cb(int item, uint8_t data)
-{
-  (void)data;
-  switch (item) {
-  case 0: /* START */
-  case 1: /* STOP */
-  case 2: /* CENTER */
-  case 3: /* SPAN */
-  case 4: /* CW */
-    if (btn_wait_release() & EVT_BUTTON_DOWN_LONG) {
-      ui_mode_numeric(item);
-      ui_process_numeric();
-    } else {
-      ui_mode_keypad(item);
-    }
-    break;
-  case 5: /* PAUSE */
-    toggle_sweep();
-    //menu_move_back(false);
-    //ui_mode_normal();
-    draw_menu();
-    break;
-  }
-}
-#endif
-
 static freq_t
 get_marker_frequency(int marker)
 {
@@ -1058,267 +800,6 @@ active_marker_select(int item)  // used only to select an active marker from the
     }
   }
 }
-#ifdef __VNA__
-static void
-menu_marker_sel_cb(int item, uint8_t data)
-{
-  (void)data;
-//  int t;
-  if (item >= 0 && item < MARKERS_MAX) {
-    if (markers[item].enabled) {
-      if (item == active_marker) {
-        // disable if active trace is selected
-        markers[item].enabled = M_DISABLED;
-        active_marker_select(-1);
-      } else {
-        active_marker_select(item);
-      }
-    } else {
-      markers[item].enabled = M_ENABLED;
-      active_marker_select(item);
-      markers[item].mtype = M_NORMAL;
-      markers[item].mtype |= (uistat.marker_delta ? M_DELTA : 0);
-      markers[item].mtype |= (uistat.marker_noise ? M_NOISE : 0);
-      markers[item].mtype |= (uistat.marker_tracking ? M_TRACKING : 0);
-    }
- //   if (markers[item].enabled)
- //     menu_push_submenu(menu_marker_type);
-#if 0
-  } else if (item == 4) { /* all off */
-      for (t = 0; t < MARKERS_MAX; t++)
-        markers[t].enabled = M_DISABLED;
-      previous_marker = -1;
-      active_marker = -1;      
-#endif
-  } else if (item == 4) { /* marker delta */
-    uistat.marker_delta = !uistat.marker_delta;
-  } else if (item == 5) { /* marker noise */
-    uistat.marker_noise = !uistat.marker_noise;
-    // if (uistat.marker_noise) uistat.marker_delta = true;     //Default behavior
-  } else if (item == 6) { /* marker tracking */
-    uistat.marker_tracking = !uistat.marker_tracking;
-    // if (uistat.marker_tracking) uistat.marker_noise = false; //Default behavior
-  }
-  redraw_marker(active_marker);
-  draw_menu();
-}
-
-static const menuitem_t menu_calop[] = {
-  { MT_CALLBACK, CAL_OPEN,  "OPEN",  menu_calop_cb },
-  { MT_CALLBACK, CAL_SHORT, "SHORT", menu_calop_cb },
-  { MT_CALLBACK, CAL_LOAD,  "LOAD",  menu_calop_cb },
-  { MT_CALLBACK, CAL_ISOLN, "ISOLN", menu_calop_cb },
-  { MT_CALLBACK, CAL_THRU,  "THRU",  menu_calop_cb },
-  { MT_CALLBACK, 0,         "DONE",  menu_caldone_cb },
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
-  { MT_NONE,     0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_save[] = {
-  { MT_CALLBACK, 0, "SAVE 0", menu_save_cb },
-  { MT_CALLBACK, 1, "SAVE 1", menu_save_cb },
-  { MT_CALLBACK, 2, "SAVE 2", menu_save_cb },
-  { MT_CALLBACK, 3, "SAVE 3", menu_save_cb },
-  { MT_CALLBACK, 4, "SAVE 4", menu_save_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_cal[] = {
-  { MT_SUBMENU,  0, "CALIBRATE", menu_calop },
-  { MT_SUBMENU,  0, "SAVE", menu_save },
-  { MT_CALLBACK, 0, "RESET", menu_cal2_cb },
-  { MT_CALLBACK, 0, "CORRECTION", menu_cal2_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_trace[] = {
-  { MT_CALLBACK, 0, "TRACE 0", menu_trace_cb },
-  { MT_CALLBACK, 1, "TRACE 1", menu_trace_cb },
-  { MT_CALLBACK, 2, "TRACE 2", menu_trace_cb },
-  { MT_CALLBACK, 3, "TRACE 3", menu_trace_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_format2[] = {
-  { MT_CALLBACK, TRC_POLAR, "POLAR", menu_format_cb },
-  { MT_CALLBACK, TRC_LINEAR, "LINEAR", menu_format_cb },
-  { MT_CALLBACK, TRC_REAL, "REAL", menu_format_cb },
-  { MT_CALLBACK, TRC_IMAG, "IMAG", menu_format_cb },
-  { MT_CALLBACK, TRC_R, "RESISTANCE", menu_format_cb },
-  { MT_CALLBACK, TRC_X, "REACTANCE", menu_format_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_format[] = {
-  { MT_CALLBACK, TRC_LOGMAG, "LOGMAG", menu_format_cb },
-  { MT_CALLBACK, TRC_PHASE, "PHASE", menu_format_cb },
-  { MT_CALLBACK, TRC_DELAY, "DELAY", menu_format_cb },
-  { MT_CALLBACK, TRC_SMITH, "SMITH", menu_format_cb },
-  { MT_CALLBACK, TRC_SWR, "SWR", menu_format_cb },
-  { MT_SUBMENU, 0, S_RARROW" MORE", menu_format2 },
-  //{ MT_CALLBACK, TRC_LINEAR, "LINEAR", menu_format_cb },
-  //{ MT_CALLBACK, TRC_SWR, "SWR", menu_format_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_scale[] = {
-  { MT_CALLBACK, KM_SCALE, "SCALE/DIV", menu_scale_cb },
-  { MT_CALLBACK, KM_REFPOS, "\2REFERENCE\0POSITION", menu_scale_cb },
-  { MT_CALLBACK, KM_EDELAY, "\2ELECTRICAL\0DELAY", menu_scale_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_channel[] = {
-  { MT_CALLBACK, 0, "\2CH0\0REFLECT", menu_channel_cb },
-  { MT_CALLBACK, 1, "\2CH1\0THROUGH", menu_channel_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_transform_window[] = {
-  { MT_CALLBACK, TD_WINDOW_MINIMUM, "MINIMUM", menu_transform_window_cb },
-  { MT_CALLBACK, TD_WINDOW_NORMAL,   "NORMAL", menu_transform_window_cb },
-  { MT_CALLBACK, TD_WINDOW_MAXIMUM, "MAXIMUM", menu_transform_window_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_transform[] = {
-  { MT_CALLBACK, 0, "\2TRANSFORM\0ON", menu_transform_cb },
-  { MT_CALLBACK, TD_FUNC_LOWPASS_IMPULSE, "\2LOW PASS\0IMPULSE", menu_transform_filter_cb },
-  { MT_CALLBACK, TD_FUNC_LOWPASS_STEP, "\2LOW PASS\0STEP", menu_transform_filter_cb },
-  { MT_CALLBACK, TD_FUNC_BANDPASS, "BANDPASS", menu_transform_filter_cb },
-  { MT_SUBMENU, 0, "WINDOW", menu_transform_window },
-  { MT_CALLBACK, 0, "\2VELOCITY\0FACTOR", menu_velocity_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_bandwidth[] = {
-  { MT_CALLBACK, 0, "1 kHz", menu_bandwidth_cb },
-  { MT_CALLBACK, 0, "300 Hz", menu_bandwidth_cb },
-  { MT_CALLBACK, 0, "100 Hz", menu_bandwidth_cb },
-  { MT_CALLBACK, 0, "30 Hz", menu_bandwidth_cb },
-  { MT_CALLBACK, 0, "10 Hz", menu_bandwidth_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_display[] = {
-  { MT_SUBMENU, 0, "TRACE", menu_trace },
-  { MT_SUBMENU, 0, "FORMAT", menu_format },
-  { MT_SUBMENU, 0, "SCALE", menu_scale },
-  { MT_SUBMENU, 0, "CHANNEL", menu_channel },
-  { MT_SUBMENU, 0, "TRANSFORM", menu_transform },
-  { MT_SUBMENU, 0, "BANDWIDTH", menu_bandwidth },  
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_stimulus[] = {
-  { MT_CALLBACK, 0, "START", menu_stimulus_cb },
-  { MT_CALLBACK, 0, "STOP", menu_stimulus_cb },
-  { MT_CALLBACK, 0, "CENTER", menu_stimulus_cb },
-  { MT_CALLBACK, 0, "SPAN", menu_stimulus_cb },
-  { MT_CALLBACK, 0, "CW FREQ", menu_stimulus_cb },
-  { MT_CALLBACK, 0, "\2PAUSE\0SWEEP", menu_stimulus_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_marker_sel[] = {
-  { MT_CALLBACK, 1, "MARKER 1", menu_marker_sel_cb },
-  { MT_CALLBACK, 2, "MARKER 2", menu_marker_sel_cb },
-  { MT_CALLBACK, 3, "MARKER 3", menu_marker_sel_cb },
-  { MT_CALLBACK, 4, "MARKER 4", menu_marker_sel_cb },
-  { MT_CALLBACK, 0, "ALL OFF", menu_marker_sel_cb },
-  { MT_CALLBACK, 0, "DELTA", menu_marker_sel_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_marker_ops[] = {
-  { MT_CALLBACK, ST_START, S_RARROW"START", menu_marker_op_cb },
-  { MT_CALLBACK, ST_STOP, S_RARROW"STOP", menu_marker_op_cb },
-  { MT_CALLBACK, ST_CENTER, S_RARROW"CENTER", menu_marker_op_cb },
-  { MT_CALLBACK, ST_SPAN, S_RARROW"SPAN", menu_marker_op_cb },
-  { MT_CALLBACK, 0, S_RARROW"EDELAY", menu_marker_op_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_marker_search[] = {
-  //{ MT_CALLBACK, "OFF", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "MAXIMUM", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "MINIMUM", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "\2SEARCH\0" S_LARROW" LEFT", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "\2SEARCH\0" S_RARROW" RIGHT", menu_marker_search_cb },
-  { MT_CALLBACK, 0, "TRACKING", menu_marker_search_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_marker_smith[] = {
-  { MT_CALLBACK, MS_LIN, "LIN", menu_marker_smith_cb },
-  { MT_CALLBACK, MS_LOG, "LOG", menu_marker_smith_cb },
-  { MT_CALLBACK, MS_REIM,"Re+Im", menu_marker_smith_cb },
-  { MT_CALLBACK, MS_RX,  "R+Xj", menu_marker_smith_cb },
-  { MT_CALLBACK, MS_RLC, "R+L/C", menu_marker_smith_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_marker[] = {
-  { MT_SUBMENU, 0, "\2SELECT\0MARKER", menu_marker_sel },
-  { MT_SUBMENU, 0, "SEARCH", menu_marker_search },
-  { MT_SUBMENU, 0, "OPERATIONS", menu_marker_ops },
-  { MT_SUBMENU, 0, "\2SMITH\0VALUE", menu_marker_smith },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_recall[] = {
-  { MT_CALLBACK, 0, "RECALL 0", menu_recall_cb },
-  { MT_CALLBACK, 1, "RECALL 1", menu_recall_cb },
-  { MT_CALLBACK, 2, "RECALL 2", menu_recall_cb },
-  { MT_CALLBACK, 3, "RECALL 3", menu_recall_cb },
-  { MT_CALLBACK, 4, "RECALL 4", menu_recall_cb },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_dfu[] = {
-  { MT_CALLBACK, 0, "\2RESET AND\0ENTER DFU", menu_dfu_cb },
-  { MT_CANCEL, 0, S_LARROW"CANCEL", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_config[] = {
-  { MT_CALLBACK, 0, "TOUCH CAL", menu_config_cb },
-  { MT_CALLBACK, 0, "TOUCH TEST", menu_config_cb },
-  { MT_CALLBACK, 0, "SAVE", menu_config_save_cb },
-  { MT_CALLBACK, 0, "VERSION", menu_config_cb },
-  { MT_SUBMENU, 0, S_RARROW"DFU", menu_dfu },
-  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-const menuitem_t menu_top[] = {
-  { MT_SUBMENU, 0, "DISPLAY", menu_display },
-  { MT_SUBMENU, 0, "MARKER", menu_marker },
-  { MT_SUBMENU, 0, "STIMULUS", menu_stimulus },
-  { MT_SUBMENU, 0, "CAL", menu_cal },
-  { MT_SUBMENU, 0, "RECALL", menu_recall },
-  { MT_SUBMENU, 0, "CONFIG", menu_config },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-#endif
 
 #include "ui_sa.c"
 
@@ -1331,16 +812,15 @@ static void
 ensure_selection(void)
 {
   const menuitem_t *menu = menu_stack[menu_current_level];
-  if (selection < 0) {selection = -1; return;}
   int i;
-  if (MT_MASK(menu[0].type) == MT_TITLE && selection == 0) {
-    selection = 1;
-    return;
-  }
   for (i = 0; MT_MASK(menu[i].type) != MT_NONE; i++)
     ;
-  if (selection >= i)
-    selection = i-1;
+  if (selection <  0) selection =  -1;
+  if (selection >= i) selection = i-1;
+  if (MT_MASK(menu[0].type) == MT_TITLE && selection == 0) selection = 1;
+
+  static const uint8_t button_h[] = {MENU_BUTTON_HEIGHT, MENU_BUTTON_HEIGHT_10, MENU_BUTTON_HEIGHT_11, MENU_BUTTON_HEIGHT_12};
+  menu_button_height = button_h[menu[i].data&3];
 }
 
 static void
@@ -1870,13 +1350,13 @@ draw_menu_buttons(const menuitem_t *menu, int only)
   int y = 0;
   ui_button_t button;
   for (i = 0; i < MENU_BUTTON_MAX; i++) {
-    if (menuDisabled(menu[i].type))            //not applicable to mode
-      continue;
     if (MT_MASK(menu[i].type) == MT_NONE)
       break;
+    if (menuDisabled(menu[i].type))            //not applicable to mode
+      continue;
 #ifdef __SWEEP_RESTART__
     if (only != -1 && only != i) {
-      y += MENU_BUTTON_HEIGHT;
+      y += menu_button_height;
       continue;
     }
 #else
@@ -1923,11 +1403,11 @@ draw_menu_buttons(const menuitem_t *menu, int only)
     if (menu[i].type & MT_FORM) {
       int button_width = MENU_FORM_WIDTH;
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen
-      int button_height = MENU_BUTTON_HEIGHT;
+      int button_height = menu_button_height;
       draw_button(button_start, y, button_width, button_height, &button);
       uint16_t text_offs = button_start + 6;
       if (button.icon >=0){
-        ili9341_blitBitmap(button_start+3, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
+        ili9341_blitBitmap(button_start+3, y+(button_height-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
         text_offs = button_start+6+ICON_WIDTH+1;
       }
 #ifdef __ICONS__
@@ -1973,11 +1453,11 @@ draw_menu_buttons(const menuitem_t *menu, int only)
     } else {
       int button_width = MENU_BUTTON_WIDTH;
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
-      int button_height = MENU_BUTTON_HEIGHT;
+      int button_height = menu_button_height;
       draw_button(button_start, y, button_width, button_height, &button);
       uint16_t text_offs = button_start + 7;
       if (button.icon >=0){
-        ili9341_blitBitmap(button_start+2, y+(MENU_BUTTON_HEIGHT-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
+        ili9341_blitBitmap(button_start+2, y+(button_height-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
         text_offs = button_start+2+ICON_WIDTH;
       }
       int lines = menu_is_multiline(button.text);
@@ -1988,12 +1468,14 @@ draw_menu_buttons(const menuitem_t *menu, int only)
       ili9341_drawstring(button.text, text_offs, y+(button_height-linesFONT_GET_HEIGHT)/2);
 #endif
     }
-    y += MENU_BUTTON_HEIGHT;
+    y += menu_button_height;
   }
   // Cleanup other buttons (less flicker)
-  ili9341_set_background(LCD_BG_COLOR);
-  for (; y < MENU_BUTTON_MAX*MENU_BUTTON_HEIGHT; y+=MENU_BUTTON_HEIGHT)
-    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT);
+  // Erase empty buttons
+  if (AREA_HEIGHT_NORMAL + OFFSETY - y > 0){
+    ili9341_set_background(LCD_BG_COLOR);
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, AREA_HEIGHT_NORMAL + OFFSETY - y);
+  }
 //  if (menu[i].type & MT_FORM)
 //    draw_battery_status();
 }
@@ -2221,14 +1703,13 @@ menu_apply_touch(int touch_x, int touch_y)
   int i;
   int y = 0;
   for (i = 0; i < MENU_BUTTON_MAX; i++) {
+    if (MT_MASK(menu[i].type) == MT_NONE)
+      break;
     if (menuDisabled(menu[i].type))            //not applicable to mode
       continue;
     if (MT_MASK(menu[i].type) == MT_TITLE) {
-      y += MENU_BUTTON_HEIGHT;
+      y += menu_button_height;
       continue;
-    }
-    if (MT_MASK(menu[i].type) == MT_NONE) {
-      break;
     }
     int active_button_start;
     if (menu[i].type & MT_FORM) {
@@ -2238,13 +1719,13 @@ menu_apply_touch(int touch_x, int touch_y)
       active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
 //      active_button_stop = LCD_WIDTH;
     }
-    if (y < touch_y && touch_y < y+MENU_BUTTON_HEIGHT) {
+    if (y < touch_y && touch_y < y+menu_button_height) {
       if (touch_x > active_button_start) {
         menu_select_touch(i, (( touch_x - active_button_start) * 5 ) / MENU_FORM_WIDTH);
         return;
       }
     }
-    y += MENU_BUTTON_HEIGHT;
+    y += menu_button_height;
   }
   if (menu_is_form(menu))
     return;
@@ -2282,9 +1763,9 @@ erase_menu_buttons(void)
 // Not need, screen redraw in all cases
 //  ili9341_fill(area_width, 0, LCD_WIDTH - area_width, area_height, LCD_BG_COLOR);
  // if (current_menu_is_form())
- //   ili9341_fill(OFFSETX, 0,LCD_WIDTH-OFFSETX, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, LCD_BG_COLOR);
+ //   ili9341_fill(OFFSETX, 0,LCD_WIDTH-OFFSETX, menu_button_height*MENU_BUTTON_MAX, LCD_BG_COLOR);
  // else
- //   ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX, LCD_BG_COLOR);
+ //   ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, 0, MENU_BUTTON_WIDTH, menu_button_height*MENU_BUTTON_MAX, LCD_BG_COLOR);
   draw_frequencies();
 }
 
@@ -2306,8 +1787,8 @@ leave_ui_mode()
 //  }
   ili9341_set_background(LCD_BG_COLOR);
   // Erase bottom area (not redraw on area update)
-  if (MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height > 0)
-    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT*MENU_BUTTON_MAX - area_height);
+//  if (menu_button_height*MENU_BUTTON_MAX - area_height > 0)
+//    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, menu_button_height*MENU_BUTTON_MAX - area_height);
   if (setting.waterfall)
     toggle_waterfall();
   redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
