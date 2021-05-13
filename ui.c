@@ -64,7 +64,7 @@ static uint16_t last_button = 0b0000;
 static uint32_t last_button_down_ticks;
 static uint32_t last_button_repeat_ticks;
 
-static uint16_t menu_button_height = MENU_BUTTON_HEIGHT;
+static uint16_t menu_button_height = MENU_BUTTON_HEIGHT_N(MENU_BUTTON_MIN);
 volatile uint8_t operation_requested = OP_NONE;
 
 int8_t previous_marker = MARKER_INVALID;
@@ -818,9 +818,9 @@ ensure_selection(void)
   if (selection <  0) selection =  -1;
   if (selection >= i) selection = i-1;
   if (MT_MASK(menu[0].type) == MT_TITLE && selection == 0) selection = 1;
-
-  static const uint8_t button_h[] = {MENU_BUTTON_HEIGHT, MENU_BUTTON_HEIGHT_10, MENU_BUTTON_HEIGHT_11, MENU_BUTTON_HEIGHT_12};
-  menu_button_height = button_h[menu[i].data&3];
+  if (i <  MENU_BUTTON_MIN) i = MENU_BUTTON_MIN;
+  if (i >= MENU_BUTTON_MAX) i = MENU_BUTTON_MAX;
+  menu_button_height = MENU_BUTTON_HEIGHT_N(i);
 }
 
 static void
