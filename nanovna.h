@@ -661,15 +661,13 @@ float marker_to_value(const int i);
 #define _MODE_SERIAL           0x04
 #define _MODE_USB              0x00
 
+#pragma pack(push, 4)
 typedef struct config {
   int32_t magic;
   uint32_t deviceid;
   uint16_t lcd_palette[MAX_PALETTE];
   int16_t  touch_cal[4];
   uint32_t _serial_speed;
-#ifdef __VNA__
-  freq_t harmonic_freq_threshold;
-#endif
   uint16_t dac_value;
   uint16_t vbat_offset;
   float low_level_offset;
@@ -711,6 +709,7 @@ typedef struct config {
 //  uint8_t _reserved[22];
   freq_t checksum;
 } config_t;
+#pragma pack(pop)
 
 extern config_t config;
 //#define settingLevelOffset config.level_offset
@@ -1180,7 +1179,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e51 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e52 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
