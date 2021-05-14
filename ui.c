@@ -1472,9 +1472,9 @@ draw_menu_buttons(const menuitem_t *menu, int only)
   }
   // Cleanup other buttons (less flicker)
   // Erase empty buttons
-  if (AREA_HEIGHT_NORMAL + OFFSETY - y > 0){
+  if (NO_WATERFALL - y > 0){
     ili9341_set_background(LCD_BG_COLOR);
-    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, AREA_HEIGHT_NORMAL + OFFSETY - y);
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, NO_WATERFALL - y);
   }
 //  if (menu[i].type & MT_FORM)
 //    draw_battery_status();
