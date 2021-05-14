@@ -454,17 +454,9 @@ static setting_t saved_setting;
 
 void set_measurement(int m)
 {
-#if 0
-  if (m != M_OFF && setting.measurement == M_OFF ) {
-    saved_setting = setting;
-  } else if (m == M_OFF && setting.measurement != M_OFF ) {
-    setting = saved_setting;
-  }
-#endif
-  setting.measurement = m;
+ setting.measurement = m;
 #ifdef __LINEARITY__
   if (m == M_LINEARITY) {
-    TRACE_ENABLE(TRACE_STORED_FLAG);
     for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = -150;
     setting.linearity_step = 0;
@@ -1448,6 +1440,7 @@ static const struct {
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
   {  8500,       150,           50,      400,   -90},
+  {  6000,       150,           50,      300,   -95},
   {  3000,       150,           50,      200,   -95},
   {  1000,       600,          100,      100,   -105},
   {   300,       800,          120,      100,   -110},

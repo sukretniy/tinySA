@@ -746,7 +746,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_load_preset_acb)
 {
   (void)item;
   if(b){
-    b->param_1.u = data;
+    setting_t *p = caldata_pointer(data);
+    char *t = (char *)spi_buffer;
+    if (p)
+      plot_printf(t, 64, "%.6FHz\n%.6FHz", (float)p->frequency0, (float)p->frequency1);//\n%d-drstx8
+    else
+      plot_printf(t, 64, "EMPTY %d", (int)data);
+    b->param_1.text = t;
     return;
   }
   if (caldata_recall(data) == -1) {
@@ -1131,19 +1137,28 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     return;
   }
   menu_move_back(false);
+
 #ifdef __MEASURE__
-//  set_measurement(data);
+  if ((data != M_OFF && setting.measurement != M_OFF) || data == M_OFF )
+  {
+    //      reset_settings(setting.mode);
+    if (0) {
+    no_measurement:
+      data = M_OFF;
+    }
+    if (setting.measurement == M_LINEARITY) {
+      TRACE_DISABLE(TRACE_STORED_FLAG);
+    }
+    for (int i = 0; i< MARKERS_MAX; i++) {
+      markers[i].enabled = M_DISABLED;
+      markers[i].mtype = M_NORMAL;
+    }
+    markers[0].enabled = M_ENABLED;
+    markers[0].mtype = M_REFERENCE | M_TRACKING;
+    set_average(AV_OFF);
+  }
   switch(data) {
     case M_OFF:                                     // Off
-//      reset_settings(setting.mode);
-      no_measurement:
-      for (int i = 0; i< MARKERS_MAX; i++) {
-        markers[i].enabled = M_DISABLED;
-        markers[i].mtype = M_NORMAL;
-      }
-      markers[0].enabled = M_ENABLED;
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
-      set_average(AV_OFF);
 //      set_measurement(M_OFF);
       break;
     case M_IMD:                                     // IMD
@@ -1237,6 +1252,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
 #ifdef __LINEARITY__
     case M_LINEARITY:
+      TRACE_ENABLE(TRACE_STORED_FLAG);
 //      set_measurement(M_LINEARITY);
       break;
 #endif
@@ -1544,8 +1560,8 @@ static UI_FUNCTION_CALLBACK(menu_limit_disable_cb)
 #endif
 
 #ifdef TINYSA4
-static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,8500};
-static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300k","850k"};
+static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,6000,8500};
+static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300k","600k","850k"};
 #else
 static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
 #endif
@@ -1961,9 +1977,9 @@ static const menuitem_t menu_store_preset_high[8] =
 static const menuitem_t menu_load_preset_high[] =
 {
   { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP",menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 5, "LOAD %d",      menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 6, "LOAD %d",      menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 7, "LOAD %d",      menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 5, "LOAD %s",      menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 6, "LOAD %s",      menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 7, "LOAD %s",      menu_load_preset_acb},
   { MT_ADV_CALLBACK, 8, "LOAD %s",      menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,      menu_store_preset_high},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
@@ -1986,10 +2002,10 @@ static const menuitem_t menu_store_preset[] =
 static const menuitem_t menu_load_preset[] =
 {
   { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP",menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 1, "LOAD %d"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 2, "LOAD %d"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 3, "LOAD %d"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 4, "LOAD %d"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 1, "%s"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 2, "%s"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 3, "%s"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 4, "%s"  ,    menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
@@ -2099,6 +2115,7 @@ static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 6, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 7, "%sHz",   menu_rbw_acb},
   { MT_ADV_CALLBACK, 8, "%sHz",   menu_rbw_acb},
+  { MT_ADV_CALLBACK, 9, "%sHz",   menu_rbw_acb},
   { MT_CANCEL,  0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 #else
@@ -3507,15 +3524,15 @@ redraw_cal_status:
   y += YSTEP + YSTEP/2 ;
 #ifdef TINYSA4
   strncpy(buf,&TINYSA_VERSION[9], BLEN+1);
+#else
+  strncpy(buf,&TINYSA_VERSION[8], BLEN+1);
+#endif
   if (buf[7]=='-') {
     buf[3] = buf[4];
     buf[4] = buf[5];
     buf[5] = buf[6];
   }
   buf[6] = 0;
-#else
-  strncpy(buf,&TINYSA_VERSION[8], BLEN-1);
-#endif
   ili9341_drawstring(buf, x, y);
 
   if (y >= BATTERY_START && item_space > 0) {

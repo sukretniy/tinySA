@@ -64,7 +64,7 @@ static uint16_t last_button = 0b0000;
 static uint32_t last_button_down_ticks;
 static uint32_t last_button_repeat_ticks;
 
-static uint16_t menu_button_height = MENU_BUTTON_HEIGHT_N(MENU_BUTTON_MIN);
+//static uint16_t menu_button_height = MENU_BUTTON_HEIGHT_N(MENU_BUTTON_MIN);
 volatile uint8_t operation_requested = OP_NONE;
 
 int8_t previous_marker = MARKER_INVALID;
@@ -820,7 +820,7 @@ ensure_selection(void)
   if (MT_MASK(menu[0].type) == MT_TITLE && selection == 0) selection = 1;
   if (i <  MENU_BUTTON_MIN) i = MENU_BUTTON_MIN;
   if (i >= MENU_BUTTON_MAX) i = MENU_BUTTON_MAX;
-  menu_button_height = MENU_BUTTON_HEIGHT_N(i);
+//  menu_button_height = MENU_BUTTON_HEIGHT_N(i);
 }
 
 static void
@@ -1342,6 +1342,12 @@ static const uint8_t check_box[] = {
 };
 static const char *step_text[5] = {"-10dB", "-1dB", "set", "+1dB", "+10dB"};
 static char step_text_freq[5][10] = { "-100MHz", "-10MHz", "set", "+10MHz", "+100MHz" };
+
+#ifdef TINYS4
+#define menu_button_height  ((menu[i].type & MT_FORM) || menu_is_multiline(menu[i].label) == 2 ? LCD_HEIGHT/10 : LCD_HEIGHT/12 )
+#else
+#define menu_button_height  ((menu[i].type & MT_FORM) || menu_is_multiline(menu[i].label) == 2 ? LCD_HEIGHT/8 : LCD_HEIGHT/10 )
+#endif
 
 static void
 draw_menu_buttons(const menuitem_t *menu, int only)

@@ -1491,6 +1491,15 @@ static const uint8_t SI4463_RBW_100kHz[] =
 static const uint8_t SI4463_RBW_300kHz[] =
     RADIO_CONFIGURATION_DATA_ARRAY;
 
+// -------------- 600kHz ----------------------------
+
+#include "radio_config_Si4468_undef.h"
+#include "radio_config_Si4468_600kHz.h"
+#include "radio_config_Si4468_short.h"
+
+static const uint8_t SI4463_RBW_600kHz[] =
+    RADIO_CONFIGURATION_DATA_ARRAY;
+
 // -------------- 850kHz ----------------------------
 
 #include "radio_config_Si4468_undef.h"
@@ -1520,6 +1529,7 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_30kHz, 0,300},
  {SI4463_RBW_100kHz,0,1000},
  {SI4463_RBW_300kHz,1,3000},
+ {SI4463_RBW_600kHz,11,6000},
  {SI4463_RBW_850kHz,11,8500},
 };
 
