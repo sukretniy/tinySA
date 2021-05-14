@@ -1498,16 +1498,28 @@ static void cell_draw_marker_info(int x0, int y0)
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
         cell_printf(xpos, ypos, FONT_b"DEVIATION:%6.1QHz", dev);
-      } else if (setting.measurement == M_THD && markers[0].enabled && (markers[0].index << 5) > sweep_points ) {
+#ifdef TINYSA4
+#define THD_SHIFT   7
+#else
+#define THD_SHIFT   6
+#endif
+      } else if (setting.measurement == M_THD && markers[0].enabled && (markers[0].index << THD_SHIFT) > sweep_points ) {
         int old_unit = setting.unit;
         setting.unit = U_WATT;
         float p = marker_to_value(0);
         int h_i = 2;
         freq_t f = markers[0].frequency;
         float h = 0.0;
+        int h_count = 0;
+        int search_gate = 10;
+        if (markers[0].index < search_gate)
+          search_gate = markers[0].index * 2 / 3;
         while (f * h_i < frequencies[sweep_points-1]) {
-          if (search_maximum(1, f*h_i, 4*h_i) )             // use marker 1 for searching harmonics
+          if (search_maximum(1, f*h_i, search_gate) ) {            // use marker 1 for searching harmonics
+            h_count++;
+            f = (f * 3 + markers[1].frequency / h_i) >> 2;
             h += marker_to_value(1);
+          }
           h_i++;
         }
         float thd = 100.0 * sa_sqrtf(h/p);
@@ -1516,7 +1528,7 @@ static void cell_draw_marker_info(int x0, int y0)
 //        j = 1;
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
-        cell_printf(xpos, ypos, FONT_b"THD: %4.1f%%", thd);
+        cell_printf(xpos, ypos, FONT_b"#%d THD: %4.1f%%", h_count, thd);
         break;
       }
     } else

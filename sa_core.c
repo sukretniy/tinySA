@@ -2105,18 +2105,24 @@ done:
 #endif
 }
 
-#ifdef TINYSA4
-#define frequency_seatch_gate 60          // 120% of the RBW
-#else
-#define frequency_seatch_gate 100          // 200% of the RBW
-#endif
+//#ifdef TINYSA4
+//#define frequency_seatch_gate 60          // 120% of the RBW
+//#else
+//#define frequency_seatch_gate 100          // 200% of the RBW
+//#endif
 
 int binary_search_frequency(freq_t f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
   int L = 0;
-  int R =  (sizeof frequencies)/sizeof(int) - 1;
-  freq_t fmin =  f - actual_rbw_x10 * frequency_seatch_gate;
-  freq_t fplus = f + actual_rbw_x10 * frequency_seatch_gate;
+  int frequency_seatch_gate = (frequencies[1] - frequencies[0]) >> 1;
+  if (f < frequencies[0])
+    return -1;
+  if (f > frequencies[sweep_points-1])
+    return -1;
+//  int R =  (sizeof frequencies)/sizeof(int) - 1;
+  int R = sweep_points - 1;
+  freq_t fmin =  f - frequency_seatch_gate; // actual_rbw_x10 * frequency_seatch_gate;
+  freq_t fplus = f + frequency_seatch_gate; // actual_rbw_x10 * frequency_seatch_gate;
   while (L <= R) {
     int m = (L + R) / 2;
     if (frequencies[m] < fmin)
@@ -2128,6 +2134,37 @@ int binary_search_frequency(freq_t f)      // Search which index in the frequenc
   }
   return -1;
 }
+
+int index_of_frequency(freq_t f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
+{
+  freq_t f_step = frequencies[1] - frequencies[0];
+  if (f_step == 0)
+    return 0;
+  if (f < frequencies[0])
+    return -1;
+  if (f > frequencies[sweep_points-1])
+    return -1;
+  int i = (f + (f_step >> 1))* sweep_points / (frequencies[sweep_points-1] - frequencies[0]);
+  return i;
+#if 0
+  //  int R =  (sizeof frequencies)/sizeof(int) - 1;
+  int L = 0;
+  int R = sweep_points - 1;
+  freq_t fmin =  f - frequency_seatch_gate; // actual_rbw_x10 * frequency_seatch_gate;
+  freq_t fplus = f + frequency_seatch_gate; // actual_rbw_x10 * frequency_seatch_gate;
+  while (L <= R) {
+    int m = (L + R) / 2;
+    if (frequencies[m] < fmin)
+      L = m + 1;
+    else if (frequencies[m] > fplus)
+      R = m - 1;
+    else
+       return m; // index is m
+  }
+#endif
+}
+
+
 
 void interpolate_maximum(int m)
 {
@@ -2154,7 +2191,7 @@ void interpolate_maximum(int m)
 int
 search_maximum(int m, freq_t center, int span)
 {
-  int center_index = binary_search_frequency(center);
+  int center_index = index_of_frequency(center);
   if (center_index < 0)
 	return false;
   int from = center_index - span/2;
@@ -2211,6 +2248,15 @@ search_maximum(int m, freq_t center, int span)
         downslope = true;
       }
     }
+  }
+  if (false && !found) {
+    temppeakIndex = from;
+    temppeakLevel = actual_t[from];
+    for (int i = from+1; i <= to; i++) {
+      if (temppeakLevel<actual_t[i])
+        temppeakIndex = i;
+    }
+    found = true;
   }
   markers[m].index = max_index[0];
   interpolate_maximum(m);
@@ -4187,9 +4233,14 @@ static bool sweep(bool break_on_operation)
 
 #ifdef __MEASURE__
     if (setting.measurement == M_IMD && markers[0].index > 10) {                    // ----- IMD measurement
-      markers[1].enabled = search_maximum(1, frequencies[markers[0].index]*2, 8);
-      markers[2].enabled = search_maximum(2, frequencies[markers[0].index]*3, 12);
-      markers[3].enabled = search_maximum(3, frequencies[markers[0].index]*4, 16);
+#ifdef TINYSA4
+#define H_SPACING   7
+#else
+#define H_SPACING   4
+#endif
+      markers[1].enabled = search_maximum(1, frequencies[markers[0].index]*2, 2*H_SPACING);
+      markers[2].enabled = search_maximum(2, frequencies[markers[0].index]*3, 3*H_SPACING);
+      markers[3].enabled = search_maximum(3, frequencies[markers[0].index]*4, 4*H_SPACING);
 #ifdef TINYSA4
     } else if (setting.measurement == M_AM  && markers[0].index > 10) { // ----------AM measurement
       int l = markers[1].index;
