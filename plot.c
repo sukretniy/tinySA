@@ -511,7 +511,11 @@ static inline void
 markmap_upperarea(void)
 {
   // Hardcoded, Text info from upper area
+#if MARKER_COUNT == 4
   invalidate_rect(0, 0, AREA_WIDTH_NORMAL, 31);
+#else
+  invalidate_rect(0, 0, AREA_WIDTH_NORMAL, 63);
+#endif
 }
 
 static uint16_t get_trigger_level(void){
@@ -627,7 +631,8 @@ static const uint8_t reference_bitmap[]={
 #define X_MARKER_OFFSET    3
 #define Y_MARKER_OFFSET   10
 #define MARKER_BITMAP(i)  (&marker_bitmap[(i)*MARKER_HEIGHT])
-static const uint8_t marker_bitmap[]={
+static const uint8_t marker_bitmap[]=
+{
 // Marker Back plate
   _BMP8(0b11111110),
   _BMP8(0b11111110),
@@ -683,6 +688,53 @@ static const uint8_t marker_bitmap[]={
   _BMP8(0b00001000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
+#if MARKER_COUNT > 4
+  // Marker 5
+  _BMP8(0b00000000),
+  _BMP8(0b11110000),
+  _BMP8(0b10000000),
+  _BMP8(0b11100000),
+  _BMP8(0b00010000),
+  _BMP8(0b00010000),
+  _BMP8(0b10010000),
+  _BMP8(0b01100000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
+  // Marker 6
+  _BMP8(0b00000000),
+  _BMP8(0b01100000),
+  _BMP8(0b10010000),
+  _BMP8(0b10000000),
+  _BMP8(0b11100000),
+  _BMP8(0b10010000),
+  _BMP8(0b10010000),
+  _BMP8(0b01100000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
+  // Marker 7
+  _BMP8(0b00000000),
+  _BMP8(0b11110000),
+  _BMP8(0b00010000),
+  _BMP8(0b00100000),
+  _BMP8(0b00100000),
+  _BMP8(0b01000000),
+  _BMP8(0b01000000),
+  _BMP8(0b01000000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
+  // Marker 8
+  _BMP8(0b00000000),
+  _BMP8(0b01100000),
+  _BMP8(0b10010000),
+  _BMP8(0b10010000),
+  _BMP8(0b01100000),
+  _BMP8(0b10010000),
+  _BMP8(0b10010000),
+  _BMP8(0b01100000),
+  _BMP8(0b00000000),
+  _BMP8(0b00000000),
+
+#endif
 };
 
 #elif _MARKER_SIZE_ == 1
@@ -691,7 +743,8 @@ static const uint8_t marker_bitmap[]={
 #define X_MARKER_OFFSET     4
 #define Y_MARKER_OFFSET    13
 #define MARKER_BITMAP(i)   (&marker_bitmap[(i)*2*MARKER_HEIGHT])
-static const uint8_t marker_bitmap[]={
+static const uint8_t marker_bitmap[]=
+{
   // Marker Back plate
   _BMP16(0b1111111110000000),
   _BMP16(0b1111111110000000),
@@ -762,6 +815,64 @@ static const uint8_t marker_bitmap[]={
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
+#if MARKER_COUNT>4
+  // Marker 5
+  _BMP16(0b0000000000000000),
+  _BMP16(0b11111100<<6),
+  _BMP16(0b11000000<<6),
+  _BMP16(0b11000000<<6),
+  _BMP16(0b11111000<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b00001100<<6),
+  _BMP16(0b00001100<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b01111000<<6),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  // Marker 6
+  _BMP16(0b0000000000000000),
+  _BMP16(0b01111000<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b11000000<<6),
+  _BMP16(0b11000000<<6),
+  _BMP16(0b11111000<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b01111000<<6),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  // Marker 7
+  _BMP16(0b0000000000000000),
+  _BMP16(0b11111100<<6),
+  _BMP16(0b00001100<<6),
+  _BMP16(0b00001100<<6),
+  _BMP16(0b00011000<<6),
+  _BMP16(0b00011000<<6),
+  _BMP16(0b00110000<<6),
+  _BMP16(0b00110000<<6),
+  _BMP16(0b01100000<<6),
+  _BMP16(0b01100000<<6),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  // Marker 8
+  _BMP16(0b0000000000000000),
+  _BMP16(0b01111000<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b01111000<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b11001100<<6),
+  _BMP16(0b01111000<<6),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+  _BMP16(0b0000000000000000),
+#endif
 };
 #endif
 
@@ -994,7 +1105,7 @@ draw_cell(int m, int n)
 #endif
 // Draw trace and marker info on the top (50 system ticks for all screen calls)
 #if 1
-  if (n == 0)
+  if (n <= (MARKERS_MAX > 4 ? 1 : 0))
     cell_draw_marker_info(x0, y0);
 #endif
 #ifdef __SELFTEST__

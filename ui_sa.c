@@ -1137,6 +1137,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     return;
   }
   menu_move_back(false);
+  for (int i = 0; i< MARKERS_MAX; i++) {
+    markers[i].enabled = M_DISABLED;
+    markers[i].mtype = M_NORMAL;
+  }
 
 #ifdef __MEASURE__
   if ((data != M_OFF && setting.measurement != M_OFF) || data == M_OFF )
@@ -1148,10 +1152,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     }
     if (setting.measurement == M_LINEARITY) {
       TRACE_DISABLE(TRACE_STORED_FLAG);
-    }
-    for (int i = 0; i< MARKERS_MAX; i++) {
-      markers[i].enabled = M_DISABLED;
-      markers[i].mtype = M_NORMAL;
     }
     markers[0].enabled = M_ENABLED;
     markers[0].mtype = M_REFERENCE | M_TRACKING;
@@ -1171,18 +1171,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       kp_help_text = "Frequency of fundamental";
       ui_mode_keypad(KM_CENTER);
       set_sweep_frequency(ST_START, 0);
-#ifdef TINYSA4
-#define IMD_RANGE   10
-#else
-#define IMD_RANGE   5
-#endif
-      set_sweep_frequency(ST_STOP, uistat.value*IMD_RANGE);
+      set_sweep_frequency(ST_STOP, uistat.value*(MARKERS_MAX+1));
       set_average(AV_4);
 //      set_measurement(M_IMD);
       break;
     case M_OIP3:                                     // OIP3
       reset_settings(setting.mode);
-      for (int i = 0; i< MARKERS_MAX; i++) {
+      for (int i = 0; i< 4; i++) {
         markers[i].enabled = M_ENABLED;
         markers[i].mtype = M_DELTA;
       }
@@ -1201,10 +1196,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
     case M_PHASE_NOISE:                             // Phase noise
       reset_settings(setting.mode);
-      for (int i = 0; i< MARKERS_MAX; i++) {
-        markers[i].enabled = M_DISABLED;
-        markers[i].mtype = M_NORMAL;
-      }
       markers[0].enabled = M_ENABLED;
       markers[0].mtype = M_REFERENCE | M_TRACKING;
       markers[1].enabled = M_ENABLED;
@@ -1341,6 +1332,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_SPAN);
       set_sweep_frequency(ST_SPAN, uistat.value*3);
 //      set_measurement(M_CP);
+      break;
+    case M_DECONV:
+      set_average(AV_DECONV);
       break;
 #endif
   }
@@ -2275,6 +2269,18 @@ const menuitem_t menu_marker_select[] = {
   { MT_ADV_CALLBACK, 2, "MARKER %d", menu_marker_select_acb },
   { MT_ADV_CALLBACK, 3, "MARKER %d", menu_marker_select_acb },
   { MT_ADV_CALLBACK, 4, "MARKER %d", menu_marker_select_acb },
+#if MARKER_COUNT >= 5
+  { MT_ADV_CALLBACK, 5, "MARKER %d", menu_marker_select_acb },
+#endif
+#if MARKER_COUNT >= 6
+  { MT_ADV_CALLBACK, 6, "MARKER %d", menu_marker_select_acb },
+#endif
+#if MARKER_COUNT >= 7
+  { MT_ADV_CALLBACK, 7, "MARKER %d", menu_marker_select_acb },
+#endif
+#if MARKER_COUNT >= 8
+  { MT_ADV_CALLBACK, 8, "MARKER %d", menu_marker_select_acb },
+#endif
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
@@ -2542,8 +2548,11 @@ static const menuitem_t menu_measure2[] = {
 #ifdef __CHANNEL_POWER__
   { MT_ADV_CALLBACK,            M_CP,           "CHANNEL\nPOWER",menu_measure_acb},
 #endif
-  #ifdef __LINEARITY__
-  { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+#ifdef __LINEARITY__
+{ MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+#endif
+#ifdef TINYSA4
+  { MT_ADV_CALLBACK,            M_DECONV,  "DECONV",         menu_measure_acb},
 #endif
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
