@@ -2631,7 +2631,7 @@ static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
 #endif
 #ifdef __LCD_BRIGHTNESS__
-  { MT_CALLBACK, 0, "BRIGHTHESS", menu_brightness_cb},
+  { MT_CALLBACK, 0, "BRIGHTNESS", menu_brightness_cb},
 #endif
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
