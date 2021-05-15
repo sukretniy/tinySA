@@ -1776,7 +1776,7 @@ draw_frequencies(void)
 
 // Draw battery level
 #define BATTERY_TOP_LEVEL       4200
-#define BATTERY_BOTTOM_LEVEL    3200
+#define BATTERY_BOTTOM_LEVEL    3300
 #define BATTERY_WARNING_LEVEL   3300
 #define BATTERY_MID_LEVEL       3600
 
