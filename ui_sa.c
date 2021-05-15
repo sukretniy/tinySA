@@ -747,12 +747,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_load_preset_acb)
   (void)item;
   if(b){
     setting_t *p = caldata_pointer(data);
-    char *t = (char *)spi_buffer;
     if (p)
-      plot_printf(t, 64, "%.6FHz\n%.6FHz", (float)p->frequency0, (float)p->frequency1);//\n%d-drstx8
+      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)p->frequency0, (float)p->frequency1);
     else
-      plot_printf(t, 64, "EMPTY %d", (int)data);
-    b->param_1.text = t;
+      plot_printf(b->text, sizeof(b->text), "EMPTY %d", (int)data);
     return;
   }
   if (caldata_recall(data) == -1) {
@@ -923,10 +921,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
   (void)data;
   if(b){
     if (setting.modulation == MO_NONE || setting.modulation == MO_EXTERNAL)
-      b->param_1.text = menu_modulation_text[setting.modulation];
+      plot_printf(b->text, sizeof b->text, "MOD: %s", menu_modulation_text[setting.modulation]);
     else {
-      plot_printf(uistat.text, sizeof uistat.text, "%5.3fkHz %s", setting.modulation_frequency / 1000.0, menu_modulation_text[setting.modulation]);
-      b->param_1.text = uistat.text;
+      plot_printf(b->text, sizeof b->text, "MOD: %5.3fkHz %s", setting.modulation_frequency / 1000.0, menu_modulation_text[setting.modulation]);
     }
     return;
   }
@@ -1970,11 +1967,11 @@ static const menuitem_t menu_store_preset_high[8] =
 
 static const menuitem_t menu_load_preset_high[] =
 {
-  { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP",menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 5, "LOAD %s",      menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 6, "LOAD %s",      menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 7, "LOAD %s",      menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 8, "LOAD %s",      menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP", menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 5, MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 6, MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 7, MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 8, MT_CUSTOM_LABEL, menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,      menu_store_preset_high},
   { MT_CANCEL,   255, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
@@ -1995,11 +1992,11 @@ static const menuitem_t menu_store_preset[] =
 
 static const menuitem_t menu_load_preset[] =
 {
-  { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP",menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 1, "%s"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 2, "%s"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 3, "%s"  ,    menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 4, "%s"  ,    menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP", menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 1, MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 2, MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 3, MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_ADV_CALLBACK, 4, MT_CUSTOM_LABEL, menu_load_preset_acb},
   { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0,     NULL,            NULL } // sentinel
@@ -2054,7 +2051,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
 //  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           center_text,         VARIANT("10kHz..350MHz","10kHz..850MHz")},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        low_level_help_text},
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              MT_CUSTOM_LABEL,   menu_smodulation_acb},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
 #ifdef __SWEEP_RESTART__
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_restart_acb},
@@ -2071,7 +2068,7 @@ static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz",range_text)},
   { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
-  { MT_FORM | MT_ADV_CALLBACK,   0,     "MOD: %s",   menu_smodulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK,   0,     MT_CUSTOM_LABEL,   menu_smodulation_acb},
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
 #ifdef __SWEEP_RESTART__
   { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_restart_acb},
@@ -2315,7 +2312,7 @@ static const menuitem_t menu_dfu[] = {
 #ifdef __HARMONIC__
 static const menuitem_t menu_harmonic[] =
 {
- { MT_ADV_CALLBACK,  0,     "OFF",              menu_harmonic_acb},
+  { MT_ADV_CALLBACK, 0,   "OFF",              menu_harmonic_acb},
   { MT_ADV_CALLBACK, 2,     "2",              menu_harmonic_acb},
   { MT_ADV_CALLBACK, 3,     "3",              menu_harmonic_acb},
   { MT_ADV_CALLBACK, 4,     "4",              menu_harmonic_acb},
@@ -2390,8 +2387,8 @@ static const menuitem_t menu_settings3[] =
 {
 #ifdef TINYSA4
 //  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
- { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
- { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
+  { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
+  { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
   { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
