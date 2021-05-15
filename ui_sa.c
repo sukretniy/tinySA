@@ -527,14 +527,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
   (void)item;
   if (b){
     if (setting.level_sweep != 0 || get_sweep_frequency(ST_SPAN) != 0)  {
-      plot_printf(uistat.text, sizeof uistat.text, "SW:%3.2fMHz %+ddB %.3Fs",
+      plot_printf(b->text, sizeof b->text, "SW:%3.2fMHz %+ddB %.3Fs",
                   get_sweep_frequency(ST_SPAN) / 1000000.0,
                   (int)setting.level_sweep,
                   setting.sweep_time_us/(float)ONE_SECOND_TIME);
-      b->param_1.text = uistat.text;
     }
     else
-      b->param_1.text = "SWEEP: OFF";
+      plot_printf(b->text, sizeof b->text, "SWEEP: OFF");
     return;
   }
   menu_push_submenu(menu_sweep);
@@ -547,11 +546,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_restart_acb){
   if(b){
     if (current_index >= 0 && setting.sweep) {
       float current_level = setting.level + ((float)current_index)* setting.level_sweep / (float)sweep_points;
-      plot_printf(uistat.text, sizeof uistat.text, "STOP %5.3QHz %+.1fdBm", frequencies[current_index], current_level);
-      b->param_1.text = uistat.text;
-    } else {
-      b->param_1.text = "START SWEEP";
+      plot_printf(b->text, sizeof b->text, "STOP %5.3QHz %+.1fdBm", frequencies[current_index], current_level);
     }
+    else
+      plot_printf(b->text, sizeof b->text, "START SWEEP");
     return;
   }
   setting.sweep = !setting.sweep;
@@ -570,10 +568,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
   (void)item;
   int old_m;
   if (b){
-    plot_printf(uistat.text, sizeof uistat.text, "%8.3QHz %+4.1fdB",
+    plot_printf(b->text, sizeof b->text, "%8.3QHz %+4.1fdB",
                 config.correction_frequency[current_curve][data],
                 config.correction_value[current_curve][data]);
-    b->param_1.text = uistat.text;
     return;
   }
   switch(current_curve) {
@@ -2052,9 +2049,9 @@ static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           center_text,         VARIANT("10kHz..350MHz","10kHz..850MHz")},
   { MT_FORM | MT_KEYPAD,   KM_LOWOUTLEVEL,      "LEVEL: %s",        low_level_help_text},
   { MT_FORM | MT_ADV_CALLBACK,  0,              MT_CUSTOM_LABEL,   menu_smodulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              MT_CUSTOM_LABEL,   menu_sweep_acb},
 #ifdef __SWEEP_RESTART__
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_restart_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              MT_CUSTOM_LABEL,   menu_restart_acb},
 #endif
   { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",   "-100..+100"},
 #ifdef TINYSA4
@@ -2069,9 +2066,9 @@ static const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz",range_text)},
   { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
   { MT_FORM | MT_ADV_CALLBACK,   0,     MT_CUSTOM_LABEL,   menu_smodulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_sweep_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,      MT_CUSTOM_LABEL,   menu_sweep_acb},
 #ifdef __SWEEP_RESTART__
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "%s",      menu_restart_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,      MT_CUSTOM_LABEL,   menu_restart_acb},
 #endif
   { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",          "-100..+100"},
 #ifdef TINYSA4
@@ -2457,37 +2454,37 @@ static const menuitem_t menu_settings2[] =
 
 #ifdef TINYSA4
 static const menuitem_t menu_curve3[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 14, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 15, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 16, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 17, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 18, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 19, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 14, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 15, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 16, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 17, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 18, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 19, MT_CUSTOM_LABEL, menu_curve_acb },
   { MT_FORM | MT_CANCEL,       0,  S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_curve2[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 7, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 8, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 9, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 10, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 11, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 12, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 13, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK,  7, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK,  8, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK,  9, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 10, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 11, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 12, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 13, MT_CUSTOM_LABEL, menu_curve_acb },
   { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve3},
   { MT_FORM | MT_CANCEL,       0,  S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
 static const menuitem_t menu_curve[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 0, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 1, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 2, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 3, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 4, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 5, "%s", menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 6, "%s", menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 0, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 1, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 2, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 3, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 4, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 5, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 6, MT_CUSTOM_LABEL, menu_curve_acb },
   { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve2},
   { MT_FORM | MT_CANCEL,       0,  S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
