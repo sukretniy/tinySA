@@ -1156,7 +1156,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       kp_help_text = "Frequency of fundamental";
       ui_mode_keypad(KM_CENTER);
       set_sweep_frequency(ST_START, 0);
-      set_sweep_frequency(ST_STOP, uistat.value*5);
+#ifdef TINYSA4
+#define IMD_RANGE   10
+#else
+#define IMD_RANGE   5
+#endif
+      set_sweep_frequency(ST_STOP, uistat.value*IMD_RANGE);
+      set_average(AV_4);
 //      set_measurement(M_IMD);
       break;
     case M_OIP3:                                     // OIP3
@@ -1175,6 +1181,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       int right =  uistat.value;
       set_sweep_frequency(ST_CENTER, (left+right)/2);
       set_sweep_frequency(ST_SPAN, (right - left)*5);
+      set_average(AV_4);
 //      set_measurement(M_OIP3);
       break;
     case M_PHASE_NOISE:                             // Phase noise
@@ -1305,6 +1312,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //      set_measurement(M_FM);
       break;
     case M_THD:
+      set_average(AV_4);
 //      set_measurement(M_THD);
       break;
 #ifdef __CHANNEL_POWER__
