@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -1217,6 +1217,7 @@ int caldata_save(uint16_t id);
 //const properties_t *caldata_ref(int id);
 int config_save(void);
 int config_recall(void);
+setting_t * caldata_pointer(uint16_t id);
 
 void clear_all_config_prop_data(void);
 

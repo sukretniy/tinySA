@@ -171,6 +171,28 @@ caldata_save(uint16_t id)
   return 0;
 }
 
+setting_t *
+caldata_pointer(uint16_t id)
+{
+  setting_t *src;
+
+  if (id >= SAVEAREA_MAX)
+    return NULL;
+
+  // point to saved area on the flash memory
+  src = (setting_t*)(SAVE_PROP_CONFIG_ADDR + id * SAVE_PROP_CONFIG_SIZE);
+
+  if (src->magic != CONFIG_MAGIC)
+    return NULL;
+//  if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("Checksum %x\r\n", src->checksum);
+  if (checksum(src,
+//               (sizeof (setting)) - sizeof src->checksum
+               (void *)&setting.checksum - (void *) &setting
+               ) != src->checksum)
+    return NULL;
+  return src;
+}
+
 int
 caldata_recall(uint16_t id)
 {
