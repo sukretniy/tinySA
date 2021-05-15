@@ -175,7 +175,7 @@
  * I2S driver system settings.
  */
 #define STM32_I2S_USE_SPI1                  FALSE
-#define STM32_I2S_USE_SPI2                  TRUE
+#define STM32_I2S_USE_SPI2                  FALSE
 #define STM32_I2S_SPI1_MODE                 (STM32_I2S_MODE_MASTER |        \
                                              STM32_I2S_MODE_RX)
 #define STM32_I2S_SPI2_MODE                 (STM32_I2S_MODE_SLAVE |        \
@@ -222,7 +222,7 @@
 /*
  * SPI driver system settings.
  */
-#define STM32_SPI_USE_SPI1                  TRUE
+#define STM32_SPI_USE_SPI1                  FALSE
 #define STM32_SPI_USE_SPI2                  FALSE
 #define STM32_SPI_USE_SPI3                  FALSE
 #define STM32_SPI_SPI1_RX_DMA_STREAM        STM32_DMA_STREAM_ID(1, 2)
