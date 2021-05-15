@@ -3963,11 +3963,13 @@ static bool sweep(bool break_on_operation)
         }
       }        // end of peak finding
     }
+#ifdef TINYSA4
     if (setting.average == AV_DECONV && setting.frequency_step != 0) {
       for (int i = sweep_points - 1 -  d_half_width*2; i>0; i--) {
         actual_t[i+d_half_width] = actual_t[i];
       }
     }
+#endif
   }
 
 
