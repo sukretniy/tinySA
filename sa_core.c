@@ -2137,7 +2137,7 @@ int index_of_frequency(freq_t f)      // Search which index in the frequency tab
     return -1;
   if (f > frequencies[sweep_points-1])
     return -1;
-  int i = (f + (f_step >> 1))* sweep_points / (frequencies[sweep_points-1] - frequencies[0]);
+  int i = (f + (f_step >> 1)) / f_step;
   return i;
 #if 0
   //  int R =  (sizeof frequencies)/sizeof(int) - 1;
@@ -2180,18 +2180,22 @@ void interpolate_maximum(int m)
   }
 }
 
-#define MAX_MAX 4
+#define MAX_MAX MARKER_COUNT
 int
 search_maximum(int m, freq_t center, int span)
 {
+#ifdef TINYSA4
   int center_index = index_of_frequency(center);
+#else
+  int center_index = binary_search_frequency(center);
+#endif
   if (center_index < 0)
 	return false;
   int from = center_index - span/2;
   int found = false;
   int to = center_index + span/2;
   int cur_max = 0;          // Always at least one maximum
-  int max_index[4];
+  int max_index[MAX_MAX];
   if (from<0)
     from = 0;
   if (to > setting._sweep_points-1)
@@ -3608,7 +3612,6 @@ again:                                                              // Spur redu
 
 }
 
-#define MAX_MAX 4
 static uint16_t max_index[MAX_MAX];
 static uint16_t cur_max = 0;
 
@@ -3815,6 +3818,13 @@ static bool sweep(bool break_on_operation)
     }
 #endif
 
+#ifdef TINYSA4
+    int d_half_width = 0;
+    if (setting.average == AV_DECONV && setting.frequency_step != 0) {
+      d_half_width = (frequencies[sweep_points-1] - frequencies[0]) / (actual_rbw_x10 * 100);
+    }
+#endif
+
     for (int i = 0; i < sweep_points; i++) {
 
 #if 0
@@ -3885,6 +3895,16 @@ static bool sweep(bool break_on_operation)
         }
         break;
 #endif
+#ifdef TINYSA4
+        case AV_DECONV:
+          actual_t[i] = temp_t[i];
+          int f_start = sweep_points/2 - d_half_width;
+          int lower = ( i - d_half_width*2 + 1 < 0 ? 0 :  i - d_half_width*2 + 1);
+          for (int k = lower; k < i; k++)
+          actual_t[i] -= actual_t[k] * stored_t[f_start + i - k];
+          actual_t[i] /= stored_t[0];
+          break;
+#endif
         }
       }
 
@@ -3943,7 +3963,15 @@ static bool sweep(bool break_on_operation)
         }
       }        // end of peak finding
     }
-  }  // ---------------------- end of postprocessing -----------------------------
+    if (setting.average == AV_DECONV && setting.frequency_step != 0) {
+      for (int i = sweep_points - 1 -  d_half_width*2; i>0; i--) {
+        actual_t[i+d_half_width] = actual_t[i];
+      }
+    }
+  }
+
+
+  // ---------------------- end of postprocessing -----------------------------
 
   if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE) { // if in output mode with modulation
     if (!in_selftest)
@@ -4231,9 +4259,8 @@ static bool sweep(bool break_on_operation)
 #else
 #define H_SPACING   4
 #endif
-      markers[1].enabled = search_maximum(1, frequencies[markers[0].index]*2, 2*H_SPACING);
-      markers[2].enabled = search_maximum(2, frequencies[markers[0].index]*3, 3*H_SPACING);
-      markers[3].enabled = search_maximum(3, frequencies[markers[0].index]*4, 4*H_SPACING);
+      for (int i=1; i < MARKER_COUNT;i++)
+        markers[i].enabled = search_maximum(i, frequencies[markers[0].index]*(i+1), (i+1)*H_SPACING);
 #ifdef TINYSA4
     } else if (setting.measurement == M_AM  && markers[0].index > 10) { // ----------AM measurement
       int l = markers[1].index;
@@ -4266,7 +4293,7 @@ static bool sweep(bool break_on_operation)
       markers[2].enabled = search_maximum(2, lf - (rf - lf), 12);
       markers[3].enabled = search_maximum(3, rf + (rf - lf), 12);
     } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
-      markers[1].index =  markers[0].index + (setting.mode == M_LOW ? 290/4 : -290/4);  // Position phase noise marker at requested offset
+      markers[1].index =  markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4);  // Position phase noise marker at requested offset
       markers[1].frequency = frequencies[markers[1].index];
     } else if (setting.measurement == M_STOP_BAND  && markers[0].index > 10) {      // -------------Stop band measurement
       markers[1].index =  marker_search_left_min(markers[0].index);

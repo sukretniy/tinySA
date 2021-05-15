@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -124,7 +124,11 @@
 #else
 #define POINTS_COUNT     290
 #endif
+#ifdef TINYSA4
+#define MARKER_COUNT    8
+#else
 #define MARKER_COUNT    4
+#endif
 
 #define TRACES_MAX 3
 #define TRACE_ACTUAL    0           // order linked to redraw_request flags!!!!!
@@ -254,7 +258,7 @@ void toggle_pulse(void);
 void load_default_properties(void);
 
 enum {
-  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16, AV_QUASI
+  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16, AV_QUASI, AV_DECONV
 };
 enum {
   M_LOW, M_HIGH, M_GENLOW, M_GENHIGH, M_ULTRA
@@ -769,7 +773,7 @@ extern uint8_t active_limit;
 extern void limits_update(void);
 #endif
 
-#define MARKERS_MAX 4
+#define MARKERS_MAX MARKER_COUNT
 #define MARKER_INVALID -1
 
 extern int8_t previous_marker;
@@ -1432,7 +1436,7 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP,
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_DECONV
 };
 
 enum {
