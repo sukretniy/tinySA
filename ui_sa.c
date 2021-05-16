@@ -1129,6 +1129,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_freq_acb)
 }
 #endif
 
+
+const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16","QUASI", "DECONV"};
+
 static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 {
   (void)item;
@@ -1333,6 +1336,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       set_sweep_frequency(ST_SPAN, uistat.value*3);
 //      set_measurement(M_CP);
       break;
+#endif
+#ifdef __FFT_DECONV__
     case M_DECONV:
       set_average(AV_DECONV);
       break;
@@ -1912,7 +1917,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_enter_marker_acb)
 }
 
 #ifdef TINYSA4
-static const uint16_t points_setting[] = {51, 101, 201, 290, 450};
+static const uint16_t points_setting[] = {51, 101, 201, 256, 290, 450};
 #else
 static const uint16_t points_setting[] = {51, 101, 145, 290};
 #endif
@@ -2345,6 +2350,7 @@ static const menuitem_t menu_sweep_points[] = {
   { MT_ADV_CALLBACK, 3, "%3d point", menu_points_acb },
 #ifdef TINYSA4  
   { MT_ADV_CALLBACK, 4, "%3d point", menu_points_acb },
+  { MT_ADV_CALLBACK, 5, "%3d point", menu_points_acb },
 #endif
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
@@ -2357,6 +2363,7 @@ static const menuitem_t menu_sweep_points_form[] = {
   { MT_FORM | MT_ADV_CALLBACK, 3, "%3d point", menu_points_acb },
 #ifdef TINYSA4
   { MT_FORM | MT_ADV_CALLBACK, 4, "%3d point", menu_points_acb },
+  { MT_FORM | MT_ADV_CALLBACK, 5, "%3d point", menu_points_acb },
 #endif
   { MT_FORM | MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel
@@ -2551,7 +2558,7 @@ static const menuitem_t menu_measure2[] = {
 #ifdef __LINEARITY__
 { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
 #endif
-#ifdef TINYSA4
+#ifdef __FFT_DECONV__
   { MT_ADV_CALLBACK,            M_DECONV,  "DECONV",         menu_measure_acb},
 #endif
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
@@ -3141,7 +3148,6 @@ menu_move_top(void)
 
 
 // -------------------------- CAL STATUS ---------------------------------------------
-const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16","QUASI"};
 const char * const dBText[] = { "1dB/", "2dB/", "5dB/", "10dB/", "20dB/"};
 const int refMHz[] = { 30, 15, 10, 4, 3, 2, 1 };
 

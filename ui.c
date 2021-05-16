@@ -1343,7 +1343,7 @@ static const uint8_t check_box[] = {
 static const char *step_text[5] = {"-10dB", "-1dB", "set", "+1dB", "+10dB"};
 static char step_text_freq[5][10] = { "-100MHz", "-10MHz", "set", "+10MHz", "+100MHz" };
 
-#ifdef TINYS4
+#ifdef TINYSA4
 #define menu_button_height  ((menu[i].type & MT_FORM) || menu_is_multiline(menu[i].label) == 2 ? LCD_HEIGHT/10 : LCD_HEIGHT/12 )
 #else
 #define menu_button_height  ((menu[i].type & MT_FORM) || menu_is_multiline(menu[i].label) == 2 ? LCD_HEIGHT/8 : LCD_HEIGHT/10 )
@@ -1406,10 +1406,11 @@ draw_menu_buttons(const menuitem_t *menu, int only)
     // Prepare button label
     plot_printf(button.text, sizeof button.text, menu[i].label, button.param_1.u, button.param_2.u);
 
+    int button_height = menu_button_height;
+
     if (menu[i].type & MT_FORM) {
       int button_width = MENU_FORM_WIDTH;
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen
-      int button_height = menu_button_height;
       draw_button(button_start, y, button_width, button_height, &button);
       uint16_t text_offs = button_start + 6;
       if (button.icon >=0){
@@ -1459,7 +1460,6 @@ draw_menu_buttons(const menuitem_t *menu, int only)
     } else {
       int button_width = MENU_BUTTON_WIDTH;
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
-      int button_height = menu_button_height;
       draw_button(button_start, y, button_width, button_height, &button);
       uint16_t text_offs = button_start + 7;
       if (button.icon >=0){
@@ -1474,7 +1474,7 @@ draw_menu_buttons(const menuitem_t *menu, int only)
       ili9341_drawstring(button.text, text_offs, y+(button_height-linesFONT_GET_HEIGHT)/2);
 #endif
     }
-    y += menu_button_height;
+    y += button_height;
   }
   // Cleanup other buttons (less flicker)
   // Erase empty buttons

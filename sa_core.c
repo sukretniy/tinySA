@@ -27,6 +27,13 @@
 #pragma GCC optimize ("Os")
 #endif
 
+#ifdef __FFT_DECONV__
+void FFT(float *real, float *imag, int length, bool inverse);
+float *real = (float *) &spi_buffer[0];
+float *imag = (float *) &spi_buffer[512];
+float *real2 = (float *) &spi_buffer[1024];
+float *imag2 = (float *) &spi_buffer[1536];
+#endif
 
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
 #ifdef __DEBUG_AGC__
@@ -454,7 +461,6 @@ static setting_t saved_setting;
 
 void set_measurement(int m)
 {
- setting.measurement = m;
 #ifdef __LINEARITY__
   if (m == M_LINEARITY) {
     for (int j = 0; j < setting._sweep_points; j++)
@@ -464,6 +470,14 @@ void set_measurement(int m)
     setting.auto_attenuation = false;
   }
 #endif
+#ifdef __FFT_DECONV__
+  if (m == M_DECONV && sweep_points == 256) {
+    set_storage();
+    set_reflevel(-20);
+  } else
+    return;
+#endif
+  setting.measurement = m;
   dirty = true;
 }
 void set_lo_drive(int d)
@@ -3818,10 +3832,99 @@ static bool sweep(bool break_on_operation)
     }
 #endif
 
-#ifdef TINYSA4
-    int d_half_width = 0;
+#ifdef  __FFT_DECONV__
+    int d_width = 0;
+    float d_scale = 0.0;
+    float d_offset = 0.0;
+    int d_start = 0;
     if (setting.average == AV_DECONV && setting.frequency_step != 0) {
-      d_half_width = (frequencies[sweep_points-1] - frequencies[0]) / (actual_rbw_x10 * 100);
+      d_width = (sweep_points * (actual_rbw_x10 * 250) / (frequencies[sweep_points-1] - frequencies[0]));
+      d_start = sweep_points/2 - d_width/2;
+      d_offset = stored_t[d_start];
+      for (int i=0; i<d_width; i++)
+        if (d_offset > stored_t[d_start + i])
+          d_offset = stored_t[d_start + i];
+//      d_offset -= 1;    // To avoid divide by zero
+      for (int i=0; i<d_width; i++)
+        d_scale += stored_t[d_start + i] - d_offset;
+//      d_scale *= d_wid;
+    }
+#endif
+
+#ifdef __FFT_DECONV__
+    if (setting.average == AV_DECONV && setting.frequency_step != 0 && sweep_points == 256) {
+      float m = 150;
+      for (int i=0;i<sweep_points;i++) {
+        if (m > temp_t[i])
+          m = temp_t[i];
+        real[i] = 0;
+        imag[i] = 0;
+        real2[0] = 0;
+        imag2[i] = 0;
+        actual_t[i] = -150;
+      }
+      for (int i=0;i<sweep_points-d_width*4;i++) {
+        real[i+d_width*2] = temp_t[i+d_width*2] - m;
+      }
+      for (int i=0;i<d_width*2;i++) {
+        real[i] = (temp_t[i] - m) * i/d_width/2;
+      }
+      for (int i=0;i<d_width*2;i++) {
+        real[255-i] = (temp_t[255-i] - m) * i/d_width/2;
+      }
+
+      FFT(real, imag, 256, false);
+#if 0
+      for (int i = 128 - d_width*2; i<128+d_width*2; i++) {
+        real[i] = 0;
+        imag[i] = 0;
+      }
+#endif
+#if 0
+      for (int i=0;i<d_width/2;i++) {
+        real2[i] = (stored_t[i+d_start + d_width/2] - d_offset) / d_scale*4;
+      }
+      for (int i=-d_width/2;i<0;i++) {
+        real2[i+256] = (stored_t[i+d_start + d_width/2] - d_offset) / d_scale*4;
+      }
+#else
+#if 0
+      for (int i=0;i<d_width;i++) {
+        real2[i] = (stored_t[i+d_start] - d_offset) / d_scale;
+      }
+//      for (int i=-d_width/2;i<0;i++) {
+//        real2[i+256] = (stored_t[i+d_start + d_width/2] - d_offset) / d_scale;
+//      }
+#else
+      real2[0] = 2;
+      real2[1] = 1;
+      real2[255] = 1;
+//      real2[255] = -0.5;
+#endif
+#endif
+      FFT(real2, imag2, 256, false);
+
+      for (int i=0;i<256;i++) {
+        float a = real[i];
+        float b = imag[i];
+        float c = real2[i];
+        float d = imag2[i];
+        float cd2 = c*c+d*d;
+static volatile int dummy;
+        if (cd2 == 0)
+          while(dummy++) ;
+        real[i] = (a*c+b*d)/cd2;
+        imag[i] = (b*c-a*d)/cd2;
+      }
+
+      FFT(real, imag, 256, true);
+
+      for (int i=0;i<sweep_points;i++) {
+        float re = real[i];
+        float im = imag[i];
+        actual_t[i] = re + m;
+//        actual_t[i] = sqrtf(re*re + im*im) + m;
+      }
     }
 #endif
 
@@ -3842,7 +3945,13 @@ static bool sweep(bool break_on_operation)
 #endif
 
       // ------------------------ do all RSSI calculations from CALC menu -------------------
-      RSSI = temp_t[i];
+#ifdef __FFT_DECONV__
+      if (setting.average == AV_DECONV)
+        RSSI = actual_t[i];
+      else
+#endif
+        RSSI = temp_t[i];
+
       if (setting.subtract_stored) {
         RSSI = RSSI - stored_t[i] + setting.normalize_level;
       }
@@ -3895,14 +4004,14 @@ static bool sweep(bool break_on_operation)
         }
         break;
 #endif
-#ifdef TINYSA4
+#if 0
         case AV_DECONV:
-          actual_t[i] = temp_t[i];
-          int f_start = sweep_points/2 - d_half_width;
-          int lower = ( i - d_half_width*2 + 1 < 0 ? 0 :  i - d_half_width*2 + 1);
+          actual_t[i] = temp_t[i] - temp_t[0];
+
+          int lower = ( i - d_width + 1 < 0 ? 0 :  i - d_width + 1);
           for (int k = lower; k < i; k++)
-          actual_t[i] -= actual_t[k] * stored_t[f_start + i - k];
-          actual_t[i] /= stored_t[0];
+            actual_t[i] -= actual_t[k] * (stored_t[d_start + i - k] - d_offset) / d_scale;
+//          actual_t[i] /= (stored_t[d_start] - d_offset ) /d_scale;
           break;
 #endif
         }
@@ -3963,11 +4072,18 @@ static bool sweep(bool break_on_operation)
         }
       }        // end of peak finding
     }
-    if (setting.average == AV_DECONV && setting.frequency_step != 0) {
-      for (int i = sweep_points - 1 -  d_half_width*2; i>0; i--) {
-        actual_t[i+d_half_width] = actual_t[i];
+
+#ifdef __NOFFT_DECONV__
+
+      for (int i = sweep_points - 1 -  d_width; i>0; i--) {
+        actual_t[i+d_width/2] = actual_t[i] +  temp_t[0];
       }
-    }
+      for (int i = 0; i < d_width/2+2; i++) {
+        actual_t[i] = temp_t[0];
+        actual_t[sweep_points - 1 - i] = temp_t[0];
+      }
+#endif
+
   }
 
 
@@ -5646,6 +5762,101 @@ quit:
   reset_settings(M_LOW);
 }
 #endif
+
+#ifdef TINYSA4
+
+#define PI  3.1415926535897932384626433832795
+
+
+// Fast Fourier Transform. length must be exactly 2^n.
+// inverse = true computes InverseFFT
+// inverse = false computes FFT.
+// Overwrites the real and imaginary arrays in-place
+
+void FFT(float *real, float *imag, int length, bool inverse)
+{
+
+    float wreal, wpreal, wimag, wpimag, theta;
+    float tempreal, tempimag, tempwreal, direction;
+
+    int Addr, Position, Mask, BitRevAddr, PairAddr;
+    int m, k;
+
+
+    direction = -1.0;       // direction of rotating phasor for FFT
+
+    if(inverse)
+        direction = 1.0;    // direction of rotating phasor for IFFT
+
+    //  bit-reverse the addresses of both the real and imaginary arrays
+    //  real[0..length-1] and imag[0..length-1] are the paired complex numbers
+
+    for (Addr=0; Addr<length; Addr++)
+    {
+        // Derive Bit-Reversed Address
+        BitRevAddr = 0;
+        Position = length >> 1;
+        Mask = Addr;
+        while (Mask)
+        {
+            if(Mask & 1)
+                BitRevAddr += Position;
+            Mask >>= 1;
+            Position >>= 1;
+        }
+
+        if (BitRevAddr > Addr)              // Swap
+        {
+            float s;
+            s = real[BitRevAddr];           // real part
+            real[BitRevAddr] = real[Addr];
+            real[Addr] = s;
+            s = imag[BitRevAddr];           // imaginary part
+            imag[BitRevAddr] = imag[Addr];
+            imag[Addr] = s;
+        }
+    }
+
+    // FFT, IFFT Kernel
+
+    for (k=1; k < length; k <<= 1)
+    {
+        theta = direction * PI / (float)k;
+        wpimag = sinf(theta);
+        wpreal = cosf(theta);
+        wreal = 1.0;
+        wimag = 0.0;
+
+        for (m=0; m < k; m++)
+        {
+            for (Addr = m; Addr < length; Addr += (k*2))
+            {
+                PairAddr = Addr + k;
+
+                tempreal = wreal * real[PairAddr] - wimag * imag[PairAddr];
+                tempimag = wreal * imag[PairAddr] + wimag * real[PairAddr];
+                real[PairAddr] = real[Addr] - tempreal;
+                imag[PairAddr] = imag[Addr] - tempimag;
+                real[Addr] += tempreal;
+                imag[Addr] += tempimag;
+            }
+            tempwreal = wreal;
+            wreal = wreal * wpreal - wimag * wpimag;
+            wimag = wimag * wpreal + tempwreal * wpimag;
+        }
+    }
+
+    if(inverse)                         // Normalize the IFFT coefficients
+        for(int i=0; i<length; i++)
+        {
+            real[i] /= (float)length;
+            imag[i] /= (float)length;
+        }
+
+}
+
+#endif
+
 
 #pragma GCC pop_options
 
