@@ -1349,8 +1349,6 @@ static const uint8_t check_box[] = {
   _BMP16(0b0000100001000000),
   _BMP16(0b0000011110000000),
 };
-static const char *step_text[5] = {"-10dB", "-1dB", "set", "+1dB", "+10dB"};
-static char step_text_freq[5][10] = { "-100MHz", "-10MHz", "set", "+10MHz", "+100MHz" };
 
 #ifndef MENU_USE_AUTOHEIGHT
 #ifdef TINYSA4
@@ -1443,19 +1441,19 @@ draw_menu_buttons(const menuitem_t *menu, int only)
         local_text_shift = 2;
         if (menu[i].data == KM_CENTER) {
           local_slider_positions =  LCD_WIDTH/2+setting.slider_position;
-          plot_printf(step_text_freq[0], sizeof step_text_freq[0], "-%3.0FHz", (float)setting.slider_span);
-          plot_printf(step_text_freq[1], sizeof step_text_freq[1], "-%3.0FHz", (float)setting.slider_span/10);
-          plot_printf(step_text_freq[3], sizeof step_text_freq[3], "+%3.0FHz", (float)setting.slider_span/10);
-          plot_printf(step_text_freq[4], sizeof step_text_freq[4], "+%3.0FHz", (float)setting.slider_span);
-          for (int i=0; i <= 4; i++) {
-            ili9341_drawstring(step_text_freq[i], button_start+12 + i * MENU_FORM_WIDTH/5, y+button_height-9);
-          }
+          lcd_printf(button_start+12 + 0 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz", -(float)setting.slider_span);
+          lcd_printf(button_start+12 + 1 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz", -(float)setting.slider_span/10);
+          lcd_printf(button_start+12 + 2 * MENU_FORM_WIDTH/5, y+button_height-9, "Set");
+          lcd_printf(button_start+12 + 3 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz",  (float)setting.slider_span/10);
+          lcd_printf(button_start+12 + 4 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz",  (float)setting.slider_span);
           goto draw_divider;
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
           local_slider_positions = ((get_level() - level_min()) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
-          for (int i=0; i <= 4; i++) {
-            ili9341_drawstring(step_text[i], button_start+12 + i * MENU_FORM_WIDTH/5, y+button_height-9);
-          }
+          lcd_printf(button_start+12 + 0 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB", -10);
+          lcd_printf(button_start+12 + 1 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB",  -1);
+          lcd_printf(button_start+12 + 2 * MENU_FORM_WIDTH/5, y+button_height-9, "Set");
+          lcd_printf(button_start+12 + 3 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB",   1);
+          lcd_printf(button_start+12 + 4 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB",  10);
         draw_divider:
           for (int i = 1; i <= 4; i++) {
             ili9341_line(button_start + i * MENU_FORM_WIDTH/5, y+button_height-9, button_start + i * MENU_FORM_WIDTH/5, y+button_height);
