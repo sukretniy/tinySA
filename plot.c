@@ -631,8 +631,7 @@ static const uint8_t reference_bitmap[]={
 #define X_MARKER_OFFSET    3
 #define Y_MARKER_OFFSET   10
 #define MARKER_BITMAP(i)  (&marker_bitmap[(i)*MARKER_HEIGHT])
-static const uint8_t marker_bitmap[]=
-{
+static const uint8_t marker_bitmap[]={
 // Marker Back plate
   _BMP8(0b11111110),
   _BMP8(0b11111110),
@@ -655,6 +654,7 @@ static const uint8_t marker_bitmap[]=
   _BMP8(0b00000000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
+#if MARKERS_MAX >=2
   // Marker 2
   _BMP8(0b00000000),
   _BMP8(0b00111000),
@@ -666,6 +666,8 @@ static const uint8_t marker_bitmap[]=
   _BMP8(0b00000000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
+#endif
+#if MARKERS_MAX >=3
   // Marker 3
   _BMP8(0b00000000),
   _BMP8(0b00111000),
@@ -677,6 +679,8 @@ static const uint8_t marker_bitmap[]=
   _BMP8(0b00000000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
+#endif
+#if MARKERS_MAX >=4
   // Marker 4
   _BMP8(0b00000000),
   _BMP8(0b00001000),
@@ -688,54 +692,61 @@ static const uint8_t marker_bitmap[]=
   _BMP8(0b00001000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
-#if MARKER_COUNT > 4
+#endif
+#if MARKERS_MAX >=5
   // Marker 5
   _BMP8(0b00000000),
-  _BMP8(0b11110000),
-  _BMP8(0b10000000),
-  _BMP8(0b11100000),
-  _BMP8(0b00010000),
-  _BMP8(0b00010000),
-  _BMP8(0b10010000),
-  _BMP8(0b01100000),
+  _BMP8(0b01111100),
+  _BMP8(0b01000000),
+  _BMP8(0b01111000),
+  _BMP8(0b00000100),
+  _BMP8(0b01000100),
+  _BMP8(0b00111000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
+  _BMP8(0b00000000),
+#endif
+#if MARKERS_MAX >=6
   // Marker 6
   _BMP8(0b00000000),
-  _BMP8(0b01100000),
-  _BMP8(0b10010000),
-  _BMP8(0b10000000),
-  _BMP8(0b11100000),
-  _BMP8(0b10010000),
-  _BMP8(0b10010000),
-  _BMP8(0b01100000),
+  _BMP8(0b00111100),
+  _BMP8(0b01000000),
+  _BMP8(0b01111000),
+  _BMP8(0b01000100),
+  _BMP8(0b01000100),
+  _BMP8(0b00111000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
+  _BMP8(0b00000000),
+#endif
+#if MARKERS_MAX >=7
   // Marker 7
   _BMP8(0b00000000),
-  _BMP8(0b11110000),
+  _BMP8(0b01111100),
+  _BMP8(0b01000100),
+  _BMP8(0b00000100),
+  _BMP8(0b00001000),
   _BMP8(0b00010000),
-  _BMP8(0b00100000),
-  _BMP8(0b00100000),
-  _BMP8(0b01000000),
-  _BMP8(0b01000000),
-  _BMP8(0b01000000),
+  _BMP8(0b00010000),
+  _BMP8(0b00010000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
+#endif
+#if MARKERS_MAX >=8
   // Marker 8
   _BMP8(0b00000000),
-  _BMP8(0b01100000),
-  _BMP8(0b10010000),
-  _BMP8(0b10010000),
-  _BMP8(0b01100000),
-  _BMP8(0b10010000),
-  _BMP8(0b10010000),
-  _BMP8(0b01100000),
+  _BMP8(0b00111000),
+  _BMP8(0b01000100),
+  _BMP8(0b00111000),
+  _BMP8(0b01000100),
+  _BMP8(0b01000100),
+  _BMP8(0b00111000),
   _BMP8(0b00000000),
   _BMP8(0b00000000),
-
+  _BMP8(0b00000000),
 #endif
 };
+
 
 #elif _MARKER_SIZE_ == 1
 #define MARKER_WIDTH       10
@@ -743,8 +754,7 @@ static const uint8_t marker_bitmap[]=
 #define X_MARKER_OFFSET     4
 #define Y_MARKER_OFFSET    13
 #define MARKER_BITMAP(i)   (&marker_bitmap[(i)*2*MARKER_HEIGHT])
-static const uint8_t marker_bitmap[]=
-{
+static const uint8_t marker_bitmap[]={
   // Marker Back plate
   _BMP16(0b1111111110000000),
   _BMP16(0b1111111110000000),
@@ -773,20 +783,23 @@ static const uint8_t marker_bitmap[]=
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
+#if MARKERS_MAX >=2
   // Marker 2
   _BMP16(0b0000000000000000),
   _BMP16(0b0001111000000000),
   _BMP16(0b0011001100000000),
   _BMP16(0b0011001100000000),
+  _BMP16(0b0000001100000000),
   _BMP16(0b0000011000000000),
-  _BMP16(0b0000110000000000),
-  _BMP16(0b0001100000000000),
+  _BMP16(0b0001110000000000),
   _BMP16(0b0011000000000000),
-  _BMP16(0b0011111100000000),
+  _BMP16(0b0011000000000000),
+  _BMP16(0b0011111000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
-  _BMP16(0b0000000000000000),
+#endif
+#if MARKERS_MAX >=3
   // Marker 3
   _BMP16(0b0000000000000000),
   _BMP16(0b0011111000000000),
@@ -801,6 +814,8 @@ static const uint8_t marker_bitmap[]=
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
+#endif
+#if MARKERS_MAX >=4
   // Marker 4
   _BMP16(0b0000000000000000),
   _BMP16(0b0000011000000000),
@@ -815,60 +830,67 @@ static const uint8_t marker_bitmap[]=
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
-#if MARKER_COUNT>4
+#endif
+#if MARKERS_MAX >=5
   // Marker 5
   _BMP16(0b0000000000000000),
-  _BMP16(0b11111100<<6),
-  _BMP16(0b11000000<<6),
-  _BMP16(0b11000000<<6),
-  _BMP16(0b11111000<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b00001100<<6),
-  _BMP16(0b00001100<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b01111000<<6),
+  _BMP16(0b0111111100000000),
+  _BMP16(0b0110000000000000),
+  _BMP16(0b0110000000000000),
+  _BMP16(0b0111111000000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0000001100000000),
+  _BMP16(0b0000001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0011111000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
+#endif
+#if MARKERS_MAX >=6
   // Marker 6
   _BMP16(0b0000000000000000),
-  _BMP16(0b01111000<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b11000000<<6),
-  _BMP16(0b11000000<<6),
-  _BMP16(0b11111000<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b01111000<<6),
+  _BMP16(0b0011111000000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110000000000000),
+  _BMP16(0b0110111000000000),
+  _BMP16(0b0111001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0011111000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
+#endif
+#if MARKERS_MAX >=7
   // Marker 7
   _BMP16(0b0000000000000000),
-  _BMP16(0b11111100<<6),
-  _BMP16(0b00001100<<6),
-  _BMP16(0b00001100<<6),
-  _BMP16(0b00011000<<6),
-  _BMP16(0b00011000<<6),
-  _BMP16(0b00110000<<6),
-  _BMP16(0b00110000<<6),
-  _BMP16(0b01100000<<6),
-  _BMP16(0b01100000<<6),
+  _BMP16(0b0111111100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0000001100000000),
+  _BMP16(0b0000011000000000),
+  _BMP16(0b0000110000000000),
+  _BMP16(0b0001100000000000),
+  _BMP16(0b0001100000000000),
+  _BMP16(0b0001100000000000),
+  _BMP16(0b0001100000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
+#endif
+#if MARKERS_MAX >=8
   // Marker 8
   _BMP16(0b0000000000000000),
-  _BMP16(0b01111000<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b01111000<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b11001100<<6),
-  _BMP16(0b01111000<<6),
+  _BMP16(0b0011111000000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0011111000000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0110001100000000),
+  _BMP16(0b0011111000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
   _BMP16(0b0000000000000000),
@@ -1294,77 +1316,8 @@ cell_drawchar_size(uint8_t ch, int x, int y, int size)
 }
 #endif
 
-/*
-void
-cell_drawstring(char *str, int x, int y)
-{
-  if ((uint32_t)(y+FONT_GET_HEIGHT) >= CELLHEIGHT + FONT_GET_HEIGHT)
-    return;
-  while (*str) {
-    if (x >= CELLWIDTH)
-      return;
-    uint16_t ch = *str++;
-    uint16_t w = FONT_GET_WIDTH(ch);
-    cell_blit_bitmap(x, y, w, FONT_GET_HEIGHT, FONT_GET_DATA(ch));
-    x += w;
-  }
-}
-
-static void
-cell_drawstring_7x13(char *str, int x, int y)
-{
-  if ((uint32_t)(y+bFONT_GET_HEIGHT) >= CELLHEIGHT + bFONT_GET_HEIGHT)
-    return;
-  while (*str) {
-    if (x >= CELLWIDTH)
-      return;
-    uint8_t ch = *str++;
-    uint16_t w = bFONT_GET_WIDTH(ch);
-    cell_blit_bitmap(x, y, w, bFONT_GET_HEIGHT, bFONT_GET_DATA(ch));
-    x += w;
-  }
-}
-
-#ifndef wFONT_GET_DATA
-void
-cell_drawstring_size(char *str, int x, int y, int size)
-{
-  if (y <= -FONT_GET_HEIGHT*2 || y >= CELLHEIGHT)
-    return;
-  while (*str) {
-    if (x >= CELLWIDTH)
-      return;
-    x += cell_drawchar_size(*str++, x, y, size);
-  }
-}
-#endif
-
-void
-cell_drawstring_10x14(char *str, int x, int y)
-{
-#ifdef wFONT_GET_DATA
-  if ((uint32_t)(y+wFONT_GET_HEIGHT) >= CELLHEIGHT + wFONT_GET_HEIGHT)
-    return;
-  while (*str) {
-    if (x >= CELLWIDTH)
-      return;
-    uint8_t ch = *str++;
-    uint16_t w = wFONT_GET_WIDTH(ch);
-    cell_blit_bitmap(x, y, w <=8 ? 9 : w, wFONT_GET_HEIGHT, wFONT_GET_DATA(ch));
-    x+=w;
-  }
-#else
-  cell_drawstring_size(str, x, y, 2);
-#endif
-}
-*/
-
-struct cellprintStreamVMT {
-  _base_sequential_stream_methods
-};
-
 typedef struct {
-  const struct cellprintStreamVMT *vmt;
+  const void *vmt;
   int16_t x;
   int16_t y;
 } screenPrintStream;
@@ -1378,7 +1331,6 @@ static msg_t cellPut(void *ip, uint8_t ch) {
   }
   return MSG_OK;
 }
-static const struct cellprintStreamVMT cell_vmt_s = {NULL, NULL, cellPut, NULL};
 
 static msg_t cellPut7x13(void *ip, uint8_t ch) {
   screenPrintStream *ps = ip;
@@ -1389,10 +1341,8 @@ static msg_t cellPut7x13(void *ip, uint8_t ch) {
   }
   return MSG_OK;
 }
-static const struct cellprintStreamVMT cell_vmt_b = {NULL, NULL, cellPut7x13, NULL};
 
 //#define ENABLE_WIDE_FONT_ON_CELL
-
 #ifdef ENABLE_WIDE_FONT_ON_CELL
 static msg_t cellPut10x14(void *ip, uint8_t ch) {
   screenPrintStream *ps = ip;
@@ -1407,25 +1357,27 @@ static msg_t cellPut10x14(void *ip, uint8_t ch) {
   }
   return MSG_OK;
 }
-static const struct cellprintStreamVMT cell_vmt_w = {NULL, NULL, cellPut10x14, NULL};
 #endif
 
 // Simple print in buffer function
 int cell_printf(int16_t x, int16_t y, const char *fmt, ...) {
   // skip always if right
   if (x>=CELLWIDTH) return 0;
-  uint8_t font_type = *fmt++;
-  screenPrintStream ps;
+  // Init small cell print stream
+  struct cellprintStreamVMT {
+    _base_sequential_stream_methods
+  } cell_vmt = {NULL, NULL, NULL, NULL};
+  screenPrintStream ps = {&cell_vmt, x, y};
   // Select font and skip print if not on cell (at top/bottom)
-  switch (font_type){
+  switch (*fmt++){
     case _FONT_s:
       if ((uint32_t)(y+FONT_GET_HEIGHT) >= CELLHEIGHT + FONT_GET_HEIGHT) return 0;
-      ps.vmt = &cell_vmt_s;
+      cell_vmt.put = cellPut;
       break;
 #ifdef ENABLE_WIDE_FONT_ON_CELL
     case _FONT_w:
       if ((uint32_t)(y+FONT_GET_HEIGHT) >= CELLHEIGHT + FONT_GET_HEIGHT) return 0;
-      ps.vmt = &cell_vmt_w;
+      cell_vmt.put = cellPut10x14;
       break;
 #endif
     default:
@@ -1433,14 +1385,11 @@ int cell_printf(int16_t x, int16_t y, const char *fmt, ...) {
       __attribute__ ((fallthrough)); // prevent warning
     case _FONT_b:
       if ((uint32_t)(y+bFONT_GET_HEIGHT) >= CELLHEIGHT + bFONT_GET_HEIGHT) return 0;
-      ps.vmt = &cell_vmt_b;
+      cell_vmt.put = cellPut7x13;
       break;
   }
-  va_list ap;
-  // Init small cell print stream
-  ps.x = x;
-  ps.y = y;
   // Performing the print operation using the common code.
+  va_list ap;
   va_start(ap, fmt);
   int retval = chvprintf((BaseSequentialStream *)(void *)&ps, fmt, ap);
   va_end(ap);
@@ -1469,8 +1418,8 @@ static void trace_print_value_string(     // Only used at one place
     int xpos, int ypos,
     bool bold,
     int mi,  // Marker number
-	int ri,  // reference Marker number
-	float coeff[POINTS_COUNT])
+    int ri,  // reference Marker number
+    float coeff[POINTS_COUNT])
 {
   (void) bold;
   int mtype = markers[mi].mtype;
@@ -1754,7 +1703,7 @@ draw_frequencies(void)
 
 // Draw battery level
 #define BATTERY_TOP_LEVEL       4200
-#define BATTERY_BOTTOM_LEVEL    3200
+#define BATTERY_BOTTOM_LEVEL    3300
 #define BATTERY_WARNING_LEVEL   3300
 #define BATTERY_MID_LEVEL       3600
 

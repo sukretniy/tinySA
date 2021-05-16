@@ -2046,9 +2046,8 @@ static const I2CConfig i2ccfg = {
 };
 #endif
 
-static DACConfig dac1cfg1 = {
-  //init:         2047U,
-  init:         1922U,
+static const DACConfig dac1cfg1 = {
+  init:         0,
   datamode:     DAC_DHRM_12BIT_RIGHT
 };
 
@@ -2224,18 +2223,7 @@ int main(void)
 
   shell_init_connection();
 
-#ifdef TINYSA4
-  dac1cfg1.init = config.dac_value;
-#else
-  dac1cfg1.init = 0;
-#endif
 
-/*
- * Starting DAC1 driver, setting up the output pin as analog as suggested
- * by the Reference Manual.
- */
-  dacStart(&DACD2, &dac1cfg1);
-  dacStart(&DACD1, &dac1cfg1);
 
   set_sweep_points(POINTS_COUNT);
 
@@ -2279,11 +2267,16 @@ int main(void)
   ui_mode_normal();
 
   /*
-   * Set LCD display brightness
+   * Set LCD display brightness (use DAC2 for control)
+   * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
    */
   #ifdef  __LCD_BRIGHTNESS__
     lcd_setBrightness(config._brightness);
+  #else
+    dacStart(&DACD2, &dac1cfg1);
+    dacPutChannelX(&DACD2, 0, config.dac_value);
   #endif
+  dacStart(&DACD1, &dac1cfg1);
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
@@ -2351,27 +2344,25 @@ void hard_fault_handler_c(uint32_t *sp)
   uint32_t psr = sp[7];
   int y = 0;
   int x = OFFSETX + 1;
-  static  char buf[96];
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_set_foreground(LCD_FG_COLOR);
-
-  plot_printf(buf, sizeof(buf), "SP  0x%08x",  (uint32_t)sp);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R0  0x%08x",  r0);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R1  0x%08x",  r1);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R2  0x%08x",  r2);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R3  0x%08x",  r3);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R4  0x%08x",  r4);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R5  0x%08x",  r5);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R6  0x%08x",  r6);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R7  0x%08x",  r7);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R8  0x%08x",  r8);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R9  0x%08x",  r9);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R10 0x%08x", r10);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R11 0x%08x", r11);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "R12 0x%08x", r12);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "LR  0x%08x",  lr);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "PC  0x%08x",  pc);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
-  plot_printf(buf, sizeof(buf), "PSR 0x%08x", psr);ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "SP  0x%08x",  (uint32_t)sp);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R0  0x%08x",  r0);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R1  0x%08x",  r1);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R2  0x%08x",  r2);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R3  0x%08x",  r3);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R4  0x%08x",  r4);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R5  0x%08x",  r5);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R6  0x%08x",  r6);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R7  0x%08x",  r7);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R8  0x%08x",  r8);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R9  0x%08x",  r9);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R10 0x%08x", r10);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R11 0x%08x", r11);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "R12 0x%08x", r12);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "LR  0x%08x",  lr);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "PC  0x%08x",  pc);
+  lcd_printf(x, y+=FONT_STR_HEIGHT, "PSR 0x%08x", psr);
 #ifdef ENABLE_THREADS_COMMAND
   thread_t *tp;
   tp = chRegFirstThread();
@@ -2385,11 +2376,10 @@ void hard_fault_handler_c(uint32_t *sp)
 #else
     uint32_t stklimit = 0U;
 #endif
-    plot_printf(buf, sizeof(buf), "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
+    lcd_printf(x, y+=FONT_STR_HEIGHT, "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
              stklimit, (uint32_t)tp->ctx.sp, max_stack_use, (uint32_t)tp,
              (uint32_t)tp->refs - 1, (uint32_t)tp->prio, states[tp->state],
              tp->name == NULL ? "" : tp->name);
-    ili9341_drawstring(buf, x, y+=FONT_STR_HEIGHT);
     tp = chRegNextThread(tp);
   } while (tp != NULL);
 #endif

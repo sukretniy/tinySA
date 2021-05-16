@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #include "adc_F303.h"
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
@@ -27,7 +27,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -962,6 +962,7 @@ void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
 void ili9341_drawstring_7x13(const char *str, int x, int y);
 void ili9341_drawstring_10x14(const char *str, int x, int y);
+int  lcd_printf(int16_t x, int16_t y, const char *fmt, ...);
 void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size);
 void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size);
@@ -1444,6 +1445,8 @@ enum {
   T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID
 };
 
+//!!! Warning can show not correct results on CH_CFG_ST_FREQUENCY not round by 1000 or > 1000000UL
+#define sa_ST2US(n) ((n)*(1000000UL/(CH_CFG_ST_FREQUENCY)))
 
 extern const uint8_t SI4432_RBW_count;
 extern void SI4432_Listen(int s);

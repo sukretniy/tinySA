@@ -64,7 +64,11 @@ static uint16_t last_button = 0b0000;
 static uint32_t last_button_down_ticks;
 static uint32_t last_button_repeat_ticks;
 
-//static uint16_t menu_button_height = MENU_BUTTON_HEIGHT_N(MENU_BUTTON_MIN);
+#define MENU_USE_AUTOHEIGHT
+#ifdef MENU_USE_AUTOHEIGHT
+static uint16_t menu_button_height = MENU_BUTTON_HEIGHT_N(MENU_BUTTON_MIN);
+#endif
+
 volatile uint8_t operation_requested = OP_NONE;
 
 int8_t previous_marker = MARKER_INVALID;
@@ -641,6 +645,8 @@ enum {
 //#define MT_LEAVE    0x20
 #define MT_MASK(x) (0xF & (x))
 
+#define MT_CUSTOM_LABEL  0
+
 // Call back functions for MT_CALLBACK type
 typedef void (*menuaction_cb_t)(int item, uint16_t data);
 #define UI_FUNCTION_CALLBACK(ui_function_name) void ui_function_name(int item, uint16_t data)
@@ -820,7 +826,9 @@ ensure_selection(void)
   if (MT_MASK(menu[0].type) == MT_TITLE && selection == 0) selection = 1;
   if (i <  MENU_BUTTON_MIN) i = MENU_BUTTON_MIN;
   if (i >= MENU_BUTTON_MAX) i = MENU_BUTTON_MAX;
-//  menu_button_height = MENU_BUTTON_HEIGHT_N(i);
+#ifdef MENU_USE_AUTOHEIGHT
+  menu_button_height = MENU_BUTTON_HEIGHT_N(i);
+#endif
 }
 
 static void
@@ -1118,9 +1126,10 @@ static int
 menu_is_multiline(const char *label)
 {
   int n = 1;
-  while (*label)
-    if (*label++ == '\n')
-      n++;
+  if (label)
+    while (*label)
+      if (*label++ == '\n')
+        n++;
   return n;
 }
 
@@ -1343,10 +1352,12 @@ static const uint8_t check_box[] = {
 static const char *step_text[5] = {"-10dB", "-1dB", "set", "+1dB", "+10dB"};
 static char step_text_freq[5][10] = { "-100MHz", "-10MHz", "set", "+10MHz", "+100MHz" };
 
+#ifndef MENU_USE_AUTOHEIGHT
 #ifdef TINYSA4
 #define menu_button_height  ((menu[i].type & MT_FORM) || menu_is_multiline(menu[i].label) == 2 ? LCD_HEIGHT/10 : LCD_HEIGHT/12 )
 #else
 #define menu_button_height  ((menu[i].type & MT_FORM) || menu_is_multiline(menu[i].label) == 2 ? LCD_HEIGHT/8 : LCD_HEIGHT/10 )
+#endif
 #endif
 
 static void
@@ -1390,23 +1401,25 @@ draw_menu_buttons(const menuitem_t *menu, int only)
 
     // Need replace this obsolete bad function on new MT_ADV_CALLBACK variant
     menu_item_modify_attribute(menu, i, &button);      // before plot_printf to create status text
-
+    char *text;
     // MT_ADV_CALLBACK - allow change button data in callback, more easy and correct
     if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK){
       menuaction_acb_t cb = (menuaction_acb_t)menu[i].reference;
       if (cb) (*cb)(i, menu[i].data, &button);
+      // Apply custom text, from button label and
+      if (menu[i].label != MT_CUSTOM_LABEL)
+        plot_printf(button.text, sizeof(button.text), menu[i].label, button.param_1.u);
+      text = button.text;
     }
+    else
+      text = menu[i].label;
     // Only keypad retrieves value
     if (menu[i].type & MT_FORM && MT_MASK(menu[i].type) == MT_KEYPAD) {
       keypad_mode = menu[i].data;
       fetch_numeric_target();
-      button.param_1.text = uistat.text;
+      plot_printf(button.text, sizeof button.text, menu[i].label, uistat.text);
+      text = button.text;
     }
-
-    // Prepare button label
-    plot_printf(button.text, sizeof button.text, menu[i].label, button.param_1.u, button.param_2.u);
-
-    int button_height = menu_button_height;
 
     if (menu[i].type & MT_FORM) {
       int button_width = MENU_FORM_WIDTH;
@@ -1455,8 +1468,8 @@ draw_menu_buttons(const menuitem_t *menu, int only)
           goto draw_slider;
         }
       }
-//      ili9341_drawstring_size(button.text, text_offs, y+(button_height-2*FONT_GET_HEIGHT)/2-local_text_shift, 2);
-      ili9341_drawstring_10x14(button.text, text_offs, y+(button_height-wFONT_GET_HEIGHT)/2-local_text_shift);
+//      ili9341_drawstring_size(text, text_offs, y+(button_height-2*FONT_GET_HEIGHT)/2-local_text_shift, 2);
+      ili9341_drawstring_10x14(text, text_offs, y+(button_height-wFONT_GET_HEIGHT)/2-local_text_shift);
     } else {
       int button_width = MENU_BUTTON_WIDTH;
       int button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
@@ -1466,12 +1479,12 @@ draw_menu_buttons(const menuitem_t *menu, int only)
         ili9341_blitBitmap(button_start+2, y+(button_height-ICON_HEIGHT)/2, ICON_WIDTH, ICON_HEIGHT, &check_box[button.icon*2*ICON_HEIGHT]);
         text_offs = button_start+2+ICON_WIDTH;
       }
-      int lines = menu_is_multiline(button.text);
+      int lines = menu_is_multiline(text);
 #define BIG_BUTTON_FONT 1
 #ifdef BIG_BUTTON_FONT
-      ili9341_drawstring_7x13(button.text, text_offs, y+(button_height-lines*bFONT_GET_HEIGHT)/2);
+      ili9341_drawstring_7x13(text, text_offs, y+(button_height-lines*bFONT_GET_HEIGHT)/2);
 #else
-      ili9341_drawstring(button.text, text_offs, y+(button_height-linesFONT_GET_HEIGHT)/2);
+      ili9341_drawstring(text, text_offs, y+(button_height-linesFONT_GET_HEIGHT)/2);
 #endif
     }
     y += button_height;

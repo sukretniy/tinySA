@@ -593,7 +593,7 @@ void SI4432_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigg
     case ST_ARMING:
       if (i == sweep_points-1) {
         waiting = ST_WAITING;
-        setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
+        setting.measure_sweep_time_us = sa_ST2US(chVTGetSystemTimeX() - measure);
       }
       break;
     case ST_WAITING:
@@ -674,7 +674,7 @@ void SI4432_Fill(int s, int start)
   shiftInBuf(sel, SI4432_REG_RSSI, &age[start], sweep_points - start, t);
 #endif
 //  __enable_irq();
-  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
+  setting.measure_sweep_time_us = sa_ST2US(chVTGetSystemTimeX() - measure);
   buf_index = start; // Is used to skip 1st entry during level triggering
   buf_end = sweep_points - 1;
   buf_read = true;
