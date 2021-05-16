@@ -2046,9 +2046,8 @@ static const I2CConfig i2ccfg = {
 };
 #endif
 
-static DACConfig dac1cfg1 = {
-  //init:         2047U,
-  init:         1922U,
+static const DACConfig dac1cfg1 = {
+  init:         0,
   datamode:     DAC_DHRM_12BIT_RIGHT
 };
 
@@ -2224,18 +2223,7 @@ int main(void)
 
   shell_init_connection();
 
-#ifdef TINYSA4
-  dac1cfg1.init = config.dac_value;
-#else
-  dac1cfg1.init = 0;
-#endif
 
-/*
- * Starting DAC1 driver, setting up the output pin as analog as suggested
- * by the Reference Manual.
- */
-  dacStart(&DACD2, &dac1cfg1);
-  dacStart(&DACD1, &dac1cfg1);
 
   set_sweep_points(POINTS_COUNT);
 
@@ -2279,11 +2267,16 @@ int main(void)
   ui_mode_normal();
 
   /*
-   * Set LCD display brightness
+   * Set LCD display brightness (use DAC2 for control)
+   * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
    */
   #ifdef  __LCD_BRIGHTNESS__
     lcd_setBrightness(config._brightness);
+  #else
+    dacStart(&DACD2, &dac1cfg1);
+    dacPutChannelX(&DACD2, 0, config.dac_value);
   #endif
+  dacStart(&DACD1, &dac1cfg1);
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
@@ -2351,7 +2344,6 @@ void hard_fault_handler_c(uint32_t *sp)
   uint32_t psr = sp[7];
   int y = 0;
   int x = OFFSETX + 1;
-  static  char buf[96];
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_set_foreground(LCD_FG_COLOR);
   lcd_printf(x, y+=FONT_STR_HEIGHT, "SP  0x%08x",  (uint32_t)sp);
@@ -2384,7 +2376,7 @@ void hard_fault_handler_c(uint32_t *sp)
 #else
     uint32_t stklimit = 0U;
 #endif
-    lcd_printf(buf, x, y+=FONT_STR_HEIGHT, "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
+    lcd_printf(x, y+=FONT_STR_HEIGHT, "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
              stklimit, (uint32_t)tp->ctx.sp, max_stack_use, (uint32_t)tp,
              (uint32_t)tp->refs - 1, (uint32_t)tp->prio, states[tp->state],
              tp->name == NULL ? "" : tp->name);
