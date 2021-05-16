@@ -3195,9 +3195,8 @@ int invoke_quick_menu(int y)
 }
 #define YSTEP   8
 
-int add_quick_menu(char *buf, int x, int y, menuitem_t *menu)
+int add_quick_menu(int y, menuitem_t *menu)
 {
-  ili9341_drawstring(buf, x, y);
   y += YSTEP*item_space/2 + YSTEP;
   if (max_quick_menu<MAX_QUICK_MENU-1) {
     quick_menu_y[max_quick_menu] = y;
@@ -3226,10 +3225,8 @@ redraw_cal_status:
   if (MODE_OUTPUT(setting.mode)) {     // No cal status during output
 #ifdef TINYSA4
     if (level_error) {
-      color = LCD_BRIGHT_COLOR_RED;
-      ili9341_set_foreground(color);
-      ili9341_drawstring("LEVEL", 0 , 80);
-      ili9341_drawstring("ERROR", 0 , 90);
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
+      ili9341_drawstring("LEVEL\nERROR", 0 , 80);
     }
 #endif
     return;
@@ -3238,21 +3235,21 @@ redraw_cal_status:
     //  if (current_menu_is_form() && !in_selftest)
 //    return;
 
-  ili9341_set_background(LCD_BG_COLOR);
+//ili9341_set_background(LCD_BG_COLOR);
 
   float yMax = setting.reflevel;
-  // Ref level
-  if (rounding)
-    plot_printf(buf, BLEN, "%+4d", (int)yMax);
-  else
-    plot_printf(buf, BLEN, "%+4.3F", (yMax/setting.unit_scale));
 
   if (level_is_calibrated())
     color = setting.auto_reflevel ? LCD_FG_COLOR : LCD_BRIGHT_COLOR_GREEN;
   else
     color = LCD_BRIGHT_COLOR_RED;
   ili9341_set_foreground(color);
-  y = add_quick_menu(buf, x, y, (menuitem_t *)menu_reflevel);
+  // Ref level
+  if (rounding)
+    lcd_printf(x, y, "%+4d", (int)yMax);
+  else
+    lcd_printf(x, y, "%+4.3F", (yMax/setting.unit_scale));
+  y = add_quick_menu(y, (menuitem_t *)menu_reflevel);
 
   // Unit
 #if 0
@@ -3263,44 +3260,40 @@ redraw_cal_status:
     ili9341_drawstring("AUTO", x, y);
   }
 #endif
-  plot_printf(buf, BLEN, "%c%s",unit_scale_text[setting.unit_scale_index], unit);
-  y = add_quick_menu(buf, x, y, (menuitem_t *)menu_unit);
+  lcd_printf(x, y, "%c%s", unit_scale_text[setting.unit_scale_index], unit);
+  y = add_quick_menu(y, (menuitem_t *)menu_unit);
 
   // Scale
-  color = LCD_FG_COLOR;
-  ili9341_set_foreground(color);
+  ili9341_set_foreground(LCD_FG_COLOR);
 #if 1
   unsigned int i = 0;
   while (i < ARRAY_COUNT(scale_value)) {
     float t = (setting.scale/setting.unit_scale) / scale_value[i];
     if (t > 0.9 && t < 1.1){
-      plot_printf(buf, BLEN, "%s%c/",scale_vtext[i],unit_scale_text[setting.unit_scale_index]);
+      lcd_printf(x, y, "%s%c/",scale_vtext[i],unit_scale_text[setting.unit_scale_index]);
       break;
     }
     i++;
   }
 #else
-  plot_printf(buf, BLEN, "%.2F/",setting.scale);
+  lcd_printf(x, y, "%.2F/",setting.scale);
 #endif
-  y = add_quick_menu(buf, x, y, (menuitem_t *)KM_SCALE);
+  y = add_quick_menu(y, (menuitem_t *)KM_SCALE);
 
   // Trigger status
   if (is_paused()) {
-    color = LCD_BRIGHT_COLOR_GREEN;
-    ili9341_set_foreground(color);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("PAUSED", x, y);
     y += YSTEP + YSTEP/2 ;
   }
   if (setting.trigger == T_SINGLE || setting.trigger == T_NORMAL ) {
-    color = LCD_BRIGHT_COLOR_GREEN;
-    ili9341_set_foreground(color);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("ARMED", x, y);
     y += YSTEP + YSTEP/2 ;
   }
   // AM warning
   if (signal_is_AM) {
-    color = LCD_BRIGHT_COLOR_RED;
-    ili9341_set_foreground(color);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
     ili9341_drawstring("AM", x, y);
     y += YSTEP + YSTEP/2 ;
   }
@@ -3309,66 +3302,42 @@ redraw_cal_status:
 
 //  if (setting.mode == M_LOW) {
     // Attenuation
-    if (setting.auto_attenuation)
-      color = LCD_FG_COLOR;
-    else
-      color = LCD_BRIGHT_COLOR_GREEN;
-    ili9341_set_foreground(color);
-    ili9341_drawstring("Atten:", x, y);
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%.2FdB", get_attenuation());
-    y = add_quick_menu(buf, x, y, (menuitem_t *)menu_atten);
+    ili9341_set_foreground(setting.auto_attenuation ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
+    lcd_printf(x, y, "Atten:\n%4.2FdB", get_attenuation());
+    y = add_quick_menu(y+= YSTEP, (menuitem_t *)menu_atten);
 //  }
 
   // Calc
   if (setting.average>0) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    ili9341_drawstring("Calc:", x, y);
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%s",averageText[setting.average]);
-    y = add_quick_menu(buf, x, y, (menuitem_t *)menu_average);
+    lcd_printf(x, y, "Calc:\n%s", averageText[setting.average]);
+    y = add_quick_menu(y+= YSTEP, (menuitem_t *)menu_average);
   }
   // Spur
 #ifdef __SPUR__
   if (setting.spur_removal != S_OFF) {
-    if (setting.spur_removal == S_ON)
-      color = LCD_BRIGHT_COLOR_GREEN;
-    else
-      color = LCD_FG_COLOR;
-    ili9341_set_foreground(color);
-
-    ili9341_drawstring("Spur:", x, y);
-    y += YSTEP;
-    if (S_IS_AUTO(setting.spur_removal))
-      y = add_quick_menu("AUTO", x, y, (menuitem_t *)menu_stimulus);
-    else
-      y = add_quick_menu("ON", x, y, (menuitem_t *)menu_stimulus);
+    ili9341_set_foreground(setting.spur_removal == S_ON ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
+    lcd_printf(x, y, "Spur:\n%s", S_IS_AUTO(setting.spur_removal) ? "AUTO" : "ON");
+    y = add_quick_menu(y += YSTEP, (menuitem_t *)menu_stimulus);
   }
   if (setting.mirror_masking) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    ili9341_drawstring("Mask:", x, y);
-
-    y += YSTEP;
-    y = add_quick_menu("ON", x, y, (menuitem_t *)menu_stimulus);
+    ili9341_drawstring("Mask:\nON", x, y);
+    y = add_quick_menu(y+=YSTEP, (menuitem_t *)menu_stimulus);
   }
 #endif
 
   if (setting.subtract_stored) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y = add_quick_menu("Norm.", x, y, (menuitem_t *)menu_storage);
+    ili9341_drawstring("Norm.", x, y);
+    y = add_quick_menu(y, (menuitem_t *)menu_storage);
   }
 
   // RBW
-  if (setting.rbw_x10)
-    color = LCD_BRIGHT_COLOR_GREEN;
-  else
-    color = LCD_FG_COLOR;
-  ili9341_set_foreground(color);
+  ili9341_set_foreground(setting.rbw_x10 ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
   if (dirty) update_rbw();
-  ili9341_drawstring("RBW:", x, y);
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%.1FHz", actual_rbw_x10*100.0);
-  y = add_quick_menu(buf, x, y,(menuitem_t *)menu_rbw);
+  lcd_printf(x, y, "RBW:\n%.1FHz", actual_rbw_x10*100.0);
+  y = add_quick_menu(y+=YSTEP, (menuitem_t *)menu_rbw);
 
 #ifdef __VBW__
   // VBW
@@ -3381,41 +3350,22 @@ redraw_cal_status:
       vbw = 10;
     }
     ili9341_set_foreground(color);
-    ili9341_drawstring("VBW:", x, y);
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%.1FHz", actual_rbw_x10*100.0 *vbw/10.0);
-    y = add_quick_menu(buf, x, y,(menuitem_t *)menu_vbw);
+    lcd_printf(x, y, "VBW:\n%.1FHz", actual_rbw_x10*100.0 *vbw/10.0);
+    y = add_quick_menu(y+=YSTEP, (menuitem_t *)menu_vbw);
   }
 #endif
-  // Sweep time
-  if (setting.step_delay != 0)
-    color = LCD_BRIGHT_COLOR_GREEN;
-  else
-    color = LCD_FG_COLOR;
-  ili9341_set_foreground(color);
-  buf[0] = ' ';
-  strcpy(&buf[1],"Scan:");
-  if (setting.step_delay_mode == SD_PRECISE)
-    buf[0] = 'P';
-  else if (setting.step_delay_mode == SD_FAST)
-    buf[0] = 'F';
-  else
-    strcpy(&buf[0],"Scan:");
-  ili9341_drawstring(buf, x, y);
-
+  // Sweep time: SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL
+  static const char fscan[]={0, 'P', 'F', 'M'};
   if (dirty) {
     calculate_step_delay();
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
   }
-
+  ili9341_set_foreground(setting.step_delay ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
 #if 0                   // Activate for sweep time debugging
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.sweep_time_us/ONE_SECOND_TIME);
-  ili9341_drawstring(buf, x, y);
+  lcd_printf(x, y, "%cScan:\n%5.3Fs", fscan[setting.step_delay_mode&3], (float)setting.sweep_time_us/ONE_SECOND_TIME);
 #endif
-  y += YSTEP;
-  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
-  y = add_quick_menu(buf, x, y, (menuitem_t *)menu_sweep_speed);
+  lcd_printf(x, y, "%cScan:\n%5.3Fs", fscan[setting.step_delay_mode&3], (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
+  y = add_quick_menu(y+=YSTEP, (menuitem_t *)menu_sweep_speed);
 
 
   #if 0                   // Activate for sweep time debugging
@@ -3423,47 +3373,38 @@ redraw_cal_status:
   update_rbw();             // To ensure the calc_min_sweep time shown takes the latest delay into account
   calculate_step_delay();
   uint32_t t = calc_min_sweep_time_us();
-  plot_printf(buf, BLEN, "%5.3Fs", (float)t/ONE_SECOND_TIME);
-  ili9341_drawstring(buf, x, y);
+  lcd_printf(x, y, "%5.3Fs", (float)t/ONE_SECOND_TIME);
   y += YSTEP;
-  plot_printf(buf, BLEN, "%5.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
-  ili9341_drawstring(buf, x, y);
+  lcd_printf(x, y, "%5.3Fs", (float)setting.additional_step_delay_us/ONE_SECOND_TIME);
   y += YSTEP + YSTEP/2 ;
 #endif
 #ifdef TINYSA4
   if (setting.extra_lna){
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    y = add_quick_menu("LNA:ON", x, y, (menuitem_t *)menu_level);
+    lcd_printf(x, y, "LNA:ON");
+    y = add_quick_menu(y, (menuitem_t *)menu_level);
     y += YSTEP;
   }
 #endif
   // Cal output
   if (setting.refer >= 0) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    ili9341_drawstring("Ref:", x, y);
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%dMHz",reffer_freq[setting.refer]/1000000);
-    buf[6]=0;
-    y = add_quick_menu(buf, x, y,(menuitem_t *)menu_reffer);
+    lcd_printf(x, y, "Ref:\n%dMHz",reffer_freq[setting.refer]/1000000);
+    y = add_quick_menu(y+=YSTEP, (menuitem_t *)menu_reffer);
   }
 
   // Offset
   if (setting.external_gain != 0.0) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    ili9341_drawstring("Amp:", x, y);
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%.1fdB",setting.external_gain);
-    y = add_quick_menu(buf, x, y,(menuitem_t *)KM_EXT_GAIN);
+    lcd_printf(x, y, "Amp:\n%4.1fdB",setting.external_gain);
+    y = add_quick_menu(y+=YSTEP, (menuitem_t *)KM_EXT_GAIN);
   }
 
   // Repeat
   if (setting.repeat != 1) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    ili9341_drawstring("Repeat:", x, y);
-    y += YSTEP;
-    plot_printf(buf, BLEN, "%d",setting.repeat);
-    buf[6]=0;
-    y = add_quick_menu(buf, x, y,(menuitem_t *)KM_REPEAT);
+    lcd_printf(x, y, "Repeat\n x%d", setting.repeat);
+    y = add_quick_menu(y+=YSTEP,( menuitem_t *)KM_REPEAT);
   }
 
   // Trigger
@@ -3477,19 +3418,15 @@ redraw_cal_status:
 
     y += YSTEP;
     if (rounding)
-      plot_printf(buf, BLEN, "%4f", value(setting.trigger_level));
+      lcd_printf(x, y, "%6.3f", value(setting.trigger_level));
     else
-      plot_printf(buf, BLEN, "%.4F", value(setting.trigger_level));
-//    plot_printf(buf, BLEN, "%4f", value(setting.trigger_level)/setting.unit_scale);
-    y = add_quick_menu(buf, x, y,(menuitem_t *)menu_trigger);
+      lcd_printf(x, y, "%6.4F", value(setting.trigger_level));
+//    lcd_printf(x, y, "%4f", value(setting.trigger_level)/setting.unit_scale);
+    y = add_quick_menu(y,(menuitem_t *)menu_trigger);
   }
 
   // Mode
-  if (level_is_calibrated())
-    color = LCD_BRIGHT_COLOR_GREEN;
-  else
-    color = LCD_BRIGHT_COLOR_RED;
-  ili9341_set_foreground(color);
+  ili9341_set_foreground(level_is_calibrated() ? LCD_BRIGHT_COLOR_GREEN : LCD_BRIGHT_COLOR_RED);
   ili9341_drawstring_7x13(MODE_LOW(setting.mode) ? "LOW" : "HIGH", x, y);
 
   // Compact status string
@@ -3551,11 +3488,6 @@ redraw_cal_status:
   if (!setting.waterfall) {               // Do not draw bottom level if in waterfall mode
     // Bottom level
     y = area_height + OFFSETY;
-    if (rounding)
-      plot_printf(buf, BLEN, "%4d", (int)(yMax - setting.scale * NGRIDY));
-    else
-      plot_printf(buf, BLEN, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
-    //  buf[5]=0;
     if (level_is_calibrated())
       if (setting.auto_reflevel)
         color = LCD_FG_COLOR;
@@ -3564,8 +3496,11 @@ redraw_cal_status:
     else
       color = LCD_BRIGHT_COLOR_RED;
     ili9341_set_foreground(color);
-    y = add_quick_menu(buf, x, y,(menuitem_t *)menu_average);
-//    ili9341_drawstring(buf, x, y);
+    if (rounding)
+      lcd_printf(x, y, "%4d", (int)(yMax - setting.scale * NGRIDY));
+    else
+      lcd_printf(x, y, "%+4.3F", ((yMax - setting.scale * NGRIDY)/setting.unit_scale));
+    y = add_quick_menu(y,(menuitem_t *)menu_average);
   }
 }
 
