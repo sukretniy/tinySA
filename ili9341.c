@@ -23,7 +23,7 @@
 #ifdef TINYSA4
 #include "si4432.h"
 #endif
-
+#include "chprintf.h"
 #include "spi.h"
 
 // Pin macros for LCD
@@ -839,6 +839,50 @@ void ili9341_drawstring_10x14(const char *str, int x, int y)
 #else
   ili9341_drawstring_size(str, x, y, 2);
 #endif
+}
+
+typedef struct {
+  const void *vmt;
+  int16_t start_x;
+  int16_t start_y;
+  int16_t x;
+  int16_t y;
+} lcdPrintStream;
+
+static msg_t lcd_put(void *ip, uint8_t ch) {
+  lcdPrintStream *ps = ip;
+  if (ch == '\n') {ps->x = ps->start_x; ps->y+=FONT_STR_HEIGHT; return MSG_OK;}
+  uint16_t w = FONT_GET_WIDTH(ch);
+  ili9341_blitBitmap(ps->x, ps->y, w, FONT_GET_HEIGHT, FONT_GET_DATA(ch));
+  ps->x+= w;
+  return MSG_OK;
+}
+
+#if 0
+static msg_t lcd_put_7x13(void *ip, uint8_t ch) {
+  lcdPrintStream *ps = ip;
+  if (ch == '\n') {ps->x = ps->start_x; ps->y+=FONT_STR_HEIGHT; return MSG_OK;}
+  uint16_t w = FONT_GET_WIDTH(ch);
+  ili9341_blitBitmap(ps->x, ps->y, w, FONT_GET_HEIGHT, FONT_GET_DATA(ch));
+  ps->x+= w;
+  return MSG_OK;
+}
+#endif
+
+// Simple print in buffer function
+int lcd_printf(int16_t x, int16_t y, const char *fmt, ...) {
+  // Init small lcd print stream
+  struct lcd_printStreamVMT {
+    _base_sequential_stream_methods
+  } lcd_vmt = {NULL, NULL, lcd_put, NULL};
+  lcdPrintStream ps = {&lcd_vmt, x, y, x, y};
+  // Performing the print operation using the common code.
+  va_list ap;
+  va_start(ap, fmt);
+  int retval = chvprintf((BaseSequentialStream *)(void *)&ps, fmt, ap);
+  va_end(ap);
+  // Return number of bytes that would have been written.
+  return retval;
 }
 
 void ili9341_drawstringV(const char *str, int x, int y)

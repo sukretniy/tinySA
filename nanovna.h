@@ -961,6 +961,7 @@ void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
 void ili9341_drawstring_7x13(const char *str, int x, int y);
 void ili9341_drawstring_10x14(const char *str, int x, int y);
+int  lcd_printf(int16_t x, int16_t y, const char *fmt, ...);
 void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size);
 void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size);
