@@ -4105,17 +4105,6 @@ static volatile int dummy;
         }
       }        // end of peak finding
     }
-
-#ifdef __NOFFT_DECONV__
-      for (int i = sweep_points - 1 -  d_width; i>0; i--) {
-        actual_t[i+d_width/2] = actual_t[i] +  temp_t[0];
-      }
-      for (int i = 0; i < d_width/2+2; i++) {
-        actual_t[i] = temp_t[0];
-        actual_t[sweep_points - 1 - i] = temp_t[0];
-      }
-#endif
-
   }
 
 
