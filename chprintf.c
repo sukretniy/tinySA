@@ -350,7 +350,8 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
     switch (c) {
     case 'c':
       state&=~PAD_ZERO;
-      *p++ = va_arg(ap, int);
+      c = va_arg(ap, int);
+      if (c) *p++ = c;
       break;
     case 's':
       state&=~PAD_ZERO;
