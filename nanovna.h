@@ -1444,6 +1444,8 @@ enum {
   T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID
 };
 
+//!!! Warning can show not correct results on CH_CFG_ST_FREQUENCY not round by 1000 or > 1000000UL
+#define sa_ST2US(n) ((n)*(1000000UL/(CH_CFG_ST_FREQUENCY)))
 
 extern const uint8_t SI4432_RBW_count;
 extern void SI4432_Listen(int s);

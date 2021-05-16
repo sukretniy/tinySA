@@ -3427,7 +3427,7 @@ again:                                                              // Spur redu
 //        i = 1;              // Everything set so skip LO setting
 #define MODULATION_CYCLES_TEST   10000
         if (in_selftest && modulation_count_iter++ >= 10000) {
-          start_of_sweep_timestamp = (chVTGetSystemTimeX() - start_of_sweep_timestamp)*MODULATION_STEPS*100/MODULATION_CYCLES_TEST;  // uS per cycle
+          start_of_sweep_timestamp = sa_ST2US(chVTGetSystemTimeX() - start_of_sweep_timestamp)*MODULATION_STEPS/MODULATION_CYCLES_TEST;  // uS per cycle
           return 0;
         }
         goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
@@ -3761,7 +3761,7 @@ static bool sweep(bool break_on_operation)
         }
       }
     }
-    systime_t local_sweep_time = (chVTGetSystemTimeX() - start_of_sweep_timestamp)*100 ;
+    systime_t local_sweep_time = sa_ST2US(chVTGetSystemTimeX() - start_of_sweep_timestamp);
     if (setting.actual_sweep_time_us > ONE_SECOND_TIME)
       local_sweep_time = setting.actual_sweep_time_us;
     if (show_bar && (( local_sweep_time > ONE_SECOND_TIME && (i & 0x07) == 0) || ( local_sweep_time > ONE_SECOND_TIME*10)) )
@@ -4002,7 +4002,7 @@ static bool sweep(bool break_on_operation)
   // ---------------------- process measured actual sweep time -----------------
   // For CW mode value calculated in SI4432_Fill
   if (setting.measure_sweep_time_us == 0)
-    setting.measure_sweep_time_us = (chVTGetSystemTimeX() - start_of_sweep_timestamp) * 100;
+    setting.measure_sweep_time_us = sa_ST2US(chVTGetSystemTimeX() - start_of_sweep_timestamp);
 
   // Update actual time on change on status panel
   uint32_t delta = abs((int)(setting.actual_sweep_time_us - setting.measure_sweep_time_us));
@@ -4104,7 +4104,7 @@ static bool sweep(bool break_on_operation)
     } else if (actual_max_level > target_level && setting.attenuate_x2 < 60) {
       delta = actual_max_level - target_level;
     }
-    if ((chVTGetSystemTimeX() - sweep_elapsed > 10000 && ( delta < -5 || delta > +5)) || delta > 10 ) {
+    if ((chVTGetSystemTimeX() - sweep_elapsed > MS2ST(1000) && ( delta < -5 || delta > +5)) || delta > 10 ) {
       setting.attenuate_x2 += delta + delta;
       if (setting.attenuate_x2 < 0)
         setting.attenuate_x2= 0;

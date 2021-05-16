@@ -1276,7 +1276,7 @@ void SI446x_Fill(int s, int start)
 
   } while(1);
   __enable_irq();
-  setting.measure_sweep_time_us = (chVTGetSystemTimeX() - measure)*100;
+  setting.measure_sweep_time_us = sa_ST2US(chVTGetSystemTimeX() - measure);
   buf_index = (start<=0 ? 0 : start); // Is used to skip 1st entry during level triggering
   buf_read = true;
 }
