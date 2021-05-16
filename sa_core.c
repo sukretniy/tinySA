@@ -4714,7 +4714,6 @@ static void test_acquire(int i)
 }
 
 int cell_printf(int16_t x, int16_t y, const char *fmt, ...);
-static char self_test_status_buf[35];
 void cell_draw_test_info(int x0, int y0)
 {
 #define INFO_SPACING    13
@@ -4726,27 +4725,28 @@ void cell_draw_test_info(int x0, int y0)
     i++;
     int xpos = 25 - x0;
     int ypos = 50+i*INFO_SPACING - y0;
-    unsigned int color = LCD_FG_COLOR;
+    pixel_t color;
+    if (i < 0)
+      color = LCD_FG_COLOR;
+    else if (test_status[i] == TS_PASS)
+      color = LCD_BRIGHT_COLOR_GREEN;
+    else if (test_status[i] == TS_CRITICAL)
+      color = LCD_TRACE_3_COLOR;          // Yellow
+    else if (test_status[i] == TS_FAIL)
+      color = LCD_BRIGHT_COLOR_RED;
+    else
+      color = LCD_BRIGHT_COLOR_BLUE;
+    ili9341_set_foreground(color);
     if (i == -1) {
-      plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Self test status:");
+      cell_printf(xpos, ypos, FONT_s"Self test status:");
     } else if (test_case[i].kind == TC_END) {
       if (test_wait)
-        plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Touch screen to continue");
-      else
-        self_test_status_buf[0] = 0;
+        cell_printf(xpos, ypos, FONT_s"Touch screen to continue");
+      continue;
     } else {
-      plot_printf(self_test_status_buf, sizeof self_test_status_buf, FONT_s"Test %d: %s%s", i+1, test_fail_cause[i], test_text[test_status[i]] );
-      if (test_status[i] == TS_PASS)
-        color = LCD_BRIGHT_COLOR_GREEN;
-      else if (test_status[i] == TS_CRITICAL)
-        color = LCD_TRACE_3_COLOR;          // Yellow
-      else if (test_status[i] == TS_FAIL)
-        color = LCD_BRIGHT_COLOR_RED;
-      else
-        color = LCD_BRIGHT_COLOR_BLUE;
+      cell_printf(xpos, ypos, FONT_s"Test %d: %s%s", i+1, test_fail_cause[i], test_text[test_status[i]] );
+      continue;
     }
-    ili9341_set_foreground(color);
-    cell_printf(xpos, ypos, self_test_status_buf);
   } while (test_case[i].kind != TC_END);
 }
 
