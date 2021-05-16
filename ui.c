@@ -1421,6 +1421,7 @@ draw_menu_buttons(const menuitem_t *menu, int only)
       text = button.text;
     }
 
+    int button_height = menu_button_height;
     if (menu[i].type & MT_FORM) {
       int button_width = MENU_FORM_WIDTH;
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen

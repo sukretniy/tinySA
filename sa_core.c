@@ -35,6 +35,12 @@ float *real2 = (float *) &spi_buffer[1024];
 float *imag2 = (float *) &spi_buffer[1536];
 #endif
 
+#ifdef __FFT_VBW__
+void FFT(float *real, float *imag, int length, bool inverse);
+float *real = (float *) &spi_buffer[0];
+float *imag = (float *) &spi_buffer[512];
+#endif
+
 //#define __DEBUG_AGC__         If set the AGC value will be shown in the stored trace and FAST_SWEEP rmmode will be disabled
 #ifdef __DEBUG_AGC__
 #ifdef __FAST_SWEEP__
@@ -3813,6 +3819,36 @@ static bool sweep(bool break_on_operation)
 
 
 #ifdef __VBW__
+#ifdef __FFT_VBW__
+    if (setting.vbw_x10 != 0 && sweep_points == 256) {
+      float m = 150;
+      for (int i=0;i<sweep_points;i++) {
+        if (m > temp_t[i])
+          m = temp_t[i];
+        real[i] = 0;
+        imag[i] = 0;
+        actual_t[i] = -150;
+      }
+      for (int i=0;i<sweep_points;i++) {
+        real[i] = temp_t[i] - m;
+      }
+      FFT(real, imag, 256, false);
+#if 1
+      for (int i = 128 - setting.vbw_x10; i<128+setting.vbw_x10; i++) {
+        real[i] = 0;
+        imag[i] = 0;
+      }
+#endif
+      FFT(real, imag, 256, true);
+
+      for (int i=0;i<sweep_points;i++) {
+        float re = real[i];
+        temp_t[i] = re + m;
+//        actual_t[i] = sqrtf(re*re + im*im) + m;
+      }
+    }
+#else
+
   // ------------------------ do VBW processing ------------------------------
     if (setting.frequency_step) {
       int vbw_count_div2 = actual_rbw_x10 * 100 / setting.frequency_step / (setting.vbw_x10 == 0 ? 10 : setting.vbw_x10);
@@ -3830,6 +3866,7 @@ static bool sweep(bool break_on_operation)
         temp_t[j] = (temp_t[j] + temp_t[j] + prev)/3;
       }
     }
+#endif
 #endif
 
 #ifdef  __FFT_DECONV__
@@ -3857,30 +3894,25 @@ static bool sweep(bool break_on_operation)
       for (int i=0;i<sweep_points;i++) {
         if (m > temp_t[i])
           m = temp_t[i];
-        real[i] = 0;
+        real[i] = 0.000000000001;
         imag[i] = 0;
-        real2[0] = 0;
+        real2[0] = 0.000000000001;
         imag2[i] = 0;
         actual_t[i] = -150;
       }
-      for (int i=0;i<sweep_points-d_width*4;i++) {
-        real[i+d_width*2] = temp_t[i+d_width*2] - m;
+      for (int i=0;i<sweep_points;i++) {
+        if (temp_t[i] > m+25)
+          real[i] = temp_t[i] - m;
       }
-      for (int i=0;i<d_width*2;i++) {
-        real[i] = (temp_t[i] - m) * i/d_width/2;
-      }
-      for (int i=0;i<d_width*2;i++) {
-        real[255-i] = (temp_t[255-i] - m) * i/d_width/2;
-      }
-
       FFT(real, imag, 256, false);
+#if 1
 #if 0
       for (int i = 128 - d_width*2; i<128+d_width*2; i++) {
         real[i] = 0;
         imag[i] = 0;
       }
 #endif
-#if 0
+#if 1
       for (int i=0;i<d_width/2;i++) {
         real2[i] = (stored_t[i+d_start + d_width/2] - d_offset) / d_scale*4;
       }
@@ -3896,9 +3928,9 @@ static bool sweep(bool break_on_operation)
 //        real2[i+256] = (stored_t[i+d_start + d_width/2] - d_offset) / d_scale;
 //      }
 #else
-      real2[0] = 2;
-      real2[1] = 1;
-      real2[255] = 1;
+      real2[0] = 1;
+//      real2[1] = 1;
+//      real2[255] = 1;
 //      real2[255] = -0.5;
 #endif
 #endif
@@ -3912,11 +3944,12 @@ static bool sweep(bool break_on_operation)
         float cd2 = c*c+d*d;
 static volatile int dummy;
         if (cd2 == 0)
-          while(dummy++) ;
+          cd2 = 1e-24;
+//          while(dummy++) ;
         real[i] = (a*c+b*d)/cd2;
         imag[i] = (b*c-a*d)/cd2;
       }
-
+#endif
       FFT(real, imag, 256, true);
 
       for (int i=0;i<sweep_points;i++) {
@@ -4072,18 +4105,6 @@ static volatile int dummy;
         }
       }        // end of peak finding
     }
-
-#ifdef __NOFFT_DECONV__
-
-      for (int i = sweep_points - 1 -  d_width; i>0; i--) {
-        actual_t[i+d_width/2] = actual_t[i] +  temp_t[0];
-      }
-      for (int i = 0; i < d_width/2+2; i++) {
-        actual_t[i] = temp_t[0];
-        actual_t[sweep_points - 1 - i] = temp_t[0];
-      }
-#endif
-
   }
 
 
