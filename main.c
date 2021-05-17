@@ -188,7 +188,7 @@ static THD_FUNCTION(Thread1, arg)
       redraw_request |= REDRAW_CELLS | REDRAW_BATTERY;
 //      STOP_PROFILE;
       if (uistat.marker_tracking) {
-        int i = marker_search_max();
+        int i = marker_search_max(active_marker);
         if (i != -1 && active_marker != MARKER_INVALID) {
           markers[active_marker].index = i;
           markers[active_marker].frequency = frequencies[i];
@@ -1397,7 +1397,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     case 0: markers[t].enabled = TRUE; active_marker = t; return;
     case 1: markers[t].enabled =FALSE; if (active_marker == t) active_marker = MARKER_INVALID; return;
     case 2: markers[t].enabled = TRUE; active_marker = t;
-      int i = marker_search_max();
+      int i = marker_search_max(active_marker);
       if (i == -1) i = 0;
       markers[active_marker].index = i;
       markers[active_marker].frequency = frequencies[i];
@@ -2277,6 +2277,10 @@ int main(void)
     dacPutChannelX(&DACD2, 0, config.dac_value);
   #endif
   dacStart(&DACD1, &dac1cfg1);
+#ifdef TINYSA4
+  disk_initialize(0);
+//  SD_PowerOn();
+#endif
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 

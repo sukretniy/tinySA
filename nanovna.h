@@ -801,11 +801,11 @@ void draw_cal_status(void);
 int distance_to_index(int8_t t, uint16_t idx, int16_t x, int16_t y);
 int search_nearest_index(int x, int y, int t);
 
-int marker_search_max(void);
-int marker_search_left_max(int from);
-int marker_search_right_max(int from);
-int marker_search_left_min(int from);
-int marker_search_right_min(int from);
+int marker_search_max(int m);
+int marker_search_left_max(int m);
+int marker_search_right_max(int m);
+int marker_search_left_min(int m);
+int marker_search_right_min(int m);
 
 // _request flag for update screen
 #define REDRAW_CELLS      (1<<0)

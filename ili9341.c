@@ -582,7 +582,7 @@ void ili9341_bulk(int x, int y, int w, int h)
 #ifdef __REMOTE_DESKTOP__
   if (auto_capture) {
      send_region("bulk", x, y, w, h);
-     send_buffer((uint8_t *)buffer, w * h * sizeof(pixel_t));
+     send_buffer((uint8_t *)spi_buffer, w *h * sizeof(pixel_t));
   }
 #endif
 }
@@ -1459,7 +1459,7 @@ static uint8_t SD_SendCmd(uint8_t cmd, uint32_t arg) {
 }
 
 // Power on SD
-static void SD_PowerOn(void) {
+void SD_PowerOn(void) {
   uint16_t n;
   SD_Select_SPI(SD_INIT_SPI_SPEED);
 
