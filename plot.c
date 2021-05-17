@@ -286,12 +286,13 @@ draw_on_strut(int v0, int d, int color)
 /*
  * calculate log10f(abs(gamma))
  */ 
+#if 0
 float
 index_to_value(const int i)
 {
   return(value(actual_t[i]));
 }
-
+#endif
 float
 marker_to_value(const int i)
 {
@@ -1417,14 +1418,19 @@ static void cell_grid_line_info(int x0, int y0)
 static void trace_print_value_string(     // Only used at one place
     int xpos, int ypos,
     bool bold,
-    int mi,  // Marker number
-    int ri,  // reference Marker number
-    float coeff[POINTS_COUNT])
+    int mi  // Marker number
+    )
 {
   (void) bold;
+  int ref_marker=-1;
+  for (int i = 0; i < MARKER_COUNT; i++) {
+    if (markers[i].enabled && markers[i].mtype & M_REFERENCE && ((markers[i].mtype & M_STORED) == (markers[mi].mtype & M_STORED))) {
+        ref_marker = i;
+    }
+  }
   int mtype = markers[mi].mtype;
   int   idx = markers[mi].index;
-  float v   = value(coeff[idx]);
+  float v   = marker_to_value(mi);
   char buf2[24];
   char *ptr2 = buf2;
   // Prepare marker type string
@@ -1452,14 +1458,14 @@ static void trace_print_value_string(     // Only used at one place
   freq_t freq = markers[mi].frequency;
   int unit_index = setting.unit;
   // Setup delta values
-  if (mtype & M_DELTA) {
+  if (mtype & M_DELTA && ref_marker>=0) {
     *ptr2++ = S_DELTA[0];
     unit_index+= 5;
-    freq_t  ref_freq = markers[ri].frequency;
-    int ridx = markers[ri].index;
+    freq_t  ref_freq = markers[ref_marker].frequency;
+    int ridx = markers[ref_marker].index;
     if (ridx > idx) {freq = ref_freq - freq; idx = ridx - idx; *ptr2++ = '-';}
     else            {freq = freq - ref_freq; idx = idx - ridx; *ptr2++ = '+';}
-    v-= marker_to_value(ri);
+    v-= marker_to_value(ref_marker);
   } else
     freq += (setting.frequency_offset - FREQUENCY_SHIFT);
 
@@ -1485,15 +1491,15 @@ static void trace_print_value_string(     // Only used at one place
 static void cell_draw_marker_info(int x0, int y0)
 {
   int t;
-  int ref_marker = 0;
+//  int ref_marker = 0;
   int j = 0;
 //  int count = 0;
   int active=0;
   for (int i = 0; i < MARKER_COUNT; i++) {
     if (markers[i].enabled) {
-      if (markers[i].mtype & M_REFERENCE) {
-        ref_marker = i;
-      }
+//      if (markers[i].mtype & M_REFERENCE) {
+//        ref_marker = i;
+//      }
       active++;
     }
   }
@@ -1650,7 +1656,7 @@ static void cell_draw_marker_info(int x0, int y0)
       int xpos = 1 + CELLOFFSETX - x0;
       int ypos = 1 + j*(FONT_GET_HEIGHT*2+1) - y0;
 #endif
-      trace_print_value_string(xpos, ypos, active == 1, i, ref_marker, measured[t]);
+      trace_print_value_string(xpos, ypos, active == 1, i);
       j++;
    }
   }
@@ -1784,13 +1790,46 @@ redraw_frame(void)
   draw_cal_status();
 }
 
-int display_test(void)
+int display_test_pattern(pixel_t p)
 {
   // write and read display, return false on fail.
   for (int h = 0; h < LCD_HEIGHT; h++) {
     // write test pattern to LCD
     for (int w = 0; w < LCD_WIDTH; w++)
-      spi_buffer[w] = w*h;
+      spi_buffer[w] = p;
+    ili9341_bulk(0, h, LCD_WIDTH, 1);
+    // Cleanup buffer
+    memset(spi_buffer, 0, LCD_WIDTH * sizeof(pixel_t));
+    // try read data
+    ili9341_read_memory(0, h, LCD_WIDTH, 1, spi_buffer);
+    // Check pattern from data    for (volatile int w = 0; w < LCD_WIDTH; w++)
+    for (int w = 0; w < LCD_WIDTH; w++)
+      if (spi_buffer[w] != p)
+        return false;
+  }
+  return true;
+}
+
+int display_test(void)
+{
+#if 0
+  if (!display_test_pattern(RGB565(0,0,0)))
+      return false;
+  if (!display_test_pattern(RGB565(255,255,255)))
+      return false;
+  if (!display_test_pattern(RGB565(255,0,0)))
+      return false;
+  if (!display_test_pattern(RGB565(0,255,0)))
+      return false;
+  if (!display_test_pattern(RGB565(0,0,255)))
+      return false;
+  if (!display_test_pattern(0xd200))
+      return false;
+#endif
+  for (int h = 0; h < LCD_HEIGHT; h++) {
+    // write test pattern to LCD
+    for (int w = 0; w < LCD_WIDTH; w++)
+      spi_buffer[w] = h*w; //(h<<8)+w;
     ili9341_bulk(0, h, LCD_WIDTH, 1);
     // Cleanup buffer
     memset(spi_buffer, 0, LCD_WIDTH * sizeof(pixel_t));
@@ -1798,7 +1837,7 @@ int display_test(void)
     ili9341_read_memory(0, h, LCD_WIDTH, 1, spi_buffer);
     // Check pattern from data
     for (volatile int w = 0; w < LCD_WIDTH; w++)
-      if (spi_buffer[w] != (pixel_t)(w*h)) // WARNING: Comparison fails without typecast of (w*h) to pixel_t
+      if (spi_buffer[w] != (pixel_t) (h*w) )// ((h<<8)+w)) // WARNING: Comparison fails without typecast of (w*h) to pixel_t
         return false;
   }
   return true;

@@ -2181,6 +2181,11 @@ int index_of_frequency(freq_t f)      // Search which index in the frequency tab
 
 void interpolate_maximum(int m)
 {
+  float *ref_marker_levels;
+  if (markers[m].mtype & M_STORED )
+    ref_marker_levels = stored_t;
+  else
+    ref_marker_levels = actual_t;
   const int idx          = markers[m].index;
   markers[m].frequency = frequencies[idx];
   if (idx > 0 && idx < sweep_points-1)
@@ -2191,9 +2196,9 @@ void interpolate_maximum(int m)
 #else
 #define INTER_TYPE  float
 #endif
-    const INTER_TYPE y1         = actual_t[idx - 1];
-    const INTER_TYPE y2         = actual_t[idx + 0];
-    const INTER_TYPE y3         = actual_t[idx + 1];
+    const INTER_TYPE y1         = ref_marker_levels[idx - 1];
+    const INTER_TYPE y2         = ref_marker_levels[idx + 0];
+    const INTER_TYPE y3         = ref_marker_levels[idx + 1];
     const INTER_TYPE d          = abs(delta_Hz) * 0.5 * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12);
     //const float bin      = (float)idx + d;
     markers[m].frequency   += d;
@@ -2204,6 +2209,12 @@ void interpolate_maximum(int m)
 int
 search_maximum(int m, freq_t center, int span)
 {
+  float *ref_marker_levels;
+  if (markers[m].mtype & M_STORED )
+    ref_marker_levels = stored_t;
+  else
+    ref_marker_levels = actual_t;
+
 #ifdef TINYSA4
   int center_index = index_of_frequency(center);
 #else
@@ -2221,29 +2232,29 @@ search_maximum(int m, freq_t center, int span)
   if (to > setting._sweep_points-1)
     to = setting._sweep_points-1;
   temppeakIndex = 0;
-  temppeakLevel = actual_t[from];
+  temppeakLevel = ref_marker_levels[from];
   max_index[cur_max] = from;
   int downslope = true;
 
   for (int i = from; i <= to; i++) {
     if (downslope) {
-      if (temppeakLevel > actual_t[i]) {    // Follow down
+      if (temppeakLevel > ref_marker_levels[i]) {    // Follow down
         temppeakIndex = i;                  // Latest minimum
-        temppeakLevel = actual_t[i];
-      } else if (temppeakLevel + setting.noise < actual_t[i]) {    // Local minimum found
+        temppeakLevel = ref_marker_levels[i];
+      } else if (temppeakLevel + setting.noise < ref_marker_levels[i]) {    // Local minimum found
         temppeakIndex = i;                          // This is now the latest maximum
-        temppeakLevel = actual_t[i];
+        temppeakLevel = ref_marker_levels[i];
         downslope = false;
       }
     } else {
-      if (temppeakLevel < actual_t[i]) {    // Follow up
+      if (temppeakLevel < ref_marker_levels[i]) {    // Follow up
         temppeakIndex = i;
-        temppeakLevel = actual_t[i];
-      } else if (temppeakLevel - setting.noise > actual_t[i]) {    // Local max found
+        temppeakLevel = ref_marker_levels[i];
+      } else if (temppeakLevel - setting.noise > ref_marker_levels[i]) {    // Local max found
 
         found = true;
         int j = 0;                                            // Insertion index
-        while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
+        while (j<cur_max && ref_marker_levels[max_index[j]] >= temppeakLevel)   // Find where to insert
           j++;
         if (j < MAX_MAX) {                                    // Larger then one of the previous found
           int k = MAX_MAX-1;
@@ -2253,14 +2264,14 @@ search_maximum(int m, freq_t center, int span)
             k--;
           }
           max_index[j] = temppeakIndex;
-          //            maxlevel_index[j] = actual_t[temppeakIndex];      // Only for debugging
+          //            maxlevel_index[j] = ref_marker_levels[temppeakIndex];      // Only for debugging
           if (cur_max < MAX_MAX) {
             cur_max++;
           }
           //STOP_PROFILE
         }
         temppeakIndex = i;            // Latest minimum
-        temppeakLevel = actual_t[i];
+        temppeakLevel = ref_marker_levels[i];
 
         downslope = true;
       }
@@ -2268,9 +2279,9 @@ search_maximum(int m, freq_t center, int span)
   }
   if (false && !found) {
     temppeakIndex = from;
-    temppeakLevel = actual_t[from];
+    temppeakLevel = ref_marker_levels[from];
     for (int i = from+1; i <= to; i++) {
-      if (temppeakLevel<actual_t[i])
+      if (temppeakLevel<ref_marker_levels[i])
         temppeakIndex = i;
     }
     found = true;
@@ -4433,10 +4444,10 @@ static volatile int dummy;
       markers[1].index =  markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4);  // Position phase noise marker at requested offset
       markers[1].frequency = frequencies[markers[1].index];
     } else if (setting.measurement == M_STOP_BAND  && markers[0].index > 10) {      // -------------Stop band measurement
-      markers[1].index =  marker_search_left_min(markers[0].index);
+      markers[1].index =  marker_search_left_min(0);
       if (markers[1].index < 0) markers[1].index = 0;
       markers[1].frequency = frequencies[markers[1].index];
-      markers[2].index =  marker_search_right_min(markers[0].index);
+      markers[2].index =  marker_search_right_min(0);
       if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
       markers[2].frequency = frequencies[markers[2].index];
     } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
@@ -4480,7 +4491,7 @@ static volatile int dummy;
           channel_power_watt[c] = 0.0;
           int sp_div3 = sweep_points/3;
           for (int i =0; i < sp_div3; i++) {
-            channel_power_watt[c] += index_to_value(i + c*sp_div3);
+            channel_power_watt[c] += value(actual_t[i + c*sp_div3]);
           }
           float rbw_cor =  (float)(get_sweep_frequency(ST_SPAN)/3) / ((float)actual_rbw_x10 * 100.0);
           channel_power_watt[c] = channel_power_watt[c] * rbw_cor /(float)sp_div3;
@@ -4562,16 +4573,23 @@ static volatile int dummy;
 //------------------------------- SEARCH ---------------------------------------------
 
 int
-marker_search_left_max(int from)
+marker_search_left_max(int m)
 {
   int i;
+  float *ref_marker_levels;
+  if (markers[m].mtype & M_STORED )
+    ref_marker_levels = stored_t;
+  else
+    ref_marker_levels = actual_t;
+  int from = markers[m].index;
+
   int found = -1;
   if (uistat.current_trace == TRACE_INVALID)
     return -1;
 
-  float value = actual_t[from];
+  float value = ref_marker_levels[from];
   for (i = from - 1; i >= 0; i--) {
-    float new_value = actual_t[i];
+    float new_value = ref_marker_levels[i];
     if (new_value < value) {
       value = new_value;
       found = i;
@@ -4580,7 +4598,7 @@ marker_search_left_max(int from)
   }
 
   for (; i >= 0; i--) {
-    float new_value = actual_t[i];
+    float new_value = ref_marker_levels[i];
     if (new_value > value) {
       value = new_value;
       found = i;
@@ -4591,16 +4609,23 @@ marker_search_left_max(int from)
 }
 
 int
-marker_search_right_max(int from)
+marker_search_right_max(int m)
 {
   int i;
+  float *ref_marker_levels;
+  if (markers[m].mtype & M_STORED )
+    ref_marker_levels = stored_t;
+  else
+    ref_marker_levels = actual_t;
+  int from = markers[m].index;
+
   int found = -1;
 
   if (uistat.current_trace == TRACE_INVALID)
     return -1;
-  float value = actual_t[from];
+  float value = ref_marker_levels[from];
   for (i = from + 1; i < sweep_points; i++) {
-    float new_value = actual_t[i];
+    float new_value = ref_marker_levels[i];
     if (new_value < value) {    // follow down
       value = new_value;
       found = i;
@@ -4608,7 +4633,7 @@ marker_search_right_max(int from)
       break;    //  past the minimum
   }
   for (; i < sweep_points; i++) {
-    float new_value = actual_t[i];
+    float new_value = ref_marker_levels[i];
     if (new_value > value) {    // follow up
       value = new_value;
       found = i;
@@ -4618,14 +4643,19 @@ marker_search_right_max(int from)
   return found;
 }
 
-int marker_search_max(void)
+int marker_search_max(int m)
 {
   int i = 0;
+  float *ref_marker_levels;
+  if (markers[m].mtype & M_STORED )
+    ref_marker_levels = stored_t;
+  else
+    ref_marker_levels = actual_t;
   int found = 0;
 
-  float value = actual_t[i];
+  float value = ref_marker_levels[i];
   for (; i < sweep_points; i++) {
-    int new_value = actual_t[i];
+    int new_value = ref_marker_levels[i];
     if (new_value > value) {    // follow up
       value = new_value;
       found = i;
@@ -4638,16 +4668,22 @@ int marker_search_max(void)
 
 
 int
-marker_search_left_min(int from)
+marker_search_left_min(int m)
 {
   int i;
+  float *ref_marker_levels;
+  if (markers[m].mtype & M_STORED )
+    ref_marker_levels = stored_t;
+  else
+    ref_marker_levels = actual_t;
+  int from = markers[m].index;
   int found = from;
   if (uistat.current_trace == TRACE_INVALID)
     return -1;
 
-  int value_x10 = actual_t[from]*10;
+  int value_x10 = ref_marker_levels[from]*10;
   for (i = from - 1; i >= 0; i--) {
-    int new_value_x10 = actual_t[i]*10;
+    int new_value_x10 = ref_marker_levels[i]*10;
     if (new_value_x10 > value_x10) {
       value_x10 = new_value_x10;        // follow up
 //      found = i;
@@ -4656,7 +4692,7 @@ marker_search_left_min(int from)
   }
 
   for (; i >= 0; i--) {
-    int new_value_x10 = actual_t[i]*10;
+    int new_value_x10 = ref_marker_levels[i]*10;
     if (new_value_x10 < value_x10) {
       value_x10 = new_value_x10;        // follow down
       found = i;
@@ -4667,16 +4703,22 @@ marker_search_left_min(int from)
 }
 
 int
-marker_search_right_min(int from)
+marker_search_right_min(int m)
 {
   int i;
+  float *ref_marker_levels;
+  if (markers[m].mtype & M_STORED )
+    ref_marker_levels = stored_t;
+  else
+    ref_marker_levels = actual_t;
+  int from = markers[m].index;
   int found = from;
 
   if (uistat.current_trace == TRACE_INVALID)
     return -1;
-  int value_x10 = actual_t[from]*10;
+  int value_x10 = ref_marker_levels[from]*10;
   for (i = from + 1; i < sweep_points; i++) {
-    int new_value_x10 = actual_t[i]*10;
+    int new_value_x10 = ref_marker_levels[i]*10;
     if (new_value_x10 > value_x10) {    // follow up
       value_x10 = new_value_x10;
 //      found = i;
@@ -4684,7 +4726,7 @@ marker_search_right_min(int from)
       break;    // past the maximum
   }
   for (; i < sweep_points; i++) {
-    int new_value_x10 = actual_t[i]*10;
+    int new_value_x10 = ref_marker_levels[i]*10;
     if (new_value_x10 < value_x10) {    // follow down
       value_x10 = new_value_x10;
       found = i;

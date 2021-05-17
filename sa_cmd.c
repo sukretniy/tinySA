@@ -431,7 +431,6 @@ VNA_SHELL_FUNCTION(cmd_ultra_start)
   }
 }
 
-
 VNA_SHELL_FUNCTION(cmd_if1)
 {
   if (argc != 1) {

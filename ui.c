@@ -735,19 +735,19 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
   markers[active_marker].mtype &= ~M_TRACKING;
   switch (data) {
   case 0: /* search Left */
-    i = marker_search_left_min(markers[active_marker].index);
+    i = marker_search_left_min(active_marker);
     break;
   case 1: /* search right */
-    i = marker_search_right_min(markers[active_marker].index);
+    i = marker_search_right_min(active_marker);
     break;
   case 2: /* search Left */
-    i = marker_search_left_max(markers[active_marker].index);
+    i = marker_search_left_max(active_marker);
     break;
   case 3: /* search right */
-    i = marker_search_right_max(markers[active_marker].index);
+    i = marker_search_right_max(active_marker);
     break;
   case 4: /* peak search */
-    i = marker_search_max();
+    i = marker_search_max(active_marker);
     break;
   }
   if (i != -1) {
