@@ -1418,9 +1418,8 @@ static void cell_grid_line_info(int x0, int y0)
 static void trace_print_value_string(     // Only used at one place
     int xpos, int ypos,
     bool bold,
-    int mi,  // Marker number
-    int ri,  // reference Marker number
-    float coeff[POINTS_COUNT])
+    int mi  // Marker number
+    )
 {
   (void) bold;
   int ref_marker=-1;
@@ -1492,15 +1491,15 @@ static void trace_print_value_string(     // Only used at one place
 static void cell_draw_marker_info(int x0, int y0)
 {
   int t;
-  int ref_marker = 0;
+//  int ref_marker = 0;
   int j = 0;
 //  int count = 0;
   int active=0;
   for (int i = 0; i < MARKER_COUNT; i++) {
     if (markers[i].enabled) {
-      if (markers[i].mtype & M_REFERENCE) {
-        ref_marker = i;
-      }
+//      if (markers[i].mtype & M_REFERENCE) {
+//        ref_marker = i;
+//      }
       active++;
     }
   }
@@ -1657,7 +1656,7 @@ static void cell_draw_marker_info(int x0, int y0)
       int xpos = 1 + CELLOFFSETX - x0;
       int ypos = 1 + j*(FONT_GET_HEIGHT*2+1) - y0;
 #endif
-      trace_print_value_string(xpos, ypos, active == 1, i, ref_marker, measured[t]);
+      trace_print_value_string(xpos, ypos, active == 1, i);
       j++;
    }
   }
