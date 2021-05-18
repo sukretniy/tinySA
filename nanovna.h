@@ -759,6 +759,7 @@ void enableTracesAtComplete(uint8_t mask);
 typedef struct {
   uint8_t enabled;
   uint8_t mtype;
+  uint8_t ref;
   int16_t index;
   freq_t frequency;
 } marker_t;

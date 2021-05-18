@@ -360,6 +360,7 @@ void reset_settings(int m)
   for (uint8_t i = 0; i< MARKERS_MAX; i++) {
     markers[i].enabled = M_DISABLED;
     markers[i].mtype = M_NORMAL;
+    markers[i].ref = 0;
   }
   markers[0].mtype = M_REFERENCE | M_TRACKING;
   markers[0].enabled = M_ENABLED;

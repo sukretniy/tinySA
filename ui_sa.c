@@ -507,6 +507,7 @@ static const menuitem_t  menu_sweep_points[];
 static const menuitem_t  menu_sweep_points_form[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_limit_modify[];
+static const menuitem_t menu_marker_ref_select[];
 #ifdef __USE_SERIAL_CONSOLE__
 static const menuitem_t  menu_connection[];
 #endif
@@ -1136,8 +1137,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
   menu_move_back(false);
   for (int i = 0; i< MARKERS_MAX; i++) {
     markers[i].enabled = M_DISABLED;
-    markers[i].mtype = M_NORMAL;
+    markers[i].mtype = M_DELTA;
+    markers[i].ref = 0;                 // Default DELTA referring to marker 1
   }
+  markers[0].enabled = M_ENABLED;
+  markers[0].mtype = M_REFERENCE | M_TRACKING;
 
 #ifdef __MEASURE__
   if ((data != M_OFF && setting.measurement != M_OFF) || data == M_OFF )
@@ -1150,8 +1154,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     if (setting.measurement == M_LINEARITY) {
       TRACE_DISABLE(TRACE_STORED_FLAG);
     }
-    markers[0].enabled = M_ENABLED;
-    markers[0].mtype = M_REFERENCE | M_TRACKING;
     set_average(AV_OFF);
   }
   switch(data) {
@@ -1162,9 +1164,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       reset_settings(setting.mode);
       for (int i = 0; i< MARKERS_MAX; i++) {
         markers[i].enabled = M_ENABLED;
-        markers[i].mtype = M_DELTA | M_TRACKING;
       }
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
       kp_help_text = "Frequency of fundamental";
       ui_mode_keypad(KM_CENTER);
       set_sweep_frequency(ST_START, 0);
@@ -1176,9 +1176,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       reset_settings(setting.mode);
       for (int i = 0; i< 4; i++) {
         markers[i].enabled = M_ENABLED;
-        markers[i].mtype = M_DELTA;
       }
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
       markers[1].mtype = M_TRACKING;
       kp_help_text = "Frequency of left signal";
       ui_mode_keypad(KM_CENTER);
@@ -1193,8 +1191,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
     case M_PHASE_NOISE:                             // Phase noise
       reset_settings(setting.mode);
-      markers[0].enabled = M_ENABLED;
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
       markers[1].enabled = M_ENABLED;
       markers[1].mtype = M_DELTA | M_NOISE;
       kp_help_text = "Frequency of signal";
@@ -1209,9 +1205,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     case M_STOP_BAND:                             // STop band measurement
       reset_settings(setting.mode);
       markers[1].enabled = M_ENABLED;
-      markers[1].mtype = M_DELTA;
       markers[2].enabled = M_ENABLED;
-      markers[2].mtype = M_DELTA;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
       kp_help_text = "Width of signal";
@@ -1223,12 +1217,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
     case M_PASS_BAND:                             // pass band measurement
 //      reset_settings(setting.mode);
-      markers[0].enabled = M_ENABLED;
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
       markers[1].enabled = M_ENABLED;
-      markers[1].mtype = M_DELTA;
       markers[2].enabled = M_ENABLED;
-      markers[2].mtype = M_DELTA;
 //      kp_help_text = "Frequency of signal";
 //      ui_mode_keypad(KM_CENTER);
 //      kp_help_text = "Width of signal";
@@ -1246,20 +1236,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 #endif
     case M_AM:                                     // AM
       reset_settings(setting.mode);
-      for (int i = 0; i< 3; i++) {
+      for (int i = 1; i< 3; i++) {
         markers[i].enabled = M_ENABLED;
 #ifdef TINYSA4
         markers[i].mtype = M_DELTA| M_TRACKING;
 #else
-        markers[i].mtype = M_DELTA;// | M_TRACKING;
+//        markers[i].mtype = M_DELTA;// | M_TRACKING;
 #endif
       }
 #ifdef TINYSA4
       freq_t span;
-      markers[0].mtype = M_REFERENCE | M_TRACKING;
 #else
       freq_t center, span;
-      markers[0].mtype = M_REFERENCE;// | M_TRACKING;
+      markers[0].mtype = M_REFERENCE;// | M_TRACKING;           // Not M_TRACKING!!!!
 #endif
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
@@ -1286,11 +1275,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
     case M_FM:                                     // FM
       reset_settings(setting.mode);
-      for (int i = 0; i< 3; i++) {
+      for (int i = 1; i< 3; i++) {
         markers[i].enabled = M_ENABLED;
-        markers[i].mtype = M_DELTA;
       }
-      markers[0].mtype = M_REFERENCE;
+      markers[0].mtype = M_NORMAL;              /// Not M_TRACKING !!!!
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
       set_marker_frequency(0, uistat.value);
@@ -1497,6 +1485,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
         b->icon = BUTTON_ICON_CHECK;
       else if (data==markers[active_marker].mtype)    // This catches the M_NORMAL case
         b->icon = BUTTON_ICON_CHECK;
+      if ((markers[active_marker].mtype & M_DELTA))
+        uistat.text[0] = markers[active_marker].ref+'1';
+      else
+        uistat.text[0] = 0;
+      uistat.text[1] = 0;
+      b->param_1.text = uistat.text;
     }
     return;
   }
@@ -1512,8 +1506,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
       }
       markers[active_marker].mtype &= ~M_DELTA;
     }
-    if (data == M_DELTA)
-        markers[active_marker].mtype &= ~M_REFERENCE;
+    if (data == M_DELTA) {
+      if (!(markers[active_marker].mtype & M_DELTA))      // Not yet set
+        menu_push_submenu(menu_marker_ref_select);
+      markers[active_marker].mtype &= ~M_REFERENCE;
+    }
 #if 1
     markers[active_marker].mtype ^= data;
 #else
@@ -1528,11 +1525,31 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
 //  menu_move_back(false);
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_marker_ref_select_acb)
+{
+  (void)item;
+  if(b){
+//    b->icon = markers[data-1].enabled ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->param_1.i = data;
+    return;
+  }
+  markers[data-1].enabled = true;
+//  interpolate_maximum(data-1);        // possibly not a maximum
+  markers[data-1].frequency = frequencies[markers[data-1].index];
+  markers[active_marker].ref = data-1;
+  redraw_marker(active_marker);
+  menu_move_back(false);
+}
+
 static UI_FUNCTION_CALLBACK(menu_marker_delete_cb)
 {
   (void)item;
   (void)data;
   if (active_marker>=0){
+    for (int i = 0; i<MARKER_COUNT; i++ ) {
+      if (markers[i].enabled && (markers[i].mtype & M_DELTA) && markers[i].ref == active_marker)
+        markers[i].enabled = false;
+    }
     markers[active_marker].enabled = false;
     markmap_all_markers();
     menu_move_back(false);
@@ -2215,8 +2232,8 @@ const menuitem_t menu_marker_search[] = {
 };
 
 const menuitem_t menu_marker_modify[] = {
-  { MT_ADV_CALLBACK, M_REFERENCE,   "REFER",    menu_marker_modify_acb},
-  { MT_ADV_CALLBACK, M_DELTA,       "DELTA",    menu_marker_modify_acb},
+//  { MT_ADV_CALLBACK, M_REFERENCE,   "REFER",    menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_DELTA,       "DELTA %s",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_NOISE,       "NOISE",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING", menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_STORED,      "STORED",   menu_marker_modify_acb},
@@ -2279,6 +2296,27 @@ const menuitem_t menu_marker_select[] = {
 #endif
 #if MARKER_COUNT >= 8
   { MT_ADV_CALLBACK, 8, "MARKER %d", menu_marker_select_acb },
+#endif
+  { MT_CANCEL, 0, S_LARROW" BACK", NULL },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_marker_ref_select[] = {
+  { MT_ADV_CALLBACK, 1, "MARKER %d", menu_marker_ref_select_acb },
+  { MT_ADV_CALLBACK, 2, "MARKER %d", menu_marker_ref_select_acb },
+  { MT_ADV_CALLBACK, 3, "MARKER %d", menu_marker_ref_select_acb },
+  { MT_ADV_CALLBACK, 4, "MARKER %d", menu_marker_ref_select_acb },
+#if MARKER_COUNT >= 5
+  { MT_ADV_CALLBACK, 5, "MARKER %d", menu_marker_ref_select_acb },
+#endif
+#if MARKER_COUNT >= 6
+  { MT_ADV_CALLBACK, 6, "MARKER %d", menu_marker_ref_select_acb },
+#endif
+#if MARKER_COUNT >= 7
+  { MT_ADV_CALLBACK, 7, "MARKER %d", menu_marker_ref_select_acb },
+#endif
+#if MARKER_COUNT >= 8
+  { MT_ADV_CALLBACK, 8, "MARKER %d", menu_marker_ref_select_acb },
 #endif
   { MT_CANCEL, 0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel

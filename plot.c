@@ -90,29 +90,16 @@ static index_y_t trace_index_y[TRACES_MAX][POINTS_COUNT];
 
 uint16_t marker_color(int mtype)
 {
-  if (mtype & M_REFERENCE)
-    return LCD_M_REFERENCE;
+//  if (mtype & M_REFERENCE)
+//    return LCD_M_REFERENCE;
   if (mtype & M_STORED)
     return LCD_M_DELTA;
 //  if (mtype & M_DELTA)
 //    return LCD_BRIGHT_COLOR_RED;
-  if (mtype & M_NOISE)
-    return LCD_M_NOISE;
+//  if (mtype & M_NOISE)
+//    return LCD_M_NOISE;
   return LCD_M_DEFAULT;
 }
-
-//#if 4 != M_TRACKING
-//#error "Wrong marker numbers"
-//#endif
-
-char marker_letter[5] =
-{
- 'R',
- ' ',
- 'D',
- 'N',
- 'T'
-};
 
 #if 1
 #define float2int(v) ((int)(v))
@@ -1423,11 +1410,6 @@ static void trace_print_value_string(     // Only used at one place
 {
   (void) bold;
   int ref_marker=-1;
-  for (int i = 0; i < MARKER_COUNT; i++) {
-    if (markers[i].enabled && markers[i].mtype & M_REFERENCE && ((markers[i].mtype & M_STORED) == (markers[mi].mtype & M_STORED))) {
-        ref_marker = i;
-    }
-  }
   int mtype = markers[mi].mtype;
   int   idx = markers[mi].index;
   float v   = marker_to_value(mi);
@@ -1436,14 +1418,16 @@ static void trace_print_value_string(     // Only used at one place
   // Prepare marker type string
   *ptr2++ = mi == active_marker ? S_SARROW[0] : ' ';
   *ptr2++ = mi+'1';
-  if (mtype & M_REFERENCE)
-    *ptr2++  = 'R';
+//  if (mtype & M_REFERENCE)
+//    *ptr2++  = 'R';
   if (mtype & M_TRACKING)
     *ptr2++  = 'T';
-  if (mtype & M_DELTA)
-    *ptr2++  = 'D';
-  if (mtype & M_NOISE)
-    *ptr2++  = 'N';
+  if (mtype & M_DELTA) {
+    *ptr2++ = S_DELTA[0];
+    *ptr2++  = markers[mi].ref+'1';
+  }
+//  if (mtype & M_NOISE)
+//    *ptr2++  = 'N';
   *ptr2++ =  ' ';
   if (mtype & M_NOISE){
 //  v-= log10f(actual_rbw_x10*100.0) *  10.0;
@@ -1458,8 +1442,9 @@ static void trace_print_value_string(     // Only used at one place
   freq_t freq = markers[mi].frequency;
   int unit_index = setting.unit;
   // Setup delta values
-  if (mtype & M_DELTA && ref_marker>=0) {
-    *ptr2++ = S_DELTA[0];
+  if (mtype & M_DELTA) {
+    ref_marker = markers[mi].ref;
+//    *ptr2++ = S_DELTA[0];
     unit_index+= 5;
     freq_t  ref_freq = markers[ref_marker].frequency;
     int ridx = markers[ref_marker].index;
