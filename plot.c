@@ -1029,7 +1029,7 @@ draw_cell(int m, int n)
   }
 #endif
 #ifdef __CHANNEL_POWER__
-  if (setting.measurement == M_CP) {
+  if (setting.measurement == M_CP||setting.measurement == M_SNR) {
     c = GET_PALTETTE_COLOR(LCD_TRIGGER_COLOR);
     for (x = 0; x < w; x++)
       if (x+x0 == WIDTH/3 || x+x0 == 2*WIDTH/3 ) {
@@ -1489,14 +1489,19 @@ static void cell_draw_marker_info(int x0, int y0)
     }
   }
 #ifdef __CHANNEL_POWER__
-  if (setting.measurement==M_CP) {
+  if (setting.measurement==M_CP || setting.measurement==M_SNR) {
     ili9341_set_foreground(LCD_FG_COLOR);
+    freq_t bw = get_sweep_frequency(ST_SPAN)/3;
     for (int c=0; c<3;c++) {
       int xpos = 10 + (c)*(WIDTH/3) + CELLOFFSETX - x0;
       int ypos = 1 - y0;
-      cell_printf(xpos, ypos, FONT_b"%4.1fdBm", channel_power[c]);
+      cell_printf(xpos, ypos, FONT_b"%4.1fdBm/%3QHz", channel_power[c], bw);
       ypos = 14 - y0;
-      cell_printf(xpos, ypos, FONT_b"%4.1f%%", 100.0 * channel_power_watt[c] /(channel_power_watt[0] + channel_power_watt[1] + channel_power_watt[2]) );
+      if (setting.measurement==M_CP )
+        cell_printf(xpos, ypos, FONT_b"%4.1f%%", 100.0 * channel_power_watt[c] /(channel_power_watt[0] + channel_power_watt[1] + channel_power_watt[2]) );
+      else if (c == 1)
+        cell_printf(xpos, ypos, FONT_b"SNR: %4.1fdB", channel_power[1] - (channel_power[0] + channel_power[2])/2 );
+
     }
     return;
   }

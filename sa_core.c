@@ -357,13 +357,7 @@ void reset_settings(int m)
     break;
   }
   setting.level =  level_max();     // This is the level with above settings.
-  for (uint8_t i = 0; i< MARKERS_MAX; i++) {
-    markers[i].enabled = M_DISABLED;
-    markers[i].mtype = M_NORMAL;
-    markers[i].ref = 0;
-  }
-  markers[0].mtype = M_REFERENCE | M_TRACKING;
-  markers[0].enabled = M_ENABLED;
+  markers_reset();
   setting._active_marker = 0;
   set_external_gain(0.0);  // This also updates the help text!!!!! Must be below level_min and level_max being set
   set_sweep_points(POINTS_COUNT);
@@ -4444,13 +4438,6 @@ static volatile int dummy;
     } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
       markers[1].index =  markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4);  // Position phase noise marker at requested offset
       markers[1].frequency = frequencies[markers[1].index];
-    } else if (setting.measurement == M_STOP_BAND  && markers[0].index > 10) {      // -------------Stop band measurement
-      markers[1].index =  marker_search_left_min(0);
-      if (markers[1].index < 0) markers[1].index = 0;
-      markers[1].frequency = frequencies[markers[1].index];
-      markers[2].index =  marker_search_right_min(0);
-      if (markers[2].index < 0) markers[1].index = setting._sweep_points - 1;
-      markers[2].frequency = frequencies[markers[2].index];
     } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
       int t = 0;
       float v = actual_t[markers[0].index] - (in_selftest ? 6.0 : 3.0);
@@ -4485,7 +4472,8 @@ static volatile int dummy;
 #endif
       }
 #ifdef __CHANNEL_POWER__
-      } else if (setting.measurement == M_CP) {      // ----------------CHANNEL_POWER measurement
+      } else if (setting.measurement == M_CP || setting.measurement == M_SNR) {      // ----------------CHANNEL_POWER measurement
+        freq_t bw = get_sweep_frequency(ST_SPAN)/3;
         int old_unit = setting.unit;
         setting.unit = U_WATT;
         for (int c = 0; c < 3 ;c++) {
@@ -4494,7 +4482,7 @@ static volatile int dummy;
           for (int i =0; i < sp_div3; i++) {
             channel_power_watt[c] += value(actual_t[i + c*sp_div3]);
           }
-          float rbw_cor =  (float)(get_sweep_frequency(ST_SPAN)/3) / ((float)actual_rbw_x10 * 100.0);
+          float rbw_cor =  ((float)bw) / ((float)actual_rbw_x10 * 100.0);
           channel_power_watt[c] = channel_power_watt[c] * rbw_cor /(float)sp_div3;
           channel_power[c] = to_dBm(channel_power_watt[c]);
         }
@@ -4642,6 +4630,18 @@ marker_search_right_max(int m)
       break;
   }
   return found;
+}
+
+void markers_reset()
+{
+  for (uint8_t i = 0; i< MARKERS_MAX; i++) {
+    markers[i].enabled = M_DISABLED;
+    markers[i].mtype = M_DELTA;
+    markers[i].ref = 0;
+  }
+  markers[0].mtype = M_TRACKING;
+  markers[0].enabled = M_ENABLED;
+  active_marker = 0;
 }
 
 int marker_search_max(int m)

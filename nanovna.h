@@ -300,7 +300,7 @@ enum {
 #endif
 
 extern uint8_t sweep_mode;
-extern bool completed;
+extern uint8_t completed;
 extern const char *info_about[];
 
 #ifdef TINYSA4
@@ -737,7 +737,7 @@ enum {
 };
 
 enum {
-  M_DISABLED = false, M_ENABLED = true
+  M_DISABLED = 0, M_ENABLED = 1
 };
 
 
@@ -757,8 +757,8 @@ enum {
 void enableTracesAtComplete(uint8_t mask);
 
 typedef struct {
-  uint8_t enabled;
   uint8_t mtype;
+  uint8_t enabled;
   uint8_t ref;
   int16_t index;
   freq_t frequency;
@@ -807,6 +807,7 @@ int marker_search_left_max(int m);
 int marker_search_right_max(int m);
 int marker_search_left_min(int m);
 int marker_search_right_min(int m);
+void markers_reset(void);
 
 // _request flag for update screen
 #define REDRAW_CELLS      (1<<0)
@@ -1440,7 +1441,7 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_STOP_BAND, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_DECONV
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_DECONV
 };
 
 enum {

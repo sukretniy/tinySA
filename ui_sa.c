@@ -781,13 +781,7 @@ UI_FUNCTION_CALLBACK(menu_autosettings_cb)
   (void)data;
   reset_settings(setting.mode);
 
-  active_marker = 0;
-  for (int i = 1; i<MARKER_COUNT; i++ ) {
-    markers[i].enabled = M_DISABLED;
-  }
-  markers[0].enabled = M_ENABLED;
-  markers[0].mtype = M_REFERENCE | M_TRACKING;
-
+  markers_reset();
   //  set_refer_output(1);
 
   //  SetPowerLevel(100); // Reset
@@ -1135,13 +1129,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     return;
   }
   menu_move_back(false);
-  for (int i = 0; i< MARKERS_MAX; i++) {
-    markers[i].enabled = M_DISABLED;
-    markers[i].mtype = M_DELTA;
-    markers[i].ref = 0;                 // Default DELTA referring to marker 1
-  }
-  markers[0].enabled = M_ENABLED;
-  markers[0].mtype = M_REFERENCE | M_TRACKING;
+  markers_reset();
 
 #ifdef __MEASURE__
   if ((data != M_OFF && setting.measurement != M_OFF) || data == M_OFF )
@@ -1162,8 +1150,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
     case M_IMD:                                     // IMD
       reset_settings(setting.mode);
-      for (int i = 0; i< MARKERS_MAX; i++) {
-        markers[i].enabled = M_ENABLED;
+      for (int i = 1; i< MARKERS_MAX; i++) {
+        markers[i].mtype = M_DELTA;
       }
       kp_help_text = "Frequency of fundamental";
       ui_mode_keypad(KM_CENTER);
@@ -1202,17 +1190,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       set_average(AV_4);
 
       break;
-    case M_STOP_BAND:                             // STop band measurement
+    case M_SNR:                             // STop band measurement
       reset_settings(setting.mode);
-      markers[1].enabled = M_ENABLED;
-      markers[2].enabled = M_ENABLED;
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
-      kp_help_text = "Width of signal";
+      kp_help_text = "Bandwidth";
       ui_mode_keypad(KM_SPAN);
-      set_sweep_frequency(ST_SPAN, uistat.value*4);
-//      set_measurement(M_STOP_BAND);
-//      SetAverage(4);
+      set_sweep_frequency(ST_SPAN, uistat.value*3);
+//      set_measurement(M_SNR);
+      set_average(AV_4);
 
       break;
     case M_PASS_BAND:                             // pass band measurement
@@ -1530,6 +1516,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_ref_select_acb)
   (void)item;
   if(b){
 //    b->icon = markers[data-1].enabled ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->icon = (markers[active_marker].ref == data-1 ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP );
     b->param_1.i = data;
     return;
   }
@@ -2337,6 +2324,7 @@ static const menuitem_t menu_marker[] = {
   { MT_SUBMENU,  0, "MODIFY\nMARKERS",    menu_marker_select},
   { MT_SUBMENU,  0, "MARKER\nOPS", menu_marker_ops},
   { MT_SUBMENU,  0, "SEARCH\nMARKER",     menu_marker_search},
+  { MT_CALLBACK, 0, "RESET\nMARKERS",     menu_markers_reset_cb},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
@@ -2602,7 +2590,7 @@ static const menuitem_t menu_measure[] = {
   { MT_ADV_CALLBACK,            M_IMD,        "HARMONIC",       menu_measure_acb},
   { MT_ADV_CALLBACK,            M_OIP3,       "OIP3",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_PHASE_NOISE,"PHASE\nNOISE",   menu_measure_acb},
-  { MT_ADV_CALLBACK,            M_STOP_BAND,  "SNR",            menu_measure_acb},
+  { MT_ADV_CALLBACK,            M_SNR,        "SNR",            menu_measure_acb},
   { MT_ADV_CALLBACK,            M_PASS_BAND,  "-3dB\nWIDTH",     menu_measure_acb},
   { MT_SUBMENU,  0,             S_RARROW" MORE",                menu_measure2},
   { MT_CANCEL, 0,               S_LARROW" BACK", NULL },
@@ -3346,7 +3334,7 @@ redraw_cal_status:
 
 //  if (setting.mode == M_LOW) {
     // Attenuation
-    ili9341_set_foreground(setting.auto_attenuation ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
+    ili9341_set_foreground(setting.auto_attenuation ? LCD_FG_COLOR : LCD_BRIGHT_COLOR_GREEN);
     lcd_printf(x, y, "Atten:\n%4.2FdB", get_attenuation());
     y = add_quick_menu(y+= YSTEP, (menuitem_t *)menu_atten);
 //  }
@@ -3440,7 +3428,7 @@ redraw_cal_status:
   // Offset
   if (setting.external_gain != 0.0) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    lcd_printf(x, y, "Amp:\n%4.1fdB",setting.external_gain);
+    lcd_printf(x, y, "Gain:\n%4.1fdB",setting.external_gain);
     y = add_quick_menu(y+=YSTEP, (menuitem_t *)KM_EXT_GAIN);
   }
 
