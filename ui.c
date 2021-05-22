@@ -726,6 +726,12 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
   //redraw_all();
 }
 
+static UI_FUNCTION_CALLBACK(menu_markers_reset_cb)
+{
+  (void)item;
+  markers_reset();
+}
+
 static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
 {
   (void)item;

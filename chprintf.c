@@ -88,12 +88,12 @@ static char *long_to_string_with_divisor(char *p,
 #define FREQ_PREFIX_SPACE   4
 
 static char *
-ulong_freq(char *p, ulong_t freq, uint32_t precision)
+ulong_freq(char *p, ulong_t freq, uint32_t width, uint32_t precision)
 {
   uint8_t flag = FREQ_PSET;
   flag|= precision == 0 ? FREQ_PREFIX_SPACE : FREQ_NO_SPACE;
 
-  if (precision == 0 || precision > MAX_FREQ_PRESCISION)
+  if (/* precision == 0 || */ precision > MAX_FREQ_PRESCISION)
     precision = MAX_FREQ_PRESCISION;
   char *q = p + MAX_FREQ_PRESCISION;
   char *b = q;
@@ -136,6 +136,8 @@ ulong_freq(char *p, ulong_t freq, uint32_t precision)
 
   // Get string size
   uint32_t i = (b - q);
+  if (width > 0 && i>width)
+    i=width;
   // copy string
   // Replace first ' ' by '.', remove ' ' if size too big
   do {
@@ -152,6 +154,8 @@ ulong_freq(char *p, ulong_t freq, uint32_t precision)
     if (!(flag & FREQ_PSET) && precision-- == 0)
       break;
   } while (--i);
+  if (p[-1] == '.')     // No '.' at end
+    p--;
   // Put pref (amd space before it if need)
   if (flag & FREQ_PREFIX_SPACE && s != ' ') 
     *p++ = ' ';
@@ -393,7 +397,9 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
       else
 #endif
         value.ux = va_arg(ap, uint32_t);
-      p=ulong_freq(p, value.ux, precision);
+      if (state&DEFAULT_PRESCISION)
+        precision = MAX_FREQ_PRESCISION;
+      p=ulong_freq(p, value.ux, width, precision);
       break;
 #if CHPRINTF_USE_FLOAT
     case 'F':
