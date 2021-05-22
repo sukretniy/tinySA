@@ -2478,7 +2478,7 @@ static const menuitem_t menu_settings2[] =
   { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
 #endif
 #ifdef TINYSA4
-  { MT_KEYPAD,   KM_30MHZ,      "ACTUAL\n30MHz", "Enter actual 30MHz frequency"},
+  { MT_KEYPAD,   KM_30MHZ,      "ACTUAL\n30MHz*100", "Enter actual 30MHz * 100"},
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
