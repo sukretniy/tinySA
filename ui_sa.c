@@ -430,6 +430,7 @@ enum {
 #endif
   KM_MARKER_TIME,
   // #35
+  KM_VAR,
   KM_NONE // always at enum end
 };
 
@@ -437,56 +438,60 @@ static const struct {
   const keypads_t *keypad_type;
   char * name;
 } keypads_mode_tbl[KM_NONE] = {
-  {keypads_freq        , "START"}, // start
-  {keypads_freq        , "STOP"}, // stop
-  {keypads_freq        , "CENTER"}, // center
-  {keypads_freq        , "SPAN"}, // span
-  {keypads_freq        , "FREQ"}, // cw freq
-  {keypads_plusmin_unit, "REF\nLEVEL"}, // reflevel #5
-  {keypads_pos_unit    , "SCALE"}, // scale
-  {keypads_positive    , "ATTENUATE"}, // attenuation
-  {keypads_plusmin_unit, "ACTUAL\nPOWER"}, // actual power
-  {keypads_freq        , "IF"}, // IF
-  {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay #10
-  {keypads_plusmin     , "OUTPUT\nLEVEL"},    // KM_LOWOUTLEVEL
-  {keypads_positive    , "DECAY"},    // KM_DECAY
-  {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
-  {keypads_freq        , "FREQ"},    // KM_30MHz | KM_10MHz
-  {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA #15
-  {keypads_plusmin     , "EXT\nGAIN"},    // KM_EXT_GAIN
-  {keypads_plusmin_unit, "TRIGGER\nLEVEL"},    // KM_TRIGGER
-  {keypads_plusmin     , "LEVEL\nSWEEP"},    // KM_LEVELSWEEP
-  {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
-  {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY #20
-  {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
-  {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
-  {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
-  {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
-  {keypads_plusmin     , "OUTPUT\nLEVEL"},    // KM_HIGHOUTLEVEL #25
+[KM_START]        = {keypads_freq        , "START"}, // start
+[KM_STOP]         = {keypads_freq        , "STOP"}, // stop
+[KM_CENTER]       = {keypads_freq        , "CENTER"}, // center
+[KM_SPAN]         = {keypads_freq        , "SPAN"}, // span
+[KM_CW]           = {keypads_freq        , "FREQ"}, // cw freq
+[KM_REFLEVEL]     = {keypads_plusmin_unit, "REF\nLEVEL"}, // reflevel #5
+[KM_SCALE]        = {keypads_pos_unit    , "SCALE"}, // scale
+[KM_ATTENUATION]  = {keypads_positive    , "ATTENUATE"}, // attenuation
+[KM_ACTUALPOWER]  = {keypads_plusmin_unit, "ACTUAL\nPOWER"}, // actual power
+[KM_IF]           = {keypads_freq        , "IF"}, // IF
+[KM_SAMPLETIME]   = {keypads_positive    , "SAMPLE\nDELAY"}, // sample delay #10
+[KM_LOWOUTLEVEL]  = {keypads_plusmin     , "OUTPUT\nLEVEL"},    // KM_LOWOUTLEVEL
+[KM_DECAY]        = {keypads_positive    , "DECAY"},    // KM_DECAY
+[KM_NOISE]        = {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
 #ifdef TINYSA4
-  {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
-  {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
-  {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
-  {keypads_freq        , "IF2"}, // KM_IF2
-  {keypads_positive    , "R"}, // KM_R    #30
-  {keypads_positive    , "MODULO"}, // KM_MOD
-  {keypads_positive    , "CP"}, // KM_CP
+[KM_30MHZ]        = {keypads_freq        , "FREQ"},    // KM_30MHz
+#else
+[KM_10MHZ]        = {keypads_freq        , "FREQ"},    // KM_10MHz
 #endif
-  {keypads_positive    , "ATTACK"},    // KM_ATTACK
+[KM_REPEAT]       = {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA #15
+[KM_EXT_GAIN]     = {keypads_plusmin     , "EXT\nGAIN"},    // KM_EXT_GAIN
+[KM_TRIGGER]      = {keypads_plusmin_unit, "TRIGGER\nLEVEL"},    // KM_TRIGGER
+[KM_LEVELSWEEP]   = {keypads_plusmin     , "LEVEL\nSWEEP"},    // KM_LEVELSWEEP
+[KM_SWEEP_TIME]   = {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
+[KM_OFFSET_DELAY] = {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY #20
+[KM_FAST_SPEEDUP] = {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
+[KM_GRIDLINES]    = {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
+[KM_MARKER]       = {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
+[KM_MODULATION]   = {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
+[KM_HIGHOUTLEVEL] = {keypads_plusmin     , "OUTPUT\nLEVEL"},    // KM_HIGHOUTLEVEL #25
 #ifdef TINYSA4
-  {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
+[KM_COR_AM]       = {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
+[KM_COR_WFM]      = {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
+[KM_COR_NFM]      = {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
+[KM_IF2]          = {keypads_freq        , "IF2"}, // KM_IF2
+[KM_R]            = {keypads_positive    , "R"}, // KM_R    #30
+[KM_MOD]          = {keypads_positive    , "MODULO"}, // KM_MOD
+[KM_CP]           = {keypads_positive    , "CP"}, // KM_CP
 #endif
-  {keypads_plusmin     , "LEVEL"}, // KM_LEVEL
+[KM_ATTACK]       = {keypads_positive    , "ATTACK"},    // KM_ATTACK
+#ifdef TINYSA4
+[KM_LPF]          = {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
+#endif
+[KM_LEVEL]        = {keypads_plusmin     , "LEVEL"}, // KM_LEVEL
 #ifdef __LIMITS__
-  {keypads_freq         , "END\nFREQ"},  // KM_LIMIT_FREQ
-  {keypads_plusmin_unit , "LEVEL"},  // KM_LIMIT_LEVEL
+[KM_LIMIT_FREQ]   = {keypads_freq         , "END\nFREQ"},  // KM_LIMIT_FREQ
+[KM_LIMIT_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_LIMIT_LEVEL
 #endif
-  {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
+[KM_MARKER_TIME]  = {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
+[KM_VAR]          = {keypads_freq        , "JOG\nSTEP"}, // jog step
 };
+
 #if 0 // Not used
-
 enum { SL_GENLOW_FREQ, SL_GENHIGH_FREQ, SL_GENLOW_LEVEL, SL_GENHIGH_LEVEL };
-
 ui_slider_t ui_sliders [] =
 {
  { KM_CENTER,       true, 0, 1000000,   0,          350000000,  M_GENLOW},
@@ -2752,6 +2757,7 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_CENTER,      "CENTER",      NULL},
   { MT_KEYPAD,  KM_SPAN,        "SPAN",        NULL},
   { MT_KEYPAD,  KM_CW,          "ZERO SPAN",   NULL},
+  { MT_KEYPAD,  KM_VAR,         "JOG STEP\n%s","0 - AUTO"},
   { MT_SUBMENU,0,               "RBW",         menu_rbw},
   { MT_ADV_CALLBACK,0,          "SHIFT\nFREQ", menu_shift_acb},
   { MT_CANCEL,  0,              S_LARROW" BACK", NULL },
@@ -2827,9 +2833,9 @@ static void menu_item_modify_attribute(
   }
 }
 
-static void fetch_numeric_target(void)
+static void fetch_numeric_target(uint8_t mode)
 {
-  switch (keypad_mode) {
+  switch (mode) {
   case KM_START:
     uistat.freq_value = get_sweep_frequency(ST_START) + (setting.frequency_offset - FREQUENCY_SHIFT);
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
@@ -2984,6 +2990,10 @@ static void fetch_numeric_target(void)
       plot_printf(uistat.text, sizeof uistat.text, "%7.0fHz", uistat.value);
     }
     break;
+  case KM_VAR:
+    uistat.freq_value = setting.frequency_var;
+    plot_printf(uistat.text, sizeof uistat.text, setting.frequency_var ? "%QHz" : " AUTO", setting.frequency_var);
+    break;
   }
   
   {
@@ -2993,7 +3003,6 @@ static void fetch_numeric_target(void)
       x /= 10;
     uistat.digit = n;
   }
-//  uistat.previous_value = uistat.value;
 }
 
 static void
@@ -3156,6 +3165,9 @@ set_numeric_value(void)
     dirty = true;
     break;
 #endif
+  case KM_VAR:
+    setting.frequency_var = uistat.freq_value;
+    break;
   }
 }
 
