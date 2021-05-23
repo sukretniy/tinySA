@@ -28,7 +28,6 @@
 #pragma GCC optimize ("Os")
 
 uistat_t uistat = {
- digit: 6,
  current_trace: 0,
  lever_mode: LM_MARKER,
  marker_delta: FALSE,

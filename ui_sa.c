@@ -2995,14 +2995,6 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, setting.frequency_var ? "%QHz" : " AUTO", setting.frequency_var);
     break;
   }
-  
-  {
-    freq_t x = uistat.value;
-    int n = 0;
-    for (; x >= 10 && n < 9; n++)
-      x /= 10;
-    uistat.digit = n;
-  }
 }
 
 static void
