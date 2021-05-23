@@ -1322,6 +1322,17 @@ void rtc_set_time(uint32_t dr, uint32_t tr);
 #include "../FatFs/ff.h"
 #include "../FatFs/diskio.h"
 bool SD_Inserted(void);
+// Buffers for SD card use spi_buffer
+#if SPI_BUFFER_SIZE < 2048
+#error "SPI_BUFFER_SIZE for SD card support need size >= 2048"
+#else
+// Fat file system work area (at the end of spi_buffer)
+#define fs_volume    (FATFS *)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS))
+// FatFS file object (at the end of spi_buffer)
+#define fs_file      (   FIL*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL))
+// Filename object (at the end of spi_buffer)
+#define fs_filename  (  char*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL) - FF_LFN_BUF - 4)
+#endif
 void testLog(void);        // debug log
 #endif
 

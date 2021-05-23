@@ -71,19 +71,6 @@ volatile uint8_t operation_requested = OP_NONE;
 
 int8_t previous_marker = MARKER_INVALID;
 
-#ifdef __USE_SD_CARD__
-#if SPI_BUFFER_SIZE < 2048
-#error "SPI_BUFFER_SIZE for SD card support need size >= 2048"
-#else
-// Fat file system work area (at the end of spi_buffer)
-static FATFS *fs_volume   = (FATFS *)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS));
-// FatFS file object (at the end of spi_buffer)
-static FIL   *fs_file     = (   FIL*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL));
-// Filename object (at the end of spi_buffer)
-static char  *fs_filename = (  char*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL) - FF_LFN_BUF - 4);
-#endif
-#endif
-
 enum {
   UI_NORMAL, UI_MENU, UI_KEYPAD
 };
