@@ -763,10 +763,6 @@ void send_buffer(uint8_t * buf, int s)
 #ifndef __USE_SD_CARD__
 #error "Need enable SD card support __USE_SD_CARD__ in nanovna.h, for use ENABLE_SD_CARD_CMD"
 #endif
-// Fat file system work area (at the end of spi_buffer)
-static FATFS *fs_volume   = (FATFS *)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS));
-// FatFS file object (at the end of spi_buffer)
-static FIL   *fs_file     = (   FIL*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL));
 
 static FRESULT cmd_sd_card_mount(void){
   const FRESULT res = f_mount(fs_volume, "", 1);
