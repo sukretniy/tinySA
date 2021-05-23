@@ -148,26 +148,29 @@
 typedef uint32_t freq_t;
  typedef int32_t long_t;
  extern bool has_esd;
-#define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
-#define CORRECTION_LOW  0
-#define CORRECTION_HIGH 1
-#define CORRECTION_SIZE 2
+ #define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
+ #define CORRECTION_LOW  0
+ #define CORRECTION_HIGH 1
+ #define CORRECTION_SIZE 2
 #endif
 #ifdef TINYSA4
  typedef uint64_t freq_t;
  typedef int64_t long_t;
-#define CORRECTION_POINTS  20       // Frequency dependent level correction table entries
-#define CORRECTION_LOW      0
-#define CORRECTION_LNA      1
-#define CORRECTION_LOW_OUT  2
-#define CORRECTION_HIGH     3
-#define CORRECTION_SIZE     4
- #endif
-
-
+ #define CORRECTION_POINTS  20       // Frequency dependent level correction table entries
+ #define CORRECTION_LOW      0
+ #define CORRECTION_LNA      1
+ #define CORRECTION_LOW_OUT  2
+ #define CORRECTION_HIGH     3
+ #define CORRECTION_SIZE     4
+#endif
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
 #endif
+
+extern freq_t minFreq;
+extern freq_t maxFreq;
+#define START_MIN minFreq
+#define STOP_MAX maxFreq
 
 extern const char TINYSA_VERSION[];
 
@@ -178,63 +181,6 @@ extern int16_t mouse_y;
 extern uint8_t mouse_down;
 #endif
 
-#ifdef __VNA__
-// Minimum frequency set
-#define START_MIN                50000
-// Maximum frequency set
-#define STOP_MAX                 2700000000U
-// Frequency offset (sin_cos table in dsp.c generated for this offset, if change need create new table)
-#define FREQUENCY_OFFSET         5000
-// Speed of light const
-#define SPEED_OF_LIGHT           299792458
-// pi const
-#define VNA_PI                   3.14159265358979323846
-
-#define POINTS_COUNT 101
-extern float measured[2][POINTS_COUNT][2];
-
-#define CAL_LOAD 0
-#define CAL_OPEN 1
-#define CAL_SHORT 2
-#define CAL_THRU 3
-#define CAL_ISOLN 4
-
-#define CALSTAT_LOAD (1<<0)
-#define CALSTAT_OPEN (1<<1)
-#define CALSTAT_SHORT (1<<2)
-#define CALSTAT_THRU (1<<3)
-#define CALSTAT_ISOLN (1<<4)
-#define CALSTAT_ES (1<<5)
-#define CALSTAT_ER (1<<6)
-#define CALSTAT_ET (1<<7)
-#define CALSTAT_ED CALSTAT_LOAD
-#define CALSTAT_EX CALSTAT_ISOLN
-#define CALSTAT_APPLY (1<<8)
-#define CALSTAT_INTERPOLATED (1<<9)
-
-#define ETERM_ED 0 /* error term directivity */
-#define ETERM_ES 1 /* error term source match */
-#define ETERM_ER 2 /* error term refrection tracking */
-#define ETERM_ET 3 /* error term transmission tracking */
-#define ETERM_EX 4 /* error term isolation */
-
-#define DOMAIN_MODE (1<<0)
-#define DOMAIN_FREQ (0<<0)
-#define DOMAIN_TIME (1<<0)
-#define TD_FUNC (0b11<<1)
-#define TD_FUNC_BANDPASS (0b00<<1)
-#define TD_FUNC_LOWPASS_IMPULSE (0b01<<1)
-#define TD_FUNC_LOWPASS_STEP    (0b10<<1)
-#define TD_WINDOW (0b11<<3)
-#define TD_WINDOW_NORMAL (0b00<<3)
-#define TD_WINDOW_MINIMUM (0b01<<3)
-#define TD_WINDOW_MAXIMUM (0b10<<3)
-
-#define FFT_SIZE 256
-
-void cal_collect(int type);
-void cal_done(void);
-#endif
 #define MAX_FREQ_TYPE 5
 enum stimulus_type {
   ST_START=0, ST_STOP, ST_CENTER, ST_SPAN, ST_CW, ST_DUMMY      // Last is used in marker ops
@@ -1053,6 +999,7 @@ typedef struct setting
   freq_t frequency_step;
   freq_t frequency0;
   freq_t frequency1;
+  freq_t frequency_var;
   freq_t frequency_IF;
   freq_t frequency_offset;
 #define FREQUENCY_SHIFT 100000000   // 100MHz upconversion maximum

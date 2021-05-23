@@ -21,7 +21,6 @@
 #include "hal.h"
 #include "chprintf.h"
 #include "nanovna.h"
-//#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
@@ -89,12 +88,6 @@ static char  *fs_filename = (  char*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE]))
 enum {
   UI_NORMAL, UI_MENU, UI_KEYPAD
 };
-
-#ifdef __VNA__
-enum {
-  KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, KM_SCALE, KM_REFPOS, KM_EDELAY, KM_VELOCITY_FACTOR, KM_SCALEDELAY
-};
-#endif
 
 #define NUMINPUT_LEN 12
 static uint8_t ui_mode = UI_NORMAL;
@@ -729,6 +722,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
 static UI_FUNCTION_CALLBACK(menu_markers_reset_cb)
 {
   (void)item;
+  (void)data;
   markers_reset();
 }
 
@@ -953,114 +947,6 @@ menu_invoke(int item)
     draw_menu();
 }
 
-#ifdef __VNA__
-// Key names
-#define KP_0          0
-#define KP_1          1
-#define KP_2          2
-#define KP_3          3
-#define KP_4          4
-#define KP_5          5
-#define KP_6          6
-#define KP_7          7
-#define KP_8          8
-#define KP_9          9
-#define KP_PERIOD    10
-#define KP_MINUS     11
-#define KP_X1        12
-#define KP_K         13
-#define KP_M         14
-#define KP_G         15
-#define KP_BS        16
-#define KP_INF       17
-#define KP_DB        18
-#define KP_PLUSMINUS 19
-#define KP_KEYPAD    20
-#define KP_N         21
-#define KP_P         22
-
-typedef struct {
-  uint8_t x:4;
-  uint8_t y:4;
-  int8_t  c;
-} keypads_t;
-
-static const keypads_t *keypads;
-
-static const keypads_t keypads_freq[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, KP_0 },
-  { 0, 2, KP_1 },
-  { 1, 2, KP_2 },
-  { 2, 2, KP_3 },
-  { 0, 1, KP_4 },
-  { 1, 1, KP_5 },
-  { 2, 1, KP_6 },
-  { 0, 0, KP_7 },
-  { 1, 0, KP_8 },
-  { 2, 0, KP_9 },
-  { 3, 0, KP_G },
-  { 3, 1, KP_M },
-  { 3, 2, KP_K },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
-};
-
-static const keypads_t keypads_scale[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, KP_0 },
-  { 0, 2, KP_1 },
-  { 1, 2, KP_2 },
-  { 2, 2, KP_3 },
-  { 0, 1, KP_4 },
-  { 1, 1, KP_5 },
-  { 2, 1, KP_6 },
-  { 0, 0, KP_7 },
-  { 1, 0, KP_8 },
-  { 2, 0, KP_9 },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
-};
-
-static const keypads_t keypads_time[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, KP_0 },
-  { 0, 2, KP_1 },
-  { 1, 2, KP_2 },
-  { 2, 2, KP_3 },
-  { 0, 1, KP_4 },
-  { 1, 1, KP_5 },
-  { 2, 1, KP_6 },
-  { 0, 0, KP_7 },
-  { 1, 0, KP_8 },
-  { 2, 0, KP_9 },
-  { 3, 1, KP_N },
-  { 3, 2, KP_P },
-  { 3, 3, KP_MINUS },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
-};
-
-static const keypads_t * const keypads_mode_tbl[] = {
-  keypads_freq, // start
-  keypads_freq, // stop
-  keypads_freq, // center
-  keypads_freq, // span
-  keypads_freq, // cw freq
-  keypads_scale, // scale
-  keypads_scale, // refpos
-  keypads_time, // electrical delay
-  keypads_scale, // velocity factor
-  keypads_time // scale of delay
-};
-
-static const char * const keypad_mode_label[] = {
-  "START", "STOP", "CENTER", "SPAN", "CW FREQ", "SCALE", "REFPOS", "EDELAY", "VELOCITY%", "DELAY"
-};
-#endif
-
 static const char * const keypad_scale_text[] = {"0", "1", "2", "5", "10", "20" , "50", "100", "200", "500"};
 //static const int  keypad_scale_value[] = { 1, 2, 5, 10, 20 , 50, 100, 200, 500};
 
@@ -1186,83 +1072,6 @@ draw_numeric_area_frame(void)
   //ili9341_drawfont(KP_KEYPAD, 300, 216);
   draw_numeric_input("");
 }
-
-#ifdef __VNA__
-static void
-menu_item_modify_attribute(const menuitem_t *menu, int item,
-                           uint16_t *fg, uint16_t *bg)
-{
-  if (menu == menu_trace && item < TRACES_MAX) {
-    if (trace[item].enabled)
-      *bg = config.trace_color[item];
-  } else if (menu == menu_marker_sel) {
-    if (item < 4) {
-      if (markers[item].enabled) {
-        *bg = LCD_MENU_TEXT_COLOR;
-        *fg = config.menu_normal_color;
-      }
-    } else if (item == 5) {
-      if (uistat.marker_delta) {
-        *bg = LCD_MENU_TEXT_COLOR;
-        *fg = config.menu_normal_color;
-      }
-    }
-  } else if (menu == menu_marker_search) {
-    if (item == 4 && uistat.marker_tracking) {
-      *bg = LCD_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
-    }
-  } else if (menu == menu_marker_smith) {
-
-    if (marker_smith_format == item) {
-      *bg = LCD_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
-    }
-  } else if (menu == menu_calop) {
-    if ((item == 0 && (cal_status & CALSTAT_OPEN))
-        || (item == 1 && (cal_status & CALSTAT_SHORT))
-        || (item == 2 && (cal_status & CALSTAT_LOAD))
-        || (item == 3 && (cal_status & CALSTAT_ISOLN))
-        || (item == 4 && (cal_status & CALSTAT_THRU))) {
-      domain_mode = (domain_mode & ~DOMAIN_MODE) | DOMAIN_FREQ;
-      *bg = LCD_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
-    }
-  } else if (menu == menu_stimulus) {
-    if (item == 5 /* PAUSE */ && !(sweep_mode&SWEEP_ENABLE)) {
-      *bg = LCD_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
-    }
-  } else if (menu == menu_cal) {
-    if (item == 3 /* CORRECTION */ && (cal_status & CALSTAT_APPLY)) {
-      *bg = LCD_MENU_TEXT_COLOR;
-      *fg = config.menu_normal_color;
-    }
-  } else if (menu == menu_bandwidth) {
-      if (item == bandwidth) {
-        *bg = 0x0000;
-        *fg = 0xffff;
-      }
-  } else if (menu == menu_transform) {
-      if ((item == 0 && (domain_mode & DOMAIN_MODE) == DOMAIN_TIME)
-       || (item == 1 && (domain_mode & TD_FUNC) == TD_FUNC_LOWPASS_IMPULSE)
-       || (item == 2 && (domain_mode & TD_FUNC) == TD_FUNC_LOWPASS_STEP)
-       || (item == 3 && (domain_mode & TD_FUNC) == TD_FUNC_BANDPASS)
-       ) {
-        *bg = LCD_MENU_TEXT_COLOR;
-        *fg = config.menu_normal_color;
-      }
-  } else if (menu == menu_transform_window) {
-      if ((item == 0 && (domain_mode & TD_WINDOW) == TD_WINDOW_MINIMUM)
-       || (item == 1 && (domain_mode & TD_WINDOW) == TD_WINDOW_NORMAL)
-       || (item == 2 && (domain_mode & TD_WINDOW) == TD_WINDOW_MAXIMUM)
-       ) {
-        *bg = LCD_MENU_TEXT_COLOR;
-        *fg = config.menu_normal_color;
-      }
-  }
-}
-#endif
 
 #ifndef __VNA__
 extern void menu_item_modify_attribute(
@@ -1418,9 +1227,8 @@ draw_menu_buttons(const menuitem_t *menu, int only)
     else
       text = menu[i].label;
     // Only keypad retrieves value
-    if (menu[i].type & MT_FORM && MT_MASK(menu[i].type) == MT_KEYPAD) {
-      keypad_mode = menu[i].data;
-      fetch_numeric_target();
+    if (MT_MASK(menu[i].type) == MT_KEYPAD) {
+      fetch_numeric_target(menu[i].data);
       plot_printf(button.text, sizeof button.text, menu[i].label, uistat.text);
       text = button.text;
     }
@@ -1556,8 +1364,7 @@ menu_select_touch(int i, int pos)
       if (dt > BUTTON_DOWN_LONG_TICKS) {
         touch_position(&touch_x, &touch_y);
         if (touch_x !=  prev_touch_x /* - 1 || prev_touch_x + 1 < touch_x */ ) {
-        keypad_mode = keypad;
-        fetch_numeric_target();
+        fetch_numeric_target(keypad);
         int new_slider = touch_x - LCD_WIDTH/2;   // Can have negative outcome
         if (new_slider < - (MENU_FORM_WIDTH-8)/2 - 1)
           new_slider = -(MENU_FORM_WIDTH-8)/2 - 1;
@@ -1818,89 +1625,6 @@ leave_ui_mode()
   redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
 }
 
-#ifdef __VNA__
-static void
-fetch_numeric_target(void)
-{
-  switch (keypad_mode) {
-  case KM_START:
-    uistat.value = get_sweep_frequency(ST_START);
-    break;
-  case KM_STOP:
-    uistat.value = get_sweep_frequency(ST_STOP);
-    break;
-  case KM_CENTER:
-    uistat.value = get_sweep_frequency(ST_CENTER);
-    break;
-  case KM_SPAN:
-    uistat.value = get_sweep_frequency(ST_SPAN);
-    break;
-  case KM_CW:
-    uistat.value = get_sweep_frequency(ST_CW);
-    break;
-  case KM_SCALE:
-    uistat.value = get_trace_scale(uistat.current_trace) * 1000;
-    break;
-  case KM_REFPOS:
-    uistat.value = get_trace_refpos(uistat.current_trace) * 1000;
-    break;
-  case KM_EDELAY:
-    uistat.value = get_electrical_delay();
-    break;
-  case KM_VELOCITY_FACTOR:
-    uistat.value = velocity_factor * 100;
-    break;
-  case KM_SCALEDELAY:
-    uistat.value = get_trace_scale(uistat.current_trace) * 1e12;
-    break;
-  }
-
-  {
-    uint32_t x = uistat.value;
-    int n = 0;
-    for (; x >= 10 && n < 9; n++)
-      x /= 10;
-    uistat.digit = n;
-  }
-//  uistat.previous_value = uistat.value;
-}
-
-
-static void
-set_numeric_value(void)
-{
-  switch (keypad_mode) {
-  case KM_START:
-    set_sweep_frequency(ST_START, uistat.value);
-    break;
-  case KM_STOP:
-    set_sweep_frequency(ST_STOP, uistat.value);
-    break;
-  case KM_CENTER:
-    set_sweep_frequency(ST_CENTER, uistat.value);
-    break;
-  case KM_SPAN:
-    set_sweep_frequency(ST_SPAN, uistat.value);
-    break;
-  case KM_CW:
-    set_sweep_frequency(ST_CW, uistat.value);
-    break;
-  case KM_SCALE:
-    set_trace_scale(uistat.current_trace, uistat.value / 1000.0);
-    break;
-  case KM_REFPOS:
-    set_trace_refpos(uistat.current_trace, uistat.value / 1000.0);
-    break;
-  case KM_EDELAY:
-    set_electrical_delay(uistat.value);
-    break;
-  case KM_VELOCITY_FACTOR:
-    velocity_factor = uistat.value/100.0;
-    break;
-  }
-}
-#endif
-
 void
 ui_mode_menu(void)
 {
@@ -2015,25 +1739,6 @@ step_round(freq_t v)
 }
 
 static void
-lever_zoom_span(int status)
-{
-  freq_t span = get_sweep_frequency(ST_SPAN);
-  if (uistat.auto_center_marker) {
-    freq_t freq = get_marker_frequency(active_marker);
-    search_maximum(active_marker, freq, 10 );
-    if (freq != 0)
-      set_sweep_frequency(ST_CENTER, freq);
-  }
-  if (status & EVT_UP) {
-    span = step_round(span - 1);
-  } else if (status & EVT_DOWN) {
-    span = step_round(span + 1);
-    span = step_round(span * 3);
-  }
-  set_sweep_frequency(ST_SPAN, span);
-}
-
-static void
 lever_zoom_time(int status)
 {
   uint32_t time = setting.sweep_time_us; // in uS
@@ -2051,35 +1756,30 @@ lever_zoom_time(int status)
 static void
 lever_move(int status, int mode)
 {
-  freq_t center = get_sweep_frequency(mode);
-  freq_t span = get_sweep_frequency(ST_SPAN);
-  span = step_round(span / 3);
-  if (status & EVT_UP) {
-    set_sweep_frequency(mode, center + span);
-  } else if (status & EVT_DOWN) {
-    set_sweep_frequency(mode, center - span);
+  freq_t freq = get_sweep_frequency(mode);
+  if (mode == ST_SPAN){
+    if (uistat.auto_center_marker) {
+      freq = get_marker_frequency(active_marker);
+      search_maximum(active_marker, freq, 10 );
+      if (freq == 0) return;
+      set_sweep_frequency(ST_CENTER, freq);
+      return;
+    }
+    if (status & EVT_UP  ) freq = setting.frequency_var ? (freq + setting.frequency_var) : step_round(freq*4 + 1);
+    if (status & EVT_DOWN) freq = setting.frequency_var ? (freq - setting.frequency_var) : step_round(freq   - 1);
   }
+  else {
+    freq_t span = setting.frequency_var ? setting.frequency_var : step_round(get_sweep_frequency(ST_SPAN) / 4);
+    if (status & EVT_UP  ) freq+= span;
+    if (status & EVT_DOWN) freq-= span;
+  }
+  if (freq > STOP_MAX || freq < START_MIN) return;
+  set_sweep_frequency(mode, freq);
 }
 
 #define STEPRATIO 0.2
-#ifdef __VNA__
 static void
-lever_edelay(int status)
-{
-  float value = get_electrical_delay();
-  float ratio = STEPRATIO;
-  if (value < 0)
-    ratio = -ratio;
-  if (status & EVT_UP) {
-    value = (1 - ratio) * value;
-  } else if (status & EVT_DOWN) {
-    value = (1 + ratio) * value;
-  }
-  set_electrical_delay(value);
-}
-#endif
-static void
-ui_process_normal(void)
+ui_process_normal_lever(void)
 {
   int status = btn_check();
   if (status != 0) {
@@ -2089,24 +1789,13 @@ ui_process_normal(void)
       switch (uistat.lever_mode) {
       case LM_MARKER: lever_move_marker(status);   break;
       case LM_SEARCH: lever_search_marker(status); break;
-      case LM_CENTER:
-        lever_move(status, FREQ_IS_STARTSTOP() ? ST_START : ST_CENTER);
-        break;
+      case LM_CENTER: lever_move(status, FREQ_IS_STARTSTOP() ? ST_START : ST_CENTER); break;
       case LM_SPAN:
-        if (FREQ_IS_STARTSTOP())
-          lever_move(status, ST_STOP);
-        else {
-          if (FREQ_IS_CW())
-            lever_zoom_time(status);
-          else
-            lever_zoom_span(status);
-        }
+        if (FREQ_IS_CW()) 
+          lever_zoom_time(status);
+        else
+          lever_move(status, FREQ_IS_STARTSTOP() ? ST_STOP : ST_SPAN);
         break;
-#ifdef __VNA__
-      case LM_EDELAY:
-        lever_edelay(status);
-        break;
-#endif
       }
     }
   }
@@ -2129,7 +1818,7 @@ ui_process_listen_lever(void)
 #endif
 
 static void
-ui_process_menu(void)
+ui_process_menu_lever(void)
 {
   // Flag show, can close menu if user come out from it
   // if false user must select some thing
@@ -2164,8 +1853,7 @@ ui_process_menu(void)
         ensure_selection();
         draw_menu();
         chThdSleepMilliseconds(50); // Add delay for not move so fast in menu
-        status = btn_wait_release();
-      } while (status != 0);
+      } while ((status = btn_wait_release()) != 0);
     }
   }
   return;
@@ -2318,14 +2006,14 @@ ui_process_lever(void)
 {
   switch (ui_mode) {
   case UI_NORMAL:
-    ui_process_normal();
+    ui_process_normal_lever();
     break;
   case UI_MENU:
-    ui_process_menu();
+    ui_process_menu_lever();
     break;
-  case UI_KEYPAD:
-    ui_process_keypad();
-    break;
+//  case UI_KEYPAD:
+//    ui_process_keypad();
+//    break;
   }
 }
 

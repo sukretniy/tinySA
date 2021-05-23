@@ -28,13 +28,10 @@
 #include <string.h>
 #include <math.h>
 
-extern freq_t minFreq;
-extern freq_t maxFreq;
 freq_t frequencyStart;
 freq_t frequencyStop;
 int32_t frequencyExtra;
-#define START_MIN minFreq
-#define STOP_MAX maxFreq
+
 /*
  *  Shell settings
  */
@@ -936,10 +933,7 @@ static const marker_t def_markers[MARKERS_MAX] = {
 void load_LCD_properties(void)
 {
 //Magic add on caldata_save
-//current_props.magic = CONFIG_MAGIC;
-//  current_props._setting.frequency0   =         0;    // start =  0Hz
-//  current_props._setting.frequency1   = 350000000;    // end   = 350MHz
-//  current_props._setting.frequency_IF=  433800000,
+//setting.magic = CONFIG_MAGIC;
   setting._sweep_points = POINTS_COUNT;
   setting.trace_scale = 10.0;
   setting.trace_refpos = 0;
