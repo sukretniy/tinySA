@@ -1216,12 +1216,9 @@ enum marker_smithvalue {
 };
 
 typedef struct uistat {
-  float value; // for editing at numeric input area
+  float  value; // for editing at numeric input area
   freq_t freq_value; // for editing frequencies that do not fit in float;
-  int8_t digit; /* 0~5 */
-  int8_t digit_mode;
   int8_t current_trace; /* 0..3 */
-//  uint32_t previous_value;
   uint8_t lever_mode;
   uint8_t marker_delta;
   uint8_t marker_noise;
