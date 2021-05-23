@@ -2152,7 +2152,7 @@ int index_of_frequency(freq_t f)      // Search which index in the frequency tab
     return -1;
   if (f > frequencies[sweep_points-1])
     return -1;
-  int i = (f + (f_step >> 1)) / f_step;
+  int i = ((f - frequencies[0] ) + (f_step >> 1)) / f_step;
   return i;
 #if 0
   //  int R =  (sizeof frequencies)/sizeof(int) - 1;
