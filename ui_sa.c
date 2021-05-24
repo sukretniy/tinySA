@@ -1123,6 +1123,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_freq_acb)
 }
 #endif
 
+static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
+{
+  (void)data;
+  (void)item;
+  kp_help_text = "Clear unlock code";
+  ui_mode_keypad(KM_CENTER);
+  if (uistat.value != 1234)
+    return;
+  clear_all_config_prop_data();
+  reset_settings(M_LOW);
+  ui_mode_normal();
+}
+
+
+
 
 const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16","QUASI", "DECONV"};
 
@@ -2461,6 +2476,7 @@ static const menuitem_t menu_settings4[] =
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
   { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
 #endif
+  { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
 #ifdef __HARMONIC__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif

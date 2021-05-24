@@ -978,7 +978,7 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
 
   for (uint32_t i = 0; i<points; i++) {
     int val = perform(false, i, start +(freq_t)(f_step * i), false) + float_TO_PURE_RSSI(config.ext_zero_level);
-    if (operation_requested && SDU1.config->usbp->state != USB_ACTIVE) // break on operation in perform
+    if (operation_requested || SDU1.config->usbp->state != USB_ACTIVE) // break on operation in perform
       break;
     streamPut(shell_stream, 'x');
     streamPut(shell_stream, (uint8_t)(val & 0xFF));
