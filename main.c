@@ -799,7 +799,6 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
 
 VNA_SHELL_FUNCTION(cmd_sd_read)
 {
-  FRESULT res;
   char *buf = (char *)spi_buffer;
   if (argc != 1)
   {
@@ -815,21 +814,15 @@ VNA_SHELL_FUNCTION(cmd_sd_read)
     return;
   }
   // shell_printf("sd_read: %s\r\n", filename);
-
   // number of bytes to follow (file size)
-  const uint32_t filesize = f_size(fs_file);
+  uint32_t filesize = f_size(fs_file);
   streamWrite(shell_stream, (void *)&filesize, 4);
-
+  UINT size = 0;
   // file data (send all data from file)
-  while (1)
-  {
-    UINT size = 0;
-    res = f_read(fs_file, buf, 512, &size);
-    if (res != FR_OK || size == 0)
-      break;
+  while (f_read(fs_file, buf, 512, &size) == FR_OK && size > 0)
     streamWrite(shell_stream, (void *)buf, size);
-  }
-  res = f_close(fs_file);
+
+  f_close(fs_file);
   return;
 }
 
@@ -1903,55 +1896,12 @@ static void shell_init_connection(void){
 }
 #endif
 
-//
-// Read command line from shell_stream
-//
-static int VNAShell_readLine(char *line, int max_size)
-{
-  // Read line from input stream
-  uint8_t c;
-  char *ptr = line;
-  // Prepare I/O for shell_stream
-  PREPARE_STREAM;
-  while (1) {
-    // Return 0 only if stream not active
-    if (streamRead(shell_stream, &c, 1) == 0)
-      return 0;
-    // Backspace or Delete
-    if (c == 8 || c == 0x7f) {
-      if (ptr != line) {
-        static const char backspace[] = {0x08, 0x20, 0x08, 0x00};
-        shell_printf(backspace);
-        ptr--;
-      }
-      continue;
-    }
-    // New line (Enter)
-    if (c == '\r') {
-      shell_printf(VNA_SHELL_NEWLINE_STR);
-      *ptr = 0;
-      return 1;
-    }
-    // Others (skip)
-    if (c < 0x20)
-      continue;
-    // Store
-    if (ptr < line + max_size - 1) {
-      streamPut(shell_stream, c); // Echo
-      *ptr++ = (char)c;
-    }
-  }
-  return 0;
-}
-
-//
-// Parse and run command line
-//
-static void VNAShell_executeLine(char *line)
-{
+static const VNAShellCommand *VNAShell_parceLine(char *line){
   // Parse and execute line
   char *lp = line, *ep;
   shell_nargs = 0;
+
+//  DEBUG_LOG(0, lp); // debug console log
   while (*lp != 0) {
     // Skipping white space and tabs at string begin.
     while (*lp == ' ' || *lp == '\t') lp++;
@@ -1964,41 +1914,127 @@ static void VNAShell_executeLine(char *line)
     if ((lp = ep) == NULL) break;
     // Argument limits check
     if (shell_nargs > VNA_SHELL_MAX_ARGUMENTS) {
-      shell_printf("too many arguments, max " define_to_STR(
-          VNA_SHELL_MAX_ARGUMENTS) "" VNA_SHELL_NEWLINE_STR);
-      return;
+      shell_printf("too many arguments, max " define_to_STR(VNA_SHELL_MAX_ARGUMENTS) "" VNA_SHELL_NEWLINE_STR);
+      return NULL;
     }
     // Set zero at the end of string and continue check
     *lp++ = 0;
   }
-  if (shell_nargs == 0) return;
-  // Execute line
-  const VNAShellCommand *scp;
-  for (scp = commands; scp->sc_name != NULL; scp++) {
-    if (get_str_index(scp->sc_name, shell_args[0]) == 0) {
-      if (scp->flags & CMD_WAIT_MUTEX) {
-        shell_function = scp->sc_function;
-        operation_requested|=OP_CONSOLE;
-        // Wait execute command in sweep thread
-        do {
-          osalThreadSleepMilliseconds(100);
-        } while (shell_function);
-      } else {
-        operation_requested = false; // otherwise commands  will be aborted
-        scp->sc_function(shell_nargs - 1, &shell_args[1]);
-        if (dirty) {
-          operation_requested = true;   // ensure output is updated
-          if (MODE_OUTPUT(setting.mode))
-            draw_menu();    // update screen if in output mode and dirty
-          else
-            redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA | REDRAW_FREQUENCY;
-        }
-      }
-      return;
+  if (shell_nargs){
+    const VNAShellCommand *scp;
+    for (scp = commands; scp->sc_name != NULL; scp++)
+      if (get_str_index(scp->sc_name, shell_args[0]) == 0)
+        return scp;
+  }
+  return NULL;
+}
+
+//
+// Read command line from shell_stream
+//
+static int VNAShell_readLine(char *line, int max_size)
+{
+  // send backspace, space for erase, backspace again
+  char backspace[] = {0x08, 0x20, 0x08, 0x00};
+  uint8_t c;
+  // Prepare I/O for shell_stream
+  PREPARE_STREAM;
+  uint16_t j = 0;
+  // Return 0 only if stream not active
+  while (streamRead(shell_stream, &c, 1)) {
+    // Backspace or Delete
+    if (c == 0x08 || c == 0x7f) {
+      if (j > 0) {shell_printf(backspace); j--;}
+      continue;
     }
+    // New line (Enter)
+    if (c == '\r') {
+      shell_printf(VNA_SHELL_NEWLINE_STR);
+      line[j] = 0;
+      return 1;
+    }
+    // Others (skip) or too long - skip
+    if (c < ' ' || j >= max_size - 1) continue;
+    streamPut(shell_stream, c); // Echo
+    line[j++] = (char)c;
+  }
+  return 0;
+}
+
+//
+// Parse and run command line
+//
+static void VNAShell_executeLine(char *line)
+{
+  // Execute line
+  const VNAShellCommand *scp = VNAShell_parceLine(line);
+  if (scp) {
+    if (scp->flags & CMD_WAIT_MUTEX) {
+      shell_function = scp->sc_function;
+      operation_requested|=OP_CONSOLE;
+      // Wait execute command in sweep thread
+      do {
+        osalThreadSleepMilliseconds(10);
+      } while (shell_function);
+    } else {
+      operation_requested = false; // otherwise commands  will be aborted
+      scp->sc_function(shell_nargs - 1, &shell_args[1]);
+      if (dirty) {
+        operation_requested = true;   // ensure output is updated
+        if (MODE_OUTPUT(setting.mode))
+          draw_menu();    // update screen if in output mode and dirty
+        else
+          redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA | REDRAW_FREQUENCY;
+      }
+    }
+    return;
   }
   shell_printf("%s?" VNA_SHELL_NEWLINE_STR, shell_args[0]);
 }
+
+#ifdef __SD_CARD_LOAD__
+#ifndef __USE_SD_CARD__
+#error "Need enable SD card support __USE_SD_CARD__ in nanovna.h, for use ENABLE_SD_CARD_CMD"
+#endif
+void sd_card_load_config(void){
+  // Mount card
+  if (f_mount(fs_volume, "", 1) != FR_OK)
+    return;
+
+  if (f_open(fs_file, "config.ini", FA_OPEN_EXISTING | FA_READ) != FR_OK)
+    return;
+
+  char *buf = (char *)spi_buffer;
+  UINT size = 0;
+
+  uint16_t j = 0, i;
+  while (f_read(fs_file, buf, 512, &size) == FR_OK && size > 0){
+    i = 0;
+    while (i < size) {
+      uint8_t c = buf[i++];
+      // New line (Enter)
+      if (c == '\r') {
+//        shell_line[j  ] = '\r';
+//        shell_line[j+1] = '\n';
+//        shell_line[j+2] = 0;
+//        shell_printf(shell_line);
+        shell_line[j] = 0; j = 0;
+        const VNAShellCommand *scp = VNAShell_parceLine(shell_line);
+//        if (scp && (scp->flags&CMD_RUN_IN_LOAD)) !!! FIX me, add this flag to commands
+          scp->sc_function(shell_nargs - 1, &shell_args[1]);
+        continue;
+      }
+      // Others (skip)
+      if (c < 0x20) continue;
+      // Store
+      if (j < VNA_SHELL_MAX_LENGTH - 1)
+        shell_line[j++] = (char)c;
+    }
+  }
+  f_close(fs_file);
+  return;
+}
+#endif
 
 #ifdef VNA_SHELL_THREAD
 static THD_WORKING_AREA(waThread2, /* cmd_* max stack size + alpha */442);
@@ -2015,26 +2051,6 @@ THD_FUNCTION(myshellThread, p)
       osalThreadSleepMilliseconds(100);
   }
 }
-#endif
-
-#ifdef __VNA__
-// I2C clock bus setting: depend from STM32_I2C1SW in mcuconf.h
-static const I2CConfig i2ccfg = {
-  .timingr  = STM32_TIMINGR_PRESC(0U)  |            /* 72MHz I2CCLK. ~ 600kHz i2c   */
-//  STM32_TIMINGR_SCLDEL(10U) | STM32_TIMINGR_SDADEL(4U) |
-//  STM32_TIMINGR_SCLH(31U)   | STM32_TIMINGR_SCLL(79U),
-
-  STM32_TIMINGR_SCLDEL(15U) | STM32_TIMINGR_SDADEL(15U) |
-  STM32_TIMINGR_SCLH(35U)   | STM32_TIMINGR_SCLL(85U),
-
-//  STM32_TIMINGR_SCLDEL(15U) | STM32_TIMINGR_SDADEL(15U) |
-//  STM32_TIMINGR_SCLH(35U)   | STM32_TIMINGR_SCLL(55U),
-
-//  STM32_TIMINGR_SCLDEL(10U) | STM32_TIMINGR_SDADEL(4U) |
-//  STM32_TIMINGR_SCLH(48U)   | STM32_TIMINGR_SCLL(90U),
-  .cr1      = 0,
-  .cr2      = 0
-};
 #endif
 
 static const DACConfig dac1cfg1 = {
@@ -2058,59 +2074,6 @@ void my_microsecond_delay(int t)
   if (t>1) gptPolledDelay(&GPTD14, t); // t us delay
 #endif
 }
-#if 0
-/*
- * UART driver configuration structure.
- */
-static UARTConfig uart_cfg_1 = {
-    NULL,   //txend1,
-    NULL,   //txend2,
-    NULL,   //rxend,
-    NULL,   //rxchar,
-    NULL,   //rxerr,
-    800000,
-    0,
-    0,      //USART_CR2_LINEN,
-    0
-};
-#endif
-
-#if 0
-static const SerialConfig LCD_config =
-{
-  9600,
-  0,
-  USART_CR2_STOP2_BITS,
-  0
-};
-
-
-void myWrite(char *buf)
-{
-  int len = strlen(buf);
-  while(len-- > 0) {
-    sdPut(&SD1,*buf++);
-    osalThreadSleepMicroseconds(1000);
-  }
-}
-
-static int serial_count = 0;
-int mySerialReadline(unsigned char *buf, int len)
-{
-  int i;
-  do {
-    i =  sdReadTimeout(&SD1,&buf[serial_count], 20-serial_count,TIME_IMMEDIATE);
-    serial_count += i;
-    if (i > 0)
-      osalThreadSleepMicroseconds(1000);
-  } while (serial_count < len && i > 0);
-  if (buf[serial_count-1] == '\n') {
-    serial_count = 0;
-    return(i);
-  } else
-    return 0;
-}
-#endif
 
 /* Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
  * Profile stack usage (enable threads command by def ENABLE_THREADS_COMMAND) show:

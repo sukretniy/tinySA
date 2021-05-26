@@ -80,6 +80,7 @@
 #ifdef TINYSA4
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
+#define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root)
 #define __LCD_BRIGHTNESS__        // LCD or hardware allow change brightness, add menu item for this
 #define __HARMONIC__
 #define __VBW__
@@ -1335,6 +1336,7 @@ bool SD_Inserted(void);
 #define fs_filename  (  char*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL) - FF_LFN_BUF - 4)
 #endif
 void testLog(void);        // debug log
+void sd_card_load_config(void);
 #endif
 
 /*

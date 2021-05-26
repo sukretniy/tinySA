@@ -780,6 +780,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
   menu_move_back(true);
 }
 
+#ifdef __SD_CARD_LOAD__
+UI_FUNCTION_CALLBACK(menu_load_config_cb)
+{
+  (void)item;
+  (void)data;
+  sd_card_load_config();
+  ui_mode_normal();
+}
+#endif
+
 UI_FUNCTION_CALLBACK(menu_autosettings_cb)
 {
   (void)item;
@@ -2476,6 +2486,9 @@ static const menuitem_t menu_settings4[] =
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
   { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
+#endif
+#ifdef __SD_CARD_LOAD__
+  { MT_CALLBACK,        0 ,     "LOAD\nCONFIG",    menu_load_config_cb},
 #endif
   { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
 #ifdef __HARMONIC__
