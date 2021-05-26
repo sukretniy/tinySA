@@ -1639,6 +1639,7 @@ typedef struct {
 
 // Some commands can executed only in sweep thread, not in main cycle
 #define CMD_WAIT_MUTEX  1
+#define CMD_RUN_IN_LOAD 2
 static const VNAShellCommand commands[] =
 {
     {"version"     , cmd_version     , 0},
