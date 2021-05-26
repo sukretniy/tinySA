@@ -3355,7 +3355,7 @@ redraw_cal_status:
 
 //  if (setting.mode == M_LOW) {
     // Attenuation
-    ili9341_set_foreground(setting.auto_attenuation ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
+    ili9341_set_foreground(setting.auto_attenuation ? LCD_FG_COLOR : LCD_BRIGHT_COLOR_GREEN);
     lcd_printf(x, y, "Atten:\n%4.2FdB", get_attenuation());
     y = add_quick_menu(y+= YSTEP, (menuitem_t *)menu_atten);
 //  }
