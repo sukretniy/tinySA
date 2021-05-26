@@ -2139,6 +2139,7 @@ int main(void)
 
 #ifdef TINYSA3
   has_esd = ((palReadPort(GPIOB) & (1<<12)) ? false : true );
+
 #endif
 
 
@@ -2202,6 +2203,10 @@ int main(void)
 #endif
 
 /* restore config */
+#ifdef TINYSA3
+  if (has_esd)
+    config.switch_offset = -5.0;
+#endif
   config_recall();
   config.cor_am = 0;        // Should be removed from config
   config.cor_nfm = 0;

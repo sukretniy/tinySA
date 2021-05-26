@@ -3371,7 +3371,7 @@ redraw_cal_status:
   if (setting.spur_removal != S_OFF) {
     ili9341_set_foreground(setting.spur_removal == S_ON ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
     lcd_printf(x, y, "Spur:\n%s", S_IS_AUTO(setting.spur_removal) ? "AUTO" : "ON");
-    y = add_quick_menu(y += YSTEP, (menuitem_t *)menu_stimulus);
+    y = add_quick_menu(y += YSTEP, (menuitem_t *)menu_config);
   }
   if (setting.mirror_masking) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
