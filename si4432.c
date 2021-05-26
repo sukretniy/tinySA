@@ -556,6 +556,7 @@ int SI4432_is_fast_mode(void)
 
 //--------------------------- Trigger -------------------
 // ************** trigger mode if need
+#if 0
 // trigger on measure 4 point
 #define T_POINTS            4
 #define T_LEVEL_UNDEF       (1<<(16-T_POINTS)) // should drop after 4 shifts left
@@ -565,6 +566,17 @@ int SI4432_is_fast_mode(void)
 #define T_DOWN_MASK         (0b0011)           // 2 from up 2 to bottom
 #define T_UP_MASK           (0b1100)           // 2 from bottom 2 to up
 #define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
+#else
+    // trigger on measure 2 point
+#define T_POINTS            2
+#define T_LEVEL_UNDEF       (1<<(16-T_POINTS)) // should drop after 2 shifts left
+#define T_LEVEL_BELOW       1
+#define T_LEVEL_ABOVE       0
+    // Trigger mask, should have width T_POINTS bit
+#define T_DOWN_MASK         (0b0001)           // 1 from up 1 to bottom
+#define T_UP_MASK           (0b0010)           // 1 from bottom 1 to up
+#define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
+#endif
 
 enum { ST_ARMING, ST_WAITING, ST_FILLING };
 
