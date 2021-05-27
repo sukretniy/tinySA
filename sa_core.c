@@ -2636,6 +2636,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     old_a = -150;                                                   // clear cached level setting
     // Initialize HW
     scandirty = true;                                                       // This is the first pass with new settings
+    scan_after_dirty = 0;
     dirty = false;
     sweep_elapsed = chVTGetSystemTimeX();                              // for measuring accumulated time
     // Set for actual time pre calculated value (update after sweep)
@@ -2681,6 +2682,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       }
     }
   }
+  if (i == 0)
+    scan_after_dirty += 1;
+
 
   // ---------------------------------  Pulse at start of low output sweep --------------------------
 
@@ -4040,8 +4044,9 @@ static volatile int dummy;
               age[i] += 1;
           }
           break;
-        case AV_4:  actual_t[i] = (actual_t[i]*3 + RSSI) / 4.0; break;
-        case AV_16: actual_t[i] = (actual_t[i]*15 + RSSI) / 16.0; break;
+        case AV_4:  actual_t[i] = (actual_t[i]*3.0 + RSSI) / 4.0; break;
+        case AV_16: actual_t[i] = (actual_t[i]*15.0 + RSSI) / 16.0; break;
+        case AV_100:actual_t[i] = (actual_t[i]*(scan_after_dirty-1) + RSSI) / scan_after_dirty; break;
 #ifdef __QUASI_PEAK__
         case AV_QUASI:
         { static float old_RSSI = -150.0;

@@ -207,8 +207,9 @@ void toggle_pulse(void);
 void load_default_properties(void);
 
 enum {
-  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16, AV_QUASI, AV_DECONV
+  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16, AV_100, AV_QUASI, AV_DECONV
 };
+
 enum {
   M_LOW, M_HIGH, M_GENLOW, M_GENHIGH, M_ULTRA
 };
