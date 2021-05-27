@@ -1136,10 +1136,7 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
   ui_mode_normal();
 }
 
-
-
-
-const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16","QUASI", "DECONV"};
+const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16", "AVER", "QUASI", "DECONV"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 {
@@ -2108,14 +2105,17 @@ static const menuitem_t  menu_highoutputmode[] = {
 };
 
 static const menuitem_t  menu_average[] = {
-  { MT_ADV_CALLBACK, 0, "OFF",          menu_average_acb},
-  { MT_ADV_CALLBACK, 1, "MIN\nHOLD",    menu_average_acb},
-  { MT_ADV_CALLBACK, 2, "MAX\nHOLD",    menu_average_acb},
-  { MT_ADV_CALLBACK, 3, "MAX\nDECAY",   menu_average_acb},
-  { MT_ADV_CALLBACK, 4, "AVER 4",       menu_average_acb},
-  { MT_ADV_CALLBACK, 5, "AVER 16",      menu_average_acb},
+  { MT_ADV_CALLBACK, AV_OFF,        "OFF",          menu_average_acb},
+  { MT_ADV_CALLBACK, AV_MIN,        "MIN\nHOLD",    menu_average_acb},
+  { MT_ADV_CALLBACK, AV_MAX_HOLD,   "MAX\nHOLD",    menu_average_acb},
+  { MT_ADV_CALLBACK, AV_MAX_DECAY,  "MAX\nDECAY",   menu_average_acb},
+  { MT_ADV_CALLBACK, AV_4,          "AVER 4",       menu_average_acb},
+  { MT_ADV_CALLBACK, AV_16,         "AVER 16",      menu_average_acb},
+#ifdef TINYSA4
+  { MT_ADV_CALLBACK, AV_100,        "AVER",     menu_average_acb},
+#endif
 #ifdef __QUASI_PEAK__
-  { MT_ADV_CALLBACK, 6, "QUASI\nPEAK",  menu_average_acb},
+  { MT_ADV_CALLBACK, AV_QUASI,      "QUASI\nPEAK",  menu_average_acb},
 #endif
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE, 0, NULL, NULL } // sentinel

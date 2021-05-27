@@ -103,6 +103,7 @@ const char *info_about[]={
 };
 
 bool dirty = true;
+int32_t scan_after_dirty = 0;
 uint8_t completed = false;
 uint8_t enable_after_complete = 0;
 
