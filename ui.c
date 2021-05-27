@@ -1025,7 +1025,7 @@ draw_numeric_input(const char *buf)
   for (i = 0; buf[i]; i++) {
     int c = buf[i];
          if (c == '.'){c = KP_PERIOD;xsim<<=4;}
-    else if (c == '-'){c = KP_MINUS; xsim&=~1;}
+    else if (c == '-'){c = KP_MINUS; xsim&=~2;}
     else// if (c >= '0' && c <= '9')
       c = c - '0';
     if (c < 0) c = 0;
