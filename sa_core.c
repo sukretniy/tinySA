@@ -1117,9 +1117,10 @@ void set_average(int v)
       && (v != AV_QUASI)
 #endif
       );
-  if (enable)
+  if (enable) {
     enableTracesAtComplete(TRACE_TEMP_FLAG);
-  else
+    scan_after_dirty = 0;
+  } else
     TRACE_DISABLE(TRACE_TEMP_FLAG);
   //dirty = true;             // No HW update required, only status panel refresh
 }
