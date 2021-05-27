@@ -1645,14 +1645,14 @@ static const VNAShellCommand commands[] =
 {
     {"version"     , cmd_version     , 0},
     {"reset"       , cmd_reset       , 0},
-    {"freq"        , cmd_freq        , CMD_WAIT_MUTEX},
+    {"freq"        , cmd_freq        , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
 #ifdef __USE_RTC__
-    {"time"        , cmd_time        , 0},
+    {"time"        , cmd_time        , CMD_RUN_IN_LOAD},
 #endif
-    {"dac"         , cmd_dac         , 0},
-    {"sweep_voltage",cmd_sweep_voltage,0},
-    {"saveconfig"  , cmd_saveconfig  , 0},
-    {"clearconfig" , cmd_clearconfig , 0},
+    {"dac"         , cmd_dac         , CMD_RUN_IN_LOAD},
+    {"sweep_voltage",cmd_sweep_voltage,CMD_RUN_IN_LOAD},
+    {"saveconfig"  , cmd_saveconfig  , CMD_RUN_IN_LOAD},
+    {"clearconfig" , cmd_clearconfig , CMD_RUN_IN_LOAD},
     {"data"        , cmd_data        , CMD_WAIT_MUTEX},
 #ifdef ENABLED_DUMP
     {"dump"        , cmd_dump        , 0},
@@ -1661,22 +1661,22 @@ static const VNAShellCommand commands[] =
 //  {"gamma"       , cmd_gamma       , 0},
     {"scan"        , cmd_scan        , CMD_WAIT_MUTEX},
     {"scanraw"     , cmd_scanraw     , CMD_WAIT_MUTEX},
-    {"zero"        , cmd_zero        , CMD_WAIT_MUTEX},
+    {"zero"        , cmd_zero        , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},   // Will set the scanraw measured value offset (128 or 174)
     {"sweep"       , cmd_sweep       , 0},
     {"test"        , cmd_test        , 0},
     {"touchcal"    , cmd_touchcal    , CMD_WAIT_MUTEX},
     {"touchtest"   , cmd_touchtest   , CMD_WAIT_MUTEX},
-    {"pause"       , cmd_pause       , CMD_WAIT_MUTEX},
-    {"resume"      , cmd_resume      , CMD_WAIT_MUTEX},
-    {"caloutput"   , cmd_caloutput   , 0},
-    {"save"        , cmd_save        , 0},
-    {"recall"      , cmd_recall      , CMD_WAIT_MUTEX},
-    {"trace"       , cmd_trace       , CMD_WAIT_MUTEX},
-    {"trigger"     , cmd_trigger     , 0},
-    {"marker"      , cmd_marker      , 0},
+    {"pause"       , cmd_pause       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    {"resume"      , cmd_resume      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    {"caloutput"   , cmd_caloutput   , CMD_RUN_IN_LOAD},
+    {"save"        , cmd_save        , CMD_RUN_IN_LOAD},
+    {"recall"      , cmd_recall      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    {"trace"       , cmd_trace       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    {"trigger"     , cmd_trigger     , CMD_RUN_IN_LOAD},
+    {"marker"      , cmd_marker      , CMD_RUN_IN_LOAD},
 #ifdef ENABLE_USART_COMMAND
     {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
-    {"usart_cfg"   , cmd_usart_cfg   , CMD_WAIT_MUTEX},
+    {"usart_cfg"   , cmd_usart_cfg   , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
 #endif
     {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
 #ifdef __REMOTE_DESKTOP__
@@ -1686,45 +1686,45 @@ static const VNAShellCommand commands[] =
 #endif
     {"vbat"        , cmd_vbat        , 0},     // Uses same adc as touch!!!!!
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
-    {"vbat_offset" , cmd_vbat_offset , 0},
+    {"vbat_offset" , cmd_vbat_offset , CMD_RUN_IN_LOAD},
 #endif
     {"help"        , cmd_help        , 0},
 #ifdef ENABLE_INFO_COMMAND
     {"info"        , cmd_info        , 0},
 #endif
 #ifdef ENABLE_COLOR_COMMAND
-    {"color"       , cmd_color       , 0},
+    {"color"       , cmd_color       , CMD_RUN_IN_LOAD},
 #endif
-    { "if", cmd_if,    0 },
+    { "if", cmd_if,    CMD_RUN_IN_LOAD },
 #ifdef TINYSA4
-    { "if1", cmd_if1,    0 },
-    { "lna2", cmd_lna2,    0 },
-    { "agc", cmd_agc,    0 },
+    { "if1", cmd_if1,    CMD_RUN_IN_LOAD },
+    { "lna2", cmd_lna2,    CMD_RUN_IN_LOAD },
+    { "agc", cmd_agc,    CMD_RUN_IN_LOAD },
 #endif
-    { "actual_freq", cmd_actual_freq, CMD_WAIT_MUTEX },
-    { "attenuate", cmd_attenuate,    0 },
-    { "level", cmd_level,    0 },
-    { "sweeptime", cmd_sweeptime,    0 },
-    { "leveloffset", cmd_leveloffset,    0 },
-    { "levelchange", cmd_levelchange,    0 },
-    { "modulation", cmd_modulation,    0 },
-    { "rbw", cmd_rbw,    0 },
-    { "mode", cmd_mode,    CMD_WAIT_MUTEX },
+    { "actual_freq", cmd_actual_freq, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
+    { "attenuate", cmd_attenuate,    CMD_RUN_IN_LOAD },
+    { "level", cmd_level,    CMD_RUN_IN_LOAD },
+    { "sweeptime", cmd_sweeptime,    CMD_RUN_IN_LOAD },
+    { "leveloffset", cmd_leveloffset,    CMD_RUN_IN_LOAD },
+    { "levelchange", cmd_levelchange,    CMD_RUN_IN_LOAD },
+    { "modulation", cmd_modulation,    CMD_RUN_IN_LOAD },
+    { "rbw", cmd_rbw,    CMD_RUN_IN_LOAD },
+    { "mode", cmd_mode,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
 #ifdef __SPUR__
-    { "spur", cmd_spur,    0 },
+    { "spur", cmd_spur,    CMD_RUN_IN_LOAD },
 #endif
 #ifdef TINYSA4
-    { "lna", cmd_lna,    0 },
-    { "ultra", cmd_ultra,    0 },
-    { "ultra_start", cmd_ultra_start, CMD_WAIT_MUTEX },
+    { "lna", cmd_lna,    CMD_RUN_IN_LOAD },
+    { "ultra", cmd_ultra,    CMD_RUN_IN_LOAD },
+    { "ultra_start", cmd_ultra_start, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
 #endif
-    { "load", cmd_load,    0 },
-    { "ext_gain", cmd_ext_gain, 0},
-    { "output", cmd_output,    0 },
-    { "deviceid", cmd_deviceid,    0 },
+    { "load", cmd_load,   CMD_RUN_IN_LOAD },
+    { "ext_gain", cmd_ext_gain, CMD_RUN_IN_LOAD},
+    { "output", cmd_output,    CMD_RUN_IN_LOAD },
+    { "deviceid", cmd_deviceid,    CMD_RUN_IN_LOAD },
     { "selftest", cmd_selftest,    0 },
-    { "correction", cmd_correction,    0 },
-    { "calc", cmd_calc, 0},
+    { "correction", cmd_correction,   CMD_RUN_IN_LOAD },
+    { "calc", cmd_calc, CMD_RUN_IN_LOAD},
 #ifdef ENABLE_SD_CARD_CMD
     { "sd_list",   cmd_sd_list,   CMD_WAIT_MUTEX },
     { "sd_read",   cmd_sd_read,   CMD_WAIT_MUTEX },
@@ -1770,12 +1770,25 @@ VNA_SHELL_FUNCTION(cmd_help)
   (void)argc;
   (void)argv;
   const VNAShellCommand *scp = commands;
-  shell_printf("Commands:");
+  shell_printf("config.ini commands:");
   while (scp->sc_name != NULL
 #ifdef __SINGLE_LETTER__
       && scp->sc_function != cmd_y
 #endif
       )   {
+    if (scp->flags & CMD_RUN_IN_LOAD)
+      shell_printf(" %s", scp->sc_name);
+    scp++;
+  }
+  scp = commands;
+  shell_printf(VNA_SHELL_NEWLINE_STR);
+  shell_printf("Other commands:");
+  while (scp->sc_name != NULL
+#ifdef __SINGLE_LETTER__
+      && scp->sc_function != cmd_y
+#endif
+      )   {
+    if (!(scp->flags & CMD_RUN_IN_LOAD))
     shell_printf(" %s", scp->sc_name);
     scp++;
   }
@@ -2021,7 +2034,7 @@ void sd_card_load_config(void){
 //        shell_printf(shell_line);
         shell_line[j] = 0; j = 0;
         const VNAShellCommand *scp = VNAShell_parceLine(shell_line);
-//        if (scp && (scp->flags&CMD_RUN_IN_LOAD)) !!! FIX me, add this flag to commands
+        if (scp && (scp->flags&CMD_RUN_IN_LOAD))
           scp->sc_function(shell_nargs - 1, &shell_args[1]);
         continue;
       }
@@ -2244,6 +2257,9 @@ int main(void)
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
+#ifdef __SD_CARD_LOAD__
+  sd_card_load_config();
+#endif
 
   while (1) {
 //    if (SDU1.config->usbp->state == USB_ACTIVE) {
