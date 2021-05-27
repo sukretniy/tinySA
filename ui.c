@@ -1019,13 +1019,12 @@ draw_numeric_input(const char *buf)
   uint16_t i;
   uint16_t x = 10 + 10 * FONT_WIDTH + 4;
   uint16_t xsim = 0b00100100100100100 >>(2-(period_pos()%3));
-  xsim&=~1;
   ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
   ili9341_set_background(LCD_INPUT_BG_COLOR);
   for (i = 0; buf[i]; i++) {
     int c = buf[i];
          if (c == '.'){c = KP_PERIOD;xsim<<=4;}
-    else if (c == '-'){c = KP_MINUS; xsim&=~2;}
+    else if (c == '-'){c = KP_MINUS; xsim&=~3;}
     else// if (c >= '0' && c <= '9')
       c = c - '0';
     if (c < 0) c = 0;
