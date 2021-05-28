@@ -431,6 +431,9 @@ enum {
   KM_MARKER_TIME,
   // #35
   KM_VAR,
+#ifdef __NOISE_FIGURE__
+  KM_NF,
+#endif
   KM_NONE // always at enum end
 };
 
@@ -488,6 +491,7 @@ static const struct {
 #endif
 [KM_MARKER_TIME]  = {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
 [KM_VAR]          = {keypads_freq        , "JOG\nSTEP"}, // jog step
+[KM_NF]           = {keypads_plusmin     , "NOISE\nFIGURE"}, // noise figure of tinySA
 };
 
 #if 0 // Not used
@@ -1170,6 +1174,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       TRACE_DISABLE(TRACE_STORED_FLAG);
     }
     set_average(AV_OFF);
+    set_external_gain(0.0);
+    set_extra_lna(false);
   }
   switch(data) {
     case M_OFF:                                     // Off
@@ -1330,6 +1336,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_SPAN);
       set_sweep_frequency(ST_SPAN, uistat.value*3);
 //      set_measurement(M_CP);
+      break;
+#endif
+#ifdef __NOISE_FIGURE__
+    case M_NF:                             // noise figure
+//      reset_settings(setting.mode);
+      markers[0].enabled = M_ENABLED;
+      markers[0].mtype = M_NOISE;
+      set_extra_lna(true);
+      kp_help_text = "Amplifier Gain ";
+      ui_mode_keypad(KM_EXT_GAIN);
+      set_average(AV_100);
       break;
 #endif
 #ifdef __FFT_DECONV__
@@ -2482,10 +2499,13 @@ static const menuitem_t menu_settings4[] =
 {
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
-#if 1                                                                           // only used during development
+#if 0                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
   { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
+#endif
+#ifdef __NOISE_FIGURE__
+  { MT_KEYPAD,   KM_NF,        "NOISE\nFIGURE", "Enter tinySA noise figure"},
 #endif
 #ifdef __SD_CARD_LOAD__
   { MT_CALLBACK,        0 ,     "LOAD\nCONFIG",    menu_load_config_cb},
@@ -2612,6 +2632,9 @@ static const menuitem_t menu_measure2[] = {
 #endif
 #ifdef __LINEARITY__
 { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
+#endif
+#ifdef __NOISE_FIGURE__
+{ MT_ADV_CALLBACK | MT_LOW,   M_NF,            "NOISE\nFIGURE",    menu_measure_acb},
 #endif
 #ifdef __FFT_DECONV__
   { MT_ADV_CALLBACK,            M_DECONV,  "DECONV",         menu_measure_acb},
@@ -3024,6 +3047,12 @@ static void fetch_numeric_target(uint8_t mode)
     uistat.freq_value = setting.frequency_var;
     plot_printf(uistat.text, sizeof uistat.text, setting.frequency_var ? "%QHz" : " AUTO", setting.frequency_var);
     break;
+#ifdef __NOISE_FIGURE__
+  case KM_NF:
+    uistat.value = config.noise_figure;
+    plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
+    break;
+#endif
   }
 }
 
@@ -3190,6 +3219,13 @@ set_numeric_value(void)
   case KM_VAR:
     setting.frequency_var = uistat.freq_value;
     break;
+#ifdef __NOISE_FIGURE__
+  case KM_NF:
+    config.noise_figure = uistat.value;
+    config_save();
+    dirty = true;
+    break;
+#endif
   }
 }
 

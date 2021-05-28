@@ -902,6 +902,9 @@ config_t config = {
   .high_out_adf4350 = true,
   .ext_zero_level = 174,
   .receive_switch_offset = 0.0,
+#ifdef __NOISE_FIGURE__
+  .noise_figure = 7.2,
+#endif
 #endif
   .sweep_voltage = 3.3,
   .switch_offset = 0.0,
@@ -1651,6 +1654,9 @@ static const VNAShellCommand commands[] =
 #endif
     {"dac"         , cmd_dac         , CMD_RUN_IN_LOAD},
     {"sweep_voltage",cmd_sweep_voltage,CMD_RUN_IN_LOAD},
+#ifdef __NOISE_FIGURE__
+    {"nf",          cmd_nf,            CMD_RUN_IN_LOAD},
+#endif
     {"saveconfig"  , cmd_saveconfig  , CMD_RUN_IN_LOAD},
     {"clearconfig" , cmd_clearconfig , CMD_RUN_IN_LOAD},
     {"data"        , cmd_data        , CMD_WAIT_MUTEX},
@@ -1914,7 +1920,7 @@ static const VNAShellCommand *VNAShell_parceLine(char *line){
   // Parse and execute line
   char *lp = line, *ep;
   shell_nargs = 0;
-
+  shell_args[0] = line;     // shell_args[0] is used in error message, must be initialized
 //  DEBUG_LOG(0, lp); // debug console log
   while (*lp != 0) {
     // Skipping white space and tabs at string begin.

@@ -2017,6 +2017,8 @@ case M_GENHIGH: // Direct output from 1
       ADF4351_enable_out(true);               // Must be enabled to have aux output
 #endif
       ADF4351_aux_drive(setting.lo_drive);
+      enable_extra_lna(false);
+      enable_ultra(true);                   // Open low output
     } else {
       ADF4351_enable_aux_out(false);
       ADF4351_enable_out(false);

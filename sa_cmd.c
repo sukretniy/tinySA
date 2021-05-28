@@ -370,6 +370,19 @@ VNA_SHELL_FUNCTION(cmd_sweep_voltage)
   config.sweep_voltage = value;
 }
 
+#ifdef __NOISE_FIGURE__
+VNA_SHELL_FUNCTION(cmd_nf)
+{
+  if (argc != 1) {
+    shell_printf("usage: nr {value}\r\n"\
+                 "%f\r\n", config.noise_figure);
+    return;
+  }
+  config.noise_figure = my_atof(argv[0]);
+  dirty = true;
+}
+#endif
+
 VNA_SHELL_FUNCTION(cmd_rbw)
 {
   if (argc != 1) {

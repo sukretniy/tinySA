@@ -1587,6 +1587,24 @@ static void cell_draw_marker_info(int x0, int y0)
         cell_printf(xpos, ypos, FONT_b"#%d THD: %4.1f%%", h_count, thd);
         break;
       }
+#ifdef __NOISE_FIGURE__
+    } else if (i>=2 && setting.measurement == M_NF && markers[0].enabled && setting.external_gain != 0 ) {
+      float mNF = marker_to_value(0) -  logf(actual_rbw_x10*100.0) * (10.0/logf(10.0)) + 174;   // measured noise figure at 18C
+      float mnf = expf(mNF/10 * logf(10));     // measure noise factor
+      float tnf = expf(config.noise_figure/10 * logf(10));     // tinySA noise factor
+      float anf = mnf - (tnf - 1.0)/setting.external_gain;
+      float aNF = 10*logf(anf)/logf(10);
+      // powf(10,x) =  expf(x * logf(10))
+      // log10f(x)  =  logf(x)/logf(10)
+
+
+      ili9341_set_foreground(marker_color(markers[0].mtype));
+//        j = 1;
+      int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
+      int ypos = 1 + (j/2)*(16) - y0;
+      cell_printf(xpos, ypos, FONT_b"NF: %4.1f", aNF);
+      break;
+#endif
     } else
     if (i >= 2 && setting.measurement == M_OIP3 && markers[2].enabled && markers[3].enabled) {
       float il = marker_to_value(2);

@@ -83,6 +83,7 @@
 #define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root)
 #define __LCD_BRIGHTNESS__        // LCD or hardware allow change brightness, add menu item for this
 #define __HARMONIC__
+#define __NOISE_FIGURE__
 #define __VBW__
 #define __SWEEP_RESTART__
 #define DB_PER_DEGREE_BELOW               0.056
@@ -634,6 +635,9 @@ typedef struct config {
   float harmonic_level_offset;
   float shift_level_offset;
 #endif
+#ifdef __NOISE_FIGURE__
+  float noise_figure;
+#endif
   float  correction_value[CORRECTION_SIZE][CORRECTION_POINTS];
   freq_t correction_frequency[CORRECTION_SIZE][CORRECTION_POINTS];
 #ifdef TINYSA4
@@ -1137,7 +1141,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e52 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e53 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
@@ -1399,7 +1403,7 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_DECONV
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF, M_DECONV
 };
 
 enum {
