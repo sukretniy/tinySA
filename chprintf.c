@@ -147,8 +147,9 @@ ulong_freq(char *p, ulong_t freq, uint32_t width, uint32_t precision)
       if (flag & FREQ_PSET) {
         c = '.';
         flag &= ~FREQ_PSET;
-      } else if (flag & FREQ_NO_SPACE)
-        c = *q++;
+      } else if (flag & FREQ_NO_SPACE) {
+        c = *q++; --i;
+      }
     }
     *p++ = c;
     if (!(flag & FREQ_PSET) && precision-- == 0)
