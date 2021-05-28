@@ -491,7 +491,9 @@ static const struct {
 #endif
 [KM_MARKER_TIME]  = {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
 [KM_VAR]          = {keypads_freq        , "JOG\nSTEP"}, // jog step
+#ifdef __NOISE_FIGURE__
 [KM_NF]           = {keypads_plusmin     , "NOISE\nFIGURE"}, // noise figure of tinySA
+#endif
 };
 
 #if 0 // Not used
@@ -1175,7 +1177,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     }
     set_average(AV_OFF);
     set_external_gain(0.0);
+#ifdef TINYSA4
     set_extra_lna(false);
+#endif
   }
   switch(data) {
     case M_OFF:                                     // Off

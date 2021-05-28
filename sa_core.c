@@ -5381,8 +5381,7 @@ quit:
 #endif
     reset_settings(M_LOW);
     set_refer_output(-1);
-#ifdef TINYSA4
-  } else if (test == 1) {
+  } else if (false && test == 1) {
     float p2, p1, p;
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
@@ -5430,7 +5429,7 @@ quit:
         shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
     }
     reset_settings(M_LOW);
-  } else if (test == 2) {                                   // Attenuator test
+  } else if (false && test == 2) {                                   // Attenuator test
     in_selftest = true;
     reset_settings(M_LOW);
 #if 1
@@ -5441,7 +5440,9 @@ quit:
       set_attenuation(((float)j)/2.0);
       if (setting.test_argument)
         set_sweep_frequency(ST_CENTER, ((freq_t)setting.test_argument));
+#ifdef TINYSA4
       ultra_threshold = config.ultra_threshold;
+#endif
       test_acquire(TEST_LEVEL);                        // Acquire test
 	  test_validate(TEST_LEVEL);                       // Validate test
       if (j == 0)
@@ -5463,8 +5464,7 @@ quit:
     test_validate(TEST_ATTEN);                       // Validate test
 #endif
     reset_settings(M_LOW);
-#endif
-  } else if (test == 3) {                       // RBW step time search
+  } else if (false && test == 3) {                       // RBW step time search
     in_selftest = true;
     ui_mode_normal();
     test_prepare(TEST_RBW);
@@ -5572,8 +5572,7 @@ quit:
     reset_settings(M_LOW);
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
-#ifdef TINYSA4
-  } else if (test == 4) {           // Calibrate modulation frequencies
+  } else if (false && test == 4) {           // Calibrate modulation frequencies
     reset_settings(M_LOW);
     set_mode(M_GENLOW);
     set_sweep_frequency(ST_CENTER, (freq_t)30000000);
@@ -5604,7 +5603,7 @@ quit:
 
     //    shell_printf("\n\rCycle time = %d\n\r", start_of_sweep_timestamp);
     reset_settings(M_LOW);
-  } else if (test == 5) {
+  } else if (false && test == 5) {
 //    reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
     switch (setting.test_argument) {
@@ -5640,7 +5639,7 @@ quit:
       set_sweep_frequency(ST_SPAN, 0);
       break;
     }
-  } else if (test == 6) {
+  } else if (false && test == 6) {
     in_selftest = true;               // MCU Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SPUR);
@@ -5658,8 +5657,7 @@ quit:
       shell_printf("%d: %9.3q\n\r",i, peakFreq);
       test_validate(TEST_SPUR);                       // Validate test
     }
-#endif
-  } else if (test == 7) {                       // RBW level test
+  } else if (false && test == 7) {                       // RBW level test
     in_selftest = true;
     ui_mode_normal();
     shell_printf("\n\r");

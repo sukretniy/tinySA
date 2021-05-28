@@ -177,7 +177,7 @@
                                      PIN_PUPDR_PULLDOWN(2) | \
                                      PIN_PUPDR_PULLDOWN(3) | \
                                      PIN_PUPDR_FLOATING(4) |         \
-                                     PIN_PUPDR_PULLDOWN(5) |         \
+                                     PIN_PUPDR_PULLUP(5) |         \
                                      PIN_PUPDR_FLOATING(6) |         \
                                      PIN_PUPDR_FLOATING(7) |         \
                                      PIN_PUPDR_PULLUP(GPIOA_MCO) | \

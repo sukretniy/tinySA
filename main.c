@@ -2119,7 +2119,7 @@ int main(void)
 
 #ifdef TINYSA3
   has_esd = ((palReadPort(GPIOB) & (1<<12)) ? false : true );
-
+  bool has_new_switch = ((palReadPort(GPIOA) & (1<<5)) ? false : true ) || ((palReadPort(GPIOB) & (1<<12)) ? false : true );
 #endif
 
 
@@ -2184,7 +2184,7 @@ int main(void)
 
 /* restore config */
 #ifdef TINYSA3
-  if (has_esd)
+  if (has_new_switch)
     config.switch_offset = -5.0;
 #endif
   config_recall();
