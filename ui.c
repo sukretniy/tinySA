@@ -1905,6 +1905,25 @@ keypad_click(int key)
   } else if (c == KP_MINUS) {
     if (kp_index == 0)
       kp_buf[kp_index++] = '-';
+    else {
+      // always allow sign change, even when not on first position
+      if (kp_buf[0] == '-') {
+        kp_index = 0;
+        do {
+          kp_buf[kp_index] = kp_buf[kp_index+1];
+          kp_index++;
+        } while (kp_buf[kp_index]);
+      } else {
+        int j = kp_index;
+        do {
+          kp_buf[j+1] = kp_buf[j];
+          j--;
+        } while (j >= 0);
+        kp_buf[0] = '-';
+        kp_index++;
+      }
+
+    }
   } else if (c == KP_BS) {
     if (kp_index == 0) {
       return KP_CANCEL;
