@@ -1592,7 +1592,7 @@ static void cell_draw_marker_info(int x0, int y0)
       float mNF = marker_to_value(0) -  logf(actual_rbw_x10*100.0) * (10.0/logf(10.0)) + 174;   // measured noise figure at 18C
       float mnf = expf(mNF/10 * logf(10));     // measure noise factor
       float tnf = expf(config.noise_figure/10 * logf(10));     // tinySA noise factor
-      float anf = mnf - (tnf - 1.0)/setting.external_gain;
+      float anf = mnf - (tnf - 1.0)/ expf(setting.external_gain/10 * logf(10));
       float aNF = 10*logf(anf)/logf(10);
       // powf(10,x) =  expf(x * logf(10))
       // log10f(x)  =  logf(x)/logf(10)
