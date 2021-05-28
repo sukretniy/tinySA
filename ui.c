@@ -1011,33 +1011,36 @@ menu_is_multiline(const char *label)
   return n;
 }
 
+static int period_pos(void) {int j; for (j = 0; j < kp_index && kp_buf[j] != '.'; j++); return j;}
+
 static void
 draw_numeric_input(const char *buf)
 {
-  int i;
-  int x;
-  uint16_t xsim = 0b0010010000000000;
-
+  uint16_t i;
+  uint16_t x = 10 + 10 * FONT_WIDTH + 4;
+  uint16_t xsim = (0b00100100100100100 >>(2-(period_pos()%3)))&(~1);
   ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
   ili9341_set_background(LCD_INPUT_BG_COLOR);
-  for (i = 0, x = 64; i < NUMINPUT_LEN && buf[i]; i++, xsim<<=1) {
+  for (i = 0; buf[i]; i++) {
     int c = buf[i];
-    if (c == '.')
-      c = KP_PERIOD;
-    else if (c == '-')
-      c = KP_MINUS;
+         if (c == '.'){c = KP_PERIOD;xsim<<=4;}
+    else if (c == '-'){c = KP_MINUS; xsim&=~3;}
     else// if (c >= '0' && c <= '9')
       c = c - '0';
-
+    if (c < 0) c = 0;
+    // Add space before char
+    int16_t space = xsim&1 ? 2 + 10 : 2;
+    xsim>>=1;
+    ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, space, NUM_INPUT_HEIGHT);
+    x+=space;
     if (c >= 0) // c is number
       ili9341_drawfont(c, x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4);
-    else // erase
+    else
       break;
-
-    x += xsim&0x8000 ? NUM_FONT_GET_WIDTH+2+8 : NUM_FONT_GET_WIDTH+2;
+    x+=NUM_FONT_GET_WIDTH;
   }
-  // erase last
-  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH-x-1, NUM_FONT_GET_WIDTH+2+8);
+
+  ili9341_fill(x, LCD_HEIGHT-NUM_INPUT_HEIGHT+4, LCD_WIDTH - 1 - x, NUM_INPUT_HEIGHT);
   if (buf[0] == 0 && kp_help_text != NULL) {
     int  lines = menu_is_multiline(kp_help_text);
     ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
