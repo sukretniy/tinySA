@@ -4493,7 +4493,7 @@ static volatile int dummy;
 #endif
       }
 #ifdef __CHANNEL_POWER__
-      } else if (setting.measurement == M_CP || setting.measurement == M_SNR) {      // ----------------CHANNEL_POWER measurement
+      } else if (setting.measurement == M_CP || setting.measurement == M_SNR || setting.measurement == M_NF) {      // ----------------CHANNEL_POWER measurement
         freq_t bw = get_sweep_frequency(ST_SPAN)/3;
         int old_unit = setting.unit;
         setting.unit = U_WATT;

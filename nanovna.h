@@ -1443,7 +1443,12 @@ extern void si_fm_offset(int16_t offset);
 extern bool ADF4351_frequency_changed;
 extern bool SI4463_frequency_changed;
 extern bool SI4463_offset_changed;
+extern int32_t SI4463_ENBW_Hz;
 extern int old_R;
 extern float Si446x_get_temp(void);
+#define ENBW_Hz    SI4463_ENBW_Hz
+#endif
+#ifdef TINYSA3
+#define ENBW_Hz    actual_rbw_x10*100;
 #endif
 /*EOF*/

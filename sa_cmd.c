@@ -374,7 +374,7 @@ VNA_SHELL_FUNCTION(cmd_sweep_voltage)
 VNA_SHELL_FUNCTION(cmd_nf)
 {
   if (argc != 1) {
-    shell_printf("usage: nr {value}\r\n"\
+    shell_printf("usage: nf {value}\r\n"\
                  "%f\r\n", config.noise_figure);
     return;
   }
