@@ -247,6 +247,7 @@ toggle_sweep(void)
 // Shell commands output
 int shell_printf(const char *fmt, ...)
 {
+  if (shell_stream == NULL) return 0;
   va_list ap;
   int formatted_bytes;
   va_start(ap, fmt);
@@ -1889,7 +1890,7 @@ static void shell_init_connection(void){
 
 #else
 // Only USB console, shell_stream always on USB
-#define PREPARE_STREAM
+#define PREPARE_STREAM shell_stream = (BaseSequentialStream *)&SDU1;
 
 #if 0           // Not used
 // Check connection as Active, if no suspend input
@@ -1919,7 +1920,7 @@ static void shell_init_connection(void){
 /*
  *  Set I/O stream SDU1 for shell
  */
-  shell_stream = (BaseSequentialStream *)&SDU1;
+  PREPARE_STREAM;
 }
 #endif
 
@@ -2030,7 +2031,8 @@ void sd_card_load_config(char *filename){
 
   if (f_open(fs_file, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK)
     return;
-
+  // Reset IO stream
+  shell_stream = NULL;
   char *buf = (char *)spi_buffer;
   UINT size = 0;
 
@@ -2059,6 +2061,8 @@ void sd_card_load_config(char *filename){
     }
   }
   f_close(fs_file);
+  // Prepare I/O for shell_stream
+  PREPARE_STREAM;
   return;
 }
 #endif
