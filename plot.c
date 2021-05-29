@@ -1430,7 +1430,11 @@ static void trace_print_value_string(     // Only used at one place
 //    *ptr2++  = 'N';
   *ptr2++ =  ' ';
   if (mtype & M_NOISE){
-    v +=   - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0)) + SI4463_noise_correction_x10/10.0;
+    v +=   - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
+#ifdef TINYSA4
+    + SI4463_noise_correction_x10/10.0
+#endif
+    ;
   }
   // Not possible ???
   if (v == -INFINITY){
