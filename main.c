@@ -118,6 +118,13 @@ static THD_FUNCTION(Thread1, arg)
   (void)arg;
   chRegSetThreadName("sweep");
 
+/*
+ * Load custom config from SD card if present
+ */
+#ifdef __SD_CARD_LOAD__
+  sd_card_load_config("config.ini");
+#endif
+
 #ifndef TINYSA4
   ui_process();
 #endif
@@ -2211,8 +2218,6 @@ int main(void)
 
   shell_init_connection();
 
-
-
   set_sweep_points(POINTS_COUNT);
 
   #ifdef __AUDIO__
@@ -2265,16 +2270,9 @@ int main(void)
     dacPutChannelX(&DACD2, 0, config.dac_value);
   #endif
   dacStart(&DACD1, &dac1cfg1);
-#ifdef TINYSA4
-  disk_initialize(0);
-//  SD_PowerOn();
-#endif
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
-#ifdef __SD_CARD_LOAD__
-  sd_card_load_config("config.ini");
-#endif
 
   while (1) {
 //    if (SDU1.config->usbp->state == USB_ACTIVE) {
