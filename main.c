@@ -2110,6 +2110,7 @@ int main(void)
   #ifdef __USE_RTC__
     rtc_init();
   #endif
+
   //palSetPadMode(GPIOB, 8, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
   //palSetPadMode(GPIOB, 9, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
 #ifdef __VNA__
@@ -2166,10 +2167,18 @@ int main(void)
   }
 #endif
 
+  spi_init();
+
+#ifdef TINYSA4
+  disk_initialize(0);
+//  SD_PowerOn();
+#endif
+
   /*
  * SPI LCD Initialize
  */
   ili9341_init();
+
 
 /*
  *  Initiate 1 micro second timer

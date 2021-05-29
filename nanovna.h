@@ -926,6 +926,7 @@ void ili9341_read_memory(int x, int y, int w, int h, uint16_t* out);
 void ili9341_line(int x0, int y0, int x1, int y1);
 void show_version(void);
 void lcd_setBrightness(uint16_t b);
+void spi_init(void);
 
 /*
  * flash.c

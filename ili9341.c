@@ -307,7 +307,7 @@ void spi_DMARxBuffer(uint8_t *buffer, uint16_t len, bool wait) {
 }
 #endif // __USE_DISPLAY_DMA__
 
-static void spi_init(void)
+void spi_init(void)
 {
   rccEnableSPI1(FALSE);
   LCD_SPI->CR1 = 0;
@@ -528,7 +528,6 @@ void lcd_setBrightness(uint16_t b){
 
 void ili9341_init(void)
 {
-  spi_init();
   // Init Brightness if LCD support
   lcd_initBrightness();
 
