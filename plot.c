@@ -1430,8 +1430,7 @@ static void trace_print_value_string(     // Only used at one place
 //    *ptr2++  = 'N';
   *ptr2++ =  ' ';
   if (mtype & M_NOISE){
-//  v-= log10f(ENBW_Hz) *  10.0;
-    v-=   logf(ENBW_Hz) * (10.0/logf(10.0));
+    v +=   - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0)) + SI4463_noise_correction_x10/10.0;
   }
   // Not possible ???
   if (v == -INFINITY){
@@ -1546,7 +1545,7 @@ static void cell_draw_marker_info(int x0, int y0)
         int ypos = 1 + (j/2)*(16) - y0;
         cell_printf(xpos, ypos, FONT_b"DEPTH: %3d%%", depth);
       } else if (setting.measurement == M_FM){
-        freq_t dev = markers[1].frequency + ENBW_Hz;      // Temp value to prevent calculation of negative deviation
+        freq_t dev = markers[1].frequency + actual_rbw_x10*100.0;      // Temp value to prevent calculation of negative deviation
         if ( markers[2].frequency < dev)
           break;
         dev = ( markers[2].frequency - dev ) >> 1;
@@ -1598,7 +1597,7 @@ static void cell_draw_marker_info(int x0, int y0)
 #else
       aNP = marker_to_value(0);
 #endif
-      float mNF = aNP -  logf(ENBW_Hz) * (10.0/logf(10.0)) + 173.93;   // measured noise figure at 20C
+      float mNF = aNP -  logf(actual_rbw_x10*100.0) * (10.0/logf(10.0)) + 173.93 + SI4463_noise_correction_x10/10.0;   // measured noise figure at 20C
       if (setting.external_gain != 0) {
         float mnf = expf(mNF/10 * logf(10));     // measure noise factor
         float tnf = expf(config.noise_figure/10 * logf(10));     // tinySA noise factor

@@ -1341,7 +1341,7 @@ bool SD_Inserted(void);
 #define fs_filename  (  char*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL) - FF_LFN_BUF - 4)
 #endif
 void testLog(void);        // debug log
-void sd_card_load_config(void);
+void sd_card_load_config(char *filename);
 #endif
 
 /*
@@ -1444,7 +1444,7 @@ extern void si_fm_offset(int16_t offset);
 extern bool ADF4351_frequency_changed;
 extern bool SI4463_frequency_changed;
 extern bool SI4463_offset_changed;
-extern int32_t SI4463_ENBW_Hz;
+extern int16_t SI4463_noise_correction_x10;
 extern int old_R;
 extern float Si446x_get_temp(void);
 #define ENBW_Hz    SI4463_ENBW_Hz

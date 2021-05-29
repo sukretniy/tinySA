@@ -790,8 +790,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
 UI_FUNCTION_CALLBACK(menu_load_config_cb)
 {
   (void)item;
-  (void)data;
-  sd_card_load_config();
+  sd_card_load_config((data?"config.ini":"setting.ini"));
   ui_mode_normal();
 }
 #endif
@@ -1353,8 +1352,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       kp_help_text = "Noise frequency";
       ui_mode_keypad(KM_CENTER);
       set_marker_frequency(0, uistat.value);
-      kp_help_text = "Noise width";
-      ui_mode_keypad(KM_SPAN);
+//      kp_help_text = "Noise width";
+//      ui_mode_keypad(KM_SPAN);
+      set_sweep_frequency(ST_SPAN, 0);
       set_average(AV_100);
       break;
 #endif
@@ -2517,7 +2517,8 @@ static const menuitem_t menu_settings4[] =
   { MT_KEYPAD,   KM_NF,        "NOISE\nFIGURE", "Enter tinySA noise figure"},
 #endif
 #ifdef __SD_CARD_LOAD__
-  { MT_CALLBACK,        0 ,     "LOAD\nCONFIG",    menu_load_config_cb},
+  { MT_CALLBACK,        0 ,     "LOAD\nCONFIG.INI",    menu_load_config_cb},
+  { MT_CALLBACK,        1 ,     "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
   { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
 #ifdef __HARMONIC__

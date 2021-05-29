@@ -2016,12 +2016,12 @@ static void VNAShell_executeLine(char *line)
 #ifndef __USE_SD_CARD__
 #error "Need enable SD card support __USE_SD_CARD__ in nanovna.h, for use ENABLE_SD_CARD_CMD"
 #endif
-void sd_card_load_config(void){
+void sd_card_load_config(char *filename){
   // Mount card
   if (f_mount(fs_volume, "", 1) != FR_OK)
     return;
 
-  if (f_open(fs_file, "config.ini", FA_OPEN_EXISTING | FA_READ) != FR_OK)
+  if (f_open(fs_file, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK)
     return;
 
   char *buf = (char *)spi_buffer;
@@ -2273,7 +2273,7 @@ int main(void)
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 
 #ifdef __SD_CARD_LOAD__
-  sd_card_load_config();
+  sd_card_load_config("config.ini");
 #endif
 
   while (1) {

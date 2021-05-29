@@ -1517,27 +1517,27 @@ typedef struct {
   const uint8_t  *reg;                   // IF_BW(dwn3, ndec, filset)
   int16_t   RSSI_correction_x_10;  // Correction * 10
   int16_t RBWx10;                // RBW in kHz
-  int32_t ENBW_Hz;
+  int16_t noise_correction_x10; // Noise marker correction * 10
 }RBW_t; // sizeof(RBW_t) = 8 bytes
 
 static const RBW_t RBW_choices[] =
 {
 // BW register    corr  freq
- {SI4463_RBW_02kHz, 15,3,188},
- {SI4463_RBW_1kHz,  14,10,1100},
- {SI4463_RBW_3kHz,  10,30,3341},
- {SI4463_RBW_10kHz, 14,100,10910},
- {SI4463_RBW_30kHz, 0,300,32500},
- {SI4463_RBW_100kHz,0,1000,106900},
- {SI4463_RBW_300kHz,1,3000,342000},
- {SI4463_RBW_600kHz,11,6000,640000},
- {SI4463_RBW_850kHz,11,8500,877000},
+ {SI4463_RBW_02kHz, 18,3,42},
+ {SI4463_RBW_1kHz,  18,10,22},
+ {SI4463_RBW_3kHz,  12,30,21},
+ {SI4463_RBW_10kHz, 7,100,20},
+ {SI4463_RBW_30kHz, 10,300,20},
+ {SI4463_RBW_100kHz,2,1000,26},
+ {SI4463_RBW_300kHz,2,3000,19},
+ {SI4463_RBW_600kHz,3,6000,18},
+ {SI4463_RBW_850kHz,12,8500,15},
 };
 
 const uint8_t SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
 
 static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
-int32_t SI4463_ENBW_Hz;
+int16_t SI4463_noise_correction_x10;
 static int prev_band = -1;
 
 pureRSSI_t getSI4463_RSSI_correction(void){
@@ -1563,7 +1563,7 @@ uint16_t force_rbw(int f)
   set_RSSI_comp();
 //  prev_band = -1;
   SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
-  SI4463_ENBW_Hz = RBW_choices[f].ENBW_Hz;
+  SI4463_noise_correction_x10 = RBW_choices[f].noise_correction_x10;
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }
 
