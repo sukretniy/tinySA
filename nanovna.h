@@ -1197,6 +1197,7 @@ void menu_push_lowoutput(void);
 void menu_push_highoutput(void);
 void menu_move_top(void);
 void draw_menu(void);
+void draw_menu_mask(uint32_t mask);
 void refres_sweep_menu(void);
 int check_touched(void);
 int invoke_quick_menu(int);

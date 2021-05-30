@@ -22,6 +22,7 @@
 #include "chprintf.h"
 #include "nanovna.h"
 #include <string.h>
+#include <stdlib.h>
 #include <math.h>
 
 #pragma GCC push_options
@@ -230,8 +231,8 @@ static int btn_wait_release(void)
 //*******************************************************************************
 #ifdef SOFTWARE_TOUCH
 // ADC read count for measure X and Y (2^N count)
-#define TOUCH_X_N 2
-#define TOUCH_Y_N 2
+#define TOUCH_X_N 3
+#define TOUCH_Y_N 3
 static int
 touch_measure_y(void)
 {
@@ -1163,7 +1164,7 @@ static const uint8_t check_box[] = {
 #endif
 
 static void
-draw_menu_buttons(const menuitem_t *menu, int only)
+draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
 {
   int i = 0;
   int y = 0;
@@ -1174,12 +1175,12 @@ draw_menu_buttons(const menuitem_t *menu, int only)
     if (menuDisabled(menu[i].type))            //not applicable to mode
       continue;
 #ifdef __SWEEP_RESTART__
-    if (only != -1 && only != i) {
+    if ((mask&(1<<i)) == 0) {
       y += menu_button_height;
       continue;
     }
 #else
-    (void)only;
+    (void)mask;
 #endif
     button.icon = BUTTON_ICON_NONE;
     // Border width
@@ -1301,9 +1302,6 @@ draw_menu_buttons(const menuitem_t *menu, int only)
 //    draw_battery_status();
 }
 
-static systime_t prev_touch_time = 0;
-static int prev_touch_button = -1;
-
 enum { SL_UNKNOWN, SL_SPAN, SL_MOVE};
 
 void set_keypad_value(int v)
@@ -1339,20 +1337,22 @@ menu_select_touch(int i, int pos)
   const menuitem_t *menu = menu_stack[menu_current_level];
   int old_keypad_mode = keypad_mode;
   int keypad = menu[i].data;
-  prev_touch_time = chVTGetSystemTimeX();
-
+  systime_t prev_touch_time = chVTGetSystemTimeX();
+  systime_t wait = BUTTON_DOWN_LONG_TICKS;
     int touch_x, touch_y,  prev_touch_x = 0;
 //    touch_position(&touch_x, &touch_y);
     systime_t dt = 0;
     int mode = SL_UNKNOWN;
+
     while (touch_check() != EVT_TOUCH_NONE) {
 
       systime_t ticks = chVTGetSystemTimeX();
       dt = ticks - prev_touch_time;
 
-      if (dt > BUTTON_DOWN_LONG_TICKS) {
+      if (dt > wait) {
+//        wait = MS2ST(100); prev_touch_time = ticks;
         touch_position(&touch_x, &touch_y);
-        if (touch_x !=  prev_touch_x /* - 1 || prev_touch_x + 1 < touch_x */ ) {
+        if (abs(touch_x -  prev_touch_x) > 1) {
         fetch_numeric_target(keypad);
         int new_slider = touch_x - LCD_WIDTH/2;   // Can have negative outcome
         if (new_slider < - (MENU_FORM_WIDTH-8)/2 - 1)
@@ -1362,7 +1362,7 @@ menu_select_touch(int i, int pos)
         if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER){
 #define TOUCH_DEAD_ZONE 40
           if (mode == SL_UNKNOWN ) {
-            if (setting.slider_position - TOUCH_DEAD_ZONE < new_slider && new_slider < setting.slider_position + TOUCH_DEAD_ZONE) { // Pick up slider
+            if (abs(setting.slider_position - new_slider) < TOUCH_DEAD_ZONE) { // Pick up slider
               mode = SL_MOVE;
             } else {
               mode = SL_SPAN;
@@ -1383,7 +1383,7 @@ menu_select_touch(int i, int pos)
             set_keypad_value(keypad);
             dirty = false;
             perform(false, 0, uistat.freq_value, false);
-            draw_menu();
+            draw_menu_mask(1<<i);
           } else if (mode == SL_SPAN ){
             freq_t slider_freq;
             first_span:
@@ -1417,7 +1417,7 @@ menu_select_touch(int i, int pos)
               center_text[2] = 'A';
               center_text[3] = 'N';
 #endif
-              draw_menu();                               // Show slider span
+              draw_menu_mask(1<<i);                      // Show slider span
               minFreq = old_minFreq;                     // and restore minFreq
               uistat.freq_value = slider_freq;        // and restore current slider freq
               set_keypad_value(keypad);
@@ -1436,14 +1436,14 @@ menu_select_touch(int i, int pos)
             uistat.value =  setting.external_gain + ((touch_x - OFFSETX+4) * level_range() ) / (MENU_FORM_WIDTH-8) + level_min() ;
          apply_step:
             set_keypad_value(keypad);
-         apply:
             perform(false, 0, get_sweep_frequency(ST_CENTER), false);
-            draw_menu();
+            draw_menu_mask(1<<i);
 //          }
 //        } else if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK && menu[i].reference == menu_sdrive_acb) {
         } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_HIGHOUTLEVEL) {
             set_level( (touch_x - OFFSETX+4) *(level_range()) / (MENU_FORM_WIDTH-8) + level_min() );
-            goto apply;
+            perform(false, 0, get_sweep_frequency(ST_CENTER), false);
+            draw_menu_mask(1<<i);
         }
         keypad_mode = old_keypad_mode;
       }
@@ -1507,7 +1507,6 @@ menu_select_touch(int i, int pos)
 
 nogo:
     setting.slider_position = 0;            // Reset slider when entering frequency
-    prev_touch_button = -1;
 #endif
 
 //  touch_wait_release();
@@ -1557,6 +1556,12 @@ void
 draw_menu(void)
 {
   draw_menu_buttons(menu_stack[menu_current_level], -1);
+}
+
+void
+draw_menu_mask(uint32_t mask)
+{
+  draw_menu_buttons(menu_stack[menu_current_level], mask);
 }
 
 #ifdef __SWEEP_RESTART__
