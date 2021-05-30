@@ -1190,6 +1190,7 @@ void clear_all_config_prop_data(void);
 extern void ui_init(void);
 extern void ui_process(void);
 int current_menu_is_form(void);
+extern float nf_gain;
 
 void ui_mode_normal(void);
 void ui_mode_menu(void);
@@ -1446,6 +1447,7 @@ extern bool ADF4351_frequency_changed;
 extern bool SI4463_frequency_changed;
 extern bool SI4463_offset_changed;
 extern int16_t SI4463_noise_correction_x10;
+void switch_SI4463_RSSI_correction(bool);
 extern int old_R;
 extern float Si446x_get_temp(void);
 #define ENBW_Hz    SI4463_ENBW_Hz

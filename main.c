@@ -118,11 +118,8 @@ static THD_FUNCTION(Thread1, arg)
   (void)arg;
   chRegSetThreadName("sweep");
 
-/*
- * Load custom config from SD card if present
- */
 #ifdef __SD_CARD_LOAD__
-  sd_card_load_config("config.ini");
+  sd_card_load_config("autoload.ini");
 #endif
 
 #ifndef TINYSA4
@@ -249,10 +246,12 @@ int shell_printf(const char *fmt, ...)
 {
   if (shell_stream == NULL) return 0;
   va_list ap;
-  int formatted_bytes;
-  va_start(ap, fmt);
-  formatted_bytes = chvprintf(shell_stream, fmt, ap);
-  va_end(ap);
+  int formatted_bytes = 0;
+  if (shell_stream) {
+    va_start(ap, fmt);
+    formatted_bytes = chvprintf(shell_stream, fmt, ap);
+    va_end(ap);
+  }
   return formatted_bytes;
 }
 
@@ -2276,7 +2275,6 @@ int main(void)
   dacStart(&DACD1, &dac1cfg1);
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
-
 
   while (1) {
 //    if (SDU1.config->usbp->state == USB_ACTIVE) {

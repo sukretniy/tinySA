@@ -1602,10 +1602,10 @@ static void cell_draw_marker_info(int x0, int y0)
       aNP = marker_to_value(0);
 #endif
       float mNF = aNP -  logf(actual_rbw_x10*100.0) * (10.0/logf(10.0)) + 173.93 + SI4463_noise_correction_x10/10.0;   // measured noise figure at 20C
-      if (setting.external_gain != 0) {
-        float mnf = expf(mNF/10 * logf(10));     // measure noise factor
+      if (nf_gain != 0) {
+        float mnf = expf((mNF - nf_gain)/10 * logf(10));     // measure noise factor
         float tnf = expf(config.noise_figure/10 * logf(10));     // tinySA noise factor
-        float amp_gain = expf(setting.external_gain/10 * logf(10));
+        float amp_gain = expf(nf_gain/10 * logf(10));
         float anf = mnf - (tnf - 1.0)/amp_gain;
         mNF = 10*logf(anf)/logf(10);
       }
@@ -1617,7 +1617,7 @@ static void cell_draw_marker_info(int x0, int y0)
 //        j = 1;
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
       int ypos = 1 + (j/2)*(16) - y0;
-      cell_printf(xpos, ypos, FONT_b"NF: %4.1f", mNF);
+      cell_printf(xpos, ypos, FONT_b"GAIN: %4.1fdB   NF: %4.1f", nf_gain, mNF);
       break;
 #endif
     } else

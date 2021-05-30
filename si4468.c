@@ -1360,7 +1360,7 @@ int16_t Si446x_RSSI(void)
 //  SI4463_WAIT_CTS;         // Wait for CTS
   do{
     //   if (MODE_INPUT(setting.mode) && RSSI_R
-#define SAMPLE_COUNT 1
+#define SAMPLE_COUNT 3
     int j = SAMPLE_COUNT; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
@@ -1523,25 +1523,30 @@ typedef struct {
 static const RBW_t RBW_choices[] =
 {
 // BW register    corr  freq
- {SI4463_RBW_02kHz, 18,3,42},
- {SI4463_RBW_1kHz,  18,10,22},
- {SI4463_RBW_3kHz,  12,30,21},
- {SI4463_RBW_10kHz, 7,100,20},
- {SI4463_RBW_30kHz, 10,300,20},
- {SI4463_RBW_100kHz,2,1000,26},
- {SI4463_RBW_300kHz,2,3000,19},
- {SI4463_RBW_600kHz,3,6000,18},
- {SI4463_RBW_850kHz,12,8500,15},
+ {SI4463_RBW_02kHz, 16,3,42},
+ {SI4463_RBW_1kHz,  20,10,29},
+ {SI4463_RBW_3kHz,  15,30,28},
+ {SI4463_RBW_10kHz, 5,100,26},
+ {SI4463_RBW_30kHz, 11,300,22},
+ {SI4463_RBW_100kHz,9,1000,19},
+ {SI4463_RBW_300kHz,8,3000,5},
+ {SI4463_RBW_600kHz,9,6000,-1},
+ {SI4463_RBW_850kHz,19,8500,-9},
 };
 
 const uint8_t SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
 
 static pureRSSI_t SI4463_RSSI_correction = float_TO_PURE_RSSI(-120);
+bool SI4463_RSSI_correction_enabled = true;
 int16_t SI4463_noise_correction_x10;
 static int prev_band = -1;
 
 pureRSSI_t getSI4463_RSSI_correction(void){
   return SI4463_RSSI_correction;
+};
+
+void switch_SI4463_RSSI_correction(bool enabled){
+  SI4463_RSSI_correction_enabled = enabled;
 };
 
 
@@ -1562,7 +1567,7 @@ uint16_t force_rbw(int f)
 //  SI4463_wait_for_cts();
   set_RSSI_comp();
 //  prev_band = -1;
-  SI4463_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
+  SI4463_RSSI_correction = ( SI4463_RSSI_correction_enabled ?  float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10 : float_TO_PURE_RSSI(-120) ) ;  // Set RSSI correction
   SI4463_noise_correction_x10 = RBW_choices[f].noise_correction_x10;
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }

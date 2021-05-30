@@ -790,7 +790,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
 UI_FUNCTION_CALLBACK(menu_load_config_cb)
 {
   (void)item;
-  sd_card_load_config((data?"config.ini":"setting.ini"));
+  sd_card_load_config("config.ini");
   ui_mode_normal();
 }
 #endif
@@ -1151,6 +1151,7 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
   ui_mode_normal();
 }
 
+float nf_gain;
 const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16", "AVER", "QUASI", "DECONV"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
@@ -1348,13 +1349,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[0].mtype = M_NOISE;          // Not tracking
       set_extra_lna(true);
       kp_help_text = "Amplifier Gain ";
+      float old_gain = setting.external_gain;
       ui_mode_keypad(KM_EXT_GAIN);
-      kp_help_text = "Noise frequency";
+      nf_gain = setting.external_gain;
+      setting.external_gain = old_gain;
+      kp_help_text = "Noise center frequency";
       ui_mode_keypad(KM_CENTER);
       set_marker_frequency(0, uistat.value);
-//      kp_help_text = "Noise width";
-//      ui_mode_keypad(KM_SPAN);
-      set_sweep_frequency(ST_SPAN, 0);
+      kp_help_text = "Noise span";
+      ui_mode_keypad(KM_SPAN);
+      set_RBW(get_sweep_frequency(ST_SPAN)/100 / 100);
+//      set_sweep_frequency(ST_SPAN, 0);
       set_average(AV_100);
       break;
 #endif
@@ -2518,7 +2523,7 @@ static const menuitem_t menu_settings4[] =
 #endif
 #ifdef __SD_CARD_LOAD__
   { MT_CALLBACK,        0 ,     "LOAD\nCONFIG.INI",    menu_load_config_cb},
-  { MT_CALLBACK,        1 ,     "LOAD\nSETTING.INI",    menu_load_config_cb},
+//  { MT_CALLBACK,        1 ,     "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
   { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
 #ifdef __HARMONIC__
