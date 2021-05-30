@@ -1439,11 +1439,11 @@ menu_select_touch(int i, int pos)
     }
     else if (keypad == KM_CENTER) {
       switch (pos) {
-        case 0: step = -setting.slider_span;   break;
-        case 1: step = -setting.slider_span/10;break;
+        case 0: step = setting.slider_span;   step=-step; break;
+        case 1: step = setting.slider_span/10;step=-step; break;
         case 2: goto nogo;
-        case 3: step =  setting.slider_span/10;break;
-        case 4: step = setting.slider_span;    break;
+        case 3: step = setting.slider_span/10;break;
+        case 4: step = setting.slider_span;   break;
       }
       if (step < 0 && get_sweep_frequency(ST_CENTER) < (freq_t)(-step))
         uistat.freq_value = 0;
