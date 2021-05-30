@@ -1321,13 +1321,14 @@ static void
 menu_select_touch(int i, int pos)
 {
   long_t step = 0;
+  uint32_t mask = (1<<i);
+  if (selection>=0) mask|=1<<selection;
   selection = i;
-  draw_menu_mask(1<<i);
+  draw_menu_mask(mask);
 #if 1               // drag values
   const menuitem_t *menu = menu_stack[menu_current_level];
   int keypad = menu[i].data;
   int touch_x, touch_y,  prev_touch_x = 0;
-//    touch_position(&touch_x, &touch_y);
   systime_t dt = 0;
   int mode = SL_UNKNOWN;
 
@@ -1777,6 +1778,8 @@ ui_process_menu_lever(void)
       menu_invoke(selection);
     } else {
       do {
+        uint32_t mask = 0;
+        if (selection>=0) mask|=1<<selection;
         if (status & EVT_UP) {
           // skip menu item if disabled
           while (menuDisabled(menu[selection+1].type))
@@ -1799,7 +1802,8 @@ ui_process_menu_lever(void)
         }
 //activate:
         ensure_selection();
-        draw_menu();
+        if (selection>=0) mask|=1<<selection;
+        draw_menu_mask(mask);
         chThdSleepMilliseconds(50); // Add delay for not move so fast in menu
       } while ((status = btn_wait_release()) != 0);
     }
