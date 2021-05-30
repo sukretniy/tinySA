@@ -1190,6 +1190,7 @@ void clear_all_config_prop_data(void);
 extern void ui_init(void);
 extern void ui_process(void);
 int current_menu_is_form(void);
+extern float nf_gain;
 
 void ui_mode_normal(void);
 void ui_mode_menu(void);

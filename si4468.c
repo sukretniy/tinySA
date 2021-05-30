@@ -1524,14 +1524,14 @@ static const RBW_t RBW_choices[] =
 {
 // BW register    corr  freq
  {SI4463_RBW_02kHz, 18,3,42},
- {SI4463_RBW_1kHz,  18,10,22},
- {SI4463_RBW_3kHz,  12,30,21},
- {SI4463_RBW_10kHz, 7,100,20},
- {SI4463_RBW_30kHz, 10,300,20},
- {SI4463_RBW_100kHz,2,1000,26},
- {SI4463_RBW_300kHz,2,3000,19},
- {SI4463_RBW_600kHz,3,6000,18},
- {SI4463_RBW_850kHz,12,8500,15},
+ {SI4463_RBW_1kHz,  18,10,29},
+ {SI4463_RBW_3kHz,  12,30,28},
+ {SI4463_RBW_10kHz, 7,100,26},
+ {SI4463_RBW_30kHz, 10,300,22},
+ {SI4463_RBW_100kHz,2,1000,19},
+ {SI4463_RBW_300kHz,2,3000,7},
+ {SI4463_RBW_600kHz,3,6000,-1},
+ {SI4463_RBW_850kHz,12,8500,-9},
 };
 
 const uint8_t SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));

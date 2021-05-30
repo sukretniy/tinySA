@@ -4780,7 +4780,7 @@ enum {
 
 #ifdef TINYSA4
 //#define CAL_LEVEL   -23.5
-#define CAL_LEVEL   -23
+#define CAL_LEVEL   -23.1
 #else
 #define CAL_LEVEL   (has_esd ? -26.2 : -25)
 #endif
@@ -4833,8 +4833,8 @@ const test_case_t test_case [] =
 #define TEST_SPUR    23
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
 #define TEST_LEVEL  24
- TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
- TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30.01,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30.01,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
  TEST_CASE_STRUCT(TC_LEVEL,   TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   145,     -55),      // 23 Measure level
 
 };
