@@ -961,12 +961,13 @@ void drawMessageBox(char *header, char *text, uint32_t delay){
 }
 
 static void
-draw_keypad(void)
+draw_keypad(uint32_t mask)
 {
-  int i = 0;
+  int i;
   ui_button_t button;
   button.fg = LCD_MENU_TEXT_COLOR;
-  while (keypads[i].c >= 0) {
+  for(i = 0; keypads[i].c >= 0; i++) {
+    if ((mask&(1<<i)) == 0) continue;
     button.bg = LCD_MENU_COLOR;
     if (i == selection){
       button.bg = LCD_MENU_ACTIVE_COLOR;
@@ -987,7 +988,6 @@ draw_keypad(void)
                      x + (KP_WIDTH  - wFONT_MAX_WIDTH*strlen(t)) / 2,
                      y + (KP_HEIGHT - wFONT_GET_HEIGHT) / 2);
     }
-    i++;
   }
 }
 
@@ -1604,7 +1604,7 @@ ui_mode_keypad(int _keypad_mode)
   ui_mode = UI_KEYPAD;
   if (!current_menu_is_form())
     draw_menu();
-  draw_keypad();
+  draw_keypad(-1);
   draw_numeric_area_frame();
   ui_process_keypad();
 }
@@ -1800,7 +1800,7 @@ ui_process_menu_lever(void)
 //activate:
         ensure_selection();
         draw_menu_mask(mask|(1<<selection));
-        chThdSleepMilliseconds(50); // Add delay for not move so fast in menu
+        chThdSleepMilliseconds(100); // Add delay for not move so fast in menu
       } while ((status = btn_wait_release()) != 0);
     }
   }
@@ -1906,13 +1906,14 @@ keypad_apply_touch(void)
     int x = KP_GET_X(keypads[i].x);
     int y = KP_GET_Y(keypads[i].y);
     if (x < touch_x && touch_x < x+KP_WIDTH && y < touch_y && touch_y < y+KP_HEIGHT) {
+      uint32_t mask = (1<<i)|(1<<selection);
       // draw focus
       selection = i;
-      draw_keypad();
+      draw_keypad(mask);
       touch_wait_release();
       // erase focus
       selection = -1;
-      draw_keypad();
+      draw_keypad((1<<i));
       return i;
     }
     i++;
@@ -1933,15 +1934,16 @@ ui_process_keypad(void)
     if (status & (EVT_UP|EVT_DOWN)) {
       int s = status;
       do {
+        uint32_t mask = (1<<selection);
         if (s & EVT_UP)
           if (--selection < 0)
             selection = keypads_last_index;
         if (s & EVT_DOWN)
           if (++selection > keypads_last_index)
             selection = 0;
-        draw_keypad();
-        s = btn_wait_release();
-      } while (s != 0);
+        draw_keypad(mask|(1<<selection));
+        chThdSleepMilliseconds(100);
+      } while ((s = btn_wait_release()) != 0);
     }
 
     if (status == EVT_BUTTON_SINGLE_CLICK) {
