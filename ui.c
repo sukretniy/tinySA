@@ -1409,12 +1409,12 @@ menu_select_touch(int i, int pos)
       } else if (keypad == KM_LOWOUTLEVEL) {
         uistat.value =  setting.external_gain + ((touch_x - OFFSETX+4) * level_range() ) / (MENU_FORM_WIDTH-8) + level_min() ;
         set_keypad_value(keypad);
-        perform(false, 0, get_sweep_frequency(ST_CENTER), false);
         draw_menu_mask(1<<i);
+        perform(false, 0, get_sweep_frequency(ST_CENTER), false);
       } else if (keypad == KM_HIGHOUTLEVEL) {
         set_level( (touch_x - OFFSETX+4) *(level_range()) / (MENU_FORM_WIDTH-8) + level_min() );
-        perform(false, 0, get_sweep_frequency(ST_CENTER), false);
         draw_menu_mask(1<<i);
+        perform(false, 0, get_sweep_frequency(ST_CENTER), false);
       }
       prev_touch_x = touch_x;
 
