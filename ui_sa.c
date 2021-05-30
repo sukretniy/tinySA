@@ -790,6 +790,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
 UI_FUNCTION_CALLBACK(menu_load_config_cb)
 {
   (void)item;
+  (void)data;
   sd_card_load_config("config.ini");
   ui_mode_normal();
 }
