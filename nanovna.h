@@ -1446,6 +1446,7 @@ extern bool ADF4351_frequency_changed;
 extern bool SI4463_frequency_changed;
 extern bool SI4463_offset_changed;
 extern int16_t SI4463_noise_correction_x10;
+void switch_SI4463_RSSI_correction(bool);
 extern int old_R;
 extern float Si446x_get_temp(void);
 #define ENBW_Hz    SI4463_ENBW_Hz

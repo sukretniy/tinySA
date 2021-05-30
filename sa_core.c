@@ -4833,8 +4833,8 @@ const test_case_t test_case [] =
 #define TEST_SPUR    23
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
 #define TEST_LEVEL  24
- TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30.01,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
- TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30.01,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30.000,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30.000,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
  TEST_CASE_STRUCT(TC_LEVEL,   TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   145,     -55),      // 23 Measure level
 
 };
@@ -5657,11 +5657,16 @@ quit:
       shell_printf("%d: %9.3q\n\r",i, peakFreq);
       test_validate(TEST_SPUR);                       // Validate test
     }
-  } else if (false && test == 7) {                       // RBW level test
+#ifdef TINYSA4
+  } else if (test == 7) {                       // RBW level test
     in_selftest = true;
     ui_mode_normal();
+    set_scale(2);
+    set_reflevel(-22);
     shell_printf("\n\r");
-    float first_level=0;
+    float first_level=-23.2;
+    setting.R = 3;
+    switch_SI4463_RSSI_correction(false);
     for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
@@ -5671,29 +5676,40 @@ quit:
       setting.spur_removal = S_ON;
       test_acquire(TEST_LEVEL);                        // Acquire test
       test_validate(TEST_LEVEL);                       // Validate test
-      if (j == SI4432_RBW_count-1)
-        first_level = peakLevel;
-      shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel + 1.5)*10.0 );
+ //     if (j == SI4432_RBW_count-1)
+ //       first_level = peakLevel;
+      shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel)*10.0 );
       if (setting.test_argument != 0)
         break;
     }
-#if 0               // Does not center on frequency!!!!!
-    shell_printf("\n\r");
-    for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
-      if (setting.test_argument != 0)
-        j = setting.test_argument;
-      test_prepare(TEST_LEVEL+2);
-      setting.rbw_x10 = force_rbw(j);
-      test_acquire(TEST_LEVEL+2);                        // Acquire test
-      test_validate(TEST_LEVEL+2);                       // Validate test
-      if (j == SI4432_RBW_count-1)
-        first_level = peakLevel;
-      shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel + 1.5)*10.0 );
-      if (setting.test_argument != 0)
-        break;
+#if 1               // Does not center on frequency!!!!!
+
+    for (int k = 0; k< 4; k++) {
+      shell_printf("\n\r%d ", k);
+      for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
+        if (setting.test_argument != 0)
+          j = setting.test_argument;
+        test_prepare(TEST_RBW);
+//        setting.step_delay_mode = SD_PRECISE;
+        set_repeat(5);
+        setting.rbw_x10 = force_rbw(j);
+        set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * (1000 << k)));
+        test_acquire(TEST_RBW);                        // Acquire test
+        test_validate(TEST_RBW);                       // Validate test
+//        if (j == SI4432_RBW_count-1)
+//          first_level = peakLevel;
+//        shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel)*10.0 );
+        shell_printf("%6.2f ", (first_level - peakLevel)*10.0 );
+        if (setting.test_argument != 0)
+          break;
+      }
     }
 #endif
+    shell_printf("\n\r");
+    setting.R = 0;
+    switch_SI4463_RSSI_correction(true);
     reset_settings(M_LOW);
+#endif
   }
 
   show_test_info = FALSE;
