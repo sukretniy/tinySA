@@ -1229,10 +1229,9 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
         ili9341_blitBitmap(button_start+MENU_FORM_WIDTH-  FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,&right_icons[((menu[i].data >>0)&0xf)*2*FORM_ICON_HEIGHT]);
       }
 #endif
-      int local_slider_positions = 0;
       int local_text_shift = 0;
       if (MT_MASK(menu[i].type) == MT_KEYPAD) {
-        local_text_shift = 2;
+        int local_slider_positions = 0;
         if (menu[i].data == KM_CENTER) {
           local_slider_positions =  LCD_WIDTH/2+setting.slider_position;
           lcd_printf(button_start+12 + 0 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz", -(float)setting.slider_span);
@@ -1240,7 +1239,6 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
           lcd_printf(button_start+12 + 2 * MENU_FORM_WIDTH/5, y+button_height-9, "Set");
           lcd_printf(button_start+12 + 3 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz",  (float)setting.slider_span/10);
           lcd_printf(button_start+12 + 4 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz",  (float)setting.slider_span);
-          goto draw_divider;
         } else if (menu[i].data == KM_LOWOUTLEVEL) {
           local_slider_positions = ((get_level() - level_min()) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
           lcd_printf(button_start+12 + 0 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB", -10);
@@ -1248,17 +1246,18 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
           lcd_printf(button_start+12 + 2 * MENU_FORM_WIDTH/5, y+button_height-9, "Set");
           lcd_printf(button_start+12 + 3 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB",   1);
           lcd_printf(button_start+12 + 4 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB",  10);
-        draw_divider:
-          for (int i = 1; i <= 4; i++) {
-            ili9341_line(button_start + i * MENU_FORM_WIDTH/5, y+button_height-9, button_start + i * MENU_FORM_WIDTH/5, y+button_height);
-          }
-        draw_slider:
-          if (local_slider_positions < button_start)
-            local_slider_positions = button_start;
-          ili9341_blitBitmap(local_slider_positions - 4, y, 7, 5, slider_bitmap);
         } else if (menu[i].data == KM_HIGHOUTLEVEL) {
           local_slider_positions = ((get_level() - level_min() ) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
-          goto draw_slider;
+        }
+        if (local_slider_positions){
+          if (local_slider_positions < button_start)
+            local_slider_positions = button_start;
+          // Shift down text if slider present
+          local_text_shift = 2;
+          ili9341_blitBitmap(local_slider_positions - 4, y, 7, 5, slider_bitmap);
+          // Draw divider for sliders
+          for (int i = 1; i <= 4; i++)
+            ili9341_line(button_start + i * MENU_FORM_WIDTH/5, y+button_height-9, button_start + i * MENU_FORM_WIDTH/5, y+button_height);
         }
       }
 //      ili9341_drawstring_size(text, text_offs, y+(button_height-2*FONT_GET_HEIGHT)/2-local_text_shift, 2);
