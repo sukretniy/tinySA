@@ -1321,12 +1321,10 @@ static void
 menu_select_touch(int i, int pos)
 {
   long_t step = 0;
-  int do_exit = false;
   selection = i;
   draw_menu_mask(1<<i);
 #if 1               // drag values
   const menuitem_t *menu = menu_stack[menu_current_level];
-  int old_keypad_mode = keypad_mode;
   int keypad = menu[i].data;
   int touch_x, touch_y,  prev_touch_x = 0;
 //    touch_position(&touch_x, &touch_y);
@@ -1421,65 +1419,46 @@ menu_select_touch(int i, int pos)
       prev_touch_x = touch_x;
 
     }
-    keypad_mode = old_keypad_mode;
     selection = -1;
-    draw_menu();
+    draw_menu_mask(1<<i);
     return;
   }
-// Wait touch release
-//  touch_wait_release();
-  if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
-    switch (pos) {
-      case 0:
-        step = -10;
-        break;
-      case 1:
-        step = -1;
-        break;
-      case 2:
-        goto nogo;
-      case 3:
-        step = +1;
-        break;
-      case 4:
-        step = +10;
-        break;
+  if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD){
+	bool do_exit = false;
+    if (keypad == KM_LOWOUTLEVEL) {
+      switch (pos) {
+        case 0:step = -10;break;
+        case 1:step =  -1;break;
+        case 2:goto nogo;
+        case 3:step =  +1;break;
+        case 4:step = +10;break;
+      }
+      uistat.value = setting.external_gain + get_level() + step;
+      do_exit = true;
     }
-    uistat.value = setting.external_gain + get_level() + step;
-    do_exit = true;
-  } else if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_CENTER) {
-    switch (pos) {
-      case 0:
-        step = setting.slider_span;
-        step =-step;
-        break;
-      case 1:
-        step = setting.slider_span/10;
-        step =-step;
-        break;
-      case 2:
-        goto nogo;
-      case 3:
-        step = setting.slider_span/10;
-        break;
-      case 4:
-        step = setting.slider_span;
-        break;
+    else if (keypad == KM_CENTER) {
+      switch (pos) {
+        case 0: step = -setting.slider_span;   break;
+        case 1: step = -setting.slider_span/10;break;
+        case 2: goto nogo;
+        case 3: step =  setting.slider_span/10;break;
+        case 4: step = setting.slider_span;    break;
+      }
+      if (step < 0 && get_sweep_frequency(ST_CENTER) < (freq_t)(-step))
+        uistat.freq_value = 0;
+      else
+        uistat.freq_value = get_sweep_frequency(ST_CENTER) + step;
+      do_exit = true;
+      setting.slider_position = 0;                         // reset slider after step
+      check_frequency_slider(uistat.freq_value);
     }
-    if (step < 0 && get_sweep_frequency(ST_CENTER) < (freq_t)(-step))
-      uistat.freq_value = 0;
-    else
-      uistat.freq_value = get_sweep_frequency(ST_CENTER) + step;
-    do_exit = true;
-    setting.slider_position = 0;                         // reset slider after step
-    check_frequency_slider(uistat.freq_value);
-  }
-  if (do_exit){
-    set_keypad_value(keypad);
-    perform(false, 0, get_sweep_frequency(ST_CENTER), false);
-    selection = -1;
-    draw_menu();
-    return;
+    if (do_exit){
+      set_keypad_value(keypad);
+      selection = -1;
+      draw_menu_mask(1<<i);
+      perform(false, 0, get_sweep_frequency(ST_CENTER), false);
+      return;
+    }
   }
 nogo:
   setting.slider_position = 0;            // Reset slider when entering frequency
