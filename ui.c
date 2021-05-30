@@ -1427,7 +1427,7 @@ menu_select_touch(int i, int pos)
     return;
   }
 // Wait touch release
-  touch_wait_release();
+//  touch_wait_release();
   if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && keypad == KM_LOWOUTLEVEL) {
     switch (pos) {
       case 0:
