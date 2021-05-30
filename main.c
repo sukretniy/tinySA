@@ -118,6 +118,10 @@ static THD_FUNCTION(Thread1, arg)
   (void)arg;
   chRegSetThreadName("sweep");
 
+#ifdef __SD_CARD_LOAD__
+  sd_card_load_config("autoload.ini");
+#endif
+
 #ifndef TINYSA4
   ui_process();
 #endif
@@ -241,10 +245,12 @@ toggle_sweep(void)
 int shell_printf(const char *fmt, ...)
 {
   va_list ap;
-  int formatted_bytes;
-  va_start(ap, fmt);
-  formatted_bytes = chvprintf(shell_stream, fmt, ap);
-  va_end(ap);
+  int formatted_bytes = 0;
+  if (shell_stream) {
+    va_start(ap, fmt);
+    formatted_bytes = chvprintf(shell_stream, fmt, ap);
+    va_end(ap);
+  }
   return formatted_bytes;
 }
 
@@ -2024,6 +2030,9 @@ void sd_card_load_config(char *filename){
   if (f_open(fs_file, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK)
     return;
 
+  BaseSequentialStream *old_shell_stream = shell_stream;
+  shell_stream = (BaseSequentialStream *)NULL;
+
   char *buf = (char *)spi_buffer;
   UINT size = 0;
 
@@ -2052,6 +2061,7 @@ void sd_card_load_config(char *filename){
     }
   }
   f_close(fs_file);
+  shell_stream = old_shell_stream;
   return;
 }
 #endif
@@ -2271,10 +2281,6 @@ int main(void)
 #endif
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
-
-#ifdef __SD_CARD_LOAD__
-  sd_card_load_config("config.ini");
-#endif
 
   while (1) {
 //    if (SDU1.config->usbp->state == USB_ACTIVE) {

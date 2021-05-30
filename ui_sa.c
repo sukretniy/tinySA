@@ -790,7 +790,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
 UI_FUNCTION_CALLBACK(menu_load_config_cb)
 {
   (void)item;
-  sd_card_load_config((data?"config.ini":"setting.ini"));
+  sd_card_load_config("config.ini");
   ui_mode_normal();
 }
 #endif
@@ -2518,7 +2518,7 @@ static const menuitem_t menu_settings4[] =
 #endif
 #ifdef __SD_CARD_LOAD__
   { MT_CALLBACK,        0 ,     "LOAD\nCONFIG.INI",    menu_load_config_cb},
-  { MT_CALLBACK,        1 ,     "LOAD\nSETTING.INI",    menu_load_config_cb},
+//  { MT_CALLBACK,        1 ,     "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
   { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
 #ifdef __HARMONIC__
