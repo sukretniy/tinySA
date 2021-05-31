@@ -2574,6 +2574,7 @@ static void calculate_static_correction(void)                   // Calculate the
           - (S_STATE(setting.agc)? 0 : 33)
           - (S_STATE(setting.lna)? 12 : 0)
           + (setting.extra_lna ? -23.5 : 0)                         // TODO <------------------------- set correct value
+          + (Si446x_get_temp() - 35.0) / 13.0              // About 7.7dB per 10 degrees C
 #endif		  
           - setting.external_gain);
 }
@@ -2630,6 +2631,11 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int modulation_index = 0;
   int modulation_count_iter = 0;
   int spur_second_pass = false;
+  if (i == 0) {
+#ifdef TINYSA4
+    calculate_static_correction();                                          // In case temperature changed.
+#endif
+  }
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
 #ifdef __ADF4351__
     clear_frequency_cache();
@@ -2687,7 +2693,6 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   }
   if (i == 0)
     scan_after_dirty += 1;
-
 
   // ---------------------------------  Pulse at start of low output sweep --------------------------
 
@@ -3844,7 +3849,8 @@ static bool sweep(bool break_on_operation)
     temppeakLevel = -150;
 
 
-#ifdef __VBW__
+// #ifdef __VBW__
+#if 0
 #ifdef __FFT_VBW__
     if (setting.vbw_x10 != 0 && sweep_points == 256) {
       float m = 150;
@@ -4836,7 +4842,10 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30.000,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
  TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30.000,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
  TEST_CASE_STRUCT(TC_LEVEL,   TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   145,     -55),      // 23 Measure level
-
+#define TEST_NOISE  27
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_SILENT,       201.000,     0,      -166,   145,     -166),      // 23 Measure level
+#define TEST_NOISE_RBW  28
+ TEST_CASE_STRUCT(TC_MEASURE,   TP_SILENT,       201,     1,      -166,    10,     -166),      // 16 Measure RBW step time
 };
 #else
 {//               Condition     Preparation     Center  Span    Pass    Width(%)Stop
@@ -5664,8 +5673,8 @@ quit:
     set_scale(2);
     set_reflevel(-22);
     shell_printf("\n\r");
-    float first_level=-23.2;
-    setting.R = 3;
+    float first_level=-23.5;
+//    setting.R = 3;
     switch_SI4463_RSSI_correction(false);
     for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
       if (setting.test_argument != 0)
@@ -5709,8 +5718,85 @@ quit:
     setting.R = 0;
     switch_SI4463_RSSI_correction(true);
     reset_settings(M_LOW);
+  } if (test == 8) {                       // RBW level test
+    in_selftest = true;
+    ui_mode_normal();
+//    set_scale(2);
+    set_reflevel(-100);
+    shell_printf("\n\r");
+    float first_level=-166.0;
+//    setting.R = 3;
+    switch_SI4463_RSSI_correction(false);
+    for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
+      if (setting.test_argument != 0)
+        j = setting.test_argument;
+      test_prepare(TEST_NOISE);
+      setting.rbw_x10 = force_rbw(j);
+      setting.extra_lna = true;
+      osalThreadSleepMilliseconds(200);
+      test_acquire(TC_LEVEL);                        // Acquire test
+      test_validate(TEST_NOISE);                       // Validate test
+      peakLevel += - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
+     #ifdef TINYSA4
+         + SI4463_noise_correction_x10/10.0
+     #endif
+         ;
+      //     if (j == SI4432_RBW_count-1)
+      //       first_level = peakLevel;
+      shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel)*10.0 );
+      if (setting.test_argument != 0)
+        break;
+    }
+#if 1               // Does not center on frequency!!!!!
+
+    for (int k = 0; k< 4; k++) {
+      shell_printf("\n\r%d ", k);
+      for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
+        if (setting.test_argument != 0)
+          j = setting.test_argument;
+        test_prepare(TEST_NOISE_RBW);
+//        setting.step_delay_mode = SD_PRECISE;
+        set_repeat(5);
+        setting.rbw_x10 = force_rbw(j);
+        setting.extra_lna = true;
+        osalThreadSleepMilliseconds(200);
+        set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * (1000 << k)));
+        test_acquire(TC_LEVEL);                        // Acquire test
+        test_validate(TEST_NOISE_RBW);                       // Validate test
+        peakLevel += - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
+       #ifdef TINYSA4
+           + SI4463_noise_correction_x10/10.0
+       #endif
+           ;
+        //        if (j == SI4432_RBW_count-1)
+        //          first_level = peakLevel;
+        //        shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel)*10.0 );
+        shell_printf("%6.2f ", (first_level - peakLevel)*10.0 );
+        if (setting.test_argument != 0)
+          break;
+      }
+    }
+#endif
+    shell_printf("\n\r");
+    setting.R = 0;
+    switch_SI4463_RSSI_correction(true);
+    reset_settings(M_LOW);
+  } else if (test == 9) {                       // temperature level
+    in_selftest = true;
+    ui_mode_normal();
+    set_scale(2);
+    set_reflevel(-22);
+    float first_level=-23.5;
+    while (Si446x_get_temp() < 45.0) {
+//    setting.R = 3;
+      test_prepare(TEST_LEVEL);
+      test_acquire(TEST_LEVEL);                        // Acquire test
+      test_validate(TEST_LEVEL);                       // Validate test
+      shell_printf("Temp = %4.1f, level = %6.2f, delta = %6.2f\n\r",Si446x_get_temp() , peakLevel, (first_level - peakLevel)*10.0 );
+    }
 #endif
   }
+
 
   show_test_info = FALSE;
   in_selftest = false;
@@ -5781,6 +5867,8 @@ again:
       set_RBW(3000);
 #endif
       set_attenuation(10);
+      set_repeat(5);
+      setting.spur_removal = S_OFF;
       test_acquire(test_case);                        // Acquire test
       local_test_status = test_validate(test_case);                       // Validate test
 #else
@@ -5790,8 +5878,11 @@ again:
         test_case += 1;
 #endif
       test_prepare(test_case);
-      set_RBW(8500);
+//      set_RBW(8500);
       set_attenuation(10);
+      test_acquire(test_case);                        // Acquire test
+      test_acquire(test_case);                        // Acquire test
+      test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
       local_test_status = test_validate(test_case);                       // Validate test also sets attenuation if zero span
 #endif
