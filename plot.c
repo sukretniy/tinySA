@@ -1617,7 +1617,11 @@ static void cell_draw_marker_info(int x0, int y0)
 //        j = 1;
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
       int ypos = 1 + (j/2)*(16) - y0;
-      cell_printf(xpos, ypos, FONT_b"GAIN: %4.1fdB   NF: %4.1f", nf_gain, mNF);
+      if (nf_gain != 0) {
+        cell_printf(xpos, ypos, FONT_b"GAIN: %4.1fdB   NF: %4.1f", nf_gain, mNF);
+      } else {
+        cell_printf(xpos, ypos, FONT_b"TINYSA NF: %4.1f", mNF);
+      }
       break;
 #endif
     } else
