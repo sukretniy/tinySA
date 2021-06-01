@@ -247,11 +247,9 @@ int shell_printf(const char *fmt, ...)
   if (shell_stream == NULL) return 0;
   va_list ap;
   int formatted_bytes = 0;
-  if (shell_stream) {
-    va_start(ap, fmt);
-    formatted_bytes = chvprintf(shell_stream, fmt, ap);
-    va_end(ap);
-  }
+  va_start(ap, fmt);
+  formatted_bytes = chvprintf(shell_stream, fmt, ap);
+  va_end(ap);
   return formatted_bytes;
 }
 

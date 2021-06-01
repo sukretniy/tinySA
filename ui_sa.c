@@ -1622,8 +1622,8 @@ static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300
 static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
 #endif
 #ifdef __VBW__
-static const uint16_t vbwsel_x10[]={0,1,3,10,30,100};
-static const char* vbwsel_text[]={"auto","0.1", "0.3","   ","  3","10"};
+static const uint16_t vbwsel_x100[]={0,100,30,10,3,1};
+static const char* vbwsel_text[]={"auto","0.01","0.03", "0.1", "0.3","   "};
 #endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
@@ -1648,10 +1648,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_vbw_acb)
   (void)item;
   if (b){
   b->param_1.text = vbwsel_text[data];
-  b->icon = setting.vbw_x10 == vbwsel_x10[data] ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+  b->icon = setting.vbw_x100 == vbwsel_x100[data] ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
-  set_VBW(vbwsel_x10[data]);
+  set_VBW(vbwsel_x100[data]);
   menu_move_back(true);
 }
 
@@ -3460,15 +3460,15 @@ redraw_cal_status:
 #ifdef __VBW__
   // VBW
   if (setting.frequency_step > 0) {
-    int vbw = setting.vbw_x10;
+    int vbw = setting.vbw_x100;
     if (vbw != 0)
       color = LCD_BRIGHT_COLOR_GREEN;
     else {
       color = LCD_FG_COLOR;
-      vbw = 10;
+      vbw = 1;
     }
     ili9341_set_foreground(color);
-    lcd_printf(x, y, "VBW:\n%.1FHz", actual_rbw_x10*100.0 *vbw/10.0);
+    lcd_printf(x, y, "VBW:\n%.1FHz", actual_rbw_x10*100.0 / vbw);
     y = add_quick_menu(y+=YSTEP, (menuitem_t *)menu_vbw);
   }
 #endif

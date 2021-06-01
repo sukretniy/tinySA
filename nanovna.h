@@ -305,7 +305,7 @@ void set_actual_power(float);
 void SetGenerate(int);
 void set_RBW(uint32_t rbw_x10);
 #ifdef __VBW__
-void set_VBW(uint32_t vbw_x10);
+void set_VBW(uint32_t vbw_x100);
 #endif
 void set_lo_drive(int d);
 void set_rx_drive(int d);
@@ -991,7 +991,7 @@ typedef struct setting
   freq_t  slider_span;
 
   uint32_t rbw_x10;
-  uint32_t vbw_x10;
+  uint32_t vbw_x100;
 
   float reflevel;
   float scale;

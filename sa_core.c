@@ -240,13 +240,13 @@ void reset_settings(int m)
   setting.step_delay = 0;
   setting.offset_delay = 0;
   setting.step_delay_mode = SD_NORMAL;
-  setting.vbw_x10 = 0;      // Auto mode
+  setting.vbw_x100 = 0;      // Auto mode
+  setting.repeat = 1;
   setting.auto_reflevel = true;     // Must be after SetReflevel
   setting.decay=20;
   setting.attack=1;
   setting.noise=5;
   setting.below_IF = S_AUTO_OFF;
-  setting.repeat = 1;
   setting.tracking_output = false;
   setting.measurement = M_OFF;
 #ifdef TINYSA4
@@ -1028,9 +1028,13 @@ void set_RBW(uint32_t rbw_x10)
 }
 
 #ifdef __VBW__
-void set_VBW(uint32_t vbw_x10)
+void set_VBW(uint32_t vbw_x100)
 {
-  setting.vbw_x10 = vbw_x10;
+  setting.vbw_x100 = vbw_x100;
+  if (vbw_x100 == 0)
+    setting.repeat = 1;
+  else
+    setting.repeat = vbw_x100;
   dirty = true;
 }
 #endif
@@ -2623,7 +2627,9 @@ int test_output_switch = false;
 int test_output_drive = 0;
 int test_output_attenuate = 0;
 bool level_error = false;
+static float old_temp = 0.0;
 #endif
+
 
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
@@ -2631,11 +2637,12 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int modulation_index = 0;
   int modulation_count_iter = 0;
   int spur_second_pass = false;
-  if (i == 0) {
 #ifdef TINYSA4
+  if (i == 0 && old_temp != Si446x_get_temp()) {
+    old_temp = Si446x_get_temp();
     calculate_static_correction();                                          // In case temperature changed.
-#endif
   }
+#endif
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
 #ifdef __ADF4351__
     clear_frequency_cache();
@@ -2673,8 +2680,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       calculate_static_correction();
 #ifdef __MCU_CLOCK_SHIFT__
       if (!in_selftest) clock_above_48MHz();
-#endif
       is_below = false;
+#endif
       correct_RSSI_freq = get_frequency_correction(f);  // for i == 0 and freq_step == 0;
     } else {
 #ifdef __MCU_CLOCK_SHIFT__
@@ -3852,7 +3859,7 @@ static bool sweep(bool break_on_operation)
 // #ifdef __VBW__
 #if 0
 #ifdef __FFT_VBW__
-    if (setting.vbw_x10 != 0 && sweep_points == 256) {
+    if (setting.vbw_x100 != 0 && sweep_points == 256) {
       float m = 150;
       for (int i=0;i<sweep_points;i++) {
         if (m > temp_t[i])
@@ -3866,7 +3873,7 @@ static bool sweep(bool break_on_operation)
       }
       FFT(real, imag, 256, false);
 #if 1
-      for (int i = 128 - setting.vbw_x10; i<128+setting.vbw_x10; i++) {
+      for (int i = 128 - setting.vbw_x100; i<128+setting.vbw_x100; i++) {
         real[i] = 0;
         imag[i] = 0;
       }
@@ -3883,7 +3890,7 @@ static bool sweep(bool break_on_operation)
 
   // ------------------------ do VBW processing ------------------------------
     if (setting.frequency_step) {
-      int vbw_count_div2 = actual_rbw_x10 * 100 / setting.frequency_step / (setting.vbw_x10 == 0 ? 10 : setting.vbw_x10);
+      int vbw_count_div2 = actual_rbw_x10 * 100 / setting.frequency_step / (setting.vbw_x100 == 0 ? 10 : setting.vbw_x100);
       while(vbw_count_div2-- > 0){
         pureRSSI_t prev = temp_t[0];
         int j;
@@ -5667,7 +5674,7 @@ quit:
       test_validate(TEST_SPUR);                       // Validate test
     }
 #ifdef TINYSA4
-  } else if (test == 7) {                       // RBW level test
+  } else if (test == 7) {                       // RBW level test, param -1 keeps correction
     in_selftest = true;
     ui_mode_normal();
     set_scale(2);
@@ -5675,14 +5682,23 @@ quit:
     shell_printf("\n\r");
     float first_level=-23.5;
 //    setting.R = 3;
-    switch_SI4463_RSSI_correction(false);
+    if (setting.test_argument < 0) {
+      switch_SI4463_RSSI_correction(false);
+      setting.test_argument = 0;
+    }
     for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {
       if (setting.test_argument != 0)
         j = setting.test_argument;
       test_prepare(TEST_LEVEL);
       setting.rbw_x10 = force_rbw(j);
       osalThreadSleepMilliseconds(200);
-      setting.spur_removal = S_ON;
+//      setting.spur_removal = S_ON;
+      setting.R = 3;
+      set_average(AV_100);
+      test_acquire(TEST_LEVEL);                        // Acquire test
+      test_acquire(TEST_LEVEL);                        // Acquire test
+      test_acquire(TEST_LEVEL);                        // Acquire test
+      test_acquire(TEST_LEVEL);                        // Acquire test
       test_acquire(TEST_LEVEL);                        // Acquire test
       test_validate(TEST_LEVEL);                       // Validate test
  //     if (j == SI4432_RBW_count-1)
@@ -5703,6 +5719,11 @@ quit:
         set_repeat(5);
         setting.rbw_x10 = force_rbw(j);
         set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * (1000 << k)));
+        set_average(AV_100);
+        test_acquire(TEST_RBW);                        // Acquire test
+        test_acquire(TEST_RBW);                        // Acquire test
+        test_acquire(TEST_RBW);                        // Acquire test
+        test_acquire(TEST_RBW);                        // Acquire test
         test_acquire(TEST_RBW);                        // Acquire test
         test_validate(TEST_RBW);                       // Validate test
 //        if (j == SI4432_RBW_count-1)
@@ -5734,6 +5755,11 @@ quit:
       setting.rbw_x10 = force_rbw(j);
       setting.extra_lna = true;
       osalThreadSleepMilliseconds(200);
+      set_average(AV_100);
+      test_acquire(TC_LEVEL);                        // Acquire test
+      test_acquire(TC_LEVEL);                        // Acquire test
+      test_acquire(TC_LEVEL);                        // Acquire test
+      test_acquire(TC_LEVEL);                        // Acquire test
       test_acquire(TC_LEVEL);                        // Acquire test
       test_validate(TEST_NOISE);                       // Validate test
       peakLevel += - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
@@ -5760,7 +5786,13 @@ quit:
         setting.rbw_x10 = force_rbw(j);
         setting.extra_lna = true;
         osalThreadSleepMilliseconds(200);
+
         set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * (1000 << k)));
+        set_average(AV_100);
+        test_acquire(TC_LEVEL);                        // Acquire test
+        test_acquire(TC_LEVEL);                        // Acquire test
+        test_acquire(TC_LEVEL);                        // Acquire test
+        test_acquire(TC_LEVEL);                        // Acquire test
         test_acquire(TC_LEVEL);                        // Acquire test
         test_validate(TEST_NOISE_RBW);                       // Validate test
         peakLevel += - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
@@ -5830,7 +5862,6 @@ void calibrate_modulation(int modulation, int8_t *correction)
 #define CALIBRATE_RBWS  1
 const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
-#ifdef __CALIBRATE__
 void calibrate(void)
 {
   int local_test_status;
@@ -5869,6 +5900,9 @@ again:
       set_attenuation(10);
       set_repeat(5);
       setting.spur_removal = S_OFF;
+      set_average(AV_100);
+      test_acquire(test_case);                        // Acquire test
+      test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
       local_test_status = test_validate(test_case);                       // Validate test
 #else
@@ -5878,8 +5912,9 @@ again:
         test_case += 1;
 #endif
       test_prepare(test_case);
-//      set_RBW(8500);
+      set_RBW(3000);
       set_attenuation(10);
+      set_average(AV_100);
       test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
@@ -5911,7 +5946,7 @@ again:
     goto again;
   }
 #endif
-  #if 0               // No high input calibration as CAL OUTPUT is unreliable
+#if 0               // No high input calibration as CAL OUTPUT is unreliable
 
   set_RBW(100);
   test_prepare(TEST_POWER+1);
@@ -5951,7 +5986,7 @@ quit:
   set_refer_output(-1);
   reset_settings(M_LOW);
 }
-#endif
+
 
 #ifdef TINYSA4
 
