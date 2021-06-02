@@ -5866,7 +5866,6 @@ void calibrate(void)
 {
   int local_test_status;
   int old_sweep_points = setting._sweep_points;
-  in_selftest = true;
 #ifdef TINYSA4
   setting.test_argument = -7;
   self_test(0);
@@ -5877,13 +5876,25 @@ void calibrate(void)
   }
 #endif
   reset_calibration();
-  reset_settings(M_LOW);
 #ifdef TINYSA4
   bool calibrate_lna = false;
 again:
 #endif
   for (int k = 0; k<2; k++) {
     for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
+#if 1
+      reset_settings(M_LOW);
+      set_refer_output(0);
+      set_sweep_frequency(ST_STOP, 60000000);
+      int test_case = TEST_POWER;
+      set_extra_lna(calibrate_lna);
+      set_average(AV_100);
+      for (int m=1; m<20; m++) {
+        test_acquire(test_case);                        // Acquire test
+        local_test_status = test_validate(test_case);
+      }
+      local_test_status = TS_PASS;
+#else
       //    set_RBW(power_rbw[j]);
       //    set_sweep_points(21);
 #if 0
@@ -5920,6 +5931,7 @@ again:
       test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
       local_test_status = test_validate(test_case);                       // Validate test also sets attenuation if zero span
+#endif
 #endif
       if (k ==0 || k == 1) {
         if (peakLevel < -50) {
@@ -5972,7 +5984,6 @@ again:
   }
 
 #endif
-
   config_save();
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 40, 140);
@@ -5983,8 +5994,11 @@ quit:
   set_sweep_points(old_sweep_points);
   in_selftest = false;
   sweep_mode = SWEEP_ENABLE;
-  set_refer_output(-1);
-  reset_settings(M_LOW);
+//  set_refer_output(-1);
+//  reset_settings(M_LOW);
+  set_extra_lna(false);
+  set_average(AV_OFF);
+
 }
 
 
