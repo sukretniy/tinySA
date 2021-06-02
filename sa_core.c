@@ -4602,6 +4602,11 @@ static volatile int dummy;
 //  palSetLine(LINE_LED);
 #endif
   
+  // Enable traces at sweep complete for redraw
+  if (enable_after_complete){
+    TRACE_ENABLE(enable_after_complete);
+    enable_after_complete = 0;
+  }
   return true;
 }
 
@@ -5744,9 +5749,11 @@ quit:
         shell_printf("%6.2f ", (first_level - peakLevel)*10.0 );
         if (setting.test_argument != 0)
           break;
+        if (operation_requested) goto abort;
       }
     }
 #endif
+abort:
     shell_printf("\n\r");
     setting.R = 0;
     switch_SI4463_RSSI_correction(true);
@@ -5764,6 +5771,7 @@ quit:
       if (setting.test_argument != 0)
         j = setting.test_argument;
       test_prepare(TEST_NOISE);
+      markers[0].mtype = M_NOISE | M_AVER;
       setting.rbw_x10 = force_rbw(j);
       setting.extra_lna = true;
       osalThreadSleepMilliseconds(200);
@@ -5798,7 +5806,7 @@ quit:
         setting.rbw_x10 = force_rbw(j);
         setting.extra_lna = true;
         osalThreadSleepMilliseconds(200);
-
+        markers[0].mtype = M_NOISE | M_AVER;
         set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * (1000 << k)));
         set_average(AV_100);
         test_acquire(TC_LEVEL);                        // Acquire test
@@ -5818,6 +5826,7 @@ quit:
         shell_printf("%6.2f ", (first_level - peakLevel)*10.0 );
         if (setting.test_argument != 0)
           break;
+        if (operation_requested) goto abort;
       }
     }
 #endif
@@ -5899,7 +5908,7 @@ again:
       set_refer_output(0);
       set_sweep_frequency(ST_STOP, 60000000);
       int test_case = TEST_POWER;
-#ifdef TINYSA
+#ifdef TINYSA4
       set_extra_lna(calibrate_lna);
 #endif
       set_average(AV_100);

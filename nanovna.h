@@ -266,6 +266,7 @@ extern float level_range(void);
 extern float channel_power[3];
 extern float channel_power_watt[3];
 extern const char * const unit_string[];
+extern uint16_t vbwSteps;
 #ifdef TINYSA4
 extern freq_t ultra_threshold;
 extern bool ultra;
