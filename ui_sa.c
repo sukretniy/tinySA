@@ -2286,6 +2286,7 @@ const menuitem_t menu_marker_modify[] = {
   { MT_ADV_CALLBACK, M_NOISE,       "NOISE",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING", menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_STORED,      "STORED",   menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_AVER,      "TRACE\nAVERAGE",   menu_marker_modify_acb},
   { MT_SUBMENU,  0,                 "SEARCH",   menu_marker_search},
   { MT_CALLBACK, M_DELETE,          "DELETE",   menu_marker_delete_cb},
   { MT_CANCEL,   0,          S_LARROW" BACK", NULL },

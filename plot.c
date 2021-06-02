@@ -288,7 +288,14 @@ marker_to_value(const int i)
     ref_marker_levels = stored_t;
   else
     ref_marker_levels = actual_t;
-  return(value(ref_marker_levels[markers[i].index]));
+  float v = value(ref_marker_levels[markers[i].index]);
+  if (markers[i].mtype & M_AVER) {
+    v = 0;
+    for (int i=0; i<sweep_points; i++)
+      v += value(ref_marker_levels[i]);
+    v /= sweep_points;
+  }
+  return(v);
 }
 
 #ifdef TINYSA3
