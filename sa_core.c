@@ -4103,6 +4103,11 @@ static volatile int dummy;
         temppeakLevel = actual_t[0];
         max_index[0] = 0;
         downslope = true;
+        peakLevel = temppeakLevel;
+      }
+      if (cur_max == 0 && peakLevel <  actual_t[i]) {
+        peakIndex = i;
+        peakLevel = actual_t[i];
       }
       if (downslope) {                               // If in down slope peak finding
         if (temppeakLevel > actual_t[i]) {           // Follow down
@@ -4403,6 +4408,10 @@ static volatile int dummy;
 
   // --------------------- set tracking markers from maximum table -----------------
 
+  if (cur_max == 0) {
+    max_index[0] = peakIndex;
+    cur_max = 1;
+  }
   if (MODE_INPUT(setting.mode)) {               // Assign maxima found to tracking markers
     int i = 0;
     int m = 0;
@@ -4525,8 +4534,11 @@ static volatile int dummy;
     }
 
 #endif
-    peakIndex = max_index[0];
-    peakLevel = actual_t[peakIndex];
+    if (cur_max > 0) {
+      peakIndex = max_index[0];
+      peakLevel = actual_t[peakIndex];
+      cur_max = 1;
+    }
     peakFreq = frequencies[peakIndex];
     min_level = temp_min_level;
   }
@@ -5887,7 +5899,9 @@ again:
       set_refer_output(0);
       set_sweep_frequency(ST_STOP, 60000000);
       int test_case = TEST_POWER;
+#ifdef TINYSA
       set_extra_lna(calibrate_lna);
+#endif
       set_average(AV_100);
       for (int m=1; m<20; m++) {
         test_acquire(test_case);                        // Acquire test
@@ -5996,7 +6010,9 @@ quit:
   sweep_mode = SWEEP_ENABLE;
 //  set_refer_output(-1);
 //  reset_settings(M_LOW);
+#ifdef TINYSA4
   set_extra_lna(false);
+#endif
   set_average(AV_OFF);
 
 }

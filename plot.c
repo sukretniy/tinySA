@@ -1488,7 +1488,7 @@ static void trace_print_value_string(     // Only used at one place
 #else
   if (bold) format++; // Skip small prefix for bold output
 #endif
-  cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""));
+  cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":(mtype & M_AVER?"/T":"")));
 }
 
 static void cell_draw_marker_info(int x0, int y0)
