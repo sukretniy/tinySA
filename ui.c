@@ -136,7 +136,6 @@ typedef struct {
 #define EVT_TOUCH_DOWN     1
 #define EVT_TOUCH_PRESSED  2
 #define EVT_TOUCH_RELEASED 3
-#define EVT_TOUCH_LONGPRESS 4
 
 #define TOUCH_INTERRUPT_ENABLED   1
 static uint8_t touch_status_flag = 0;
@@ -599,7 +598,7 @@ select_lever_mode(int mode)
 // type of menu item 
 enum {
   MT_NONE,                      // sentinel menu
-  MT_BLANK,                     // blank menu (nothing draw)
+//  MT_BLANK,                     // blank menu (nothing draw)
   MT_SUBMENU,                   // enter to submenu
   MT_CALLBACK,                  // call user function
   MT_ADV_CALLBACK,              // adv call user function
@@ -788,16 +787,50 @@ active_marker_select(int item)  // used only to select an active marker from the
 
 #define MENU_STACK_DEPTH_MAX 7
 const menuitem_t *menu_stack[MENU_STACK_DEPTH_MAX] = {
-  menu_top, NULL, NULL, NULL
+  menu_top, NULL, NULL, NULL, NULL, NULL, NULL
 };
+
+int current_menu_is_form(void)
+{
+  return menu_stack[menu_current_level]->type & MT_FORM;
+}
+
+static bool menuDisabled(uint8_t type){
+  if ((type & MT_LOW) && !MODE_LOW(setting.mode))
+    return true;
+  if ((type & MT_HIGH) && !MODE_HIGH(setting.mode))
+    return true;
+//  if (type == MT_BLANK)
+//    return true;
+  return false;
+}
+
+static const menuitem_t *menu_next_item(const menuitem_t *m){
+  do{
+    m++;
+    m = MT_MASK(m->type) == MT_NONE ? (menuitem_t *)m->reference : m;
+  } while(m!=NULL && menuDisabled(m->type));
+  return m;
+}
+
+static const menuitem_t *current_menu_item(int i){
+  const menuitem_t * m = menu_stack[menu_current_level];
+  while (i--) m = menu_next_item(m);
+  return m;
+}
+
+static int current_menu_get_count(void){
+  int i = 0;
+  const menuitem_t *m = menu_stack[menu_current_level];
+  while (m){m = menu_next_item(m); i++;}
+  return i;
+}
 
 static void
 ensure_selection(void)
 {
   const menuitem_t *menu = menu_stack[menu_current_level];
-  int i;
-  for (i = 0; MT_MASK(menu[i].type) != MT_NONE; i++)
-    ;
+  int i = current_menu_get_count();
   if (selection <  0) selection =  -1;
   if (selection >= i) selection = i-1;
   if (MT_MASK(menu[0].type) == MT_TITLE && selection == 0) selection = 1;
@@ -814,17 +847,18 @@ menu_move_back(bool leave_ui)
   if (menu_current_level == 0)
     return;
   erase_menu_buttons();
-  if ( menu_is_form(menu_stack[menu_current_level  ]) &&
-      !menu_is_form(menu_stack[menu_current_level-1]))
-    redraw_request|=REDRAW_AREA|REDRAW_BATTERY|REDRAW_FREQUENCY|REDRAW_CAL_STATUS; // redraw all if switch from form to normal menu mode
+  bool form = current_menu_is_form();
   menu_current_level--;
-  selection = -1;
 
-  if (leave_ui){
+  // redraw all if switch from form to normal menu mode or back
+  if (form != current_menu_is_form())
+    redraw_request|=REDRAW_AREA|REDRAW_BATTERY|REDRAW_FREQUENCY|REDRAW_CAL_STATUS;
+
+  selection = -1;
+  if (leave_ui)
     ui_mode_normal();
-    return;
-  }
-  ui_mode_menu();
+  else
+    ui_mode_menu();
 }
 
 static void
@@ -849,11 +883,6 @@ menu_push_highoutput(void)
   menu_push_submenu(menu_highoutputmode);
 }
 
-int current_menu_is_form(void)
-{
-  return menu_is_form(menu_stack[menu_current_level]);
-}
-
 /*
 static void
 menu_move_top(void)
@@ -870,14 +899,13 @@ menu_move_top(void)
 static void
 menu_invoke(int item)
 {
-  const menuitem_t *menu = menu_stack[menu_current_level];
-  menu = &menu[item];
-
+  const menuitem_t *menu = current_menu_item(item);
+  if (menu == NULL) return;
   switch (MT_MASK(menu->type)) {
-  case MT_NONE:
-  case MT_BLANK:
-    ui_mode_normal();
-    break;
+//  case MT_NONE:
+//  case MT_BLANK:
+//    ui_mode_normal();
+//    break;
 
   case MT_CANCEL:
     menu_move_back(false);
@@ -905,7 +933,7 @@ menu_invoke(int item)
 
   case MT_KEYPAD:
     uistat.auto_center_marker = false;
-    if (menu->type & MT_FORM) {
+    if (current_menu_is_form()) {
       redraw_frame();         // Remove form numbers
     }
     kp_help_text = (char *)menu->reference;
@@ -1053,21 +1081,6 @@ draw_numeric_area_frame(void)
   draw_numeric_input("");
 }
 
-#ifndef __VNA__
-extern void menu_item_modify_attribute(
-    const menuitem_t *menu, int item, ui_button_t *button);
-#endif
-
-static bool menuDisabled(uint8_t type){
-  if ((type & MT_LOW) && !MODE_LOW(setting.mode))
-    return true;
-  if ((type & MT_HIGH) && !MODE_HIGH(setting.mode))
-    return true;
-  if (type == MT_BLANK)
-    return true;
-  return false;
-}
-
 #define ICON_WIDTH        16
 #define ICON_HEIGHT       11
 
@@ -1159,24 +1172,15 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
   int i = 0;
   int y = 0;
   ui_button_t button;
-  for (i = 0; i < MENU_BUTTON_MAX; i++) {
-    if (MT_MASK(menu[i].type) == MT_NONE)
-      break;
-    if (menuDisabled(menu[i].type))            //not applicable to mode
+  const menuitem_t *m = menu;
+  for (i = 0; i < MENU_BUTTON_MAX && m; m = menu_next_item(m), i++, y += menu_button_height) {
+    if ((mask&(1<<i)) == 0)
       continue;
-#ifdef __SWEEP_RESTART__
-    if ((mask&(1<<i)) == 0) {
-      y += menu_button_height;
-      continue;
-    }
-#else
-    (void)mask;
-#endif
     button.icon = BUTTON_ICON_NONE;
     // Border width
     button.border = MENU_BUTTON_BORDER;
 
-    if (MT_MASK(menu[i].type) == MT_TITLE) {
+    if (MT_MASK(m->type) == MT_TITLE) {
       button.fg = LCD_FG_COLOR;
       button.bg = LCD_BG_COLOR;
       button.border = 0; // no border for title
@@ -1196,25 +1200,25 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
     menu_item_modify_attribute(menu, i, &button);      // before plot_printf to create status text
     char *text;
     // MT_ADV_CALLBACK - allow change button data in callback, more easy and correct
-    if (MT_MASK(menu[i].type) == MT_ADV_CALLBACK){
-      menuaction_acb_t cb = (menuaction_acb_t)menu[i].reference;
-      if (cb) (*cb)(i, menu[i].data, &button);
+    if (MT_MASK(m->type) == MT_ADV_CALLBACK){
+      menuaction_acb_t cb = (menuaction_acb_t)m->reference;
+      if (cb) (*cb)(i, m->data, &button);
       // Apply custom text, from button label and
-      if (menu[i].label != MT_CUSTOM_LABEL)
-        plot_printf(button.text, sizeof(button.text), menu[i].label, button.param_1.u);
+      if (m->label != MT_CUSTOM_LABEL)
+        plot_printf(button.text, sizeof(button.text), m->label, button.param_1.u);
       text = button.text;
     }
     else
-      text = menu[i].label;
+      text = m->label;
     // Only keypad retrieves value
-    if (MT_MASK(menu[i].type) == MT_KEYPAD) {
-      fetch_numeric_target(menu[i].data);
-      plot_printf(button.text, sizeof button.text, menu[i].label, uistat.text);
+    if (MT_MASK(m->type) == MT_KEYPAD) {
+      fetch_numeric_target(m->data);
+      plot_printf(button.text, sizeof button.text, m->label, uistat.text);
       text = button.text;
     }
 
     int button_height = menu_button_height;
-    if (menu[i].type & MT_FORM) {
+    if (current_menu_is_form()) {
       int button_width = MENU_FORM_WIDTH;
       int button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2; // At center of screen
       draw_button(button_start, y, button_width, button_height, &button);
@@ -1224,29 +1228,29 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
         text_offs = button_start+6+ICON_WIDTH+1;
       }
 #ifdef __ICONS__
-      if (menu[i].type & MT_ICON) {
+      if (m->type & MT_ICON) {
         ili9341_blitBitmap(button_start+MENU_FORM_WIDTH-2*FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,& left_icons[((menu[i].data >>4)&0xf)*2*FORM_ICON_HEIGHT]);
         ili9341_blitBitmap(button_start+MENU_FORM_WIDTH-  FORM_ICON_WIDTH-8,y+(button_height-FORM_ICON_HEIGHT)/2,FORM_ICON_WIDTH,FORM_ICON_HEIGHT,&right_icons[((menu[i].data >>0)&0xf)*2*FORM_ICON_HEIGHT]);
       }
 #endif
       int local_text_shift = 0;
-      if (MT_MASK(menu[i].type) == MT_KEYPAD) {
+      if (MT_MASK(m->type) == MT_KEYPAD) {
         int local_slider_positions = 0;
-        if (menu[i].data == KM_CENTER) {
+        if (m->data == KM_CENTER) {
           local_slider_positions =  LCD_WIDTH/2+setting.slider_position;
           lcd_printf(button_start+12 + 0 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz", -(float)setting.slider_span);
           lcd_printf(button_start+12 + 1 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz", -(float)setting.slider_span/10);
           lcd_printf(button_start+12 + 2 * MENU_FORM_WIDTH/5, y+button_height-9, "Set");
           lcd_printf(button_start+12 + 3 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz",  (float)setting.slider_span/10);
           lcd_printf(button_start+12 + 4 * MENU_FORM_WIDTH/5, y+button_height-9, "%+3.0FHz",  (float)setting.slider_span);
-        } else if (menu[i].data == KM_LOWOUTLEVEL) {
+        } else if (m->data == KM_LOWOUTLEVEL) {
           local_slider_positions = ((get_level() - level_min()) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
           lcd_printf(button_start+12 + 0 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB", -10);
           lcd_printf(button_start+12 + 1 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB",  -1);
           lcd_printf(button_start+12 + 2 * MENU_FORM_WIDTH/5, y+button_height-9, "Set");
           lcd_printf(button_start+12 + 3 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB",   1);
           lcd_printf(button_start+12 + 4 * MENU_FORM_WIDTH/5, y+button_height-9, "%+ddB",  10);
-        } else if (menu[i].data == KM_HIGHOUTLEVEL) {
+        } else if (m->data == KM_HIGHOUTLEVEL) {
           local_slider_positions = ((get_level() - level_min() ) * (MENU_FORM_WIDTH-8)) / level_range() + OFFSETX+4;
         }
         if (local_slider_positions){
@@ -1279,7 +1283,6 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
       ili9341_drawstring(text, text_offs, y+(button_height-linesFONT_GET_HEIGHT)/2);
 #endif
     }
-    y += button_height;
   }
   // Cleanup other buttons (less flicker)
   // Erase empty buttons
@@ -1287,7 +1290,7 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
     ili9341_set_background(LCD_BG_COLOR);
     ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, y, MENU_BUTTON_WIDTH, NO_WATERFALL - y);
   }
-//  if (menu[i].type & MT_FORM)
+//  if (current_menu_is_form())
 //    draw_battery_status();
 }
 
@@ -1323,8 +1326,9 @@ menu_select_touch(int i, int pos)
   selection = i;
   draw_menu_mask(mask);
 #if 1               // drag values
-  const menuitem_t *menu = menu_stack[menu_current_level];
-  int keypad = menu[i].data;
+  const menuitem_t *m = current_menu_item(i);
+  if (m == NULL) return;
+  int keypad = m->data;
   int touch_x, touch_y,  prev_touch_x = 0;
   systime_t dt = 0;
   int mode = SL_UNKNOWN;
@@ -1335,7 +1339,7 @@ menu_select_touch(int i, int pos)
     if (dt > BUTTON_DOWN_LONG_TICKS) break;
   }
 
-  if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD && dt >= BUTTON_DOWN_LONG_TICKS){
+  if (current_menu_is_form() && MT_MASK(m->type) == MT_KEYPAD && dt >= BUTTON_DOWN_LONG_TICKS){
     // Wait release touch and process it
     while (touch_check() != EVT_TOUCH_NONE){
       touch_position(&touch_x, &touch_y);
@@ -1421,8 +1425,8 @@ menu_select_touch(int i, int pos)
     draw_menu_mask(1<<i);
     return;
   }
-  if (menu_is_form(menu) && MT_MASK(menu[i].type) == MT_KEYPAD){
-	bool do_exit = false;
+  if (current_menu_is_form() && MT_MASK(m->type) == MT_KEYPAD){
+    bool do_exit = false;
     long_t step = 0;
     if (keypad == KM_LOWOUTLEVEL) {
       switch (pos) {
@@ -1471,35 +1475,27 @@ nogo:
 static void
 menu_apply_touch(int touch_x, int touch_y)
 {
-  const menuitem_t *menu = menu_stack[menu_current_level];
+  const menuitem_t *m = menu_stack[menu_current_level];
   int i;
   int y = 0;
-  for (i = 0; i < MENU_BUTTON_MAX; i++) {
-    if (MT_MASK(menu[i].type) == MT_NONE)
-      break;
-    if (menuDisabled(menu[i].type))            //not applicable to mode
-      continue;
-    if (MT_MASK(menu[i].type) == MT_TITLE) {
-      y += menu_button_height;
-      continue;
-    }
-    int active_button_start;
-    if (menu[i].type & MT_FORM) {
-      active_button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2;
-//      active_button_stop = LCD_WIDTH - active_button_start;
-    } else {
-      active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
-//      active_button_stop = LCD_WIDTH;
-    }
-    if (y < touch_y && touch_y < y+menu_button_height) {
-      if (touch_x > active_button_start) {
+  int active_button_start;
+  if (current_menu_is_form()) {
+    active_button_start = (LCD_WIDTH - MENU_FORM_WIDTH)/2;
+//  active_button_stop = LCD_WIDTH - active_button_start;
+  } else {
+    active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
+//  active_button_stop = LCD_WIDTH;
+  }
+  for (i = 0; i < MENU_BUTTON_MAX && m; m = menu_next_item(m), i++) {
+    if (MT_MASK(m->type) != MT_TITLE) {
+      if (y < touch_y && touch_y < y+menu_button_height && touch_x > active_button_start) {
         menu_select_touch(i, (( touch_x - active_button_start) * 5 ) / MENU_FORM_WIDTH);
         return;
       }
     }
     y += menu_button_height;
   }
-  if (menu_is_form(menu))
+  if (current_menu_is_form())
     return;
   touch_wait_release();
   ui_mode_normal();
@@ -1771,43 +1767,26 @@ ui_process_menu_lever(void)
   // if false user must select some thing
   const menuitem_t *menu = menu_stack[menu_current_level];
   int status = btn_check();
-  if (status != 0) {
-    if (selection >=0 && status & EVT_BUTTON_SINGLE_CLICK) {
-      menu_invoke(selection);
-    } else {
-      do {
-        uint32_t mask = 1<<selection;
-        if (status & EVT_UP) {
-          // skip menu item if disabled
-          while (menuDisabled(menu[selection+1].type))
-            selection++;
-          // close menu if next item is sentinel, else step up
-          if (menu[selection+1].type != MT_NONE)
-            selection++;
-          else if (!(menu[0].type & MT_FORM))  // not close if type = form menu
-            goto menuclose;
-        }
-        if (status & EVT_DOWN) {
-          // skip menu item if disabled
-          while (selection > 0 && menuDisabled(menu[selection-1].type))
-            selection--;
-          // close menu if item is 0, else step down
-          if (selection > 0)
-            selection--;
-          else if (!(menu[0].type & MT_FORM)) // not close if type = form menu
-            goto menuclose;
-        }
-//activate:
-        ensure_selection();
-        draw_menu_mask(mask|(1<<selection));
-        chThdSleepMilliseconds(100); // Add delay for not move so fast in menu
-      } while ((status = btn_wait_release()) != 0);
-    }
+  if (status == 0) return;
+  if (selection >=0 && status & EVT_BUTTON_SINGLE_CLICK) {
+    menu_invoke(selection);
+    return;
   }
+  uint16_t count = current_menu_get_count();
+  do {
+    uint32_t mask = 1<<selection;
+    if (status & EVT_UP  ) selection++;
+    if (status & EVT_DOWN) selection--;
+    // not close if type = form menu
+    if ((uint16_t)selection >= count && !(menu[0].type & MT_FORM)){
+      ui_mode_normal();
+      return;
+    }
+    ensure_selection();
+    draw_menu_mask(mask|(1<<selection));
+    chThdSleepMilliseconds(100); // Add delay for not move so fast in menu
+  } while ((status = btn_wait_release()) != 0);
   return;
-
-menuclose:
-  ui_mode_normal();
 }
 
 static int
@@ -2321,11 +2300,11 @@ ui_process(void)
   }
   if (operation_requested&OP_TOUCH
 #ifdef __REMOTE_DESKTOP__
-	  || previous_mouse_state != mouse_down || previous_mouse_x != mouse_x || previous_mouse_y != mouse_y
+    || previous_mouse_state != mouse_down || previous_mouse_x != mouse_x || previous_mouse_y != mouse_y
 #endif
   ) {
     ui_process_touch();
-	operation_requested = OP_NONE;
+    operation_requested = OP_NONE;
   }
   touch_start_watchdog();
 }
