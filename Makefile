@@ -159,7 +159,8 @@ CSRC = $(STARTUPSRC) \
        FatFs/ff.c \
        FatFs/ffunicode.c \
        usbcfg.c \
-       main.c plot.c ui.c ili9341.c tlv320aic3204.c si5351.c numfont20x22.c Font5x7.c Font10x14.c flash.c adc_F303.c  si4468.c  Font7x13b.c rtc.c
+       NANOVNA_STM32_F303/adc.c \
+       main.c plot.c ui.c ili9341.c tlv320aic3204.c si5351.c numfont20x22.c Font5x7.c Font10x14.c flash.c si4468.c  Font7x13b.c rtc.c
 else
 CSRC = $(STARTUPSRC) \
        $(KERNSRC) \
@@ -170,7 +171,8 @@ CSRC = $(STARTUPSRC) \
        $(BOARDSRC) \
        $(STREAMSSRC) \
        usbcfg.c \
-       main.c plot.c ui.c ili9341.c numfont20x22.c Font5x7.c Font10x14.c flash.c adc.c  si4432.c  Font7x13b.c
+       NANOVNA_STM32_F072/adc.c \
+       main.c plot.c ui.c ili9341.c numfont20x22.c Font5x7.c Font10x14.c flash.c si4432.c  Font7x13b.c
 endif
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

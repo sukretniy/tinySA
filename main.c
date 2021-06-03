@@ -15,9 +15,6 @@
  * the Free Software Foundation, Inc., 51 Franklin Street,
  * Boston, MA 02110-1301, USA.
  */
-//#define HAL_USE_SERIAL 1
-//#define STM32_SERIAL_USE_USART1  1
-
 #include "ch.h"
 #include "hal.h"
 
