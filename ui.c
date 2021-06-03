@@ -1169,11 +1169,10 @@ static const uint8_t check_box[] = {
 static void
 draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
 {
-  int i = 0;
-  int y = 0;
+  int i, y;
   ui_button_t button;
   const menuitem_t *m = menu;
-  for (i = 0; i < MENU_BUTTON_MAX && m; m = menu_next_item(m), i++, y += menu_button_height) {
+  for (i = 0, y = 0; m; m = menu_next_item(m), i++, y += menu_button_height) {
     if ((mask&(1<<i)) == 0)
       continue;
     button.icon = BUTTON_ICON_NONE;
@@ -1320,14 +1319,12 @@ void check_frequency_slider(freq_t slider_freq)
 
 #define TOUCH_DEAD_ZONE 40
 static void
-menu_select_touch(int i, int pos)
+menu_select_touch(const menuitem_t * m, int i, int pos)
 {
   uint32_t mask = (1<<i)|(1<<selection);
   selection = i;
   draw_menu_mask(mask);
 #if 1               // drag values
-  const menuitem_t *m = current_menu_item(i);
-  if (m == NULL) return;
   int keypad = m->data;
   int touch_x, touch_y,  prev_touch_x = 0;
   systime_t dt = 0;
@@ -1486,14 +1483,12 @@ menu_apply_touch(int touch_x, int touch_y)
     active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
 //  active_button_stop = LCD_WIDTH;
   }
-  for (i = 0; i < MENU_BUTTON_MAX && m; m = menu_next_item(m), i++) {
-    if (MT_MASK(m->type) != MT_TITLE) {
-      if (y < touch_y && touch_y < y+menu_button_height && touch_x > active_button_start) {
-        menu_select_touch(i, (( touch_x - active_button_start) * 5 ) / MENU_FORM_WIDTH);
-        return;
-      }
+  for (i = 0; m; m = menu_next_item(m), i++, y+= menu_button_height) {
+    if (MT_MASK(m->type) == MT_TITLE) continue;
+    if (y < touch_y && touch_y < y+menu_button_height && touch_x > active_button_start) {
+      menu_select_touch(m, i, (( touch_x - active_button_start) * 5 ) / MENU_FORM_WIDTH);
+      return;
     }
-    y += menu_button_height;
   }
   if (current_menu_is_form())
     return;
