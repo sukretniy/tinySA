@@ -676,6 +676,7 @@ float get_level_offset(void);
 
 extern uint8_t in_selftest;
 extern int display_test(void);
+extern void clear_marker_cache(void);
 
 //
 // Shell config functions and macros

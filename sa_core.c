@@ -3320,7 +3320,7 @@ again:                                                              // Spur redu
         }
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
-        if (actual_rbw_x10 < 3000 || setting.frequency_step < 100000) {
+        if (actual_rbw_x10 < 10000 || setting.frequency_step < 100000) {
         int32_t error_f = 0;
         if (real_old_freq[ADF4351_LO] > target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
@@ -3588,11 +3588,13 @@ again:                                                              // Spur redu
         my_step_delay = my_step_delay * 2;
 //      if (LO_shifted) // || SI4463_offset_changed)
 //        my_step_delay = my_step_delay * 2;
+#if 0   // Always have some delay before measuring RSSI
       if (old_R < 4 && actual_rbw_x10 >= 1000 && SI4463_frequency_changed && ADF4351_frequency_changed) {
         my_step_delay -= 200;                   // compensate for additional delay of setting SI4463
         if (my_step_delay < 0)
           my_step_delay = 0;
       }
+#endif
       my_microsecond_delay(my_step_delay * (old_R > 5  ? 8 : (old_R > 3  ? 2 : 1)));
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
@@ -3738,7 +3740,7 @@ static bool sweep(bool break_on_operation)
   float vbw_rssi;
 #endif
 #endif
-
+  clear_marker_cache();
   again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
   //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
