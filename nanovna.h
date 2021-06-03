@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -265,6 +265,7 @@ extern float level_range(void);
 extern float channel_power[3];
 extern float channel_power_watt[3];
 extern const char * const unit_string[];
+extern uint16_t vbwSteps;
 #ifdef TINYSA4
 extern freq_t ultra_threshold;
 extern bool ultra;
@@ -674,6 +675,7 @@ float get_level_offset(void);
 
 extern uint8_t in_selftest;
 extern int display_test(void);
+extern void clear_marker_cache(void);
 
 //
 // Shell config functions and macros

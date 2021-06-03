@@ -3320,7 +3320,7 @@ again:                                                              // Spur redu
         }
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
-        if (actual_rbw_x10 < 3000 || setting.frequency_step < 100000) {
+        if (actual_rbw_x10 < 10000 || setting.frequency_step < 100000) { //TODO always compensate for the moment as this eliminates artifacts at larger RBW
         int32_t error_f = 0;
         if (real_old_freq[ADF4351_LO] > target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
@@ -3588,11 +3588,13 @@ again:                                                              // Spur redu
         my_step_delay = my_step_delay * 2;
 //      if (LO_shifted) // || SI4463_offset_changed)
 //        my_step_delay = my_step_delay * 2;
+#if 0   // Always have some delay before measuring RSSI
       if (old_R < 4 && actual_rbw_x10 >= 1000 && SI4463_frequency_changed && ADF4351_frequency_changed) {
         my_step_delay -= 200;                   // compensate for additional delay of setting SI4463
         if (my_step_delay < 0)
           my_step_delay = 0;
       }
+#endif
       my_microsecond_delay(my_step_delay * (old_R > 5  ? 8 : (old_R > 3  ? 2 : 1)));
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
@@ -3738,7 +3740,7 @@ static bool sweep(bool break_on_operation)
   float vbw_rssi;
 #endif
 #endif
-
+  clear_marker_cache();
   again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
   //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
@@ -4103,6 +4105,11 @@ static volatile int dummy;
         temppeakLevel = actual_t[0];
         max_index[0] = 0;
         downslope = true;
+        peakLevel = temppeakLevel;
+      }
+      if (cur_max == 0 && peakLevel <  actual_t[i]) {
+        peakIndex = i;
+        peakLevel = actual_t[i];
       }
       if (downslope) {                               // If in down slope peak finding
         if (temppeakLevel > actual_t[i]) {           // Follow down
@@ -4403,6 +4410,10 @@ static volatile int dummy;
 
   // --------------------- set tracking markers from maximum table -----------------
 
+  if (cur_max == 0) {
+    max_index[0] = peakIndex;
+    cur_max = 1;
+  }
   if (MODE_INPUT(setting.mode)) {               // Assign maxima found to tracking markers
     int i = 0;
     int m = 0;
@@ -4525,8 +4536,11 @@ static volatile int dummy;
     }
 
 #endif
-    peakIndex = max_index[0];
-    peakLevel = actual_t[peakIndex];
+    if (cur_max > 0) {
+      peakIndex = max_index[0];
+      peakLevel = actual_t[peakIndex];
+      cur_max = 1;
+    }
     peakFreq = frequencies[peakIndex];
     min_level = temp_min_level;
   }
@@ -4590,6 +4604,11 @@ static volatile int dummy;
 //  palSetLine(LINE_LED);
 #endif
   
+  // Enable traces at sweep complete for redraw
+  if (enable_after_complete){
+    TRACE_ENABLE(enable_after_complete);
+    enable_after_complete = 0;
+  }
   return true;
 }
 
@@ -5732,9 +5751,11 @@ quit:
         shell_printf("%6.2f ", (first_level - peakLevel)*10.0 );
         if (setting.test_argument != 0)
           break;
+        if (operation_requested) goto abort;
       }
     }
 #endif
+abort:
     shell_printf("\n\r");
     setting.R = 0;
     switch_SI4463_RSSI_correction(true);
@@ -5752,6 +5773,7 @@ quit:
       if (setting.test_argument != 0)
         j = setting.test_argument;
       test_prepare(TEST_NOISE);
+      markers[0].mtype = M_NOISE | M_AVER;
       setting.rbw_x10 = force_rbw(j);
       setting.extra_lna = true;
       osalThreadSleepMilliseconds(200);
@@ -5786,7 +5808,7 @@ quit:
         setting.rbw_x10 = force_rbw(j);
         setting.extra_lna = true;
         osalThreadSleepMilliseconds(200);
-
+        markers[0].mtype = M_NOISE | M_AVER;
         set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * (1000 << k)));
         set_average(AV_100);
         test_acquire(TC_LEVEL);                        // Acquire test
@@ -5806,6 +5828,7 @@ quit:
         shell_printf("%6.2f ", (first_level - peakLevel)*10.0 );
         if (setting.test_argument != 0)
           break;
+        if (operation_requested) goto abort;
       }
     }
 #endif
@@ -5887,7 +5910,9 @@ again:
       set_refer_output(0);
       set_sweep_frequency(ST_STOP, 60000000);
       int test_case = TEST_POWER;
+#ifdef TINYSA4
       set_extra_lna(calibrate_lna);
+#endif
       set_average(AV_100);
       for (int m=1; m<20; m++) {
         test_acquire(test_case);                        // Acquire test
@@ -5996,7 +6021,9 @@ quit:
   sweep_mode = SWEEP_ENABLE;
 //  set_refer_output(-1);
 //  reset_settings(M_LOW);
+#ifdef TINYSA4
   set_extra_lna(false);
+#endif
   set_average(AV_OFF);
 
 }

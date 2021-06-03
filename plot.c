@@ -280,9 +280,20 @@ index_to_value(const int i)
   return(value(actual_t[i]));
 }
 #endif
+
+float marker_cache[MARKERS_MAX];
+bool marker_cache_valid[MARKERS_MAX];
+void
+clear_marker_cache(void)
+{
+  for (int i = 0; i<MARKERS_MAX; i++)
+    marker_cache_valid[i] = false;
+}
 float
 marker_to_value(const int i)
 {
+  if (marker_cache_valid[i])
+    return marker_cache[i];
   float *ref_marker_levels;
   if (markers[i].mtype & M_STORED )
     ref_marker_levels = stored_t;
@@ -290,11 +301,26 @@ marker_to_value(const int i)
     ref_marker_levels = actual_t;
   float v = value(ref_marker_levels[markers[i].index]);
   if (markers[i].mtype & M_AVER) {
+    int old_unit = setting.unit;
+    if (markers[i].mtype & M_NOISE)
+      setting.unit = U_WATT;            // Noise averaging should always be done in Watts
     v = 0;
     for (int i=0; i<sweep_points; i++)
-      v += value(ref_marker_levels[i]);
+      v += value(ref_marker_levels[i]); // TODO this should be power averaging for noise markers
     v /= sweep_points;
+    v = to_dBm(v);
+    setting.unit = old_unit;
+    v = value(v);
   }
+  if (markers[i].mtype & M_NOISE){
+    v = v - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
+#ifdef TINYSA4
+    + SI4463_noise_correction_x10/10.0
+#endif
+    ;
+  }
+  marker_cache_valid[i] = true;
+  marker_cache[i] = v;
   return(v);
 }
 
@@ -1444,13 +1470,6 @@ static void trace_print_value_string(     // Only used at one place
 //  if (mtype & M_NOISE)
 //    *ptr2++  = 'N';
   *ptr2++ =  ' ';
-  if (mtype & M_NOISE){
-    v +=   - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
-#ifdef TINYSA4
-    + SI4463_noise_correction_x10/10.0
-#endif
-    ;
-  }
   // Not possible ???
   if (v == -INFINITY){
     cell_printf(xpos, ypos, FONT_b"%s-INF", buf2);
@@ -1480,15 +1499,15 @@ static void trace_print_value_string(     // Only used at one place
   }
   const char *format;
   if (UNIT_IS_LINEAR(setting.unit))
-    format = FONT_s"%s %.3F%s%s"; // 5 characters incl u, m, etc...
+    format = FONT_s"%s %.3F%s%s%s"; // 5 characters incl u, m, etc...
   else
-    format = FONT_s"%s %.1f%s%s";
+    format = FONT_s"%s %.1f%s%s%s";
 #ifdef TINYSA4
   format++; // Skip small prefix for bold output
 #else
   if (bold) format++; // Skip small prefix for bold output
 #endif
-  cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""));
+  cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
 }
 
 static void cell_draw_marker_info(int x0, int y0)
@@ -1608,21 +1627,14 @@ static void cell_draw_marker_info(int x0, int y0)
 #ifdef __NOISE_FIGURE__
     } else if (i>=2 && setting.measurement == M_NF && markers[0].enabled) {
       float aNP = 0;
-#if 1
-      for (int i =0; i < sweep_points; i++) {
-        aNP += actual_t[i];
-      }
-      aNP /= sweep_points;
-#else
       aNP = marker_to_value(0);
-#endif
-      float mNF = aNP -  logf(actual_rbw_x10*100.0) * (10.0/logf(10.0)) + 173.93 + SI4463_noise_correction_x10/10.0;   // measured noise figure at 20C
+      float mNF = aNP + 173.93 - nf_gain;   // measured noise figure at 20C
       if (nf_gain != 0) {
-        float mnf = expf((mNF - nf_gain)/10 * logf(10));     // measure noise factor
-        float tnf = expf(config.noise_figure/10 * logf(10));     // tinySA noise factor
-        float amp_gain = expf(nf_gain/10 * logf(10));
+        float mnf = expf(mNF/10.0 * logf(10));     // measure noise factor
+        float tnf = expf(config.noise_figure/10.0 * logf(10.0));     // tinySA noise factor
+        float amp_gain = expf(nf_gain/10.0 * logf(10.0));
         float anf = mnf - (tnf - 1.0)/amp_gain;
-        mNF = 10*logf(anf)/logf(10);
+        mNF = 10.0*logf(anf)/logf(10.0);
       }
       // powf(10,x) =  expf(x * logf(10))
       // log10f(x)  =  logf(x)/logf(10)
@@ -1685,7 +1697,8 @@ static void cell_draw_marker_info(int x0, int y0)
       int level = temppeakLevel - get_attenuation() + setting.external_gain;
       if ((!setting.subtract_stored) &&     // Disabled when normalized
           ((setting.mode == M_LOW  && level > -10) ||
-           (setting.mode == M_HIGH && level > -29) ))
+           (setting.mode == M_HIGH && level > -29) ||
+           (setting.mode == M_LOW && (markers[i].mtype & M_NOISE) && vbwSteps > 1)))    //MAXPEAK increases noise marker, should reduce span.
         color = LCD_BRIGHT_COLOR_RED;
       else
         color = marker_color(markers[i].mtype);

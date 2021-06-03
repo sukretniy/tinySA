@@ -1347,7 +1347,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     case M_NF:                             // noise figure
 //      reset_settings(setting.mode);
       markers[0].enabled = M_ENABLED;
-      markers[0].mtype = M_NOISE;          // Not tracking
+      markers[0].mtype = M_NOISE | M_AVER;          // Not tracking
       set_extra_lna(true);
       kp_help_text = "Amplifier Gain ";
       float old_gain = setting.external_gain;
