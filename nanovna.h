@@ -1029,6 +1029,7 @@ typedef struct setting
   bool    extra_lna;
   uint8_t ultra;    // enum ??
   int R;            // KM_R
+  int32_t exp_aver;
 #endif
   int64_t test_argument;            // used for tests
   uint32_t checksum;            // must be last and at 4 byte boundary
@@ -1407,7 +1408,7 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF, M_DECONV
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_VALIDATE, M_NF_AMPLIFIER, M_DECONV
 };
 
 enum {

@@ -423,6 +423,7 @@ enum {
   KM_ATTACK,
 #ifdef TINYSA4
   KM_LPF,
+  KM_EXP_AVER,
 #endif
   KM_LEVEL,
 #ifdef __LIMITS__
@@ -483,6 +484,7 @@ static const struct {
 [KM_ATTACK]       = {keypads_positive    , "ATTACK"},    // KM_ATTACK
 #ifdef TINYSA4
 [KM_LPF]          = {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
+[KM_EXP_AVER]     = {keypads_positive    , "EXPONENTIAL\nAVERAGING"}, //KM_EXP_AVER
 #endif
 [KM_LEVEL]        = {keypads_plusmin     , "LEVEL"}, // KM_LEVEL
 #ifdef __LIMITS__
@@ -1344,21 +1346,32 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
 #endif
 #ifdef __NOISE_FIGURE__
-    case M_NF:                             // noise figure
+    case M_NF_TINYSA:
+      nf_gain = 0;
+      goto noise_figure;
+    case M_NF_VALIDATE:
+      nf_gain = 0.00001;                            // almost zero
+      goto noise_figure;
+    case M_NF_AMPLIFIER:                             // noise figure
 //      reset_settings(setting.mode);
-      markers[0].enabled = M_ENABLED;
-      markers[0].mtype = M_NOISE | M_AVER;          // Not tracking
-      set_extra_lna(true);
       kp_help_text = "Amplifier Gain ";
       float old_gain = setting.external_gain;
       ui_mode_keypad(KM_EXT_GAIN);
       nf_gain = setting.external_gain;
       setting.external_gain = old_gain;
+  noise_figure:
+      markers[0].enabled = M_ENABLED;
+      markers[0].mtype = M_NOISE | M_AVER;          // Not tracking
+      set_extra_lna(true);
       kp_help_text = "Noise center frequency";
       ui_mode_keypad(KM_CENTER);
       set_marker_frequency(0, uistat.value);
+#if 0
       kp_help_text = "Noise span";
       ui_mode_keypad(KM_SPAN);
+#else
+      set_sweep_frequency(ST_SPAN, 100000);
+#endif
       set_RBW(get_sweep_frequency(ST_SPAN)/100 / 100);
 //      set_sweep_frequency(ST_SPAN, 0);
       set_average(AV_100);
@@ -2606,6 +2619,16 @@ static const menuitem_t menu_settings[] =
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
+#ifdef __NOISE_FIGURE__
+static const menuitem_t menu_measure_noise_figure[] =
+{
+ { MT_ADV_CALLBACK,            M_NF_TINYSA,        "MEASURE\nTINYSA NF",menu_measure_acb},
+ { MT_ADV_CALLBACK,            M_NF_VALIDATE,        "VALIDATE\nTINYSA NF",menu_measure_acb},
+ { MT_ADV_CALLBACK,            M_NF_AMPLIFIER,        "MEASURE\nAMPLIFIER NF",menu_measure_acb},
+  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
 static const menuitem_t menu_measure2[] = {
   { MT_ADV_CALLBACK,            M_AM,           "AM",           menu_measure_acb},
   { MT_ADV_CALLBACK,            M_FM,           "FM",           menu_measure_acb},
@@ -2617,7 +2640,7 @@ static const menuitem_t menu_measure2[] = {
 { MT_ADV_CALLBACK | MT_LOW,   M_LINEARITY,  "LINEAR",         menu_measure_acb},
 #endif
 #ifdef __NOISE_FIGURE__
-{ MT_ADV_CALLBACK | MT_LOW,   M_NF,            "NOISE\nFIGURE",    menu_measure_acb},
+{ MT_SUBMENU | MT_LOW,          0,            "NOISE\nFIGURE",    menu_measure_noise_figure},
 #endif
 #ifdef __FFT_DECONV__
   { MT_ADV_CALLBACK,            M_DECONV,  "DECONV",         menu_measure_acb},
@@ -2719,6 +2742,7 @@ static const menuitem_t menu_display[] = {
 //  { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
 #ifdef __VBW__
   { MT_SUBMENU,     0,          "VBW",              menu_vbw},
+  { MT_KEYPAD,      KM_EXP_AVER, "EXP\nAVER",       NULL},
 #endif
 #ifdef __LIMITS__
   { MT_SUBMENU,     0,          "LIMITS",          menu_limit_select},
@@ -3099,6 +3123,9 @@ set_numeric_value(void)
     config_save();
     ultra_threshold = config.ultra_threshold;
     break;
+  case KM_EXP_AVER:
+    setting.exp_aver = uistat.value;
+    dirty = true;
 #endif
   case KM_LEVEL:
     break;
@@ -3417,7 +3444,7 @@ redraw_cal_status:
     calculate_step_delay();
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
   }
-  ili9341_set_foreground(setting.step_delay ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
+  ili9341_set_foreground((setting.step_delay || setting.sweep_time_us ) ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
 #if 0                   // Activate for sweep time debugging
   lcd_printf(x, y, "%cScan:\n%5.3Fs", fscan[setting.step_delay_mode&3], (float)setting.sweep_time_us/ONE_SECOND_TIME);
 #endif

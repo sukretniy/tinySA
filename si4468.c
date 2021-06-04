@@ -1319,6 +1319,7 @@ const uint8_t dBm_to_volt [] =
  5,
  5,
 };
+static int32_t RSSI_RAW  = 0;
 
 void SI4432_Listen(int s)
 {
@@ -1356,7 +1357,8 @@ int16_t Si446x_RSSI(void)
 #endif
 
   int i = setting.repeat;
-  int32_t RSSI_RAW  = 0;
+  if (setting.exp_aver == 1)
+    RSSI_RAW  = 0;
 //  SI4463_WAIT_CTS;         // Wait for CTS
   do{
     //   if (MODE_INPUT(setting.mode) && RSSI_R
@@ -1388,13 +1390,21 @@ int16_t Si446x_RSSI(void)
 
     RSSI_RAW += DEVICE_TO_PURE_RSSI(RSSI_RAW_ARRAY[1]);
 #else
+#ifdef TINYSA4
+    if (setting.exp_aver == 1)
+      RSSI_RAW += DEVICE_TO_PURE_RSSI(RSSI_RAW_ARRAY[0]);
+    else
+      RSSI_RAW = ((setting.exp_aver-1) * RSSI_RAW  + DEVICE_TO_PURE_RSSI(RSSI_RAW_ARRAY[0]))/setting.exp_aver;
+
+#else
     RSSI_RAW += DEVICE_TO_PURE_RSSI(RSSI_RAW_ARRAY[0]);
 #endif
+#endif
     if (--i <= 0) break;
-      my_microsecond_delay(100);
+//    my_microsecond_delay(100);
   }while(1);
 
-  if (setting.repeat > 1)
+  if (setting.repeat > 1 && setting.exp_aver == 1)
     RSSI_RAW = RSSI_RAW / setting.repeat;
 
   return RSSI_RAW;

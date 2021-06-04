@@ -201,6 +201,7 @@ void reset_settings(int m)
   ultra_threshold = config.ultra_threshold;
   ultra = config.ultra;
   drive_dBm = (float *) (setting.mode == M_GENHIGH && config.high_out_adf4350 ? adf_drive_dBm : si_drive_dBm);
+  setting.exp_aver = 1;
 #endif
   update_min_max_freq();
   setting.frequency_var = 0;
@@ -4189,7 +4190,7 @@ static volatile int dummy;
   // Update actual time on change on status panel
   uint32_t delta = abs((int)(setting.actual_sweep_time_us - setting.measure_sweep_time_us));
   if ((delta<<3) > setting.actual_sweep_time_us){ // update if delta > 1/8
-    redraw_request|=REDRAW_CAL_STATUS;
+    redraw_request|=REDRAW_CAL_STATUS | REDRAW_FREQUENCY;
   }
   setting.actual_sweep_time_us = setting.measure_sweep_time_us;
   // Not possible reduce sweep time, it minimum!
@@ -4517,7 +4518,7 @@ static volatile int dummy;
 #endif
       }
 #ifdef __CHANNEL_POWER__
-      } else if (setting.measurement == M_CP || setting.measurement == M_SNR || setting.measurement == M_NF) {      // ----------------CHANNEL_POWER measurement
+      } else if (setting.measurement == M_CP || setting.measurement == M_SNR || setting.measurement == M_NF_TINYSA|| setting.measurement == M_NF_VALIDATE|| setting.measurement == M_NF_AMPLIFIER) {      // ----------------CHANNEL_POWER measurement
         freq_t bw = get_sweep_frequency(ST_SPAN)/3;
         int old_unit = setting.unit;
         setting.unit = U_WATT;

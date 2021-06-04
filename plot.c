@@ -1625,11 +1625,11 @@ static void cell_draw_marker_info(int x0, int y0)
         break;
       }
 #ifdef __NOISE_FIGURE__
-    } else if (i>=2 && setting.measurement == M_NF && markers[0].enabled) {
+    } else if (i>=2 && (setting.measurement == M_NF_TINYSA || setting.measurement == M_NF_VALIDATE || setting.measurement == M_NF_AMPLIFIER) && markers[0].enabled) {
       float aNP = 0;
       aNP = marker_to_value(0);
       float mNF = aNP + 173.93 - nf_gain;   // measured noise figure at 20C
-      if (nf_gain != 0) {
+      if (setting.measurement != M_NF_TINYSA) {
         float mnf = expf(mNF/10.0 * logf(10));     // measure noise factor
         float tnf = expf(config.noise_figure/10.0 * logf(10.0));     // tinySA noise factor
         float amp_gain = expf(nf_gain/10.0 * logf(10.0));
@@ -1644,10 +1644,13 @@ static void cell_draw_marker_info(int x0, int y0)
 //        j = 1;
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
       int ypos = 1 + (j/2)*(16) - y0;
-      if (nf_gain != 0) {
-        cell_printf(xpos, ypos, FONT_b"GAIN: %4.1fdB   NF: %4.1f", nf_gain, mNF);
-      } else {
+      if (setting.measurement == M_NF_TINYSA) {
         cell_printf(xpos, ypos, FONT_b"TINYSA NF: %4.1f", mNF);
+      } else {
+        if (setting.measurement == M_NF_VALIDATE)
+          cell_printf(xpos, ypos, FONT_b"TINYSA NF ERROR: %4.1f", mNF);
+        else
+          cell_printf(xpos, ypos, FONT_b"GAIN: %4.1fdB   NF: %4.1f", nf_gain, mNF);
       }
       break;
 #endif
