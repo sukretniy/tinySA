@@ -283,16 +283,20 @@ index_to_value(const int i)
 
 float marker_cache[MARKERS_MAX];
 bool marker_cache_valid[MARKERS_MAX];
+int32_t marker_cache_index[MARKERS_MAX];
+
 void
 clear_marker_cache(void)
 {
-  for (int i = 0; i<MARKERS_MAX; i++)
+  for (int i = 0; i<MARKERS_MAX; i++) {
     marker_cache_valid[i] = false;
+  }
 }
+
 float
 marker_to_value(const int i)
 {
-  if (marker_cache_valid[i])
+  if (marker_cache_valid[i] && marker_cache_index[i] == markers[i].index)
     return marker_cache[i];
   float *ref_marker_levels;
   if (markers[i].mtype & M_STORED )
@@ -320,6 +324,7 @@ marker_to_value(const int i)
     ;
   }
   marker_cache_valid[i] = true;
+  marker_cache_index[i] = markers[i].index;
   marker_cache[i] = v;
   return(v);
 }
