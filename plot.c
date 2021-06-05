@@ -145,7 +145,7 @@ void update_grid(void)
   grid_width = (WIDTH) * (grid / 100) / (fspan / 1000);
 
   if (setting.waterfall)
-    toggle_waterfall();
+    set_waterfall();
   redraw_request |= REDRAW_FREQUENCY | REDRAW_AREA;
 }
 
@@ -281,6 +281,7 @@ index_to_value(const int i)
 }
 #endif
 
+#ifdef __MARKER_CACHE__
 float marker_cache[MARKERS_MAX];
 bool marker_cache_valid[MARKERS_MAX];
 int32_t marker_cache_index[MARKERS_MAX];
@@ -292,12 +293,15 @@ clear_marker_cache(void)
     marker_cache_valid[i] = false;
   }
 }
+#endif
 
 float
 marker_to_value(const int i)
 {
+#ifdef __MARKER_CACHE__
   if (marker_cache_valid[i] && marker_cache_index[i] == markers[i].index)
     return marker_cache[i];
+#endif
   float *ref_marker_levels;
   if (markers[i].mtype & M_STORED )
     ref_marker_levels = stored_t;
@@ -323,9 +327,11 @@ marker_to_value(const int i)
 #endif
     ;
   }
+#ifdef __MARKER_CACHE__
   marker_cache_valid[i] = true;
   marker_cache_index[i] = markers[i].index;
   marker_cache[i] = v;
+#endif
   return(v);
 }
 
@@ -939,6 +945,9 @@ markmap_marker(int marker)
     return;
   if (IS_TRACE_DISABLE(TRACE_ACTUAL))
     return;
+#ifdef __MARKER_CACHE__
+  marker_cache_valid[marker] = false;   // force recalculation
+#endif
   int idx = markers[marker].index;
   int x = trace_index_x[idx] - X_MARKER_OFFSET;
   int y = trace_index_y[TRACE_ACTUAL][idx] - Y_MARKER_OFFSET;
@@ -1981,7 +1990,7 @@ static void update_waterfall(void){
 //int w_max = -130;
 //int w_min = 0;
 void
-toggle_waterfall(void)
+set_waterfall(void)
 {
   if (setting.waterfall == W_SMALL)       graph_bottom = SMALL_WATERFALL;
   else if (setting.waterfall == W_BIG)    graph_bottom = BIG_WATERFALL;
@@ -1999,7 +2008,7 @@ void
 disable_waterfall(void)
 {
   setting.waterfall = W_OFF;
-  toggle_waterfall();
+  set_waterfall();
 }
 
 void

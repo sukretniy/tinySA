@@ -3741,7 +3741,9 @@ static bool sweep(bool break_on_operation)
   float vbw_rssi;
 #endif
 #endif
+#ifdef __MARKER_CACHE__
   clear_marker_cache();
+#endif
   again:                          // Waiting for a trigger jumps back to here
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
   //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform

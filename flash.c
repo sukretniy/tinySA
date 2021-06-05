@@ -226,6 +226,7 @@ caldata_recall(uint16_t id)
   update_frequencies();
   set_scale(setting.scale);
   set_reflevel(setting.reflevel);
+  set_waterfall();
   return 0;
 }
 #if 0

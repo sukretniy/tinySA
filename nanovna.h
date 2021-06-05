@@ -89,6 +89,8 @@
 #define DB_PER_DEGREE_ABOVE               0.069
 #define CENTER_TEMPERATURE          34.0
 #define __WAIT_CTS_WHILE_SLEEPING__
+#define __MARKER_CACHE__
+
 //#define __FFT_VBW__
 //#define __FFT_DECONV__
 #else
@@ -331,7 +333,7 @@ void  set_storage(void);
 void  set_clear_storage(void);
 void  set_subtract_storage(void);
 void  toggle_normalize(void);
-void toggle_waterfall(void);
+void set_waterfall(void);
 void disable_waterfall(void);
 void set_mode(int);
 int GetMode(void);

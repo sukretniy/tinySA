@@ -1481,7 +1481,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
     return;
   }
   setting.waterfall++; if (setting.waterfall>W_BIG)setting.waterfall = W_OFF;
-  toggle_waterfall();
+  set_waterfall();
   ui_mode_normal();
 }
 
