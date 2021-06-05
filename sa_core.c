@@ -5911,6 +5911,7 @@ again:
 #if 1
       reset_settings(M_LOW);
       set_refer_output(0);
+      set_attenuation(10);
       set_sweep_frequency(ST_STOP, 60000000);
       int test_case = TEST_POWER;
 #ifdef TINYSA4
@@ -6023,11 +6024,14 @@ quit:
   in_selftest = false;
   sweep_mode = SWEEP_ENABLE;
 //  set_refer_output(-1);
-//  reset_settings(M_LOW);
 #ifdef TINYSA4
   set_extra_lna(false);
-#endif
   set_average(AV_OFF);
+//  set_refer_output(-1);
+#else
+  reset_settings(M_LOW);
+  set_refer_output(-1);
+#endif
 
 }
 

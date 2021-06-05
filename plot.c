@@ -1713,9 +1713,10 @@ static void cell_draw_marker_info(int x0, int y0)
       uint16_t color;
       int level = temppeakLevel - get_attenuation() + setting.external_gain;
       if ((!setting.subtract_stored) &&     // Disabled when normalized
-          ((setting.mode == M_LOW  && level > -10) ||
-           (setting.mode == M_HIGH && level > -29) ||
-           (setting.mode == M_LOW && (markers[i].mtype & M_NOISE) && vbwSteps > 1)))    //MAXPEAK increases noise marker, should reduce span.
+          ((setting.mode == M_LOW  && level > -10)
+           || (setting.mode == M_HIGH && level > -29)
+           || (setting.mode == M_LOW && (markers[i].mtype & M_NOISE) && vbwSteps > 1))   //MAXPEAK increases noise marker, should reduce span.
+           )
         color = LCD_BRIGHT_COLOR_RED;
       else
         color = marker_color(markers[i].mtype);
