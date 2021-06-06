@@ -4067,7 +4067,18 @@ static volatile int dummy;
           break;
         case AV_4:  actual_t[i] = (actual_t[i]*3.0 + RSSI) / 4.0; break;
         case AV_16: actual_t[i] = (actual_t[i]*15.0 + RSSI) / 16.0; break;
-        case AV_100:actual_t[i] = (actual_t[i]*(scan_after_dirty-1) + RSSI) / scan_after_dirty; break;
+        case AV_100:
+#ifdef TINYSA4
+        {
+          int old_unit = setting.unit;
+          setting.unit = U_WATT;            // Power averaging should always be done in Watts
+          actual_t[i] = to_dBm((value(actual_t[i])*(scan_after_dirty-1) + value(RSSI)) / scan_after_dirty );
+          setting.unit = old_unit;
+        }
+#else
+        actual_t[i] = (actual_t[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
+#endif
+        break;
 #ifdef __QUASI_PEAK__
         case AV_QUASI:
         { static float old_RSSI = -150.0;

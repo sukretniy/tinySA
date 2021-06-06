@@ -269,6 +269,7 @@ extern float channel_power_watt[3];
 extern const char * const unit_string[];
 extern uint16_t vbwSteps;
 #ifdef TINYSA4
+extern float measured_noise_figure;
 extern freq_t ultra_threshold;
 extern bool ultra;
 extern float *drive_dBm;
@@ -1410,7 +1411,7 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_VALIDATE, M_NF_AMPLIFIER, M_DECONV
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_DECONV
 };
 
 enum {

@@ -529,6 +529,7 @@ static const menuitem_t  menu_connection[];
 static const menuitem_t  menu_settings3[];
 static const menuitem_t  menu_curve[];
 static const menuitem_t  menu_curve_confirm[];
+static const menuitem_t  menu_measure_noise_figure[];
 #endif
 static const menuitem_t  menu_sweep[];
 static const menuitem_t  menu_settings[];
@@ -637,6 +638,23 @@ UI_FUNCTION_CALLBACK(menu_curve_confirm_cb)
     if (new_offset > -25 && new_offset < 25) {
       config.correction_value[current_curve][current_curve_index] = new_offset;
       config_save();
+    }
+  }
+  menu_move_back(false);
+}
+
+float measured_noise_figure;
+
+UI_FUNCTION_CALLBACK(menu_noise_figure_confirm_cb)
+{
+  (void)item;
+  if (data) {
+    if (measured_noise_figure > 3 && measured_noise_figure < 15) {
+      config.noise_figure = measured_noise_figure;
+      config_save();
+      nf_gain = 0.00001;                            // almost zero
+      set_measurement(M_NF_VALIDATE);               // Continue to validate
+      return;
     }
   }
   menu_move_back(false);
@@ -1167,7 +1185,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
   menu_move_back(false);
   markers_reset();
 
-#ifdef __MEASURE__
   if ((data != M_OFF && setting.measurement != M_OFF) || data == M_OFF )
   {
     //      reset_settings(setting.mode);
@@ -1347,13 +1364,27 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 #endif
 #ifdef __NOISE_FIGURE__
     case M_NF_TINYSA:
+      reset_settings(setting.mode);
+      set_refer_output(-1);
       nf_gain = 0;
       goto noise_figure;
+    case M_NF_STORE:
+      if (measured_noise_figure > 3 && measured_noise_figure < 15) {
+        config.noise_figure = measured_noise_figure;
+        config_save();
+        data = M_NF_VALIDATE;               // Continue to validate
+        goto validate;
+      } else
+        data = M_NF_TINYSA;               // Continue to measure
+      break;
     case M_NF_VALIDATE:
+validate:
       nf_gain = 0.00001;                            // almost zero
       goto noise_figure;
     case M_NF_AMPLIFIER:                             // noise figure
 //      reset_settings(setting.mode);
+      reset_settings(setting.mode);
+      set_refer_output(-1);
       kp_help_text = "Amplifier Gain ";
       float old_gain = setting.external_gain;
       ui_mode_keypad(KM_EXT_GAIN);
@@ -1363,18 +1394,26 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[0].enabled = M_ENABLED;
       markers[0].mtype = M_NOISE | M_AVER;          // Not tracking
       set_extra_lna(true);
-      kp_help_text = "Noise center frequency";
-      ui_mode_keypad(KM_CENTER);
-      set_marker_frequency(0, uistat.value);
+      set_attenuation(0);
+      if (data != M_NF_VALIDATE) {
+        kp_help_text = "Noise center frequency";
+        ui_mode_keypad(KM_CENTER);
+        set_marker_frequency(0, uistat.value);
 #if 0
-      kp_help_text = "Noise span";
-      ui_mode_keypad(KM_SPAN);
+        kp_help_text = "Noise span";
+        ui_mode_keypad(KM_SPAN);
 #else
-      set_sweep_frequency(ST_SPAN, 100000);
+        set_sweep_frequency(ST_SPAN, 100000);
 #endif
-      set_RBW(get_sweep_frequency(ST_SPAN)/100 / 100);
+        set_RBW(get_sweep_frequency(ST_SPAN)/100 / 100);
+      }
+
 //      set_sweep_frequency(ST_SPAN, 0);
       set_average(AV_100);
+      if (data == M_NF_TINYSA || data == M_NF_VALIDATE ) {
+        menu_push_submenu(menu_measure_noise_figure);
+        goto leave;
+      }
       break;
 #endif
 #ifdef __FFT_DECONV__
@@ -1383,11 +1422,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       break;
 #endif
   }
-  set_measurement(data);
 
-#endif
 //  selection = -1;
   ui_mode_normal();
+leave:
+  set_measurement(data);
 //  draw_cal_status();
 }
 
@@ -2582,6 +2621,12 @@ static const menuitem_t menu_curve_confirm[] = {
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
+static const menuitem_t menu_noise_figure_confirm[] = {
+  { MT_CALLBACK, 1,               "STORE\nTINYSA NF",       menu_noise_figure_confirm_cb },
+  { MT_CALLBACK, 0,               "CANCEL",   menu_noise_figure_confirm_cb },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
 #endif
 
 static const menuitem_t menu_actual_power[] =
@@ -2602,7 +2647,7 @@ static const menuitem_t menu_settings[] =
   { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
   { MT_SUBMENU, 0,              "LEVEL\nCORRECTION",  menu_actual_power},
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "0=auto IF"},
-  { MT_SUBMENU,0,               "SCAN SPEED",        menu_scanning_speed},
+  { MT_SUBMENU,0,               "SCAN\nSPEED",        menu_scanning_speed},
 #ifndef TINYSA4
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
 #endif
@@ -2622,9 +2667,10 @@ static const menuitem_t menu_settings[] =
 #ifdef __NOISE_FIGURE__
 static const menuitem_t menu_measure_noise_figure[] =
 {
- { MT_ADV_CALLBACK,            M_NF_TINYSA,        "MEASURE\nTINYSA NF",menu_measure_acb},
- { MT_ADV_CALLBACK,            M_NF_VALIDATE,        "VALIDATE\nTINYSA NF",menu_measure_acb},
- { MT_ADV_CALLBACK,            M_NF_AMPLIFIER,        "MEASURE\nAMPLIFIER NF",menu_measure_acb},
+ { MT_ADV_CALLBACK,            M_NF_TINYSA,         "MEASURE\nTINYSA NF",menu_measure_acb},
+ { MT_ADV_CALLBACK,            M_NF_STORE,          "STORE\nTINYSA NF",menu_measure_acb},
+ { MT_ADV_CALLBACK,            M_NF_VALIDATE,       "VALIDATE\nTINYSA NF",menu_measure_acb},
+ { MT_ADV_CALLBACK,            M_NF_AMPLIFIER,      "MEASURE\nAMP NF",menu_measure_acb},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 #endif
