@@ -67,6 +67,7 @@
 #define SI4432_SPI_SPEED       SPI_BR_DIV2
 #endif
 
+
 //#define ADF_SPI_SPEED   SPI_BR_DIV64
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
 #define ADF_SPI_SPEED   SPI_BR_DIV2
@@ -1173,7 +1174,7 @@ static char Si446x_readRSSI(void){
     rssi = SPI_READ_8BIT(SI4432_SPI);       // get last byte as FRR_A (rssi)
     SI_CS_HIGH;
   } while (rssi == 0);                      // Wait for latch to happen
-#elif 1
+#elif 0
   SI_CS_LOW;
   SI4463_WAIT_CTS;                       // Wait for CTS
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_GET_MODEM_STATUS);
@@ -1253,10 +1254,10 @@ void SI446x_Fill(int s, int start)
   __disable_irq();
   do {
 #ifndef  __USE_FFR_FOR_RSSI__
-    age[i] = Si446x_readRSSI();
-    if (++i >= sweep_points) break;
     if (t)
       my_microsecond_delay(t);
+    age[i] = Si446x_readRSSI();
+    if (++i >= sweep_points) break;
 #else
  // DEBUG!! restart
   SI_CS_LOW;
@@ -1359,13 +1360,16 @@ int16_t Si446x_RSSI(void)
   int i = setting.repeat;
   if (setting.exp_aver == 1)
     RSSI_RAW  = 0;
-//  SI4463_WAIT_CTS;         // Wait for CTS
+
+  //  SI4463_WAIT_CTS;         // Wait for CTS
   do{
     //   if (MODE_INPUT(setting.mode) && RSSI_R
 #define SAMPLE_COUNT 1
     int j = SAMPLE_COUNT; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
+      if (setting.step_delay)
+        my_microsecond_delay(setting.step_delay);
       RSSI_RAW_ARRAY[--j] = Si446x_readRSSI();
       if (j == 0) break;
 //      my_microsecond_delay(20);
@@ -1401,7 +1405,8 @@ int16_t Si446x_RSSI(void)
 #endif
 #endif
     if (--i <= 0) break;
-    my_microsecond_delay(100);
+//    if (setting.repeat > 3)
+//      my_microsecond_delay(30);
   }while(1);
 
   if (setting.repeat > 1 && setting.exp_aver == 1)
