@@ -2308,6 +2308,7 @@ static  freq_t spur_table[] =                                 // Frequencies to 
  243775000,             // OK
  325000000,             // !!! This is a double spur
  325190000,             // !!! This is a double spur
+ 390123000,
  487541650,             // OK This is linked to the MODULO of the ADF4350
  650687000,             // OK
  731780000,             // OK
@@ -2392,8 +2393,8 @@ int binary_search(freq_t f)
 }
 
 #ifdef TINYSA4
-static const uint8_t spur_div[] = {4, 3, 3, 2, 3, 4};
-static const uint8_t spur_mul[] = {1, 1, 1, 1, 2, 3};
+static const uint8_t spur_div[] = {4, 3, 3, 5, 2, 3, 4};
+static const uint8_t spur_mul[] = {1, 1, 1, 2, 1, 2, 3};
 #define IF_OFFSET   468750*4        //
 
 void fill_spur_table(void)
@@ -2409,7 +2410,7 @@ void fill_spur_table(void)
       corr_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2 - DEFAULT_SPUR_OFFSET/2;
       setting.frequency_IF = corr_IF;
     }
-   if (i != 4)
+   if (i != 5)  // <------------------- Index of the 3/2 entry in the spur tables
      corr_IF -= IF_OFFSET;
    else
      corr_IF -= IF_OFFSET/2;
@@ -2419,9 +2420,9 @@ void fill_spur_table(void)
 //   volatile uint64_t delta =  target + (uint64_t) config.frequency_IF1 - actual_freq ;
 //   volatile uint64_t spur = target - delta;
 //   spur_table[i] = spur;
-   if (i==1)
+   if (i==1)  // <---------------------------------index of a 3/1 entry
      spur_table[i] = target - IF_OFFSET / 12;
-   else if (i == 2)
+   else if (i == 2)  // <---------------------------------index of a 3/1 entry
      spur_table[i] = target + IF_OFFSET / 12;
    else
      spur_table[i] = target;
@@ -3828,7 +3829,7 @@ static bool sweep(bool break_on_operation)
     systime_t local_sweep_time = sa_ST2US(chVTGetSystemTimeX() - start_of_sweep_timestamp);
     if (setting.actual_sweep_time_us > ONE_SECOND_TIME)
       local_sweep_time = setting.actual_sweep_time_us;
-    if (show_bar && (( local_sweep_time > ONE_SECOND_TIME && (i & 0x07) == 0) || ( local_sweep_time > ONE_SECOND_TIME*10)) )
+    if (show_bar && (( local_sweep_time > ONE_SECOND_TIME && (i & 0x07) == 0) /* || ( local_sweep_time > ONE_SECOND_TIME*10)*/ ) )
     {
       int pos = i * (WIDTH+1) / sweep_points;
       ili9341_set_background(LCD_SWEEP_LINE_COLOR);
