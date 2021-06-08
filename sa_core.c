@@ -72,6 +72,7 @@ uint32_t old_CFGR;
 uint32_t orig_CFGR;
 
 int debug_frequencies = false;
+int linear_averaging = true;
 
 static freq_t old_freq[5] = { 0, 0, 0, 0,0};
 static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
@@ -4069,12 +4070,15 @@ static volatile int dummy;
         case AV_16: actual_t[i] = (actual_t[i]*15.0 + RSSI) / 16.0; break;
         case AV_100:
 #ifdef TINYSA4
+          if (linear_averaging)
         {
           int old_unit = setting.unit;
           setting.unit = U_WATT;            // Power averaging should always be done in Watts
           actual_t[i] = to_dBm((value(actual_t[i])*(scan_after_dirty-1) + value(RSSI)) / scan_after_dirty );
           setting.unit = old_unit;
         }
+          else
+            actual_t[i] = (actual_t[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
 #else
         actual_t[i] = (actual_t[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
 #endif
@@ -5863,6 +5867,23 @@ abort:
       test_validate(TEST_LEVEL);                       // Validate test
       shell_printf("Temp = %4.1f, level = %6.2f, delta = %6.2f\n\r",Si446x_get_temp() , peakLevel, (first_level - peakLevel)*10.0 );
     }
+  } else if (test == 10) {
+//    reset_settings(M_LOW);
+    set_refer_output(-1);
+    if (setting.test_argument > 0)
+      set_R(setting.test_argument);
+    set_attenuation(0);
+    int test_case = TEST_POWER;
+    for (int i=1; i<30; i++) {
+      set_sweep_points(51);
+      set_sweep_frequency(ST_CENTER, 30000000 * i);
+      set_sweep_frequency(ST_SPAN, 3000);
+      test_acquire(test_case);                        // Acquire test
+      test_validate(test_case);
+      shell_printf("Freq = %8.3fMHz, level = %6.2f\n\r", ((float)peakFreq) / 1000000.0, peakLevel);
+    }
+    set_sweep_points(450);
+    reset_settings(M_LOW);
 #endif
   }
 

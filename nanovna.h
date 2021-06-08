@@ -1072,6 +1072,7 @@ extern const float unit_scale_value[];
 extern const char  unit_scale_text[];
 #ifdef TINYSA4
 extern int debug_frequencies;
+extern int linear_averaging;
 #endif
 #if 1   // Still sufficient flash
 // Flash save area - flash7  : org = 0x0801B000, len = 20k in *.ld file

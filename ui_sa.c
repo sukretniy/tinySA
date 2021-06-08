@@ -1157,6 +1157,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_freq_acb)
   //  menu_move_back();
   ui_mode_normal();
 }
+
+
+static UI_FUNCTION_ADV_CALLBACK(menu_linear_averaging_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = linear_averaging == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  linear_averaging = ! linear_averaging;
+  //  menu_move_back();
+  ui_mode_normal();
+}
+
+
 #endif
 
 static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
@@ -2556,6 +2572,7 @@ static const menuitem_t menu_settings4[] =
 #ifdef __HARMONIC__
   { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
 #endif
+  { MT_ADV_CALLBACK,     0,     "LINEAR\nAVERAGING",          menu_linear_averaging_acb},
 //  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };

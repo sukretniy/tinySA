@@ -310,7 +310,11 @@ marker_to_value(const int i)
   float v = value(ref_marker_levels[markers[i].index]);
   if (markers[i].mtype & M_AVER) {
     int old_unit = setting.unit;
-    if (markers[i].mtype & M_NOISE)
+    if (markers[i].mtype & M_NOISE
+#ifdef TINYSA4
+        && linear_averaging
+        #endif
+    )
       setting.unit = U_WATT;            // Noise averaging should always be done in Watts
     v = 0;
     for (int i=0; i<sweep_points; i++)
