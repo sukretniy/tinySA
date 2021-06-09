@@ -961,7 +961,7 @@ void set_sweep_points(uint16_t points){
 VNA_SHELL_FUNCTION(cmd_scan)
 {
   freq_t start, stop;
-  uint32_t points = sweep_points;
+  uint32_t old_points = sweep_points;
   uint32_t i;
   if (argc < 2 || argc > 4) {
     shell_printf("usage: scan {start(Hz)} {stop(Hz)} [points] [outmask]\r\n");
@@ -975,20 +975,21 @@ VNA_SHELL_FUNCTION(cmd_scan)
       return;
   }
   if (argc >= 3) {
-    points = my_atoi(argv[2]);
-    if (points <= 0 || points > sweep_points) {
+    int points = my_atoi(argv[2]);
+    if (points <= 0 || points > POINTS_COUNT) {
       shell_printf("sweep points exceeds range "define_to_STR(POINTS_COUNT)"\r\n");
       return;
     }
+    sweep_points = points;
   }
-  set_frequencies(start, stop, points);
+  set_frequencies(start, stop, sweep_points);
   pause_sweep();
   sweep(false);
   // Output data after if set (faster data recive)
   if (argc == 4) {
     uint16_t mask = my_atoui(argv[3]);
     if (mask) {
-      for (i = 0; i < points; i++) {
+      for (i = 0; i < sweep_points; i++) {
         if (mask & 1) shell_printf("%U ", frequencies[i]);
         if (mask & 2) shell_printf("%f %f ", value(measured[TRACE_ACTUAL][i]), 0.0);
         if (mask & 4) shell_printf("%f %f ", value(measured[TRACE_STORED][i]), 0.0);
@@ -997,7 +998,59 @@ VNA_SHELL_FUNCTION(cmd_scan)
       }
     }
   }
+  sweep_points = old_points;
 }
+
+#ifdef TINYSA4
+VNA_SHELL_FUNCTION(cmd_hop)
+{
+  freq_t start, stop, step;
+  uint32_t old_points = sweep_points;
+  uint32_t i;
+  if (argc < 2 || argc > 4) {
+    shell_printf("usage: hop {start(Hz)} {stop(Hz)} {step(Hz) | points} [outmask]\r\n");
+    return;
+  }
+
+  start = my_atoui(argv[0]);
+  stop = my_atoui(argv[1]);
+  if (start > stop) {
+      shell_printf("frequency range is invalid\r\n");
+      return;
+  }
+  if (argc >= 3) {
+    step = my_atoui(argv[2]);
+    if (step > POINTS_COUNT) {
+      int i = 0;
+      for (freq_t f = start; f<= stop; f += step)
+        frequencies[i++] = f;
+      dirty = true;
+      sweep_points = 1 + (stop-start)/step;
+    } else {
+      sweep_points = step;
+      set_frequencies(start, stop, sweep_points);
+    }
+  }
+  pause_sweep();
+  setting.frequency_step = 0;
+  sweep(false);
+  // Output data after if set (faster data recive)
+  uint16_t mask = 3;
+  if (argc == 4) {
+    mask = my_atoui(argv[3]);
+  }
+  if (mask) {
+      for (i = 0; i < sweep_points; i++) {
+        if (mask & 1) shell_printf("%Q ", frequencies[i]);
+        if (mask & 2) shell_printf("%f ", value(measured[TRACE_ACTUAL][i]));
+        if (mask & 4) shell_printf("%f ", value(measured[TRACE_STORED][i]));
+        if (mask & 8) shell_printf("%f ", value(measured[TRACE_TEMP][i]));
+        shell_printf("\r\n");
+      }
+  }
+  sweep_points = old_points;
+}
+#endif
 
 static void
 update_marker_index(void)
@@ -1668,6 +1721,9 @@ static const VNAShellCommand commands[] =
     {"frequencies" , cmd_frequencies , 0},
 //  {"gamma"       , cmd_gamma       , 0},
     {"scan"        , cmd_scan        , CMD_WAIT_MUTEX},
+#ifdef TINYSA4
+    {"hop"         , cmd_hop         , CMD_WAIT_MUTEX},
+#endif
     {"scanraw"     , cmd_scanraw     , CMD_WAIT_MUTEX},
     {"zero"        , cmd_zero        , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},   // Will set the scanraw measured value offset (128 or 174)
     {"sweep"       , cmd_sweep       , 0},

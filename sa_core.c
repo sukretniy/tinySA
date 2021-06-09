@@ -3177,7 +3177,7 @@ again:                                                              // Spur redu
                 if (debug_avoid_second) {
                   if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
                     setting.below_IF = S_AUTO_ON;
-                    local_IF = local_IF;                          // No spure removal and no spur, center in IF
+                    local_IF = local_IF;                          // No spur removal and no spur, center in IF
                   } else if (setting.auto_IF) {
                     local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
                     //                if (actual_rbw_x10 == 6000 )
@@ -3195,7 +3195,7 @@ again:                                                              // Spur redu
               } else {
                 if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
                   setting.below_IF = S_AUTO_ON;
-                  local_IF = local_IF;                          // No spure removal and no spur, center in IF
+                  local_IF = local_IF;                          // No spur removal and no spur, center in IF
                 } else if (setting.auto_IF) {
                   local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
                   //                if (actual_rbw_x10 == 6000 )
@@ -5872,12 +5872,15 @@ abort:
 //    reset_settings(M_LOW);
     set_refer_output(-1);
     if (setting.test_argument > 0)
-      set_R(setting.test_argument);
-    set_attenuation(0);
+      set_R(((int)setting.test_argument) % 10);
+    int freq_step = 30;
+    if (setting.test_argument > 9)
+      freq_step = (((int)setting.test_argument)/10) * 1000000 ;
+        set_attenuation(0);
     int test_case = TEST_POWER;
-    for (int i=1; i<30; i++) {
+    for (freq_t f=freq_step; f<900000000; f += freq_step) {
       set_sweep_points(51);
-      set_sweep_frequency(ST_CENTER, 30000000 * i);
+      set_sweep_frequency(ST_CENTER, f);
       set_sweep_frequency(ST_SPAN, 3000);
       test_acquire(test_case);                        // Acquire test
       test_validate(test_case);
