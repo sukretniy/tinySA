@@ -351,6 +351,9 @@ void set_SPI_mode(uint16_t mode){
     break;
     case SPI_MODE_SI:
       stop_SI4432_SPI_mode();
+      break;
+    case SPI_MODE_PE:
+      stop_PE4312_SPI_mode();
     break;
   }
   // Enable new mode
@@ -363,6 +366,10 @@ void set_SPI_mode(uint16_t mode){
     case SPI_MODE_SI:
       LCD_CS_HIGH;
       start_SI4432_SPI_mode();
+      break;
+    case SPI_MODE_PE:
+      LCD_CS_HIGH;
+      start_PE4312_SPI_mode();
     break;
   }
   current_spi_mode = mode;

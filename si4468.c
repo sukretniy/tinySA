@@ -74,13 +74,13 @@
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
 #define ADF_SPI_SPEED   SPI_BR_DIV2
 
-#define PE_SPI_SPEED   SPI_BR_DIV2
+#define PE_SPI_SPEED   SPI_BR_DIV16
 
 static uint32_t old_spi_settings;
 #else
-static uint32_t old_port_moder;
 static uint32_t new_port_moder;
 #endif
+static uint32_t old_port_moder;
 
 #define SPI1_CLK_HIGH   palSetPad(GPIOB, GPIOB_SPI_SCLK)
 #define SPI1_CLK_LOW    palClearPad(GPIOB, GPIOB_SPI_SCLK)
@@ -128,6 +128,41 @@ void stop_SI4432_SPI_mode(void){
   GPIOB->MODER = old_port_moder;
 #endif
 }
+
+void start_PE4312_SPI_mode(void){
+  // Init legs mode for software bitbang
+  old_spi_settings = SI4432_SPI->CR1;
+  old_port_moder = GPIOB->MODER;
+  uint32_t new_port_moder = old_port_moder & ~(PIN_MODE_ANALOG(GPIOB_SPI_SCLK)|PIN_MODE_ANALOG(GPIOB_SPI_MISO)|PIN_MODE_ANALOG(GPIOB_SPI_MOSI));
+  new_port_moder|= PIN_MODE_OUTPUT(GPIOB_SPI_SCLK)|PIN_MODE_INPUT(GPIOB_SPI_MISO)|PIN_MODE_OUTPUT(GPIOB_SPI_MOSI);
+  GPIOB->MODER = new_port_moder;
+  // Pull down SPI
+  SPI1_SDI_LOW;
+  SPI1_CLK_LOW;
+}
+
+void stop_PE4312_SPI_mode(void){
+  // Restore hardware SPI
+  GPIOB->MODER = old_port_moder;
+  SI4432_SPI->CR1 = old_spi_settings;
+}
+
+static void software_shiftOut(uint8_t val)
+{
+  SI4432_log(SI4432_Sel);
+  SI4432_log(val);
+  uint8_t i = 0;
+  do {
+    if (val & 0x80)
+      SPI1_SDI_HIGH;
+    my_microsecond_delay(100);
+    SPI1_CLK_HIGH;
+    my_microsecond_delay(100);
+    SPI1_RESET;
+    val<<=1;
+  }while((++i) & 0x07);
+}
+
 
 static void shiftOut(uint8_t val)
 {
@@ -186,20 +221,24 @@ bool PE4302_Write_Byte(unsigned char DATA )
   if (old_attenuation == DATA)
     return false;
   old_attenuation = DATA;
-
+#if 0
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != PE_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, PE_SPI_SPEED);
-#if 1
   SPI_WRITE_8BIT(SI4432_SPI, DATA);
   while (SPI_IS_BUSY(SI4432_SPI));
-#else
-  shiftOut(DATA);
+#else                               // Run PE4312 in SW mode to avoid disturbances
+  set_SPI_mode(SPI_MODE_PE);
+  software_shiftOut(DATA);
 #endif
   CS_PE_HIGH;
+  my_microsecond_delay(100);
   CS_PE_LOW;
+  my_microsecond_delay(100);
+#if 0
   if (SI4432_SPI_SPEED != PE_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+#endif
   return true;
 }
 #endif
