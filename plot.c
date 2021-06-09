@@ -2019,7 +2019,8 @@ disable_waterfall(void)
 void
 plot_init(void)
 {
-  force_set_markmap();
+  redraw_request|= REDRAW_AREA | REDRAW_BATTERY | REDRAW_CAL_STATUS | REDRAW_FREQUENCY;
+  draw_all(true);
 }
 
 #pragma GCC pop_options

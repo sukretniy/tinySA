@@ -114,14 +114,19 @@ static THD_FUNCTION(Thread1, arg)
 {
   (void)arg;
   chRegSetThreadName("sweep");
+  // Init UI and plot grid
+  area_height = AREA_HEIGHT_NORMAL;
+  ui_init();
+  //Initialize graph plotting
+  plot_init();
 
 #ifdef __SD_CARD_LOAD__
   sd_card_load_config("autoload.ini");
 #endif
 
-#ifndef TINYSA4
-  ui_process();
-#endif
+//#ifndef TINYSA4
+//  ui_process();
+//#endif
 
   while (1) {
 //  START_PROFILE
@@ -2284,10 +2289,6 @@ int main(void)
   i2sStart(&I2SD2, &i2sconfig);
   i2sStartExchange(&I2SD2);
 #endif
-  area_height = AREA_HEIGHT_NORMAL;
-  ui_init();
-  //Initialize graph plotting
-  plot_init();
 
   setup_sa();
 //  if (setting.mode != -1) {
