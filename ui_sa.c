@@ -1691,7 +1691,7 @@ static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
 #endif
 #ifdef __VBW__
 static const uint16_t vbwsel_x100[]={0,100,30,10,3,1};
-static const char* vbwsel_text[]={"auto","0.01","0.03", "0.1", "0.3","   "};
+//static const char* vbwsel_text[]={"auto","0.01","0.03", "0.1", "0.3","   "};
 #endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
@@ -1715,7 +1715,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_vbw_acb)
 {
   (void)item;
   if (b){
-  b->param_1.text = vbwsel_text[data];
+  b->param_1.f = vbwsel_x100[data] > 0 ? 1.0f/vbwsel_x100[data] : 0;
   b->icon = setting.vbw_x100 == vbwsel_x100[data] ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
@@ -2256,11 +2256,11 @@ static const menuitem_t menu_rbw[] = {
 #ifdef __VBW__
 static const menuitem_t menu_vbw[] = {
   { MT_ADV_CALLBACK, 0, "     AUTO",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 1, "%s RBW",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 2, "%s RBW",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 3, "%s RBW",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 4, "%s RBW",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 5, "%s RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 1, "%b.2f RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 2, "%b.2f RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 3, "%b.2f RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 4, "%b.2f RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK, 5, "%b.2f RBW",   menu_vbw_acb},
   { MT_NONE,      0, NULL, menu_back} // next-> menu_back
 };
 #endif
