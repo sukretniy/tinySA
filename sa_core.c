@@ -3323,7 +3323,7 @@ again:                                                              // Spur redu
         }
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
-        if (actual_rbw_x10 < 10000 || setting.frequency_step < 100000) { //TODO always compensate for the moment as this eliminates artifacts at larger RBW
+        if (actual_rbw_x10 < 1000 || setting.frequency_step < 100000) { //TODO always compensate for the moment as this eliminates artifacts at larger RBW
         int32_t error_f = 0;
         if (real_old_freq[ADF4351_LO] > target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
