@@ -293,9 +293,9 @@
 #define VAL_GPIOB_OSPEEDR           (PIN_PUPDR_FLOATING(GPIOB_XN) | \
                                      PIN_PUPDR_FLOATING(GPIOB_YN) | \
                                      PIN_OSPEED_100M(GPIO_LCD_RESET) |          \
-                                     PIN_OSPEED_2M(GPIOB_SPI_SCLK) | \
-                                     PIN_OSPEED_2M(GPIOB_SPI_MISO) |          \
-                                     PIN_OSPEED_2M(GPIOB_SPI_MOSI) |          \
+                                     PIN_OSPEED_100M(GPIOB_SPI_SCLK) | \
+                                     PIN_OSPEED_100M(GPIOB_SPI_MISO) |          \
+                                     PIN_OSPEED_100M(GPIOB_SPI_MOSI) |          \
                                      PIN_OSPEED_100M(6) |          \
                                      PIN_OSPEED_100M(GPIO_SD_CD) |          \
                                      PIN_OSPEED_100M(8) | \

@@ -1005,8 +1005,6 @@ VNA_SHELL_FUNCTION(cmd_scan)
 VNA_SHELL_FUNCTION(cmd_hop)
 {
   freq_t start, stop, step;
-  uint32_t old_points = sweep_points;
-  uint32_t i;
   if (argc < 2 || argc > 4) {
     shell_printf("usage: hop {start(Hz)} {stop(Hz)} {step(Hz) | points} [outmask]\r\n");
     return;
@@ -1020,35 +1018,25 @@ VNA_SHELL_FUNCTION(cmd_hop)
   }
   if (argc >= 3) {
     step = my_atoui(argv[2]);
-    if (step > POINTS_COUNT) {
-      int i = 0;
-      for (freq_t f = start; f<= stop; f += step)
-        frequencies[i++] = f;
-      dirty = true;
-      sweep_points = 1 + (stop-start)/step;
-    } else {
-      sweep_points = step;
-      set_frequencies(start, stop, sweep_points);
+    if (step <= POINTS_COUNT && step > 0) {
+      step = (stop - start) / step;
     }
   }
   pause_sweep();
-  setting.frequency_step = 0;
-  sweep(false);
   // Output data after if set (faster data recive)
   uint16_t mask = 3;
   if (argc == 4) {
     mask = my_atoui(argv[3]);
   }
   if (mask) {
-      for (i = 0; i < sweep_points; i++) {
-        if (mask & 1) shell_printf("%Q ", frequencies[i]);
-        if (mask & 2) shell_printf("%f ", value(measured[TRACE_ACTUAL][i]));
-        if (mask & 4) shell_printf("%f ", value(measured[TRACE_STORED][i]));
-        if (mask & 8) shell_printf("%f ", value(measured[TRACE_TEMP][i]));
+    for (freq_t f = start; f <= stop; f += step) {
+        if (mask & 1) shell_printf("%Q ", f);
+        float v = PURE_TO_float(perform(false, 0, f, false));
+        if (mask & 2) shell_printf("%f ", v);
         shell_printf("\r\n");
       }
   }
-  sweep_points = old_points;
+  resume_sweep();
 }
 #endif
 
