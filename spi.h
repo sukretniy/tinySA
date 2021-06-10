@@ -79,10 +79,11 @@
 #define SPI_READ_16BIT(spi)      *(__IO uint16_t*)(&spi->DR)
 
 #ifdef TINYSA4
-#define SPI_MODE_LCD     0x00
-#define SPI_MODE_SD_CARD 0x01
-#define SPI_MODE_SI      0x02
-#define SPI_MODE_PE      0x04
+#define SPI_MODE_LCD          0x00
+#define SPI_MODE_SD_CARD      0x01
+#define SPI_MODE_SD_CARD_LOW  0x02
+#define SPI_MODE_SI           0x03
+#define SPI_MODE_PE           0x04
 void set_SPI_mode(uint16_t mode);
 void start_SI4432_SPI_mode(void);
 void stop_SI4432_SPI_mode(void);

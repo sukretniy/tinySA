@@ -267,8 +267,8 @@
                                      PIN_OTYPE_PUSHPULL(13) | \
                                      PIN_OTYPE_PUSHPULL(GPIO_SPI2_SDO) | \
                                      PIN_OTYPE_PUSHPULL(GPIO_SPI2_SDI))
-#define VAL_GPIOB_OSPEEDR           (PIN_PUPDR_FLOATING(GPIOB_XN) | \
-                                     PIN_PUPDR_FLOATING(GPIOB_YN) | \
+#define VAL_GPIOB_OSPEEDR           (PIN_OSPEED_100M(GPIOB_XN) | \
+                                     PIN_OSPEED_100M(GPIOB_YN) | \
                                      PIN_OSPEED_100M(2) |          \
                                      PIN_OSPEED_100M(3) | \
                                      PIN_OSPEED_100M(4) |          \

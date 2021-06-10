@@ -195,7 +195,7 @@
                                      PIN_OSPEED_100M(GPIOA_JTMS) |         \
                                      PIN_OSPEED_100M(GPIOA_JTCK) |         \
                                      PIN_OSPEED_100M(15))
-#define VAL_GPIOA_PUPDR           (PIN_PUPDR_FLOATING(0) | \
+#define VAL_GPIOA_PUPDR             (PIN_PUPDR_FLOATING(0) | \
                                      PIN_PUPDR_PULLDOWN(1) | \
                                      PIN_PUPDR_PULLDOWN(2) | \
                                      PIN_PUPDR_PULLDOWN(3) | \
@@ -211,7 +211,7 @@
                                      PIN_PUPDR_PULLDOWN(GPIOA_JTMS) |   \
                                      PIN_PUPDR_PULLDOWN(GPIOA_JTCK) |   \
                                      PIN_PUPDR_PULLUP(15))
-#define VAL_GPIOA_ODR             (PIN_ODR_HIGH(0) |             \
+#define VAL_GPIOA_ODR               (PIN_ODR_HIGH(0) |             \
                                      PIN_ODR_HIGH(1) |             \
                                      PIN_ODR_HIGH(2) |         \
                                      PIN_ODR_HIGH(3) |         \
@@ -290,8 +290,8 @@
                                      PIN_OTYPE_PUSHPULL(13) | \
                                      PIN_OTYPE_PUSHPULL(14) | \
                                      PIN_OTYPE_PUSHPULL(15))
-#define VAL_GPIOB_OSPEEDR           (PIN_PUPDR_FLOATING(GPIOB_XN) | \
-                                     PIN_PUPDR_FLOATING(GPIOB_YN) | \
+#define VAL_GPIOB_OSPEEDR           (PIN_OSPEED_100M(GPIOB_XN) | \
+                                     PIN_OSPEED_100M(GPIOB_YN) | \
                                      PIN_OSPEED_100M(GPIO_LCD_RESET) |          \
                                      PIN_OSPEED_100M(GPIOB_SPI_SCLK) | \
                                      PIN_OSPEED_100M(GPIOB_SPI_MISO) |          \

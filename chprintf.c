@@ -257,6 +257,7 @@ static char *ftoaS(char *p, float num, int precision) {
 #define PAD_ZERO            16
 #define PLUS_SPACE          32
 #define DEFAULT_PRESCISION  64
+#define _32_BIT_FLOAT      128
 
 int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
   char *p, *s, c, filler=' ';
@@ -308,6 +309,8 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
       else if (*fmt == ' ')
         state|=PLUS_SPACE;
 #endif
+      else if (*fmt == 'b')
+        state|=_32_BIT_FLOAT;
       else
         break;
       fmt++;
@@ -405,7 +408,10 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
 #if CHPRINTF_USE_FLOAT
     case 'F':
     case 'f':
-      value.f = va_arg(ap, double);
+      if (state & _32_BIT_FLOAT)
+        value.u = va_arg(ap, uint32_t);
+      else
+        value.f = va_arg(ap, double);
       if (value.f < 0) {
         state|=NEGATIVE;
         *p++ = '-';

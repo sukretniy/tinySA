@@ -34,6 +34,8 @@
 #define LCD_RESET_NEGATE  palSetPad(GPIO_LCD_RESET_PORT, GPIO_LCD_RESET)
 #define LCD_DC_CMD        palClearPad(GPIO_LCD_CD_PORT, GPIO_LCD_CD)
 #define LCD_DC_DATA       palSetPad(GPIO_LCD_CD_PORT, GPIO_LCD_CD)
+#define SD_CS_LOW         palClearLine(LINE_SD_CS)
+#define SD_CS_HIGH        palSetLine(LINE_SD_CS)
 #else
 #define LCD_CS_LOW        palClearPad(GPIOB, GPIOB_LCD_CS)
 #define LCD_CS_HIGH       palSetPad(GPIOB, GPIOB_LCD_CS)
@@ -45,6 +47,8 @@
 
 // LCD display SPI bus
 #define LCD_SPI           SPI1
+// SD card spi bus
+#define SD_SPI            SPI1
 
 // Custom display definition
 #ifdef LCD_DRIVER_ILI9341
@@ -64,6 +68,11 @@
 // Allow enable DMA for read display data
 #define __USE_DISPLAY_DMA_RX__
 #endif
+
+// Define SD SPI speed on work
+#define SD_SPI_SPEED        SPI_BR_DIV2
+// Define SD SPI speed on initialization (100-400kHz need)
+#define SD_INIT_SPI_SPEED   SPI_BR_DIV256
 
 // Disable DMA rx on disabled DMA tx
 #ifndef __USE_DISPLAY_DMA__
@@ -223,6 +232,7 @@ void spi_DropRx(void){
   // Drop Rx buffer after tx and wait tx complete
   while (SPI_RX_IS_NOT_EMPTY(LCD_SPI)||SPI_IS_BUSY(LCD_SPI))
     (void)SPI_READ_8BIT(LCD_SPI);
+  (void)SPI_READ_8BIT(LCD_SPI);
 }
 
 //*****************************************************
@@ -346,8 +356,11 @@ void set_SPI_mode(uint16_t mode){
   // Disable current mode
   switch(current_spi_mode){
     case SPI_MODE_LCD:
+      LCD_CS_HIGH;
     break;
     case SPI_MODE_SD_CARD:
+    case SPI_MODE_SD_CARD_LOW:
+      SD_CS_HIGH;
     break;
     case SPI_MODE_SI:
       stop_SI4432_SPI_mode();
@@ -359,16 +372,18 @@ void set_SPI_mode(uint16_t mode){
   // Enable new mode
   switch(mode){
     case SPI_MODE_LCD:
+      SPI_BR_SET(LCD_SPI, LCD_SPI_SPEED); // Set Baud rate for LCD
     break;
     case SPI_MODE_SD_CARD:
-      LCD_CS_HIGH;
+      SPI_BR_SET(LCD_SPI, SD_SPI_SPEED); // Set Baud rate for SD work
+    break;
+    case SPI_MODE_SD_CARD_LOW:
+      SPI_BR_SET(LCD_SPI, SD_INIT_SPI_SPEED); // Set Baud rate for SD init
     break;
     case SPI_MODE_SI:
-      LCD_CS_HIGH;
       start_SI4432_SPI_mode();
       break;
     case SPI_MODE_PE:
-      LCD_CS_HIGH;
       start_PE4312_SPI_mode();
     break;
   }
@@ -546,7 +561,7 @@ void ili9341_init(void)
   for (p = LCD_INIT; *p; ) {
     send_command(p[0], p[1], &p[2]);
     p += 2 + p[1];
-    chThdSleepMilliseconds(5);
+    chThdSleepMilliseconds(2);
   }
   ili9341_clear_screen();
   LCD_CS_HIGH;
@@ -1188,15 +1203,6 @@ void ili9341_test(int mode)
 
 // Define sector size
 #define SD_SECTOR_SIZE      512
-// SD card spi bus
-#define SD_SPI              SPI1
-// Define SD SPI speed on work
-#define SD_SPI_SPEED        SPI_BR_DIV2
-// div4 give less error and high speed for Rx
-#define SD_SPI_RX_SPEED     SPI_BR_DIV2
-
-// Define SD SPI speed on initialization (100-400kHz need)
-#define SD_INIT_SPI_SPEED   SPI_BR_DIV256
 // Set number of try read or write sector data (1 only one try)
 #define SD_READ_WRITE_REPEAT 1
 // Local values for SD card state
@@ -1225,23 +1231,23 @@ void testLog(void){
 //*******************************************************
 //               SD card SPI functions
 //*******************************************************
-#define SD_CS_LOW     palClearLine(LINE_SD_CS)
-#define SD_CS_HIGH    palSetLine(LINE_SD_CS)
-
 bool SD_Inserted(void){
   return !(palReadPort(GPIOB)&(1<<GPIO_SD_CD));
 }
 
-static void SD_Select_SPI(uint32_t speed) {
+static void SD_Select_SPI(void) {
   set_SPI_mode(SPI_MODE_SD_CARD);
-  SPI_BR_SET(SD_SPI, speed); // Set Baud rate control for SD card
+  SD_CS_LOW;                 // Select SD Card
+}
+
+static void SD_Select_SPI_LOW(void) {
+  set_SPI_mode(SPI_MODE_SD_CARD_LOW);
   SD_CS_LOW;                 // Select SD Card
 }
 
 static void SD_Unselect_SPI(void) {
   SD_CS_HIGH;                         // Unselect SD Card
   spi_RxByte();                       // Dummy read/write one Byte recommend for SD after CS up
-  SPI_BR_SET(LCD_SPI, LCD_SPI_SPEED); // Restore Baud rate for LCD
 }
 
 //*******************************************************
@@ -1318,15 +1324,14 @@ static inline uint8_t SD_ReadR1(uint32_t cnt) {
 static inline bool SD_WaitDataToken(uint8_t token, uint32_t wait_time) {
   uint8_t res;
   uint32_t time = chVTGetSystemTimeX();
-  uint32_t count = 0;
+  uint8_t count = 0;
   do{
     if ((res = spi_RxByte()) == token)
       return true;
     count++;
-    // Check timeout only every 65536 bytes read (~50ms interval)
-    if ((count&0xFFFF) == 0)
-      if ((chVTGetSystemTimeX() - time) > wait_time)
-        break;
+    // Check timeout only every 256 bytes read (~8ms)
+    if (count == 0 && (chVTGetSystemTimeX() - time) > wait_time)
+      break;
   }while (res == 0xFF);
   return false;
 }
@@ -1342,15 +1347,14 @@ static inline uint8_t SD_WaitDataAccept(uint32_t cnt) {
 static uint8_t SD_WaitNotBusy(uint32_t wait_time) {
   uint8_t res;
   uint32_t time = chVTGetSystemTimeX();
-  uint32_t count = 0;
+  uint8_t count = 0;
   do{
     if ((res = spi_RxByte()) == 0xFF)
       return res;
     count++;
-    // Check timeout only every 65536 bytes read (~50ms interval)
-    if ((count&0xFFFF) == 0)
-      if ((chVTGetSystemTimeX() - time) > wait_time)
-        break;
+    // Check timeout only every 256 bytes read (~8ms)
+    if (count == 0 && (chVTGetSystemTimeX() - time) > wait_time)
+      break;
   }while (1);
   return 0;
 }
@@ -1465,9 +1469,9 @@ static uint8_t SD_SendCmd(uint8_t cmd, uint32_t arg) {
 }
 
 // Power on SD
-void SD_PowerOn(void) {
+static void SD_PowerOn(void) {
   uint16_t n;
-  SD_Select_SPI(SD_INIT_SPI_SPEED);
+  SD_Select_SPI_LOW();
 
   // Dummy TxRx 80 bits for power up SD
   for (n=0;n<10;n++)
@@ -1475,9 +1479,6 @@ void SD_PowerOn(void) {
   // Set SD card to idle state
   if (SD_SendCmd(CMD0, 0) == SD_R1_IDLE)
     Stat|= STA_POWER_ON;
-  else{
-    Stat = STA_NOINIT;
-  }
   SD_Unselect_SPI();
 }
 
@@ -1513,13 +1514,16 @@ DSTATUS disk_initialize(BYTE pdrv) {
   total_time = chVTGetSystemTimeX();
 #endif
   if (pdrv != 0) return STA_NOINIT;
+  // Start init SD card
+  Stat = STA_NOINIT;
   // power on, try detect on bus, set card to idle state
   SD_PowerOn();
+  if (!SD_CheckPower()) return Stat;
   // check disk type
   uint8_t  type = 0;
   uint32_t cnt = 100;
   // Set low SPI bus speed = PLL/256 (on 72MHz =281.250kHz)
-  SD_Select_SPI(SD_INIT_SPI_SPEED);
+  SD_Select_SPI_LOW();
   // send GO_IDLE_STATE command
   if (SD_SendCmd(CMD0, 0) == SD_R1_IDLE)
   {
@@ -1584,11 +1588,9 @@ DSTATUS disk_initialize(BYTE pdrv) {
   SD_Unselect_SPI();
   CardType = type;
   DEBUG_PRINT("CardType %d\r\n", type);
-  // Clear STA_NOINIT and set Power on
-  if (type){
-    Stat&= ~STA_NOINIT;
-    Stat|=  STA_POWER_ON;
-  }
+  // Clear STA_NOINIT
+  if (type)
+    Stat&=~STA_NOINIT;
   else // Initialization failed
     SD_PowerOff();
   return Stat;
@@ -1612,7 +1614,7 @@ DRESULT disk_read(BYTE pdrv, BYTE* buff, DWORD sector, UINT count) {
   r_time-= chVTGetSystemTimeX();
 #endif
 
-  SD_Select_SPI(SD_SPI_RX_SPEED);
+  SD_Select_SPI();
   // READ_SINGLE_BLOCK
   uint8_t cnt = SD_READ_WRITE_REPEAT; // read repeat count
   do{
@@ -1664,7 +1666,7 @@ DRESULT disk_write(BYTE pdrv, const BYTE* buff, DWORD sector, UINT count) {
   w_time-= chVTGetSystemTimeX();
 #endif
 
-  SD_Select_SPI(SD_SPI_SPEED);
+  SD_Select_SPI();
   // WRITE_SINGLE_BLOCK
   uint8_t cnt = SD_READ_WRITE_REPEAT; // write repeat count
   do{
@@ -1691,7 +1693,7 @@ DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void* buff) {
   DRESULT res = RES_PARERR;
   // No disk or not ready
   if (pdrv != 0 || Stat & STA_NOINIT) return RES_NOTRDY;
-  SD_Select_SPI(SD_SPI_RX_SPEED);
+  SD_Select_SPI();
   switch (cmd){
     // Makes sure that the device has finished pending write process.
     // If the disk I/O layer or storage device has a write-back cache,
