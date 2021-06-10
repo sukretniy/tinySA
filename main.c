@@ -1004,7 +1004,7 @@ VNA_SHELL_FUNCTION(cmd_scan)
 #ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_hop)
 {
-  freq_t start, stop, step;
+  freq_t start, stop, step = 0;
   if (argc < 2 || argc > 4) {
     shell_printf("usage: hop {start(Hz)} {stop(Hz)} {step(Hz) | points} [outmask]\r\n");
     return;
