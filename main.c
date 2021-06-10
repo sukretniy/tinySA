@@ -1034,12 +1034,17 @@ VNA_SHELL_FUNCTION(cmd_hop)
     mask = my_atoui(argv[3]);
   }
   if (mask) {
+    int old_vbwSteps = vbwSteps;
+    vbwSteps = 1;
     for (freq_t f = start; f <= stop; f += step) {
         if (mask & 1) shell_printf("%Q ", f);
         float v = PURE_TO_float(perform(false, 0, f, false));
         if (mask & 2) shell_printf("%f ", v);
         shell_printf("\r\n");
-      }
+        if (operation_requested)
+          break;
+    }
+    vbwSteps = old_vbwSteps;
   }
   resume_sweep();
 }
