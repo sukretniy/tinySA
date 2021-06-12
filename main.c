@@ -194,9 +194,7 @@ static THD_FUNCTION(Thread1, arg)
       if (uistat.marker_tracking) {
         int i = marker_search_max(active_marker);
         if (i != -1 && active_marker != MARKER_INVALID) {
-          markers[active_marker].index = i;
-          markers[active_marker].frequency = getFrequency(i);
-
+          set_marker_index(active_marker, i);
           redraw_request |= REDRAW_MARKER;
         }
       }
@@ -1066,7 +1064,7 @@ VNA_SHELL_FUNCTION(cmd_hop)
 #endif
 
 static void
-update_marker_index(void)
+update_markers_index(void)
 {
   int m, idx;
   freq_t fstart = get_sweep_frequency(ST_START);
@@ -1092,9 +1090,16 @@ update_marker_index(void)
       idx = r * (sweep_points-1);
 #endif
     }
-    markers[m].index = idx;
-    markers[m].frequency = getFrequency(idx);
+    set_marker_index(m, idx);
   }
+}
+
+void
+set_marker_index(int m, int16_t idx)
+{
+  if ((uint32_t)m >= MARKERS_MAX || (uint16_t)idx >= sweep_points) return;
+  markers[m].index = idx;
+  markers[m].frequency = getFrequency(idx);
 }
 
 void set_marker_frequency(int m, freq_t f)
@@ -1182,7 +1187,7 @@ update_frequencies(void)
   set_frequencies(start, stop, sweep_points);
   // operation_requested|= OP_FREQCHANGE;
 
-  update_marker_index();
+  update_markers_index();
 
   // set grid layout
   update_grid();
@@ -1491,8 +1496,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     case 2: markers[t].enabled = TRUE; active_marker = t;
       int i = marker_search_max(active_marker);
       if (i == -1) i = 0;
-      markers[active_marker].index = i;
-      markers[active_marker].frequency = getFrequency(i);
+      set_marker_index(active_marker, i);
       goto display_marker;
     default:
       // select active marker and move to index or frequency
@@ -1502,10 +1506,8 @@ VNA_SHELL_FUNCTION(cmd_marker)
       active_marker = t;
       if (value > sweep_points)
         set_marker_frequency(active_marker, value);
-      else {
-        markers[t].index = value;
-        markers[t].frequency = getFrequency(value);
-      }
+      else
+        set_marker_index(t, value);
       return;
   }
  usage:

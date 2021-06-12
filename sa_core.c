@@ -4478,8 +4478,7 @@ static volatile int dummy;
     }
     while (m < MARKERS_MAX) {                  // Insufficient maxima found
       if (markers[m].enabled && markers[m].mtype & M_TRACKING) {    // More available markers found
-        markers[m].index = 0;                             // Enabled but no max so set to left most frequency
-        markers[m].frequency = getFrequency(0);
+        set_marker_index(m, 0); // Enabled but no max so set to left most frequency
       }
       m++;                              // Try next marker
     }
@@ -4517,35 +4516,28 @@ static volatile int dummy;
       if (r < l) {
         l = markers[1].index;
         r = markers[0].index;
-        markers[0].index = l;
-        markers[1].index = r;
       }
-      freq_t lf = getFrequency(l);
-      freq_t rf = getFrequency(r);
-      markers[0].frequency = lf;
-      markers[1].frequency = rf;
-
+      set_marker_index(0, l);
+      set_marker_index(1, r);
+      freq_t lf = markers[0].frequency;
+      freq_t rf = markers[1].frequency;
       markers[2].enabled = search_maximum(2, lf - (rf - lf), 12);
       markers[3].enabled = search_maximum(3, rf + (rf - lf), 12);
     } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
-      markers[1].index =  markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4);  // Position phase noise marker at requested offset
-      markers[1].frequency = getFrequency(markers[1].index);
+      // Position phase noise marker at requested offset
+      set_marker_index(1, markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4));
     } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
       int t = 0;
       float v = actual_t[markers[0].index] - (in_selftest ? 6.0 : 3.0);
       while (t < markers[0].index && actual_t[t+1] < v)                                        // Find left -3dB point
         t++;
-      if (t< markers[0].index) {
-        markers[1].index = t;
-        markers[1].frequency = getFrequency(t);
-      }
+      if (t< markers[0].index)
+        set_marker_index(1, t);
       t = setting._sweep_points-1;;
       while (t > markers[0].index && actual_t[t-1] < v)                // find right -3dB point
         t--;
-      if (t > markers[0].index) {
-        markers[2].index = t;
-        markers[2].frequency = getFrequency(t);
-      }
+      if (t > markers[0].index)
+        set_marker_index(2, t);
     } else if (setting.measurement == M_AM) {      // ----------------AM measurement
       if (S_IS_AUTO(setting.agc )) {
 #ifdef __SI4432__

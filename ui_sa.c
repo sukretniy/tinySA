@@ -1563,7 +1563,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
   }
   markers[data-1].enabled = true;
 //  interpolate_maximum(data-1);        // possibly not a maximum
-  markers[data-1].frequency = getFrequency(markers[data-1].index);
+  set_marker_index(data-1, markers[data-1].index);
   active_marker_select(data-1);
   menu_push_submenu(menu_marker_modify);
   redraw_marker(active_marker);
@@ -1649,7 +1649,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_ref_select_acb)
   }
   markers[data-1].enabled = true;
 //  interpolate_maximum(data-1);        // possibly not a maximum
-  markers[data-1].frequency = getFrequency(markers[data-1].index);
+  set_marker_index(data-1, markers[data-1].index);
   markers[active_marker].ref = data-1;
   redraw_marker(active_marker);
   menu_move_back(false);

@@ -205,6 +205,7 @@ void send_buffer(uint8_t * buf, int s);
 #endif
 void set_marker_frequency(int m, freq_t f);
 void set_marker_time(int m, float f);
+void set_marker_index(int m, int16_t idx);
 void toggle_sweep(void);
 void toggle_mute(void);
 void toggle_pulse(void);
