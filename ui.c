@@ -633,7 +633,7 @@ get_marker_frequency(int marker)
     return 0;
   if (!markers[marker].enabled)
     return 0;
-  return frequencies[markers[marker].index];
+  return getFrequency(markers[marker].index);
 }
 
 static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
@@ -734,7 +734,7 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
     if (data > 1) // Maximum related
       interpolate_maximum(active_marker);
     else
-      markers[active_marker].frequency = frequencies[i];
+      markers[active_marker].frequency = getFrequency(i);
   }
   redraw_marker(active_marker);
 //  if (data == 4)
@@ -1632,7 +1632,7 @@ lever_move_marker(int status)
         if (idx  > sweep_points-1) idx = sweep_points-1 ;
       }
       markers[active_marker].index = idx;
-      markers[active_marker].frequency = frequencies[idx];
+      markers[active_marker].frequency = getFrequency(idx);
       redraw_marker(active_marker);
       markers[active_marker].mtype &= ~M_TRACKING;    // Disable tracking when dragging marker
       step++;
@@ -1976,7 +1976,7 @@ drag_marker(int t, int m)
     index = search_nearest_index(touch_x, touch_y, t);
     if (index >= 0) {
       markers[m].index = index;
-      markers[m].frequency = frequencies[index];
+      markers[m].frequency = getFrequency(index);
       redraw_marker(m);
     }
   } while (touch_check()!= EVT_TOUCH_RELEASED);
@@ -2137,7 +2137,7 @@ void save_to_sd(int mask)
   if (res == FR_OK) {
     for (int i = 0; i < sweep_points; i++) {
       char *buf = (char *)spi_buffer;
-      if (mask & 1) buf += plot_printf(buf, 100, "%U, ", frequencies[i]);
+      if (mask & 1) buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
       if (mask & 2) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
       if (mask & 4) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
       if (mask & 8) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));

@@ -1625,7 +1625,8 @@ static void cell_draw_marker_info(int x0, int y0)
         int search_gate = 10;
         if (markers[0].index < search_gate)
           search_gate = markers[0].index * 2 / 3;
-        while (f * h_i < frequencies[sweep_points-1]) {
+        freq_t stop = getFrequency(sweep_points-1);
+        while (f * h_i < stop) {
           if (search_maximum(1, f*h_i, search_gate) ) {            // use marker 1 for searching harmonics
             h_count++;
             f = (f * 3 + markers[1].frequency / h_i) >> 2;

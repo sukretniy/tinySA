@@ -561,7 +561,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_restart_acb){
   if(b){
     if (current_index >= 0 && setting.sweep) {
       float current_level = setting.level + ((float)current_index)* setting.level_sweep / (float)sweep_points;
-      plot_printf(b->text, sizeof b->text, "STOP %5.3QHz %+.1fdBm", frequencies[current_index], current_level);
+      plot_printf(b->text, sizeof b->text, "STOP %5.3QHz %+.1fdBm", getFrequency(current_index), current_level);
     }
     else
       plot_printf(b->text, sizeof b->text, "START SWEEP");
@@ -1563,7 +1563,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
   }
   markers[data-1].enabled = true;
 //  interpolate_maximum(data-1);        // possibly not a maximum
-  markers[data-1].frequency = frequencies[markers[data-1].index];
+  markers[data-1].frequency = getFrequency(markers[data-1].index);
   active_marker_select(data-1);
   menu_push_submenu(menu_marker_modify);
   redraw_marker(active_marker);
@@ -1649,7 +1649,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_ref_select_acb)
   }
   markers[data-1].enabled = true;
 //  interpolate_maximum(data-1);        // possibly not a maximum
-  markers[data-1].frequency = frequencies[markers[data-1].index];
+  markers[data-1].frequency = getFrequency(markers[data-1].index);
   markers[active_marker].ref = data-1;
   redraw_marker(active_marker);
   menu_move_back(false);

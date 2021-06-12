@@ -105,8 +105,6 @@ uint16_t adc_single_read(uint32_t chsel)
 uint16_t adc1_single_read(uint32_t chsel)
 {
   /* ADC setup */
-//  adcStart(&ADCD2, NULL);
-  adcgrpcfgXY.sqr[0] = ADC_SQR1_SQ1_N(ADC_CHANNEL_IN1);
   adcConvert(&ADCD1, &adcgrpcfgVersion, samples, 1);
   return(samples[0]);
 }
