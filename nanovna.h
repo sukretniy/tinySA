@@ -94,6 +94,7 @@
 //#define __FFT_VBW__
 //#define __FFT_DECONV__
 #else
+#define __HARMONIC__
 #endif
 
 #ifdef TINYSA3
@@ -1013,7 +1014,7 @@ typedef struct setting
   freq_t frequency_var;
   freq_t frequency_IF;
   freq_t frequency_offset;
-#define FREQUENCY_SHIFT 100000000   // 100MHz upconversion maximum
+#define FREQUENCY_SHIFT ((freq_t)100000000)   // 100MHz upconversion maximum
   float trace_scale;
   float trace_refpos;
   marker_t _markers[MARKERS_MAX];

@@ -2542,6 +2542,9 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
   { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
   { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
+#ifdef __HARMONIC__
+  { MT_SUBMENU | MT_HIGH,0,               "HARMONIC",         menu_harmonic},
+#endif
 #ifdef __USE_SERIAL_CONSOLE__
   { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
@@ -2674,7 +2677,7 @@ static const menuitem_t menu_settings[] =
 #ifdef __USE_SERIAL_CONSOLE__
   { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
-  #else
+#else
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings2},
@@ -3106,7 +3109,7 @@ set_numeric_value(void)
     set_sweep_frequency(ST_START, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
   case KM_STOP:
-    set_sweep_frequency(ST_STOP, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));
+    set_sweep_frequency(ST_STOP, (freq_t)(uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT)));
     break;
   case KM_CENTER:
     set_sweep_frequency(ST_CENTER, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));

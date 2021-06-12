@@ -142,6 +142,11 @@ float channel_power_watt[3];
 //int setting.refer = -1;  // Off by default
 const uint32_t reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
 
+#ifdef TINYSA3
+const freq_t fh_low[] = {  240000000, 480000000, 720000000, 960000000, 1200000000 };
+const freq_t fh_high[] = { 480000000, 960000000, 1920000000, 2880000000, 3840000000 };
+#endif
+
 uint8_t in_selftest = false;
 
 void update_min_max_freq(void)
@@ -172,6 +177,19 @@ void update_min_max_freq(void)
   case M_HIGH:
     minFreq = HIGH_MIN_FREQ_MHZ * 1000000;
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
+#ifdef __HARMONIC__
+    if (setting.harmonic) {
+      minFreq = setting.harmonic * HIGH_MIN_FREQ_MHZ * 1000000;
+      if (setting.harmonic < 4)
+        maxFreq = setting.harmonic * HIGH_MAX_FREQ_MHZ * 1000000;
+      else
+        maxFreq = 2880000000;
+    }
+    if (get_sweep_frequency(ST_START) < minFreq)
+      set_sweep_frequency(ST_START, minFreq);
+    if (get_sweep_frequency(ST_STOP) > maxFreq)
+      set_sweep_frequency(ST_STOP, maxFreq);
+#endif
     break;
   case M_GENHIGH:
 #ifdef TINYSA4 
@@ -1082,11 +1100,14 @@ void set_harmonic(int h)
   if ((freq_t)(setting.harmonic * 135000000)+config.frequency_IF1 >  minFreq)
     minFreq = setting.harmonic * 135000000 + config.frequency_IF1;
 #endif
+#if 0
   maxFreq = 9900000000.0;
   if (setting.harmonic != 0 && (MAX_LO_FREQ * setting.harmonic + config.frequency_IF1 )< 9900000000.0)
     maxFreq = (MAX_LO_FREQ * setting.harmonic + config.frequency_IF1 );
   set_sweep_frequency(ST_START, minFreq);
   set_sweep_frequency(ST_STOP, maxFreq);
+#endif
+  update_min_max_freq();
 }
 #endif
 
@@ -3251,6 +3272,10 @@ again:                                                              // Spur redu
       else
         target_f = local_IF+lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
 #ifdef __SI4432__
+#ifdef __HARMONIC__
+      if (setting.harmonic)
+        target_f /= setting.harmonic;
+#endif
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
 #ifdef __ADF4351__
