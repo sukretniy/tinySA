@@ -1064,6 +1064,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_spur_acb)
   //  menu_move_back(false);
   ui_mode_normal();
 }
+#if 0
+#ifdef __HARMONIC__
+static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_spur_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = AUTO_ICON(setting.spur_removal);
+    return;
+  }
+  toggle_spur();
+  ui_mode_normal();
+}#endif
+#endif
+#endif
 #endif
 
 #ifdef TINYSA4
@@ -2544,6 +2559,7 @@ static const menuitem_t menu_settings3[] =
   { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
 #ifdef __HARMONIC__
   { MT_SUBMENU | MT_HIGH,0,               "HARMONIC",         menu_harmonic},
+//  { MT_ADV_CALLBACK,0,          "SPUR\nREMOVAL",          menu_harmonic_spur_acb},
 #endif
 #ifdef __USE_SERIAL_CONSOLE__
   { MT_SUBMENU,  0, "CONNECTION", menu_connection},

@@ -604,6 +604,11 @@ void set_extra_lna(int t)
 void toggle_mirror_masking(void)
 {
   setting.mirror_masking = !setting.mirror_masking;
+#ifdef __HARMONIC__
+  if (setting.harmonic) {
+    setting.spur_removal = setting.mirror_masking;
+  }
+#endif
   dirty = true;
 }
 
@@ -3273,8 +3278,16 @@ again:                                                              // Spur redu
         target_f = local_IF+lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
 #ifdef __SI4432__
 #ifdef __HARMONIC__
-      if (setting.harmonic)
-        target_f /= setting.harmonic;
+      if (setting.harmonic) {
+        if (spur_second_pass) {
+          if (setting.harmonic == 2)
+            target_f /= setting.harmonic+1;
+          else
+            target_f /= setting.harmonic+2;
+        }
+        else
+          target_f /= setting.harmonic;
+      }
 #endif
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
@@ -3655,7 +3668,7 @@ again:                                                              // Spur redu
 //   }
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
-    if (setting.mode == M_LOW && S_STATE(setting.spur_removal) && !debug_avoid) {
+    if ((setting.mode == M_LOW || setting.mode == M_HIGH) && S_STATE(setting.spur_removal) && !debug_avoid) {
       if (!spur_second_pass) {                                        // If first spur pass
         spur_RSSI = pureRSSI;                                       // remember measure RSSI
         spur_second_pass = true;
@@ -3735,8 +3748,10 @@ static bool sweep(bool break_on_operation)
   modulation_counter = 0;                                             // init modulation counter in case needed
   int refreshing = false;
 
-  if (MODE_OUTPUT(setting.mode) && config.cor_am == 0) {                          // Calibrate the modulation frequencies at first use
-    calibrate_modulation(MO_AM, &config.cor_am);
+  if (MODE_OUTPUT(setting.mode) && config.cor_nfm == 0) {                          // Calibrate the modulation frequencies at first use
+#ifndef TINYSA4
+    calibrate_modulation(MO_AM, &config.cor_am);    // No AM mondulation for now
+#endif
     calibrate_modulation(MO_NFM, &config.cor_nfm);
     calibrate_modulation(MO_WFM, &config.cor_wfm);
   }

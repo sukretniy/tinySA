@@ -1594,7 +1594,11 @@ VNA_SHELL_FUNCTION(cmd_version)
 {
   (void)argc;
   (void)argv;
+#ifdef TINYSA4
   shell_printf("%s\r\nHW Version:%d\r\n", TINYSA_VERSION, adc1_single_read(0));
+#else
+  shell_printf("%s\r\n", TINYSA_VERSION);
+#endif
 }
 
 VNA_SHELL_FUNCTION(cmd_vbat)
