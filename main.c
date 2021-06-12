@@ -1010,32 +1010,47 @@ VNA_SHELL_FUNCTION(cmd_scan)
 VNA_SHELL_FUNCTION(cmd_hop)
 {
   freq_t start, stop, step = 0;
-  if (argc < 2 || argc > 4) {
+  if (argc < 1 || argc > 4) {
     shell_printf("usage: hop {start(Hz)} {stop(Hz)} {step(Hz) | points} [outmask]\r\n");
     return;
   }
 
   start = my_atoui(argv[0]);
-  stop = my_atoui(argv[1]);
-  if (start > stop) {
-      shell_printf("frequency range is invalid\r\n");
-      return;
+  if (argc > 1)
+    stop = my_atoui(argv[1]);
+  else {
+    stop = start;
+    step = 1; // just to stop the loop
   }
+
   if (argc >= 3) {
     step = my_atoui(argv[2]);
     if (step <= POINTS_COUNT && step > 0) {
       step = (stop - start) / step;
     }
-  }
+  } else
+    step = 1;
+
   pause_sweep();
   // Output data after if set (faster data recive)
   uint16_t mask = 3;
   if (argc == 4) {
     mask = my_atoui(argv[3]);
   }
+
+  if (argc==2) {
+    mask = stop;
+    stop = start;
+  }
+
+  if (start > stop) {
+      shell_printf("frequency range is invalid\r\n");
+      return;
+  }
+
   if (mask) {
     int old_vbwSteps = vbwSteps;
-    vbwSteps = 1;
+//    vbwSteps = 1;
     for (freq_t f = start; f <= stop; f += step) {
         if (mask & 1) shell_printf("%Q ", f);
         float v = PURE_TO_float(perform(false, 0, f, false));
