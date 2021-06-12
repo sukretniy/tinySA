@@ -46,6 +46,17 @@ static const ADCConversionGroup adcgrpcfgVBAT = {
   {ADC_SQR1_SQ1_N(ADC_CHANNEL_IN17) | ADC_SQR1_SQ2_N(ADC_CHANNEL_IN18)/*| ADC_SQR1_SQ3_N(ADC_CHANNEL_IN16)*/, 0, 0, 0}           // CHSELR
 };
 
+static const ADCConversionGroup adcgrpcfgVersion = {
+  FALSE,
+  1,
+  NULL,
+  NULL,
+  ADC_CFGR1_RES_12BIT,       // CFGR1
+  ADC_TR(0, 0),                              // ADC watchdog threshold TR1
+  {ADC_SMPR1_SMP_AN1(ADC_TOUCH_XY_SMP_TIME), 0}, /* SMPR[2] */
+  {ADC_SQR1_SQ1_N(ADC_CHANNEL_IN1), 0, 0, 0} /* SQR[4]  */
+};
+
 static const ADCConversionGroup adcgrpcfgTouch = {
   TRUE,                // Enables the circular buffer mode for the group.
   1,                   // Number of the analog channels belonging to the conversion group.
@@ -90,6 +101,16 @@ uint16_t adc_single_read(uint32_t chsel)
   adcConvert(&ADCD2, &adcgrpcfgXY, samples, 1);
   return(samples[0]);
 }
+
+uint16_t adc1_single_read(uint32_t chsel)
+{
+  /* ADC setup */
+//  adcStart(&ADCD2, NULL);
+  adcgrpcfgXY.sqr[0] = ADC_SQR1_SQ1_N(ADC_CHANNEL_IN1);
+  adcConvert(&ADCD1, &adcgrpcfgVersion, samples, 1);
+  return(samples[0]);
+}
+
 
 int16_t adc_vbat_read(void)
 {

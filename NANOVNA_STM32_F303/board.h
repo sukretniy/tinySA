@@ -147,7 +147,7 @@
  * PA13 - SWDIO                     (alternate 0).
  * PA14 - SWCLK                     (alternate 0).
  */
-#define VAL_GPIOA_MODER             (PIN_MODE_OUTPUT(0U) |           \
+#define VAL_GPIOA_MODER             (PIN_MODE_ANALOG(0U) |           \
                                      PIN_MODE_INPUT(1U) |           \
                                      PIN_MODE_INPUT(2U) |           \
                                      PIN_MODE_INPUT(3U) |           \

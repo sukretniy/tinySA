@@ -1394,6 +1394,21 @@ VNA_SHELL_FUNCTION(cmd_trace)
     }
     goto usage;
   }
+  static const char cmd_load_list[] = "load";
+  if (argc == 3) {
+    switch (get_str_index(argv[0], cmd_load_list)) {
+    case 0:
+      {
+      int i = my_atoi(argv[1]);
+      if (i>= sweep_points)
+        goto usage;
+      float v = my_atof(argv[2]);
+      stored_t[i] = v;
+      goto update;
+      }
+    }
+    goto usage;
+  }
 update:
 redraw_request |= REDRAW_CAL_STATUS;
   return;
@@ -1564,7 +1579,7 @@ VNA_SHELL_FUNCTION(cmd_version)
 {
   (void)argc;
   (void)argv;
-  shell_printf("%s\r\n", TINYSA_VERSION);
+  shell_printf("%s\r\nHW Version:%d\r\n", TINYSA_VERSION, adc1_single_read(0));
 }
 
 VNA_SHELL_FUNCTION(cmd_vbat)

@@ -508,6 +508,9 @@ show_version(void)
     do {shift>>=1; y+=5;} while (shift&1);
     ili9341_drawstring_7x13(info_about[i++], x, y+=bFONT_STR_HEIGHT+2-5);
   }
+  char buf[96];
+  plot_printf(buf, sizeof(buf), "HW Version:%d", adc1_single_read(0));
+  ili9341_drawstring_7x13(buf, x, y+=bFONT_STR_HEIGHT);
 
 extern const char *states[];
 #define ENABLE_THREADS_COMMAND
