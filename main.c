@@ -1155,20 +1155,20 @@ freq_t getFrequency(uint16_t idx) {return frequencies[idx];}
 static freq_t   _f_start;
 static freq_t   _f_delta;
 static freq_t   _f_error;
-static uint16_t _f_step;
+static uint16_t _f_count;
 
 static void
 set_frequencies(freq_t start, freq_t stop, uint16_t points)
 {
   freq_t span = stop - start;
   _f_start = start;
-  _f_step  = (points - 1);
-  _f_delta = span / _f_step;
-  _f_error = span % _f_step;
+  _f_count = (points - 1);
+  _f_delta = span / _f_count;
+  _f_error = span % _f_count;
   setting.frequency_step = _f_delta;
   dirty = true;
 }
-freq_t getFrequency(uint16_t idx) {return _f_start + _f_delta * idx + (_f_step / 2 + _f_error * idx) / _f_step;}
+freq_t getFrequency(uint16_t idx) {return _f_start + _f_delta * idx + (_f_count / 2 + _f_error * idx) / _f_count;}
 #endif
 
 
