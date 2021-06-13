@@ -145,7 +145,7 @@ static THD_FUNCTION(Thread1, arg)
 #ifdef __LISTEN__
       } else if (sweep_mode & SWEEP_LISTEN) {
       if (markers[active_marker].enabled == M_ENABLED) {
-          perform(false,0,frequencies[markers[active_marker].index], false);
+          perform(false, 0, getFrequency(markers[active_marker].index), false);
           SI4432_Listen(MODE_SELECT(setting.mode));
       }
 #endif
@@ -194,9 +194,7 @@ static THD_FUNCTION(Thread1, arg)
       if (uistat.marker_tracking) {
         int i = marker_search_max(active_marker);
         if (i != -1 && active_marker != MARKER_INVALID) {
-          markers[active_marker].index = i;
-          markers[active_marker].frequency = frequencies[i];
-
+          set_marker_index(active_marker, i);
           redraw_request |= REDRAW_MARKER;
         }
       }
@@ -995,7 +993,7 @@ VNA_SHELL_FUNCTION(cmd_scan)
     uint16_t mask = my_atoui(argv[3]);
     if (mask) {
       for (i = 0; i < sweep_points; i++) {
-        if (mask & 1) shell_printf("%U ", frequencies[i]);
+        if (mask & 1) shell_printf("%U ", getFrequency(i));
         if (mask & 2) shell_printf("%f %f ", value(measured[TRACE_ACTUAL][i]), 0.0);
         if (mask & 4) shell_printf("%f %f ", value(measured[TRACE_STORED][i]), 0.0);
         if (mask & 8) shell_printf("%f %f ", value(measured[TRACE_TEMP][i]), 0.0);
@@ -1066,7 +1064,7 @@ VNA_SHELL_FUNCTION(cmd_hop)
 #endif
 
 static void
-update_marker_index(void)
+update_markers_index(void)
 {
   int m, idx;
   freq_t fstart = get_sweep_frequency(ST_START);
@@ -1083,8 +1081,8 @@ update_marker_index(void)
     else { // Search frequency index for marker frequency
 #if 1
       for (idx = 1; idx < sweep_points; idx++) {
-        if (frequencies[idx] <= f) continue;
-        if (f < (frequencies[idx-1]/2 + frequencies[idx]/2)) idx--; // Correct closest idx
+        if (getFrequency(idx) <= f) continue;
+        if (f < (getFrequency(idx-1)/2 + getFrequency(idx)/2)) idx--; // Correct closest idx
         break;
       }
 #else
@@ -1092,9 +1090,16 @@ update_marker_index(void)
       idx = r * (sweep_points-1);
 #endif
     }
-    markers[m].index = idx;
-    markers[m].frequency = frequencies[idx];
+    set_marker_index(m, idx);
   }
+}
+
+void
+set_marker_index(int m, int16_t idx)
+{
+  if ((uint32_t)m >= MARKERS_MAX || (uint16_t)idx >= sweep_points) return;
+  markers[m].index = idx;
+  markers[m].frequency = getFrequency(idx);
 }
 
 void set_marker_frequency(int m, freq_t f)
@@ -1103,9 +1108,9 @@ void set_marker_frequency(int m, freq_t f)
     return;
   int i = 1;
   markers[m].mtype &= ~M_TRACKING;
-  freq_t s = (frequencies[1] - frequencies[0])/2;
+  freq_t s = (getFrequency(1) - getFrequency(0))/2;
   while (i< sweep_points - 2){
-    if (frequencies[i]-s  <= f && f < frequencies[i+1]-s) {     // Avoid rounding error in s!!!!!!!
+    if (getFrequency(i)-s  <= f && f < getFrequency(i+1)-s) {     // Avoid rounding error in s!!!!!!!
       markers[m].index = i;
       markers[m].frequency = f;
       return;
@@ -1126,6 +1131,11 @@ void set_marker_time(int m, float f)
   markers[m].frequency = 0;
 }
 
+/*
+ * Frequency list functions
+ */
+#ifdef __USE_FREQ_TABLE__
+static freq_t frequencies[POINTS_COUNT];
 static void
 set_frequencies(freq_t start, freq_t stop, uint16_t points)
 {
@@ -1137,11 +1147,7 @@ set_frequencies(freq_t start, freq_t stop, uint16_t points)
   freq_t f = start, df = step>>1;
   for (i = 0; i <= step; i++, f+=delta) {
     frequencies[i] = f;
-    df+=error;
-    if (df >=step) {
-      f++;
-      df -= step;
-    }
+    if ((df+=error) >= step) {f++; df-= step;}
   }
   // disable at out of sweep range
   for (; i < POINTS_COUNT; i++)
@@ -1149,6 +1155,27 @@ set_frequencies(freq_t start, freq_t stop, uint16_t points)
   setting.frequency_step = delta;
   dirty = true;
 }
+freq_t getFrequency(uint16_t idx) {return frequencies[idx];}
+#else
+static freq_t   _f_start;
+static freq_t   _f_delta;
+static freq_t   _f_error;
+static uint16_t _f_count;
+
+static void
+set_frequencies(freq_t start, freq_t stop, uint16_t points)
+{
+  freq_t span = stop - start;
+  _f_start = start;
+  _f_count = (points - 1);
+  _f_delta = span / _f_count;
+  _f_error = span % _f_count;
+  setting.frequency_step = _f_delta;
+  dirty = true;
+}
+freq_t getFrequency(uint16_t idx) {return _f_start + _f_delta * idx + (_f_count / 2 + _f_error * idx) / _f_count;}
+#endif
+
 
 void
 update_frequencies(void)
@@ -1160,7 +1187,7 @@ update_frequencies(void)
   set_frequencies(start, stop, sweep_points);
   // operation_requested|= OP_FREQCHANGE;
 
-  update_marker_index();
+  update_markers_index();
 
   // set grid layout
   update_grid();
@@ -1469,8 +1496,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     case 2: markers[t].enabled = TRUE; active_marker = t;
       int i = marker_search_max(active_marker);
       if (i == -1) i = 0;
-      markers[active_marker].index = i;
-      markers[active_marker].frequency = frequencies[i];
+      set_marker_index(active_marker, i);
       goto display_marker;
     default:
       // select active marker and move to index or frequency
@@ -1480,10 +1506,8 @@ VNA_SHELL_FUNCTION(cmd_marker)
       active_marker = t;
       if (value > sweep_points)
         set_marker_frequency(active_marker, value);
-      else {
-        markers[t].index = value;
-        markers[t].frequency = frequencies[value];
-      }
+      else
+        set_marker_index(t, value);
       return;
   }
  usage:
@@ -1522,10 +1546,8 @@ VNA_SHELL_FUNCTION(cmd_frequencies)
   int i;
   (void)argc;
   (void)argv;
-  for (i = 0; i < sweep_points; i++) {
-    if (frequencies[i] != 0)
-      shell_printf("%U\r\n", frequencies[i]);
-  }
+  for (i = 0; i < sweep_points; i++)
+    shell_printf("%U\r\n", getFrequency(i));
 }
 
 VNA_SHELL_FUNCTION(cmd_test)

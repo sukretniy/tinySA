@@ -96,6 +96,7 @@
 #else
 #define __HARMONIC__
 #endif
+//#define __USE_FREQ_TABLE__      // Enable use table for frequency list
 
 #ifdef TINYSA3
 #define VARIANT(X,Y) (X)
@@ -204,6 +205,7 @@ void send_buffer(uint8_t * buf, int s);
 #endif
 void set_marker_frequency(int m, freq_t f);
 void set_marker_time(int m, float f);
+void set_marker_index(int m, int16_t idx);
 void toggle_sweep(void);
 void toggle_mute(void);
 void toggle_pulse(void);
@@ -1068,7 +1070,6 @@ enum {W_OFF, W_SMALL, W_BIG};
 #define REPEAT_TIME         111         // Time per extra repeat in uS
 #define MEASURE_TIME        127         // Time per single point measurement with vbwstep =1 without step delay in uS
 
-extern freq_t frequencies[POINTS_COUNT];
 extern const float unit_scale_value[];
 extern const char  unit_scale_text[];
 #ifdef TINYSA4
@@ -1155,6 +1156,8 @@ extern int16_t lastsaveid;
 //extern properties_t *active_props;
 
 //extern properties_t current_props;
+
+freq_t getFrequency(uint16_t idx);
 
 //#define frequency0 current_props._frequency0
 //#define frequency1 current_props._frequency1

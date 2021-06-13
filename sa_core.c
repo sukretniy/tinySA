@@ -54,7 +54,6 @@ bool debug_avoid_second = false;
 int current_index = -1;
 
 setting_t setting;
-freq_t frequencies[POINTS_COUNT];
 
 uint16_t actual_rbw_x10 = 0;
 freq_t frequency_step_x10 = 0;
@@ -908,7 +907,7 @@ void limits_update(void)
   {
     if (setting.limits[i].enabled) {
       active = true;
-      while (j < sweep_points && (frequencies[j] < setting.limits[i].frequency || setting.limits[i].frequency == 0))
+      while (j < sweep_points && (getFrequency(j) < setting.limits[i].frequency || setting.limits[i].frequency == 0))
         stored_t[j++] = setting.limits[i].level;
     }
   }
@@ -2158,10 +2157,10 @@ done:
 int binary_search_frequency(freq_t f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
   int L = 0;
-  int frequency_seatch_gate = (frequencies[1] - frequencies[0]) >> 1;
-  if (f < frequencies[0])
+  int frequency_seatch_gate = (getFrequency(1) - getFrequency(0)) >> 1;
+  if (f < getFrequency(0))
     return -1;
-  if (f > frequencies[sweep_points-1])
+  if (f > getFrequency(sweep_points-1))
     return -1;
 //  int R =  (sizeof frequencies)/sizeof(int) - 1;
   int R = sweep_points - 1;
@@ -2169,9 +2168,10 @@ int binary_search_frequency(freq_t f)      // Search which index in the frequenc
   freq_t fplus = f + frequency_seatch_gate; // actual_rbw_x10 * frequency_seatch_gate;
   while (L <= R) {
     int m = (L + R) / 2;
-    if (frequencies[m] < fmin)
+    freq_t f = getFrequency(m);
+    if (f < fmin)
       L = m + 1;
-    else if (frequencies[m] > fplus)
+    else if (f > fplus)
       R = m - 1;
     else
        return m; // index is m
@@ -2181,14 +2181,14 @@ int binary_search_frequency(freq_t f)      // Search which index in the frequenc
 
 int index_of_frequency(freq_t f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
-  freq_t f_step = frequencies[1] - frequencies[0];
+  freq_t f_step = getFrequency(1) - getFrequency(0);
   if (f_step == 0)
     return 0;
-  if (f < frequencies[0])
+  if (f < getFrequency(0))
     return -1;
-  if (f > frequencies[sweep_points-1])
+  if (f > getFrequency(sweep_points-1))
     return -1;
-  int i = ((f - frequencies[0] ) + (f_step >> 1)) / f_step;
+  int i = ((f - getFrequency(0) ) + (f_step >> 1)) / f_step;
   return i;
 #if 0
   //  int R =  (sizeof frequencies)/sizeof(int) - 1;
@@ -2198,9 +2198,10 @@ int index_of_frequency(freq_t f)      // Search which index in the frequency tab
   freq_t fplus = f + frequency_seatch_gate; // actual_rbw_x10 * frequency_seatch_gate;
   while (L <= R) {
     int m = (L + R) / 2;
-    if (frequencies[m] < fmin)
+    freq_t f = getFrequency(m);
+    if (f < fmin)
       L = m + 1;
-    else if (frequencies[m] > fplus)
+    else if (f > fplus)
       R = m - 1;
     else
        return m; // index is m
@@ -2217,11 +2218,11 @@ void interpolate_maximum(int m)
     ref_marker_levels = stored_t;
   else
     ref_marker_levels = actual_t;
-  const int idx          = markers[m].index;
-  markers[m].frequency = frequencies[idx];
+  const int idx        = markers[m].index;
+  markers[m].frequency = getFrequency(idx);
   if (idx > 0 && idx < sweep_points-1)
   {
-    const int32_t delta_Hz = (int64_t)frequencies[idx + 0] - frequencies[idx + 1];
+    const int32_t delta_Hz = (int64_t)getFrequency(idx + 0) - getFrequency(idx + 1);
 #ifdef TINYSA4
 #define INTER_TYPE  double
 #else
@@ -3469,12 +3470,13 @@ again:                                                              // Spur redu
       } else
         f_low = f_high = real_old_freq[SI4463_RX] + real_offset;
      float f_error_low, f_error_high;
+     float freq = getFrequency(i);
      if (setting.frequency_step == 0) {
-         f_error_low = ((float)frequencies[i] - (float)f_low);
-         f_error_high = ((float)f_high-(float)frequencies[i]);
+         f_error_low  = (freq - f_low);
+         f_error_high = (f_high - freq);
      } else {
-       f_error_low = ((float)f_low-(float)frequencies[i])/setting.frequency_step;
-       f_error_high = ((float)f_high-(float)frequencies[i])/setting.frequency_step;
+       f_error_low  = (f_low - freq)/setting.frequency_step;
+       f_error_high = (f_high- freq)/setting.frequency_step;
      }
      char spur = ' ';
      int delta=0;
@@ -3797,8 +3799,9 @@ static bool sweep(bool break_on_operation)
     debug_avoid_second = false;
     debug_avoid_label:
     debug_avoid_second = debug_avoid_second;
+    freq_t current_freq = getFrequency(i);
     // --------------------- measure -------------------------
-    pureRSSI_t rssi = perform(break_on_operation, i, frequencies[i], setting.tracking);   // Measure RSSI for one of the frequencies
+    pureRSSI_t rssi = perform(break_on_operation, i, current_freq, setting.tracking);   // Measure RSSI for one of the frequencies
 #ifdef TINYSA4
     if (rssi == IGNORE_RSSI)
       RSSI = -174.0;
@@ -3835,12 +3838,12 @@ static bool sweep(bool break_on_operation)
 #define AGC_RSSI_THRESHOLD  (-55+get_attenuation())
       float local_rssi = RSSI +setting.external_gain;
       if (local_rssi > AGC_RSSI_THRESHOLD && local_rssi > agc_prev_rssi) {
-        agc_peak_freq = frequencies[i];
+        agc_peak_freq = current_freq;
         agc_peak_rssi = agc_prev_rssi = local_rssi;
       }
       if (local_rssi < AGC_RSSI_THRESHOLD)
         agc_prev_rssi = -150;
-      freq_t delta_freq = frequencies[i] - agc_peak_freq;
+      freq_t delta_freq = current_freq - agc_peak_freq;
       if (agc_peak_freq != 0 &&  delta_freq < 2000000) {
         int max_gain = (-25 - agc_peak_rssi ) / 4;
         auto_set_AGC_LNA(false, 16 + delta_freq * max_gain / 2000000 );    // enable LNA   and stepwise gain
@@ -3961,7 +3964,7 @@ static bool sweep(bool break_on_operation)
     float d_offset = 0.0;
     int d_start = 0;
     if (setting.average == AV_DECONV && setting.frequency_step != 0) {
-      d_width = (sweep_points * (actual_rbw_x10 * 250) / (frequencies[sweep_points-1] - frequencies[0]));
+      d_width = (sweep_points * (actual_rbw_x10 * 250) / get_sweep_frequency(ST_SPAN));
       d_start = sweep_points/2 - d_width/2;
       d_offset = stored_t[d_start];
       for (int i=0; i<d_width; i++)
@@ -4158,7 +4161,7 @@ static volatile int dummy;
 
 
       // START_PROFILE
-      if (i == 0 || frequencies[i] < actual_rbw_x10 * 200) {   // Prepare peak finding
+      if (i == 0 || getFrequency(i) < actual_rbw_x10 * 200) {   // Prepare peak finding
         cur_max = 0;          // Always at least one maximum
         temppeakIndex = 0;
         temppeakLevel = actual_t[0];
@@ -4490,8 +4493,7 @@ static volatile int dummy;
     }
     while (m < MARKERS_MAX) {                  // Insufficient maxima found
       if (markers[m].enabled && markers[m].mtype & M_TRACKING) {    // More available markers found
-        markers[m].index = 0;                             // Enabled but no max so set to left most frequency
-        markers[m].frequency = frequencies[0];
+        set_marker_index(m, 0); // Enabled but no max so set to left most frequency
       }
       m++;                              // Try next marker
     }
@@ -4507,7 +4509,7 @@ static volatile int dummy;
 #define H_SPACING   4
 #endif
       for (int i=1; i < MARKER_COUNT;i++)
-        markers[i].enabled = search_maximum(i, frequencies[markers[0].index]*(i+1), (i+1)*H_SPACING);
+        markers[i].enabled = search_maximum(i, getFrequency(markers[0].index)*(i+1), (i+1)*H_SPACING);
 #ifdef TINYSA4
     } else if (setting.measurement == M_AM  && markers[0].index > 10) { // ----------AM measurement
       int l = markers[1].index;
@@ -4518,8 +4520,8 @@ static volatile int dummy;
         markers[1].index = l;
         markers[2].index = r;
       }
-      freq_t lf = frequencies[l];
-      freq_t rf = frequencies[r];
+      freq_t lf = getFrequency(l);
+      freq_t rf = getFrequency(r);
       markers[1].frequency = lf;
       markers[2].frequency = rf;
 #endif
@@ -4529,35 +4531,28 @@ static volatile int dummy;
       if (r < l) {
         l = markers[1].index;
         r = markers[0].index;
-        markers[0].index = l;
-        markers[1].index = r;
       }
-      freq_t lf = frequencies[l];
-      freq_t rf = frequencies[r];
-      markers[0].frequency = lf;
-      markers[1].frequency = rf;
-
+      set_marker_index(0, l);
+      set_marker_index(1, r);
+      freq_t lf = markers[0].frequency;
+      freq_t rf = markers[1].frequency;
       markers[2].enabled = search_maximum(2, lf - (rf - lf), 12);
       markers[3].enabled = search_maximum(3, rf + (rf - lf), 12);
     } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
-      markers[1].index =  markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4);  // Position phase noise marker at requested offset
-      markers[1].frequency = frequencies[markers[1].index];
+      // Position phase noise marker at requested offset
+      set_marker_index(1, markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4));
     } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
       int t = 0;
       float v = actual_t[markers[0].index] - (in_selftest ? 6.0 : 3.0);
       while (t < markers[0].index && actual_t[t+1] < v)                                        // Find left -3dB point
         t++;
-      if (t< markers[0].index) {
-        markers[1].index = t;
-        markers[1].frequency = frequencies[t];
-      }
+      if (t< markers[0].index)
+        set_marker_index(1, t);
       t = setting._sweep_points-1;;
       while (t > markers[0].index && actual_t[t-1] < v)                // find right -3dB point
         t--;
-      if (t > markers[0].index) {
-        markers[2].index = t;
-        markers[2].frequency = frequencies[t];
-      }
+      if (t > markers[0].index)
+        set_marker_index(2, t);
     } else if (setting.measurement == M_AM) {      // ----------------AM measurement
       if (S_IS_AUTO(setting.agc )) {
 #ifdef __SI4432__
@@ -4600,7 +4595,7 @@ static volatile int dummy;
       peakLevel = actual_t[peakIndex];
       cur_max = 1;
     }
-    peakFreq = frequencies[peakIndex];
+    peakFreq = getFrequency(peakIndex);
     min_level = temp_min_level;
   }
   //  } while (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE);      // Never exit sweep loop while in output mode with modulation
