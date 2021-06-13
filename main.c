@@ -1135,7 +1135,7 @@ void set_marker_time(int m, float f)
  * Frequency list functions
  */
 #ifdef __USE_FREQ_TABLE__
-static freq_t frequencies[POINTS_COUNT];
+freq_t frequencies[POINTS_COUNT];
 static void
 set_frequencies(freq_t start, freq_t stop, uint16_t points)
 {
@@ -1155,7 +1155,9 @@ set_frequencies(freq_t start, freq_t stop, uint16_t points)
   setting.frequency_step = delta;
   dirty = true;
 }
+#ifndef getFrequency
 freq_t getFrequency(uint16_t idx) {return frequencies[idx];}
+#endif
 #else
 static freq_t   _f_start;
 static freq_t   _f_delta;

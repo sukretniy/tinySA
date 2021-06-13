@@ -96,7 +96,7 @@
 #else
 #define __HARMONIC__
 #endif
-//#define __USE_FREQ_TABLE__      // Enable use table for frequency list
+#define __USE_FREQ_TABLE__      // Enable use table for frequency list
 
 #ifdef TINYSA3
 #define VARIANT(X,Y) (X)
@@ -1156,9 +1156,15 @@ extern int16_t lastsaveid;
 //extern properties_t *active_props;
 
 //extern properties_t current_props;
-
+#ifdef __USE_FREQ_TABLE__
+extern freq_t frequencies[POINTS_COUNT];
+#define getFrequency(idx) frequencies[idx]
+#ifndef getFrequency
 freq_t getFrequency(uint16_t idx);
-
+#endif
+#else
+freq_t getFrequency(uint16_t idx);
+#endif
 //#define frequency0 current_props._frequency0
 //#define frequency1 current_props._frequency1
 #define sweep_points setting._sweep_points
