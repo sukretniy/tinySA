@@ -1183,6 +1183,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_linear_averaging_acb)
     return;
   }
   linear_averaging = ! linear_averaging;
+  dirty = true;
   //  menu_move_back();
   ui_mode_normal();
 }

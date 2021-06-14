@@ -67,11 +67,12 @@ int spur_gate = 100;
 freq_t ultra_threshold;
 bool ultra;
 int noise_level;
+float log_averaging_correction;
 uint32_t old_CFGR;
 uint32_t orig_CFGR;
 
 int debug_frequencies = false;
-int linear_averaging = true;
+int linear_averaging = false;
 
 static freq_t old_freq[5] = { 0, 0, 0, 0,0};
 static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
@@ -1485,17 +1486,18 @@ static const struct {
   uint16_t offset_delay;
   uint16_t spur_div_1000;
   int16_t   noise_level;
+  float log_aver_correction;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  8500,       150,           50,      400,   -90},
-  {  6000,       150,           50,      300,   -95},
-  {  3000,       150,           50,      200,   -95},
-  {  1000,       600,          100,      100,   -105},
-  {   300,       800,          120,      100,   -110},
-  {   100,      1500,          120,      100,   -115},
-  {    30,      1500,          300,      100,   -120},
-  {    10,      5000,          600,      100,   -122},
-  {     3,     19000,        12000,      100,   -125}
+  {  8500,       150,           50,      400,   -90,    0.4},
+  {  6000,       150,           50,      300,   -95,    0.5},
+  {  3000,       150,           50,      200,   -95,    0.8},
+  {  1000,       600,          100,      100,   -105,   0.4},
+  {   300,       800,          120,      100,   -110,   0.9},
+  {   100,      1500,          120,      100,   -115,   0.5},
+  {    30,      1500,          300,      100,   -120,   1.2},
+  {    10,      5000,          600,      100,   -122,   1.1},
+  {     3,     19000,        12000,      100,   -125,   1.0}
 };
 #endif
 
@@ -1527,6 +1529,7 @@ void calculate_step_delay(void)
       SI4432_offset_delay = step_delay_table[i].offset_delay;
       spur_gate           = step_delay_table[i].spur_div_1000 * 1000;
       noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
+      log_averaging_correction = step_delay_table[i].log_aver_correction;
 #endif
       if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;

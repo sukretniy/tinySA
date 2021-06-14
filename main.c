@@ -1398,7 +1398,7 @@ VNA_SHELL_FUNCTION(cmd_trace)
     }
 //    goto usage;
   }
-  static const char cmd_store_list[] = "store|clear|subtract";
+  static const char cmd_store_list[] = "store|clear|subtract|value";
   if (argc == 1) {
     int type = get_str_index(argv[0], cmd_store_list);
     if (type >= 0) {
@@ -1412,6 +1412,10 @@ VNA_SHELL_FUNCTION(cmd_trace)
       case 2:
         set_subtract_storage();
         goto update;
+      case 3:
+        for (int i=0;i<sweep_points;i++) {
+          shell_printf("trace value %d %.2f\r\n", i, actual_t[i]);
+        }
       }
     }
 //    goto usage;
@@ -1438,7 +1442,7 @@ VNA_SHELL_FUNCTION(cmd_trace)
     }
     goto usage;
   }
-  static const char cmd_load_list[] = "load";
+  static const char cmd_load_list[] = "value";
   if (argc == 3) {
     switch (get_str_index(argv[0], cmd_load_list)) {
     case 0:

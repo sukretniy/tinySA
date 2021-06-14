@@ -299,7 +299,7 @@ float
 marker_to_value(const int i)
 {
 #ifdef __MARKER_CACHE__
-  if (marker_cache_valid[i] && marker_cache_index[i] == markers[i].index)
+  if (markers[i].mtype & M_AVER && linear_averaging && marker_cache_valid[i] && marker_cache_index[i] == markers[i].index)
     return marker_cache[i];
 #endif
   float *ref_marker_levels;
@@ -313,7 +313,7 @@ marker_to_value(const int i)
     if (markers[i].mtype & M_NOISE
 #ifdef TINYSA4
         && linear_averaging
-        #endif
+#endif
     )
       setting.unit = U_WATT;            // Noise averaging should always be done in Watts
     v = 0;
@@ -327,7 +327,7 @@ marker_to_value(const int i)
   if (markers[i].mtype & M_NOISE){
     v = v - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
 #ifdef TINYSA4
-    + SI4463_noise_correction_x10/10.0
+    + SI4463_noise_correction_x10/10.0 + (linear_averaging ? 0.0 : log_averaging_correction);
 #endif
     ;
   }

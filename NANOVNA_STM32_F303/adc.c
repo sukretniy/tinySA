@@ -104,6 +104,7 @@ uint16_t adc_single_read(uint32_t chsel)
 
 uint16_t adc1_single_read(uint32_t chsel)
 {
+  (void)chsel;
   /* ADC setup */
   adcConvert(&ADCD1, &adcgrpcfgVersion, samples, 1);
   return(samples[0]);

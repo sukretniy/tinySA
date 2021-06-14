@@ -385,6 +385,7 @@ extern float high_out_offset(void);
 #define HIGH_OUT_OFFSET high_out_offset()
 extern bool debug_avoid;
 extern void toggle_debug_avoid(void);
+extern float log_averaging_correction;
 #else
 void set_10mhz(freq_t);
 #define LOW_OUT_OFFSET config.low_level_output_offset
@@ -1300,6 +1301,7 @@ extern char range_text[20];
 #define rccEnableWWDG(lp) rccEnableAPB1(RCC_APB1ENR_WWDGEN, lp)
 #define ADC_TOUCH_X  ADC_CHANNEL_IN3
 #define ADC_TOUCH_Y  ADC_CHANNEL_IN4
+uint16_t adc1_single_read(uint32_t chsel);
 #else
 #define ADC_TOUCH_X  ADC_CHSELR_CHSEL6
 #define ADC_TOUCH_Y  ADC_CHSELR_CHSEL7
