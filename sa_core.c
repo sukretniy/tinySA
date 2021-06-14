@@ -178,6 +178,7 @@ void update_min_max_freq(void)
     minFreq = HIGH_MIN_FREQ_MHZ * 1000000;
     maxFreq = HIGH_MAX_FREQ_MHZ * 1000000;
 #ifdef __HARMONIC__
+#ifdef TINYSA3                  // different haemonics processing
     if (setting.harmonic) {
       minFreq = setting.harmonic * HIGH_MIN_FREQ_MHZ * 1000000;
       if (setting.harmonic < 4)
@@ -189,6 +190,7 @@ void update_min_max_freq(void)
       set_sweep_frequency(ST_START, minFreq);
     if (get_sweep_frequency(ST_STOP) > maxFreq)
       set_sweep_frequency(ST_STOP, maxFreq);
+#endif
 #endif
     break;
   case M_GENHIGH:
@@ -605,9 +607,11 @@ void toggle_mirror_masking(void)
 {
   setting.mirror_masking = !setting.mirror_masking;
 #ifdef __HARMONIC__
+#ifdef TINYSA3
   if (setting.harmonic) {
     setting.spur_removal = setting.mirror_masking;
   }
+#endif
 #endif
   dirty = true;
 }
@@ -3282,6 +3286,7 @@ again:                                                              // Spur redu
         target_f = local_IF+lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
 #ifdef __SI4432__
 #ifdef __HARMONIC__
+#ifdef TINYSA3
       if (setting.harmonic) {
         if (spur_second_pass) {
           if (setting.harmonic == 2)
@@ -3292,6 +3297,7 @@ again:                                                              // Spur redu
         else
           target_f /= setting.harmonic;
       }
+#endif
 #endif
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
