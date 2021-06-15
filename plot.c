@@ -127,7 +127,7 @@ void update_grid(void)
   if (config.gridlines < 3)
     config.gridlines = 6;
 
-  while (gdigit > 100) {
+  while (gdigit > 10) {
     grid = 5 * gdigit;
     if (fspan / grid >= config.gridlines)
       break;

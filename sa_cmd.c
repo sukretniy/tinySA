@@ -79,7 +79,11 @@ VNA_SHELL_FUNCTION(cmd_modulation )
 
 VNA_SHELL_FUNCTION(cmd_calc )
 {
-  static const char cmd_cal[] = "off|minh|maxh|maxd|aver4|aver16|quasip";
+#ifdef TINYSA4
+  static const char cmd_cal[] = "off|minh|maxh|maxd|aver4|aver16|aver|quasip|log|lin";
+#else
+  static const char cmd_cal[] = "off|minh|maxh|maxd|aver4|aver16|aver|quasip";
+#endif
   if (argc < 1) {
   usage:
     shell_printf("usage: calc %s\r\n", cmd_cal);
@@ -88,6 +92,11 @@ VNA_SHELL_FUNCTION(cmd_calc )
   int m = get_str_index(argv[0], cmd_cal);
   if (m<0)
      goto usage;
+#ifdef TINYSA4
+  if (m>=8) {
+    linear_averaging = (m == 9);
+  } else
+#endif
   set_average(m);
 }
 
