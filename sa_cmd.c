@@ -397,7 +397,7 @@ VNA_SHELL_FUNCTION(cmd_rbw)
   if (argc != 1) {
   usage:
 #ifdef TINYSA4
-	shell_printf("usage: rbw 0.3..600|auto\r\n");
+	shell_printf("usage: rbw 0.3..850|auto\r\n");
 #else
 	shell_printf("usage: rbw 2..600|auto\r\n");
 #endif
@@ -408,7 +408,13 @@ VNA_SHELL_FUNCTION(cmd_rbw)
       set_RBW(0);
   } else {
     float a = my_atof(argv[0]);
-    if (a < 0.2 || a>600)
+    if (a < 0.2 ||
+#ifdef TINYSA4
+        a>850
+#else
+        a>600
+#endif
+        )
       goto usage;
     if (setting.rbw_x10 != a*10)
       set_RBW((int) ( a*10));

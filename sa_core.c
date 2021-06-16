@@ -72,7 +72,7 @@ uint32_t old_CFGR;
 uint32_t orig_CFGR;
 
 int debug_frequencies = false;
-int linear_averaging = false;
+int linear_averaging = true;
 
 static freq_t old_freq[5] = { 0, 0, 0, 0,0};
 static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
@@ -5823,7 +5823,7 @@ abort:
     setting.R = 0;
     switch_SI4463_RSSI_correction(true);
     reset_settings(M_LOW);
-  } if (test == 8) {                       // RBW level test
+  } else if (test == 8) {                       // RBW level test
     in_selftest = true;
     ui_mode_normal();
 //    set_scale(2);
@@ -5841,19 +5841,17 @@ abort:
       setting.extra_lna = true;
       osalThreadSleepMilliseconds(200);
       set_average(AV_100);
-      test_acquire(TC_LEVEL);                        // Acquire test
-      test_acquire(TC_LEVEL);                        // Acquire test
-      test_acquire(TC_LEVEL);                        // Acquire test
-      test_acquire(TC_LEVEL);                        // Acquire test
-      test_acquire(TC_LEVEL);                        // Acquire test
+      for (int w=0; w<50; w++) {
+        test_acquire(TC_LEVEL);                        // Acquire test
+      }
       test_validate(TEST_NOISE);                       // Validate test
       peakLevel += - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
      #ifdef TINYSA4
          + SI4463_noise_correction_x10/10.0
      #endif
          ;
-      //     if (j == SI4432_RBW_count-1)
-      //       first_level = peakLevel;
+      if (j == SI4432_RBW_count-1)
+        first_level = peakLevel;
       shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel)*10.0 );
       if (setting.test_argument != 0)
         break;
@@ -5893,6 +5891,7 @@ abort:
           break;
         if (operation_requested) goto abort;
       }
+      if (operation_requested) break;
     }
 #endif
     shell_printf("\n\r");
@@ -5911,8 +5910,9 @@ abort:
       test_acquire(TEST_LEVEL);                        // Acquire test
       test_validate(TEST_LEVEL);                       // Validate test
       shell_printf("Temp = %4.1f, level = %6.2f, delta = %6.2f\n\r",Si446x_get_temp() , peakLevel, (first_level - peakLevel)*10.0 );
+      if (operation_requested) break;
     }
-  } else if (test == 10) {
+  } else if (test == 10) {          // Test 30MHz spurs
 //    reset_settings(M_LOW);
     set_refer_output(-1);
     if (setting.test_argument > 0)
@@ -5929,6 +5929,7 @@ abort:
       test_acquire(test_case);                        // Acquire test
       test_validate(test_case);
       shell_printf("Freq = %8.3fMHz, level = %6.2f\n\r", ((float)peakFreq) / 1000000.0, peakLevel);
+      if (operation_requested) break;
     }
     set_sweep_points(450);
     reset_settings(M_LOW);

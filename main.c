@@ -1472,7 +1472,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
-        shell_printf("%d %d %D %f\r\n", t+1, markers[t].index, markers[t].frequency, marker_to_value(t));
+        shell_printf("%d %d %D %.2f\r\n", t+1, markers[t].index, markers[t].frequency, marker_to_value(t));
       }
     }
     return;
@@ -1495,7 +1495,13 @@ VNA_SHELL_FUNCTION(cmd_marker)
     markers[t].enabled = TRUE;
     return;
   }
+#ifdef TINYSA4
+  static const char cmd_marker_list[] = "on|off|peak|delta|noise|tracking|stored|trace_aver";
+#else
   static const char cmd_marker_list[] = "on|off|peak";
+#endif
+  static const char cmd_marker_on_off[] = "off|on";
+  int marker_mask = 0;
   switch (get_str_index(argv[1], cmd_marker_list)) {
     case 0: markers[t].enabled = TRUE; active_marker = t; return;
     case 1: markers[t].enabled =FALSE; if (active_marker == t) active_marker = MARKER_INVALID; return;
@@ -1515,9 +1521,35 @@ VNA_SHELL_FUNCTION(cmd_marker)
       else
         set_marker_index(t, value);
       return;
+#ifdef TINYSA4
+      //      M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_STORED=8, M_AVER=16, M_TRACKING=32, M_DELETE=64  // Tracking must be last.
+    case 3:
+      marker_mask = M_DELTA;
+      goto set_mask;
+    case 4:
+      marker_mask = M_NOISE;
+      goto set_mask;
+    case 5:
+      marker_mask = M_STORED;
+      goto set_mask;
+    case 6:
+      marker_mask = M_AVER;
+    set_mask:
+      if (argc == 3) {
+        switch (get_str_index(argv[2],cmd_marker_on_off)) {
+        default: goto usage;
+        case 0: markers[t].mtype &= ~marker_mask; return;
+        case 1: markers[t].mtype |= marker_mask; return;
+        }
+      }
+#endif
   }
- usage:
+usage:
+#ifdef TINYSA4
+  shell_printf("marker [n] [%s|{freq}|{index}] [on|off]\r\n", cmd_marker_list);
+#else
   shell_printf("marker [n] [%s|{freq}|{index}]\r\n", cmd_marker_list);
+#endif
 }
 
 VNA_SHELL_FUNCTION(cmd_touchcal)
@@ -1797,7 +1829,7 @@ static const VNAShellCommand commands[] =
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"trace"       , cmd_trace       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"trigger"     , cmd_trigger     , CMD_RUN_IN_LOAD},
-    {"marker"      , cmd_marker      , CMD_RUN_IN_LOAD},
+    {"marker"      , cmd_marker      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
 #ifdef ENABLE_USART_COMMAND
     {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
     {"usart_cfg"   , cmd_usart_cfg   , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
@@ -1819,27 +1851,27 @@ static const VNAShellCommand commands[] =
 #ifdef ENABLE_COLOR_COMMAND
     {"color"       , cmd_color       , CMD_RUN_IN_LOAD},
 #endif
-    { "if", cmd_if,    CMD_RUN_IN_LOAD },
+    { "if", cmd_if,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
 #ifdef TINYSA4
     { "if1", cmd_if1,    CMD_RUN_IN_LOAD },
     { "lna2", cmd_lna2,    CMD_RUN_IN_LOAD },
     { "agc", cmd_agc,    CMD_RUN_IN_LOAD },
 #endif
     { "actual_freq", cmd_actual_freq, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
-    { "attenuate", cmd_attenuate,    CMD_RUN_IN_LOAD },
-    { "level", cmd_level,    CMD_RUN_IN_LOAD },
-    { "sweeptime", cmd_sweeptime,    CMD_RUN_IN_LOAD },
+    { "attenuate", cmd_attenuate,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
+    { "level", cmd_level,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
+    { "sweeptime", cmd_sweeptime,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
     { "leveloffset", cmd_leveloffset,    CMD_RUN_IN_LOAD },
     { "levelchange", cmd_levelchange,    CMD_RUN_IN_LOAD },
     { "modulation", cmd_modulation,    CMD_RUN_IN_LOAD },
-    { "rbw", cmd_rbw,    CMD_RUN_IN_LOAD },
+    { "rbw", cmd_rbw,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
     { "mode", cmd_mode,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
 #ifdef __SPUR__
-    { "spur", cmd_spur,    CMD_RUN_IN_LOAD },
+    { "spur", cmd_spur,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
 #endif
 #ifdef TINYSA4
-    { "lna", cmd_lna,    CMD_RUN_IN_LOAD },
-    { "ultra", cmd_ultra,    CMD_RUN_IN_LOAD },
+    { "lna", cmd_lna,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
+    { "ultra", cmd_ultra,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
     { "ultra_start", cmd_ultra_start, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
 #endif
     { "load", cmd_load,   CMD_RUN_IN_LOAD },
@@ -1848,7 +1880,7 @@ static const VNAShellCommand commands[] =
     { "deviceid", cmd_deviceid,    CMD_RUN_IN_LOAD },
     { "selftest", cmd_selftest,    0 },
     { "correction", cmd_correction,   CMD_RUN_IN_LOAD },
-    { "calc", cmd_calc, CMD_RUN_IN_LOAD},
+    { "calc", cmd_calc, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
 #ifdef ENABLE_SD_CARD_CMD
     { "sd_list",   cmd_sd_list,   CMD_WAIT_MUTEX },
     { "sd_read",   cmd_sd_read,   CMD_WAIT_MUTEX },
