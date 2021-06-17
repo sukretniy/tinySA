@@ -4125,10 +4125,15 @@ static volatile int dummy;
 #ifdef TINYSA4
           if (linear_averaging)
         {
+#if 0
           int old_unit = setting.unit;
           setting.unit = U_WATT;            // Power averaging should always be done in Watts
           actual_t[i] = to_dBm((value(actual_t[i])*(scan_after_dirty-1) + value(RSSI)) / scan_after_dirty );
           setting.unit = old_unit;
+#else
+          float v = (expf(actual_t[i]*(logf(10.0)/10.0)) * (scan_after_dirty-1) + expf(RSSI * (logf(10.0)/10.0))) / scan_after_dirty;
+          actual_t[i] = logf(v)*(10.0/logf(10.0));
+#endif
         }
           else
             actual_t[i] = (actual_t[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;

@@ -1513,6 +1513,8 @@ VNA_SHELL_FUNCTION(cmd_marker)
     default:
       // select active marker and move to index or frequency
       markers[t].enabled = TRUE;
+      if (argv[1][0] < '0' || argv[1][0] > '9' )
+        goto usage;
       freq_t value = my_atoui(argv[1]);
       markers[t].mtype &= ~M_TRACKING;
       active_marker = t;
@@ -1530,9 +1532,12 @@ VNA_SHELL_FUNCTION(cmd_marker)
       marker_mask = M_NOISE;
       goto set_mask;
     case 5:
-      marker_mask = M_STORED;
+      marker_mask = M_TRACKING;
       goto set_mask;
     case 6:
+      marker_mask = M_STORED;
+      goto set_mask;
+    case 7:
       marker_mask = M_AVER;
     set_mask:
       if (argc == 3) {

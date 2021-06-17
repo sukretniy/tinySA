@@ -181,7 +181,10 @@ VNA_SHELL_FUNCTION(cmd_load)
     goto usage;
   uint16_t a = my_atoui(argv[0]);
   if (a <= 4) {
-    caldata_recall(a);
+    if (caldata_recall(a) == -1) {
+      if (a == 0)
+            reset_settings(setting.mode);
+    }
     return;
   }
 usage:
