@@ -221,12 +221,16 @@ caldata_recall(uint16_t id)
   /* duplicated saved data onto sram to be able to modify marker/trace */
   memcpy(dst, src, sizeof(setting_t));
   // Restore stored trace
-  memcpy(stored_t, &src[1], sizeof(stored_t));
+  src = &(src[1]);
+  volatile void *dst2 = stored_t;
+  memcpy(dst2, src, sizeof(stored_t));
   update_min_max_freq();
   update_frequencies();
   set_scale(setting.scale);
   set_reflevel(setting.reflevel);
   set_waterfall();
+  if (setting.show_stored)
+    enableTracesAtComplete(TRACE_STORED_FLAG);
   return 0;
 }
 #if 0

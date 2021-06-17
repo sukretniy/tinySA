@@ -1081,7 +1081,11 @@ extern int linear_averaging;
 // Flash save area - flash7  : org = 0x0801B000, len = 20k in *.ld file
 // 2k - for config save
 // 9 * 2k for setting_t + stored trace
+#ifdef TINYSA4
+#define SAVEAREA_MAX 5
+#else
 #define SAVEAREA_MAX 9
+#endif
 // STM32 minimum page size for write
 #define FLASH_PAGESIZE          0x800
 // config save area (flash7 addr)
@@ -1090,13 +1094,17 @@ extern int linear_averaging;
 #endif
 
 #ifdef TINYSA4
-#define SAVE_CONFIG_ADDR        0x0803B000
+#define SAVE_CONFIG_ADDR        0x0803A800
 #endif
 
 #define SAVE_CONFIG_SIZE        0x00000800
 // setting_t save area (save area + config size)
 #define SAVE_PROP_CONFIG_ADDR   (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE)
+#ifdef TINYSA4
+#define SAVE_PROP_CONFIG_SIZE   0x00001000
+#else
 #define SAVE_PROP_CONFIG_SIZE   0x00000800
+#endif
 // Should include all save slots
 #define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX * SAVE_PROP_CONFIG_SIZE)
 

@@ -1579,15 +1579,15 @@ typedef struct {
 static const RBW_t RBW_choices[] =
 {
 // BW register    corr  freq
- {SI4463_RBW_02kHz, 21,3,    26},
- {SI4463_RBW_1kHz,  26,10,   10},
- {SI4463_RBW_3kHz,  22,30,    8},
- {SI4463_RBW_10kHz,  12,100,  9},
- {SI4463_RBW_30kHz, 12,300,  12},
- {SI4463_RBW_100kHz, 7,1000, 10},
- {SI4463_RBW_300kHz, 8,3000,  7},
- {SI4463_RBW_600kHz, 8,6000, 15},
- {SI4463_RBW_850kHz,18,8500, 15},
+ {SI4463_RBW_02kHz,  20,3,    26},
+ {SI4463_RBW_1kHz,   23,10,    8},
+ {SI4463_RBW_3kHz,   17,30,    9},
+ {SI4463_RBW_10kHz,  12,100,   7},
+ {SI4463_RBW_30kHz,  12,300,  10},
+ {SI4463_RBW_100kHz,  2,1000, 17},
+ {SI4463_RBW_300kHz,  4,3000, 10},
+ {SI4463_RBW_600kHz, 10,6000,  8},
+ {SI4463_RBW_850kHz, 15,8500,  8},
 };
 
 const uint8_t SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
