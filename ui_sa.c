@@ -1457,6 +1457,7 @@ validate:
 
 //  selection = -1;
   ui_mode_normal();
+  goto leave;       // to get rid of warning
 leave:
   set_measurement(data);
 //  draw_cal_status();

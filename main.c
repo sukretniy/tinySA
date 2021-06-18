@@ -1497,11 +1497,11 @@ VNA_SHELL_FUNCTION(cmd_marker)
   }
 #ifdef TINYSA4
   static const char cmd_marker_list[] = "on|off|peak|delta|noise|tracking|stored|trace_aver";
+  static const char cmd_marker_on_off[] = "off|on";
+  int marker_mask = 0;
 #else
   static const char cmd_marker_list[] = "on|off|peak";
 #endif
-  static const char cmd_marker_on_off[] = "off|on";
-  int marker_mask = 0;
   switch (get_str_index(argv[1], cmd_marker_list)) {
     case 0: markers[t].enabled = TRUE; active_marker = t; return;
     case 1: markers[t].enabled =FALSE; if (active_marker == t) active_marker = MARKER_INVALID; return;

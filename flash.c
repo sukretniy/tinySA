@@ -222,8 +222,7 @@ caldata_recall(uint16_t id)
   memcpy(dst, src, sizeof(setting_t));
   // Restore stored trace
   src = &(src[1]);
-  volatile void *dst2 = stored_t;
-  memcpy(dst2, src, sizeof(stored_t));
+  memcpy(stored_t, src, sizeof(stored_t));
   update_min_max_freq();
   update_frequencies();
   set_scale(setting.scale);

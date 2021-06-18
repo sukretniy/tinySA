@@ -1084,13 +1084,13 @@ extern int linear_averaging;
 #ifdef TINYSA4
 #define SAVEAREA_MAX 5
 #else
-#define SAVEAREA_MAX 9
+#define SAVEAREA_MAX 5
 #endif
 // STM32 minimum page size for write
 #define FLASH_PAGESIZE          0x800
 // config save area (flash7 addr)
 #ifdef TINYSA3
-#define SAVE_CONFIG_ADDR        0x0801B000
+#define SAVE_CONFIG_ADDR        0x0801D000
 #endif
 
 #ifdef TINYSA4
