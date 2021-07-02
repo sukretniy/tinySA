@@ -97,7 +97,7 @@ VNA_SHELL_FUNCTION(cmd_calc )
     linear_averaging = (m == 9);
   } else
 #endif
-  set_average(m);
+  set_average(0, m);
 }
 
 int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv)

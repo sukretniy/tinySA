@@ -515,6 +515,8 @@ static const menuitem_t  menu_lowoutputmode[];
 static const menuitem_t  menu_highoutputmode[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_top[];
+static const menuitem_t  menu_trace[];
+static const menuitem_t  menu_subtract_trace[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_sweep_points[];
 static const menuitem_t  menu_sweep_points_form[];
@@ -826,7 +828,7 @@ UI_FUNCTION_CALLBACK(menu_autosettings_cb)
   //  set_refer_output(1);
 
   //  SetPowerLevel(100); // Reset
-  set_clear_storage();
+//  set_clear_storage();
   dirty = true;
   //  menu_move_back(true);   // stay in input menu
   ui_mode_normal();
@@ -1227,7 +1229,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     if (setting.measurement == M_LINEARITY) {
       TRACE_DISABLE(TRACE_STORED_FLAG);
     }
-    set_average(AV_OFF);
+    set_average(0,AV_OFF);
     set_external_gain(0.0);
 #ifdef TINYSA4
     set_extra_lna(false);
@@ -1246,7 +1248,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_CENTER);
       set_sweep_frequency(ST_START, 0);
       set_sweep_frequency(ST_STOP, uistat.value*(MARKERS_MAX+1));
-      set_average(AV_4);
+      set_average(0,AV_4);
 //      set_measurement(M_IMD);
       break;
     case M_OIP3:                                     // OIP3
@@ -1263,7 +1265,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       int right =  uistat.value;
       set_sweep_frequency(ST_CENTER, (left+right)/2);
       set_sweep_frequency(ST_SPAN, (right - left)*5);
-      set_average(AV_4);
+      set_average(0,AV_4);
 //      set_measurement(M_OIP3);
       break;
     case M_PHASE_NOISE:                             // Phase noise
@@ -1276,7 +1278,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_SPAN);
       set_sweep_frequency(ST_SPAN, uistat.value*4);
 //      set_measurement(M_PHASE_NOISE);
-      set_average(AV_4);
+      set_average(0,AV_4);
 
       break;
     case M_SNR:                             // STop band measurement
@@ -1287,7 +1289,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_SPAN);
       set_sweep_frequency(ST_SPAN, uistat.value*3);
 //      set_measurement(M_SNR);
-      set_average(AV_4);
+      set_average(0,AV_4);
 
       break;
     case M_PASS_BAND:                             // pass band measurement
@@ -1323,7 +1325,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       freq_t span;
 #else
       freq_t center, span;
-      markers[0].mtype = M_REFERENCE;// | M_TRACKING;           // Not M_TRACKING!!!!
+      markers[0].mtype = M_NORMAL; // M_REFERENCE | M_TRACKING;           // Not M_TRACKING!!!!
 #endif
       kp_help_text = "Frequency of signal";
       ui_mode_keypad(KM_CENTER);
@@ -1346,7 +1348,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       set_marker_frequency(1, center-span);
       set_marker_frequency(2, center+span);
 #endif
-      set_average(AV_4);
+      set_average(0,AV_4);
       break;
     case M_FM:                                     // FM
       reset_settings(setting.mode);
@@ -1379,7 +1381,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 //      set_measurement(M_FM);
       break;
     case M_THD:
-      set_average(AV_4);
+      set_average(0,AV_4);
 //      set_measurement(M_THD);
       break;
 #ifdef __CHANNEL_POWER__
@@ -1441,7 +1443,7 @@ validate:
       }
 
 //      set_sweep_frequency(ST_SPAN, 0);
-      set_average(AV_100);
+      set_average(0,AV_100);
       if (data == M_NF_TINYSA || data == M_NF_VALIDATE ) {
         menu_push_submenu(menu_measure_noise_figure);
         goto leave;
@@ -1450,7 +1452,7 @@ validate:
 #endif
 #ifdef __FFT_DECONV__
     case M_DECONV:
-      set_average(AV_DECONV);
+      set_average(0,AV_DECONV);
       break;
 #endif
   }
@@ -1499,13 +1501,124 @@ static UI_FUNCTION_ADV_CALLBACK(menu_reflevel_acb)
   menu_move_back(true);
 }
 
+static uint8_t current_trace = TRACE_ACTUAL;
+
+static UI_FUNCTION_ADV_CALLBACK(menu_average_acb)
+{
+  (void)item;
+  if (b){
+    b->icon = setting.average[current_trace] == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+  set_average(current_trace,data);
+  ui_mode_normal();
+//  menu_move_back(true);
+}
+
+
+#ifdef __TRACE_MENU__
+
+
+static UI_FUNCTION_ADV_CALLBACK(menu_trace_acb)
+{
+  (void)item;
+  if(b){
+    b->param_1.i = data+1;
+    b->icon = (data == current_trace) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+  current_trace = data;
+  menu_move_back(false);
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_store_trace_acb)
+{
+  (void)item;
+  if(b){
+    if (data == current_trace)
+      plot_printf(b->text, sizeof(b->text), "", data);
+    else
+      plot_printf(b->text, sizeof(b->text), S_RARROW"TRACE %d", data+1);
+    return;
+  }
+  if (data != current_trace) store_trace(current_trace,data);
+  menu_move_back(false);
+}
+
+
+static UI_FUNCTION_ADV_CALLBACK(menu_subtract_trace_acb)
+{
+  (void)item;
+  if(b){
+    if (data)
+      plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", data);
+    else
+      plot_printf(b->text, sizeof(b->text), "SUBTRACT\nDISABLED");
+    b->icon = (data == setting.subtract[current_trace]) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+  subtract_trace(current_trace,data);
+  menu_move_back(false);
+}
+
+
+static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
+{
+  (void)item;
+  if(b){
+    if (data == 0) {
+      b->param_1.i = current_trace+1;
+    } else if (data == 1)
+      b->icon = IS_TRACE_ENABLE(current_trace) ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK ;
+    else if (data == 2)
+      b->icon = setting.stored[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    else if (data == 3) {
+      if (setting.stored[current_trace])
+        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.stored[current_trace]);
+      else
+        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nDISABLED");
+    }
+    return;
+  }
+  switch(data) {
+  case 0:
+    menu_push_submenu(menu_trace);
+    return;
+  case 1:
+    if (IS_TRACE_ENABLE(current_trace)) {
+      TRACE_DISABLE(1<<current_trace);
+    } else {
+      TRACE_ENABLE(1<<current_trace);
+    }
+    break;
+  case 2:
+    setting.stored[current_trace] = !setting.stored[current_trace];
+    break;
+  case 3:
+    menu_push_submenu(menu_subtract_trace);
+    return;
+    break;
+#ifdef TINYSA4
+    case 6:
+      save_to_sd(1+2<<current_trace);      // frequencies + trace
+      break;
+#endif
+  }
+//  ui_mode_normal();
+//  draw_cal_status();
+}
+
+
+
+#endif
+
 static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
 {
   (void)item;
   if(b){
     if (data == 0 && setting.show_stored)
       b->icon = BUTTON_ICON_CHECK;
-    if (setting.subtract_stored){
+    if (setting.subtract[0]){
       if (data == 2 && setting.show_stored)
         b->icon = BUTTON_ICON_CHECK;
       if (data == 3 && !setting.show_stored)
@@ -1515,7 +1628,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
   }
   switch(data) {
     case 0:
-      set_storage();
+      store_trace(0,2);
       break;
     case 1:
       set_clear_storage();
@@ -1525,7 +1638,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
       break;
     case 3:
       toggle_normalize();
-      if (setting.subtract_stored) {
+      if (setting.subtract[0]) {
         kp_help_text = "Ref level";
         ui_mode_keypad(KM_REFLEVEL);
 //        setting.normalize_level = uistat.value;
@@ -1555,18 +1668,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   setting.waterfall++; if (setting.waterfall>W_BIG)setting.waterfall = W_OFF;
   set_waterfall();
   ui_mode_normal();
-}
-
-static UI_FUNCTION_ADV_CALLBACK(menu_average_acb)
-{
-  (void)item;
-  if (b){
-    b->icon = setting.average == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
-    return;
-  }
-  set_average(data);
-  ui_mode_normal();
-//  menu_move_back(true);
 }
 
 extern const menuitem_t menu_marker_modify[];
@@ -1629,6 +1730,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
     if (data == M_NORMAL) {
       markers[active_marker].mtype = M_NORMAL;
     }
+#if 0
     if (data == M_REFERENCE) {
       for (int i = 0; i<MARKER_COUNT; i++ ) {
         if (i != active_marker && markers[i].mtype & M_REFERENCE)
@@ -1636,13 +1738,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
       }
       markers[active_marker].mtype &= ~M_DELTA;
     }
+#endif
     if (data == M_DELTA) {
       if (!(markers[active_marker].mtype & M_DELTA))      // Not yet set
         menu_push_submenu(menu_marker_ref_select);
+#if 0
       markers[active_marker].mtype &= ~M_REFERENCE;
+#endif
     }
 #if 1
     markers[active_marker].mtype ^= data;
+    if (markers[active_marker].mtype & M_STORED)
+      markers[active_marker].trace = TRACE_STORED;
+    else
+      markers[active_marker].trace = TRACE_ACTUAL;
+
 #else
       if (markers[active_marker].mtype & data)
         markers[active_marker].mtype &= ~data;
@@ -2608,10 +2718,9 @@ static const menuitem_t menu_settings2[] =
   { MT_KEYPAD,   KM_DECAY,      "DECAY",   "0..1000000ms or sweeps"},
 #ifdef __QUASI_PEAK__
   { MT_KEYPAD,   KM_ATTACK,      "ATTACK",   "0..100000ms"},
-#else
-  { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
 #endif
 #ifdef TINYSA4
+  { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
   { MT_KEYPAD,   KM_30MHZ,      "ACTUAL\n30MHz*100", "Enter actual 30MHz * 100"},
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
@@ -2805,7 +2914,17 @@ static const menuitem_t menu_config[] = {
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
-static const menuitem_t menu_storage[] = {
+static const menuitem_t menu_storage[] =
+{
+#ifdef __TRACE_MENU__
+ { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_storage_acb},
+ { MT_ADV_CALLBACK,1,          "%s",              menu_storage_acb},
+ { MT_ADV_CALLBACK,1,          "DISPLAY",         menu_storage_acb},
+ { MT_ADV_CALLBACK,2,          "COPY\nFROM",      menu_storage_acb},
+ { MT_ADV_CALLBACK,3,          "SUBTRACT",        menu_storage_acb},
+ { MT_ADV_CALLBACK,4,          "NORMALIZE",       menu_storage_acb},
+ { MT_ADV_CALLBACK,5,          "WRITE\n"S_RARROW"SD",menu_storage_acb},
+#else
   { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
   { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
   { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
@@ -2814,11 +2933,63 @@ static const menuitem_t menu_storage[] = {
   { MT_ADV_CALLBACK,4,          "ACTUAL\n"S_RARROW"SD",       menu_storage_acb},
   { MT_ADV_CALLBACK,5,          "STORED\n"S_RARROW"SD",       menu_storage_acb},
 #endif
+#endif
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
+#ifdef __TRACE_MENU__
+static const menuitem_t menu_trace[] =
+{
+ { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_trace_acb},
+ { MT_ADV_CALLBACK,1,          "TRACE %d",        menu_trace_acb},
+ { MT_ADV_CALLBACK,2,          "TRACE %d",        menu_trace_acb},
+#if TRACES_MAX > 3
+ { MT_ADV_CALLBACK,3,          "TRACE %d",        menu_trace_acb},
+#endif
+  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_store_trace[] =
+{
+ { MT_ADV_CALLBACK,0,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
+ { MT_ADV_CALLBACK,1,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
+ { MT_ADV_CALLBACK,2,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
+#if TRACES_MAX > 3
+ { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
+#endif
+  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_subtract_trace[] =
+{
+ { MT_ADV_CALLBACK,0,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
+ { MT_ADV_CALLBACK,1,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
+ { MT_ADV_CALLBACK,2,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
+ { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
+#if TRACES_MAX > 3
+ { MT_ADV_CALLBACK,4,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
+#endif
+  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_traces[] =
+{
+ { MT_ADV_CALLBACK,0,          "TRACE %d",                  menu_traces_acb},
+ { MT_ADV_CALLBACK,1,          "HIDDEN",                    menu_traces_acb},
+ { MT_ADV_CALLBACK,2,          "STORED",                    menu_traces_acb},
+ { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,             menu_traces_acb},
+ { MT_SUBMENU,     0,          "CALC",                      menu_average},
+ { MT_SUBMENU,     0,          "STORE\n"S_RARROW"TRACE",    menu_store_trace},
+#ifdef TINYSA4
+ { MT_ADV_CALLBACK,6,          "WRITE\n"S_RARROW"SD",       menu_traces_acb},
+#endif
+  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
 static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,0,          "PAUSE\nSWEEP",    menu_pause_acb},
+#ifndef __TRACE_MENU__
   { MT_SUBMENU,     0,          "CALC",            menu_average},
   { MT_SUBMENU,     0,          "STORAGE",         menu_storage},
 //  { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
@@ -2831,8 +3002,17 @@ static const menuitem_t menu_display[] = {
 #ifdef __LIMITS__
   { MT_SUBMENU,     0,          "LIMITS",          menu_limit_select},
 #endif
+#endif
   { MT_ADV_CALLBACK,4,          "WATER\nFALL",     menu_waterfall_acb},
   { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
+  { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
+  { MT_SUBMENU,          0,             "SWEEP\nPOINTS",   menu_sweep_points},
+ #ifdef TINYSA4
+  { MT_KEYPAD,           KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
+ #else
+  { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
+ #endif
+
 //#ifdef __REMOTE_DESKTOP__
 //  { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
 //#endif
@@ -2911,6 +3091,9 @@ static const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "PRESET",       menu_load_preset},
   { MT_SUBMENU,  0, "FREQUENCY",    menu_stimulus},
   { MT_SUBMENU,  0, "LEVEL",        menu_level},
+#ifdef __TRACE_MENU__
+  { MT_SUBMENU,  0, "TRACE",        menu_traces},
+#endif
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "MEASURE",      menu_measure},
@@ -3476,9 +3659,9 @@ redraw_cal_status:
 //  }
 
   // Calc
-  if (setting.average>0) {
+  if (setting.average[0]>0) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-    lcd_printf(x, y, "Calc:\n%s", averageText[setting.average]);
+    lcd_printf(x, y, "Calc:\n%s", averageText[setting.average[0]]);
     y = add_quick_menu(y+= YSTEP, (menuitem_t *)menu_average);
   }
   // Spur
@@ -3495,7 +3678,7 @@ redraw_cal_status:
   }
 #endif
 
-  if (setting.subtract_stored) {
+  if (setting.subtract[0]) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Norm.", x, y);
     y = add_quick_menu(y, (menuitem_t *)menu_storage);

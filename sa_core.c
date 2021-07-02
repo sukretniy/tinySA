@@ -237,7 +237,11 @@ void reset_settings(int m)
   setting.rx_drive=MAX_DRIVE;              // And this
   setting.atten_step = 0;           // And this, only used in low output mode
   setting.rbw_x10 = 0;
-  setting.average = 0;
+  for (int t=0;t<TRACES_MAX;t++) {
+    setting.average[t] = 0;
+    setting.stored[t] = false;
+    setting.subtract[t] = 0;
+  }
 #ifdef TINYSA4  
   setting.harmonic = 3;         // Automatically used when above ULTRA_MAX_FREQ
 #else
@@ -245,7 +249,6 @@ void reset_settings(int m)
 #endif
   setting.show_stored = 0;
   setting.auto_attenuation = false;
-  setting.subtract_stored = false;
   setting.normalize_level = 0.0;
 #ifdef TINYSA4
   setting.lo_drive=5;
@@ -930,28 +933,29 @@ void limits_update(void)
 }
 #endif
 
-void set_storage(void)
+void store_trace(int f, int t)
 {
   for (int i=0; i<POINTS_COUNT;i++)
-    stored_t[i] = actual_t[i];
-  setting.show_stored = true;
-  enableTracesAtComplete(TRACE_STORED_FLAG);
+    measured[t][i] = measured[f][i];
+  setting.stored[t] = true;
+  enableTracesAtComplete(1<<t);
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
 void set_clear_storage(void)
 {
   setting.show_stored = false;
-  setting.subtract_stored = false;
+//  setting.subtract = false;
   TRACE_DISABLE(TRACE_STORED_FLAG);
   // dirty = true;             // No HW update required, only status panel refresh
 }
 
 void set_subtract_storage(void)
 {
+  /*
   if (!setting.subtract_stored) {
     if (!setting.show_stored)
-      set_storage();
+      store_trace(0,2);
     setting.subtract_stored = true;
     setting.normalize_level = 0.0;
 //    setting.auto_attenuation = false;
@@ -959,12 +963,21 @@ void set_subtract_storage(void)
     setting.subtract_stored = false;
   }
   //dirty = true;             // No HW update required, only status panel refresh
+  */
 }
 
+void subtract_trace(int t, int f)
+{
+  if (!setting.subtract[t]) {
+    setting.subtract[t] = f;
+    setting.normalize_level = 0.0;
+  } else
+    setting.subtract[t] = 0;
+}
 
 void toggle_normalize(void)
 {
-  if (!setting.subtract_stored) {
+/*  if (!setting.subtract_stored) {
     for (int i=0; i<POINTS_COUNT;i++)
       stored_t[i] = actual_t[i];
     setting.subtract_stored = true;
@@ -973,6 +986,7 @@ void toggle_normalize(void)
   } else {
     setting.subtract_stored = false;
   }
+  */
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -1143,21 +1157,23 @@ void set_offset_delay(int d)                  // override RSSI measurement delay
 }
 
 
-void set_average(int v)
+void set_average(int t, int v)
 {
-  if (setting.average == v)     // Clear calc on second click
+  if (setting.average[t] == v)     // Clear calc on second click
     dirty = true;
-  setting.average = v;
+  setting.average[t] = v;
   bool enable = ((v != 0)
 #ifdef __QUASI_PEAK__
       && (v != AV_QUASI)
 #endif
       );
+#ifndef __TRACES_MENU__
   if (enable) {
     enableTracesAtComplete(TRACE_TEMP_FLAG);
     scan_after_dirty = 0;
   } else
     TRACE_DISABLE(TRACE_TEMP_FLAG);
+#endif
   //dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -2220,11 +2236,7 @@ int index_of_frequency(freq_t f)      // Search which index in the frequency tab
 
 void interpolate_maximum(int m)
 {
-  float *ref_marker_levels;
-  if (markers[m].mtype & M_STORED )
-    ref_marker_levels = stored_t;
-  else
-    ref_marker_levels = actual_t;
+  float *ref_marker_levels = measured[markers[m].trace];
   const int idx        = markers[m].index;
   markers[m].frequency = getFrequency(idx);
   if (idx > 0 && idx < sweep_points-1)
@@ -2248,12 +2260,7 @@ void interpolate_maximum(int m)
 int
 search_maximum(int m, freq_t center, int span)
 {
-  float *ref_marker_levels;
-  if (markers[m].mtype & M_STORED )
-    ref_marker_levels = stored_t;
-  else
-    ref_marker_levels = actual_t;
-
+  float *ref_marker_levels = measured[markers[m].trace];
 #ifdef TINYSA4
   int center_index = index_of_frequency(center);
 #else
@@ -3544,7 +3551,7 @@ again:                                                              // Spur redu
     }
 #endif
 #ifdef __SI4463__
-    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+    if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME && setting.exp_aver == 1) {
       SI446x_Fill(MODE_SELECT(setting.mode), -1);   // First get_RSSI will fail
     }
 #endif
@@ -3803,6 +3810,10 @@ static bool sweep(bool break_on_operation)
 
   sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
+  temppeakLevel = -150;
+  float temp_min_level = 100;          // Initialize the peak search algorithm
+  int16_t downslope = true;
+
   // ------------------------- start sweep loop -----------------------------------
   for (int i = 0; i < sweep_points; i++) {
     debug_avoid_second = false;
@@ -3903,17 +3914,12 @@ static bool sweep(bool break_on_operation)
         debug_avoid_second = false;
       }
     }
-    temp_t[i] = RSSI;
+#ifdef __DOUBLE_LOOP__
   }
 
   // -------------------------------- Scan finished, do all postprocessing --------------------
-  float temp_min_level = 100;
 
   if (MODE_INPUT(setting.mode)) {
-
-    int16_t downslope = true;             // Initialize the peak search algorithm
-    temppeakLevel = -150;
-
 
 // #ifdef __VBW__
 #if 0
@@ -4075,16 +4081,22 @@ static volatile int dummy;
 #endif
 #endif
 
-      // ------------------------ do all RSSI calculations from CALC menu -------------------
-#ifdef __FFT_DECONV__
+      #ifdef __FFT_DECONV__
       if (setting.average == AV_DECONV)
         RSSI = actual_t[i];
       else
 #endif
         RSSI = temp_t[i];
 
-      if (setting.subtract_stored) {
-        RSSI = RSSI - stored_t[i] + setting.normalize_level;
+#else
+      for (int t=0; t<TRACES_MAX;t++) {
+        if (setting.stored[t])
+          continue;
+        float *trace_data = measured[t];
+#endif // __DOUBLE_LOOP__
+      // ------------------------ do all RSSI calculations from CALC menu -------------------
+      if (setting.subtract[t]) {
+        RSSI = RSSI - measured[setting.subtract[t]-1][i] + setting.normalize_level;
       }
 #ifdef __SI4432__
       //#define __DEBUG_AGC__
@@ -4101,26 +4113,26 @@ static volatile int dummy;
         last_AGC_value = AGC_value;
       }
 #endif
-      if (scandirty || setting.average == AV_OFF) {             // Level calculations
-        if (setting.average == AV_MAX_DECAY) age[i] = 0;
-        actual_t[i] = RSSI;
+      if (scandirty || setting.average[t] == AV_OFF) {             // Level calculations
+        if (setting.average[t] == AV_MAX_DECAY) age[i] = 0;
+        trace_data[i] = RSSI;
       } else {
-        switch(setting.average) {
-        case AV_MIN:      if (actual_t[i] > RSSI) actual_t[i] = RSSI; break;
-        case AV_MAX_HOLD: if (actual_t[i] < RSSI) actual_t[i] = RSSI; break;
+        switch(setting.average[t] ) {
+        case AV_MIN:      if (trace_data[i] > RSSI) trace_data[i] = RSSI; break;
+        case AV_MAX_HOLD: if (trace_data[i] < RSSI) trace_data[i] = RSSI; break;
         case AV_MAX_DECAY:
-          if (actual_t[i] < RSSI) {
+          if (trace_data[i] < RSSI) {
             age[i] = 0;
-            actual_t[i] = RSSI;
+            trace_data[i] = RSSI;
           } else {
             if (age[i] > setting.decay)
-              actual_t[i] -= 0.5;
+              trace_data[i] -= 0.5;
             else
               age[i] += 1;
           }
           break;
-        case AV_4:  actual_t[i] = (actual_t[i]*3.0 + RSSI) / 4.0; break;
-        case AV_16: actual_t[i] = (actual_t[i]*15.0 + RSSI) / 16.0; break;
+        case AV_4:  trace_data[i] = (trace_data[i]*3.0 + RSSI) / 4.0; break;
+        case AV_16: trace_data[i] = (trace_data[i]*15.0 + RSSI) / 16.0; break;
         case AV_100:
 #ifdef TINYSA4
           if (linear_averaging)
@@ -4128,46 +4140,45 @@ static volatile int dummy;
 #if 0
           int old_unit = setting.unit;
           setting.unit = U_WATT;            // Power averaging should always be done in Watts
-          actual_t[i] = to_dBm((value(actual_t[i])*(scan_after_dirty-1) + value(RSSI)) / scan_after_dirty );
+          trace_data[i] = to_dBm((value(trace_data[i])*(scan_after_dirty-1) + value(RSSI)) / scan_after_dirty );
           setting.unit = old_unit;
 #else
-          float v = (expf(actual_t[i]*(logf(10.0)/10.0)) * (scan_after_dirty-1) + expf(RSSI * (logf(10.0)/10.0))) / scan_after_dirty;
-          actual_t[i] = logf(v)*(10.0/logf(10.0));
+          float v = (expf(trace_data[i]*(logf(10.0)/10.0)) * (scan_after_dirty-1) + expf(RSSI * (logf(10.0)/10.0))) / scan_after_dirty;
+          trace_data[i] = logf(v)*(10.0/logf(10.0));
 #endif
         }
           else
-            actual_t[i] = (actual_t[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
+            trace_data[i] = (trace_data[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
 #else
-        actual_t[i] = (actual_t[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
+        trace_data[i] = (trace_data[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
 #endif
         break;
 #ifdef __QUASI_PEAK__
         case AV_QUASI:
         { static float old_RSSI = -150.0;
-        if (i == 0) old_RSSI = actual_t[sweep_points-1];
+        if (i == 0) old_RSSI = trace_data[sweep_points-1];
         if (RSSI > old_RSSI && setting.attack > 1)
           old_RSSI += (RSSI - old_RSSI)/setting.attack;
         else if (RSSI < old_RSSI && setting.decay > 1)
           old_RSSI += (RSSI - old_RSSI)/setting.decay;
         else
           old_RSSI = RSSI;
-        actual_t[i] = old_RSSI;
+        trace_data[i] = old_RSSI;
         }
         break;
 #endif
 #if 0
         case AV_DECONV:
-          actual_t[i] = temp_t[i] - temp_t[0];
+          trace_data[i] = temp_t[i] - temp_t[0];
 
           int lower = ( i - d_width + 1 < 0 ? 0 :  i - d_width + 1);
           for (int k = lower; k < i; k++)
-            actual_t[i] -= actual_t[k] * (stored_t[d_start + i - k] - d_offset) / d_scale;
-//          actual_t[i] /= (stored_t[d_start] - d_offset ) /d_scale;
+            trace_data[i] -= trace_data[k] * (stored_t[d_start + i - k] - d_offset) / d_scale;
+//          trace_data[i] /= (stored_t[d_start] - d_offset ) /d_scale;
           break;
 #endif
         }
       }
-
       if ( actual_t[i] > -174.0 && temp_min_level > actual_t[i])   // Remember minimum
         temp_min_level = actual_t[i];
 
@@ -4686,11 +4697,7 @@ int
 marker_search_left_max(int m)
 {
   int i;
-  float *ref_marker_levels;
-  if (markers[m].mtype & M_STORED )
-    ref_marker_levels = stored_t;
-  else
-    ref_marker_levels = actual_t;
+  float *ref_marker_levels = measured[markers[m].trace];
   int from = markers[m].index;
 
   int found = -1;
@@ -4722,11 +4729,7 @@ int
 marker_search_right_max(int m)
 {
   int i;
-  float *ref_marker_levels;
-  if (markers[m].mtype & M_STORED )
-    ref_marker_levels = stored_t;
-  else
-    ref_marker_levels = actual_t;
+  float *ref_marker_levels = measured[markers[m].trace];
   int from = markers[m].index;
 
   int found = -1;
@@ -4768,11 +4771,7 @@ void markers_reset()
 int marker_search_max(int m)
 {
   int i = 0;
-  float *ref_marker_levels;
-  if (markers[m].mtype & M_STORED )
-    ref_marker_levels = stored_t;
-  else
-    ref_marker_levels = actual_t;
+  float *ref_marker_levels = measured[markers[m].trace];
   int found = 0;
 
   float value = ref_marker_levels[i];
@@ -4793,11 +4792,7 @@ int
 marker_search_left_min(int m)
 {
   int i;
-  float *ref_marker_levels;
-  if (markers[m].mtype & M_STORED )
-    ref_marker_levels = stored_t;
-  else
-    ref_marker_levels = actual_t;
+  float *ref_marker_levels = measured[markers[m].trace];
   int from = markers[m].index;
   int found = from;
   if (uistat.current_trace == TRACE_INVALID)
@@ -4828,11 +4823,7 @@ int
 marker_search_right_min(int m)
 {
   int i;
-  float *ref_marker_levels;
-  if (markers[m].mtype & M_STORED )
-    ref_marker_levels = stored_t;
-  else
-    ref_marker_levels = actual_t;
+  float *ref_marker_levels = measured[markers[m].trace];
   int from = markers[m].index;
   int found = from;
 
@@ -5781,7 +5772,7 @@ quit:
       osalThreadSleepMilliseconds(200);
 //      setting.spur_removal = S_ON;
       setting.R = 3;
-      set_average(AV_100);
+      set_average(0,AV_100);
       test_acquire(TEST_LEVEL);                        // Acquire test
       test_acquire(TEST_LEVEL);                        // Acquire test
       test_acquire(TEST_LEVEL);                        // Acquire test
@@ -5806,7 +5797,7 @@ quit:
         set_repeat(5);
         setting.rbw_x10 = force_rbw(j);
         set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * (1000 << k)));
-        set_average(AV_100);
+        set_average(0,AV_100);
         test_acquire(TEST_RBW);                        // Acquire test
         test_acquire(TEST_RBW);                        // Acquire test
         test_acquire(TEST_RBW);                        // Acquire test
@@ -5845,7 +5836,7 @@ abort:
       setting.rbw_x10 = force_rbw(j);
       setting.extra_lna = true;
       osalThreadSleepMilliseconds(200);
-      set_average(AV_100);
+      set_average(0,AV_100);
       for (int w=0; w<50; w++) {
         test_acquire(TC_LEVEL);                        // Acquire test
       }
@@ -5876,7 +5867,7 @@ abort:
         osalThreadSleepMilliseconds(200);
         markers[0].mtype = M_NOISE | M_AVER;
         set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * (1000 << k)));
-        set_average(AV_100);
+        set_average(0,AV_100);
         test_acquire(TC_LEVEL);                        // Acquire test
         test_acquire(TC_LEVEL);                        // Acquire test
         test_acquire(TC_LEVEL);                        // Acquire test
@@ -6003,7 +5994,7 @@ again:
 #ifdef TINYSA4
       set_extra_lna(calibrate_lna);
 #endif
-      set_average(AV_100);
+      set_average(0, AV_100);
       for (int m=1; m<20; m++) {
         test_acquire(test_case);                        // Acquire test
         local_test_status = test_validate(test_case);
@@ -6026,7 +6017,7 @@ again:
       set_attenuation(10);
       set_repeat(5);
       setting.spur_removal = S_OFF;
-      set_average(AV_100);
+      set_average(0,AV_100);
       test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
@@ -6040,7 +6031,7 @@ again:
       test_prepare(test_case);
       set_RBW(3000);
       set_attenuation(10);
-      set_average(AV_100);
+      set_average(0,AV_100);
       test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
       test_acquire(test_case);                        // Acquire test
@@ -6112,7 +6103,7 @@ quit:
 //  set_refer_output(-1);
 #ifdef TINYSA4
   set_extra_lna(false);
-  set_average(AV_OFF);
+  set_average(0,AV_OFF);
 //  set_refer_output(-1);
 #else
   reset_settings(M_LOW);

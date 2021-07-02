@@ -921,10 +921,10 @@ config_t config = {
 
 
 static const marker_t def_markers[MARKERS_MAX] = {
-    { M_ENABLED,            M_TRACKING,               0,  30, 0 },
-    { M_DISABLED,           M_NORMAL,                 0,  40, 0 },
-    { M_DISABLED,           M_NORMAL,                 0,  60, 0 },
-    { M_DISABLED,           M_NORMAL,                 0,  80, 0 }
+    {M_TRACKING, M_ENABLED,               0, TRACE_ACTUAL, 30, 0 },
+    {M_NORMAL,   M_DISABLED,              0, TRACE_ACTUAL, 40, 0 },
+    {M_NORMAL,   M_DISABLED,              0, TRACE_ACTUAL, 60, 0 },
+    {M_NORMAL,   M_DISABLED,              0, TRACE_ACTUAL, 80, 0 }
 };
 
 // Load propeties default settings
@@ -1341,10 +1341,10 @@ VNA_SHELL_FUNCTION(cmd_recall)
   shell_printf("recall {id}\r\n");
 }
 
-const char * const trc_channel_name[] = {
-  [TRACE_ACTUAL] = "ACTUAL",
+const char * const trc_channel_name[TRACES_MAX] = {
+  [TRACE_ACTUAL] = "MEASURED",
   [TRACE_STORED] = "STORED",
-  [TRACE_TEMP]   = "COMPUTED",
+  [TRACE_TEMP]   = "RAW",
 };
 
 void set_trace_scale(float scale)
@@ -1404,7 +1404,7 @@ VNA_SHELL_FUNCTION(cmd_trace)
     if (type >= 0) {
       switch(type) {
       case 0:
-        set_storage();
+        store_trace(0,2);
         goto update;
       case 1:
         set_clear_storage();

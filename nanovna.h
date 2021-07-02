@@ -76,6 +76,7 @@
 #define __CHANNEL_POWER__
 #define __LIMITS__
 #define __MCU_CLOCK_SHIFT__
+#define __TRACE_MENU__
 #ifdef TINYSA4
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
@@ -133,14 +134,15 @@
 #endif
 #ifdef TINYSA4
 #define MARKER_COUNT    8
+#define TRACES_MAX 3
 #else
 #define MARKER_COUNT    4
+#define TRACES_MAX 3
 #endif
 
-#define TRACES_MAX 3
-#define TRACE_ACTUAL    0           // order linked to redraw_request flags!!!!!
-#define TRACE_STORED    1
-#define TRACE_TEMP      2
+#define TRACE_ACTUAL    0           // order linked to colors in palette!!!!!
+#define TRACE_TEMP      (LCD_TRACE_2_COLOR - LCD_TRACE_1_COLOR)
+#define TRACE_STORED    (LCD_TRACE_3_COLOR - LCD_TRACE_1_COLOR)
 //#define TRACE_AGE       3
 #define TRACE_INVALID  -1
 
@@ -148,6 +150,8 @@
 #define stored_t  measured[TRACE_STORED]
 #define temp_t    measured[TRACE_TEMP]
 // #define age_t     measured[TRACE_AGE]
+
+extern const char * const trc_channel_name[];
 
 #ifdef TINYSA3
 typedef uint32_t freq_t;
@@ -301,7 +305,8 @@ void set_attenuation(float);
 float get_attenuation(void);
 float get_level(void);
 void set_harmonic(int);
-void set_storage(void);
+void store_trace(int f, int t);
+void subtract_trace(int t, int f);
 //extern int setting.harmonic;
 int search_is_greater(void);
 void set_auto_attenuation(void);
@@ -330,8 +335,7 @@ void set_spur(int v);
 void toggle_spur(void);
 void toggle_mirror_masking(void);
 #endif
-void set_average(int);
-int GetAverage(void);
+void set_average(int t, int);
 //extern int setting.average;
 void  set_storage(void);
 void  set_clear_storage(void);
@@ -720,6 +724,7 @@ typedef struct {
   uint8_t mtype;
   uint8_t enabled;
   uint8_t ref;
+  uint8_t trace;
   int16_t index;
   freq_t frequency;
 } marker_t;
@@ -862,8 +867,8 @@ typedef uint16_t pixel_t;
 [LCD_MENU_TEXT_COLOR  ] = RGB565(  0,  0,  0), \
 [LCD_MENU_ACTIVE_COLOR] = RGB565(210,210,210), \
 [LCD_TRACE_1_COLOR    ] = RGB565(255,255,  0), \
-[LCD_TRACE_2_COLOR    ] = RGB565(  0,255,  0), \
-[LCD_TRACE_3_COLOR    ] = RGB565(255,  0,  0), \
+[LCD_TRACE_2_COLOR    ] = RGB565(255,  0,  0), \
+[LCD_TRACE_3_COLOR    ] = RGB565(  0,255,  0), \
 [LCD_TRACE_4_COLOR    ] = RGB565(255,  0,255), \
 [LCD_NORMAL_BAT_COLOR ] = RGB565( 31,227,  0), \
 [LCD_LOW_BAT_COLOR    ] = RGB565(255,  0,  0), \
@@ -945,13 +950,13 @@ typedef struct setting
   bool auto_reflevel;          // bool
   bool auto_attenuation;       // bool
   bool mirror_masking;         // bool
-  bool subtract_stored;        // bool
   bool show_stored;            // bool
   bool tracking_output;        // bool
   bool mute;                   // bool
   bool auto_IF;                // bool
   bool sweep;                  // bool
   bool pulse;                  // bool
+  bool stored[TRACES_MAX];     // enum
 
   uint8_t mode;                // enum
   uint8_t below_IF;            // enum
@@ -964,7 +969,8 @@ typedef struct setting
   uint8_t trigger_direction;   // enum
   uint8_t step_delay_mode;     // enum
   uint8_t waterfall;           // enum
-  uint8_t average;             // enum
+  uint8_t average[TRACES_MAX]; // enum
+  uint8_t subtract[TRACES_MAX];// index
   uint8_t measurement;         // enum
   uint8_t spur_removal;        // enum
 
@@ -1159,7 +1165,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e53 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e54 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

@@ -88,17 +88,9 @@ typedef uint16_t  index_y_t;
 static index_x_t trace_index_x[POINTS_COUNT];
 static index_y_t trace_index_y[TRACES_MAX][POINTS_COUNT];
 
-uint16_t marker_color(int mtype)
+uint16_t marker_color(int m_i)
 {
-//  if (mtype & M_REFERENCE)
-//    return LCD_M_REFERENCE;
-  if (mtype & M_STORED)
-    return LCD_M_DELTA;
-//  if (mtype & M_DELTA)
-//    return LCD_BRIGHT_COLOR_RED;
-//  if (mtype & M_NOISE)
-//    return LCD_M_NOISE;
-  return LCD_M_DEFAULT;
+  return LCD_TRACE_1_COLOR + markers[m_i].trace;
 }
 
 #if 1
@@ -303,10 +295,7 @@ marker_to_value(const int i)
     return marker_cache[i];
 #endif
   float *ref_marker_levels;
-  if (markers[i].mtype & M_STORED )
-    ref_marker_levels = stored_t;
-  else
-    ref_marker_levels = actual_t;
+  ref_marker_levels = measured[markers[i].trace];
   float v = value(ref_marker_levels[markers[i].index]);
   if (markers[i].mtype & M_AVER) {
     int old_unit = setting.unit;
@@ -1143,17 +1132,13 @@ draw_cell(int m, int n)
 //  PULSE;
 // draw marker symbols on each trace (<10 system ticks for all screen calls)
 #if 1
-  for (int t = TRACE_ACTUAL; t <= TRACE_STORED; t++ ) {
+  for (int t = TRACE_ACTUAL; t < TRACES_MAX; t++ ) {
   if (IS_TRACE_ENABLE(t)) {
     for (i = 0; i < MARKERS_MAX; i++) {
       if (!markers[i].enabled)
         continue;
-      if (markers[i].mtype & M_STORED) {
-        if (t == TRACE_ACTUAL)
-          continue;
-      } else {
-        if (t == TRACE_STORED)
-          continue;
+      if (markers[i].trace != t) {
+        continue;
       }
       int idx = markers[i].index;
       int x = trace_index_x[idx] - x0 - X_MARKER_OFFSET;
@@ -1636,7 +1621,7 @@ static void cell_draw_marker_info(int x0, int y0)
         }
         float thd = 100.0 * sa_sqrtf(h/p);
         setting.unit = old_unit;
-        ili9341_set_foreground(marker_color(markers[0].mtype));
+        ili9341_set_foreground(marker_color(0));
 //        j = 1;
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
@@ -1659,7 +1644,7 @@ static void cell_draw_marker_info(int x0, int y0)
       // log10f(x)  =  logf(x)/logf(10)
 
 
-      ili9341_set_foreground(marker_color(markers[0].mtype));
+      ili9341_set_foreground(marker_color(0));
 //        j = 1;
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
       int ypos = 1 + (j/2)*(16) - y0;
@@ -1705,26 +1690,22 @@ static void cell_draw_marker_info(int x0, int y0)
 #endif
     if (!markers[i].enabled)
       continue;
-    for (t = TRACE_ACTUAL; t <= TRACE_STORED; t++) { // Only show info on actual trace
+    for (t = TRACE_ACTUAL; t < TRACES_MAX; t++) { // Only show info on actual trace
       if (IS_TRACE_DISABLE(t))
         continue;
-      if (markers[i].mtype & M_STORED) {
-        if (t == TRACE_ACTUAL)
-          continue;
-      } else {
-        if (t == TRACE_STORED)
-          continue;
+      if (markers[i].trace != t) {
+        continue;
       }
       uint16_t color;
       int level = temppeakLevel - get_attenuation() + setting.external_gain;
-      if ((!setting.subtract_stored) &&     // Disabled when normalized
+      if ((!setting.subtract[t]) &&     // Disabled when normalized
           ((setting.mode == M_LOW  && level > -10)
            || (setting.mode == M_HIGH && level > -29)
            || (setting.mode == M_LOW && (markers[i].mtype & M_NOISE) && vbwSteps > 1))   //MAXPEAK increases noise marker, should reduce span.
            )
         color = LCD_BRIGHT_COLOR_RED;
       else
-        color = marker_color(markers[i].mtype);
+        color = marker_color(i);
       ili9341_set_foreground(color);
       ili9341_set_background(LCD_BG_COLOR);
 #if 1
@@ -1934,11 +1915,15 @@ static void update_waterfall(void){
     ili9341_read_memory(OFFSETX, i, w_width, 1, spi_buffer);
     ili9341_bulk(OFFSETX, i+1, w_width, 1);
   }
-  index_y_t *index;
-  if (setting.average == AV_OFF)
-    index = trace_index_y[TRACE_ACTUAL];
-  else
-    index = trace_index_y[TRACE_TEMP];
+  index_y_t *index = NULL;
+  for (int t=0;t<TRACES_MAX;t++) {                      // Find trace with active measurement
+    if (IS_TRACE_ENABLE(t) && setting.average[t] == AV_OFF) {
+      index = trace_index_y[t];
+      break;
+    }
+  }
+  if (index == NULL)
+    return;
   int j = 0;
   for (i=0; i< sweep_points; i++) {			// Add new topline
     uint16_t color;
