@@ -516,6 +516,7 @@ static const menuitem_t  menu_highoutputmode[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_top[];
 static const menuitem_t  menu_trace[];
+static const menuitem_t  menu_marker_trace[];
 static const menuitem_t  menu_subtract_trace[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_sweep_points[];
@@ -1525,9 +1526,23 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trace_acb)
   if(b){
     b->param_1.i = data+1;
     b->icon = (data == current_trace) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->bg = LCD_TRACE_1_COLOR+data;
     return;
   }
   current_trace = data;
+  menu_move_back(false);
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_marker_trace_acb)
+{
+  (void)item;
+  if(b){
+    b->param_1.i = data+1;
+    b->icon = (data == markers[active_marker].trace) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    b->bg = LCD_TRACE_1_COLOR+data;
+    return;
+  }
+  markers[active_marker].trace = data;
   menu_move_back(false);
 }
 
@@ -1535,13 +1550,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_trace_acb)
 {
   (void)item;
   if(b){
-    if (data == current_trace)
-      plot_printf(b->text, sizeof(b->text), "", data);
-    else
-      plot_printf(b->text, sizeof(b->text), S_RARROW"TRACE %d", data+1);
+    plot_printf(b->text, sizeof(b->text), S_RARROW"TRACE %d", data+1);
+    b->bg = LCD_TRACE_1_COLOR+data;
+    if (current_trace == data)
+      b->fg = LCD_DARK_GREY;
     return;
   }
-  if (data != current_trace) store_trace(current_trace,data);
+  store_trace(current_trace,data);
   menu_move_back(false);
 }
 
@@ -1550,11 +1565,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_subtract_trace_acb)
 {
   (void)item;
   if(b){
-    if (data)
+    if (data) {
       plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", data);
+      b->bg = LCD_TRACE_1_COLOR+data-1;
+    }
     else
       plot_printf(b->text, sizeof(b->text), "SUBTRACT\nDISABLED");
     b->icon = (data == setting.subtract[current_trace]) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    if (data - 1 == current_trace)
+      b->fg = LCD_DARK_GREY;
     return;
   }
   subtract_trace(current_trace,data);
@@ -1566,15 +1585,20 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 {
   (void)item;
   if(b){
-    if (data == 0) {
+    if (data == 0) {                // Select trace
       b->param_1.i = current_trace+1;
-    } else if (data == 1)
-      b->icon = IS_TRACE_ENABLE(current_trace) ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK ;
-    else if (data == 2)
+      b->bg = LCD_TRACE_1_COLOR+current_trace;
+    } else if (data == 1) {           // View
+      if (current_trace)
+        b->icon = IS_TRACE_ENABLE(current_trace) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+      else
+        b->fg = LCD_DARK_GREY;
+    }
+    else if (data == 2)               // freeze
       b->icon = setting.stored[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     else if (data == 3) {
-      if (setting.stored[current_trace])
-        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.stored[current_trace]);
+      if (setting.subtract[current_trace])
+        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.subtract[current_trace]);
       else
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nDISABLED");
     }
@@ -1586,12 +1610,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     return;
   case 1:
     if (IS_TRACE_ENABLE(current_trace)) {
-      TRACE_DISABLE(1<<current_trace);
+      if (current_trace)                    // Trace 1 always viewed
+        TRACE_DISABLE(1<<current_trace);
     } else {
       TRACE_ENABLE(1<<current_trace);
     }
     break;
-  case 2:
+  case 2:                               // Freeze
     setting.stored[current_trace] = !setting.stored[current_trace];
     break;
   case 3:
@@ -1600,7 +1625,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     break;
 #ifdef TINYSA4
     case 6:
-      save_to_sd(1+2<<current_trace);      // frequencies + trace
+      save_to_sd(1+(2<<current_trace));      // frequencies + trace
       break;
 #endif
   }
@@ -1710,55 +1735,39 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
   (void)item;
   if (active_marker == MARKER_INVALID) return;
   if(b){
-    if (markers[active_marker].enabled == M_ENABLED) {
+    uistat.text[0] = 0;
+    switch(data) {
+    case M_DELTA:
+    case M_NOISE:
+    case M_TRACKING:
+    case M_AVER:
       b->icon = BUTTON_ICON_NOCHECK;
-      if (data & markers[active_marker].mtype)
+      if (markers[active_marker].mtype & data)
         b->icon = BUTTON_ICON_CHECK;
-      else if (data==markers[active_marker].mtype)    // This catches the M_NORMAL case
-        b->icon = BUTTON_ICON_CHECK;
-      if ((markers[active_marker].mtype & M_DELTA))
+      if (markers[active_marker].mtype & M_DELTA)
         uistat.text[0] = markers[active_marker].ref+'1';
-      else
-        uistat.text[0] = 0;
-      uistat.text[1] = 0;
-      b->param_1.text = uistat.text;
+      break;
+    case M_STORED:
+      uistat.text[0] = markers[active_marker].trace+'1';
+      b->bg = LCD_TRACE_1_COLOR+markers[active_marker].trace;
+      break;
     }
+    b->param_1.text = uistat.text;
     return;
   }
-  if (markers[active_marker].enabled == M_ENABLED)
-  {
-    if (data == M_NORMAL) {
-      markers[active_marker].mtype = M_NORMAL;
-    }
-#if 0
-    if (data == M_REFERENCE) {
-      for (int i = 0; i<MARKER_COUNT; i++ ) {
-        if (i != active_marker && markers[i].mtype & M_REFERENCE)
-          markers[i].mtype &= ~M_REFERENCE;
-      }
-      markers[active_marker].mtype &= ~M_DELTA;
-    }
-#endif
-    if (data == M_DELTA) {
-      if (!(markers[active_marker].mtype & M_DELTA))      // Not yet set
-        menu_push_submenu(menu_marker_ref_select);
-#if 0
-      markers[active_marker].mtype &= ~M_REFERENCE;
-#endif
-    }
-#if 1
-    markers[active_marker].mtype ^= data;
-    if (markers[active_marker].mtype & M_STORED)
-      markers[active_marker].trace = TRACE_STORED;
-    else
-      markers[active_marker].trace = TRACE_ACTUAL;
-
-#else
-      if (markers[active_marker].mtype & data)
-        markers[active_marker].mtype &= ~data;
-      else
-        markers[active_marker].mtype |= data;
-#endif
+  if (data == M_DELTA && !(markers[active_marker].mtype & M_DELTA)) {   // Not yet set
+    menu_push_submenu(menu_marker_ref_select);
+    goto set_delta;
+    return;
+  } else if (data == M_STORED) {
+    current_trace = 0;
+    menu_push_submenu(menu_marker_trace);
+    return;
+  } else if (markers[active_marker].mtype & data)
+    markers[active_marker].mtype &= ~data;
+  else {
+    set_delta:
+    markers[active_marker].mtype |= data;
   }
   markmap_all_markers();
 //  redraw_marker(active_marker, TRUE);
@@ -2468,7 +2477,7 @@ const menuitem_t menu_marker_modify[] = {
   { MT_ADV_CALLBACK, M_DELTA,       "DELTA %s",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_NOISE,       "NOISE",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING", menu_marker_modify_acb},
-  { MT_ADV_CALLBACK, M_STORED,      "STORED",   menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, M_STORED,      "TRACE %s",   menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_AVER,      "TRACE\nAVERAGE",   menu_marker_modify_acb},
   { MT_SUBMENU,  0,                 "SEARCH",   menu_marker_search},
   { MT_CALLBACK, M_DELETE,          "DELETE",   menu_marker_delete_cb},
@@ -2949,6 +2958,17 @@ static const menuitem_t menu_trace[] =
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
+static const menuitem_t menu_marker_trace[] =
+{
+ { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_marker_trace_acb},
+ { MT_ADV_CALLBACK,1,          "TRACE %d",        menu_marker_trace_acb},
+ { MT_ADV_CALLBACK,2,          "TRACE %d",        menu_marker_trace_acb},
+#if TRACES_MAX > 3
+ { MT_ADV_CALLBACK,3,          "TRACE %d",        menu_marker_trace_acb},
+#endif
+  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+};
+
 static const menuitem_t menu_store_trace[] =
 {
  { MT_ADV_CALLBACK,0,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
@@ -2975,11 +2995,11 @@ static const menuitem_t menu_subtract_trace[] =
 static const menuitem_t menu_traces[] =
 {
  { MT_ADV_CALLBACK,0,          "TRACE %d",                  menu_traces_acb},
- { MT_ADV_CALLBACK,1,          "HIDDEN",                    menu_traces_acb},
- { MT_ADV_CALLBACK,2,          "STORED",                    menu_traces_acb},
+ { MT_ADV_CALLBACK,1,          "VIEW",                      menu_traces_acb},
+ { MT_ADV_CALLBACK,2,          "FREEZE",                    menu_traces_acb},
  { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,             menu_traces_acb},
  { MT_SUBMENU,     0,          "CALC",                      menu_average},
- { MT_SUBMENU,     0,          "STORE\n"S_RARROW"TRACE",    menu_store_trace},
+ { MT_SUBMENU,     0,          "COPY\n"S_RARROW"TRACE",     menu_store_trace},
 #ifdef TINYSA4
  { MT_ADV_CALLBACK,6,          "WRITE\n"S_RARROW"SD",       menu_traces_acb},
 #endif

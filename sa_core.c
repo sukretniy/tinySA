@@ -240,7 +240,7 @@ void reset_settings(int m)
   for (int t=0;t<TRACES_MAX;t++) {
     setting.average[t] = 0;
     setting.stored[t] = false;
-    setting.subtract[t] = 0;
+    setting.subtract[t] = 0;        // Disabled
   }
 #ifdef TINYSA4  
   setting.harmonic = 3;         // Automatically used when above ULTRA_MAX_FREQ
@@ -935,6 +935,8 @@ void limits_update(void)
 
 void store_trace(int f, int t)
 {
+  if (f == t)
+    return;
   for (int i=0; i<POINTS_COUNT;i++)
     measured[t][i] = measured[f][i];
   setting.stored[t] = true;
@@ -968,9 +970,12 @@ void set_subtract_storage(void)
 
 void subtract_trace(int t, int f)
 {
+  if (t == f)
+    return;
   if (!setting.subtract[t]) {
     setting.subtract[t] = f;
     setting.normalize_level = 0.0;
+    setting.auto_attenuation = false;       // Otherwise noise level may move leading to strange measurements
   } else
     setting.subtract[t] = 0;
 }
@@ -4092,11 +4097,12 @@ static volatile int dummy;
       for (int t=0; t<TRACES_MAX;t++) {
         if (setting.stored[t])
           continue;
+        float RSSI_calc = RSSI;
         float *trace_data = measured[t];
 #endif // __DOUBLE_LOOP__
       // ------------------------ do all RSSI calculations from CALC menu -------------------
       if (setting.subtract[t]) {
-        RSSI = RSSI - measured[setting.subtract[t]-1][i] + setting.normalize_level;
+        RSSI_calc = RSSI_calc - measured[setting.subtract[t]-1][i] + setting.normalize_level;
       }
 #ifdef __SI4432__
       //#define __DEBUG_AGC__
@@ -4115,15 +4121,15 @@ static volatile int dummy;
 #endif
       if (scandirty || setting.average[t] == AV_OFF) {             // Level calculations
         if (setting.average[t] == AV_MAX_DECAY) age[i] = 0;
-        trace_data[i] = RSSI;
+        trace_data[i] = RSSI_calc;
       } else {
         switch(setting.average[t] ) {
-        case AV_MIN:      if (trace_data[i] > RSSI) trace_data[i] = RSSI; break;
-        case AV_MAX_HOLD: if (trace_data[i] < RSSI) trace_data[i] = RSSI; break;
+        case AV_MIN:      if (trace_data[i] > RSSI_calc) trace_data[i] = RSSI_calc; break;
+        case AV_MAX_HOLD: if (trace_data[i] < RSSI_calc) trace_data[i] = RSSI_calc; break;
         case AV_MAX_DECAY:
-          if (trace_data[i] < RSSI) {
+          if (trace_data[i] < RSSI_calc) {
             age[i] = 0;
-            trace_data[i] = RSSI;
+            trace_data[i] = RSSI_calc;
           } else {
             if (age[i] > setting.decay)
               trace_data[i] -= 0.5;
@@ -4131,8 +4137,8 @@ static volatile int dummy;
               age[i] += 1;
           }
           break;
-        case AV_4:  trace_data[i] = (trace_data[i]*3.0 + RSSI) / 4.0; break;
-        case AV_16: trace_data[i] = (trace_data[i]*15.0 + RSSI) / 16.0; break;
+        case AV_4:  trace_data[i] = (trace_data[i]*3.0 + RSSI_calc) / 4.0; break;
+        case AV_16: trace_data[i] = (trace_data[i]*15.0 + RSSI_calc) / 16.0; break;
         case AV_100:
 #ifdef TINYSA4
           if (linear_averaging)
@@ -4140,29 +4146,29 @@ static volatile int dummy;
 #if 0
           int old_unit = setting.unit;
           setting.unit = U_WATT;            // Power averaging should always be done in Watts
-          trace_data[i] = to_dBm((value(trace_data[i])*(scan_after_dirty-1) + value(RSSI)) / scan_after_dirty );
+          trace_data[i] = to_dBm((value(trace_data[i])*(scan_after_dirty-1) + value(RSSI_calc)) / scan_after_dirty );
           setting.unit = old_unit;
 #else
-          float v = (expf(trace_data[i]*(logf(10.0)/10.0)) * (scan_after_dirty-1) + expf(RSSI * (logf(10.0)/10.0))) / scan_after_dirty;
+          float v = (expf(trace_data[i]*(logf(10.0)/10.0)) * (scan_after_dirty-1) + expf(RSSI_calc * (logf(10.0)/10.0))) / scan_after_dirty;
           trace_data[i] = logf(v)*(10.0/logf(10.0));
 #endif
         }
           else
-            trace_data[i] = (trace_data[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
+            trace_data[i] = (trace_data[i]*(scan_after_dirty-1) + RSSI_calc)/ scan_after_dirty;
 #else
-        trace_data[i] = (trace_data[i]*(scan_after_dirty-1) + RSSI)/ scan_after_dirty;
+        trace_data[i] = (trace_data[i]*(scan_after_dirty-1) + RSSI_calc)/ scan_after_dirty;
 #endif
         break;
 #ifdef __QUASI_PEAK__
         case AV_QUASI:
         { static float old_RSSI = -150.0;
         if (i == 0) old_RSSI = trace_data[sweep_points-1];
-        if (RSSI > old_RSSI && setting.attack > 1)
-          old_RSSI += (RSSI - old_RSSI)/setting.attack;
-        else if (RSSI < old_RSSI && setting.decay > 1)
-          old_RSSI += (RSSI - old_RSSI)/setting.decay;
+        if (RSSI_calc > old_RSSI && setting.attack > 1)
+          old_RSSI += (RSSI_calc - old_RSSI)/setting.attack;
+        else if (RSSI_calc < old_RSSI && setting.decay > 1)
+          old_RSSI += (RSSI_calc - old_RSSI)/setting.decay;
         else
-          old_RSSI = RSSI;
+          old_RSSI = RSSI_calc;
         trace_data[i] = old_RSSI;
         }
         break;
