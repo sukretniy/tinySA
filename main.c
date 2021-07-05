@@ -1473,7 +1473,7 @@ usage:
 
 VNA_SHELL_FUNCTION(cmd_marker)
 {
-  int t,tr;
+  int t;
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
@@ -1501,6 +1501,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     return;
   }
 #ifdef TINYSA4
+  int tr;
   static const char cmd_marker_list[] = "on|off|peak|delta|noise|tracking|trace|trace_aver";
   static const char cmd_marker_on_off[] = "off|on";
   int marker_mask = 0;

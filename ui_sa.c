@@ -1687,23 +1687,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   ui_mode_normal();
 }
 
-extern const menuitem_t menu_marker_modify[];
-static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
-{
-  (void)item;
-  if(b){
-    b->icon = markers[data-1].enabled ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
-    b->param_1.i = data;
-    return;
-  }
-  markers[data-1].enabled = true;
-//  interpolate_maximum(data-1);        // possibly not a maximum
-  set_marker_index(data-1, markers[data-1].index);
-  active_marker_select(data-1);
-  menu_push_submenu(menu_marker_modify);
-  redraw_marker(active_marker);
-}
-
 #ifdef __LIMITS__
 uint8_t active_limit = 0;
 static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
@@ -1727,6 +1710,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
 
 #endif
 
+extern const menuitem_t menu_marker_select[];
+
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
 {
   (void)item;
@@ -1735,15 +1720,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
     uistat.text[0] = 0;
     uistat.text[1] = 0;
     switch(data) {
+    case 0:
+      uistat.text[0] = active_marker+'1';
+      break;
     case M_DELTA:
+      uistat.text[0] = markers[active_marker].ref+'1';
     case M_NOISE:
     case M_TRACKING:
     case M_AVER:
       b->icon = BUTTON_ICON_NOCHECK;
       if (markers[active_marker].mtype & data)
         b->icon = BUTTON_ICON_CHECK;
-      if (markers[active_marker].mtype & M_DELTA)
-        uistat.text[0] = markers[active_marker].ref+'1';
       break;
     case M_STORED:
       uistat.text[0] = markers[active_marker].trace+'1';
@@ -1763,10 +1750,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
     return;
   } else if (markers[active_marker].mtype & data)
     markers[active_marker].mtype &= ~data;
-  else {
+  else if (data) {
     set_delta:
     markers[active_marker].mtype |= data;
-  }
+  } else
+    menu_push_submenu(menu_marker_select);
   markmap_all_markers();
 //  redraw_marker(active_marker, TRUE);
 //  menu_move_back(false);
@@ -1785,6 +1773,24 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_ref_select_acb)
 //  interpolate_maximum(data-1);        // possibly not a maximum
   set_marker_index(data-1, markers[data-1].index);
   markers[active_marker].ref = data-1;
+  redraw_marker(active_marker);
+  menu_move_back(false);
+}
+
+extern const menuitem_t menu_marker_modify[];
+static UI_FUNCTION_ADV_CALLBACK(menu_marker_select_acb)
+{
+  (void)item;
+  if(b){
+    b->icon = markers[data-1].enabled ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->param_1.i = data;
+    return;
+  }
+  markers[data-1].enabled = true;
+//  interpolate_maximum(data-1);        // possibly not a maximum
+  set_marker_index(data-1, markers[data-1].index);
+  active_marker_select(data-1);
+//  menu_push_submenu(menu_marker_modify);
   redraw_marker(active_marker);
   menu_move_back(false);
 }
@@ -2226,30 +2232,6 @@ static const menuitem_t menu_back[] = {
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
-#if 0
-static const menuitem_t menu_store_preset_high[8] =
-{
-  { MT_ADV_CALLBACK, 0,  "STORE\nSTARTUP",   menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 5,  "STORE %d",         menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 6,  "STORE %d",         menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 7,  "STORE %d",         menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 8,  "STORE %d",         menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
-  { MT_NONE,           0,               NULL,menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_load_preset_high[] =
-{
-  { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP", menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 5, MT_CUSTOM_LABEL, menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 6, MT_CUSTOM_LABEL, menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 7, MT_CUSTOM_LABEL, menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 8, MT_CUSTOM_LABEL, menu_load_preset_acb},
-  { MT_SUBMENU,  0,     "STORE"  ,      menu_store_preset_high},
-  { MT_NONE,     0,     NULL,menu_back} // next-> menu_back
-};
-#endif
-
 static const menuitem_t menu_store_preset[] =
 {
   { MT_ADV_CALLBACK, 0,  "STORE AS\nSTARTUP",menu_store_preset_acb},
@@ -2360,82 +2342,24 @@ static const menuitem_t  menu_average[] = {
 static const menuitem_t menu_rbw[] = {
   { MT_ADV_CALLBACK, 0, "  AUTO",   menu_rbw_acb},
 #ifdef TINYSA4
-  { MT_ADV_CALLBACK, 1, "%sHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 2, "%sHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 3, "%sHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 4, "%sHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 5, "%sHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 6, "%sHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 7, "%sHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 8, "%sHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 9, "%sHz",   menu_rbw_acb},
-  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+  { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,9), "%sHz",   menu_rbw_acb},
 #else
-  { MT_ADV_CALLBACK, 1, "%4dkHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 2, "%4dkHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 3, "%4dkHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 4, "%4dkHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 5, "%4dkHz",   menu_rbw_acb},
-  { MT_ADV_CALLBACK, 6, "%4dkHz",   menu_rbw_acb},
-  { MT_NONE,    0, NULL, menu_back} // next-> menu_back
+  { MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(1,6), "%4dkHz",   menu_rbw_acb},
 #endif  
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 
 };
 
 #ifdef __VBW__
 static const menuitem_t menu_vbw[] = {
   { MT_ADV_CALLBACK, 0, "     AUTO",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 1, "%b.2f RBW",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 2, "%b.2f RBW",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 3, "%b.2f RBW",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 4, "%b.2f RBW",   menu_vbw_acb},
-  { MT_ADV_CALLBACK, 5, "%b.2f RBW",   menu_vbw_acb},
+  { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,5), "%b.2f RBW",   menu_vbw_acb},
   { MT_NONE,      0, NULL, menu_back} // next-> menu_back
 };
 #endif
 
-#if 0
-static const menuitem_t menu_scale_per2[] = {
-  { MT_ADV_CALLBACK, 6, "0.1 /",   menu_scale_per_acb},
-  { MT_ADV_CALLBACK, 7, "0.2 /",   menu_scale_per_acb},
-  { MT_ADV_CALLBACK, 8, "0.05/",   menu_scale_per_acb},
-  { MT_ADV_CALLBACK, 9, "0.02/",   menu_scale_per_acb},
-  { MT_ADV_CALLBACK,10, "0.01/",   menu_scale_per_acb},
-//{ MT_ADV_CALLBACK,11, "0.005/",  menu_scale_per_acb},
-//{ MT_SUBMENU,  0, S_RARROW" MORE",   menu_scale_per2},
-  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_scale_per[] = {
-  { MT_ADV_CALLBACK, 0, " 20/",   menu_scale_per_acb},
-  { MT_ADV_CALLBACK, 1, " 10/",   menu_scale_per_acb},
-  { MT_ADV_CALLBACK, 2, "  5/",   menu_scale_per_acb},
-  { MT_ADV_CALLBACK, 3, "  2/",   menu_scale_per_acb},
-  { M_ADVT_CALLBACK, 4, "  1/",   menu_scale_per_acb},
-  { MT_ADV_CALLBACK, 5, "0.5/",   menu_scale_per_acb},
-  { MT_SUBMENU,  0, S_RARROW" MORE",  menu_scale_per2},
-  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
-};
-#endif
-
-#if 0
-static const menuitem_t menu_reffer2[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 5, "%s",  menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 6, "%s",  menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK, 7, "%s",  menu_reffer_acb},
-  { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
-};
-#endif
-
 static const menuitem_t menu_reffer[] = {
-  { MT_FORM | MT_ADV_CALLBACK,  0, "%s", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  1, "%s", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  2, "%s", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  3, "%s", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  4, "%s", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  6, "%s", menu_reffer_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  7, "%s", menu_reffer_acb},
-//{ MT_FORM | MT_SUBMENU,  0, S_RARROW" MORE", menu_reffer2},
+  { MT_FORM | MT_ADV_CALLBACK|MT_REPEATS,  DATA_STARTS_REPEATS(0,8), "%s", menu_reffer_acb},
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
@@ -2466,7 +2390,7 @@ const menuitem_t menu_marker_search[] = {
 };
 
 const menuitem_t menu_marker_modify[] = {
-//  { MT_ADV_CALLBACK, M_REFERENCE,   "REFER",    menu_marker_modify_acb},
+  { MT_ADV_CALLBACK, 0,            "MARKER %s",      menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_DELTA,       "DELTA %s",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_NOISE,       "NOISE",    menu_marker_modify_acb},
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING", menu_marker_modify_acb},
@@ -2488,13 +2412,6 @@ static const menuitem_t menu_limit_modify[] =
 
 const menuitem_t menu_limit_select[] = {
   { MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(1,6), MT_CUSTOM_LABEL, menu_limit_select_acb },
-#if 0
-  { MT_ADV_CALLBACK, 2, MT_CUSTOM_LABEL, menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 3, MT_CUSTOM_LABEL, menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 4, MT_CUSTOM_LABEL, menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 5, MT_CUSTOM_LABEL, menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 6, MT_CUSTOM_LABEL, menu_limit_select_acb },
-#endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -2514,42 +2431,12 @@ const menuitem_t menu_marker_sel[] = {
 #endif
 
 const menuitem_t menu_marker_select[] = {
-  { MT_ADV_CALLBACK, 1, "MARKER %d", menu_marker_select_acb },
-  { MT_ADV_CALLBACK, 2, "MARKER %d", menu_marker_select_acb },
-  { MT_ADV_CALLBACK, 3, "MARKER %d", menu_marker_select_acb },
-  { MT_ADV_CALLBACK, 4, "MARKER %d", menu_marker_select_acb },
-#if MARKER_COUNT >= 5
-  { MT_ADV_CALLBACK, 5, "MARKER %d", menu_marker_select_acb },
-#endif
-#if MARKER_COUNT >= 6
-  { MT_ADV_CALLBACK, 6, "MARKER %d", menu_marker_select_acb },
-#endif
-#if MARKER_COUNT >= 7
-  { MT_ADV_CALLBACK, 7, "MARKER %d", menu_marker_select_acb },
-#endif
-#if MARKER_COUNT >= 8
-  { MT_ADV_CALLBACK, 8, "MARKER %d", menu_marker_select_acb },
-#endif
+  { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,MARKER_COUNT), "MARKER %d", menu_marker_select_acb },
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_marker_ref_select[] = {
-  { MT_ADV_CALLBACK, 1, "MARKER %d", menu_marker_ref_select_acb },
-  { MT_ADV_CALLBACK, 2, "MARKER %d", menu_marker_ref_select_acb },
-  { MT_ADV_CALLBACK, 3, "MARKER %d", menu_marker_ref_select_acb },
-  { MT_ADV_CALLBACK, 4, "MARKER %d", menu_marker_ref_select_acb },
-#if MARKER_COUNT >= 5
-  { MT_ADV_CALLBACK, 5, "MARKER %d", menu_marker_ref_select_acb },
-#endif
-#if MARKER_COUNT >= 6
-  { MT_ADV_CALLBACK, 6, "MARKER %d", menu_marker_ref_select_acb },
-#endif
-#if MARKER_COUNT >= 7
-  { MT_ADV_CALLBACK, 7, "MARKER %d", menu_marker_ref_select_acb },
-#endif
-#if MARKER_COUNT >= 8
-  { MT_ADV_CALLBACK, 8, "MARKER %d", menu_marker_ref_select_acb },
-#endif
+  { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,MARKER_COUNT), S_RARROW"MARKER %d", menu_marker_ref_select_acb },
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
@@ -2564,7 +2451,7 @@ const menuitem_t menu_marker_ops[] = {
 
 static const menuitem_t menu_marker[] = {
 //  { MT_SUBMENU,  0, "SELECT\nMARKER",     menu_marker_sel},
-  { MT_SUBMENU,  0, "MODIFY\nMARKERS",    menu_marker_select},
+  { MT_SUBMENU,  0, "MODIFY\nMARKERS",    menu_marker_modify},
   { MT_SUBMENU,  0, "MARKER\nOPS", menu_marker_ops},
   { MT_SUBMENU,  0, "SEARCH\nMARKER",     menu_marker_search},
   { MT_CALLBACK, 0, "RESET\nMARKERS",     menu_markers_reset_cb},
@@ -2603,25 +2490,19 @@ static const menuitem_t menu_scanning_speed[] =
 };
 
 static const menuitem_t menu_sweep_points[] = {
-  { MT_ADV_CALLBACK, 0, "%3d point", menu_points_acb },
-  { MT_ADV_CALLBACK, 1, "%3d point", menu_points_acb },
-  { MT_ADV_CALLBACK, 2, "%3d point", menu_points_acb },
-  { MT_ADV_CALLBACK, 3, "%3d point", menu_points_acb },
 #ifdef TINYSA4  
-  { MT_ADV_CALLBACK, 4, "%3d point", menu_points_acb },
-  { MT_ADV_CALLBACK, 5, "%3d point", menu_points_acb },
+  { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(0,6), "%3d point", menu_points_acb },
+#else
+  { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(0,4), "%3d point", menu_points_acb },
 #endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_sweep_points_form[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 0, "%3d point", menu_points_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 1, "%3d point", menu_points_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 2, "%3d point", menu_points_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 3, "%3d point", menu_points_acb },
 #ifdef TINYSA4
-  { MT_FORM | MT_ADV_CALLBACK, 4, "%3d point", menu_points_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 5, "%3d point", menu_points_acb },
+  { MT_FORM|MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(0,6), "%3d point", menu_points_acb },
+#else
+  { MT_FORM|MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(0,4), "%3d point", menu_points_acb },
 #endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
@@ -2731,35 +2612,18 @@ static const menuitem_t menu_settings2[] =
 
 #ifdef TINYSA4
 static const menuitem_t menu_curve3[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 14, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 15, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 16, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 17, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 18, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 19, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(14,6), MT_CUSTOM_LABEL, menu_curve_acb },
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_curve2[] = {
-  { MT_FORM | MT_ADV_CALLBACK,  7, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK,  8, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK,  9, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 10, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 11, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 12, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 13, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(7,7), MT_CUSTOM_LABEL, menu_curve_acb },
   { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve3},
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_curve[] = {
-  { MT_FORM | MT_ADV_CALLBACK, 0, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 1, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 2, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 3, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 4, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 5, MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_ADV_CALLBACK, 6, MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(0,7), MT_CUSTOM_LABEL, menu_curve_acb },
   { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve2},
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
@@ -2866,16 +2730,7 @@ static const menuitem_t menu_calibrate[] =
 
 #ifdef __USE_SERIAL_CONSOLE__
 const menuitem_t menu_serial_speed[] = {
-  { MT_ADV_CALLBACK, 0, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 1, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 2, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 3, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 4, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 5, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 6, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 7, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 8, "%u", menu_serial_speed_acb },
-  { MT_ADV_CALLBACK, 9, "%u", menu_serial_speed_acb },
+  { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(0,10), "%u", menu_serial_speed_acb },
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
@@ -2930,46 +2785,25 @@ static const menuitem_t menu_storage[] =
 
 static const menuitem_t menu_trace[] =
 {
- { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_trace_acb},
- { MT_ADV_CALLBACK,1,          "TRACE %d",        menu_trace_acb},
- { MT_ADV_CALLBACK,2,          "TRACE %d",        menu_trace_acb},
-#if TRACES_MAX > 3
- { MT_ADV_CALLBACK,3,          "TRACE %d",        menu_trace_acb},
-#endif
+ { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          "TRACE %d",        menu_trace_acb},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_marker_trace[] =
 {
- { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_marker_trace_acb},
- { MT_ADV_CALLBACK,1,          "TRACE %d",        menu_marker_trace_acb},
- { MT_ADV_CALLBACK,2,          "TRACE %d",        menu_marker_trace_acb},
-#if TRACES_MAX > 3
- { MT_ADV_CALLBACK,3,          "TRACE %d",        menu_marker_trace_acb},
-#endif
+ { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          MT_CUSTOM_LABEL,        menu_marker_trace_acb},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_store_trace[] =
 {
- { MT_ADV_CALLBACK,0,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
- { MT_ADV_CALLBACK,1,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
- { MT_ADV_CALLBACK,2,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
-#if TRACES_MAX > 3
- { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,        menu_store_trace_acb},
-#endif
+ { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          MT_CUSTOM_LABEL,        menu_store_trace_acb},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_subtract_trace[] =
 {
- { MT_ADV_CALLBACK,0,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
- { MT_ADV_CALLBACK,1,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
- { MT_ADV_CALLBACK,2,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
- { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
-#if TRACES_MAX > 3
- { MT_ADV_CALLBACK,4,          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
-#endif
+ { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
