@@ -76,7 +76,6 @@
 #define __CHANNEL_POWER__
 #define __LIMITS__
 #define __MCU_CLOCK_SHIFT__
-#define __TRACE_MENU__
 #ifdef TINYSA4
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
@@ -96,8 +95,8 @@
 //#define __FFT_DECONV__
 #else
 //#define __HARMONIC__
-#endif
 #define __USE_FREQ_TABLE__      // Enable use table for frequency list
+#endif
 
 #ifdef TINYSA3
 #define VARIANT(X,Y) (X)
@@ -134,7 +133,7 @@
 #endif
 #ifdef TINYSA4
 #define MARKER_COUNT    8
-#define TRACES_MAX 3
+#define TRACES_MAX 4
 #else
 #define MARKER_COUNT    4
 #define TRACES_MAX 3
@@ -867,8 +866,8 @@ typedef uint16_t pixel_t;
 [LCD_MENU_TEXT_COLOR  ] = RGB565(  0,  0,  0), \
 [LCD_MENU_ACTIVE_COLOR] = RGB565(210,210,210), \
 [LCD_TRACE_1_COLOR    ] = RGB565(255,255,  0), \
-[LCD_TRACE_2_COLOR    ] = RGB565(255,  0,  0), \
-[LCD_TRACE_3_COLOR    ] = RGB565(  0,255,  0), \
+[LCD_TRACE_2_COLOR    ] = RGB565(255, 64, 64), \
+[LCD_TRACE_3_COLOR    ] = RGB565( 64,255, 64), \
 [LCD_TRACE_4_COLOR    ] = RGB565(255,  0,255), \
 [LCD_NORMAL_BAT_COLOR ] = RGB565( 31,227,  0), \
 [LCD_LOW_BAT_COLOR    ] = RGB565(255,  0,  0), \

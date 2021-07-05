@@ -242,6 +242,8 @@ void reset_settings(int m)
     setting.stored[t] = false;
     setting.subtract[t] = 0;        // Disabled
   }
+  setting.stored[TRACE_STORED] = true;
+  TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
 #ifdef TINYSA4  
   setting.harmonic = 3;         // Automatically used when above ULTRA_MAX_FREQ
 #else
@@ -290,7 +292,6 @@ void reset_settings(int m)
   setting.fast_speedup = 0;
   setting.trigger_level = -150.0;
   setting.linearity_step = 0;
-  TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
 //  setting.refer = -1;             // do not reset reffer when switching modes
   setting.mute = true;
 #ifdef __SPUR__
@@ -489,6 +490,7 @@ static setting_t saved_setting;
 void set_measurement(int m)
 {
 #ifdef __LINEARITY__
+  setting.stored[TRACE_STORED] = true;
   if (m == M_LINEARITY) {
     for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = -150;
@@ -915,8 +917,15 @@ void limits_update(void)
   {
     if (setting.limits[i].enabled) {
       active = true;
-      while (j < sweep_points && (getFrequency(j) < setting.limits[i].frequency || setting.limits[i].frequency == 0))
-        stored_t[j++] = setting.limits[i].level;
+      while (j < sweep_points && (getFrequency(j) < setting.limits[i].frequency || setting.limits[i].frequency == 0)) {
+        if (i == 0)
+          stored_t[j] = setting.limits[i].level;
+        else
+          stored_t[j] = setting.limits[i-1].level +
+          (getFrequency(j) - setting.limits[i-1].frequency) * (setting.limits[i].level - setting.limits[i-1].level) /
+          (setting.limits[i].frequency-setting.limits[i-1].frequency);
+        j++;
+      }
     }
   }
   if (active)
@@ -973,7 +982,7 @@ void subtract_trace(int t, int f)
   if (t == f)
     return;
   if (!setting.subtract[t]) {
-    setting.subtract[t] = f;
+    setting.subtract[t] = f+1;
     setting.normalize_level = 0.0;
     setting.auto_attenuation = false;       // Otherwise noise level may move leading to strange measurements
   } else
@@ -1173,7 +1182,7 @@ void set_average(int t, int v)
 #endif
       );
 #ifndef __TRACES_MENU__
-  if (enable) {
+  if (enable && !IS_TRACES_ENABLED(TRACE_TEMP_FLAG)) {
     enableTracesAtComplete(TRACE_TEMP_FLAG);
     scan_after_dirty = 0;
   } else
@@ -2697,6 +2706,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     clear_frequency_cache();
 #endif
     calculate_correction();                                                 // pre-calculate correction factor dividers to avoid float division
+    limits_update();
     apply_settings();
     old_a = -150;                                                   // clear cached level setting
     // Initialize HW
@@ -4676,6 +4686,7 @@ static volatile int dummy;
   if (setting.measurement == M_LINEARITY && setting.linearity_step < sweep_points) {
     setting.attenuate_x2 = (29.0 - setting.linearity_step * 30.0 / (sweep_points))*2.0;
     dirty = true;
+    setting.stored[TRACE_STORED]=true;
     stored_t[setting.linearity_step] = peakLevel;
     setting.linearity_step++;
   }
@@ -4910,8 +4921,8 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       900,    1,     -90,    0,      -90),       // 9 LPF cutoff
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      -23,    10,     -50),      // 10 Switch isolation using high attenuation
- TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    145,     -60),      // 11 test display
- TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    145,     -60),      // 12 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    50,     -60),      // 11 test display
+ TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 12 Measure atten step accuracy
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_LNA,       30,     5,      -23,   10,     -75),      // 13 Measure LNA
 #define TEST_END 13
  TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
@@ -4926,15 +4937,15 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65),       // 14 Calibrate power high mode
  TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
 #define TEST_ATTEN    22
- TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    145,     -60),      // 20 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    50,     -60),      // 20 Measure atten step accuracy
 #define TEST_SPUR    23
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
 #define TEST_LEVEL  24
- TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30.000,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
- TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30.000,     0,      CAL_LEVEL,   145,     -55),      // 23 Measure level
- TEST_CASE_STRUCT(TC_LEVEL,   TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   145,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30.000,     0,      CAL_LEVEL,   50,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30.000,     0,      CAL_LEVEL,   50,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   50,     -55),      // 23 Measure level
 #define TEST_NOISE  27
- TEST_CASE_STRUCT(TC_LEVEL,   TP_SILENT,       201.000,     0,      -166,   145,     -166),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,   TP_SILENT,       201.000,     0,      -166,   50,     -166),      // 23 Measure level
 #define TEST_NOISE_RBW  28
  TEST_CASE_STRUCT(TC_MEASURE,   TP_SILENT,       201,     1,      -166,    10,     -166),      // 16 Measure RBW step time
 };
@@ -5250,6 +5261,7 @@ void test_prepare(int i)
   setting.measurement = M_OFF;
   markers[1].enabled = M_DISABLED;
   markers[2].enabled = M_DISABLED;
+  setting.stored[TRACE_STORED] = true;
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
 #ifdef TINYSA4
@@ -5274,6 +5286,7 @@ void test_prepare(int i)
     set_mode(M_LOW);
 common_silent:
     set_refer_output(-1);
+    setting.stored[TRACE_STORED] = true;
     for (int j = 0; j < setting._sweep_points; j++)
       stored_t[j] = test_case[i].pass;
     in_selftest = false;                    // Otherwise spurs will be visible
@@ -5312,7 +5325,7 @@ common_silent:
 #endif
 #endif
  common:
-
+   setting.stored[TRACE_STORED] = true;
     for (int j = 0; j < setting._sweep_points/2 - W2P(test_case[i].width); j++)
       stored_t[j] = test_case[i].stop;
     for (int j = setting._sweep_points/2 + W2P(test_case[i].width); j < setting._sweep_points; j++)

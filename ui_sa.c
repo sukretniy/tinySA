@@ -1516,10 +1516,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_average_acb)
 //  menu_move_back(true);
 }
 
-
-#ifdef __TRACE_MENU__
-
-
 static UI_FUNCTION_ADV_CALLBACK(menu_trace_acb)
 {
   (void)item;
@@ -1570,13 +1566,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_subtract_trace_acb)
       b->bg = LCD_TRACE_1_COLOR+data-1;
     }
     else
-      plot_printf(b->text, sizeof(b->text), "SUBTRACT\nDISABLED");
+      plot_printf(b->text, sizeof(b->text), "SUBTRACT\nOFF");
     b->icon = (data == setting.subtract[current_trace]) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     if (data - 1 == current_trace)
       b->fg = LCD_DARK_GREY;
     return;
   }
-  subtract_trace(current_trace,data);
+  subtract_trace(current_trace,data-1);
   menu_move_back(false);
 }
 
@@ -1600,7 +1596,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
       if (setting.subtract[current_trace])
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.subtract[current_trace]);
       else
-        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nDISABLED");
+        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nOFF");
     }
     return;
   }
@@ -1632,10 +1628,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 //  ui_mode_normal();
 //  draw_cal_status();
 }
-
-
-
-#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
 {
@@ -1718,8 +1710,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
 {
   (void)item;
   if(b){
-    b->icon = setting.limits[data-1].enabled ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
-    b->param_1.i = data;
+    if (setting.limits[data-1].enabled) {
+      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6fdBm", (float)setting.limits[data-1].frequency, setting.limits[data-1].level);
+      b->icon = BUTTON_ICON_CHECK;
+    } else {
+      plot_printf(b->text, sizeof(b->text), "EMPTY");
+      b->icon = BUTTON_ICON_NOCHECK;
+    }
     return;
   }
   active_limit = data -1;
@@ -1736,6 +1733,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
   if (active_marker == MARKER_INVALID) return;
   if(b){
     uistat.text[0] = 0;
+    uistat.text[1] = 0;
     switch(data) {
     case M_DELTA:
     case M_NOISE:
@@ -2222,6 +2220,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_connection_acb)
 #endif
 // ===[MENU DEFINITION]=========================================================
 // Back button submenu list
+
 static const menuitem_t menu_back[] = {
   { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
@@ -2487,19 +2486,19 @@ const menuitem_t menu_marker_modify[] = {
 #ifdef __LIMITS__
 static const menuitem_t menu_limit_modify[] =
 {
-  { MT_KEYPAD,   KM_LIMIT_FREQ,   "END\nFREQUENCY",    "End frequency"},
-  { MT_KEYPAD,   KM_LIMIT_LEVEL,  "LEVEL",             "Limit level"},
-  { MT_CALLBACK, 0,               "DISABLE",           menu_limit_disable_cb},
+  { MT_KEYPAD,   KM_LIMIT_FREQ,   "FREQUENCY",          "End frequency"},
+  { MT_KEYPAD,   KM_LIMIT_LEVEL,  "LEVEL",              "Limit level"},
+  { MT_CALLBACK, 0,               "DISABLE",            menu_limit_disable_cb},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
 const menuitem_t menu_limit_select[] = {
-  { MT_ADV_CALLBACK, 1, "LIMIT %d", menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 2, "LIMIT %d", menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 3, "LIMIT %d", menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 4, "LIMIT %d", menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 5, "LIMIT %d", menu_limit_select_acb },
-  { MT_ADV_CALLBACK, 6, "LIMIT %d", menu_limit_select_acb },
+  { MT_ADV_CALLBACK, 1, MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK, 2, MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK, 3, MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK, 4, MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK, 5, MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK, 6, MT_CUSTOM_LABEL, menu_limit_select_acb },
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -2640,8 +2639,6 @@ static const menuitem_t menu_sweep_speed[] =
 #else
  { MT_ADV_CALLBACK | MT_LOW,SD_FAST,   "FAST",            menu_scanning_speed_acb},
 #endif
- { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
- { MT_SUBMENU,          0,             "SWEEP\nPOINTS",   menu_sweep_points},
 #ifdef TINYSA4
  { MT_KEYPAD,           KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
 #else
@@ -2925,7 +2922,6 @@ static const menuitem_t menu_config[] = {
 
 static const menuitem_t menu_storage[] =
 {
-#ifdef __TRACE_MENU__
  { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_storage_acb},
  { MT_ADV_CALLBACK,1,          "%s",              menu_storage_acb},
  { MT_ADV_CALLBACK,1,          "DISPLAY",         menu_storage_acb},
@@ -2933,20 +2929,9 @@ static const menuitem_t menu_storage[] =
  { MT_ADV_CALLBACK,3,          "SUBTRACT",        menu_storage_acb},
  { MT_ADV_CALLBACK,4,          "NORMALIZE",       menu_storage_acb},
  { MT_ADV_CALLBACK,5,          "WRITE\n"S_RARROW"SD",menu_storage_acb},
-#else
-  { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
-  { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
-  { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
-  { MT_ADV_CALLBACK,3,          "NORMALIZE",       menu_storage_acb},
-#ifdef TINYSA4
-  { MT_ADV_CALLBACK,4,          "ACTUAL\n"S_RARROW"SD",       menu_storage_acb},
-  { MT_ADV_CALLBACK,5,          "STORED\n"S_RARROW"SD",       menu_storage_acb},
-#endif
-#endif
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
-#ifdef __TRACE_MENU__
 static const menuitem_t menu_trace[] =
 {
  { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_trace_acb},
@@ -2995,7 +2980,7 @@ static const menuitem_t menu_subtract_trace[] =
 static const menuitem_t menu_traces[] =
 {
  { MT_ADV_CALLBACK,0,          "TRACE %d",                  menu_traces_acb},
- { MT_ADV_CALLBACK,1,          "VIEW",                      menu_traces_acb},
+ { MT_ADV_CALLBACK,1,          "ENABLE",                    menu_traces_acb},
  { MT_ADV_CALLBACK,2,          "FREEZE",                    menu_traces_acb},
  { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,             menu_traces_acb},
  { MT_SUBMENU,     0,          "CALC",                      menu_average},
@@ -3005,34 +2990,16 @@ static const menuitem_t menu_traces[] =
 #endif
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
-#endif
 
 static const menuitem_t menu_display[] = {
-  { MT_ADV_CALLBACK,0,          "PAUSE\nSWEEP",    menu_pause_acb},
-#ifndef __TRACE_MENU__
-  { MT_SUBMENU,     0,          "CALC",            menu_average},
-  { MT_SUBMENU,     0,          "STORAGE",         menu_storage},
-//  { MT_ADV_CALLBACK,0,          "STORE\nTRACE",    menu_storage_acb},
-//  { MT_ADV_CALLBACK,1,          "CLEAR\nSTORED",   menu_storage_acb},
-//  { MT_ADV_CALLBACK,2,          "SUBTRACT\nSTORED",menu_storage_acb},
-#ifdef __VBW__
-  { MT_SUBMENU,     0,          "VBW",              menu_vbw},
-  { MT_KEYPAD,      KM_EXP_AVER, "EXP\nAVER",       NULL},
-#endif
+  { MT_ADV_CALLBACK,0,             "PAUSE\nSWEEP",    menu_pause_acb},
+  { MT_ADV_CALLBACK,1,             "WATER\nFALL",     menu_waterfall_acb},
 #ifdef __LIMITS__
-  { MT_SUBMENU,     0,          "LIMITS",          menu_limit_select},
+  { MT_SUBMENU,     0,             "LIMITS",          menu_limit_select},
 #endif
-#endif
-  { MT_ADV_CALLBACK,4,          "WATER\nFALL",     menu_waterfall_acb},
-  { MT_SUBMENU, 0,              "SWEEP\nSETTINGS", menu_sweep_speed},
-  { MT_KEYPAD,           KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
-  { MT_SUBMENU,          0,             "SWEEP\nPOINTS",   menu_sweep_points},
- #ifdef TINYSA4
-  { MT_KEYPAD,           KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
- #else
-  { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
- #endif
-
+  { MT_KEYPAD,      KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
+  { MT_SUBMENU,     0,             "SWEEP\nPOINTS",   menu_sweep_points},
+  { MT_SUBMENU,     0,             "SWEEP\nACCURACY",  menu_sweep_speed},
 //#ifdef __REMOTE_DESKTOP__
 //  { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
 //#endif
@@ -3111,9 +3078,7 @@ static const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "PRESET",       menu_load_preset},
   { MT_SUBMENU,  0, "FREQUENCY",    menu_stimulus},
   { MT_SUBMENU,  0, "LEVEL",        menu_level},
-#ifdef __TRACE_MENU__
   { MT_SUBMENU,  0, "TRACE",        menu_traces},
-#endif
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "MEASURE",      menu_measure},
@@ -3127,7 +3092,7 @@ static const menuitem_t menu_top[] = {
 
 #define ACTIVE_COLOR RGBHEX(0x007FFF)
 
-static void menu_item_modify_attribute(
+static void menu_item_modify_attribute(                     // To modify menu buttons with keypad modes
     const menuitem_t *menu, int item, ui_button_t *button)
 {
   if (menu == menu_settings) {
@@ -3138,11 +3103,12 @@ static void menu_item_modify_attribute(
       button->icon = setting.step_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
     else if (item == 1)
       button->icon =setting.offset_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
-  } else if (menu == menu_sweep_speed) {
-    if (item == 3)
+  } else if (menu == menu_display) {
+    if (item == 2)
       button->icon = setting.sweep_time_us != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
-    else if (item == 5)
-      button->icon = setting.fast_speedup != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
+  } else if (menu == menu_sweep_speed) {
+    if (item == 4)
+    button->icon = setting.fast_speedup != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
   } else if (menu == menu_reflevel) {
     if (item == 1)
       button->icon = setting.auto_reflevel ? BUTTON_ICON_GROUP: BUTTON_ICON_GROUP_CHECKED;

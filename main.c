@@ -1363,28 +1363,33 @@ void set_trace_refpos(float refpos)
 
 VNA_SHELL_FUNCTION(cmd_trace)
 {
-  int t;
+  int t = 0;
+  bool do_one = false;
   if (argc == 0) {
     for (t = 0; t < TRACES_MAX; t++) {
+show_one:
       if (IS_TRACE_ENABLE(t)) {
         const char *type = unit_string[setting.unit]; // get_trace_typename(t);
-        const char *channel = trc_channel_name[t];
+//        const char *channel = trc_channel_name[t];
         float scale = get_trace_scale();
         float refpos = get_trace_refpos();
-        shell_printf("%d %s %s %f %f\r\n", t, type, channel, scale, refpos);
+        shell_printf("%d: %s %f %f \r\n", t+1, type, refpos, scale, (setting.stored[t]?", frozen":""));
       }
+      if (do_one) break;
     }
     return;
   }
-
+  int next_arg = 0;
   if ('0' <= argv[0][0] && argv[0][0] <= '9') {
-    t = my_atoi(argv[0]);
-    if (argc != 1 || t < 0 || t >= TRACES_MAX)
+    t = my_atoi(argv[0]) - 1;
+    next_arg++;
+    argc--;
+    if (t < 0 || t >= TRACES_MAX)
       goto usage;
-    const char *type = "LOGMAG";//unit_string[setting.unit];
-    const char *channel = trc_channel_name[t];
-    shell_printf("%d %s %s\r\n", t, type, channel);
-    return;
+    if (argc >= 1)
+      goto process;
+    do_one = true;
+    goto show_one;
   }
 #if MAX_UNIT_TYPE != 4
 #error "Unit type enum possibly changed, check cmd_trace function"
@@ -1398,23 +1403,15 @@ VNA_SHELL_FUNCTION(cmd_trace)
     }
 //    goto usage;
   }
-  static const char cmd_store_list[] = "store|clear|subtract|value";
+  static const char cmd_store_list[] = "value";
+  process:
   if (argc == 1) {
-    int type = get_str_index(argv[0], cmd_store_list);
+    int type = get_str_index(argv[next_arg], cmd_store_list);
     if (type >= 0) {
       switch(type) {
       case 0:
-        store_trace(0,2);
-        goto update;
-      case 1:
-        set_clear_storage();
-        goto update;
-      case 2:
-        set_subtract_storage();
-        goto update;
-      case 3:
         for (int i=0;i<sweep_points;i++) {
-          shell_printf("trace value %d %.2f\r\n", i, actual_t[i]);
+          shell_printf("trace %d value %d %.2f\r\n", t+1, i, measured[t][i]);
         }
       }
     }
@@ -1440,18 +1437,26 @@ VNA_SHELL_FUNCTION(cmd_trace)
       }
       goto update;
     }
-    goto usage;
   }
-  static const char cmd_load_list[] = "value";
-  if (argc == 3) {
-    switch (get_str_index(argv[0], cmd_load_list)) {
+  static const char cmd_load_list[] = "copy|freeze|subtract|view|value";
+  if (argc >= 2) {
+    switch (get_str_index(argv[next_arg++], cmd_load_list)) {
     case 0:
+      store_trace(t, my_atoi(argv[next_arg++]));
+      goto update;
+    case 1:
+      setting.stored[t]= true;;
+      goto update;
+    case 2:
+      subtract_trace(t,my_atoi(argv[next_arg++]));
+      goto update;
+    case 4:
       {
-      int i = my_atoi(argv[1]);
+      int i = my_atoi(argv[next_arg++]);
       if (i>= sweep_points)
         goto usage;
-      float v = my_atof(argv[2]);
-      stored_t[i] = v;
+      float v = my_atof(argv[next_arg]);
+      measured[t][i] = v;
       goto update;
       }
     }
@@ -1461,14 +1466,14 @@ update:
 redraw_request |= REDRAW_CAL_STATUS;
   return;
 usage:
-  shell_printf("trace {%s}\r\n"\
+  shell_printf("trace {trace} {%s}\r\n"\
                "trace {%s}\r\n"\
                "trace {%s} {value|auto}\r\n", cmd_store_list, cmd_type_list, cmd_scale_ref_list);
 }
 
 VNA_SHELL_FUNCTION(cmd_marker)
 {
-  int t;
+  int t,tr;
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
@@ -1496,7 +1501,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     return;
   }
 #ifdef TINYSA4
-  static const char cmd_marker_list[] = "on|off|peak|delta|noise|tracking|stored|trace_aver";
+  static const char cmd_marker_list[] = "on|off|peak|delta|noise|tracking|trace|trace_aver";
   static const char cmd_marker_on_off[] = "off|on";
   int marker_mask = 0;
 #else
@@ -1526,8 +1531,15 @@ VNA_SHELL_FUNCTION(cmd_marker)
 #ifdef TINYSA4
       //      M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_STORED=8, M_AVER=16, M_TRACKING=32, M_DELETE=64  // Tracking must be last.
     case 3:
-      marker_mask = M_DELTA;
-      goto set_mask;
+      tr=0;
+      if (argc == 3 &&( argv[2][0] < '0' || argv[2][0] > '9' )) {
+        tr = my_atoui(argv[2]);
+        markers[t].mtype |= M_DELTA;
+        markers[t].ref= tr;
+      } else if (get_str_index(argv[2],cmd_marker_on_off) == 0) {
+        markers[t].mtype &= ~M_DELTA;
+      }
+      return;
     case 4:
       marker_mask = M_NOISE;
       goto set_mask;
@@ -1535,8 +1547,12 @@ VNA_SHELL_FUNCTION(cmd_marker)
       marker_mask = M_TRACKING;
       goto set_mask;
     case 6:
-      marker_mask = M_STORED;
-      goto set_mask;
+      tr=2;
+      if (argc == 3 &&( argv[2][0] < '0' || argv[2][0] > '9' )) {
+        tr = my_atoui(argv[2]);
+      }
+      markers[t].trace= tr;
+      return;
     case 7:
       marker_mask = M_AVER;
     set_mask:
@@ -1547,6 +1563,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
         case 1: markers[t].mtype |= marker_mask; return;
         }
       }
+      return;
 #endif
   }
 usage:
