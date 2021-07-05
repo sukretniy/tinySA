@@ -1711,7 +1711,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
   (void)item;
   if(b){
     if (setting.limits[data-1].enabled) {
-      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6fdBm", (float)setting.limits[data-1].frequency, setting.limits[data-1].level);
+      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.1fdBm", (float)setting.limits[data-1].frequency, setting.limits[data-1].level);
       b->icon = BUTTON_ICON_CHECK;
     } else {
       plot_printf(b->text, sizeof(b->text), "EMPTY");
@@ -2253,22 +2253,16 @@ static const menuitem_t menu_load_preset_high[] =
 static const menuitem_t menu_store_preset[] =
 {
   { MT_ADV_CALLBACK, 0,  "STORE AS\nSTARTUP",menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 1,  "STORE %d",         menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 2,  "STORE %d",         menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 3,  "STORE %d",         menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 4,  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK |MT_REPEATS,  DATA_STARTS_REPEATS(1,4),  "STORE %d",         menu_store_preset_acb},
   { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
   { MT_NONE,     0,     NULL,menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_load_preset[] =
 {
-  { MT_ADV_CALLBACK, 0, "LOAD\nSTARTUP", menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 1, MT_CUSTOM_LABEL, menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 2, MT_CUSTOM_LABEL, menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 3, MT_CUSTOM_LABEL, menu_load_preset_acb},
-  { MT_ADV_CALLBACK, 4, MT_CUSTOM_LABEL, menu_load_preset_acb},
-  { MT_SUBMENU,  0,     "STORE"  ,       menu_store_preset},
+  { MT_ADV_CALLBACK,            0,                          "LOAD\nSTARTUP", menu_load_preset_acb},
+  { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,4),   MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_SUBMENU,                 0,                          "STORE"  ,       menu_store_preset},
   { MT_NONE,     0,     NULL, menu_back} // next-> menu_back
 };
 #ifdef TINYSA4
@@ -2493,12 +2487,14 @@ static const menuitem_t menu_limit_modify[] =
 };
 
 const menuitem_t menu_limit_select[] = {
-  { MT_ADV_CALLBACK, 1, MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(1,6), MT_CUSTOM_LABEL, menu_limit_select_acb },
+#if 0
   { MT_ADV_CALLBACK, 2, MT_CUSTOM_LABEL, menu_limit_select_acb },
   { MT_ADV_CALLBACK, 3, MT_CUSTOM_LABEL, menu_limit_select_acb },
   { MT_ADV_CALLBACK, 4, MT_CUSTOM_LABEL, menu_limit_select_acb },
   { MT_ADV_CALLBACK, 5, MT_CUSTOM_LABEL, menu_limit_select_acb },
   { MT_ADV_CALLBACK, 6, MT_CUSTOM_LABEL, menu_limit_select_acb },
+#endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -3104,10 +3100,10 @@ static void menu_item_modify_attribute(                     // To modify menu bu
     else if (item == 1)
       button->icon =setting.offset_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
   } else if (menu == menu_display) {
-    if (item == 2)
+    if (item == 4)
       button->icon = setting.sweep_time_us != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
   } else if (menu == menu_sweep_speed) {
-    if (item == 4)
+    if (item == 3)
     button->icon = setting.fast_speedup != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
   } else if (menu == menu_reflevel) {
     if (item == 1)

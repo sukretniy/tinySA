@@ -608,6 +608,7 @@ enum {
   MT_CANCEL,                    // menu, step back on one level up
   MT_TITLE,                     // Title
   MT_KEYPAD,
+  MT_REPEATS = 0x08,
   MT_ICON = 0x10,
   MT_HIGH = 0x20,               // Only applicable to high mode
   MT_LOW = 0x40,                // Only applicable to low mode
@@ -615,7 +616,8 @@ enum {
 };
 //#define MT_BACK     0x40
 //#define MT_LEAVE    0x20
-#define MT_MASK(x) (0xF & (x))
+#define MT_MASK(x) (0x7 & (x))
+#define DATA_STARTS_REPEATS(S,R)  (((R)<<4)+(S))
 
 #define MT_CUSTOM_LABEL  0
 
@@ -808,24 +810,31 @@ static bool menuDisabled(uint8_t type){
   return false;
 }
 
-static const menuitem_t *menu_next_item(const menuitem_t *m){
+static const menuitem_t *menu_next_item(const menuitem_t *m, int *sub_item){
   do{
+    if (m->type & MT_REPEATS) {
+      (*sub_item)++;
+      if (*sub_item < ((m->data>>4) & 0x0f))
+        return m;
+      *sub_item = 0;
+    }
     m++;
     m = MT_MASK(m->type) == MT_NONE ? (menuitem_t *)m->reference : m;
   } while(m!=NULL && menuDisabled(m->type));
   return m;
 }
 
-static const menuitem_t *current_menu_item(int i){
+static const menuitem_t *current_menu_item(int i, int *sub_item){
+  *sub_item = 0;
   const menuitem_t * m = menu_stack[menu_current_level];
-  while (i--) m = menu_next_item(m);
+  while (i--) m = menu_next_item(m,sub_item);
   return m;
 }
 
 static int current_menu_get_count(void){
-  int i = 0;
+  int i = 0,sub_item = 0;
   const menuitem_t *m = menu_stack[menu_current_level];
-  while (m){m = menu_next_item(m); i++;}
+  while (m){m = menu_next_item(m, &sub_item); i++;}
   return i;
 }
 
@@ -902,7 +911,8 @@ menu_move_top(void)
 static void
 menu_invoke(int item)
 {
-  const menuitem_t *menu = current_menu_item(item);
+  int sub_item;
+  const menuitem_t *menu = current_menu_item(item, &sub_item);
   if (menu == NULL) return;
   switch (MT_MASK(menu->type)) {
 //  case MT_NONE:
@@ -917,7 +927,7 @@ menu_invoke(int item)
   case MT_CALLBACK: {
     uistat.auto_center_marker = false;
     menuaction_cb_t cb = (menuaction_cb_t)menu->reference;
-    if (cb) (*cb)(item, menu->data);
+    if (cb) (*cb)(item, (menu->type & MT_REPEATS) ? (menu->data & 0x0f)+sub_item : menu->data);
 //    if (!(menu->type & MT_FORM))
     redraw_request |= REDRAW_CAL_STATUS;
     break;
@@ -925,7 +935,7 @@ menu_invoke(int item)
   case MT_ADV_CALLBACK: {
     uistat.auto_center_marker = false;
     menuaction_acb_t cb = (menuaction_acb_t)menu->reference;
-    if (cb) (*cb)(item, menu->data, NULL);
+    if (cb) (*cb)(item, (menu->type & MT_REPEATS) ? (menu->data & 0x0f)+sub_item : menu->data, NULL);
 //    if (!(menu->type & MT_FORM))
     redraw_request |= REDRAW_CAL_STATUS | REDRAW_BATTERY;
     break;
@@ -1175,7 +1185,8 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
   int i, y;
   ui_button_t button;
   const menuitem_t *m = menu;
-  for (i = 0, y = 0; m; m = menu_next_item(m), i++, y += menu_button_height) {
+  int sub_item = 0;
+  for (i = 0, y = 0; m; m = menu_next_item(m, &sub_item), i++, y += menu_button_height) {
     if ((mask&(1<<i)) == 0)
       continue;
     button.icon = BUTTON_ICON_NONE;
@@ -1204,7 +1215,7 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
     // MT_ADV_CALLBACK - allow change button data in callback, more easy and correct
     if (MT_MASK(m->type) == MT_ADV_CALLBACK){
       menuaction_acb_t cb = (menuaction_acb_t)m->reference;
-      if (cb) (*cb)(i, m->data, &button);
+      if (cb) (*cb)(i, (m->type & MT_REPEATS) ? (m->data & 0x0f)+sub_item : m->data, &button);
       // Apply custom text, from button label and
       if (m->label != MT_CUSTOM_LABEL)
         plot_printf(button.text, sizeof(button.text), m->label, button.param_1.u);
@@ -1486,7 +1497,8 @@ menu_apply_touch(int touch_x, int touch_y)
     active_button_start = LCD_WIDTH - MENU_BUTTON_WIDTH;
 //  active_button_stop = LCD_WIDTH;
   }
-  for (i = 0; m; m = menu_next_item(m), i++, y+= menu_button_height) {
+  int sub_item = 0;
+  for (i = 0; m; m = menu_next_item(m,&sub_item), i++, y+= menu_button_height) {
     if (MT_MASK(m->type) == MT_TITLE) continue;
     if (y < touch_y && touch_y < y+menu_button_height && touch_x > active_button_start) {
       menu_select_touch(m, i, (( touch_x - active_button_start) * 5 ) / MENU_FORM_WIDTH);
