@@ -242,6 +242,8 @@ void reset_settings(int m)
     setting.stored[t] = false;
     setting.subtract[t] = 0;        // Disabled
   }
+  for (int l=0;l<LIMITS_MAX;l++)
+    setting.limits[l].enabled = false;
   setting.stored[TRACE_STORED] = true;
   TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
 #ifdef TINYSA4  
@@ -912,27 +914,26 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
 void limits_update(void)
 {
   int j = 0;
-  bool active = false;
+  int prev = -1;
   for (int i = 0; i<LIMITS_MAX; i++)
   {
     if (setting.limits[i].enabled) {
-      active = true;
       while (j < sweep_points && (getFrequency(j) < setting.limits[i].frequency || setting.limits[i].frequency == 0)) {
-        if (i == 0)
+        if (prev < 0)
           stored_t[j] = setting.limits[i].level;
         else
-          stored_t[j] = setting.limits[i-1].level +
-          (getFrequency(j) - setting.limits[i-1].frequency) * (setting.limits[i].level - setting.limits[i-1].level) /
-          (setting.limits[i].frequency-setting.limits[i-1].frequency);
+          stored_t[j] = setting.limits[prev].level +
+          (getFrequency(j) - setting.limits[prev].frequency) * (setting.limits[i].level - setting.limits[prev].level) /
+          (setting.limits[i].frequency-setting.limits[prev].frequency);
         j++;
       }
+      prev = i;
     }
   }
-  if (active)
+  if (prev>=0)
   {
-    float old_level = stored_t[j-1];
     while (j < sweep_points)
-      stored_t[j++] = old_level;
+      stored_t[j++] = setting.limits[prev].level;
     setting.show_stored = true;
     TRACE_ENABLE(TRACE_STORED_FLAG);
   } else {
@@ -1181,13 +1182,12 @@ void set_average(int t, int v)
       && (v != AV_QUASI)
 #endif
       );
-#ifndef __TRACES_MENU__
   if (enable && !IS_TRACES_ENABLED(TRACE_TEMP_FLAG)) {
     enableTracesAtComplete(TRACE_TEMP_FLAG);
     scan_after_dirty = 0;
-  } else
-    TRACE_DISABLE(TRACE_TEMP_FLAG);
-#endif
+  }
+//  else
+//    TRACE_DISABLE(TRACE_TEMP_FLAG);
   //dirty = true;             // No HW update required, only status panel refresh
 }
 

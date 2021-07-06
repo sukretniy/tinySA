@@ -1580,15 +1580,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_subtract_trace_acb)
 static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 {
   (void)item;
+  int count = 0;
   if(b){
     if (data == 0) {                // Select trace
       b->param_1.i = current_trace+1;
       b->bg = LCD_TRACE_1_COLOR+current_trace;
     } else if (data == 1) {           // View
-      if (current_trace)
-        b->icon = IS_TRACE_ENABLE(current_trace) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
-      else
-        b->fg = LCD_DARK_GREY;
+      b->icon = IS_TRACE_ENABLE(current_trace) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     }
     else if (data == 2)               // freeze
       b->icon = setting.stored[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
@@ -1605,9 +1603,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     menu_push_submenu(menu_trace);
     return;
   case 1:
+    for (int i=0;i<TRACES_MAX;i++)
+      if (IS_TRACE_ENABLE(i))
+        count++;
     if (IS_TRACE_ENABLE(current_trace)) {
-      if (current_trace)                    // Trace 1 always viewed
+      if (count > 1)  {                   // Always 1 trace enabled
         TRACE_DISABLE(1<<current_trace);
+      } else {
+        drawMessageBox("Trace", "Enable at least one trace", 2000);
+        redraw_request|= REDRAW_AREA;
+      }
     } else {
       TRACE_ENABLE(1<<current_trace);
     }
@@ -1693,13 +1698,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
 {
   (void)item;
   if(b){
-    if (setting.limits[data-1].enabled) {
-      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.1fdBm", (float)setting.limits[data-1].frequency, setting.limits[data-1].level);
-      b->icon = BUTTON_ICON_CHECK;
-    } else {
-      plot_printf(b->text, sizeof(b->text), "EMPTY");
-      b->icon = BUTTON_ICON_NOCHECK;
-    }
+    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.2F%s", (float)setting.limits[data-1].frequency, value(setting.limits[data-1].level),unit_string[setting.unit]);
+    b->icon = (setting.limits[data-1].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
     return;
   }
   active_limit = data -1;
@@ -2791,7 +2791,7 @@ static const menuitem_t menu_trace[] =
 
 static const menuitem_t menu_marker_trace[] =
 {
- { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          MT_CUSTOM_LABEL,        menu_marker_trace_acb},
+ { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          "TRACE %d",        menu_marker_trace_acb},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
@@ -2803,8 +2803,8 @@ static const menuitem_t menu_store_trace[] =
 
 static const menuitem_t menu_subtract_trace[] =
 {
- { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
-  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+ { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX+1),          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
+ { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
 static const menuitem_t menu_traces[] =
@@ -3054,7 +3054,7 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_LIMIT_LEVEL:
-    uistat.value = setting.limits[active_limit].level;
+    uistat.value = value(setting.limits[active_limit].level);
     plot_printf(uistat.text, sizeof uistat.text, "%.1f", uistat.value);
     break;
 #endif
@@ -3218,7 +3218,7 @@ set_numeric_value(void)
     limits_update();
     break;
   case KM_LIMIT_LEVEL:
-    setting.limits[active_limit].level = uistat.value;
+    setting.limits[active_limit].level = to_dBm(uistat.value);
     limits_update();
     break;
 #endif
