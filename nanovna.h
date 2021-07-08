@@ -140,8 +140,12 @@
 #endif
 
 #define TRACE_ACTUAL    0           // order linked to colors in palette!!!!!
-#define TRACE_TEMP      (LCD_TRACE_2_COLOR - LCD_TRACE_1_COLOR)
-#define TRACE_STORED    (LCD_TRACE_3_COLOR - LCD_TRACE_1_COLOR)
+#if TRACES_MAX == 3
+#define TRACE_TEMP      (LCD_TRACE_3_COLOR - LCD_TRACE_1_COLOR)
+#else
+#define TRACE_TEMP      (LCD_TRACE_4_COLOR - LCD_TRACE_1_COLOR)
+#endif
+#define TRACE_STORED    (LCD_TRACE_2_COLOR - LCD_TRACE_1_COLOR)
 //#define TRACE_AGE       3
 #define TRACE_INVALID  -1
 
@@ -339,7 +343,7 @@ void set_average(int t, int);
 void  set_storage(void);
 void  set_clear_storage(void);
 void  set_subtract_storage(void);
-void  toggle_normalize(void);
+void  toggle_normalize(int);
 void set_waterfall(void);
 void disable_waterfall(void);
 void set_mode(int);
@@ -858,6 +862,7 @@ typedef uint16_t pixel_t;
 #define LCD_M_NOISE             28
 #define LCD_M_DEFAULT           29
 
+#if TRACES_MAX == 3
 #define LCD_DEFAULT_PALETTE {\
 [LCD_BG_COLOR         ] = RGB565(  0,  0,  0), \
 [LCD_FG_COLOR         ] = RGB565(255,255,255), \
@@ -866,8 +871,8 @@ typedef uint16_t pixel_t;
 [LCD_MENU_TEXT_COLOR  ] = RGB565(  0,  0,  0), \
 [LCD_MENU_ACTIVE_COLOR] = RGB565(210,210,210), \
 [LCD_TRACE_1_COLOR    ] = RGB565(255,255,  0), \
-[LCD_TRACE_2_COLOR    ] = RGB565(255, 64, 64), \
-[LCD_TRACE_3_COLOR    ] = RGB565( 64,255, 64), \
+[LCD_TRACE_2_COLOR    ] = RGB565( 64,255, 64), \
+[LCD_TRACE_3_COLOR    ] = RGB565(255, 64, 64), \
 [LCD_TRACE_4_COLOR    ] = RGB565(255,  0,255), \
 [LCD_NORMAL_BAT_COLOR ] = RGB565( 31,227,  0), \
 [LCD_LOW_BAT_COLOR    ] = RGB565(255,  0,  0), \
@@ -890,6 +895,40 @@ typedef uint16_t pixel_t;
 [LCD_M_NOISE          ] = RGB565(  0,255,255), \
 [LCD_M_DEFAULT        ] = RGB565(255,255,  0), \
 }
+#else
+#define LCD_DEFAULT_PALETTE {\
+[LCD_BG_COLOR         ] = RGB565(  0,  0,  0), \
+[LCD_FG_COLOR         ] = RGB565(255,255,255), \
+[LCD_GRID_COLOR       ] = RGB565(128,128,128), \
+[LCD_MENU_COLOR       ] = RGB565(230,230,230), \
+[LCD_MENU_TEXT_COLOR  ] = RGB565(  0,  0,  0), \
+[LCD_MENU_ACTIVE_COLOR] = RGB565(210,210,210), \
+[LCD_TRACE_1_COLOR    ] = RGB565(255,255,  0), \
+[LCD_TRACE_2_COLOR    ] = RGB565( 64,255, 64), \
+[LCD_TRACE_3_COLOR    ] = RGB565(255,  0,255), \
+[LCD_TRACE_4_COLOR    ] = RGB565(255, 64, 64), \
+[LCD_NORMAL_BAT_COLOR ] = RGB565( 31,227,  0), \
+[LCD_LOW_BAT_COLOR    ] = RGB565(255,  0,  0), \
+[LCD_TRIGGER_COLOR    ] = RGB565(  0,  0,255), \
+[LCD_RISE_EDGE_COLOR  ] = RGB565(255,255,255), \
+[LCD_FALLEN_EDGE_COLOR] = RGB565(128,128,128), \
+[LCD_SWEEP_LINE_COLOR ] = RGB565(  0,255,  0), \
+[LCD_BW_TEXT_COLOR    ] = RGB565(128,128,128), \
+[LCD_INPUT_TEXT_COLOR ] = RGB565(  0,  0,  0), \
+[LCD_INPUT_BG_COLOR   ] = RGB565(255,255,255), \
+[LCD_BRIGHT_COLOR_BLUE] = RGB565(  0,  0,255), \
+[LCD_BRIGHT_COLOR_RED ] = RGB565(255,128,128), \
+[LCD_BRIGHT_COLOR_GREEN]= RGB565(  0,255,  0), \
+[LCD_DARK_GREY        ] = RGB565(140,140,140), \
+[LCD_LIGHT_GREY       ] = RGB565(220,220,220), \
+[LCD_HAM_COLOR        ] = RGB565( 80, 80, 80), \
+[LCD_GRID_VALUE_COLOR ] = RGB565(196,196,196), \
+[LCD_M_REFERENCE      ] = RGB565(255,255,255), \
+[LCD_M_DELTA          ] = RGB565(  0,255,  0), \
+[LCD_M_NOISE          ] = RGB565(  0,255,255), \
+[LCD_M_DEFAULT        ] = RGB565(255,255,  0), \
+}
+#endif
 
 #define GET_PALTETTE_COLOR(idx)  config.lcd_palette[idx]
 
@@ -972,6 +1011,7 @@ typedef struct setting
   uint8_t subtract[TRACES_MAX];// index
   uint8_t measurement;         // enum
   uint8_t spur_removal;        // enum
+  int8_t normalized_trace;
 
   int8_t  tracking;            // -1...1 Can NOT convert to bool!!!!!!
   uint8_t atten_step;          //  0...1 !!! need convert to bool

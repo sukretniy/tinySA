@@ -518,6 +518,7 @@ static const menuitem_t  menu_top[];
 static const menuitem_t  menu_trace[];
 static const menuitem_t  menu_marker_trace[];
 static const menuitem_t  menu_subtract_trace[];
+static const menuitem_t  menu_average[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_sweep_points[];
 static const menuitem_t  menu_sweep_points_form[];
@@ -1595,6 +1596,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.subtract[current_trace]);
       else
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nOFF");
+      b->icon = setting.subtract[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    } else if (data == 4) {
+      if (current_trace == TRACES_MAX-1)
+        b->fg = LCD_DARK_GREY;
+      else
+        b->icon = setting.normalized_trace == current_trace ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    } else if (data == 5) {
+      plot_printf(b->text, sizeof(b->text), "CALC\n%s", averageText[setting.average[0]]);
+      b->icon = setting.average[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     }
     return;
   }
@@ -1624,6 +1634,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     menu_push_submenu(menu_subtract_trace);
     return;
     break;
+  case 4:
+    if (current_trace < TRACES_MAX-1) {
+      toggle_normalize(current_trace);
+      if (setting.subtract[current_trace]) {
+        kp_help_text = "Ref level";
+        ui_mode_keypad(KM_REFLEVEL);
+//        setting.normalize_level = uistat.value;
+      } else
+        set_auto_reflevel(true);
+    }
+    break;
+  case 5:
+    menu_push_submenu(menu_average);
+    return;
+    break;
+
 #ifdef TINYSA4
     case 6:
       save_to_sd(1+(2<<current_trace));      // frequencies + trace
@@ -1633,7 +1659,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 //  ui_mode_normal();
 //  draw_cal_status();
 }
-
+#if 0
 static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
 {
   (void)item;
@@ -1679,6 +1705,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
   ui_mode_normal();
 //  draw_cal_status();
 }
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   (void)item;
@@ -2770,7 +2797,7 @@ static const menuitem_t menu_config[] = {
 #endif
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
-
+#if 0
 static const menuitem_t menu_storage[] =
 {
  { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_storage_acb},
@@ -2782,7 +2809,7 @@ static const menuitem_t menu_storage[] =
  { MT_ADV_CALLBACK,5,          "WRITE\n"S_RARROW"SD",menu_storage_acb},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
-
+#endif
 static const menuitem_t menu_trace[] =
 {
  { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          "TRACE %d",        menu_trace_acb},
@@ -2813,7 +2840,8 @@ static const menuitem_t menu_traces[] =
  { MT_ADV_CALLBACK,1,          "ENABLE",                    menu_traces_acb},
  { MT_ADV_CALLBACK,2,          "FREEZE",                    menu_traces_acb},
  { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,             menu_traces_acb},
- { MT_SUBMENU,     0,          "CALC",                      menu_average},
+ { MT_ADV_CALLBACK,4,          "NORMALIZE",                 menu_traces_acb},
+ { MT_ADV_CALLBACK,5,          MT_CUSTOM_LABEL,             menu_traces_acb},
  { MT_SUBMENU,     0,          "COPY\n"S_RARROW"TRACE",     menu_store_trace},
 #ifdef TINYSA4
  { MT_ADV_CALLBACK,6,          "WRITE\n"S_RARROW"SD",       menu_traces_acb},
@@ -2824,6 +2852,9 @@ static const menuitem_t menu_traces[] =
 static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,0,             "PAUSE\nSWEEP",    menu_pause_acb},
   { MT_ADV_CALLBACK,1,             "WATER\nFALL",     menu_waterfall_acb},
+#ifdef __VBW__
+  { MT_SUBMENU,     0,             "VBW",             menu_vbw},
+#endif
 #ifdef __LIMITS__
   { MT_SUBMENU,     0,             "LIMITS",          menu_limit_select},
 #endif
@@ -3497,7 +3528,7 @@ redraw_cal_status:
   if (setting.subtract[0]) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Norm.", x, y);
-    y = add_quick_menu(y, (menuitem_t *)menu_storage);
+    y = add_quick_menu(y, (menuitem_t *)menu_display);
   }
 
   // RBW

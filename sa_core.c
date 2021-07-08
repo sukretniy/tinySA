@@ -254,6 +254,8 @@ void reset_settings(int m)
   setting.show_stored = 0;
   setting.auto_attenuation = false;
   setting.normalize_level = 0.0;
+  setting.normalized_trace = -1;
+
 #ifdef TINYSA4
   setting.lo_drive=5;
 #else
@@ -943,13 +945,19 @@ void limits_update(void)
 }
 #endif
 
-void store_trace(int f, int t)
+void copy_trace(int f, int t)
 {
   if (f == t)
     return;
   for (int i=0; i<POINTS_COUNT;i++)
     measured[t][i] = measured[f][i];
   setting.stored[t] = true;
+  //dirty = true;             // No HW update required, only status panel refresh
+}
+
+void store_trace(int f, int t)
+{
+  copy_trace(f,t);
   enableTracesAtComplete(1<<t);
   //dirty = true;             // No HW update required, only status panel refresh
 }
@@ -990,19 +998,22 @@ void subtract_trace(int t, int f)
     setting.subtract[t] = 0;
 }
 
-void toggle_normalize(void)
+void toggle_normalize(int t)
 {
-/*  if (!setting.subtract_stored) {
-    for (int i=0; i<POINTS_COUNT;i++)
-      stored_t[i] = actual_t[i];
-    setting.subtract_stored = true;
+  if (setting.normalized_trace != -1 && t != setting.normalized_trace) {
+    setting.subtract[setting.normalized_trace] = 0;
+    setting.normalized_trace = -1;
+  }
+  if (!setting.subtract[t]) {
+    copy_trace(t,TRACE_TEMP);
+    setting.subtract[t] = TRACE_TEMP+1;
     setting.auto_attenuation = false;       // Otherwise noise level may move leading to strange measurements
     setting.normalize_level = 0.0;
+    setting.normalized_trace = t;
   } else {
-    setting.subtract_stored = false;
+    setting.subtract[t] = 0;
+    setting.normalized_trace = -1;
   }
-  */
-  //dirty = true;             // No HW update required, only status panel refresh
 }
 
 
@@ -1182,8 +1193,9 @@ void set_average(int t, int v)
       && (v != AV_QUASI)
 #endif
       );
-  if (enable && !IS_TRACES_ENABLED(TRACE_TEMP_FLAG)) {
+  if (enable && !IS_TRACES_ENABLED(TRACE_TEMP_FLAG) && setting.normalized_trace == -1) {
     enableTracesAtComplete(TRACE_TEMP_FLAG);
+    setting.stored[TRACE_TEMP] = false;
     scan_after_dirty = 0;
   }
 //  else
@@ -5019,6 +5031,7 @@ static void test_acquire(int i)
     peakLevel = summed_peak_level / LEVEL_TEST_SWEEPS;
   } else
     sweep(false);
+  TRACE_ENABLE(TRACE_STORED_FLAG);
   plot_into_index(measured);
   redraw_request |= REDRAW_CELLS | REDRAW_FREQUENCY;
 }
