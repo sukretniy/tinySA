@@ -6131,17 +6131,17 @@ quit:
   ili9341_clear_screen();
   set_sweep_points(old_sweep_points);
   in_selftest = false;
-  sweep_mode = SWEEP_ENABLE;
 //  set_refer_output(-1);
 #ifdef TINYSA4
-  set_extra_lna(false);
-  set_average(0,AV_OFF);
-//  set_refer_output(-1);
+  reset_settings(M_LOW);
+//  set_extra_lna(false);
+//  set_average(0,AV_OFF);
+  set_refer_output(-1);
 #else
   reset_settings(M_LOW);
   set_refer_output(-1);
 #endif
-
+  test_wait = false;
 }
 
 
