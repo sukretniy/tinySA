@@ -995,6 +995,7 @@ typedef struct setting
   bool sweep;                  // bool
   bool pulse;                  // bool
   bool stored[TRACES_MAX];     // enum
+  bool normalized[TRACES_MAX];     // enum
 
   uint8_t mode;                // enum
   uint8_t below_IF;            // enum

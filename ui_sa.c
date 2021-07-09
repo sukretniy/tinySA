@@ -1526,7 +1526,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trace_acb)
     b->bg = LCD_TRACE_1_COLOR+data;
     return;
   }
-  current_trace = data;
+  if (setting.normalized_trace != -1 && data == TRACE_TEMP) {
+    drawMessageBox("Error", "Disable normalization first", 2000);
+    redraw_request|= REDRAW_AREA;
+  } else
+    current_trace = data;
   menu_move_back(false);
 }
 
@@ -1591,7 +1595,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     }
     else if (data == 2)               // freeze
       b->icon = setting.stored[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
-    else if (data == 3) {
+    else if (data == 5) {
       if (setting.subtract[current_trace])
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.subtract[current_trace]);
       else
@@ -1601,8 +1605,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
       if (current_trace == TRACES_MAX-1)
         b->fg = LCD_DARK_GREY;
       else
-        b->icon = setting.normalized_trace == current_trace ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
-    } else if (data == 5) {
+        b->icon = setting.normalized[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    } else if (data == 3) {
       plot_printf(b->text, sizeof(b->text), "CALC\n%s", averageText[setting.average[0]]);
       b->icon = setting.average[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     }
@@ -1630,22 +1634,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
   case 2:                               // Freeze
     setting.stored[current_trace] = !setting.stored[current_trace];
     break;
-  case 3:
+  case 5:
     menu_push_submenu(menu_subtract_trace);
     return;
     break;
   case 4:
     if (current_trace < TRACES_MAX-1) {
       toggle_normalize(current_trace);
-      if (setting.subtract[current_trace]) {
-        kp_help_text = "Ref level";
-        ui_mode_keypad(KM_REFLEVEL);
-//        setting.normalize_level = uistat.value;
+      if (setting.normalized[current_trace]) {
+//        kp_help_text = "Ref level";
+//        ui_mode_keypad(KM_REFLEVEL);
+//        setting.normalize_level = 20.0; // uistat.value;
       } else
         set_auto_reflevel(true);
     }
     break;
-  case 5:
+  case 3:
     menu_push_submenu(menu_average);
     return;
     break;
@@ -2839,9 +2843,9 @@ static const menuitem_t menu_traces[] =
  { MT_ADV_CALLBACK,0,          "TRACE %d",                  menu_traces_acb},
  { MT_ADV_CALLBACK,1,          "ENABLE",                    menu_traces_acb},
  { MT_ADV_CALLBACK,2,          "FREEZE",                    menu_traces_acb},
- { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,             menu_traces_acb},
+ { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,             menu_traces_acb},       // Calc
  { MT_ADV_CALLBACK,4,          "NORMALIZE",                 menu_traces_acb},
- { MT_ADV_CALLBACK,5,          MT_CUSTOM_LABEL,             menu_traces_acb},
+ { MT_ADV_CALLBACK,5,          MT_CUSTOM_LABEL,             menu_traces_acb},       // Trace Math
  { MT_SUBMENU,     0,          "COPY\n"S_RARROW"TRACE",     menu_store_trace},
 #ifdef TINYSA4
  { MT_ADV_CALLBACK,6,          "WRITE\n"S_RARROW"SD",       menu_traces_acb},

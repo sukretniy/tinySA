@@ -1366,6 +1366,8 @@ VNA_SHELL_FUNCTION(cmd_trace)
 {
   int t = 0;
   bool do_one = false;
+  if (argc==1 && argv[0][0] == '?')
+    goto usage;
   if (argc == 0) {
     for (t = 0; t < TRACES_MAX; t++) {
 show_one:
@@ -1404,20 +1406,6 @@ show_one:
     }
 //    goto usage;
   }
-  static const char cmd_store_list[] = "value";
-  process:
-  if (argc == 1) {
-    int type = get_str_index(argv[next_arg], cmd_store_list);
-    if (type >= 0) {
-      switch(type) {
-      case 0:
-        for (int i=0;i<sweep_points;i++) {
-          shell_printf("trace %d value %d %.2f\r\n", t+1, i, measured[t][i]);
-        }
-      }
-    }
-//    goto usage;
-  }
   //                                            0      1
   static const char cmd_scale_ref_list[] = "scale|reflevel";
   if (argc == 2) {
@@ -1439,17 +1427,38 @@ show_one:
       goto update;
     }
   }
+
+  static const char cmd_value_list[] = "value";
+  process:
+  if (argc == 1) {
+    int type = get_str_index(argv[next_arg], cmd_value_list);
+    if (type >= 0) {
+      switch(type) {
+      case 0:
+        for (int i=0;i<sweep_points;i++) {
+          shell_printf("trace %d value %d %.2f\r\n", t+1, i, measured[t][i]);
+        }
+      }
+    }
+//    goto usage;
+  }
   static const char cmd_load_list[] = "copy|freeze|subtract|view|value";
   if (argc >= 2) {
     switch (get_str_index(argv[next_arg++], cmd_load_list)) {
     case 0:
-      store_trace(t, my_atoi(argv[next_arg++]));
+      store_trace(t, my_atoi(argv[next_arg++])-1); // copy {trace}
       goto update;
     case 1:
-      setting.stored[t]= true;;
+      setting.stored[t]= (get_str_index(argv[next_arg++], "off|on") == 1); // freeze {off|on}
       goto update;
     case 2:
-      subtract_trace(t,my_atoi(argv[next_arg++]));
+      subtract_trace(t,my_atoi(argv[next_arg++])-1);
+      goto update;
+    case 3:
+      if (get_str_index(argv[next_arg++], "off|on") == 1)
+        { TRACE_ENABLE(1<<t); }
+      else
+        { TRACE_DISABLE(1<<t);}
       goto update;
     case 4:
       {
@@ -1467,9 +1476,11 @@ update:
 redraw_request |= REDRAW_CAL_STATUS;
   return;
 usage:
-  shell_printf("trace {trace} {%s}\r\n"\
-               "trace {%s}\r\n"\
-               "trace {%s} {value|auto}\r\n", cmd_store_list, cmd_type_list, cmd_scale_ref_list);
+  shell_printf("trace {%s}\r\n"\
+               "trace {%s} auto|{value}\r\n"\
+               "trace [{trace#}] value\r\n"\
+               "trace [{trace#}] {%s} {trace#}|off|on|[{index} {value}]\r\n"\
+               , cmd_type_list,cmd_scale_ref_list, cmd_load_list);
 }
 
 VNA_SHELL_FUNCTION(cmd_marker)

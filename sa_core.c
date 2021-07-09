@@ -241,6 +241,7 @@ void reset_settings(int m)
     setting.average[t] = 0;
     setting.stored[t] = false;
     setting.subtract[t] = 0;        // Disabled
+    setting.normalized[t] = false;        // Disabled
   }
   for (int l=0;l<LIMITS_MAX;l++)
     setting.limits[l].enabled = false;
@@ -1000,19 +1001,22 @@ void subtract_trace(int t, int f)
 
 void toggle_normalize(int t)
 {
-  if (setting.normalized_trace != -1 && t != setting.normalized_trace) {
-    setting.subtract[setting.normalized_trace] = 0;
-    setting.normalized_trace = -1;
-  }
-  if (!setting.subtract[t]) {
-    copy_trace(t,TRACE_TEMP);
-    setting.subtract[t] = TRACE_TEMP+1;
+  if (!setting.normalized[t]) {
+    if (setting.normalized_trace == -1) {
+      copy_trace(t,TRACE_TEMP);
+      setting.normalized_trace = t;
+    }
+    setting.normalized[t] = true;
+    for (int i=0;i<POINTS_COUNT;i++)
+      measured[t][i] -= measured[TRACE_TEMP][i];                   // pre-load AVER
     setting.auto_attenuation = false;       // Otherwise noise level may move leading to strange measurements
     setting.normalize_level = 0.0;
-    setting.normalized_trace = t;
   } else {
-    setting.subtract[t] = 0;
-    setting.normalized_trace = -1;
+    if (setting.normalized_trace == t)
+      setting.normalized_trace = -1;
+    setting.normalized[t] = 0;
+    for (int i=0;i<POINTS_COUNT;i++)
+      measured[t][i] += measured[TRACE_TEMP][i];                   // pre-load AVER
   }
 }
 
@@ -4123,6 +4127,8 @@ static volatile int dummy;
         float *trace_data = measured[t];
 #endif // __DOUBLE_LOOP__
       // ------------------------ do all RSSI calculations from CALC menu -------------------
+        if (setting.normalized[t])
+          RSSI_calc -= measured[TRACE_TEMP][i];
       if (setting.subtract[t]) {
         RSSI_calc = RSSI_calc - measured[setting.subtract[t]-1][i] + setting.normalize_level;
       }
