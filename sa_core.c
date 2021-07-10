@@ -245,7 +245,8 @@ void reset_settings(int m)
   }
   for (int l=0;l<LIMITS_MAX;l++)
     setting.limits[l].enabled = false;
-  setting.stored[TRACE_STORED] = true;
+  if (in_selftest)
+    setting.stored[TRACE_STORED] = true;
   TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
 #ifdef TINYSA4  
   setting.harmonic = 3;         // Automatically used when above ULTRA_MAX_FREQ
@@ -995,7 +996,12 @@ void subtract_trace(int t, int f)
     setting.subtract[t] = f+1;
     setting.normalize_level = 0.0;
     setting.auto_attenuation = false;       // Otherwise noise level may move leading to strange measurements
+    for (int i=0;i<POINTS_COUNT;i++)
+       measured[t][i] -= measured[f][i];                   // pre-load AVER
+
   } else
+    for (int i=0;i<POINTS_COUNT;i++)
+      measured[t][i] += measured[f][i];                   // pre-load AVER
     setting.subtract[t] = 0;
 }
 
@@ -1005,6 +1011,7 @@ void toggle_normalize(int t)
     if (setting.normalized_trace == -1) {
       copy_trace(t,TRACE_TEMP);
       setting.normalized_trace = t;
+      TRACE_DISABLE(1<<TRACE_TEMP);
     }
     setting.normalized[t] = true;
     for (int i=0;i<POINTS_COUNT;i++)
@@ -1012,11 +1019,17 @@ void toggle_normalize(int t)
     setting.auto_attenuation = false;       // Otherwise noise level may move leading to strange measurements
     setting.normalize_level = 0.0;
   } else {
-    if (setting.normalized_trace == t)
+    for (int f=0; f<TRACES_MAX-1;f++) {
+      if (setting.normalized[f] && (setting.normalized_trace == t || f == t)) {
+        for (int i=0;i<POINTS_COUNT;i++)
+          measured[f][i] += measured[TRACE_TEMP][i];                   // pre-load AVER
+        setting.normalized[f] = false;
+      }
+    }
+    if (setting.normalized_trace == t) {
       setting.normalized_trace = -1;
-    setting.normalized[t] = 0;
-    for (int i=0;i<POINTS_COUNT;i++)
-      measured[t][i] += measured[TRACE_TEMP][i];                   // pre-load AVER
+      setting.stored[TRACE_TEMP] = false;
+    }
   }
 }
 
@@ -1197,10 +1210,8 @@ void set_average(int t, int v)
       && (v != AV_QUASI)
 #endif
       );
-  if (enable && !IS_TRACES_ENABLED(TRACE_TEMP_FLAG) && setting.normalized_trace == -1) {
-    enableTracesAtComplete(TRACE_TEMP_FLAG);
-    setting.stored[TRACE_TEMP] = false;
-    scan_after_dirty = 0;
+  if (enable) {
+    setting.scan_after_dirty[t] = 0;
   }
 //  else
 //    TRACE_DISABLE(TRACE_TEMP_FLAG);
@@ -2727,7 +2738,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     old_a = -150;                                                   // clear cached level setting
     // Initialize HW
     scandirty = true;                                                       // This is the first pass with new settings
-    scan_after_dirty = 0;
+    for (int t=0;t<TRACES_MAX;t++)
+      setting.scan_after_dirty[t] = 0;
     dirty = false;
     sweep_elapsed = chVTGetSystemTimeX();                              // for measuring accumulated time
     // Set for actual time pre calculated value (update after sweep)
@@ -2773,9 +2785,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       }
     }
   }
-  if (i == 0)
-    scan_after_dirty += 1;
-
+  if (i == 0) {
+    for (int t=0;t<TRACES_MAX;t++)
+      setting.scan_after_dirty[t] += 1;
+  }
   // ---------------------------------  Pulse at start of low output sweep --------------------------
 
   if ((setting.mode == M_GENLOW || (setting.pulse && setting.mode == M_LOW)) && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// pulse high out
@@ -4174,17 +4187,17 @@ static volatile int dummy;
 #if 0
           int old_unit = setting.unit;
           setting.unit = U_WATT;            // Power averaging should always be done in Watts
-          trace_data[i] = to_dBm((value(trace_data[i])*(scan_after_dirty-1) + value(RSSI_calc)) / scan_after_dirty );
+          trace_data[i] = to_dBm((value(trace_data[i])*(setting.scan_after_dirty[t]-1) + value(RSSI_calc)) / setting.scan_after_dirty[t] );
           setting.unit = old_unit;
 #else
-          float v = (expf(trace_data[i]*(logf(10.0)/10.0)) * (scan_after_dirty-1) + expf(RSSI_calc * (logf(10.0)/10.0))) / scan_after_dirty;
+          float v = (expf(trace_data[i]*(logf(10.0)/10.0)) * (setting.scan_after_dirty[t]-1) + expf(RSSI_calc * (logf(10.0)/10.0))) / setting.scan_after_dirty[t];
           trace_data[i] = logf(v)*(10.0/logf(10.0));
 #endif
         }
           else
-            trace_data[i] = (trace_data[i]*(scan_after_dirty-1) + RSSI_calc)/ scan_after_dirty;
+            trace_data[i] = (trace_data[i]*(setting.scan_after_dirty[t]-1) + RSSI_calc)/ setting.scan_after_dirty[t];
 #else
-        trace_data[i] = (trace_data[i]*(scan_after_dirty-1) + RSSI_calc)/ scan_after_dirty;
+        trace_data[i] = (trace_data[i]*(setting.scan_after_dirty[t]-1) + RSSI_calc)/ setting.scan_after_dirty[t];
 #endif
         break;
 #ifdef __QUASI_PEAK__

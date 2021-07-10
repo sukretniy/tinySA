@@ -1046,6 +1046,7 @@ typedef struct setting
 
   uint32_t rbw_x10;
   uint32_t vbw_x100;
+  uint32_t scan_after_dirty[TRACES_MAX];
 
   float reflevel;
   float scale;

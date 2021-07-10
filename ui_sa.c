@@ -1645,8 +1645,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 //        kp_help_text = "Ref level";
 //        ui_mode_keypad(KM_REFLEVEL);
 //        setting.normalize_level = 20.0; // uistat.value;
-      } else
-        set_auto_reflevel(true);
+      } else {
+//        set_auto_reflevel(true);
+      }
     }
     break;
   case 3:
