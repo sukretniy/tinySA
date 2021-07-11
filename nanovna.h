@@ -1010,6 +1010,7 @@ typedef struct setting
   uint8_t waterfall;           // enum
   uint8_t average[TRACES_MAX]; // enum
   uint8_t subtract[TRACES_MAX];// index
+  uint8_t limit_trace;         // index
   uint8_t measurement;         // enum
   uint8_t spur_removal;        // enum
   int8_t normalized_trace;

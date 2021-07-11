@@ -518,6 +518,7 @@ static const menuitem_t  menu_top[];
 static const menuitem_t  menu_trace[];
 static const menuitem_t  menu_marker_trace[];
 static const menuitem_t  menu_subtract_trace[];
+static const menuitem_t  menu_limit_trace[];
 static const menuitem_t  menu_average[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_sweep_points[];
@@ -1581,6 +1582,33 @@ static UI_FUNCTION_ADV_CALLBACK(menu_subtract_trace_acb)
   menu_move_back(false);
 }
 
+#ifdef __LIMITS__
+static UI_FUNCTION_ADV_CALLBACK(menu_limit_trace_acb)
+{
+  (void)item;
+  if(b){
+    if (data) {
+      plot_printf(b->text, sizeof(b->text), "LIMIT\nTRACE %d", data);
+      b->bg = LCD_TRACE_1_COLOR+data-1;
+    }
+    else
+      plot_printf(b->text, sizeof(b->text), "LIMIT\nOFF");
+    b->icon = (data == setting.limit_trace) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+  if (setting.normalized_trace != -1 && data-1 == TRACE_TEMP) {
+    drawMessageBox("Error", "Disable normalization first", 2000);
+    redraw_request|= REDRAW_AREA;
+    return;
+  }
+  if (setting.limit_trace != data && setting.limit_trace >0) {  // Clear previous limit trace
+    setting.stored[setting.limit_trace-1] = false;
+    TRACE_DISABLE(1<<(setting.limit_trace-1));
+  }
+  setting.limit_trace = data;
+  menu_move_back(false);
+}
+#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 {
@@ -1730,8 +1758,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
 {
   (void)item;
   if(b){
-    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.2F%s", (float)setting.limits[data-1].frequency, value(setting.limits[data-1].level),unit_string[setting.unit]);
-    b->icon = (setting.limits[data-1].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
+    if (data == 0) {
+      if (setting.limit_trace) {
+        plot_printf(b->text, sizeof(b->text), "LIMIT\nTRACE %d", setting.limit_trace);
+        b->bg = LCD_TRACE_1_COLOR+setting.limit_trace-1;
+      }
+      else
+        plot_printf(b->text, sizeof(b->text), "LIMIT\nOFF");
+    } else {
+      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.2F%s", (float)setting.limits[data-1].frequency, value(setting.limits[data-1].level),unit_string[setting.unit]);
+      b->icon = (setting.limits[data-1].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
+    }
+    return;
+  }
+  if (data == 0) {
+    menu_push_submenu(menu_limit_trace);
     return;
   }
   active_limit = data -1;
@@ -2443,7 +2484,8 @@ static const menuitem_t menu_limit_modify[] =
 };
 
 const menuitem_t menu_limit_select[] = {
-  { MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(1,6), MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK,                0,                        MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(1,6), MT_CUSTOM_LABEL, menu_limit_select_acb },
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -2838,6 +2880,14 @@ static const menuitem_t menu_subtract_trace[] =
  { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX+1),          MT_CUSTOM_LABEL,        menu_subtract_trace_acb},
  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
+
+#ifdef __LIMITS__
+static const menuitem_t menu_limit_trace[] =
+{
+ { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX+1),          MT_CUSTOM_LABEL,        menu_limit_trace_acb},
+ { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+};
+#endif
 
 static const menuitem_t menu_traces[] =
 {

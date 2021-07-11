@@ -921,14 +921,17 @@ void limits_update(void)
 {
   int j = 0;
   int prev = -1;
+  if (setting.limit_trace == 0)
+    return;
+  int t = setting.limit_trace - 1;
   for (int i = 0; i<LIMITS_MAX; i++)
   {
     if (setting.limits[i].enabled) {
       while (j < sweep_points && (getFrequency(j) < setting.limits[i].frequency || setting.limits[i].frequency == 0)) {
         if (prev < 0)
-          stored_t[j] = setting.limits[i].level;
+          measured[t][j] = setting.limits[i].level;
         else
-          stored_t[j] = setting.limits[prev].level +
+          measured[t][j] = setting.limits[prev].level +
           (getFrequency(j) - setting.limits[prev].frequency) * (setting.limits[i].level - setting.limits[prev].level) /
           (setting.limits[i].frequency-setting.limits[prev].frequency);
         j++;
@@ -939,13 +942,14 @@ void limits_update(void)
   if (prev>=0)
   {
     while (j < sweep_points)
-      stored_t[j++] = setting.limits[prev].level;
-    setting.stored[TRACE_STORED] = true;
-    TRACE_ENABLE(TRACE_STORED_FLAG);
+      measured[t][j++] = setting.limits[prev].level;
+    setting.stored[t] = true;
+    TRACE_ENABLE(1<<t);
   } else {
-    setting.stored[TRACE_STORED] = false;
-    TRACE_DISABLE(TRACE_STORED_FLAG);
+    setting.stored[t] = false;
+    TRACE_DISABLE(1<<t);
   }
+  redraw_request|= REDRAW_AREA;
 }
 #endif
 
