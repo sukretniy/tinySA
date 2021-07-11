@@ -245,9 +245,11 @@ void reset_settings(int m)
   }
   for (int l=0;l<LIMITS_MAX;l++)
     setting.limits[l].enabled = false;
-  if (in_selftest)
+  if (in_selftest) {
     setting.stored[TRACE_STORED] = true;
-  TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
+    TRACE_ENABLE(TRACE_STORED_FLAG);
+  } else
+    TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
 #ifdef TINYSA4  
   setting.harmonic = 3;         // Automatically used when above ULTRA_MAX_FREQ
 #else
@@ -938,10 +940,10 @@ void limits_update(void)
   {
     while (j < sweep_points)
       stored_t[j++] = setting.limits[prev].level;
-    setting.show_stored = true;
+    setting.stored[TRACE_STORED] = true;
     TRACE_ENABLE(TRACE_STORED_FLAG);
   } else {
-    setting.show_stored = false;
+    setting.stored[TRACE_STORED] = false;
     TRACE_DISABLE(TRACE_STORED_FLAG);
   }
 }
@@ -999,10 +1001,11 @@ void subtract_trace(int t, int f)
     for (int i=0;i<POINTS_COUNT;i++)
        measured[t][i] -= measured[f][i];                   // pre-load AVER
 
-  } else
+  } else {
     for (int i=0;i<POINTS_COUNT;i++)
       measured[t][i] += measured[f][i];                   // pre-load AVER
     setting.subtract[t] = 0;
+  }
 }
 
 void toggle_normalize(int t)
@@ -5415,6 +5418,7 @@ common_silent:
     set_attenuation(0.0);
   }
   TRACE_ENABLE(TRACE_STORED_FLAG);
+  setting.stored[TRACE_STORED] = true;
   set_reflevel(test_case[i].pass+10);
   set_sweep_frequency(ST_CENTER, (freq_t)(test_case[i].center * 1000000));
   set_sweep_frequency(ST_SPAN, (freq_t)(test_case[i].span * 1000000));

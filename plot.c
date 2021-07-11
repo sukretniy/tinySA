@@ -382,9 +382,9 @@ to_dBm(const float v)
   switch(setting.unit)
   {
   case U_DBMV:
-    return v - (30.0 - 20.0*log10f(sqrtf(50.0)));
+    return v - (30.0 + 20.0*log10f(sqrtf(50.0)));
   case U_DBUV:
-    return v - (90.0 - 20.0*log10f(sqrtf(50.0)));
+    return v - (90.0 + 20.0*log10f(sqrtf(50.0)));
   case U_VOLT:
 //  return log10f(v/(sqrtf(50.0)))* 20.0             + 30.0;
     return   logf(v/(sqrtf(50.0)))*(20.0/logf(10.0)) + 30.0;
