@@ -734,6 +734,7 @@ typedef struct {
 
 #ifdef __LIMITS__
 #define LIMITS_MAX  6
+#define REFERENCE_MAX 2
 typedef struct {
   uint8_t enabled;
   float level;
@@ -741,6 +742,7 @@ typedef struct {
   int16_t index;
 } limit_t;
 extern uint8_t active_limit;
+extern uint8_t active_reference;
 extern void limits_update(void);
 #endif
 
@@ -1010,7 +1012,9 @@ typedef struct setting
   uint8_t waterfall;           // enum
   uint8_t average[TRACES_MAX]; // enum
   uint8_t subtract[TRACES_MAX];// index
-  uint8_t limit_trace;         // index
+#ifdef __LIMITS__
+  uint8_t limit_trace[REFERENCE_MAX];         // index
+#endif
   uint8_t measurement;         // enum
   uint8_t spur_removal;        // enum
   int8_t normalized_trace;
@@ -1070,7 +1074,7 @@ typedef struct setting
   float trace_refpos;
   marker_t _markers[MARKERS_MAX];
 #ifdef __LIMITS__
-  limit_t limits[LIMITS_MAX];
+  limit_t limits[REFERENCE_MAX][LIMITS_MAX];
 #endif
   systime_t sweep_time_us;
   systime_t measure_sweep_time_us;

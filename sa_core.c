@@ -243,8 +243,11 @@ void reset_settings(int m)
     setting.subtract[t] = 0;        // Disabled
     setting.normalized[t] = false;        // Disabled
   }
-  for (int l=0;l<LIMITS_MAX;l++)
-    setting.limits[l].enabled = false;
+  for (int r=0;r<REFERENCE_MAX;r++)
+    for (int l=0;l<LIMITS_MAX;l++)
+      setting.limits[r][l].enabled = false;
+  for (int i=0; i<REFERENCE_MAX;i++)
+    setting.limit_trace[i] = 0;
   if (in_selftest) {
     setting.stored[TRACE_STORED] = true;
     TRACE_ENABLE(TRACE_STORED_FLAG);
@@ -919,37 +922,39 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
 #ifdef __LIMITS__
 void limits_update(void)
 {
-  int j = 0;
-  int prev = -1;
-  if (setting.limit_trace == 0)
-    return;
-  int t = setting.limit_trace - 1;
-  for (int i = 0; i<LIMITS_MAX; i++)
-  {
-    if (setting.limits[i].enabled) {
-      while (j < sweep_points && (getFrequency(j) < setting.limits[i].frequency || setting.limits[i].frequency == 0)) {
-        if (prev < 0)
-          measured[t][j] = setting.limits[i].level;
-        else
-          measured[t][j] = setting.limits[prev].level +
-          (getFrequency(j) - setting.limits[prev].frequency) * (setting.limits[i].level - setting.limits[prev].level) /
-          (setting.limits[i].frequency-setting.limits[prev].frequency);
-        j++;
+  for (int r=0;r<REFERENCE_MAX;r++) {
+    int j =0;
+    int prev = -1;
+    if (setting.limit_trace[r] == 0)
+      continue;
+    int t = setting.limit_trace[r] - 1;
+    for (int i = 0; i<LIMITS_MAX; i++)
+    {
+      if (setting.limits[r][i].enabled) {
+        while (j < sweep_points && (getFrequency(j) < setting.limits[r][i].frequency || setting.limits[r][i].frequency == 0)) {
+          if (prev < 0)
+            measured[t][j] = setting.limits[r][i].level;
+          else
+            measured[t][j] = setting.limits[r][prev].level +
+            (getFrequency(j) - setting.limits[r][prev].frequency) * (setting.limits[r][i].level - setting.limits[r][prev].level) /
+            (setting.limits[r][i].frequency-setting.limits[r][prev].frequency);
+          j++;
+        }
+        prev = i;
       }
-      prev = i;
     }
+    if (prev>=0)
+    {
+      while (j < sweep_points)
+        measured[t][j++] = setting.limits[r][prev].level;
+      setting.stored[t] = true;
+      TRACE_ENABLE(1<<t);
+    } else {
+      setting.stored[t] = false;
+      TRACE_DISABLE(1<<t);
+    }
+    redraw_request|= REDRAW_AREA;
   }
-  if (prev>=0)
-  {
-    while (j < sweep_points)
-      measured[t][j++] = setting.limits[prev].level;
-    setting.stored[t] = true;
-    TRACE_ENABLE(1<<t);
-  } else {
-    setting.stored[t] = false;
-    TRACE_DISABLE(1<<t);
-  }
-  redraw_request|= REDRAW_AREA;
 }
 #endif
 
@@ -1367,7 +1372,8 @@ const char  unit_scale_text[]= {' ',   'm',     '\035',         'n',            
 void user_set_reflevel(float level)
 {
   set_auto_reflevel(false);
-  if (UNIT_IS_LINEAR(setting.unit) && level < setting.scale*NGRIDY) {
+  float new_zero_level = level - setting.scale*NGRIDY;
+  if (UNIT_IS_LINEAR(setting.unit) && new_zero_level < setting.scale/10) {    // Avoid below zero level
     set_scale(level/NGRIDY);
     set_reflevel(setting.scale*NGRIDY);
   } else
@@ -1438,14 +1444,18 @@ void set_scale(float t) {
 //        t = t * 1.2;
   while (t > 10) { m *= 10; t/=10; }
   while (t < 1.0)  { m /= 10; t*=10; }
-  if (t>5.0001)
-    t = 10.0;
-  else if (t>2.0001)
-    t = 5.0;
-  else if (t > 1.0001)
-    t = 2.0;
-  else
-    t = 1.0;
+  if (UNIT_IS_LINEAR(setting.unit)) {
+    t = ((int)(10*t+0.4999))/10.0;
+  } else {
+    if (t>5.0001)
+      t = 10.0;
+    else if (t>2.0001)
+      t = 5.0;
+    else if (t > 1.0001)
+      t = 2.0;
+    else
+      t = 1.0;
+  }
   t = t*m;
   setting.scale = t;
   set_trace_scale(t);
@@ -2822,7 +2832,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   }
 #ifdef TINYSA4
   // ----------------------------- set mixer drive --------------------------------------------
-  if (setting.lo_drive & 0x04){
+  if (setting.lo_drive & 0x04){     // Automatic mixer drive
     int target_drive;
     if (f < 2400000000ULL)
       target_drive = 1;
