@@ -1372,8 +1372,7 @@ const char  unit_scale_text[]= {' ',   'm',     '\035',         'n',            
 void user_set_reflevel(float level)
 {
   set_auto_reflevel(false);
-  float new_zero_level = level - setting.scale*NGRIDY;
-  if (UNIT_IS_LINEAR(setting.unit) && new_zero_level < setting.scale/10) {    // Avoid below zero level
+  if (UNIT_IS_LINEAR(setting.unit) && level < setting.scale*NGRIDY) {    // Avoid below zero level
     set_scale(level/NGRIDY);
     set_reflevel(setting.scale*NGRIDY);
   } else
@@ -5124,7 +5123,7 @@ int validate_signal_within(int i, float margin)
     markers[0].index = (markers[2].index + markers[1].index)/2;
   }
   test_fail_cause[i] = "Frequency ";
-  if (peakFreq < test_case[i].center * 1000000 - 400000 || test_case[i].center * 1000000 + 400000 < peakFreq )
+  if (peakFreq < test_case[i].center * 1000000 - 500000 || test_case[i].center * 1000000 + 500000 < peakFreq )
     return TS_FAIL;
   test_fail_cause[i] = "";
   return TS_PASS;

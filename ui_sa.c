@@ -435,6 +435,7 @@ enum {
 #ifdef __NOISE_FIGURE__
   KM_NF,
 #endif
+  KM_LINEAR_SCALE,
   KM_NONE // always at enum end
 };
 
@@ -496,6 +497,7 @@ static const struct {
 #ifdef __NOISE_FIGURE__
 [KM_NF]           = {keypads_plusmin     , "NOISE\nFIGURE"}, // noise figure of tinySA
 #endif
+[KM_LINEAR_SCALE] = {keypads_plusmin     , "SCALE"}, // scale for linear units
 };
 
 #if 0 // Not used
@@ -839,6 +841,20 @@ UI_FUNCTION_CALLBACK(menu_autosettings_cb)
   //  menu_move_back(true);   // stay in input menu
   ui_mode_normal();
 //  draw_cal_status();
+}
+
+static UI_FUNCTION_CALLBACK(menu_scale_cb)
+{
+  (void)item;
+  (void)data;
+  kp_help_text = "Enter scale";
+  kp_buf[0]=0;
+
+  if (UNIT_IS_LINEAR(setting.unit))
+    ui_mode_keypad(KM_LINEAR_SCALE);
+  else
+    ui_mode_keypad(KM_SCALE);
+  ui_mode_normal();
 }
 
 #ifdef __CALIBRATE__
@@ -2977,7 +2993,7 @@ static const menuitem_t menu_trigger[] = {
 static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,              "REF LEVEL",    menu_reflevel},
 //{ MT_SUBMENU, 0,              "SCALE/DIV",    menu_scale_per},
-  { MT_KEYPAD,  KM_SCALE,       "SCALE/DIV",    NULL},
+  { MT_CALLBACK,0,              "SCALE/DIV",    menu_scale_cb},
   { MT_SUBMENU, 0,              "ATTENUATE",    menu_atten},
 //  { MT_SUBMENU,0,             "CALC",         menu_average},
   { MT_SUBMENU, 0,              "UNIT",         menu_unit},
@@ -3085,6 +3101,7 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_SCALE:
+  case KM_LINEAR_SCALE:
     uistat.value = setting.scale;
     plot_printf(uistat.text, sizeof uistat.text, "%f/", uistat.value);
     break;
@@ -3251,6 +3268,7 @@ set_numeric_value(void)
   case KM_CW:
     set_sweep_frequency(ST_CW, uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT));
     break;
+  case KM_LINEAR_SCALE:
   case KM_SCALE:
     user_set_scale(uistat.value);
     break;
@@ -3443,7 +3461,7 @@ float my_round(float v)
   return v;
 }
 
-const char * const unit_string[] = { "dBm", "dBmV", "dB"S_MICRO"V", "V", "W", "dBc", "dBc", "dBc", "Vc", "Wc" }; // unit + 5 is delta unit
+const char * const unit_string[] = { "dBm", "dBmV", "dB"S_MICRO"V", "V", "W", "dB", "dBmV", "dB"S_MICRO"V", "V", "W" }; // unit + 5 is delta unit
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};
