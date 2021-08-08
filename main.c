@@ -869,13 +869,22 @@ config_t config = {
   .high_level_offset =      100,    // Uncalibrated
   .correction_frequency = { { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
                             { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 }},
+#ifdef __ULTRA__
+  .correction_value = { { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +0.4, +0.4, +0.4 },
+                        { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 } },
+#else
   .correction_value = { { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
                         { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 } },
+#endif
   .setting_frequency_10mhz = 10000000,
   .cor_am = 0,// -10,
   .cor_wfm = 0, //-18,
   .cor_nfm = 0, //-18,
   .ext_zero_level = 128,
+#ifdef __ULTRA
+  .ultra_threshold = 350000000,
+  .ultra = false,
+#endif
 #endif
 #ifdef TINYSA4
   ._brightness  = DEFAULT_BRIGHTNESS,
@@ -964,9 +973,12 @@ void set_sweep_points(uint16_t points){
 
 VNA_SHELL_FUNCTION(cmd_scan)
 {
-  freq_t start, stop;
+  freq_t start = get_sweep_frequency(ST_START);
+  freq_t stop  = get_sweep_frequency(ST_STOP);
   uint32_t old_points = sweep_points;
   uint32_t i;
+  if (argc == 0)
+    goto do_scan;
   if (argc < 2 || argc > 4) {
     shell_printf("usage: scan {start(Hz)} {stop(Hz)} [points] [outmask]\r\n");
     return;
@@ -987,8 +999,11 @@ VNA_SHELL_FUNCTION(cmd_scan)
     sweep_points = points;
   }
   set_frequencies(start, stop, sweep_points);
+do_scan:
   pause_sweep();
+  setting.sweep = true;         // prevent abort
   sweep(false);
+  setting.sweep = false;
   // Output data after if set (faster data recive)
   if (argc == 4) {
     uint16_t mask = my_atoui(argv[3]);
@@ -1296,6 +1311,11 @@ VNA_SHELL_FUNCTION(cmd_sweep)
     set_sweep_frequency(type, value1);
     return;
   }
+  // Parse sweep {go|abort}
+  static const char sweep_cmd2[] = "go|abort";
+  int type2 = get_str_index(argv[0], sweep_cmd2);
+  if (type2==0) { setting.sweep = true; return;}
+  if (type2==1) { setting.sweep = false; return;}
   //  Parse sweep {start(Hz)} [stop(Hz)]
   set_sweep_frequency(ST_START, value0);
   if (value1)
@@ -1305,7 +1325,8 @@ VNA_SHELL_FUNCTION(cmd_sweep)
   return;
 usage:
   shell_printf("usage: sweep {start(Hz)} [stop(Hz)] [points]\r\n"\
-               "\tsweep {%s} {freq(Hz)}\r\n", sweep_cmd);
+                    "\tsweep {%s}\r\n"\
+                    "\tsweep {%s} {freq(Hz)}\r\n", sweep_cmd2, sweep_cmd);
 }
 
 VNA_SHELL_FUNCTION(cmd_save)
@@ -1906,6 +1927,8 @@ static const VNAShellCommand commands[] =
 #endif
 #ifdef TINYSA4
     { "lna", cmd_lna,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
+#endif
+#ifdef __ULTRA__
     { "ultra", cmd_ultra,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
     { "ultra_start", cmd_ultra_start, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
 #endif

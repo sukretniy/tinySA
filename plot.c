@@ -1806,7 +1806,7 @@ static const uint8_t sd_icon [] = {
   int16_t vbat = adc_vbat_read();
   if (vbat <= 0)
     return;
-  uint8_t string_buf[16];
+  uint8_t string_buf[24];
   // Set battery color
   ili9341_set_foreground(vbat < BATTERY_WARNING_LEVEL ? LCD_LOW_BAT_COLOR : (vbat < BATTERY_MID_LEVEL ? LCD_TRACE_1_COLOR : LCD_NORMAL_BAT_COLOR));
   ili9341_set_background(LCD_BG_COLOR);

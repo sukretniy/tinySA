@@ -421,8 +421,10 @@ enum {
   KM_R,KM_MOD,KM_CP,
 #endif
   KM_ATTACK,
-#ifdef TINYSA4
+#ifdef __ULTRA__
   KM_LPF,
+#endif
+#ifdef TINYSA4
   KM_EXP_AVER,
 #endif
   KM_LEVEL,
@@ -483,8 +485,10 @@ static const struct {
 [KM_CP]           = {keypads_positive    , "CP"}, // KM_CP
 #endif
 [KM_ATTACK]       = {keypads_positive    , "ATTACK"},    // KM_ATTACK
-#ifdef TINYSA4
+#ifdef __ULTRA__
 [KM_LPF]          = {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
+#endif
+#ifdef TINYSA4
 [KM_EXP_AVER]     = {keypads_positive    , "EXPONENTIAL\nAVERAGING"}, //KM_EXP_AVER
 #endif
 [KM_LEVEL]        = {keypads_plusmin     , "LEVEL"}, // KM_LEVEL
@@ -569,9 +573,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_restart_acb){
   (void)item;
   (void)data;
   if(b){
-    if (current_index >= 0 && setting.sweep) {
-      float current_level = setting.level + ((float)current_index)* setting.level_sweep / (float)sweep_points;
-      plot_printf(b->text, sizeof b->text, "STOP %5.3QHz %+.1fdBm", getFrequency(current_index), current_level);
+    if (setting.sweep) {
+      if (current_index >= 0) {
+        float current_level = setting.level + ((float)current_index)* setting.level_sweep / (float)sweep_points;
+        plot_printf(b->text, sizeof b->text, "STOP %5.3QHz %+.1fdBm", getFrequency(current_index), current_level);
+      } else
+        plot_printf(b->text, sizeof b->text, "STOP SWEEP");
     }
     else
       plot_printf(b->text, sizeof b->text, "START SWEEP");
@@ -1105,6 +1112,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_spur_acb)
 #endif
 #endif
 
+#ifdef __ULTRA__
+static UI_FUNCTION_ADV_CALLBACK(menu_debug_spur_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = debug_spur == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  toggle_debug_spur();
+  //  menu_move_back();
+  ui_mode_normal();
+}
+#endif
+
 #ifdef TINYSA4
 static UI_FUNCTION_ADV_CALLBACK(menu_extra_lna_acb)
 {
@@ -1128,31 +1150,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_adf_out_acb)
     return;
   }
   toggle_high_out_adf4350();
-  //  menu_move_back(false);
-  ui_mode_normal();
-}
-
-static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
-{
-  (void)data;
-  (void)item;
-  if (b){
-    b->icon = config.ultra == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
-    return;
-  }
-  if (!config.ultra) {
-    kp_help_text = "Ultra unlock code";
-    ui_mode_keypad(KM_CENTER);
-    if (uistat.value != 4321)
-      return;
-  }
-  config.ultra = !config.ultra;
-  config_save();
-  reset_settings(M_LOW);
-  if (config.ultra){
-    set_sweep_frequency(ST_START, 0);
-    set_sweep_frequency(ST_STOP, 3000000000ULL);
-  }
   //  menu_move_back(false);
   ui_mode_normal();
 }
@@ -1213,6 +1210,33 @@ static UI_FUNCTION_ADV_CALLBACK(menu_linear_averaging_acb)
 }
 
 
+#endif
+
+#ifdef __ULTRA__
+static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = config.ultra == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  if (!config.ultra) {
+    kp_help_text = "Ultra unlock code";
+    ui_mode_keypad(KM_CENTER);
+    if (uistat.value != 4321)
+      return;
+  }
+  config.ultra = !config.ultra;
+  config_save();
+  reset_settings(M_LOW);
+  if (config.ultra){
+    set_sweep_frequency(ST_START, 0);
+    set_sweep_frequency(ST_STOP, 3000000000ULL);
+  }
+  //  menu_move_back(false);
+  ui_mode_normal();
+}
 #endif
 
 static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
@@ -2659,6 +2683,11 @@ static const menuitem_t menu_settings3[] =
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings4},
 #else
+#ifdef __ULTRA__
+  { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
+  { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
+  { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
+#endif
   { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
   { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
   { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
@@ -3172,7 +3201,7 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
     break;
 #endif
-#ifdef TINYSA4
+#ifdef __ULTRA__
   case KM_LPF:
     uistat.freq_value = config.ultra_threshold;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
@@ -3331,12 +3360,14 @@ set_numeric_value(void)
     set_attack(uistat.value);
     break;
 #endif
-#ifdef TINYSA4
+#ifdef __ULTRA__
   case KM_LPF:
     config.ultra_threshold = uistat.value;
     config_save();
     ultra_threshold = config.ultra_threshold;
     break;
+#endif
+#ifdef TINYSA4
   case KM_EXP_AVER:
     setting.exp_aver = uistat.value;
     dirty = true;

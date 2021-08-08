@@ -1184,8 +1184,10 @@
 #endif
 
 #ifdef  USB_DP_R_VDD
-#define usb_lld_connect_bus(usbp) 
-#define usb_lld_disconnect_bus(usbp)
+//#define usb_lld_connect_bus(usbp)
+//#define usb_lld_disconnect_bus(usbp)
+#define usb_lld_connect_bus(usbp)    {palSetPadMode(GPIOA, GPIOA_USB_DP, PAL_MODE_ALTERNATE(14));}
+#define usb_lld_disconnect_bus(usbp) {palSetPadMode(GPIOA, GPIOA_USB_DP, PAL_STM32_MODE_OUTPUT); palClearPad(GPIOA, GPIOA_USB_DP);}
 #else // USB_DP connect to VDD by 1.5K R, and USB_DP short with PA10
 #define usb_lld_connect_bus(usbp) palSetPadMode(GPIOA, GPIOA_USB_DISC, PAL_MODE_INPUT)
 #define usb_lld_disconnect_bus(usbp) palClearPad(GPIOA, GPIOA_USB_DISC)

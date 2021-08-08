@@ -74,7 +74,9 @@
 //#define ADF_SPI_SPEED   SPI_BR_DIV32
 #define ADF_SPI_SPEED   SPI_BR_DIV2
 
-#define PE_SPI_SPEED   SPI_BR_DIV16
+#define PE4302_HW_SHIFT     true
+#define PE_SPI_SPEED   SPI_BR_DIV2
+#define PE_SW_DELAY     1
 
 static uint32_t old_spi_settings;
 #else
@@ -155,9 +157,9 @@ static void software_shiftOut(uint8_t val)
   do {
     if (val & 0x80)
       SPI1_SDI_HIGH;
-    my_microsecond_delay(100);
+    my_microsecond_delay(PE_SW_DELAY);
     SPI1_CLK_HIGH;
-    my_microsecond_delay(100);
+    my_microsecond_delay(PE_SW_DELAY);
     SPI1_RESET;
     val<<=1;
   }while((++i) & 0x07);
@@ -221,7 +223,7 @@ bool PE4302_Write_Byte(unsigned char DATA )
   if (old_attenuation == DATA)
     return false;
   old_attenuation = DATA;
-#if 0
+#if PE4302_HW_SHIFT
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != PE_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, PE_SPI_SPEED);
@@ -232,10 +234,10 @@ bool PE4302_Write_Byte(unsigned char DATA )
   software_shiftOut(DATA);
 #endif
   CS_PE_HIGH;
-  my_microsecond_delay(100);
+  my_microsecond_delay(PE_SW_DELAY);
   CS_PE_LOW;
-  my_microsecond_delay(100);
-#if 0
+  my_microsecond_delay(PE_SW_DELAY);
+#if PE4302_HW_SHIFT
   if (SI4432_SPI_SPEED != PE_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
 #endif
@@ -1825,17 +1827,21 @@ void enable_extra_lna(int s)
   }
 }
 
+#ifdef __ULTRA__
 void enable_ultra(int s)
 {
 static int old_ultra = -1;
   if (s != old_ultra) {
+#ifdef TINYSA4
     if (s)
       palClearLine(LINE_ULTRA);
     else
       palSetLine(LINE_ULTRA);
+#endif
     old_ultra = s;
   }
 }
+#endif
 
 void enable_rx_output(int s)
 {

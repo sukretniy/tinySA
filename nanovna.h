@@ -77,6 +77,7 @@
 #define __LIMITS__
 #define __MCU_CLOCK_SHIFT__
 #ifdef TINYSA4
+#define __ULTRA__
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
 #define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root)
@@ -94,6 +95,7 @@
 //#define __FFT_VBW__
 //#define __FFT_DECONV__
 #else
+//#define __ULTRA__
 //#define __HARMONIC__
 #define __USE_FREQ_TABLE__      // Enable use table for frequency list
 #endif
@@ -103,6 +105,10 @@
 #define DEFAULT_IF  433800000
 #define DEFAULT_SPUR_IF 434000000
 #define DEFAULT_MAX_FREQ    350000000
+#define MAX_LO_FREQ         960000000UL
+#define MIN_LO_FREQ         240000000UL
+#define MIN_BELOW_LO         550000000UL
+#define ULTRA_MAX_FREQ      1390000000UL
 //#define DEFAULT_MAX_FREQ    527000000
 #define HIGH_MIN_FREQ_MHZ   240
 #define HIGH_MAX_FREQ_MHZ   960
@@ -119,7 +125,7 @@
 #define ULTRA_MAX_FREQ      5350000000ULL
 //#define ULTRA_MAX_FREQ      2900000000ULL
 #define MAX_LO_FREQ         4350000000ULL
-#define LOW_MAX_FREQ         800000000ULL
+//#define LOW_MAX_FREQ         800000000ULL
 #define MIN_BELOW_LO         550000000ULL
 #endif
 /*
@@ -144,6 +150,7 @@
 #define TRACE_TEMP      (LCD_TRACE_3_COLOR - LCD_TRACE_1_COLOR)
 #else
 #define TRACE_TEMP      (LCD_TRACE_4_COLOR - LCD_TRACE_1_COLOR)
+#define TRACE_STORED2    (LCD_TRACE_3_COLOR - LCD_TRACE_1_COLOR)
 #endif
 #define TRACE_STORED    (LCD_TRACE_2_COLOR - LCD_TRACE_1_COLOR)
 //#define TRACE_AGE       3
@@ -278,10 +285,12 @@ extern float channel_power[3];
 extern float channel_power_watt[3];
 extern const char * const unit_string[];
 extern uint16_t vbwSteps;
-#ifdef TINYSA4
-extern float measured_noise_figure;
+#ifdef __ULTRA__
 extern freq_t ultra_threshold;
 extern bool ultra;
+#endif
+#ifdef TINYSA4
+extern float measured_noise_figure;
 extern float *drive_dBm;
 extern int test_output;
 extern int test_output_switch;
@@ -376,12 +385,15 @@ void sweep_remote(void);
 void calculate_step_delay(void);
 extern int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv);
 
+#ifdef __ULTRA__
+void toggle_ultra(void);
+void enable_ultra(int);
+#endif
 #ifdef TINYSA4
 void clear_frequency_cache(void);
 void toggle_high_out_adf4350(void);
 extern int high_out_adf4350;
 void set_30mhz(freq_t);
-void toggle_ultra(void);
 void set_IF2(int f);
 void set_R(int f);
 extern void set_modulo(uint32_t f);
@@ -398,7 +410,10 @@ void set_10mhz(freq_t);
 #define LOW_OUT_OFFSET config.low_level_output_offset
 #define HIGH_OUT_OFFSET config.high_level_output_offset
 #endif
-
+#ifdef __ULTRA__
+extern bool debug_spur;
+extern void toggle_debug_spur(void);
+#endif
 #ifdef __AUDIO__
 /*
  * dsp.c
@@ -665,6 +680,8 @@ typedef struct config {
 #ifdef TINYSA4
   freq_t frequency_IF1;
   freq_t frequency_IF2;
+#endif
+#ifdef __ULTRA__
   freq_t ultra_threshold;
   int8_t    ultra;
 #endif
@@ -1084,9 +1101,11 @@ typedef struct setting
   freq_t  *correction_frequency;
   float   *correction_value;
 
-#ifdef TINYSA4
-  bool    extra_lna;
+#ifdef __ULTRA__
   uint8_t ultra;    // enum ??
+#endif
+  #ifdef TINYSA4
+  bool    extra_lna;
   int R;            // KM_R
   int32_t exp_aver;
 #endif

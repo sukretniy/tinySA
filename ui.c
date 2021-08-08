@@ -1534,9 +1534,9 @@ refresh_sweep_menu(int i)
   if (new_sweep_time - old_sweep_time > ONE_SECOND_TIME/200 && i >= 0) {
     old_sweep_time = new_sweep_time;
     if (menu_stack[menu_current_level] == menu_lowoutputmode)
-      draw_menu_buttons(menu_stack[menu_current_level], 5);
+      draw_menu_buttons(menu_stack[menu_current_level], 1 << 5);
     if (menu_stack[menu_current_level] == menu_highoutputmode)
-      draw_menu_buttons(menu_stack[menu_current_level], 5);
+      draw_menu_buttons(menu_stack[menu_current_level], 1 << 5);
   }
 }
 #endif

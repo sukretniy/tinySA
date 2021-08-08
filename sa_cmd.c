@@ -149,7 +149,8 @@ VNA_SHELL_FUNCTION(cmd_lna)
     redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA;
   }
 }
-
+#endif
+#ifdef __ULTRA__
 VNA_SHELL_FUNCTION(cmd_ultra)
 {
 //  static const char cmd[] = "off|on";
@@ -449,7 +450,7 @@ VNA_SHELL_FUNCTION(cmd_zero)
   }
 }
 
-#ifdef TINYSA4
+#ifdef __ULTRA__
 VNA_SHELL_FUNCTION(cmd_ultra_start)
 {
   if (argc != 1) {
@@ -461,7 +462,9 @@ VNA_SHELL_FUNCTION(cmd_ultra_start)
     config_save();
   }
 }
+#endif
 
+#ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_if1)
 {
   if (argc != 1) {

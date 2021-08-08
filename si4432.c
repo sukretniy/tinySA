@@ -553,6 +553,21 @@ int SI4432_is_fast_mode(void)
 }
 #endif
 
+#ifdef __ULTRA__
+void enable_ultra(int s)
+{
+static int old_ultra = -1;
+  if (s != old_ultra) {
+#ifdef TINYSA4
+    if (s)
+      palClearLine(LINE_ULTRA);
+    else
+      palSetLine(LINE_ULTRA);
+#endif
+    old_ultra = s;
+  }
+}
+#endif
 
 //--------------------------- Trigger -------------------
 // ************** trigger mode if need
