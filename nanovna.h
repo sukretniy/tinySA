@@ -226,7 +226,7 @@ void toggle_pulse(void);
 void load_default_properties(void);
 
 enum {
-  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16, AV_100, AV_QUASI, AV_DECONV
+  AV_OFF, AV_MIN, AV_MAX_HOLD, AV_MAX_DECAY, AV_4, AV_16, AV_100, AV_QUASI, AV_TABLE, AV_DECONV
 };
 
 enum {
@@ -751,7 +751,7 @@ typedef struct {
 
 #ifdef __LIMITS__
 #define LIMITS_MAX  6
-#define REFERENCE_MAX 2
+#define REFERENCE_MAX TRACES_MAX
 typedef struct {
   uint8_t enabled;
   float level;

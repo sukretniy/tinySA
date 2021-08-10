@@ -525,16 +525,15 @@ static const menuitem_t  menu_trace[];
 static const menuitem_t  menu_marker_trace[];
 static const menuitem_t  menu_subtract_trace[];
 #ifdef __LIMITS__
-static const menuitem_t  menu_limit_trace[];
-static const menuitem_t  menu_reference[];
 static const menuitem_t  menu_limit_modify[];
+static const menuitem_t  menu_limit_select[];
 #endif
 static const menuitem_t  menu_average[];
 static const menuitem_t  menu_reffer[];
 static const menuitem_t  menu_sweep_points[];
 static const menuitem_t  menu_sweep_points_form[];
 static const menuitem_t  menu_modulation[];
-static const menuitem_t menu_marker_ref_select[];
+static const menuitem_t  menu_marker_ref_select[];
 #ifdef __USE_SERIAL_CONSOLE__
 static const menuitem_t  menu_connection[];
 #endif
@@ -1253,7 +1252,7 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
 }
 
 float nf_gain;
-const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16", "AVER", "QUASI", "DECONV"};
+const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16", "AVER", "QUASI", "TABLE", "DECONV"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 {
@@ -1557,7 +1556,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_average_acb)
     return;
   }
   set_average(current_trace,data);
-  ui_mode_normal();
+  if (data == AV_TABLE)
+    menu_push_submenu(menu_limit_select);
+  else {
+    ui_mode_normal();
+  }
 //  menu_move_back(true);
 }
 
@@ -1575,18 +1578,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trace_acb)
     redraw_request|= REDRAW_AREA;
   } else
     current_trace = data;
-  menu_move_back(false);
-}
-
-static UI_FUNCTION_ADV_CALLBACK(menu_reference_acb)
-{
-  (void)item;
-  if(b){
-    b->param_1.i = data+1;
-    b->icon = (data == active_reference) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
-    return;
-  }
-  active_reference = data;
   menu_move_back(false);
 }
 
@@ -1636,34 +1627,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_subtract_trace_acb)
   subtract_trace(current_trace,data-1);
   menu_move_back(false);
 }
-
-#ifdef __LIMITS__
-static UI_FUNCTION_ADV_CALLBACK(menu_limit_trace_acb)
-{
-  (void)item;
-  if(b){
-    if (data) {
-      plot_printf(b->text, sizeof(b->text), "TRACE %d", data);
-      b->bg = LCD_TRACE_1_COLOR+data-1;
-    }
-    else
-      plot_printf(b->text, sizeof(b->text), "OFF");
-    b->icon = (data == setting.limit_trace[active_reference]) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
-    return;
-  }
-  if (setting.normalized_trace != -1 && data-1 == TRACE_TEMP) {
-    drawMessageBox("Error", "Disable normalization first", 2000);
-    redraw_request|= REDRAW_AREA;
-    return;
-  }
-  if (setting.limit_trace[active_reference] != data && setting.limit_trace[active_reference] >0) {  // Clear previous limit trace
-    setting.stored[setting.limit_trace[active_reference]-1] = false;
-    TRACE_DISABLE(1<<(setting.limit_trace[active_reference]-1));
-  }
-  setting.limit_trace[active_reference] = data;
-  menu_move_back(false);
-}
-#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 {
@@ -1809,36 +1772,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
 
 #ifdef __LIMITS__
 uint8_t active_limit = 0;
-uint8_t active_reference = 0;
 static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
 {
   (void)item;
   if(b){
-    if (data == 0) {
-      plot_printf(b->text, sizeof(b->text), "REFERENCE\n %d", active_reference+1);
-    } else if (data == 1) {
-        if (setting.limit_trace[active_reference]) {
-          plot_printf(b->text, sizeof(b->text), "TRACE %d", setting.limit_trace[active_reference]);
-          b->bg = LCD_TRACE_1_COLOR+setting.limit_trace[active_reference]-1;
-        }
-        else
-          plot_printf(b->text, sizeof(b->text), "OFF");
-      } else {
-      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.2F%s", (float)setting.limits[active_reference][data-2].frequency, value(setting.limits[active_reference][data-2].level),unit_string[setting.unit]);
-      b->icon = (setting.limits[active_reference][data-2].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
-    }
+    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.2F%s", (float)setting.limits[current_trace][data].frequency, value(setting.limits[current_trace][data].level),unit_string[setting.unit]);
+    b->icon = (setting.limits[current_trace][data].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
     return;
   }
-  if (data == 0) {
-    menu_push_submenu(menu_reference);
-    return;
-  }
-  if (data == 1) {
-    menu_push_submenu(menu_limit_trace);
-    return;
-  }
-  active_limit = data - 2;
-  setting.limits[active_reference][active_limit].enabled = true;
+  active_limit = data;
+  setting.limits[current_trace][active_limit].enabled = true;
+  dirty = true;
   limits_update();
   menu_push_submenu(menu_limit_modify);
 }
@@ -1951,7 +1895,8 @@ static UI_FUNCTION_CALLBACK(menu_limit_disable_cb)
   (void)item;
   (void)data;
   if (active_limit<LIMITS_MAX){
-    setting.limits[active_reference][active_limit].enabled = false;
+    setting.limits[current_trace][active_limit].enabled = false;
+    dirty = true;
     limits_update();
     menu_move_back(false);
   }
@@ -2471,6 +2416,9 @@ static const menuitem_t  menu_average[] = {
 #ifdef __QUASI_PEAK__
   { MT_ADV_CALLBACK, AV_QUASI,      "QUASI\nPEAK",  menu_average_acb},
 #endif
+#ifdef __LIMITS__
+  { MT_ADV_CALLBACK, AV_TABLE,      "TABLE"S_RARROW"\nTRACE",  menu_average_acb},
+#endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
@@ -2545,7 +2493,7 @@ static const menuitem_t menu_limit_modify[] =
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
-const menuitem_t menu_limit_select[] = {
+static const menuitem_t menu_limit_select[] = {
   { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,8), MT_CUSTOM_LABEL, menu_limit_select_acb },
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
@@ -2947,20 +2895,6 @@ static const menuitem_t menu_subtract_trace[] =
  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
-#ifdef __LIMITS__
-static const menuitem_t menu_limit_trace[] =
-{
- { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX+1),          MT_CUSTOM_LABEL,        menu_limit_trace_acb},
- { MT_NONE,   0, NULL, menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_reference[] =
-{
- { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,REFERENCE_MAX),          "REFERENCE\n%d",        menu_reference_acb},
- { MT_NONE,   0, NULL, menu_back} // next-> menu_back
-};
-#endif
-
 static const menuitem_t menu_traces[] =
 {
  { MT_ADV_CALLBACK,0,          "TRACE %d",                  menu_traces_acb},
@@ -2981,9 +2915,6 @@ static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,1,             "WATER\nFALL",     menu_waterfall_acb},
 #ifdef __VBW__
   { MT_SUBMENU,     0,             "VBW",             menu_vbw},
-#endif
-#ifdef __LIMITS__
-  { MT_SUBMENU,     0,             "REFERENCE\nTRACE",menu_limit_select},
 #endif
   { MT_KEYPAD,      KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
   { MT_SUBMENU,     0,             "SWEEP\nPOINTS",   menu_sweep_points},
@@ -3209,11 +3140,11 @@ static void fetch_numeric_target(uint8_t mode)
 #endif
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
-    uistat.freq_value = setting.limits[active_reference][active_limit].frequency;
+    uistat.freq_value = setting.limits[current_trace][active_limit].frequency;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
     break;
   case KM_LIMIT_LEVEL:
-    uistat.value = value(setting.limits[active_reference][active_limit].level);
+    uistat.value = value(setting.limits[current_trace][active_limit].level);
     plot_printf(uistat.text, sizeof uistat.text, "%.1f", uistat.value);
     break;
 #endif
@@ -3376,11 +3307,13 @@ set_numeric_value(void)
     break;
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
-    setting.limits[active_reference][active_limit].frequency = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    setting.limits[current_trace][active_limit].frequency = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    dirty = true;
     limits_update();
     break;
   case KM_LIMIT_LEVEL:
-    setting.limits[active_reference][active_limit].level = to_dBm(uistat.value);
+    setting.limits[current_trace][active_limit].level = to_dBm(uistat.value);
+    dirty = true;
     limits_update();
     break;
 #endif

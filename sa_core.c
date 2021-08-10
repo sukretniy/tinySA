@@ -1,5 +1,4 @@
 /*
- * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
@@ -950,22 +949,21 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
 #ifdef __LIMITS__
 void limits_update(void)
 {
-  for (int r=0;r<REFERENCE_MAX;r++) {
+  for (int t=0;t<TRACES_MAX;t++) {
     int j =0;
     int prev = -1;
-    if (setting.limit_trace[r] == 0)
+    if (setting.average[t] != AV_TABLE)
       continue;
-    int t = setting.limit_trace[r] - 1;
     for (int i = 0; i<LIMITS_MAX; i++)
     {
-      if (setting.limits[r][i].enabled) {
-        while (j < sweep_points && (getFrequency(j) < setting.limits[r][i].frequency || setting.limits[r][i].frequency == 0)) {
+      if (setting.limits[t][i].enabled) {
+        while (j < sweep_points && (getFrequency(j) < setting.limits[t][i].frequency || setting.limits[t][i].frequency == 0)) {
           if (prev < 0)
-            measured[t][j] = setting.limits[r][i].level;
+            measured[t][j] = setting.limits[t][i].level;
           else
-            measured[t][j] = setting.limits[r][prev].level +
-            (getFrequency(j) - setting.limits[r][prev].frequency) * (setting.limits[r][i].level - setting.limits[r][prev].level) /
-            (setting.limits[r][i].frequency-setting.limits[r][prev].frequency);
+            measured[t][j] = setting.limits[t][prev].level +
+            (getFrequency(j) - setting.limits[t][prev].frequency) * (setting.limits[t][i].level - setting.limits[t][prev].level) /
+            (setting.limits[t][i].frequency-setting.limits[t][prev].frequency);
           j++;
         }
         prev = i;
@@ -974,7 +972,7 @@ void limits_update(void)
     if (prev>=0)
     {
       while (j < sweep_points)
-        measured[t][j++] = setting.limits[r][prev].level;
+        measured[t][j++] = setting.limits[t][prev].level;
       setting.stored[t] = true;
       TRACE_ENABLE(1<<t);
     } else {
@@ -1244,6 +1242,8 @@ void set_average(int t, int v)
 {
   if (setting.average[t] == v)     // Clear calc on second click
     dirty = true;
+  if (setting.average[t] == AV_TABLE && v != AV_TABLE)
+    setting.stored[t] = false;
   setting.average[t] = v;
   bool enable = ((v != 0)
 #ifdef __QUASI_PEAK__
