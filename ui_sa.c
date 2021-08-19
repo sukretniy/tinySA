@@ -2494,7 +2494,7 @@ static const menuitem_t menu_limit_modify[] =
 };
 
 static const menuitem_t menu_limit_select[] = {
-  { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,8), MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,LIMITS_MAX), MT_CUSTOM_LABEL, menu_limit_select_acb },
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 #endif

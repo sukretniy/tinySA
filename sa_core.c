@@ -128,7 +128,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 #define MAX_DRIVE   (setting.mode == M_GENHIGH ? 15 : 11)
 #define MIN_DRIVE   8
 #define SL_GENHIGH_LEVEL_MIN    -38
-#define SL_GENHIGH_LEVEL_MAX    16
+#define SL_GENHIGH_LEVEL_MAX    9
 #define SL_GENLOW_LEVEL_MIN    -76
 #define SL_GENLOW_LEVEL_MAX   -7
 #endif
@@ -254,8 +254,6 @@ void reset_settings(int m)
   for (int r=0;r<REFERENCE_MAX;r++)
     for (int l=0;l<LIMITS_MAX;l++)
       setting.limits[r][l].enabled = false;
-  for (int i=0; i<REFERENCE_MAX;i++)
-    setting.limit_trace[i] = 0;
   if (in_selftest) {
     setting.stored[TRACE_STORED] = true;
     TRACE_ENABLE(TRACE_STORED_FLAG);
@@ -957,7 +955,7 @@ void limits_update(void)
     for (int i = 0; i<LIMITS_MAX; i++)
     {
       if (setting.limits[t][i].enabled) {
-        while (j < sweep_points && (getFrequency(j) < setting.limits[t][i].frequency || setting.limits[t][i].frequency == 0)) {
+        while (j < sweep_points && (getFrequency(j) < setting.limits[t][i].frequency /* || setting.limits[t][i].frequency == 0 */)) {
           if (prev < 0)
             measured[t][j] = setting.limits[t][i].level;
           else
