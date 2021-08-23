@@ -1073,7 +1073,9 @@ void toggle_normalize(int t)
 extern float peakLevel;
 void set_actual_power(float o)              // Set peak level to known value
 {
-  float new_offset = o - peakLevel + get_level_offset();        //  offset based on difference between measured peak level and known peak level
+  if (!markers[0].index)
+    return;
+  float new_offset = o -   measured[markers[0].trace][markers[0].index] + get_level_offset();        //  offset based on difference between measured peak level and known peak level
   if (o == 100) new_offset = 0;
   if (setting.mode == M_HIGH) {
     config.high_level_offset = new_offset;
