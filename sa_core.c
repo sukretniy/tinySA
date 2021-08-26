@@ -3891,6 +3891,8 @@ static uint8_t sweep_counter = 0;           // Only used for HW refresh
 static bool sweep(bool break_on_operation)
 {
   float RSSI;
+  float local_peakLevel;
+  int local_peakIndex;
 #ifdef __SI4432__
   freq_t agc_peak_freq = 0;
   float agc_peak_rssi = -150;
@@ -4350,11 +4352,12 @@ static volatile int dummy;
         temppeakLevel = actual_t[0];
         max_index[0] = 0;
         downslope = true;
-        peakLevel = temppeakLevel;
+        local_peakIndex = 0;
+        local_peakLevel = temppeakLevel;
       }
-      if (cur_max == 0 && peakLevel <  actual_t[i]) {
-        peakIndex = i;
-        peakLevel = actual_t[i];
+      if (cur_max == 0 && local_peakLevel <  actual_t[i]) {
+        local_peakIndex = i;
+        local_peakLevel = actual_t[i];
       }
       if (downslope) {                               // If in down slope peak finding
         if (temppeakLevel > actual_t[i]) {           // Follow down
@@ -4657,7 +4660,7 @@ static volatile int dummy;
   // --------------------- set tracking markers from maximum table -----------------
 
   if (cur_max == 0) {
-    max_index[0] = peakIndex;
+    max_index[0] = local_peakIndex;
     cur_max = 1;
   }
   if (MODE_INPUT(setting.mode)) {               // Assign maxima found to tracking markers
@@ -4776,9 +4779,10 @@ static volatile int dummy;
 #endif
     if (cur_max > 0) {
       peakIndex = max_index[0];
-      peakLevel = actual_t[peakIndex];
       cur_max = 1;
-    }
+    } else
+      peakIndex = local_peakIndex;
+    peakLevel = actual_t[peakIndex];
     peakFreq = getFrequency(peakIndex);
     min_level = temp_min_level;
   }
@@ -5640,6 +5644,7 @@ quit:
     config.cor_nfm = 0;
     config.cor_wfm = 0;
 #endif
+    in_selftest = false;
     reset_settings(M_LOW);
     set_refer_output(-1);
   } else if (false && test == 1) {
