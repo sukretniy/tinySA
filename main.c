@@ -508,15 +508,15 @@ usage:
 
 VNA_SHELL_FUNCTION(cmd_dac)
 {
-  int value;
+  uint32_t value;
   if (argc != 1) {
     shell_printf("usage: dac {value(0-4095)}\r\n"\
                  "current value: %d\r\n", config.dac_value);
     return;
   }
-  value = my_atoui(argv[0]);
+  value = my_atoui(argv[0]) & 0xFFF;
   config.dac_value = value;
-  dacPutChannelX(&DACD2, 0, value);
+  DAC->DHR12R2 = value;
 }
 
 VNA_SHELL_FUNCTION(cmd_saveconfig)
@@ -2284,11 +2284,6 @@ THD_FUNCTION(myshellThread, p)
 }
 #endif
 
-static const DACConfig dac1cfg1 = {
-  init:         0,
-  datamode:     DAC_DHRM_12BIT_RIGHT
-};
-
 #pragma GCC pop_options
 
 static const GPTConfig gpt4cfg = {
@@ -2310,6 +2305,9 @@ void my_microsecond_delay(int t)
  * Profile stack usage (enable threads command by def ENABLE_THREADS_COMMAND) show:
  *Stack maximum usage = 472 bytes (need test more and run all commands), free stack = 40 bytes
  */
+static void dac_init(void){
+  rccEnableDAC1(false); // Enable DAC1
+}
 
 int main(void)
 {
@@ -2463,13 +2461,14 @@ int main(void)
    * Set LCD display brightness (use DAC2 for control)
    * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
    */
+  dac_init();
+  DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
   #ifdef  __LCD_BRIGHTNESS__
     lcd_setBrightness(config._brightness);
   #else
-    dacStart(&DACD2, &dac1cfg1);
-    dacPutChannelX(&DACD2, 0, config.dac_value);
+    DAC->DHR12R2 = config.dac_value; // Setup DAC: CH2 value
   #endif
-  dacStart(&DACD1, &dac1cfg1);
+  DAC->DHR12R1 = 0;                  // Setup DAC: CH1 value
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 

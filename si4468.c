@@ -1382,7 +1382,7 @@ void SI4432_Listen(int s)
       } else
         count++;
       v = max - v;
-      dacPutChannelX(&DACD1, 0, dBm_to_volt[v] << 4);
+      DAC->DHR12R1 = dBm_to_volt[v] << 4; // Use DAC: CH1 and put 12 bit right aligned value
     } while(operation_requested == OP_NONE);
   count = 0;
 //  dacPutChannelX(&DACD2, 0, 0);

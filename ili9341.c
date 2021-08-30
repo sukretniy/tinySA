@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2019-2020, written by DiSlord dislordlive@gmail.com
  * All rights reserved.
  *
  * This is free software; you can redistribute it and/or modify
@@ -524,35 +523,23 @@ static const uint8_t ili9341_init_seq[] = {
 #endif
 
 #ifdef __LCD_BRIGHTNESS__
-#if HAL_USE_DAC == FALSE
-#error "Need set HAL_USE_DAC in halconf.h for use __LCD_BRIGHTNESS__"
+#if HAL_USE_DAC == TRUE
+#error "Need to disable HAL_USE_DAC in halconf.h for use __LCD_BRIGHTNESS__"
 #endif
 
-static const DACConfig dac1cfg1 = {
-  init:         0,
-  datamode:     DAC_DHRM_12BIT_RIGHT
-};
-
-static void lcd_initBrightness(void){
-  dacStart(&DACD2, &dac1cfg1);
-}
 
 #define BRIGHTNESS_MIN_LEVEL    0
-#define BRIGHTNESS_MAX_LEVEL 3300
+#define BRIGHTNESS_MAX_LEVEL 4000
 // Brightness control range 0 - 100
+// DAC value range 0 - 4095 (0 to vRef in Volt)
 void lcd_setBrightness(uint16_t b){
   b = BRIGHTNESS_MIN_LEVEL + b*((BRIGHTNESS_MAX_LEVEL-BRIGHTNESS_MIN_LEVEL)/100);
-  dacPutChannelX(&DACD2, 0, b);
+  DAC->DHR12R2 = b;
 }
-#else
-#define lcd_initBrightness()
 #endif
 
 void ili9341_init(void)
 {
-  // Init Brightness if LCD support
-  lcd_initBrightness();
-
   LCD_DC_DATA;
   LCD_RESET_ASSERT;
   chThdSleepMilliseconds(10);
