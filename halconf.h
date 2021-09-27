@@ -61,7 +61,7 @@
 #if !defined(HAL_USE_DAC) || defined(__DOXYGEN__)
 #define HAL_USE_DAC                 FALSE
 #endif
-
+#define STM32_DMA_REQUIRED
 /**
  * @brief   Enables the EXT subsystem.
  */

@@ -1111,6 +1111,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_spur_acb)
 #endif
 #endif
 
+#if 0
 #ifdef __ULTRA__
 static UI_FUNCTION_ADV_CALLBACK(menu_debug_spur_acb)
 {
@@ -1124,6 +1125,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_spur_acb)
   //  menu_move_back();
   ui_mode_normal();
 }
+#endif
 #endif
 
 #ifdef TINYSA4
@@ -1804,6 +1806,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
       break;
     case M_DELTA:
       uistat.text[0] = markers[active_marker].ref+'1';
+      /* fall through */
     case M_NOISE:
     case M_TRACKING:
     case M_AVER:

@@ -89,8 +89,13 @@
 #define GPIOB_SPI_MOSI          5
 #define GPIO_LO_SEL             6
 #define LINE_LO_SEL             PAL_LINE(GPIOB, GPIO_LO_SEL)
+#ifdef __NEW_SWITCHES__
+#define GPIO_SD_CD              12
+#define LINE_SD_CD              PAL_LINE(GPIOB, GPIO_SD_CD)
+#else
 #define GPIO_SD_CD              7
 #define LINE_SD_CD              PAL_LINE(GPIOB, GPIO_SD_CD)
+#endif
 #define GPIO_RX_SEL             8
 #define LINE_RX_SEL             PAL_LINE(GPIOB, GPIO_RX_SEL)
 #define GPIO_RX_CTS             9
@@ -99,8 +104,13 @@
 #define GPIO_LCD_CD_PORT        GPIOB
 #define GPIO_LCD_CS             11
 #define GPIO_LCD_CS_PORT        GPIOB
+#ifdef __NEW_SWITCHES__
+#define GPIO_RX_SDN             7
+#define LINE_RX_SDN             PAL_LINE(GPIOB, GPIO_RX_SDN)
+#else
 #define GPIO_RX_SDN             12
 #define LINE_RX_SDN             PAL_LINE(GPIOB, GPIO_RX_SDN)
+#endif
 #define GPIO_PB13               13
 #define LINE_PB13               PAL_LINE(GPIOB, GPIO_PB13)
 #define GPIO_PB14               14

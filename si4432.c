@@ -825,8 +825,9 @@ pureRSSI_t SI4432_RSSI(uint32_t i, int s)
     my_microsecond_delay(100);
   }while(1);
 
-  if (setting.repeat > 1)
+  if (setting.repeat > 1){
     RSSI_RAW = RSSI_RAW / setting.repeat;
+  }
  //   if (MODE_INPUT(setting.mode) && RSSI_RAW == 0)
  //     SI4432_Init();
 #ifdef __SIMULATION__

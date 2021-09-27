@@ -149,6 +149,7 @@ void stop_PE4312_SPI_mode(void){
   SI4432_SPI->CR1 = old_spi_settings;
 }
 
+#if 0
 static void software_shiftOut(uint8_t val)
 {
   SI4432_log(SI4432_Sel);
@@ -164,7 +165,7 @@ static void software_shiftOut(uint8_t val)
     val<<=1;
   }while((++i) & 0x07);
 }
-
+#endif
 
 static void shiftOut(uint8_t val)
 {
@@ -819,11 +820,12 @@ static void SI4463_set_state(si446x_state_t newState)
   SI4463_do_api(data, sizeof(data), NULL, 0);
 }
 
-static uint8_t gpio_state[4] = {
+static uint8_t gpio_state[5] = {
   SI446X_GPIO_MODE_DIV_CLK,
   SI446X_GPIO_MODE_CTS,
   SI446X_GPIO_MODE_DONOTHING,
-  SI446X_GPIO_MODE_DONOTHING
+  SI446X_GPIO_MODE_DONOTHING,
+  SI446X_GPIO_MODE_DRIVE1
 };
 
 void SI4463_refresh_gpio(void)
@@ -832,9 +834,9 @@ void SI4463_refresh_gpio(void)
     SI446X_CMD_GPIO_PIN_CFG,
     gpio_state[0], // GPIO[0]
     gpio_state[1], // GPIO[1]
-    gpio_state[2], // GPIO[2]
-    gpio_state[3], // GPIO[3]
-    0,             // NIRQ
+    gpio_state[2], // GPIO[2]       // High
+    gpio_state[3], // GPIO[3]       // TX/RX
+    gpio_state[4], // NIRQ          // Direct
     0,             // SDO
     0              // GEN_CONFIG
   };
@@ -1853,11 +1855,28 @@ void enable_rx_output(int s)
 
 void enable_high(int s)
 {
+#ifdef __NEW_SWITCHES__
+  if (s)
+    SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE0);
+  else
+    SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE1);
+#else
   if (s)
     SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE1);
   else
     SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE0);
+#endif
 }
+
+#ifdef __NEW_SWITCHES__
+void enable_direct(int s)
+{
+  if (s)
+    SI4463_set_gpio(4,SI446X_GPIO_MODE_DRIVE0);
+  else
+    SI4463_set_gpio(4,SI446X_GPIO_MODE_DRIVE1);
+}
+#endif
 
 
 #pragma GCC pop_options

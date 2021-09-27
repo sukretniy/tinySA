@@ -709,7 +709,7 @@ void set_modulation_frequency(int f)
 
 void set_repeat(int r)
 {
-  if (r > 0 && r <= 100) {
+  if (r > 0 && r <= 500) {
     setting.repeat = r;
 //    dirty = true;             // No HW update required, only status panel refresh
   }
@@ -1786,7 +1786,7 @@ done:
 float peakLevel;
 float min_level;
 freq_t peakFreq;
-int peakIndex;
+int peakIndex = 0;
 float temppeakLevel;
 uint16_t temppeakIndex;
 // volatile int t;
@@ -1824,7 +1824,9 @@ void setup_sa(void)
 #endif
   enable_rx_output(false);
   enable_high(false);
-
+#ifdef __NEW_SWITCHES__
+  enable_direct(false);
+#endif
   fill_spur_table();
 #endif
   #if 0           // Measure fast scan time
@@ -3891,8 +3893,8 @@ static uint8_t sweep_counter = 0;           // Only used for HW refresh
 static bool sweep(bool break_on_operation)
 {
   float RSSI;
-  float local_peakLevel;
-  int local_peakIndex;
+  float local_peakLevel = -150.0;
+  int local_peakIndex = 0;
 #ifdef __SI4432__
   freq_t agc_peak_freq = 0;
   float agc_peak_rssi = -150;

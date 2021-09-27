@@ -49,6 +49,7 @@
 #define __SI4463__
 #define __SI4468__
 #define __ADF4351__
+#define __NEW_SWITCHES__
 #endif
 #define __PE4302__
 //#define __SIMULATION__
