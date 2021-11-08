@@ -28,6 +28,7 @@
 #define BOARD_NAME              "tinySA4"
 
 #include <stm32f303xc.h>
+//#include "..\nanovna.h"
 /*
  * Board frequencies.
  */
@@ -89,6 +90,7 @@
 #define GPIOB_SPI_MOSI          5
 #define GPIO_LO_SEL             6
 #define LINE_LO_SEL             PAL_LINE(GPIOB, GPIO_LO_SEL)
+//#define __NEW_SWITCHES__
 #ifdef __NEW_SWITCHES__
 #define GPIO_SD_CD              12
 #define LINE_SD_CD              PAL_LINE(GPIOB, GPIO_SD_CD)

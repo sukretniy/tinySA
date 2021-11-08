@@ -75,8 +75,8 @@
 #define ADF_SPI_SPEED   SPI_BR_DIV2
 
 #define PE4302_HW_SHIFT     true
-#define PE_SPI_SPEED   SPI_BR_DIV2
-#define PE_SW_DELAY     1
+#define PE_SPI_SPEED   SPI_BR_DIV8
+#define PE_SW_DELAY     2
 
 static uint32_t old_spi_settings;
 #else
@@ -1832,7 +1832,7 @@ void enable_extra_lna(int s)
 #ifdef __ULTRA__
 void enable_ultra(int s)
 {
-static int old_ultra = -1;
+static int old_ultra = 2;
   if (s != old_ultra) {
 #ifdef TINYSA4
     if (s)
@@ -1871,6 +1871,10 @@ void enable_high(int s)
 #ifdef __NEW_SWITCHES__
 void enable_direct(int s)
 {
+  static int old_direct = 2;
+  if (s == old_direct)
+    return;
+  old_direct = s;
   if (s)
     SI4463_set_gpio(4,SI446X_GPIO_MODE_DRIVE0);
   else

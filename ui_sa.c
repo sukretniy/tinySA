@@ -1238,6 +1238,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
   //  menu_move_back(false);
   ui_mode_normal();
 }
+
+static UI_FUNCTION_ADV_CALLBACK(menu_direct_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = config.direct == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  config.direct = !config.direct;
+  config_save();
+  //  menu_move_back(false);
+  ui_mode_normal();
+}
+
 #endif
 
 static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
@@ -2621,6 +2636,7 @@ static const menuitem_t menu_settings3[] =
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
   { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
+  { MT_ADV_CALLBACK,     0,     "ENABLE\nDIRECT",    menu_direct_acb},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
@@ -3118,12 +3134,12 @@ static void fetch_numeric_target(uint8_t mode)
     if (setting.level_sweep != 0)
       plot_printf(uistat.text, sizeof uistat.text, "%.1f to %.1fdBm", uistat.value, end_level);
     else
-      plot_printf(uistat.text, sizeof uistat.text, "%.1fdBm", uistat.value);
+      plot_printf(uistat.text, sizeof uistat.text, "%+.1fdBm", uistat.value);
     break;
   case KM_HIGHOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
     uistat.value += setting.external_gain;
-    plot_printf(uistat.text, sizeof uistat.text, "%.1fdBm", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%+.1fdBm", uistat.value);
     break;
   case KM_DECAY:
     uistat.value = setting.decay;

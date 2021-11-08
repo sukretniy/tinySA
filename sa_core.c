@@ -72,8 +72,8 @@ bool ultra;
 #ifdef TINYSA4
 int noise_level;
 float log_averaging_correction;
-uint32_t old_CFGR;
-uint32_t orig_CFGR;
+//uint32_t old_CFGR; // Not used??
+//uint32_t orig_CFGR; // Not used??
 
 int debug_frequencies = false;
 int linear_averaging = true;
@@ -2021,10 +2021,7 @@ case M_LOW:     // Mixed into 0
 #ifdef TINYSA4
     ADF4351_enable(true);
 //    ADF4351_drive(setting.lo_drive);
-    if (setting.tracking_output)
-      ADF4351_enable_aux_out(true);
-    else
-      ADF4351_enable_aux_out(false);
+    ADF4351_enable_aux_out(setting.tracking_output);
     ADF4351_enable_out(true);
 #endif
 
@@ -2110,7 +2107,7 @@ case M_GENLOW:  // Mixed output from 0
     ADF4351_enable_out(true);
 //    ADF4351_drive(setting.lo_drive);
     ADF4351_enable(true);
-    ADF4351_enable_aux_out(false);
+    ADF4351_enable_aux_out(setting.tracking_output);
 
     if (setting.atten_step) { // use switch as attenuator
       enable_rx_output(false);
@@ -2777,6 +2774,11 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int modulation_index = 0;
   int modulation_count_iter = 0;
   int spur_second_pass = false;
+#ifdef __NEW_SWITCHES__
+  int direct = (setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP );
+#else
+  const int direct = false;
+#endif
 #ifdef TINYSA4
   if (i == 0 && old_temp != Si446x_get_temp()) {
     old_temp = Si446x_get_temp();
@@ -2901,7 +2903,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #endif
 #endif
 
-  // ------------------------------------- Set the output level ----------------------------------
+  // ------------------------------------- START Set the output level ----------------------------------
 
   if (( setting.frequency_step != 0 || setting.level_sweep != 0.0 || i == 0)) {     // Initialize or adapt output levels
     if (setting.mode == M_GENLOW) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
@@ -3069,6 +3071,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       }
     }
   }
+
+  // ------------------------------------- END Set the output level ----------------------------------
+
 #ifdef __SI4432__
   if (setting.mode == M_LOW && S_IS_AUTO(setting.agc) && !check_for_AM && UNIT_IS_LOG(setting.unit)) {   // If in low input mode with auto AGC and log unit
     if (f < 1500000)
@@ -3156,14 +3161,29 @@ modulation_again:
     }
   }
 #ifdef __ULTRA__
-  // -------------- set ultra ---------------------------------
-  if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
-    enable_ultra(true);
-  }
-  else
-    enable_ultra(false);
+  // -------------- set ultra or direct ---------------------------------
+  if (setting.mode == M_LOW) {
+    if (ultra && f > ultra_threshold) {
+      enable_ultra(true);
+    }
+    else {
+#ifdef __NEW_SWITCHES__
+      if (direct) {
+        enable_ultra(true);
+        enable_direct(true);
+        enable_high(true);
+      }
+      else {
+        enable_ultra(false);
+        enable_direct(false);
+        enable_high(false);
+#else
+        enable_ultra(false);
 #endif
-  // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
+      }
+    }
+#endif
+    // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
   if (debug_avoid){                 // For debugging the spur avoidance control
 	stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
@@ -3179,6 +3199,9 @@ modulation_again:
     local_vbw_steps *= 2;
   }
 #endif
+
+  // -----------------------------------START vbwsteps loop ------------------------------------
+
   int t = 0;
   do {
     freq_t lf = f;
@@ -3208,7 +3231,7 @@ modulation_again:
         lf += offs;
 #endif
     }
-// -------------- Calculate the IF -----------------------------
+// -------------- START Calculate the IF -----------------------------
 
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
@@ -3246,7 +3269,7 @@ again:                                                              // Spur redu
         local_IF = DEFAULT_IF;
 #endif
       }
-      if (setting.mode == M_LOW) {
+      if (setting.mode == M_LOW && !direct) {
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
 #if 0                                                               // Isolation test
           local_IF = lf;
@@ -3387,7 +3410,7 @@ again:                                                              // Spur redu
         if (setting.modulation == MO_EXTERNAL)    // VERY SPECIAL CASE !!!!!! LO input via high port
           local_IF += lf;
       }
-    }
+    } // --------------- END IF calculation ------------------------
 
     // ------------- Set LO ---------------------------
 
@@ -3396,7 +3419,7 @@ again:                                                              // Spur redu
 #ifdef TINYSA4
       int inverted_f = false;
 #endif
-      if (setting.mode == M_LOW && !setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
+      if (setting.mode == M_LOW  && !direct && !setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
 #ifdef __ULTRA__
         if (lf < local_IF)
 #endif
@@ -3441,9 +3464,12 @@ again:                                                              // Spur redu
 #endif
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
 #endif
+
+// ----------------------------- START Calculate and set the AD4351 frequency  and set the RX frequency --------------------------------
+
 #ifdef __ADF4351__
 //      START_PROFILE;
-      if (MODE_LOW(setting.mode)) {
+      if (MODE_LOW(setting.mode) &&!direct) {
         if (config.frequency_IF2 != 0) {
           set_freq (ADF4351_LO2, config.frequency_IF2  - local_IF);          // Down from IF2 to fixed second IF in Ultra SA mode
           local_IF = config.frequency_IF2;
@@ -3456,9 +3482,9 @@ again:                                                              // Spur redu
         if (setting.R == 0) {
           if (setting.mode == M_GENLOW) {
             if (local_modulo == 0) ADF4351_modulo(1000);
-            ADF4351_R_counter(1);
+            ADF4351_R_counter(3);
           } else
-          if (lf < 1000000000 /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
+          if (lf > 8000000 && lf < 1000000000 /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
             if (local_modulo == 0) {
               if (actual_rbw_x10 >= 3000)
                 ADF4351_modulo(1000);
@@ -3488,7 +3514,7 @@ again:                                                              // Spur redu
             if (setting.frequency_step < 100000)
               ADF4351_R_counter(3);
             else
-              ADF4351_R_counter(1);
+              ADF4351_R_counter(1); // Used to be 1
           }
         }
         else {
@@ -3541,7 +3567,7 @@ again:                                                              // Spur redu
         }
         }
 #endif
-      } else if (setting.mode == M_HIGH) {
+      } else if (setting.mode == M_HIGH || direct) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
       } else if (setting.mode == M_GENHIGH) {
         if (config.high_out_adf4350) {
@@ -3552,9 +3578,11 @@ again:                                                              // Spur redu
           local_IF = 0;
         }
       }
+      // ----------------------------- END Calculate and set the AD4351 frequency and set the RX frequency --------------------------------
+
 //      STOP_PROFILE;
 #endif
-    }
+    }       // ----------------- LO's set --------------------------
 
 #ifdef __MCU_CLOCK_SHIFT__
         if (setting.mode == M_LOW && !in_selftest) {         // Avoid 48MHz spur
@@ -3590,7 +3618,7 @@ again:                                                              // Spur redu
 
 // ----------- Set IF ------------------
 
-    if (local_IF != 0)                  // When not in one of the high modes
+    if (local_IF != 0)                  // When not in one of the high modes and not in direct mode
     {
 #ifdef __SI4432__
       set_freq (SI4432_RX , local_IF);
@@ -3865,10 +3893,10 @@ again:                                                              // Spur redu
       break;         // abort
   } while (t < local_vbw_steps);                                   // till all sub steps done
 #ifdef TINYSA4
-  if (old_CFGR != orig_CFGR) {
-    old_CFGR = orig_CFGR;
-    RCC->CFGR  = orig_CFGR;
-  }
+//  if (old_CFGR != orig_CFGR) {    // Never happens ???
+//    old_CFGR = orig_CFGR;
+//    RCC->CFGR  = orig_CFGR;
+ // }
 #define IGNORE_RSSI 30000
 //  pureRSSI_t rssi = (RSSI>0 ? RSSI + correct_RSSI + correct_RSSI_freq : IGNORE_RSSI); // add correction
   pureRSSI_t rssi = RSSI + correct_RSSI + correct_RSSI_freq; // add correction
@@ -5060,14 +5088,14 @@ typedef struct test_case {
 const test_case_t test_case [] =
 #ifdef TINYSA4
 {//                 Condition   Preparation     Center  Span    Pass    Width(%)Stop
- TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.05,  0.1,   0,      0,      0),         // 1 Zero Hz leakage
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.06,  0.11,   -30,      0,      -30),         // 1 Zero Hz leakage
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -70,    0,      0),         // 2 Phase noise of zero Hz
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     1,      -23,   10,     -85),      // 3
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 900,    1,      -75,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
  TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     633,    994,    -85,    0,      0),         // 6 Wide band noise floor high mode
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -23,    27,     -70),      // 7 BPF loss and stop band
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -23,    27,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       900,    1,     -90,    0,      -90),       // 9 LPF cutoff
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      -23,    10,     -50),      // 10 Switch isolation using high attenuation

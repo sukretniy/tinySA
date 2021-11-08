@@ -49,7 +49,7 @@
 #define __SI4463__
 #define __SI4468__
 #define __ADF4351__
-#define __NEW_SWITCHES__
+//#define __NEW_SWITCHES__
 #endif
 #define __PE4302__
 //#define __SIMULATION__
@@ -128,6 +128,10 @@
 #define MAX_LO_FREQ         4350000000ULL
 //#define LOW_MAX_FREQ         800000000ULL
 #define MIN_BELOW_LO         550000000ULL
+#ifdef __NEW_SWITCHES__
+#define DIRECT_START 822000000ULL
+#define DIRECT_STOP  1130000000ULL
+#endif
 #endif
 /*
  * main.c
@@ -692,6 +696,9 @@ typedef struct config {
   int8_t    cor_nfm;
   uint8_t  _brightness;
   uint8_t high_out_adf4350;
+#ifdef __ULTRA__
+  uint8_t    direct;
+#endif
   float sweep_voltage;
   float switch_offset;
   int16_t   ext_zero_level;
