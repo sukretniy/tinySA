@@ -2768,7 +2768,7 @@ static float old_temp = 0.0;
 #endif
 
 
-pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
+static pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
   int modulation_index = 0;
@@ -3177,10 +3177,12 @@ modulation_again:
         enable_ultra(false);
         enable_direct(false);
         enable_high(false);
-#else
         enable_ultra(false);
-#endif
       }
+#else
+      enable_ultra(false);
+#endif
+
     }
 #endif
     // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------

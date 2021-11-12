@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -1503,7 +1503,7 @@ void calibrate(void);
 float to_dBm(float);
 float dBm_to_Watt(float);
 uint32_t calc_min_sweep_time_us(void);
-pureRSSI_t perform(bool b, int i, freq_t f, int e);
+static pureRSSI_t perform(bool b, int i, freq_t f, int e);
 void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
