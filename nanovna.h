@@ -49,7 +49,7 @@
 #define __SI4463__
 #define __SI4468__
 #define __ADF4351__
-//#define __NEW_SWITCHES__
+#define __NEW_SWITCHES__
 #endif
 #define __PE4302__
 //#define __SIMULATION__
@@ -1503,7 +1503,7 @@ void calibrate(void);
 float to_dBm(float);
 float dBm_to_Watt(float);
 uint32_t calc_min_sweep_time_us(void);
-static pureRSSI_t perform(bool b, int i, freq_t f, int e);
+pureRSSI_t perform(bool b, int i, freq_t f, int e);
 void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 

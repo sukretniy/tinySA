@@ -2768,7 +2768,7 @@ static float old_temp = 0.0;
 #endif
 
 
-static pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
+pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
   int modulation_index = 0;
@@ -3163,27 +3163,27 @@ modulation_again:
 #ifdef __ULTRA__
   // -------------- set ultra or direct ---------------------------------
   if (setting.mode == M_LOW) {
+#ifdef __NEW_SWITCHES__
+    if (direct) {
+      enable_ultra(true);
+      enable_direct(true);
+      enable_high(true);
+    } else
+#endif
     if (ultra && f > ultra_threshold) {
       enable_ultra(true);
-    }
-    else {
 #ifdef __NEW_SWITCHES__
-      if (direct) {
-        enable_ultra(true);
-        enable_direct(true);
-        enable_high(true);
-      }
-      else {
-        enable_ultra(false);
-        enable_direct(false);
-        enable_high(false);
-        enable_ultra(false);
-      }
-#else
-      enable_ultra(false);
+      enable_direct(false);
+      enable_high(false);
 #endif
-
+    } else {
+      enable_ultra(false);
+#ifdef __NEW_SWITCHES__
+      enable_high(false);
+      enable_direct(false);
+#endif
     }
+  }
 #endif
     // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
@@ -3203,7 +3203,6 @@ modulation_again:
 #endif
 
   // -----------------------------------START vbwsteps loop ------------------------------------
-
   int t = 0;
   do {
     freq_t lf = f;
@@ -3497,6 +3496,7 @@ again:                                                              // Spur redu
             if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {   // 30MHz
               ADF4351_R_counter(6);
             } else {
+#if 0
               if (actual_rbw_x10 < 1000) {
                 freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
                 if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
@@ -3504,6 +3504,7 @@ again:                                                              // Spur redu
                 else
                   ADF4351_R_counter(3);
               } else
+#endif
                 ADF4351_R_counter(1);
             }
           } else {
@@ -3571,6 +3572,7 @@ again:                                                              // Spur redu
 #endif
       } else if (setting.mode == M_HIGH || direct) {
         set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
+        local_IF = 0;
       } else if (setting.mode == M_GENHIGH) {
         if (config.high_out_adf4350) {
           set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
@@ -3893,7 +3895,7 @@ again:                                                              // Spur redu
     t++;                                                    // one subscan done
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
-  } while (t < local_vbw_steps);                                   // till all sub steps done
+  } while (t < local_vbw_steps);  // till all sub steps done
 #ifdef TINYSA4
 //  if (old_CFGR != orig_CFGR) {    // Never happens ???
 //    old_CFGR = orig_CFGR;
