@@ -1321,10 +1321,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       markers[1].mtype = M_TRACKING;
       kp_help_text = "Frequency of left signal";
       ui_mode_keypad(KM_CENTER);
-      int left =  uistat.value;
+      freq_t left =  uistat.value;
       kp_help_text = "Right signal";
       ui_mode_keypad(KM_CENTER);
-      int right =  uistat.value;
+      freq_t right =  uistat.value;
       set_sweep_frequency(ST_CENTER, (left+right)/2);
       set_sweep_frequency(ST_SPAN, (right - left)*5);
       set_average(0,AV_4);

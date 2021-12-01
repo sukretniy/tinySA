@@ -231,6 +231,7 @@ void reset_settings(int m)
 #ifdef TINYSA4
   drive_dBm = (float *) (setting.mode == M_GENHIGH && config.high_out_adf4350 ? adf_drive_dBm : si_drive_dBm);
   setting.exp_aver = 1;
+  setting.increased_R = false;
 #endif
   update_min_max_freq();
   setting.frequency_var = 0;
@@ -1636,7 +1637,7 @@ void calculate_step_delay(void)
       noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
       log_averaging_correction = step_delay_table[i].log_aver_correction;
 #endif
-      if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
+      if (setting.step_delay_mode == SD_PRECISE || setting.increased_R)    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
       if (setting.fast_speedup >0)
         SI4432_offset_delay = SI4432_step_delay / setting.fast_speedup;
@@ -2016,7 +2017,10 @@ case M_LOW:     // Mixed into 0
     } else {
        enable_rx_output(false);
     }
- #endif
+#ifdef __NEW_SWITCHES__
+  enable_direct(false);
+#endif
+  #endif
     set_AGC_LNA();
 #ifdef TINYSA4
     ADF4351_enable(true);
@@ -2073,6 +2077,9 @@ mute:
        enable_rx_output(false);
     }
     enable_high(true);
+#ifdef __NEW_SWITCHES__
+    enable_direct(false);
+#endif
     enable_extra_lna(false);
 #endif
 #ifdef __ULTRA__
@@ -2116,6 +2123,9 @@ case M_GENLOW:  // Mixed output from 0
     }
     SI4463_set_output_level(setting.rx_drive);
     enable_high(false);
+#ifdef __NEW_SWITCHES__
+    enable_direct(false);
+#endif
     enable_extra_lna(false);
 #endif
 #ifdef __ULTRA__
@@ -2827,6 +2837,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       is_below = false;
 #endif
       correct_RSSI_freq = get_frequency_correction(f);  // for i == 0 and freq_step == 0;
+#ifdef TINYSA4
+      correct_RSSI_freq += float_TO_PURE_RSSI(direct ? -6.0 : 0); // TODO add impact of direct
+#endif
+
     } else {
 #ifdef __MCU_CLOCK_SHIFT__
       clock_at_48MHz();
@@ -2921,7 +2935,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         else
           ls -= 0.5;
         float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0 /* + get_level_offset() */ ;
-        correct_RSSI_freq = get_frequency_correction(f);
+        correct_RSSI_freq = get_frequency_correction(f);  // No direct in output
         a += PURE_TO_float(correct_RSSI_freq);
 #ifdef TINYSA4
         {
@@ -3084,8 +3098,12 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #endif
   // Calculate the RSSI correction for later use
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
-    if (setting.frequency_step != 0)
+    if (setting.frequency_step != 0) {
       correct_RSSI_freq = get_frequency_correction(f);
+#ifdef TINYSA4
+      correct_RSSI_freq += float_TO_PURE_RSSI(direct ? -6.0 : 0); // TODO add impact of direct
+#endif
+    }
   }
 // #define DEBUG_CORRECTION
 #ifdef DEBUG_CORRECTION
@@ -3168,20 +3186,23 @@ modulation_again:
       enable_ultra(true);
       enable_direct(true);
       enable_high(true);
-    } else
-#endif
-    if (ultra && f > ultra_threshold) {
-      enable_ultra(true);
-#ifdef __NEW_SWITCHES__
-      enable_direct(false);
-      enable_high(false);
-#endif
+      ADF4351_enable_out(false);
     } else {
-      enable_ultra(false);
-#ifdef __NEW_SWITCHES__
-      enable_high(false);
-      enable_direct(false);
 #endif
+    ADF4351_enable_out(true);
+    if (ultra && f > ultra_threshold) {
+        enable_ultra(true);
+#ifdef __NEW_SWITCHES__
+        enable_direct(false);
+        enable_high(false);
+#endif
+      } else {
+        enable_ultra(false);
+#ifdef __NEW_SWITCHES__
+        enable_high(false);
+        enable_direct(false);
+#endif
+      }
     }
   }
 #endif
@@ -3481,27 +3502,32 @@ again:                                                              // Spur redu
 #define TXCO_DIV3   10000000
 
         if (setting.R == 0) {
+          setting.increased_R = false;
           if (setting.mode == M_GENLOW) {
             if (local_modulo == 0) ADF4351_modulo(1000);
             ADF4351_R_counter(3);
-          } else
-          if (lf > 8000000 && lf < 1000000000 /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
+          } else if ( ( (lf > 8000000 && lf < 700000000) || (lf > 500000000 && lf < 520000000)  ) /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
+#if 0
             if (local_modulo == 0) {
               if (actual_rbw_x10 >= 3000)
                 ADF4351_modulo(1000);
               else
                 ADF4351_modulo(60);
             }
+#endif
             freq_t tf = ((lf + actual_rbw_x10*1000) / TCXO) * TCXO;
-            if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) {   // 30MHz
-              ADF4351_R_counter(6);
+            if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 && tf != 180000000) {   // 30MHz
+              setting.increased_R = true;
+              ADF4351_R_counter(3);
             } else {
 #if 0
               if (actual_rbw_x10 < 1000) {
                 freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
                 if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
+                  setting.increased_R = true;
                   ADF4351_R_counter(4);
                 else
+                  setting.increased_R = true;
                   ADF4351_R_counter(3);
               } else
 #endif
@@ -3514,13 +3540,15 @@ again:                                                              // Spur redu
               else
                 ADF4351_modulo(60);
             }
-            if (setting.frequency_step < 100000)
+#if 0
+            if (setting.frequency_step < 100000) {
+              setting.increased_R = true;
               ADF4351_R_counter(3);
-            else
+            } else
+#endif
               ADF4351_R_counter(1); // Used to be 1
           }
-        }
-        else {
+        } else {
           ADF4351_R_counter(setting.R);
         }
 #endif          // __ADF4351__
@@ -4001,7 +4029,7 @@ static bool sweep(bool break_on_operation)
   int16_t downslope = true;
 
   // ------------------------- start sweep loop -----------------------------------
-  for (int i = 0; i < sweep_points; i++) {
+  for (int i = 0; i < sweep_points ; i++) {
     debug_avoid_second = false;
     debug_avoid_label:
     debug_avoid_second = debug_avoid_second;
