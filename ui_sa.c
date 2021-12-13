@@ -480,7 +480,7 @@ static const struct {
 [KM_COR_WFM]      = {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
 [KM_COR_NFM]      = {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
 [KM_IF2]          = {keypads_freq        , "IF2"}, // KM_IF2
-[KM_R]            = {keypads_positive    , "R"}, // KM_R    #30
+[KM_R]            = {keypads_plusmin     , "R"}, // KM_R    #30
 [KM_MOD]          = {keypads_positive    , "MODULO"}, // KM_MOD
 [KM_CP]           = {keypads_positive    , "CP"}, // KM_CP
 #endif
@@ -2868,12 +2868,12 @@ static const menuitem_t menu_config[] = {
 #ifdef TINYSA4
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
 #endif
+#ifdef __LCD_BRIGHTNESS__
+  { MT_CALLBACK, 0, "BRIGHTNESS", menu_brightness_cb},
+#endif
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
 #ifndef TINYSA4
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
-#endif
-#ifdef __LCD_BRIGHTNESS__
-  { MT_CALLBACK, 0, "BRIGHTNESS", menu_brightness_cb},
 #endif
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
@@ -2954,6 +2954,9 @@ static const menuitem_t menu_unit[] =
 //{ MT_ADV_CALLBACK,U_UVOLT, S_MICRO"Volt",     menu_unit_acb},
   { MT_ADV_CALLBACK,U_WATT,  "Watt",            menu_unit_acb},
 //{ MT_ADV_CALLBACK,U_UWATT, S_MICRO"Watt",     menu_unit_acb},
+#ifdef TINYSA4
+  { MT_ADV_CALLBACK,U_RAW,   "RAW",             menu_unit_acb},
+#endif
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
@@ -3443,8 +3446,7 @@ float my_round(float v)
   }
   return v;
 }
-
-const char * const unit_string[] = { "dBm", "dBmV", "dB"S_MICRO"V", "V", "W", "dB", "dBmV", "dB"S_MICRO"V", "V", "W" }; // unit + 5 is delta unit
+const char * const unit_string[MAX_UNIT_TYPE*2] = { "dBm", "dBmV", "dB"S_MICRO"V", "RAW", "V", "W", "dB", "dBmV", "dB"S_MICRO"V", "RAW", "V", "W" }; // unit + 6 is delta unit
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};

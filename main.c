@@ -132,6 +132,8 @@ static THD_FUNCTION(Thread1, arg)
 //  START_PROFILE
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
 //      if (dirty)
+      backup.frequency0 = setting.frequency0;
+      backup.frequency1 = setting.frequency1;
         completed = sweep(true);
       sweep_mode&=~SWEEP_ONCE;
     } else if (sweep_mode & SWEEP_SELFTEST) {
@@ -1415,10 +1417,10 @@ show_one:
     do_one = true;
     goto show_one;
   }
-#if MAX_UNIT_TYPE != 4
+#if MAX_UNIT_TYPE != 6
 #error "Unit type enum possibly changed, check cmd_trace function"
 #endif
-  static const char cmd_type_list[] = "dBm|dBmV|dBuV|V|W";
+  static const char cmd_type_list[] = "dBm|dBmV|dBuV|RAW|V|W";
   if (argc == 1) {
     int type = get_str_index(argv[0], cmd_type_list);
     if (type >= 0) {
@@ -2451,6 +2453,12 @@ int main(void)
 
   if (caldata_recall(0) == -1) {
     load_LCD_properties();
+  }
+
+  if (backup.frequency0 != 0 || backup.frequency1 != 0) {
+    setting.frequency0 = backup.frequency0;
+    setting.frequency1 = backup.frequency1;
+    update_frequencies();
   }
 
   set_refer_output(-1);

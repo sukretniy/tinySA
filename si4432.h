@@ -204,6 +204,7 @@ void enable_ultra(int s);
 void enable_rx_output(int s);
 void enable_high(int s);
 void enable_direct(int s);
+void enable_ADF_output(int f);
 #endif
 
 

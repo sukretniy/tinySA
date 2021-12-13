@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,16 +26,16 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
-#ifdef TINYSA_F072
+//#ifdef TINYSA_F072
 #ifdef TINYSA_F303
 #error "Remove comment for #ifdef TINYSA_F072"
 #endif
 #ifndef TINYSA3
 #define TINYSA3
 #endif
-#endif
+//#endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
@@ -129,8 +129,8 @@
 //#define LOW_MAX_FREQ         800000000ULL
 #define MIN_BELOW_LO         550000000ULL
 #ifdef __NEW_SWITCHES__
-#define DIRECT_START 822000000ULL
-#define DIRECT_STOP  1130000000ULL
+#define DIRECT_START 965000000ULL
+#define DIRECT_STOP  985000000ULL
 #endif
 #endif
 /*
@@ -454,6 +454,13 @@ extern void tlv320aic3204_set_gain(int lgain, int rgain);
 extern void tlv320aic3204_select(int channel);
 
 #endif
+
+typedef struct {
+  freq_t    frequency0, frequency1;
+} backup_t;
+
+#define backup (*(backup_t *)0x40002850)   // backup registers 5 * 32 bits
+
 /*
  * plot.c
  */
@@ -630,10 +637,11 @@ enum trace_type {
 // Electrical Delay
 // Phase
 
-#define MAX_UNIT_TYPE 4
+#define MAX_UNIT_TYPE 6     // Index of U_DBC
 enum unit_type {
-  U_DBM=0, U_DBMV, U_DBUV, U_VOLT, U_WATT, U_DBC //  dBc only for displaying delta marker info
+  U_DBM=0, U_DBMV, U_DBUV, U_RAW, U_VOLT, U_WATT, U_DBC //  dBc only for displaying delta marker info
 };
+
 #define UNIT_IS_LINEAR(T) ( T >= U_VOLT ? true : false)
 #define UNIT_IS_LOG(T) ( T >= U_VOLT ? false : true)
 
@@ -1008,6 +1016,7 @@ void spi_init(void);
 /*
  * flash.c
  */
+
 typedef struct setting
 {
   uint32_t magic;

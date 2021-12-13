@@ -741,7 +741,11 @@ void set_IF2(int f)
 void set_R(int f)
 {
   setting.R = f;
-  ADF4351_R_counter(f % 1000);
+  if (f<0) {
+    f = -f;
+    ADF4351_R_counter(-(f % 1000));
+  } else
+    ADF4351_R_counter(f % 1000);
   ADF4351_spur_mode(f/1000);
   dirty = true;
 }
@@ -1637,7 +1641,11 @@ void calculate_step_delay(void)
       noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
       log_averaging_correction = step_delay_table[i].log_aver_correction;
 #endif
-      if (setting.step_delay_mode == SD_PRECISE || setting.increased_R)    // In precise mode wait twice as long for RSSI to stabilize
+      if (setting.step_delay_mode == SD_PRECISE
+#ifdef TINYSA4
+          || setting.increased_R
+#endif
+          )    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
       if (setting.fast_speedup >0)
         SI4432_offset_delay = SI4432_step_delay / setting.fast_speedup;
@@ -2886,23 +2894,20 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   }
 #ifdef TINYSA4
   // ----------------------------- set mixer drive --------------------------------------------
-  if (setting.lo_drive & 0x04){     // Automatic mixer drive
-    int target_drive;
-    if (f < 2400000000ULL)
+  int target_drive = setting.lo_drive;
+  if (target_drive & 0x04){     // Automatic mixer drive
+    if (f < 100000000ULL)
+      target_drive = 0;
+    else if (f < 2400000000ULL)
       target_drive = 1;
     else if (f < 3000000000ULL)
       target_drive = 2;
     else
       target_drive = 3;
-    if (old_drive != target_drive) {
-      ADF4351_drive(target_drive);       // Max drive
-      old_drive = target_drive;
-    }
-  } else {
-    if (old_drive != setting.lo_drive) {
-      ADF4351_drive(setting.lo_drive);
-      old_drive = setting.lo_drive;
-    }
+  }
+  if (old_drive != target_drive) {
+    ADF4351_drive(target_drive);       // Max drive
+    old_drive = target_drive;
   }
 #endif
 #ifdef TINYSA3
@@ -3186,10 +3191,11 @@ modulation_again:
       enable_ultra(true);
       enable_direct(true);
       enable_high(true);
-      ADF4351_enable_out(false);
-    } else {
+      enable_ADF_output(false);
+    } else
 #endif
-    ADF4351_enable_out(true);
+    {
+      enable_ADF_output(true);
     if (ultra && f > ultra_threshold) {
         enable_ultra(true);
 #ifdef __NEW_SWITCHES__
@@ -3515,10 +3521,13 @@ again:                                                              // Spur redu
                 ADF4351_modulo(60);
             }
 #endif
-            freq_t tf = ((lf + actual_rbw_x10*1000) / TCXO) * TCXO;
+            freq_t tf = ((lf + actual_rbw_x10*200) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 && tf != 180000000) {   // 30MHz
               setting.increased_R = true;
-              ADF4351_R_counter(3);
+              if ( (tf / TCXO) & 1 )    // Odd harmonic of 30MHz
+                ADF4351_R_counter(-3);
+              else
+                ADF4351_R_counter(3);
             } else {
 #if 0
               if (actual_rbw_x10 < 1000) {
@@ -3931,7 +3940,11 @@ again:                                                              // Spur redu
  // }
 #define IGNORE_RSSI 30000
 //  pureRSSI_t rssi = (RSSI>0 ? RSSI + correct_RSSI + correct_RSSI_freq : IGNORE_RSSI); // add correction
-  pureRSSI_t rssi = RSSI + correct_RSSI + correct_RSSI_freq; // add correction
+  pureRSSI_t rssi;
+  if (setting.unit == U_RAW)
+    rssi = RSSI - float_TO_PURE_RSSI(120); // don't add correction;
+  else
+    rssi = RSSI + correct_RSSI + correct_RSSI_freq; // add correction
   if (false) {
   abort:
     rssi = 0;

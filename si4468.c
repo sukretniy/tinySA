@@ -254,6 +254,10 @@ bool PE4302_Write_Byte(unsigned char DATA )
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) ((bitvalue) ? bitSet(value, bit) : bitClear(value, bit))
 
+#define maskedWrite(reg, bit, mask, value)   (reg) &= ~(((uint32_t)mask) << (bit)); (reg) |=  ((((uint32_t) (value)) & ((uint32_t)mask)) << (bit));
+
+
+
 #define CS_ADF0_HIGH     {palSetLine(LINE_LO_SEL);ADF_CS_DELAY;}
 #define CS_ADF1_HIGH     {ADF_CS_DELAY;palSetLine(LINE_LO_SEL);}
 
@@ -414,8 +418,9 @@ void ADF4351_R_counter(int R)
     PFDRFout[channel] = (config.setting_frequency_30mhz * (dbl?2:1)) / R;
   }
   clear_frequency_cache();                              // When R changes the possible frequencies will change
-  registers[2] &= ~(((uint32_t)0x3FF) << 14);
-  registers[2] |=  (((uint32_t)    R) << 14);
+  maskedWrite(registers[2],14, 0x3FF, R);
+//  registers[2] &= ~(((uint32_t)0x3FF) << 14);
+//  registers[2] |=  (((uint32_t)    R) << 14);
   ADF4351_Set(0);
 }
 
@@ -427,45 +432,51 @@ void ADF4351_recalculate_PFDRFout(void){
 
 void ADF4351_mux(int R)
 {
-  registers[2] &= ~(((uint32_t)     0x7) << 26);
-  registers[2] |=  (((uint32_t)R & 0x07) << 26);
+  maskedWrite(registers[2],26, 0x7, R);
+//  registers[2] &= ~(((uint32_t)     0x7) << 26);
+//  registers[2] |=  (((uint32_t)R & 0x07) << 26);
   ADF4351_Set(0);
 }
 
 void ADF4351_csr(int c)
 {
-  registers[3] &= ~(((uint32_t)     0x1) << 18);
-  registers[3] |=  (((uint32_t)c & 0x01) << 18);
+  maskedWrite(registers[3],18, 0x1, c);
+//  registers[3] &= ~(((uint32_t)     0x1) << 18);
+//  registers[3] |=  (((uint32_t)c & 0x01) << 18);
   ADF4351_Set(0);
 }
 
 void ADF4351_fastlock(int c)
 {
-  registers[3] &= ~(((uint32_t)     0x3) << 15);
-  registers[3] |=  (((uint32_t)c & 0x03) << 15);
+  maskedWrite(registers[3],15, 0x3, c);
+//  registers[3] &= ~(((uint32_t)     0x3) << 15);
+//  registers[3] |=  (((uint32_t)c & 0x03) << 15);
   ADF4351_Set(0);
 }
 
 void ADF4351_CP(int p)
 {
-  registers[2] &= ~(((uint32_t)0xF) << 9);
-  registers[2] |=  (((uint32_t)  p) << 9);
+  maskedWrite(registers[2],9, 0xF, p);
+//  registers[2] &= ~(((uint32_t)0xF) << 9);
+//  registers[2] |=  (((uint32_t)  p) << 9);
   ADF4351_Set(0);
 }
 
 void ADF4351_drive(int p)
 {
-  p &= 0x03;
-  registers[4] &= ~(((uint32_t)0x3) << 3);
-  registers[4] |=  (((uint32_t)  p) << 3);
+  maskedWrite(registers[4],3, 0x3, p);
+//  p &= 0x03;
+//  registers[4] &= ~(((uint32_t)0x3) << 3);
+//  registers[4] |=  (((uint32_t)  p) << 3);
   ADF4351_Set(0);
 }
 
 void ADF4351_aux_drive(int p)
 {
-  p &= 0x03;
-  registers[4] &= ~(((uint32_t)0x3) << 6);
-  registers[4] |=  (((uint32_t)  p) << 6);
+  maskedWrite(registers[4],6, 0x3, p);
+//  p &= 0x03;
+//  registers[4] &= ~(((uint32_t)0x3) << 6);
+//  registers[4] |=  (((uint32_t)  p) << 6);
   ADF4351_Set(0);
 }
 #if 0
@@ -587,13 +598,13 @@ void ADF4351_enable_aux_out(int s)
 void ADF4351_enable_out(int s)
 {
   if (s) {
-    bitClear(registers[2], 11);     // Disable VCO power down
+    bitClear(registers[4], 11);     // Disable VCO power down
     bitClear(registers[2], 5);      // Disable power down
     bitSet(registers[4], 5);        // Enable output
   } else {
     bitClear(registers[4], 5);      // Disable output
     bitSet(registers[2], 5);        // Enable power down
-    bitSet(registers[2], 11);        // Enable VCO power down
+    bitSet(registers[4], 11);        // Enable VCO power down
   }
   ADF4351_Set(0);
 }
@@ -1855,6 +1866,10 @@ void enable_rx_output(int s)
 
 void enable_high(int s)
 {
+static int old_s = 2;
+  if (s == old_s)
+    return;
+  old_s = s;
 #ifdef __NEW_SWITCHES__
   if (s)
     SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE0);
@@ -1866,6 +1881,15 @@ void enable_high(int s)
   else
     SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE0);
 #endif
+}
+
+void enable_ADF_output(int f)
+{
+  static int old_f = 2;
+  if (f==old_f)
+    return;
+  old_f = f;
+  ADF4351_enable_out(f);
 }
 
 #ifdef __NEW_SWITCHES__

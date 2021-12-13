@@ -372,7 +372,8 @@ value(const float v)
 //    return powf(10.0, v/10.0)/1000.0;               // powf(10.0, v           /10.0) / 1000.0
     return expf(v*(logf(10.0)/10.0)) / 1000.0;        //       expf(v*logf(10.0)/10.0) / 1000.0
   }
-//  case U_DBM:
+  //  case U_DBM:
+  //  case U_RAW:
     return v;  // raw data is in logmag*10 format
 }
 
@@ -443,7 +444,10 @@ trace_into_index_y_array(index_y_t *y, float *array, int points)
   float mult = 0, vmult = 1.0;
   float ref_shift = 0;
   switch (setting.unit){
-    case U_DBM: break;
+  case U_DBM: break;
+#ifdef TINYSA4
+  case U_RAW: break;
+#endif
     case U_DBMV: ref_shift = 30.0 + 20.0*log10f(sqrtf(50.0));break;
     case U_DBUV: ref_shift = 90.0 + 20.0*log10f(sqrtf(50.0));break;
     case U_VOLT: vmult = powf(10, -30.0/20.0) * sqrtf(50.0); mult = logf(10.0)/20.0;break;
@@ -1485,7 +1489,7 @@ static void trace_print_value_string(     // Only used at one place
   if (mtype & M_DELTA) {
     ref_marker = markers[mi].ref;
 //    *ptr2++ = S_DELTA[0];
-    unit_index+= 5;
+    unit_index+= MAX_UNIT_TYPE;
     freq_t  ref_freq = markers[ref_marker].frequency;
     int ridx = markers[ref_marker].index;
     if (ridx > idx) {freq = ref_freq - freq; idx = ridx - idx; *ptr2++ = '-';}
