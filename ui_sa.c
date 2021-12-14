@@ -438,6 +438,10 @@ enum {
   KM_NF,
 #endif
   KM_LINEAR_SCALE,
+#ifdef TINYSA4
+  KM_DIRECT_START,
+  KM_DIRECT_STOP,
+#endif
   KM_NONE // always at enum end
 };
 
@@ -502,6 +506,10 @@ static const struct {
 [KM_NF]           = {keypads_plusmin     , "NOISE\nFIGURE"}, // noise figure of tinySA
 #endif
 [KM_LINEAR_SCALE] = {keypads_plusmin     , "SCALE"}, // scale for linear units
+#ifdef TINYSA4
+[KM_DIRECT_START] = {keypads_freq        , "DIRECT\nSTART"}, // KM_DIRECT_START
+[KM_DIRECT_STOP]  = {keypads_freq        , "DIRECT\nSTOP"}, // KM_DIRECT_STOP
+#endif
 };
 
 #if 0 // Not used
@@ -2695,6 +2703,8 @@ static const menuitem_t menu_settings4[] =
 #endif
   { MT_ADV_CALLBACK,     0,     "LINEAR\nAVERAGING",          menu_linear_averaging_acb},
 //  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
+  { MT_KEYPAD,   KM_DIRECT_START,     "DIRECT\nSTART", ""},
+  { MT_KEYPAD,   KM_DIRECT_STOP,     "DIRECT\nSTOP", ""},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -3159,6 +3169,14 @@ static void fetch_numeric_target(uint8_t mode)
     uistat.freq_value = config.ultra_threshold;
     plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
     break;
+  case KM_DIRECT_START:
+    uistat.freq_value = config.direct_start;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
+    break;
+  case KM_DIRECT_STOP:
+    uistat.freq_value = config.direct_stop;
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
+    break;
 #endif
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
@@ -3318,6 +3336,14 @@ set_numeric_value(void)
     config.ultra_threshold = uistat.value;
     config_save();
     ultra_threshold = config.ultra_threshold;
+    break;
+  case KM_DIRECT_START:
+    config.direct_start = uistat.value;
+    config_save();
+    break;
+  case KM_DIRECT_STOP:
+    config.direct_stop = uistat.value;
+    config_save();
     break;
 #endif
 #ifdef TINYSA4

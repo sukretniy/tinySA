@@ -131,10 +131,19 @@ static THD_FUNCTION(Thread1, arg)
   while (1) {
 //  START_PROFILE
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
-//      if (dirty)
+
       backup.frequency0 = setting.frequency0;
       backup.frequency1 = setting.frequency1;
-        completed = sweep(true);
+      if (setting.auto_attenuation)
+        backup.attenuation = 0;
+      else
+        backup.attenuation = setting.attenuate_x2+1;
+      if (setting.auto_reflevel || setting.unit != U_DBM)
+        backup.reflevel = 0;
+      else
+        backup.reflevel = setting.reflevel + 140;
+
+      completed = sweep(true);
       sweep_mode&=~SWEEP_ONCE;
     } else if (sweep_mode & SWEEP_SELFTEST) {
       // call from lowest level to save stack space
@@ -925,6 +934,10 @@ config_t config = {
 #endif
   .sweep_voltage = 3.3,
   .switch_offset = 0.0,
+#ifdef TINYSA4
+  .direct_start = 9650000000UL,
+  .direct_stop  = 9850000000UL,
+#endif
 };
 
 //properties_t current_props;
@@ -2454,13 +2467,24 @@ int main(void)
   if (caldata_recall(0) == -1) {
     load_LCD_properties();
   }
-
+  {backup_t b = backup;
   if (backup.frequency0 != 0 || backup.frequency1 != 0) {
     setting.frequency0 = backup.frequency0;
     setting.frequency1 = backup.frequency1;
     update_frequencies();
+    if (backup.attenuation == 0)
+      set_auto_attenuation();
+    else {
+      set_attenuation((backup.attenuation - 1)/2.0);
+    }
+    if (backup.reflevel == 0)
+      set_auto_reflevel(true);
+    else {
+      set_auto_reflevel(false);
+      user_set_reflevel(((float)backup.reflevel)-140.0);
+    }
   }
-
+  }
   set_refer_output(-1);
 //  ui_mode_menu();       // Show menu when autostarting mode
   ui_mode_normal();

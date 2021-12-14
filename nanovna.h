@@ -28,14 +28,14 @@
 #define TINYSA4_PROTO
 #endif
 
-//#ifdef TINYSA_F072
+#ifdef TINYSA_F072
 #ifdef TINYSA_F303
 #error "Remove comment for #ifdef TINYSA_F072"
 #endif
 #ifndef TINYSA3
 #define TINYSA3
 #endif
-//#endif
+#endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
@@ -129,8 +129,8 @@
 //#define LOW_MAX_FREQ         800000000ULL
 #define MIN_BELOW_LO         550000000ULL
 #ifdef __NEW_SWITCHES__
-#define DIRECT_START 965000000ULL
-#define DIRECT_STOP  985000000ULL
+#define DIRECT_START config.direct_start
+#define DIRECT_STOP  config.direct_stop
 #endif
 #endif
 /*
@@ -455,9 +455,17 @@ extern void tlv320aic3204_select(int channel);
 
 #endif
 
+#pragma pack(push)
+#pragma pack(1)
+
 typedef struct {
-  freq_t    frequency0, frequency1;
+  uint32_t    frequency0, frequency1;
+  uint32_t attenuation;
+  int32_t reflevel;
+//  uint8_t RBW;
+//  uint8_t mode;
 } backup_t;
+#pragma pack(pop)
 
 #define backup (*(backup_t *)0x40002850)   // backup registers 5 * 32 bits
 
@@ -696,6 +704,8 @@ typedef struct config {
 #endif
 #ifdef __ULTRA__
   freq_t ultra_threshold;
+  freq_t direct_start;
+  freq_t direct_stop;
   int8_t    ultra;
 #endif
   uint8_t   _mode;
