@@ -198,13 +198,6 @@ extern freq_t maxFreq;
 
 extern const char TINYSA_VERSION[];
 
-#ifdef __REMOTE_DESKTOP__
-extern uint8_t auto_capture;
-extern int16_t mouse_x;
-extern int16_t mouse_y;
-extern uint8_t mouse_down;
-#endif
-
 #define MAX_FREQ_TYPE 5
 enum stimulus_type {
   ST_START=0, ST_STOP, ST_CENTER, ST_SPAN, ST_CW, ST_DUMMY      // Last is used in marker ops
@@ -218,10 +211,20 @@ void my_microsecond_delay(int t);
 float my_atof(const char *p);
 freq_t my_atoui(const char *p);
 int shell_printf(const char *fmt, ...);
+
 #ifdef __REMOTE_DESKTOP__
-void send_region(const char *t, int16_t x, int16_t y, int16_t w, int16_t h);
-void send_buffer(uint8_t * buf, int s);
+extern uint8_t remote_mouse_down;
+extern uint8_t auto_capture;
+typedef struct {
+  char new_str[6];
+  int16_t x;
+  int16_t y;
+  int16_t w;
+  int16_t h;
+} remote_region_t;
+void send_region(remote_region_t *rd, uint8_t * buf, uint16_t size);
 #endif
+
 void set_marker_frequency(int m, freq_t f);
 void set_marker_time(int m, float f);
 void set_marker_index(int m, int16_t idx);
@@ -1319,6 +1322,7 @@ void draw_menu(void);
 void draw_menu_mask(uint32_t mask);
 void refres_sweep_menu(void);
 int check_touched(void);
+void touch_set(int16_t x, int16_t y);
 int invoke_quick_menu(int);
 bool ui_process_listen_lever(void);
 void refresh_sweep_menu(int i);

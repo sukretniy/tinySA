@@ -610,8 +610,8 @@ void ili9341_fill(int x, int y, int w, int h)
 #endif
 #ifdef __REMOTE_DESKTOP__
   if (auto_capture) {
-     send_region("fill", x, y, w, h);
-     send_buffer((uint8_t *)&background_color, sizeof(pixel_t));
+    remote_region_t rd = {"fill\r\n", x, y, w, h};
+    send_region(&rd, (uint8_t *)&background_color, sizeof(pixel_t));
   }
 #endif
 #if 1
@@ -632,8 +632,8 @@ static void ili9341_DMA_bulk(uint16_t x, uint16_t y, uint16_t w, uint16_t h, pix
 #endif
 #ifdef __REMOTE_DESKTOP__
   if (auto_capture) {
-     send_region("bulk", x, y, w, h);
-     send_buffer((uint8_t *)buffer, w *h * sizeof(pixel_t));
+    remote_region_t rd = {"bulk\r\n", x, y, w, h};
+    send_region(&rd, (uint8_t *)buffer, w * h * sizeof(pixel_t));
   }
 #endif
 //  while (SPI_IN_TX_RX(LCD_SPI));

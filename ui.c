@@ -336,14 +336,9 @@ touch_check(void)
       last_touch_y = y;
     }
 #ifdef __REMOTE_DESKTOP__
-    mouse_down = false;
-  }
-  if (!stat) {
-    stat = mouse_down;
-    if (mouse_down) {
-      last_touch_x = mouse_x;
-      last_touch_y = mouse_y;
-    }
+    remote_mouse_down = false;
+  } else {
+    stat = remote_mouse_down;
 #endif
   }
   if (stat != last_touch_status) {
@@ -356,6 +351,11 @@ touch_check(void)
 // End Software Touch module
 //*******************************************************************************
 #endif // end SOFTWARE_TOUCH
+
+void touch_set(int16_t x, int16_t y) {
+  last_touch_x = x;
+  last_touch_y = y;
+}
 
 void
 touch_wait_release(void)
@@ -458,12 +458,14 @@ void
 touch_position(int *x, int *y)
 {
 #ifdef __REMOTE_DESKTOP__
-  *x = (mouse_down ? mouse_x : (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2]);
-  *y = (mouse_down ? mouse_y : (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3]);
-#else
+  if (remote_mouse_down) {
+    *x = last_touch_x;
+    *y = last_touch_y;
+    return;
+  }
+#endif
   *x = (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2];
   *y = (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3];
-#endif
 }
 
 void
@@ -2278,11 +2280,6 @@ void ui_process_touch(void)
 }
 
 static uint16_t previous_button_state = 0;
-#ifdef __REMOTE_DESKTOP__
-static uint16_t previous_mouse_state = 0;
-static int16_t previous_mouse_x = 0;
-static int16_t previous_mouse_y = 0;
-#endif
 
 void
 ui_process(void)
@@ -2292,17 +2289,13 @@ ui_process(void)
     selection = -1; // hide keyboard mode selection
     ui_mode_menu();
   }
-  if (operation_requested&OP_LEVER || previous_button_state != button_state) {
+  if ((operation_requested&OP_LEVER) || previous_button_state != button_state) {
     ui_process_lever();
     previous_button_state = button_state;
     operation_requested = OP_NONE;
   }
-  if (operation_requested&OP_TOUCH
-#ifdef __REMOTE_DESKTOP__
-    || previous_mouse_state != mouse_down || previous_mouse_x != mouse_x || previous_mouse_y != mouse_y
-#endif
-  ) {
-    ui_process_touch();
+  if (operation_requested&OP_TOUCH) {
+   ui_process_touch();
     operation_requested = OP_NONE;
   }
   touch_start_watchdog();

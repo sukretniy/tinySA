@@ -82,7 +82,6 @@ static bool sweep(bool break_on_operation);
 
 uint8_t sweep_mode = SWEEP_ENABLE;
 uint16_t redraw_request = 0; // contains REDRAW_XXX flags
-uint8_t auto_capture = false;
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
   BOARD_NAME,
@@ -699,6 +698,20 @@ VNA_SHELL_FUNCTION(cmd_dump)
 #endif
 
 #ifdef __REMOTE_DESKTOP__
+uint8_t remote_mouse_down = false;
+uint8_t auto_capture = false;
+
+void send_region(remote_region_t *rd, uint8_t * buf, uint16_t size)
+{
+  if (SDU1.config->usbp->state == USB_ACTIVE) {
+    streamWrite(shell_stream, (void*) rd, sizeof(remote_region_t));
+    streamWrite(shell_stream, (void*) buf, size);
+    streamWrite(shell_stream, (void*)"ch> \r\n", 6);
+  }
+  else
+    auto_capture = false;
+}
+
 VNA_SHELL_FUNCTION(cmd_refresh)
 {
 // read pixel count at one time (PART*2 bytes required for read buffer)
@@ -708,27 +721,19 @@ VNA_SHELL_FUNCTION(cmd_refresh)
   }
 }
 
-int16_t mouse_x = 0;
-int16_t mouse_y = 0;
-uint8_t mouse_down = false;
-
 VNA_SHELL_FUNCTION(cmd_touch)
 {
-  if (argc == 2){
-    mouse_x = my_atoi(argv[0]);
-    mouse_y = my_atoi(argv[1]);
-    mouse_down = true;
-    handle_touch_interrupt();
-  }
+  if (argc != 2) return;
+  touch_set(my_atoi(argv[0]), my_atoi(argv[1]));
+  remote_mouse_down = true;
+  handle_touch_interrupt();
 }
 
 VNA_SHELL_FUNCTION(cmd_release)
 {
-  if (argc==2) {
-    mouse_x = my_atoi(argv[0]);
-    mouse_y = my_atoi(argv[1]);
-  }
-  mouse_down = false;
+  if (argc == 2)
+    touch_set(my_atoi(argv[0]), my_atoi(argv[1]));
+  remote_mouse_down = false;
   handle_touch_interrupt();
 }
 #endif
@@ -754,35 +759,6 @@ VNA_SHELL_FUNCTION(cmd_capture)
     uint8_t *buf = (uint8_t *)spi_buffer;
     ili9341_read_memory(0, y, LCD_WIDTH, 2, spi_buffer);
     streamWrite(shell_stream, (void*)buf, 2 * LCD_WIDTH * sizeof(uint16_t));
-  }
-}
-
-void send_region(const char *t, int16_t x, int16_t y, int16_t w, int16_t h)
-{
-  if (SDU1.config->usbp->state == USB_ACTIVE) {
-    shell_printf(t);
-    struct {
-      char new_str[2];
-      int16_t x;
-      int16_t y;
-      int16_t w;
-      int16_t h;
-    } region={"\r\n", x,y,w,h};
-    streamWrite(shell_stream, (void*)&region, sizeof(region));
-  }
-  else
-    auto_capture = false;
-}
-
-void send_buffer(uint8_t * buf, int s)
-{
-  if (SDU1.config->usbp->state == USB_ACTIVE) {
-    while (s > 0) {
-      streamWrite(shell_stream, (void*) buf, (s > 128 ? 128 : s));
-      buf = buf+128;
-      s -= 128;
-    }
-    streamWrite(shell_stream, (void*)"ch> \r\n", 6);
   }
 }
 
