@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -454,20 +454,6 @@ extern void tlv320aic3204_set_gain(int lgain, int rgain);
 extern void tlv320aic3204_select(int channel);
 
 #endif
-
-#pragma pack(push)
-#pragma pack(1)
-
-typedef struct {
-  uint32_t    frequency0, frequency1;
-  uint32_t attenuation;
-  int32_t reflevel;
-//  uint8_t RBW;
-//  uint8_t mode;
-} backup_t;
-#pragma pack(pop)
-
-#define backup (*(backup_t *)0x40002850)   // backup registers 5 * 32 bits
 
 /*
  * plot.c
@@ -1307,6 +1293,18 @@ void clear_all_config_prop_data(void);
 /*
  * ui.c
  */
+
+// Set structure align as WORD (save flash memory)
+#pragma pack(push, 2)
+typedef struct {
+  uint8_t type;
+  uint8_t data;
+  char *label;
+  const void *reference;
+} menuitem_t;
+#pragma pack(pop)
+
+
 extern void ui_init(void);
 extern void ui_process(void);
 int current_menu_is_form(void);
@@ -1467,6 +1465,29 @@ bool SD_Inserted(void);
 void testLog(void);        // debug log
 void sd_card_load_config(char *filename);
 #endif
+
+/*
+ * Backup
+ */
+#pragma pack(push)
+#pragma pack(1)
+
+extern uint8_t SI4463_rbw_selected;
+extern const menuitem_t  menu_lowoutputmode[];
+extern const menuitem_t  menu_highoutputmode[];
+extern void menu_push_submenu(const menuitem_t *submenu);
+
+typedef struct {
+  uint32_t    frequency0, frequency1;
+  uint8_t attenuation;
+  uint8_t reflevel;
+  uint8_t RBW;
+  uint8_t mode;
+} backup_t;
+#pragma pack(pop)
+
+#define backup (*(uint32_t *)0x40002850)   // backup registers 5 * 32 bits
+
 
 /*
  * misclinous

@@ -131,17 +131,27 @@ static THD_FUNCTION(Thread1, arg)
   while (1) {
 //  START_PROFILE
     if (sweep_mode&(SWEEP_ENABLE|SWEEP_ONCE)) {
-
-      backup.frequency0 = setting.frequency0;
-      backup.frequency1 = setting.frequency1;
+      backup_t b;
+      b.frequency0 = setting.frequency0;
+      b.frequency1 = setting.frequency1;
       if (setting.auto_attenuation)
-        backup.attenuation = 0;
+        b.attenuation = 0;
       else
-        backup.attenuation = setting.attenuate_x2+1;
+        b.attenuation = setting.attenuate_x2+1;
       if (setting.auto_reflevel || setting.unit != U_DBM)
-        backup.reflevel = 0;
+        b.reflevel = 0;
       else
-        backup.reflevel = setting.reflevel + 140;
+      b.reflevel = setting.reflevel + 140;
+      if (setting.rbw_x10 == 0)
+        b.RBW = 0;
+      else
+        b.RBW = SI4463_rbw_selected+1;
+      b.mode = setting.mode;
+      uint32_t *f = (uint32_t *)&b;
+      uint32_t *t = &backup;
+      int i = 5;
+      while (i--)
+        *t++ = *f++;
 
       completed = sweep(true);
       sweep_mode&=~SWEEP_ONCE;
@@ -2467,27 +2477,58 @@ int main(void)
   if (caldata_recall(0) == -1) {
     load_LCD_properties();
   }
-  {backup_t b = backup;
-  if (backup.frequency0 != 0 || backup.frequency1 != 0) {
-    setting.frequency0 = backup.frequency0;
-    setting.frequency1 = backup.frequency1;
-    update_frequencies();
-    if (backup.attenuation == 0)
+  ui_mode_normal();
+  {
+    backup_t b;
+    uint32_t *f = &backup;
+    uint32_t *t = (uint32_t *)&b;
+    int i = 5;
+    while (i--)
+      *t++ = *f++;
+
+    set_mode(b.mode);
+    switch (b.mode) {
+    case M_LOW:
+    case M_HIGH:
+      break;
+    case M_GENLOW:
+      menu_push_submenu(menu_lowoutputmode);
+      break;
+    case M_GENHIGH:
+      menu_push_submenu(menu_highoutputmode);
+      break;
+    }
+
+    if (b.frequency0 != 0 || b.frequency1 != 0) {
+    if (b.mode <= M_HIGH){
+      setting.frequency0 = b.frequency0;
+      setting.frequency1 = b.frequency1;
+      update_frequencies();
+    } else {
+      set_sweep_frequency(ST_CW, (b.frequency0 + b.frequency1)/2);
+      set_sweep_frequency(ST_SPAN, (b.frequency1 - b.frequency0));
+      ui_mode_menu();
+    }
+    if (b.attenuation == 0)
       set_auto_attenuation();
     else {
-      set_attenuation((backup.attenuation - 1)/2.0);
+      set_attenuation((b.attenuation - 1)/2.0);
     }
-    if (backup.reflevel == 0)
+    if (b.reflevel == 0)
       set_auto_reflevel(true);
     else {
       set_auto_reflevel(false);
-      user_set_reflevel(((float)backup.reflevel)-140.0);
+      user_set_reflevel((float)(b.reflevel-140));
+    }
+    if (b.RBW == 0)
+      setting.rbw_x10 = 0;
+    else {
+      set_RBW(force_rbw(b.RBW-1));
     }
   }
   }
   set_refer_output(-1);
 //  ui_mode_menu();       // Show menu when autostarting mode
-  ui_mode_normal();
 
   /*
    * Set LCD display brightness (use DAC2 for control)

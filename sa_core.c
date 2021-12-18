@@ -835,7 +835,7 @@ float high_out_offset()
 static pureRSSI_t get_signal_path_loss(void){
 #ifdef TINYSA4
   if (setting.mode == M_LOW)
-    return float_TO_PURE_RSSI(+3);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
+    return float_TO_PURE_RSSI(+9.3);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
   return float_TO_PURE_RSSI(+29);          // Loss in dB (+ is gain)
 #else
   if (setting.mode == M_LOW)
@@ -4126,6 +4126,15 @@ static bool sweep(bool break_on_operation)
       ili9341_fill(OFFSETX, CHART_BOTTOM+1, pos, 1);     // update sweep progress bar
       ili9341_set_background(LCD_BG_COLOR);
       ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
+
+      if (local_sweep_time > 10 * ONE_SECOND_TIME) {
+        plot_into_index(measured);
+        redraw_request |= REDRAW_CELLS | REDRAW_BATTERY;
+        // plot trace and other indications as raster
+        draw_all(true);  // flush markmap only if scan completed to prevent
+      }
+
+
 #ifdef __SWEEP_RESTART__
       if (MODE_OUTPUT(setting.mode) && (setting.level_sweep != 0 || get_sweep_frequency(ST_SPAN) != 0))
         refresh_sweep_menu(i);
@@ -5111,7 +5120,7 @@ enum {
 
 #ifdef TINYSA4
 //#define CAL_LEVEL   -23.5
-#define CAL_LEVEL   -23.1
+#define CAL_LEVEL   -24.2
 #else
 #define CAL_LEVEL   (has_esd ? -26.2 : -25)
 #endif
@@ -6236,7 +6245,9 @@ again:
       reset_settings(M_LOW);
       set_refer_output(0);
       set_attenuation(10);
-      set_sweep_frequency(ST_STOP, 60000000);
+      set_sweep_frequency(ST_CENTER, 30000000);
+      set_sweep_frequency(ST_SPAN,    5000000);
+      setting.rbw_x10 = 3000;
       int test_case = TEST_POWER;
 #ifdef TINYSA4
       set_extra_lna(calibrate_lna);

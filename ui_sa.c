@@ -525,8 +525,8 @@ ui_slider_t ui_sliders [] =
 
 
 // ===[MENU CALLBACKS]=========================================================
-static const menuitem_t  menu_lowoutputmode[];
-static const menuitem_t  menu_highoutputmode[];
+const menuitem_t  menu_lowoutputmode[];
+const menuitem_t  menu_highoutputmode[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_top[];
 static const menuitem_t  menu_trace[];
@@ -2394,7 +2394,7 @@ static const menuitem_t  menu_sweep[] = {
 char low_level_help_text[12] = "-76..-6";
 char center_text[18] = "FREQ: %s";
 
-static const menuitem_t  menu_lowoutputmode[] = {
+const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK, 0,               "LOW OUTPUT            %s", menu_outputmode_acb},
 //  { MT_FORM | MT_ADV_CALLBACK,  0,              "MOD: %s",   menu_smodulation_acb},
   { MT_FORM | MT_KEYPAD,   KM_CENTER,           center_text,         VARIANT("10kHz..350MHz","10kHz..850MHz")},
@@ -2412,7 +2412,7 @@ static const menuitem_t  menu_lowoutputmode[] = {
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel
 };
 
-static const menuitem_t  menu_highoutputmode[] = {
+const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
   { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz",range_text)},
   { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},

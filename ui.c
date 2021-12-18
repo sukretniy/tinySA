@@ -121,16 +121,6 @@ static const uint8_t slider_bitmap[]=
 #define BUTTON_BORDER_RISE           (BUTTON_BORDER_TOP|BUTTON_BORDER_RIGHT)
 #define BUTTON_BORDER_FALLING        (BUTTON_BORDER_BOTTOM|BUTTON_BORDER_LEFT)
 
-// Set structure align as WORD (save flash memory)
-#pragma pack(push, 2)
-typedef struct {
-  uint8_t type;
-  uint8_t data;
-  char *label;
-  const void *reference;
-} menuitem_t;
-#pragma pack(pop)
-
 // Touch screen
 #define EVT_TOUCH_NONE     0
 #define EVT_TOUCH_DOWN     1
@@ -154,7 +144,6 @@ static void erase_menu_buttons(void);
 static void ui_process_keypad(void);
 static void choose_active_marker(void);
 static void menu_move_back(bool leave_ui);
-static void menu_push_submenu(const menuitem_t *submenu);
 //static const menuitem_t menu_marker_type[];
 
 static int btn_check(void)
@@ -873,7 +862,7 @@ menu_move_back(bool leave_ui)
     ui_mode_menu();
 }
 
-static void
+void
 menu_push_submenu(const menuitem_t *submenu)
 {
   erase_menu_buttons();

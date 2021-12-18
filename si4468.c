@@ -616,6 +616,7 @@ void ADF4351_enable_out(int s)
 bool SI4463_frequency_changed = false;
 bool SI4463_offset_changed = false;
 int SI4463_offset_value = 0;
+uint8_t SI4463_rbw_selected = 0;
 
 static int SI4463_band = -1;
 //static freq_t SI4463_prev_freq = 0;
@@ -1601,8 +1602,8 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_30kHz,  12,300,  10},
  {SI4463_RBW_100kHz,  2,1000, 17},
  {SI4463_RBW_300kHz,  4,3000, 10},
- {SI4463_RBW_600kHz, 10,6000,  8},
- {SI4463_RBW_850kHz, 15,8500,  8},
+ {SI4463_RBW_600kHz, -10,6000,  8},
+ {SI4463_RBW_850kHz, -9,8500,  8},
 };
 
 const uint8_t SI4432_RBW_count = ((int)(sizeof(RBW_choices)/sizeof(RBW_t)));
@@ -1623,7 +1624,7 @@ void switch_SI4463_RSSI_correction(bool enabled){
 
 uint16_t force_rbw(int f)
 {
-  if (SI4463_in_tx_mode)
+  if (SI4463_in_tx_mode || f >= (int)(sizeof(RBW_choices)/sizeof(RBW_t)))
     return(0);
   SI4463_set_state(SI446X_STATE_READY);
   const uint8_t *config = RBW_choices[f].reg;
@@ -1640,6 +1641,7 @@ uint16_t force_rbw(int f)
 //  prev_band = -1;
   SI4463_RSSI_correction = ( SI4463_RSSI_correction_enabled ?  float_TO_PURE_RSSI(RBW_choices[f].RSSI_correction_x_10 - 1200)/10 : float_TO_PURE_RSSI(-120) ) ;  // Set RSSI correction
   SI4463_noise_correction_x10 = RBW_choices[f].noise_correction_x10;
+  SI4463_rbw_selected = f;
   return RBW_choices[f].RBWx10;                                                   // RBW achieved by SI4463 in kHz * 10
 }
 
