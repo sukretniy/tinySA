@@ -180,6 +180,8 @@ static inline void shiftInBuf(uint16_t sel, uint8_t addr, deviceRSSI_t *buf, uin
 const uint16_t SI_nSEL[MAX_SI4432+1] = { GPIO_RX_SEL, GPIO_LO_SEL, 0}; // #3 is dummy!!!!!!
 
 uint16_t SI4432_Sel = GPIO_RX_SEL;         // currently selected SI4432
+uint8_t SI4432_rbw_selected = 0;
+
 // volatile int SI4432_guard = 0;
 
 #ifdef __SI4432_H__
@@ -456,6 +458,7 @@ uint16_t force_rbw(int i)
   SI4432_Write_Byte(SI4432_IF_FILTER_BW, RBW_choices[i].reg);                     // Write RBW settings to Si4432
   SI4432_RSSI_correction = float_TO_PURE_RSSI(RBW_choices[i].RSSI_correction_x_10 - 1200)/10;  // Set RSSI correction
 //  SI4432_RSSI_correction = float_TO_PURE_RSSI( - 1200)/10;  // Set RSSI correction
+  SI4432_rbw_selected = i;
   return RBW_choices[i].RBWx10;                                                   // RBW achieved by Si4432 in kHz * 10
 }
 

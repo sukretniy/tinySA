@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,16 +26,16 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
-#ifdef TINYSA_F072
+//#ifdef TINYSA_F072
 #ifdef TINYSA_F303
 #error "Remove comment for #ifdef TINYSA_F072"
 #endif
 #ifndef TINYSA3
 #define TINYSA3
 #endif
-#endif
+//#endif
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
@@ -1476,9 +1476,14 @@ void sd_card_load_config(char *filename);
 #pragma pack(push)
 #pragma pack(1)
 
+#ifdef TINYSA4
 extern uint8_t SI4463_rbw_selected;
+#else
+extern uint8_t SI4432_rbw_selected;
+#endif
 extern const menuitem_t  menu_lowoutputmode[];
 extern const menuitem_t  menu_highoutputmode[];
+extern const menuitem_t  menu_mode[];
 extern void menu_push_submenu(const menuitem_t *submenu);
 
 typedef struct {

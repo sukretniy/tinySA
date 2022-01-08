@@ -527,6 +527,7 @@ ui_slider_t ui_sliders [] =
 // ===[MENU CALLBACKS]=========================================================
 const menuitem_t  menu_lowoutputmode[];
 const menuitem_t  menu_highoutputmode[];
+const menuitem_t  menu_mode[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_top[];
 static const menuitem_t  menu_trace[];
@@ -3012,7 +3013,7 @@ static const menuitem_t menu_stimulus[] = {
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 
-static const menuitem_t menu_mode[] = {
+const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "%s to LOW in",      menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "%s to HIGH in",     menu_mode_acb},

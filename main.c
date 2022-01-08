@@ -144,7 +144,11 @@ static THD_FUNCTION(Thread1, arg)
       if (setting.rbw_x10 == 0)
         b.RBW = 0;
       else
+#ifdef TINYSA4
         b.RBW = SI4463_rbw_selected+1;
+#else
+        b.RBW = SI4432_rbw_selected+1;
+#endif
       b.mode = setting.mode;
       uint32_t *f = (uint32_t *)&b;
       uint32_t *t = &backup;
@@ -720,12 +724,11 @@ VNA_SHELL_FUNCTION(cmd_refresh)
     auto_capture = m;
   }
 }
-
 VNA_SHELL_FUNCTION(cmd_touch)
 {
   if (argc != 2) return;
   touch_set(my_atoi(argv[0]), my_atoi(argv[1]));
-  remote_mouse_down = true;
+  remote_mouse_down = 1;
   handle_touch_interrupt();
 }
 
@@ -733,9 +736,10 @@ VNA_SHELL_FUNCTION(cmd_release)
 {
   if (argc == 2)
     touch_set(my_atoi(argv[0]), my_atoi(argv[1]));
-  remote_mouse_down = false;
+  remote_mouse_down = 2;
   handle_touch_interrupt();
 }
+
 #endif
 
 VNA_SHELL_FUNCTION(cmd_capture)
@@ -2468,18 +2472,19 @@ int main(void)
     case M_HIGH:
       break;
     case M_GENLOW:
+      menu_push_submenu(menu_mode);
       menu_push_submenu(menu_lowoutputmode);
       break;
     case M_GENHIGH:
+      menu_push_submenu(menu_mode);
       menu_push_submenu(menu_highoutputmode);
       break;
     }
 
     if (b.frequency0 != 0 || b.frequency1 != 0) {
     if (b.mode <= M_HIGH){
-      setting.frequency0 = b.frequency0;
-      setting.frequency1 = b.frequency1;
-      update_frequencies();
+      set_sweep_frequency(ST_START, b.frequency0);
+      set_sweep_frequency(ST_STOP, b.frequency1);
     } else {
       set_sweep_frequency(ST_CW, (b.frequency0 + b.frequency1)/2);
       set_sweep_frequency(ST_SPAN, (b.frequency1 - b.frequency0));

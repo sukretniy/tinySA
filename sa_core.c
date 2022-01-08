@@ -105,8 +105,8 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 #endif
 
 #ifdef TINYSA4
-#define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 35.8 - config.switch_offset)
-#define RECEIVE_SWITCH_ATTENUATION  (38 - config.receive_switch_offset)
+#define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 23 - config.switch_offset)
+#define RECEIVE_SWITCH_ATTENUATION  (29 - config.receive_switch_offset)
 //#define POWER_OFFSET    -18             // Max level with all enabled
 //#define POWER_RANGE     70
 #define MAX_DRIVE   ((setting.mode == M_GENHIGH && config.high_out_adf4350 ) ? 3 : 18)
@@ -125,7 +125,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 #define SWITCH_ATTENUATION  (29 - config.switch_offset)
 #define RECEIVE_SWITCH_ATTENUATION  24
 #define POWER_OFFSET    15
-#define MAX_DRIVE   (setting.mode == M_GENHIGH ? 15 : 11)
+#define MAX_DRIVE   (setting.mode == M_GENHIGH ? 13 : 11)  // The value of 13 is linked to the SL_GENHIGH_LEVEL_MAX of 9
 #define MIN_DRIVE   8
 #define SL_GENHIGH_LEVEL_MIN    -38
 #define SL_GENHIGH_LEVEL_MAX    9
@@ -1091,9 +1091,11 @@ void set_actual_power(float o)              // Set peak level to known value
     else
 #endif
     {
- //     if (get_attennuation() > 32)
- //       config.receive_switch_offset = new_offset;
- //     else
+#ifdef TINYSA4
+      if (setting.atten_step)
+        config.receive_switch_offset -= new_offset;
+      else
+#endif
         config.low_level_offset = new_offset;
     }
   }
@@ -6237,6 +6239,7 @@ void calibrate(void)
   reset_calibration();
 #ifdef TINYSA4
   bool calibrate_lna = false;
+  bool calibrate_switch = false;
 again:
 #endif
   for (int k = 0; k<2; k++) {
@@ -6250,7 +6253,9 @@ again:
       setting.rbw_x10 = 3000;
       int test_case = TEST_POWER;
 #ifdef TINYSA4
-      set_extra_lna(calibrate_lna);
+      setting.atten_step = calibrate_switch;
+      if (!calibrate_switch)
+        set_extra_lna(calibrate_lna);
 #endif
       set_average(0, AV_100);
       for (int m=1; m<20; m++) {
@@ -6319,6 +6324,10 @@ again:
 #ifdef TINYSA4
   if (!calibrate_lna) {
     calibrate_lna = true;
+    goto again;
+  }
+  if (!calibrate_switch) {
+    calibrate_switch = true;
     goto again;
   }
 #endif
