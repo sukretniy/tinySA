@@ -54,6 +54,7 @@
 #define __PE4302__
 //#define __SIMULATION__
 #define __SCROLL__                // Add waterfall option
+#define __LEVEL_METER__
 #define __ICONS__
 #define __MEASURE__
 #define __LINEARITY__             // Not available
@@ -363,6 +364,10 @@ void  set_subtract_storage(void);
 void  toggle_normalize(int);
 void set_waterfall(void);
 void disable_waterfall(void);
+#ifdef __LEVEL_METER__
+void set_level_meter(void);
+void disable_level_meter(void);
+#endif
 void set_mode(int);
 int GetMode(void);
 void set_reflevel(float);
@@ -1042,6 +1047,9 @@ typedef struct setting
   uint8_t trigger_direction;   // enum
   uint8_t step_delay_mode;     // enum
   uint8_t waterfall;           // enum
+#ifdef __LEVEL_METER__
+  uint8_t level_meter;         // enum
+#endif
   uint8_t average[TRACES_MAX]; // enum
   uint8_t subtract[TRACES_MAX];// index
   uint8_t measurement;         // enum

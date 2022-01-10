@@ -35,6 +35,10 @@ static void cell_grid_line_info(int x0, int y0);
 static void cell_blit_bitmap(int x, int y, uint16_t w, uint16_t h, const uint8_t *bitmap);
 static void draw_battery_status(void);
 static void update_waterfall(void);
+#ifdef __LEVEL_METER__
+static void update_level_meter(void);
+char level_text[20];
+#endif
 void cell_draw_test_info(int x0, int y0);
 int cell_printf(int16_t x, int16_t y, const char *fmt, ...);
 #ifndef wFONT_GET_DATA
@@ -138,6 +142,10 @@ void update_grid(void)
 
   if (setting.waterfall)
     set_waterfall();
+#ifdef __LEVEL_METER__
+  if (setting.level_meter)
+    set_level_meter();
+#endif
   redraw_request |= REDRAW_FREQUENCY | REDRAW_AREA;
 }
 
@@ -1237,6 +1245,9 @@ draw_all_cells(bool flush_markmap)
 void
 draw_all(bool flush)
 {
+#ifdef __LEVEL_METER__
+  level_text[0] = 0;    // Clear level text
+#endif
   if (redraw_request & REDRAW_AREA)       // this set all area for update
     force_set_markmap();
   else {
@@ -1253,6 +1264,12 @@ draw_all(bool flush)
     update_waterfall();
   //  STOP_PROFILE
 #endif
+
+#ifdef __LEVEL_METER__
+  if (setting.level_meter) {
+    update_level_meter();
+  }
+#endif
   }
   if (redraw_request & REDRAW_CAL_STATUS)
     draw_cal_status();                      // calculates the actual sweep time, must be before draw_frequencies
@@ -1262,6 +1279,7 @@ draw_all(bool flush)
     draw_battery_status();
   redraw_request = 0;
 }
+
 
 //
 // Call this function then need fast draw marker and marker info
@@ -1515,6 +1533,8 @@ static void trace_print_value_string(     // Only used at one place
   if (bold) format++; // Skip small prefix for bold output
 #endif
   cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
+  if (level_text[0] == 0)
+    plot_printf(level_text, sizeof(level_text), &format[3], v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
 }
 
 static void cell_draw_marker_info(int x0, int y0)
@@ -2005,6 +2025,43 @@ disable_waterfall(void)
   setting.waterfall = W_OFF;
   set_waterfall();
 }
+
+#ifdef __LEVEL_METER__
+static void update_level_meter(void){
+  int m = 0;
+  while (m < MARKERS_MAX){
+    if (markers[m].enabled)
+      break;
+    m++;
+  }
+  if (m == MARKERS_MAX)
+    return;
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+2,6);
+}
+
+void
+set_level_meter(void)
+{
+  if (setting.level_meter)       graph_bottom = SMALL_WATERFALL;
+//  else if (setting.level_meter == W_BIG)    graph_bottom = BIG_WATERFALL;
+  else /*if (setting.level_meter == W_OFF)*/graph_bottom = NO_WATERFALL;
+  _grid_y = graph_bottom / NGRIDY;
+  area_height = AREA_HEIGHT_NORMAL;
+  if (setting.level_meter){
+    ili9341_set_background(LCD_BG_COLOR);
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
+  }
+  request_to_redraw_grid();
+}
+
+void
+disable_level_meter(void)
+{
+  setting.level_meter = false;
+  set_level_meter();
+}
+#endif
 
 void
 plot_init(void)

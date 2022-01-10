@@ -899,7 +899,7 @@ void ili9341_drawstringV(const char *str, int x, int y)
   ili9341_drawstring(str, ILI9341_HEIGHT-y, x);
   ili9341_set_rotation(DISPLAY_ROTATION_0);
 }
-#ifndef wFONT_GET_DATA
+#ifdef __LEVEL_METER__
 int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size)
 {
   uint16_t *buf = spi_buffer;

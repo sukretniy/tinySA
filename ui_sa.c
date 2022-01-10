@@ -1796,6 +1796,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   ui_mode_normal();
 }
 
+#ifdef __LEVEL_METER__
+static UI_FUNCTION_ADV_CALLBACK(menu_level_meter_acb){
+  (void)item;
+  (void)data;
+  if (b){
+    b->icon = setting.level_meter ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  setting.level_meter = !setting.level_meter;
+  set_level_meter();
+  ui_mode_normal();
+}
+#endif
+
+
 #ifdef __LIMITS__
 uint8_t active_limit = 0;
 static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
@@ -2943,6 +2958,9 @@ static const menuitem_t menu_traces[] =
 static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,0,             "PAUSE\nSWEEP",    menu_pause_acb},
   { MT_ADV_CALLBACK,1,             "WATER\nFALL",     menu_waterfall_acb},
+#ifdef __LEVEL_METER__
+  { MT_ADV_CALLBACK,1,             "LEVEL\nMETER",     menu_level_meter_acb},
+#endif
 #ifdef __VBW__
   { MT_SUBMENU,     0,             "VBW",             menu_vbw},
 #endif
