@@ -287,7 +287,7 @@ touch_start_watchdog(void)
   if (touch_status_flag&TOUCH_INTERRUPT_ENABLED) return;
   touch_status_flag^=TOUCH_INTERRUPT_ENABLED;
   adc_start_analog_watchdog();
-#ifdef REMOTE_DESKTOP
+#ifdef __REMOTE_DESKTOP__
   remote_mouse_down = 0;
 #endif
 }
@@ -337,7 +337,7 @@ touch_check(void)
       last_touch_x = x;
       last_touch_y = y;
     }
-#ifdef REMOTE_DESKTOP
+#ifdef __REMOTE_DESKTOP__
     remote_mouse_down = 0;
   } else {
     stat = remote_mouse_down == 1;

@@ -668,9 +668,9 @@ typedef struct config {
   float high_level_offset;
   float low_level_output_offset;
   float high_level_output_offset;
+  float receive_switch_offset;
 #ifdef TINYSA4
   float lna_level_offset;
-  float receive_switch_offset;
   float harmonic_level_offset;
   float shift_level_offset;
 #endif

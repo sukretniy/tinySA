@@ -309,7 +309,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 #ifdef TINYSA4
   static const char cmd_mode_list[] = "low|high|switch|receive_switch|lna|harmonic|shift";
 #else
-  static const char cmd_mode_list[] = "low|high|switch";
+  static const char cmd_mode_list[] = "low|high|switch|receive_switch";
 #endif
   if (argc == 0) {
     const char *p = "leveloffset %s %.1f\r\n";
@@ -318,8 +318,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     shell_printf(p, "low output",   config.low_level_output_offset);
     shell_printf(p, "high output",  config.high_level_output_offset);
     shell_printf(p, "switch",       config.switch_offset);
-#ifdef TINYSA4
     shell_printf(p, "receive_switch",config.receive_switch_offset);
+#ifdef TINYSA4
     shell_printf(p, "lna",          config.lna_level_offset);
     shell_printf(p, "harmonic",     config.harmonic_level_offset);
     shell_printf(p, "shift",        config.shift_level_offset);
@@ -335,8 +335,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       case 0: config.low_level_offset = v; break;
       case 1: config.high_level_offset = v; break;
       case 2: config.switch_offset = v; break;
-#ifdef TINYSA4
       case 3: config.receive_switch_offset = v; break;
+#ifdef TINYSA4
       case 4: config.lna_level_offset = v; break;
       case 5: config.harmonic_level_offset = v; break;
       case 6: config.shift_level_offset = v; break;
