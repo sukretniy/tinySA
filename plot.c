@@ -1533,8 +1533,10 @@ static void trace_print_value_string(     // Only used at one place
   if (bold) format++; // Skip small prefix for bold output
 #endif
   cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
+#ifdef __LEVEL_METER__
   if (level_text[0] == 0)
-    plot_printf(level_text, sizeof(level_text), &format[3], v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
+    plot_printf(level_text, sizeof(level_text), &format[3], v, "       ", "" ,"");
+#endif
 }
 
 static void cell_draw_marker_info(int x0, int y0)
@@ -1561,11 +1563,21 @@ static void cell_draw_marker_info(int x0, int y0)
       int ypos = 1 - y0;
       cell_printf(xpos, ypos, FONT_b"%4.1fdBm/%3QHz", channel_power[c], bw);
       ypos = 14 - y0;
-      if (setting.measurement==M_CP )
-        cell_printf(xpos, ypos, FONT_b"%4.1f%%", 100.0 * channel_power_watt[c] /(channel_power_watt[0] + channel_power_watt[1] + channel_power_watt[2]) );
-      else if (c == 1)
-        cell_printf(xpos, ypos, FONT_b"SNR: %4.1fdB", channel_power[1] - (channel_power[0] + channel_power[2])/2 );
-
+      if (setting.measurement==M_CP ) {
+        float v = 100.0 * channel_power_watt[c] /(channel_power_watt[0] + channel_power_watt[1] + channel_power_watt[2]);
+        cell_printf(xpos, ypos, FONT_b"%4.1f%%", v );
+#ifdef __LEVEL_METER__
+        if (c == 1)
+           plot_printf(level_text, sizeof(level_text), "%4.1f%%", v);
+#endif
+      }
+      else if (c == 1) {
+        float v = channel_power[1] - (channel_power[0] + channel_power[2])/2;
+        cell_printf(xpos, ypos, FONT_b"SNR: %4.1fdB", v);
+#ifdef __LEVEL_METER__
+        plot_printf(level_text, sizeof(level_text), "%4.1f", v);
+#endif
+      }
     }
     return;
   }
@@ -1585,6 +1597,9 @@ static void cell_draw_marker_info(int x0, int y0)
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
         cell_printf(xpos, ypos, FONT_b"WIDTH: %8.3QHz", f);
+#ifdef __LEVEL_METER__
+        plot_printf(level_text, sizeof(level_text), "%8.3Q", f);
+#endif
         //        cell_drawstring(buf, xpos, ypos);
       } else if (setting.measurement == M_AM){
 #ifdef AM_IN_VOLT
@@ -1609,6 +1624,9 @@ static void cell_draw_marker_info(int x0, int y0)
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
         cell_printf(xpos, ypos, FONT_b"DEPTH: %3d%%", depth);
+#ifdef __LEVEL_METER__
+        plot_printf(level_text, sizeof(level_text), "%3d%%", depth);
+#endif
       } else if (setting.measurement == M_FM){
         freq_t dev = markers[1].frequency + actual_rbw_x10*100.0;      // Temp value to prevent calculation of negative deviation
         if ( markers[2].frequency < dev)
@@ -1618,6 +1636,9 @@ static void cell_draw_marker_info(int x0, int y0)
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
         cell_printf(xpos, ypos, FONT_b"DEVIATION:%6.1QHz", dev);
+#ifdef __LEVEL_METER__
+        plot_printf(level_text, sizeof(level_text), "%6.1Q", dev);
+#endif
 #ifdef TINYSA4
 #define THD_SHIFT   7
 #else
@@ -1650,6 +1671,9 @@ static void cell_draw_marker_info(int x0, int y0)
         int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
         int ypos = 1 + (j/2)*(16) - y0;
         cell_printf(xpos, ypos, FONT_b"#%d THD: %4.1f%%", h_count, thd);
+#ifdef __LEVEL_METER__
+        plot_printf(level_text, sizeof(level_text), "%4.1f%%", thd);
+#endif
         break;
       }
 #ifdef __NOISE_FIGURE__
@@ -1680,6 +1704,10 @@ static void cell_draw_marker_info(int x0, int y0)
         else
           cell_printf(xpos, ypos, FONT_b"GAIN: %4.1fdB   NF: %4.1f", nf_gain, measured_noise_figure);
       }
+#ifdef __LEVEL_METER__
+        plot_printf(level_text, sizeof(level_text), "%4.1f", measured_noise_figure);
+#endif
+
       break;
 #endif
     } else
@@ -1694,6 +1722,10 @@ static void cell_draw_marker_info(int x0, int y0)
       int xpos = 1 + (j%2)*(WIDTH/2) + CELLOFFSETX - x0;
       int ypos = 1 + (j/2)*(16) - y0;
       cell_printf(xpos, ypos, FONT_s"OIP3: %4.1fdB", ip);
+#ifdef __LEVEL_METER__
+      plot_printf(level_text, sizeof(level_text), "%4.1f", ip);
+#endif
+
 
       ip = sr+ (sl - ir)/2;
       j = 3;
@@ -2028,16 +2060,16 @@ disable_waterfall(void)
 
 #ifdef __LEVEL_METER__
 static void update_level_meter(void){
-  int m = 0;
-  while (m < MARKERS_MAX){
-    if (markers[m].enabled)
-      break;
-    m++;
-  }
-  if (m == MARKERS_MAX)
+  if (level_text[0] == 0)
     return;
+  ili9341_set_background(LCD_BG_COLOR);
+  const int minimum_text_width = 6*5*7;
+  level_text[6] = 0;
+  if (area_width-minimum_text_width > 0)
+    ili9341_fill(OFFSETX+minimum_text_width, graph_bottom+1, area_width-minimum_text_width, CHART_BOTTOM - graph_bottom);
   ili9341_set_foreground(LCD_FG_COLOR);
-  ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+2,6);
+  ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+2,4);
+
 }
 
 void

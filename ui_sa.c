@@ -2959,7 +2959,7 @@ static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,0,             "PAUSE\nSWEEP",    menu_pause_acb},
   { MT_ADV_CALLBACK,1,             "WATER\nFALL",     menu_waterfall_acb},
 #ifdef __LEVEL_METER__
-  { MT_ADV_CALLBACK,1,             "LEVEL\nMETER",     menu_level_meter_acb},
+  { MT_ADV_CALLBACK,1,             "BIG\nNUMBER",     menu_level_meter_acb},
 #endif
 #ifdef __VBW__
   { MT_SUBMENU,     0,             "VBW",             menu_vbw},

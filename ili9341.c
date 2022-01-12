@@ -903,9 +903,9 @@ void ili9341_drawstringV(const char *str, int x, int y)
 int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size)
 {
   uint16_t *buf = spi_buffer;
-  const uint8_t *char_buf = FONT_GET_DATA(ch);
-  uint16_t w = FONT_GET_WIDTH(ch);
-  for (int c = 0; c < FONT_GET_HEIGHT; c++, char_buf++) {
+  const uint8_t *char_buf = bFONT_GET_DATA(ch);
+  uint16_t w = bFONT_GET_WIDTH(ch);
+  for (int c = 0; c < bFONT_GET_HEIGHT; c++, char_buf++) {
     for (int i = 0; i < size; i++) {
       uint8_t bits = *char_buf;
       for (int r = 0; r < w; r++, bits <<= 1)
@@ -913,7 +913,7 @@ int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size)
           *buf++ = (0x80 & bits) ? foreground_color : background_color;
     }
   }
-  ili9341_bulk(x, y, w * size, FONT_GET_HEIGHT * size);
+  ili9341_bulk(x, y, w * size, bFONT_GET_HEIGHT * size);
   return w*size;
 }
 
