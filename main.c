@@ -486,7 +486,7 @@ my_atof(const char *p)
 
 VNA_SHELL_FUNCTION(cmd_freq)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
     goto usage;
   }
   freq_t freq = my_atoui(argv[0]);
@@ -515,7 +515,7 @@ VNA_SHELL_FUNCTION(cmd_time)
     rtc_set_time(my_atoui(argv[1]), my_atoui(argv[2]));
     return;
   }
-  if (argc!=2) goto usage;
+  if (argc!=2 || argv[0][0] == '?') goto usage;
   int idx = get_str_index(argv[0], time_cmd);
   uint32_t val = my_atoui(argv[1]);
   if (idx < 0 || val > 99)
@@ -533,7 +533,7 @@ usage:
 VNA_SHELL_FUNCTION(cmd_dac)
 {
   uint32_t value;
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
     shell_printf("usage: dac {value(0-4095)}\r\n"\
                  "current value: %d\r\n", config.dac_value);
     return;
@@ -553,7 +553,7 @@ VNA_SHELL_FUNCTION(cmd_saveconfig)
 
 VNA_SHELL_FUNCTION(cmd_clearconfig)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
     shell_printf("usage: clearconfig {protection key}\r\n");
     return;
   }
@@ -665,8 +665,9 @@ VNA_SHELL_FUNCTION(cmd_data)
 {
   int i;
   int sel = 0;
-  if (argc == 1)
-    sel = my_atoi(argv[0]);
+  if (argc != 1 || argv[0][0] == '?')
+    goto usage;
+  sel = my_atoi(argv[0]);
 
   if (sel >= 0 && sel <= MAX_DATA) {
     static const uint8_t sel_conv[]={TRACE_TEMP, TRACE_STORED, TRACE_ACTUAL};
@@ -675,6 +676,7 @@ VNA_SHELL_FUNCTION(cmd_data)
       shell_printf("%f\r\n", value(data[i]));
     return;
   }
+usage:
   shell_printf("usage: data [0-2]\r\n");
 }
 
@@ -807,7 +809,7 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
 VNA_SHELL_FUNCTION(cmd_sd_read)
 {
   char *buf = (char *)spi_buffer;
-  if (argc != 1)
+  if (argc != 1 || argv[0][0] == '?')
   {
      shell_printf("usage: sd_read {filename}\r\n");
      return;
@@ -836,7 +838,7 @@ VNA_SHELL_FUNCTION(cmd_sd_read)
 VNA_SHELL_FUNCTION(cmd_sd_delete)
 {
   FRESULT res;
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
      shell_printf("usage: sd_delete {filename}\r\n");
      return;
   }
@@ -1337,7 +1339,7 @@ usage:
 
 VNA_SHELL_FUNCTION(cmd_save)
 {
-  if (argc != 1)
+  if (argc != 1 || argv[0][0] == '?')
     goto usage;
 
   int id = my_atoi(argv[0]);
@@ -1353,7 +1355,7 @@ VNA_SHELL_FUNCTION(cmd_save)
 
 VNA_SHELL_FUNCTION(cmd_recall)
 {
-  if (argc != 1)
+  if (argc != 1 || argv[0][0] == '?')
     goto usage;
 
   int id = my_atoi(argv[0]);
@@ -1733,7 +1735,7 @@ VNA_SHELL_FUNCTION(cmd_vbat)
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
 VNA_SHELL_FUNCTION(cmd_vbat_offset)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
     shell_printf("%d\r\n", config.vbat_offset);
     return;
   }
@@ -1815,7 +1817,7 @@ VNA_SHELL_FUNCTION(cmd_threads)
 #ifdef ENABLE_USART_COMMAND
 VNA_SHELL_FUNCTION(cmd_usart_cfg)
 {
-  if (argc != 1) goto result;
+  if (argc != 1 || argv[0][0] == '?') goto result;
   uint32_t speed = my_atoui(argv[0]);
   if (speed < 300) speed = 300;
   config._serial_speed = speed;

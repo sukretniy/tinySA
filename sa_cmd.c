@@ -86,10 +86,22 @@ VNA_SHELL_FUNCTION(cmd_calc )
 #endif
   if (argc < 1) {
   usage:
-    shell_printf("usage: calc %s\r\n", cmd_cal);
+    shell_printf("usage: calc [{trace#}] %s\r\n", cmd_cal);
     return;
   }
-  int m = get_str_index(argv[0], cmd_cal);
+  int next_arg = 0;
+  int t = 0;
+  if ('0' <= argv[0][0] && argv[0][0] <= '9') {
+    t = my_atoi(argv[0]) - 1;
+    next_arg++;
+    argc--;
+    if (t < 0 || t >= TRACES_MAX)
+      goto usage;
+    if (argc < 1)
+      goto usage;
+  }
+
+  int m = get_str_index(argv[next_arg], cmd_cal);
   if (m<0)
      goto usage;
 #ifdef TINYSA4
@@ -97,7 +109,7 @@ VNA_SHELL_FUNCTION(cmd_calc )
     linear_averaging = (m == 9);
   } else
 #endif
-  set_average(0, m);
+  set_average(t, m);
 }
 
 int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv)
@@ -107,7 +119,7 @@ int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *a
     shell_printf("usage: %s %s\r\n", cmd, cmd_list);
     return -1;
   }
-  int m = get_str_index(argv, cmd_list);
+  int m = get_str_index(argv, cmd_list); // this will catch the ?
   if (m < 0)
     goto usage;
   return m;
@@ -116,12 +128,6 @@ int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *a
 #ifdef __SPUR__
 VNA_SHELL_FUNCTION(cmd_spur)
 {
-//  static const char cmd[] = "off|on";
-//  if (argc != 1) {
-//  usage:
-//    shell_printf("usage: spur %s\r\n", cmd);
-//    return;
-//  }
 #ifdef TINYSA4
   int m = generic_option_cmd("spur", "off|on|auto", argc, argv[0]);
 #else
@@ -137,12 +143,6 @@ VNA_SHELL_FUNCTION(cmd_spur)
 #ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_lna)
 {
-//  static const char cmd[] = "off|on";
-//  if (argc != 1) {
-//  usage:
-//    shell_printf("usage: spur %s\r\n", cmd);
-//    return;
-//  }
   int m = generic_option_cmd("lna", "off|on", argc, argv[0]);
   if (m>=0) {
     set_extra_lna(m);
@@ -153,12 +153,6 @@ VNA_SHELL_FUNCTION(cmd_lna)
 #ifdef __ULTRA__
 VNA_SHELL_FUNCTION(cmd_ultra)
 {
-//  static const char cmd[] = "off|on";
-//  if (argc != 1) {
-//  usage:
-//    shell_printf("usage: spur %s\r\n", cmd);
-//    return;
-//  }
   int m = generic_option_cmd("ultra", "off|on", argc, argv[0]);
   if (m>=0) {
     config.ultra = m;
@@ -178,7 +172,7 @@ VNA_SHELL_FUNCTION(cmd_output)
 
 VNA_SHELL_FUNCTION(cmd_load)
 {
-  if (argc != 1)
+  if (argc != 1 || argv[0][0] == '?')
     goto usage;
   uint16_t a = my_atoui(argv[0]);
   if (a <= 4) {
@@ -199,7 +193,7 @@ static uint8_t reg_agc_lna = 0;
 VNA_SHELL_FUNCTION(cmd_lna2)
 {
   int a;
-  if (argc != 1) {
+  if (argc != 1  || argv[0][0] == '?') {
 //  usage:
     shell_printf("usage: lna2 0..7|auto\r\n");
     return;
@@ -217,7 +211,7 @@ VNA_SHELL_FUNCTION(cmd_lna2)
 VNA_SHELL_FUNCTION(cmd_agc)
 {
   int a;
-  if (argc != 1) {
+  if (argc != 1  || argv[0][0] == '?') {
 //  usage:
     shell_printf("usage: agc 0..7|auto\r\n");
     return;
@@ -237,8 +231,8 @@ VNA_SHELL_FUNCTION(cmd_agc)
 
 VNA_SHELL_FUNCTION(cmd_attenuate)
 {
-  if (argc != 1) {
-//  usage:
+  if (argc != 1 || argv[0][0] == '?') {
+  usage:
     shell_printf("usage: attenuate 0..31|auto\r\n");
     return;
   }
@@ -257,7 +251,8 @@ VNA_SHELL_FUNCTION(cmd_attenuate)
 
 VNA_SHELL_FUNCTION(cmd_level)
 {
-  if (argc != 1) {
+  if (argc != 1  || argv[0][0] == '?') {
+usage:
     if (setting.mode==M_GENLOW)
       shell_printf("usage: level -76..-6\r\n");
     if (setting.mode==M_GENHIGH)
@@ -270,7 +265,8 @@ VNA_SHELL_FUNCTION(cmd_level)
 
 VNA_SHELL_FUNCTION(cmd_sweeptime)
 {
-  if (argc != 1) {
+  if (argc != 1  || argv[0][0] == '?') {
+   usage:
     shell_printf("usage: sweeptime 0.003..60\r\n");
     return;
   }
@@ -282,7 +278,8 @@ VNA_SHELL_FUNCTION(cmd_sweeptime)
 
 VNA_SHELL_FUNCTION(cmd_ext_gain)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
+usage:
     shell_printf("usage: ext_gain -100.0..+100.0\r\n");
     return;
   }
@@ -295,7 +292,8 @@ VNA_SHELL_FUNCTION(cmd_ext_gain)
 
 VNA_SHELL_FUNCTION(cmd_levelchange)
 {
-  if (argc != 1) {
+  if (argc != 1  || argv[0][0] == '?') {
+usage:
     shell_printf("usage: levelchange -70..+70\r\n");
     return;
   }
@@ -326,6 +324,9 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 #endif
     return;
   }
+  if (argv[0][0] == '?')
+    goto usage;
+
   int mode = get_str_index(argv[0], cmd_mode_list);
   if (mode < 0) goto usage;
   float v;
@@ -366,9 +367,12 @@ VNA_SHELL_FUNCTION(cmd_deviceid)
     shell_printf("deviceid %d\r\n", config.deviceid);
     return;
   } else if (argc == 1) {
+    if (argv[0][0] == '?')
+      goto usage;
     float v = my_atoui(argv[0]);
     config.deviceid = v;
   } else {
+  usage:
     shell_printf("usage: deviceid [<number>]\r\n");
   }
 }
@@ -376,7 +380,8 @@ VNA_SHELL_FUNCTION(cmd_deviceid)
 VNA_SHELL_FUNCTION(cmd_sweep_voltage)
 {
   float value;
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
+    usage:
     shell_printf("usage: sweep_voltage {value(0-3.3)}\r\n"\
                  "current value: %f\r\n", config.sweep_voltage);
     return;
@@ -388,7 +393,8 @@ VNA_SHELL_FUNCTION(cmd_sweep_voltage)
 #ifdef __NOISE_FIGURE__
 VNA_SHELL_FUNCTION(cmd_nf)
 {
-  if (argc != 1) {
+  if (argc != 1  || argv[0][0] == '?') {
+usage:
     shell_printf("usage: nf {value}\r\n"\
                  "%f\r\n", config.noise_figure);
     return;
@@ -400,7 +406,7 @@ VNA_SHELL_FUNCTION(cmd_nf)
 
 VNA_SHELL_FUNCTION(cmd_rbw)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
   usage:
 #ifdef TINYSA4
 	shell_printf("usage: rbw 0.3..850|auto\r\n");
@@ -429,33 +435,32 @@ VNA_SHELL_FUNCTION(cmd_rbw)
 
 VNA_SHELL_FUNCTION(cmd_if)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
   usage:
     shell_printf("usage: if {433M..435M}\r\n%QHz\r\n", setting.frequency_IF);
     return;
-  } else {
-    freq_t a = (freq_t)my_atoi(argv[0]);
-    if (a!= 0 &&( a < (DEFAULT_IF - (freq_t)2000000) || a>(DEFAULT_IF + (freq_t)2000000)))
-      goto usage;
-    setting.auto_IF = false;
-    set_IF(a);
   }
+  freq_t a = (freq_t)my_atoi(argv[0]);
+  if (a!= 0 &&( a < (DEFAULT_IF - (freq_t)2000000) || a>(DEFAULT_IF + (freq_t)2000000)))
+    goto usage;
+  setting.auto_IF = false;
+  set_IF(a);
 }
 
 VNA_SHELL_FUNCTION(cmd_zero)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
+usage:
     shell_printf("usage: zero {level}\r\n%ddBm\r\n", config.ext_zero_level);
     return;
-  } else {
-    config.ext_zero_level = my_atoi(argv[0]);
   }
+  config.ext_zero_level = my_atoi(argv[0]);
 }
 
 #ifdef __ULTRA__
 VNA_SHELL_FUNCTION(cmd_ultra_start)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
     shell_printf("usage: ultra_start {0..4290M}\r\n%QHz\r\n", config.ultra_threshold);
     return;
   } else {
@@ -469,7 +474,7 @@ VNA_SHELL_FUNCTION(cmd_ultra_start)
 #ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_if1)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
   usage:
     shell_printf("usage: if1 {975M..979M}\r\n%QHz\r\n", config.frequency_IF1);
     return;
@@ -484,7 +489,7 @@ VNA_SHELL_FUNCTION(cmd_if1)
 
 VNA_SHELL_FUNCTION(cmd_actual_freq)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
     shell_printf("%DHz\r\n", config.setting_frequency_30mhz);
     return;
   } else {
@@ -496,7 +501,7 @@ VNA_SHELL_FUNCTION(cmd_actual_freq)
 #ifdef TINYSA3
 VNA_SHELL_FUNCTION(cmd_actual_freq)
 {
-  if (argc != 1) {
+  if (argc != 1 || argv[0][0] == '?') {
     shell_printf("%DHz\r\n", config.setting_frequency_10mhz);
     return;
   } else {
@@ -509,7 +514,8 @@ VNA_SHELL_FUNCTION(cmd_trigger)
 {
   if (argc == 0)
     goto usage;
-
+  if(argv[0][0] == '?')
+    goto usage;
   if (( '0' <= argv[0][0] && argv[0][0] <= '9') || argv[0][0] == '-') {
     float t = my_atof(argv[0]);
     if (setting.trigger == T_AUTO )
@@ -538,7 +544,7 @@ usage:
 
 VNA_SHELL_FUNCTION(cmd_selftest)
 {
-  if (argc < 1 || argc > 2) {
+  if (argc < 1 || argc > 2 || argv[0][0] == '?') {
     shell_printf("usage: selftest (1-3) [arg]\r\n");
     return;
   }
