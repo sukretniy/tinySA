@@ -1792,6 +1792,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
     return;
   }
   setting.waterfall++; if (setting.waterfall>W_BIG)setting.waterfall = W_OFF;
+  if (setting.waterfall != W_OFF)
+    setting.level_meter = false;
   set_waterfall();
   ui_mode_normal();
 }
@@ -1805,6 +1807,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_level_meter_acb){
     return;
   }
   setting.level_meter = !setting.level_meter;
+  if (setting.level_meter)
+    setting.waterfall = W_OFF;
   set_level_meter();
   ui_mode_normal();
 }

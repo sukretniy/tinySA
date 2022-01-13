@@ -900,11 +900,15 @@ void ili9341_drawstringV(const char *str, int x, int y)
   ili9341_set_rotation(DISPLAY_ROTATION_0);
 }
 #ifdef __LEVEL_METER__
-int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size)
+int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size, int x_max)
 {
   uint16_t *buf = spi_buffer;
   const uint8_t *char_buf = bFONT_GET_DATA(ch);
   uint16_t w = bFONT_GET_WIDTH(ch);
+  if (x > x_max)
+    return 0;
+  if (w*size + x > x_max)
+    w = (x_max - x)/size;
   for (int c = 0; c < bFONT_GET_HEIGHT; c++, char_buf++) {
     for (int i = 0; i < size; i++) {
       uint8_t bits = *char_buf;
@@ -917,10 +921,11 @@ int ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size)
   return w*size;
 }
 
-void ili9341_drawstring_size(const char *str, int x, int y, uint8_t size)
+int ili9341_drawstring_size(const char *str, int x, int y, uint8_t size, int x_max)
 {
   while (*str)
-    x += ili9341_drawchar_size(*str++, x, y, size);
+    x += ili9341_drawchar_size(*str++, x, y, size, x_max);
+  return x;
 }
 #endif
 

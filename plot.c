@@ -1535,7 +1535,7 @@ static void trace_print_value_string(     // Only used at one place
   cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
 #ifdef __LEVEL_METER__
   if (level_text[0] == 0)
-    plot_printf(level_text, sizeof(level_text), &format[3], v, "       ", "" ,"");
+    plot_printf(level_text, sizeof(level_text), &format[3], v, "", "" ,"");
 #endif
 }
 
@@ -2063,13 +2063,15 @@ static void update_level_meter(void){
   if (level_text[0] == 0)
     return;
   ili9341_set_background(LCD_BG_COLOR);
-  const int minimum_text_width = 6*5*7;
-  level_text[6] = 0;
-  if (area_width-minimum_text_width > 0)
-    ili9341_fill(OFFSETX+minimum_text_width, graph_bottom+1, area_width-minimum_text_width, CHART_BOTTOM - graph_bottom);
+//  const int minimum_text_width = 6*5*7;
+//  level_text[6] = 0;
+//  if (area_width-minimum_text_width > 0)
+//    ili9341_fill(OFFSETX+minimum_text_width, graph_bottom+1, area_width-minimum_text_width, CHART_BOTTOM - graph_bottom);
   ili9341_set_foreground(LCD_FG_COLOR);
-  ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+2,4);
-
+  int x_max = area_width+OFFSETX;
+  int w = ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+1,4, x_max) + OFFSETX;
+  if (w < x_max)
+    ili9341_fill(w, graph_bottom+1, x_max - w, CHART_BOTTOM - graph_bottom+1);
 }
 
 void
