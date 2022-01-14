@@ -212,6 +212,7 @@ void my_microsecond_delay(int t);
 float my_atof(const char *p);
 freq_t my_atoui(const char *p);
 int shell_printf(const char *fmt, ...);
+int usage_printf(const char *fmt, ...);
 
 #ifdef __REMOTE_DESKTOP__
 extern uint8_t remote_mouse_down;

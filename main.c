@@ -278,6 +278,19 @@ int shell_printf(const char *fmt, ...)
   return formatted_bytes;
 }
 
+// Shell commands output
+int usage_printf(const char *fmt, ...)
+{
+  if (shell_stream == NULL) return 0;
+  va_list ap;
+  int formatted_bytes = 0;
+  va_start(ap, fmt);
+  shell_printf("usage: ");
+  formatted_bytes += chvprintf(shell_stream, fmt, ap);
+  va_end(ap);
+  return formatted_bytes;
+}
+
 #ifdef __USE_SERIAL_CONSOLE__
 // Serial Shell commands output
 int shell_serial_printf(const char *fmt, ...)
@@ -495,7 +508,7 @@ VNA_SHELL_FUNCTION(cmd_freq)
   set_frequency(freq);
   return;
 usage:
-  shell_printf("usage: freq {frequency(Hz)}\r\n");
+  usage_printf("freq {frequency(Hz)}\r\n");
 }
 
 #ifdef __USE_RTC__
@@ -525,8 +538,8 @@ VNA_SHELL_FUNCTION(cmd_time)
   rtc_set_time(dt_buf[1], dt_buf[0]);
   return;
 usage:
-  shell_printf("20%02x/%02x/%02x %02x:%02x:%02x\r\n"\
-               "usage: time {[%s] 0-99} or {b 0xYYMMDD 0xHHMMSS}\r\n", time[6], time[5], time[4], time[2], time[1], time[0], time_cmd);
+  usage_printf("time {[%s] 0-99} or {b 0xYYMMDD 0xHHMMSS}\r\n"\
+               "20%02x/%02x/%02x %02x:%02x:%02x\r\n", time_cmd, time[6], time[5], time[4], time[2], time[1], time[0]);
 }
 #endif
 
@@ -534,7 +547,7 @@ VNA_SHELL_FUNCTION(cmd_dac)
 {
   uint32_t value;
   if (argc != 1 || argv[0][0] == '?') {
-    shell_printf("usage: dac {value(0-4095)}\r\n"\
+    usage_printf("dac {value(0-4095)}\r\n"\
                  "current value: %d\r\n", config.dac_value);
     return;
   }
@@ -554,7 +567,7 @@ VNA_SHELL_FUNCTION(cmd_saveconfig)
 VNA_SHELL_FUNCTION(cmd_clearconfig)
 {
   if (argc != 1 || argv[0][0] == '?') {
-    shell_printf("usage: clearconfig {protection key}\r\n");
+    usage_printf("clearconfig {protection key}\r\n");
     return;
   }
 
@@ -677,7 +690,7 @@ VNA_SHELL_FUNCTION(cmd_data)
     return;
   }
 usage:
-  shell_printf("usage: data [0-2]\r\n");
+  usage_printf("data [0-2]\r\n");
 }
 
 #ifdef ENABLED_DUMP
@@ -794,7 +807,7 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
   switch (argc){
     case 0: search =   "*.*";break;
     case 1: search = argv[0];break;
-    default: shell_printf("usage: sd_list {pattern}\r\n"); return;
+    default: usage_printf("sd_list {pattern}\r\n"); return;
   }
   shell_printf("sd_list:\r\n");
   res = f_findfirst(&dj, &fno, "", search);
@@ -811,7 +824,7 @@ VNA_SHELL_FUNCTION(cmd_sd_read)
   char *buf = (char *)spi_buffer;
   if (argc != 1 || argv[0][0] == '?')
   {
-     shell_printf("usage: sd_read {filename}\r\n");
+     usage_printf("sd_read {filename}\r\n");
      return;
   }
   const char *filename = argv[0];
@@ -839,7 +852,7 @@ VNA_SHELL_FUNCTION(cmd_sd_delete)
 {
   FRESULT res;
   if (argc != 1 || argv[0][0] == '?') {
-     shell_printf("usage: sd_delete {filename}\r\n");
+     usage_printf("sd_delete {filename}\r\n");
      return;
   }
   if (cmd_sd_card_mount() != FR_OK)
@@ -988,7 +1001,7 @@ VNA_SHELL_FUNCTION(cmd_scan)
   if (argc == 0)
     goto do_scan;
   if (argc < 2 || argc > 4) {
-    shell_printf("usage: scan {start(Hz)} {stop(Hz)} [points] [outmask]\r\n");
+    usage_printf("scan {start(Hz)} {stop(Hz)} [points] [outmask]\r\n");
     return;
   }
 
@@ -1033,7 +1046,7 @@ VNA_SHELL_FUNCTION(cmd_hop)
 {
   freq_t start, stop, step = 0;
   if (argc < 1 || argc > 4) {
-    shell_printf("usage: hop {start(Hz)} {stop(Hz)} {step(Hz) | points} [outmask]\r\n");
+    usage_printf("hop {start(Hz)} {stop(Hz)} {step(Hz) | points} [outmask]\r\n");
     return;
   }
 
@@ -1302,6 +1315,8 @@ VNA_SHELL_FUNCTION(cmd_sweep)
   } else if (argc > 3) {
     goto usage;
   }
+  if (argv[0][0] == '?')
+    goto usage;
   freq_t value0 = 0;
   freq_t value1 = 0;
   freq_t value2 = 0;
@@ -1332,7 +1347,7 @@ VNA_SHELL_FUNCTION(cmd_sweep)
     set_sweep_points(value2);
   return;
 usage:
-  shell_printf("usage: sweep {start(Hz)} [stop(Hz)] [points]\r\n"\
+  usage_printf("sweep {start(Hz)} [stop(Hz)] [points]\r\n"\
                     "\tsweep {%s}\r\n"\
                     "\tsweep {%s} {freq(Hz)}\r\n", sweep_cmd2, sweep_cmd);
 }
@@ -1523,6 +1538,8 @@ VNA_SHELL_FUNCTION(cmd_marker)
     }
     return;
   }
+  if (argv[0][0] == '?')
+    goto usage;
   redraw_request |= REDRAW_MARKER;
   if (get_str_index(argv[0], "off") == 0) {
     active_marker = MARKER_INVALID;
@@ -1541,14 +1558,10 @@ VNA_SHELL_FUNCTION(cmd_marker)
     markers[t].enabled = TRUE;
     return;
   }
-#ifdef TINYSA4
   int tr;
   static const char cmd_marker_list[] = "on|off|peak|delta|noise|tracking|trace|trace_aver";
   static const char cmd_marker_on_off[] = "off|on";
   int marker_mask = 0;
-#else
-  static const char cmd_marker_list[] = "on|off|peak";
-#endif
   switch (get_str_index(argv[1], cmd_marker_list)) {
     case 0: markers[t].enabled = TRUE; active_marker = t; return;
     case 1: markers[t].enabled =FALSE; if (active_marker == t) active_marker = MARKER_INVALID; return;
@@ -1570,12 +1583,11 @@ VNA_SHELL_FUNCTION(cmd_marker)
       else
         set_marker_index(t, value);
       return;
-#ifdef TINYSA4
       //      M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_STORED=8, M_AVER=16, M_TRACKING=32, M_DELETE=64  // Tracking must be last.
     case 3:
       tr=0;
-      if (argc == 3 &&( argv[2][0] < '0' || argv[2][0] > '9' )) {
-        tr = my_atoui(argv[2]);
+      if (argc == 3 && argv[2][0] >= '1' && argv[2][0] <= '9') {
+        tr = my_atoui(argv[2])-1;
         markers[t].mtype |= M_DELTA;
         markers[t].ref= tr;
       } else if (get_str_index(argv[2],cmd_marker_on_off) == 0) {
@@ -1589,9 +1601,9 @@ VNA_SHELL_FUNCTION(cmd_marker)
       marker_mask = M_TRACKING;
       goto set_mask;
     case 6:
-      tr=2;
-      if (argc == 3 &&( argv[2][0] < '0' || argv[2][0] > '9' )) {
-        tr = my_atoui(argv[2]);
+      tr=0;
+      if (argc == 3 && argv[2][0] >= '1' && argv[2][0] <= '9') {
+        tr = my_atoui(argv[2])-1;
       }
       markers[t].trace= tr;
       return;
@@ -1606,14 +1618,9 @@ VNA_SHELL_FUNCTION(cmd_marker)
         }
       }
       return;
-#endif
   }
 usage:
-#ifdef TINYSA4
-  shell_printf("marker [n] [%s|{freq}|{index}] [on|off]\r\n", cmd_marker_list);
-#else
-  shell_printf("marker [n] [%s|{freq}|{index}]\r\n", cmd_marker_list);
-#endif
+  shell_printf("marker [n] [%s|{freq}] [{index}|%s]\r\n", cmd_marker_list, cmd_marker_on_off);
 }
 
 VNA_SHELL_FUNCTION(cmd_touchcal)
@@ -1764,7 +1771,7 @@ VNA_SHELL_FUNCTION(cmd_color)
   uint32_t color;
   int i;
   if (argc != 2) {
-    shell_printf("usage: color {id} {rgb24}\r\n");
+    usage_printf("color {id} {rgb24}\r\n");
     for (i=0; i < MAX_PALETTE; i++) {
       color = GET_PALTETTE_COLOR(i);
       color = HEXRGB(color);
@@ -2003,8 +2010,7 @@ VNA_SHELL_FUNCTION(cmd_help)
     scp++;
   }
   scp = commands;
-  shell_printf(VNA_SHELL_NEWLINE_STR);
-  shell_printf("Other commands:");
+  shell_printf("\r\nOther commands:");
   while (scp->sc_name != NULL
 #ifdef __SINGLE_LETTER__
       && scp->sc_function != cmd_y
@@ -2014,7 +2020,7 @@ VNA_SHELL_FUNCTION(cmd_help)
     shell_printf(" %s", scp->sc_name);
     scp++;
   }
-  shell_printf(VNA_SHELL_NEWLINE_STR);
+  shell_printf("\r\nEnter for more info: {command} ?\r\n");
   return;
 }
 
