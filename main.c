@@ -725,7 +725,7 @@ void send_region(remote_region_t *rd, uint8_t * buf, uint16_t size)
   if (SDU1.config->usbp->state == USB_ACTIVE) {
     streamWrite(shell_stream, (void*) rd, sizeof(remote_region_t));
     streamWrite(shell_stream, (void*) buf, size);
-    streamWrite(shell_stream, (void*)"ch> \r\n", 6);
+    streamWrite(shell_stream, (void*)"ch> ", 4);
   }
   else
     auto_capture = false;
@@ -1620,7 +1620,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
       return;
   }
 usage:
-  shell_printf("marker [n] [%s|{freq}] [{index}|%s]\r\n", cmd_marker_list, cmd_marker_on_off);
+  shell_printf("marker [n] [%s|{freq}|{index}] [{n}|%s]\r\n", cmd_marker_list, cmd_marker_on_off);
 }
 
 VNA_SHELL_FUNCTION(cmd_touchcal)
@@ -2020,7 +2020,7 @@ VNA_SHELL_FUNCTION(cmd_help)
     shell_printf(" %s", scp->sc_name);
     scp++;
   }
-  shell_printf("\r\nEnter for more info: {command} ?\r\n");
+//  shell_printf("\r\nEnter for more info: {command} ?\r\n");
   return;
 }
 

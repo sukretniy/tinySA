@@ -2794,8 +2794,8 @@ static const menuitem_t menu_actual_power[] =
 
 static const menuitem_t menu_settings[] =
 {
-  { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
   { MT_SUBMENU, 0,              "LEVEL\nCORRECTION",  menu_actual_power},
+  { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "0=auto IF"},
   { MT_SUBMENU,0,               "SCAN\nSPEED",        menu_scanning_speed},
 #ifndef TINYSA4
@@ -2860,7 +2860,7 @@ static const menuitem_t menu_calibrate[] =
 {
   { MT_FORM | MT_TITLE,      0, "Connect HIGH and LOW",  NULL},
   { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
-  { MT_FORM | MT_CALLBACK,   0, "RESET CALBRATION",          menu_calibrate_cb},
+  { MT_FORM | MT_CALLBACK,   0, "RESET CALIBRATION",          menu_calibrate_cb},
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -3495,7 +3495,7 @@ float my_round(float v)
   }
   return v;
 }
-const char * const unit_string[MAX_UNIT_TYPE*2] = { "dBm", "dBmV", "dB"S_MICRO"V", "RAW", "V", "W", "dB", "dBmV", "dB"S_MICRO"V", "RAW", "V", "W" }; // unit + 6 is delta unit
+const char * const unit_string[MAX_UNIT_TYPE*2] = { "dBm", "dBmV", "dB"S_MICRO"V", "RAW", "V", "W", "dB", "dB", "dB", "RAW", "V", "W" }; // unit + 6 is delta unit
 
 static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};

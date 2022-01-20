@@ -1535,7 +1535,7 @@ static void trace_print_value_string(     // Only used at one place
   cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
 #ifdef __LEVEL_METER__
   if (level_text[0] == 0)
-    plot_printf(level_text, sizeof(level_text), &format[3], v, "", "" ,"");
+    plot_printf(level_text, sizeof(level_text), &format[3], v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":"") ,(mtype & M_AVER?"/T":""));
 #endif
 }
 
@@ -2069,7 +2069,9 @@ static void update_level_meter(void){
 //    ili9341_fill(OFFSETX+minimum_text_width, graph_bottom+1, area_width-minimum_text_width, CHART_BOTTOM - graph_bottom);
   ili9341_set_foreground(LCD_FG_COLOR);
   int x_max = area_width+OFFSETX;
-  int w = ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+1,4, x_max) + OFFSETX;
+  int w = ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+1,3, x_max);         // TODO Size 4 does not transfer to remote desktop??????
+  ili9341_fill(OFFSETX, graph_bottom+34, x_max - OFFSETX, 11);
+
   if (w < x_max)
     ili9341_fill(w, graph_bottom+1, x_max - w, CHART_BOTTOM - graph_bottom+1);
 }
