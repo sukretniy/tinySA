@@ -142,6 +142,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 
 float channel_power[3];
 float channel_power_watt[3];
+volatile float flatness;
 
 //int setting.refer = -1;  // Off by default
 const uint32_t reffer_freq[] = {30000000, 15000000, 10000000, 4000000, 3000000, 2000000, 1000000};
@@ -4813,17 +4814,37 @@ static volatile int dummy;
       // Position phase noise marker at requested offset
       set_marker_index(1, markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4));
     } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
-      int t = 0;
+      int t1 = 0;
+      int t2 = 0;
       float v = actual_t[markers[0].index] - (in_selftest ? 6.0 : 3.0);
-      while (t < markers[0].index && actual_t[t+1] < v)                                        // Find left -3dB point
-        t++;
-      if (t< markers[0].index)
-        set_marker_index(1, t);
-      t = setting._sweep_points-1;;
-      while (t > markers[0].index && actual_t[t-1] < v)                // find right -3dB point
-        t--;
-      if (t > markers[0].index)
-        set_marker_index(2, t);
+      while (t1 < markers[0].index && actual_t[t1+1] < v)                                        // Find left -3dB point
+        t1++;
+      if (t1< markers[0].index)
+        set_marker_index(1, t1);
+      t2 = setting._sweep_points-1;;
+      while (t2 > markers[0].index && actual_t[t2-1] < v)                // find right -3dB point
+        t2--;
+      if (t2 > markers[0].index)
+        set_marker_index(2, t2);
+#if 1
+      int t = (t1+t2)/2;
+      t1 += (t-t1)/2;
+      t2 -= (t2-t)/2;
+      if (t2-t1 < 100 && t2-t1 > 10 ) {
+        float aver = 0.0;
+        for (int i=t1;i<=t2;i++)
+          aver +=actual_t[i];
+        aver /= (t2-t1+1);
+        float stdev=0.0;
+        for (int i=t1;i<=t2;i++)
+          stdev +=(actual_t[i] - aver) * (actual_t[i] - aver);
+        stdev /= (t2-t1+1);
+      //      stdev = sqrtf(stdev);
+        flatness = stdev;
+      } else
+        flatness = -1;
+#endif
+
     } else if (setting.measurement == M_AM) {      // ----------------AM measurement
       if (S_IS_AUTO(setting.agc )) {
 #ifdef __SI4432__
@@ -5306,6 +5327,10 @@ int validate_signal_within(int i, float margin)
     peakFreq = (markers[2].frequency + markers[1].frequency)/2;
     markers[0].frequency = peakFreq;
     markers[0].index = (markers[2].index + markers[1].index)/2;
+    if (flatness > 0.2) {
+      test_fail_cause[i] = "Flatness ";
+      return TS_FAIL;
+    }
   }
   test_fail_cause[i] = "Frequency ";
   if (peakFreq < test_case[i].center * 1000000 - 500000 || test_case[i].center * 1000000 + 500000 < peakFreq )
