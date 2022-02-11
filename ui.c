@@ -1843,7 +1843,7 @@ keypad_click(int key)
     // append period if there are no period
     if (kp_index == j)
       kp_buf[kp_index++] = '.';
-  } else if (c == KP_MINUS) {
+  } else if (c == KP_MINUS && kp_index < NUMINPUT_LEN) {
     if (kp_index == 0)
       kp_buf[kp_index++] = '-';
     else {

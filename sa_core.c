@@ -5327,7 +5327,7 @@ int validate_signal_within(int i, float margin)
     peakFreq = (markers[2].frequency + markers[1].frequency)/2;
     markers[0].frequency = peakFreq;
     markers[0].index = (markers[2].index + markers[1].index)/2;
-    if (flatness > 0.2) {
+    if (flatness > 0.3) {
       test_fail_cause[i] = "Flatness ";
       return TS_FAIL;
     }

@@ -19,37 +19,165 @@
  */
 #include "hal.h"
 #include "nanovna.h"
-#ifdef __VNA__
+#ifdef __SI5351__
 #include "si5351.h"
+
+inline int palReadLine(uint32_t line) {
+  return ( palReadPort(PAL_PORT(line)) & (1<<PAL_PAD(line)) )
+}
+
+    /*
+     * Software i2c bus
+     */
+#define I2C_DELAY     my_microsecond_delay(10);
+
+    static inline void scl_low(void) {
+      palClearLine(LINE_PB13);
+        I2C_DELAY;
+    }
+
+    static inline void scl_high(void) {
+      palSetLine(LINE_PB13);
+        I2C_DELAY;
+    }
+
+    static inline void sda_low(void) {
+      palClearLine(LINE_PB14);
+        I2C_DELAY;
+    }
+
+    static inline void sda_high(void) {
+      palSetLine(LINE_PB14);
+        I2C_DELAY;
+    }
+
+    static void i2c_begin(void) {
+        sda_low();
+        scl_low();
+    }
+
+    static void i2c_end(void) {
+        sda_low();
+        scl_high();
+        sda_high();
+    }
+
+    uint32_t i2c_recv(int bits) {
+        uint32_t ret = 0;
+//        soft_i2c_sda.set_mode(GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, HIGH); // Input pullup
+        while(bits--) {
+            scl_high();
+            ret<<= 1;
+            if (palReadLine(LINE_PB14)) ret|=1;
+            scl_low();
+        }
+//        soft_i2c_sda.set_mode(GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LOW); // Output low
+        return ret;
+    }
+
+#define CLOCK_TICK      {scl_high(); scl_low();}
+#define DATA_OUT(bit)   {if (bit) sda_high(); else sda_low();}
+    static bool i2c_send(uint8_t data) {
+        // put data on bus
+        for (uint16_t mask = 0x80; mask; mask>>=1){
+            DATA_OUT(data&mask);
+            CLOCK_TICK; // clock tick
+        }
+        // Read answer bit
+        bool ret = i2c_recv(1);
+        // Stop transfer at error (no answer)
+        if (ret)
+            i2c_end();
+        return ret;
+    }
+
+    void i2c_init() {
+//        soft_i2c_clk.set_mode(GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
+//        soft_i2c_sda.set_mode(GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
+        i2c_begin();
+        i2c_end();
+    }
+
+    bool i2c_probe(uint8_t devAddr) {
+        i2c_begin();
+        // device address
+        if(i2c_send((devAddr<<1) | I2C_WRITE))
+            return false;
+        i2c_end();
+        return true;
+    }
+
+    // return value: 0: success; -1: no device ack; -2: no register addr ack; -3: no data ack
+    int i2c_write(uint8_t devAddr, uint8_t addr, uint8_t data) {
+        i2c_begin();
+        // device address
+        if(i2c_send((devAddr<<1) | I2C_WRITE))
+            return -1;
+        // register address
+        if(i2c_send(addr))
+            return -2;
+        // data
+        if(i2c_send(data))
+            return -3;
+        i2c_end();
+        return 0;
+    }
+
+    // return value: 0: success; -1: no device ack; -2: no register addr ack or data ack
+    int i2c_write_buf(uint8_t devAddr, uint8_t* data, int len) {
+        i2c_begin();
+        // device address
+        if(i2c_send((devAddr<<1) | I2C_WRITE))
+            return -1;
+        // data
+        for(int i=0; i<len; i++)
+            if(i2c_send(data[i]))
+                return -2;
+        i2c_end();
+        return 0;
+    }
+
+    // return value: >= 0: the read data; -1: no device ack; -2: no register addr ack
+    int i2c_read(uint8_t devAddr, uint8_t addr) {
+        i2c_begin();
+        // device address
+        if(i2c_send((devAddr<<1) | I2C_READ))
+            return -1;
+        // register address
+        if(i2c_send(addr))
+            return -2;
+        // data
+        int res = i2c_recv(8);
+        i2c_end();
+        return res;
+    }
+
+
 
 #define SI5351_I2C_ADDR   	(0x60<<1)
 
-static bool si5351_bulk_read(uint8_t reg, uint8_t* buf, int len)
+static bool si5351_read(uint8_t reg, uint8_t* buf)
 {
     int addr = SI5351_I2C_ADDR>>1;
-    i2cAcquireBus(&I2CD1);
-    msg_t mr = i2cMasterTransmitTimeout(&I2CD1, addr, &reg, 1, buf, len, 1000);
-    i2cReleaseBus(&I2CD1);
-    return mr == MSG_OK;
+    int v = i2c_read(addr, reg);
+    if (v < 0)
+      return false;
+    *buf = (uint8_t) v
+    return true;
 }
 
 static bool si5351_write(uint8_t reg, uint8_t dat)
 {
   int addr = SI5351_I2C_ADDR>>1;
-  uint8_t buf[] = { reg, dat };
-  i2cAcquireBus(&I2CD1);
-  msg_t mr = i2cMasterTransmitTimeout(&I2CD1, addr, buf, 2, NULL, 0, 1000);
-  i2cReleaseBus(&I2CD1);
-  return mr == MSG_OK;
+  int s = i2c_write(addr, reg, dat);
+  return s >= 0;
 }
 
 static bool si5351_bulk_write(const uint8_t *buf, int len)
 {
   int addr = SI5351_I2C_ADDR>>1;
-  i2cAcquireBus(&I2CD1);
-  msg_t mr = i2cMasterTransmitTimeout(&I2CD1, addr, buf, len, NULL, 0, 1000);
-  i2cReleaseBus(&I2CD1);
-  return mr == MSG_OK;
+  int s = i2c_write_buf(addr, buf, len);
+  return s > 0;
 }
 
 // register addr, length, data, ...
@@ -80,7 +208,7 @@ static bool si5351_wait_ready(void)
     systime_t end = start + MS2ST(1000);     // 1000 ms timeout
     while (chVTIsSystemTimeWithin(start, end))
     {
-        if(!si5351_bulk_read(0, &status, 1))
+        if(!si5351_read(0, &status))
             status = 0xff;  // comm timeout
         if ((status & 0x80) == 0) 
             return true;
@@ -93,14 +221,14 @@ static void si5351_wait_pll_lock(void)
 {
     systime_t start = chVTGetSystemTime();
     uint8_t status = 0xff;
-    if(!si5351_bulk_read(0, &status, 1))
+    if(!si5351_read(0, &status))
         status = 0xff;  // comm timeout
     if ((status & 0x60) == 0)
         return;
     systime_t end = start + MS2ST(100);     // 100 ms timeout
     while (chVTIsSystemTimeWithin(start, end))
     {
-        if(!si5351_bulk_read(0, &status, 1))
+        if(!si5351_read(0, &status))
             status = 0xff;  // comm timeout
         if ((status & 0x60) == 0)
             return;
