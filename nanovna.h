@@ -108,13 +108,13 @@
 #define DEFAULT_IF  433800000
 #define DEFAULT_SPUR_IF 434000000
 #define DEFAULT_MAX_FREQ    350000000
-#define MAX_LO_FREQ         960000000UL
+#define MAX_LO_FREQ         959800000UL
 #define MIN_LO_FREQ         240000000UL
 #define MIN_BELOW_LO         550000000UL
 #define ULTRA_MAX_FREQ      1390000000UL
 //#define DEFAULT_MAX_FREQ    527000000
 #define HIGH_MIN_FREQ_MHZ   240
-#define HIGH_MAX_FREQ_MHZ   960
+#define HIGH_MAX_FREQ_MHZ   959
 #endif
 #ifdef TINYSA4
 #define FREQ_MULTIPLIER 100         // Multiplier of the 30MHz reference to get accurate frequency correction

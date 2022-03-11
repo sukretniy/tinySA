@@ -2434,7 +2434,7 @@ const menuitem_t  menu_lowoutputmode[] = {
 
 const menuitem_t  menu_highoutputmode[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,      "HIGH OUTPUT           %s", menu_outputmode_acb},
-  { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..960MHz",range_text)},
+  { MT_FORM | MT_KEYPAD,    KM_CENTER,  center_text,         VARIANT("240MHz..959MHz",range_text)},
   { MT_FORM | MT_KEYPAD,   KM_HIGHOUTLEVEL,      "LEVEL: %s",        low_level_help_text /* "-76..-6" */},
   { MT_FORM | MT_ADV_CALLBACK,   0,     MT_CUSTOM_LABEL,   menu_smodulation_acb},
   { MT_FORM | MT_ADV_CALLBACK,  0,      MT_CUSTOM_LABEL,   menu_sweep_acb},
