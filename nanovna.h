@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,16 +26,17 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
-//#ifdef TINYSA_F072
+#ifdef TINYSA_F072
 #ifdef TINYSA_F303
 #error "Remove comment for #ifdef TINYSA_F072"
 #endif
 #ifndef TINYSA3
 #define TINYSA3
 #endif
-//#endif
+#endif
+
 // Need enable HAL_USE_SPI in halconf.h
 #define __USE_DISPLAY_DMA__
 
@@ -94,7 +95,7 @@
 #define CENTER_TEMPERATURE          34.0
 #define __WAIT_CTS_WHILE_SLEEPING__
 #define __MARKER_CACHE__
-
+#define TINYSA4_4
 //#define __FFT_VBW__
 //#define __FFT_DECONV__
 #else

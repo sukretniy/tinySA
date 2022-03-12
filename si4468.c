@@ -224,6 +224,9 @@ bool PE4302_Write_Byte(unsigned char DATA )
   if (old_attenuation == DATA)
     return false;
   old_attenuation = DATA;
+#ifdef __ARW621__
+  DATA = DATA << 1;
+#endif
 #if PE4302_HW_SHIFT
   set_SPI_mode(SPI_MODE_SI);
   if (SI4432_SPI_SPEED != PE_SPI_SPEED)

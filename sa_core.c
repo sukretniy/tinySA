@@ -119,8 +119,11 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 
 #define SL_GENLOW_LEVEL_MIN    -124
 #define SL_GENLOW_LEVEL_MAX   -16
-
-
+#ifdef TINYSA4_4
+#define MAX_ATTENUATE (setting.extra_lna ? 0 : 31.5)
+#else
+#define MAX_ATTENUATE 31.5
+#endif
 #else
 #define SWITCH_ATTENUATION  (29 - config.switch_offset)
 #define RECEIVE_SWITCH_ATTENUATION  (24 - config.receive_switch_offset)
@@ -131,6 +134,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 #define SL_GENHIGH_LEVEL_MAX    9
 #define SL_GENLOW_LEVEL_MIN    -76
 #define SL_GENLOW_LEVEL_MAX   -7
+#define MAX_ATTENUATE   31.5
 #endif
 
 #define BELOW_MAX_DRIVE(X) (drive_dBm[X] - drive_dBm[MAX_DRIVE])
@@ -627,6 +631,10 @@ void toggle_high_out_adf4350(void)
 void toggle_extra_lna(void)
 {
   setting.extra_lna = !setting.extra_lna;
+#ifdef TINYSA4_4
+  if (setting.extra_lna)
+    setting.attenuate_x2 = 0;
+#endif
   set_extra_lna(setting.extra_lna);
 }
 
@@ -766,7 +774,12 @@ void set_auto_attenuation(void)
 {
   setting.auto_attenuation = true;
   if (setting.mode == M_LOW) {
-    setting.attenuate_x2 = 60;
+#ifdef TINYSA4_4
+    if (setting.extra_lna)
+      setting.attenuate_x2 = 0;
+    else
+#endif
+      setting.attenuate_x2 = 60;
   } else {
     setting.attenuate_x2 = 0;
   }
@@ -927,7 +940,7 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
   } else
 #endif
   {
-    if (setting.mode == M_LOW && a > 31.5) {
+    if (setting.mode == M_LOW && a > MAX_ATTENUATE) {
       setting.atten_step = 1;
       a = a - RECEIVE_SWITCH_ATTENUATION;
     } else if (setting.mode == M_HIGH && a > 0) {
@@ -940,8 +953,8 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
   }
   if (a<0.0)
       a = 0;
-  if (a> 31.5)
-    a = 31.5;
+  if (a> MAX_ATTENUATE)
+    a = MAX_ATTENUATE;
   if (setting.mode == M_HIGH)   // No attenuator in high mode
     a = 0;
   if (setting.attenuate_x2 == a*2)
@@ -4605,7 +4618,11 @@ static volatile int dummy;
 #endif
 #define AUTO_TARGET_WINDOW  2
 
-  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation) {  // calculate and apply auto attenuate
+  if (!in_selftest && setting.mode == M_LOW && setting.auto_attenuation
+#ifdef TINYSA4_4
+      && !setting.extra_lna
+#endif
+      ) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     int delta = 0;
@@ -5141,7 +5158,8 @@ enum {
 
 #ifdef TINYSA4
 //#define CAL_LEVEL   -23.5
-#define CAL_LEVEL   -24.2
+//#define CAL_LEVEL   -24.2
+#define CAL_LEVEL -35.0
 #else
 #define CAL_LEVEL   (has_esd ? -26.2 : -25)
 #endif
@@ -5170,7 +5188,7 @@ const test_case_t test_case [] =
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
  TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     633,    994,    -85,    0,      0),         // 6 Wide band noise floor high mode
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      -23,    27,     -45),      // 7 BPF loss and stop band
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    27,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       900,    1,     -90,    0,      -90),       // 9 LPF cutoff
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      -23,    10,     -50),      // 10 Switch isolation using high attenuation
@@ -5327,7 +5345,7 @@ int validate_signal_within(int i, float margin)
     peakFreq = (markers[2].frequency + markers[1].frequency)/2;
     markers[0].frequency = peakFreq;
     markers[0].index = (markers[2].index + markers[1].index)/2;
-    if (flatness > 0.3) {
+    if (flatness > 0.8) {
       test_fail_cause[i] = "Flatness ";
       return TS_FAIL;
     }
@@ -5756,21 +5774,25 @@ quit:
     in_selftest = false;
     reset_settings(M_LOW);
     set_refer_output(-1);
-  } else if (false && test == 1) {
+#ifdef TINYSA4
+  } else if (test == 1) {
     float p2, p1, p;
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SILENCE);
-    setting.auto_IF = false;
 #ifdef TINYSA4
-    setting.frequency_IF=config.frequency_IF1+ STATIC_DEFAULT_SPUR_OFFSET/2;
+//    setting.auto_IF = false;
+//    setting.frequency_IF=config.frequency_IF1+ STATIC_DEFAULT_SPUR_OFFSET/2;
+    freq_t f = 47300000;           // Start search at 2.2MHz
+    setting.frequency_step = 1000;
 #else
+    setting.auto_IF = false;
    setting.frequency_IF=DEFAULT_IF;
+   freq_t f = 400000;           // Start search at 400kHz
+   setting.frequency_step = 30000;
  #endif
-    setting.frequency_step = 30000;
     if (setting.test_argument > 0)
       setting.frequency_step=setting.test_argument;
-    freq_t f = 400000;           // Start search at 400kHz
     //  int i = 0;                     // Index in spur table (temp_t)
     set_RBW(setting.frequency_step/100);
     last_spur = 0;
@@ -5781,19 +5803,23 @@ quit:
       f += setting.frequency_step;
       p1 = PURE_TO_float(perform(false, 1, f, false));
       f += setting.frequency_step;
-      shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %d and step of %d\n\r", p2, p1, setting.frequency_IF, setting.frequency_step );
-      f = 400000;
+      shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %D and step of %D\n\r", p2, p1, setting.frequency_IF, setting.frequency_step );
       while (f < DEFAULT_MAX_FREQ) {
-        p = PURE_TO_float(perform(false, 1, f, false));
+        int r = 0;
+        do {
+          p = PURE_TO_float(perform(false, 1, f, false));
 #ifdef TINYSA4
-#define SPUR_DELTA  15
+#define SPUR_DELTA  10
 #else
 #define SPUR_DELTA  15
 #endif
-        if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
-          shell_printf("Spur of %4.2f at %d with count %d\n\r", p1,(f - setting.frequency_step)/1000, add_spur(f - setting.frequency_step));
+//        shell_printf("%ld %4.2f\n\r", f, p);
+//        if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
+        } while ( p2 < p - SPUR_DELTA && r++ < 4);
+        if (r >= 4) {
+          shell_printf("Spur of %4.2f at %D with count %d\n\r", p,f/1000, add_spur(f));
         }
-        p2 = p1;
+        p2 = (p2*9+p1)/10;
         p1 = p;
         f += setting.frequency_step;
       }
@@ -5804,6 +5830,7 @@ quit:
         shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
     }
     reset_settings(M_LOW);
+#endif
   } else if (false && test == 2) {                                   // Attenuator test
     in_selftest = true;
     reset_settings(M_LOW);
@@ -6270,7 +6297,11 @@ again:
 #if 1
       reset_settings(M_LOW);
       set_refer_output(0);
+#ifdef TINYSA4
+      set_attenuation(0);
+#else
       set_attenuation(10);
+#endif
       set_sweep_frequency(ST_CENTER, 30000000);
       set_sweep_frequency(ST_SPAN,    5000000);
       setting.rbw_x10 = 3000;
