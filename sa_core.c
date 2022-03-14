@@ -601,8 +601,12 @@ void toggle_debug_avoid(void)
   debug_avoid = !debug_avoid;
   if (debug_avoid) {
     TRACE_ENABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
+    setting.stored[TRACE_STORED] = true;
+    setting.stored[TRACE_TEMP] = true;
   } else {
     TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
+    setting.stored[TRACE_STORED] = false;
+    setting.stored[TRACE_TEMP] = false;
   }
   dirty = true;
 }
@@ -612,8 +616,12 @@ void toggle_debug_spur(void)
   debug_spur = !debug_spur;
   if (debug_spur) {
     TRACE_ENABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
+    setting.stored[TRACE_STORED] = true;
+    setting.stored[TRACE_TEMP] = true;
   } else {
     TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
+    setting.stored[TRACE_STORED] = false;
+    setting.stored[TRACE_TEMP] = false;
   }
   dirty = true;
 }
@@ -1744,7 +1752,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
     if ( f > ULTRA_MAX_FREQ) {
 #ifdef TINYSA4
-      cv += float_TO_PURE_RSSI(9);                                        // +9dB correction.
+      cv += float_TO_PURE_RSSI(0);                                        // +9dB correction.
 #else
       cv += float_TO_PURE_RSSI(13.5);                                        // +dB correction. TODO !!!!!!!!!!!!!!!!!
 #endif
@@ -3526,7 +3534,7 @@ again:                                                              // Spur redu
           if (setting.mode == M_GENLOW) {
             if (local_modulo == 0) ADF4351_modulo(1000);
             ADF4351_R_counter(3);
-          } else if ( ( (lf > 8000000 && lf < 700000000) || (lf > 500000000 && lf < 520000000)  ) /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
+          } else if ( ( (lf > 8000000 && lf < 800000000) || (lf > 500000000 && lf < 520000000)  ) /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
 #if 0
             if (local_modulo == 0) {
               if (actual_rbw_x10 >= 3000)
@@ -5182,19 +5190,19 @@ const test_case_t test_case [] =
 #ifdef TINYSA4
 {//                 Condition   Preparation     Center  Span    Pass    Width(%)Stop
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.06,  0.11,   -30,      0,      -30),         // 1 Zero Hz leakage
- TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -70,    0,      0),         // 2 Phase noise of zero Hz
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     1,      -23,   10,     -85),      // 3
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -60,    0,      0),         // 2 Phase noise of zero Hz
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     1,      CAL_LEVEL,   10,     -85),      // 3
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 900,    1,      -75,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
  TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     633,    994,    -85,    0,      0),         // 6 Wide band noise floor high mode
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    27,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
- TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       900,    1,     -90,    0,      -90),       // 9 LPF cutoff
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      -23,    10,     -50),      // 10 Switch isolation using high attenuation
- TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      -25,    50,     -60),      // 11 test display
+ TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       880,    1,     -100,    0,      -100),       // 9 LPF cutoff
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      CAL_LEVEL,    10,     -50),      // 10 Switch isolation using high attenuation
+ TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 11 test display
  TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 12 Measure atten step accuracy
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_LNA,       30,     5,      -23,   10,     -75),      // 13 Measure LNA
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_LNA,       30,     5,      CAL_LEVEL,   10,     -75),      // 13 Measure LNA
 #define TEST_END 13
  TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
 #define TEST_POWER  14
@@ -5208,7 +5216,7 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65),       // 14 Calibrate power high mode
  TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
 #define TEST_ATTEN    22
- TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      -25,    50,     -60),      // 20 Measure atten step accuracy
+ TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 20 Measure atten step accuracy
 #define TEST_SPUR    23
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
 #define TEST_LEVEL  24
@@ -5797,14 +5805,16 @@ quit:
     set_RBW(setting.frequency_step/100);
     last_spur = 0;
     for (int j = 0; j < 4; j++) {
-
+      int k=0;
       p2 = PURE_TO_float(perform(false, 0, f, false));
       vbwSteps = 1;
       f += setting.frequency_step;
       p1 = PURE_TO_float(perform(false, 1, f, false));
       f += setting.frequency_step;
       shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %D and step of %D\n\r", p2, p1, setting.frequency_IF, setting.frequency_step );
-      while (f < DEFAULT_MAX_FREQ) {
+      while (f < DEFAULT_MAX_FREQ && !global_abort) {
+        if ((k++ % 1000) == 0)
+          shell_printf("Pass %d, freq %D\n\r", j, f);
         int r = 0;
         do {
           p = PURE_TO_float(perform(false, 1, f, false));
@@ -5817,7 +5827,7 @@ quit:
 //        if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
         } while ( p2 < p - SPUR_DELTA && r++ < 4);
         if (r >= 4) {
-          shell_printf("Spur of %4.2f at %D with count %d\n\r", p,f/1000, add_spur(f));
+          shell_printf("Pass %d, spur of %4.2f at %D with count %d\n\r", j, p,f/1000, add_spur(f));
         }
         p2 = (p2*9+p1)/10;
         p1 = p;
@@ -5826,7 +5836,7 @@ quit:
     }
     shell_printf("\n\rTable for IF at %d and step of %d\n\r", setting.frequency_IF, setting.frequency_step);
     for (int j = 0; j < last_spur; j++) {
-      if ((int)stored_t[j] > 1)
+      if ((int)stored_t[j] >= 1)
         shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
     }
     reset_settings(M_LOW);
@@ -6061,14 +6071,15 @@ quit:
     }
 #ifdef TINYSA4
   } else if (test == 7) {                       // RBW level test, param -1 keeps correction
+    int arg = setting.test_argument;
     in_selftest = true;
     ui_mode_normal();
     set_scale(2);
     set_reflevel(-22);
     shell_printf("\n\r");
-    float first_level=-23.5;
+    float first_level=-35.0;
 //    setting.R = 3;
-    if (setting.test_argument < 0) {
+    if (arg == -1) {
       switch_SI4463_RSSI_correction(false);
       setting.test_argument = 0;
     }
@@ -6087,14 +6098,13 @@ quit:
       test_acquire(TEST_LEVEL);                        // Acquire test
       test_acquire(TEST_LEVEL);                        // Acquire test
       test_validate(TEST_LEVEL);                       // Validate test
- //     if (j == SI4432_RBW_count-1)
- //       first_level = peakLevel;
+      if (j == SI4432_RBW_count-1)
+        first_level = peakLevel;
       shell_printf("RBW = %7.1fk, level = %6.2f, corr = %6.2f\n\r",actual_rbw_x10/10.0 , peakLevel, (first_level - peakLevel)*10.0 );
       if (setting.test_argument != 0)
         break;
     }
-#if 1               // Does not center on frequency!!!!!
-
+#if 1
     for (int k = 0; k< 4; k++) {
       shell_printf("\n\r%d ", k);
       for (int j= SI4432_RBW_count-1; j >= 0; j-- ) {

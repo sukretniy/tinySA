@@ -967,6 +967,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
   float v = my_atof(argv[3]);
   config.correction_frequency[m][i] = f;
   config.correction_value[m][i] = v;
+  dirty = true;       // recalculate intermediate table
   redraw_request|=REDRAW_AREA;                  // to ensure the change in level will be visible
   shell_printf("updated %d to %D %.1f\r\n", i, config.correction_frequency[m][i], config.correction_value[m][i]);
 }

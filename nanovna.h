@@ -400,7 +400,7 @@ void set_measurement(int);
 void sweep_remote(void);
 void calculate_step_delay(void);
 extern int generic_option_cmd( const char *cmd, const char *cmd_list, int argc, char *argv);
-
+extern bool global_abort;
 #ifdef __ULTRA__
 void toggle_ultra(void);
 void enable_ultra(int);
