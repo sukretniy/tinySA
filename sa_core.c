@@ -1624,12 +1624,12 @@ static const struct {
   {  8500,       150,           50,      400,   -90,    0.7},
   {  6000,       150,           50,      300,   -95,    0.8},
   {  3000,       150,           50,      200,   -95,    1.3},
-  {  1000,       600,          100,      100,   -105,   0.3},
-  {   300,       800,          120,      100,   -110,   0.7},
-  {   100,      1500,          120,      100,   -115,   0.5},
-  {    30,      1500,          300,      100,   -120,   0.7},
-  {    10,      5000,          600,      100,   -122,   1.1},
-  {     3,     19000,        12000,      100,   -125,   1.0}
+  {  1000,       260,          100,      100,   -105,   0.3},
+  {   300,       420,          120,      100,   -110,   0.7},
+  {   100,      1280,          120,      100,   -115,   0.5},
+  {    30,      1600,          300,      100,   -120,   0.7},
+  {    10,      4000,          600,      100,   -122,   1.1},
+  {     3,     18700,        12000,      100,   -125,   1.0}
 };
 #endif
 
@@ -1752,7 +1752,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
     if ( f > ULTRA_MAX_FREQ) {
 #ifdef TINYSA4
-      cv += float_TO_PURE_RSSI(0);                                        // +9dB correction.
+      cv += float_TO_PURE_RSSI(8.5);                                        // +9dB correction.
 #else
       cv += float_TO_PURE_RSSI(13.5);                                        // +dB correction. TODO !!!!!!!!!!!!!!!!!
 #endif
@@ -5190,9 +5190,9 @@ const test_case_t test_case [] =
 #ifdef TINYSA4
 {//                 Condition   Preparation     Center  Span    Pass    Width(%)Stop
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.06,  0.11,   -30,      0,      -30),         // 1 Zero Hz leakage
- TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -60,    0,      0),         // 2 Phase noise of zero Hz
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -55,    0,      0),         // 2 Phase noise of zero Hz
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     1,      CAL_LEVEL,   10,     -85),      // 3
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 900,    1,      -75,    10,     -85),      // 4 Test Ultra mode
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 30,    1,      CAL_LEVEL,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
  TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     633,    994,    -85,    0,      0),         // 6 Wide band noise floor high mode
@@ -5876,13 +5876,16 @@ quit:
     test_validate(TEST_ATTEN);                       // Validate test
 #endif
     reset_settings(M_LOW);
-  } else if (false && test == 3) {                       // RBW step time search
+#ifdef TINYSA4
+  } else if (test == 3) {                       // RBW step time search
     in_selftest = true;
     ui_mode_normal();
     test_prepare(TEST_RBW);
 //    reset_settings(M_LOW);
     setting.auto_IF = false;
 #ifdef TINYSA4
+    int old_setting_r = setting.R;
+    setting.R = 1;                              // force to highest scan speed
     setting.frequency_IF=config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
     setting.step_delay = 15000;
 #else
@@ -5893,6 +5896,9 @@ quit:
       if (setting.test_argument != 0)
         j = setting.test_argument;
 // do_again:
+#ifdef TINYSA4
+      setting.R = 1;                              // force to highest scan speed
+#endif
       test_prepare(TEST_RBW);
       setting.spur_removal = S_OFF;
 #if 1               // Disable for offset baseline scanning
@@ -5927,10 +5933,16 @@ quit:
  //       shell_printf("Peak level too low, abort\n\r");
  //       return;
  //     }
-      shell_printf("Start level = %f, ",peakLevel);
-#if 0                                                                       // Enable for step delay tuning
+      float aver_noise = 0;
+      for (int i=0;i<50;i++)
+         aver_noise += actual_t[i];
+      aver_noise /= 50;
+      float saved_aver_noise = aver_noise;
+      shell_printf("Start level, noise, delay = %f, %f, %d\n\r",peakLevel, aver_noise, setting.step_delay);
+
+#if 1                                                                       // Enable for step delay tuning
       float saved_peakLevel = peakLevel;
-      while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 1.5) {
+      while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 1.5 && aver_noise < saved_aver_noise + 5) {
         test_prepare(TEST_RBW);
         setting.spur_removal = S_OFF;
         setting.step_delay_mode = SD_NORMAL;
@@ -5943,7 +5955,11 @@ quit:
 //        setting.repeat = 10;
         test_acquire(TEST_RBW);                        // Acquire test
         test_validate(TEST_RBW);                       // Validate test
-      shell_printf(" Step delay %f, %d\n\r",peakLevel, setting.step_delay);
+        aver_noise = 0;
+        for (int i=0;i<50;i++)
+           aver_noise += actual_t[i];
+        aver_noise /= 50;
+      shell_printf(" Level, noise, delay = %f, %f, %d\n\r",peakLevel, aver_noise, setting.step_delay);
       }
 
       setting.step_delay = setting.step_delay * 5 / 4;          // back one level
@@ -5975,15 +5991,19 @@ quit:
         }
         setting.offset_delay = setting.offset_delay * 5 / 4;            // back one level
       }
-      shell_printf("---------------------------------------------\n\r");
 #endif
-      shell_printf("End level = %f, step time = %d, fast delay = %d\n\r",peakLevel, setting.step_delay, setting.offset_delay);
+      shell_printf("End level = %f, noise = %f, step time = %d, fast delay = %d\n\r",peakLevel, aver_noise, setting.step_delay, setting.offset_delay);
+      shell_printf("---------------------------------------------\n\r");
+#ifdef TINYSA4
+      setting.R = old_setting_r;
+#endif
       if (setting.test_argument != 0)
         break;
     }
     reset_settings(M_LOW);
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
+#endif
   } else if (false && test == 4) {           // Calibrate modulation frequencies
     reset_settings(M_LOW);
     set_mode(M_GENLOW);

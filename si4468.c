@@ -1428,8 +1428,8 @@ int16_t Si446x_RSSI(void)
     int j = SAMPLE_COUNT; //setting.repeat;
     int RSSI_RAW_ARRAY[3];
     do{
-      if (setting.step_delay)
-        my_microsecond_delay(setting.step_delay);
+//      if (setting.step_delay)
+//        my_microsecond_delay(setting.step_delay);             // moved to sweep
       RSSI_RAW_ARRAY[--j] = Si446x_readRSSI();
       if (j == 0) break;
 //      my_microsecond_delay(20);
