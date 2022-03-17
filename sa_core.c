@@ -180,7 +180,7 @@ void update_min_max_freq(void)
   case M_GENLOW:
     minFreq = 0;
 #ifdef TINYSA4
-    maxFreq = DEFAULT_MAX_FREQ;
+    maxFreq = MAX_LOW_OUTPUT_FREQ;
 #else
    maxFreq = DEFAULT_MAX_FREQ;
 #endif
@@ -741,6 +741,7 @@ void set_IF(int f)
     setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
 #endif
   } else {
+    setting.auto_IF = false;
     setting.frequency_IF = f;
   }
   dirty = true;
@@ -854,7 +855,7 @@ float high_out_offset()
 }
 #endif
 
-static pureRSSI_t get_signal_path_loss(void){
+static pureRSSI_t get_signal_path_loss(void){  //  loss as positive number
 #ifdef TINYSA4
   if (setting.mode == M_LOW)
     return float_TO_PURE_RSSI(+9.3);      // Loss in dB, -9.5 for v0.1, -12.5 for v0.2
@@ -1624,7 +1625,7 @@ static const struct {
   {  8500,       150,           50,      400,   -90,    0.7},
   {  6000,       150,           50,      300,   -95,    0.8},
   {  3000,       150,           50,      200,   -95,    1.3},
-  {  1000,       260,          100,      100,   -105,   0.3},
+  {  1000,       350,          100,      100,   -105,   0.3},
   {   300,       420,          120,      100,   -110,   0.7},
   {   100,      1280,          120,      100,   -115,   0.5},
   {    30,      1600,          300,      100,   -120,   0.7},
@@ -2752,8 +2753,8 @@ static void calculate_static_correction(void)                   // Calculate the
 #ifdef TINYSA4
           - (S_STATE(setting.agc)? 0 : 33)
           - (S_STATE(setting.lna)? 12 : 0)
-          + (setting.extra_lna ? -23.5 : 0)                         // TODO <------------------------- set correct value
-          + (Si446x_get_temp() - 35.0) / 13.0              // About 7.7dB per 10 degrees C
+          + (setting.extra_lna ? -26.5 : 0)                // checked
+          + (setting.mode == M_GENLOW ? (Si446x_get_temp() - 35.0) / 13.0 : 0)      // About 7.7dB per 10 degrees C
 #endif		  
           - setting.external_gain);
 }
@@ -2815,7 +2816,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int modulation_count_iter = 0;
   int spur_second_pass = false;
 #ifdef __NEW_SWITCHES__
-  int direct = (setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP );
+  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f > config.ultra_threshold) );
 #else
   const int direct = false;
 #endif
@@ -2868,7 +2869,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #endif
       correct_RSSI_freq = get_frequency_correction(f);  // for i == 0 and freq_step == 0;
 #ifdef TINYSA4
-      correct_RSSI_freq += float_TO_PURE_RSSI(direct ? -6.0 : 0); // TODO add impact of direct
+//      correct_RSSI_freq += float_TO_PURE_RSSI(direct ? +6.0 : 0); // TODO add impact of direct
 #endif
 
     } else {
@@ -3128,7 +3129,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     if (setting.frequency_step != 0) {
       correct_RSSI_freq = get_frequency_correction(f);
 #ifdef TINYSA4
-      correct_RSSI_freq += float_TO_PURE_RSSI(direct ? -6.0 : 0); // TODO add impact of direct
+//      correct_RSSI_freq += float_TO_PURE_RSSI(direct ? -6.0 : 0); // TODO add impact of direct
 #endif
     }
   }
@@ -3207,7 +3208,7 @@ modulation_again:
   }
 #ifdef __ULTRA__
   // -------------- set ultra or direct ---------------------------------
-  if (setting.mode == M_LOW) {
+  if (setting.mode == M_LOW || setting.mode == M_GENLOW) {
 #ifdef __NEW_SWITCHES__
     if (direct) {
       enable_ultra(true);
@@ -5156,7 +5157,7 @@ enum {
 enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_30MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH,
 #ifdef TINYSA4
-  TP_30MHZ_ULTRA, TP_30MHZ_LNA,
+  TP_30MHZ_ULTRA, TP_30MHZ_DIRECT, TP_30MHZ_LNA,
 #endif
 };
 
@@ -5167,7 +5168,7 @@ enum {
 #ifdef TINYSA4
 //#define CAL_LEVEL   -23.5
 //#define CAL_LEVEL   -24.2
-#define CAL_LEVEL -35.0
+#define CAL_LEVEL -35.50
 #else
 #define CAL_LEVEL   (has_esd ? -26.2 : -25)
 #endif
@@ -5190,12 +5191,12 @@ const test_case_t test_case [] =
 #ifdef TINYSA4
 {//                 Condition   Preparation     Center  Span    Pass    Width(%)Stop
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.06,  0.11,   -30,      0,      -30),         // 1 Zero Hz leakage
- TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -55,    0,      0),         // 2 Phase noise of zero Hz
+ TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      0.1,   0.1,   -50,    0,      0),         // 2 Phase noise of zero Hz
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ,       30,     1,      CAL_LEVEL,   10,     -85),      // 3
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 30,    1,      CAL_LEVEL,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
- TEST_CASE_STRUCT(TC_BELOW,     TPH_SILENT,     633,    994,    -85,    0,      0),         // 6 Wide band noise floor high mode
+ TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,990,    10,    -85,    0,      -85),         // 6 Wide band noise floor high mode
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    27,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       880,    1,     -100,    0,      -100),       // 9 LPF cutoff
@@ -5412,6 +5413,13 @@ int validate_flatness(int i) {
 
 const float atten_step[7] = { 0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0 };
 
+#ifdef TINYSA4
+bool saved_direct;
+freq_t saved_direct_start;
+freq_t saved_direct_stop;
+#endif
+
+
 int test_validate(int i);
 
 int validate_atten(int i) {
@@ -5451,17 +5459,17 @@ int validate_display(int tc)
 }
 
 int validate_above(int tc) {
-  int status = TS_PASS;
+  int status = TS_FAIL;
   for (int j = 0; j < setting._sweep_points; j++) {
-    if (actual_t[j] < stored_t[j] + 5)
-      status = TS_CRITICAL;
-    else if (actual_t[j] < stored_t[j]) {
-      status = TS_FAIL;
+    if (actual_t[j] > stored_t[j]+5) {
+      status = TS_PASS;
       break;
+    } else if (actual_t[j] > stored_t[j]) {
+      status = TS_CRITICAL;
     }
   }
   if (status != TS_PASS)
-    test_fail_cause[tc] = "Below ";
+    test_fail_cause[tc] = "Above ";
   return(status);
 }
 
@@ -5482,6 +5490,13 @@ int validate_level(int i) {
 int test_validate(int i)
 {
 //  draw_all(TRUE);
+#ifdef TINYSA4
+  if (saved_direct_start && test_case[i].setup ==TP_30MHZ_ULTRA) {
+    config.direct = saved_direct;
+    config.direct_start = saved_direct_start;
+    config.direct_stop = saved_direct_stop;
+  }
+#endif
   int current_test_status = TS_PASS;
   switch (test_case[i].kind) {
   case TC_SET:
@@ -5624,6 +5639,7 @@ common_silent:
       stored_t[j] = test_case[i].pass;
     break;
 #ifdef TINYSA4
+  case TP_30MHZ_DIRECT:
   case TP_30MHZ_ULTRA:
   case TP_30MHZ_LNA:
 #endif
@@ -5653,6 +5669,15 @@ common_silent:
 #ifdef TINYSA4
   case TP_30MHZ_ULTRA:
     ultra_threshold = 0;
+    break;
+  case TP_30MHZ_DIRECT:
+    ultra_threshold = 800000000;
+    saved_direct = config.direct;
+    config.direct = true;
+    saved_direct_start = config.direct_start;
+    config.direct_start = 965000000;
+    saved_direct_stop = config.direct_stop;
+    config.direct_stop = 1000000000;
     break;
   case TP_30MHZ_LNA:
     setting.extra_lna = true;

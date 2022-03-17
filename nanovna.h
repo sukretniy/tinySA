@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -123,7 +123,8 @@
 #define DEFAULT_IF  ((freq_t)977400000)
 #define DEFAULT_SPUR_OFFSET ((freq_t)(actual_rbw_x10 > 3000 ? 1500000 : 1000000))
 #define STATIC_DEFAULT_SPUR_OFFSET ((freq_t) 1500000)
-#define DEFAULT_MAX_FREQ    ((freq_t)800000000)
+#define DEFAULT_MAX_FREQ    ((freq_t) 800000000)
+#define MAX_LOW_OUTPUT_FREQ ((freq_t)1100000000)
 #define HIGH_MIN_FREQ_MHZ   136// 825
 #define HIGH_MAX_FREQ_MHZ   1130
 #define ULTRA_MAX_FREQ      5350000000ULL
@@ -413,6 +414,7 @@ void set_30mhz(freq_t);
 void set_IF2(int f);
 void set_R(int f);
 extern void set_modulo(uint32_t f);
+extern uint32_t local_modulo;
 extern void fill_spur_table(void);
 extern float low_out_offset(void);
 extern float high_out_offset(void);
@@ -773,7 +775,11 @@ typedef struct {
 } marker_t;
 
 #ifdef __LIMITS__
+#ifdef TINYSA4
+#define LIMITS_MAX  8
+#else
 #define LIMITS_MAX  6
+#endif
 #define REFERENCE_MAX TRACES_MAX
 typedef struct {
   uint8_t enabled;
@@ -1254,7 +1260,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e54 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e55 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

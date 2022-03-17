@@ -907,7 +907,7 @@ config_t config = {
   .vbat_offset = 220,
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
-  .ultra_threshold = 750000000,
+  .ultra_threshold = 800000000,
   .low_level_offset =       100.0,    // Uncalibrated
   .high_level_offset =      100,      // Uncalibrated
   .lna_level_offset = 100,
@@ -940,8 +940,8 @@ config_t config = {
   .sweep_voltage = 3.3,
   .switch_offset = 0.0,
 #ifdef TINYSA4
-  .direct_start = 9650000000UL,
-  .direct_stop  = 9850000000UL,
+  .direct_start = 965000000UL,
+  .direct_stop  = 985000000UL,
 #endif
 };
 

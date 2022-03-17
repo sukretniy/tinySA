@@ -626,7 +626,7 @@ static int SI4463_band = -1;
 //static float SI4463_step_size = 100;        // Will be recalculated once used
 static uint8_t SI4463_channel = 0;
 static uint8_t SI4463_in_tx_mode = false;
-int SI4463_R = 5;
+//int SI4463_R = 5;
 static int SI4463_output_level = 0x20;
 
 static si446x_state_t SI4463_get_state(void);
@@ -1609,15 +1609,15 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_600kHz, -10,6000,  8},
  {SI4463_RBW_850kHz, -9,8500,  8},
 #else
- {SI4463_RBW_02kHz,  15,3,    26},
- {SI4463_RBW_1kHz,   15,10,    11},
- {SI4463_RBW_3kHz,   10,30,    11},
- {SI4463_RBW_10kHz,  10,100,   10},
- {SI4463_RBW_30kHz,  10,300,  10},
- {SI4463_RBW_100kHz, -2,1000, 21},
- {SI4463_RBW_300kHz, 10,3000, 13},
- {SI4463_RBW_600kHz, 25, 6000, 8},
- {SI4463_RBW_850kHz, 20,8500,  18},
+ {SI4463_RBW_02kHz,  18,3,    20},
+ {SI4463_RBW_1kHz,   13,10,    15},
+ {SI4463_RBW_3kHz,   8,30,   10},
+ {SI4463_RBW_10kHz,  3,100,   10},
+ {SI4463_RBW_30kHz,  3,300,  15},
+ {SI4463_RBW_100kHz, -2,1000, 15},      // OK
+ {SI4463_RBW_300kHz, -2,3000, 10},
+ {SI4463_RBW_600kHz, -2, 6000, 20},
+ {SI4463_RBW_850kHz, 8,8500,  18},
 #endif
 };
 

@@ -825,6 +825,7 @@ void ili9341_drawstring_7x13(const char *str, int x, int y)
   while (*str) {
     uint8_t ch = *str++;
     if (ch == '\n') {x = x_pos; y+=bFONT_STR_HEIGHT; continue;}
+    if (ch == '\b') {ili9341_set_foreground(LCD_BRIGHT_COLOR_BLUE); continue;};
     const uint8_t *char_buf = bFONT_GET_DATA(ch);
     uint16_t w = bFONT_GET_WIDTH(ch);
     ili9341_blitBitmap(x, y, w, bFONT_GET_HEIGHT, char_buf);

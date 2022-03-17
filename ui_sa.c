@@ -422,7 +422,7 @@ enum {
 #endif
   KM_ATTACK,
 #ifdef __ULTRA__
-  KM_LPF,
+  KM_ULTRA_START,
 #endif
 #ifdef TINYSA4
   KM_EXP_AVER,
@@ -490,7 +490,7 @@ static const struct {
 #endif
 [KM_ATTACK]       = {keypads_positive    , "ATTACK"},    // KM_ATTACK
 #ifdef __ULTRA__
-[KM_LPF]          = {keypads_freq        , "ULTRA\nSTART"}, // KM_LPF
+[KM_ULTRA_START]  = {keypads_freq        , "ULTRA\nSTART"}, // KM_ULTRA_START
 #endif
 #ifdef TINYSA4
 [KM_EXP_AVER]     = {keypads_positive    , "EXPONENTIAL\nAVERAGING"}, //KM_EXP_AVER
@@ -1335,7 +1335,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_CENTER);
       freq_t right =  uistat.value;
       set_sweep_frequency(ST_CENTER, (left+right)/2);
-      set_sweep_frequency(ST_SPAN, (right - left)*5);
+      freq_t local_span = (right - left)*10;
+      if (local_span < 30000)
+        local_span = 30000;
+      set_sweep_frequency(ST_SPAN, local_span);
       set_average(0,AV_4);
 //      set_measurement(M_OIP3);
       break;
@@ -1951,13 +1954,13 @@ static UI_FUNCTION_CALLBACK(menu_limit_disable_cb)
 
 #ifdef TINYSA4
 static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,6000,8500};
-static const char* rbwsel_text[]={"auto","300","1k","3k","10k","30k","100k","300k","600k","850k"};
+static const char* rbwsel_text[]={"AUTO","300","1k","3k","10k","30k","100k","300k","600k","850k"};
 #else
 static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
 #endif
 #ifdef __VBW__
 static const uint16_t vbwsel_x100[]={0,100,30,10,3,1};
-//static const char* vbwsel_text[]={"auto","0.01","0.03", "0.1", "0.3","   "};
+//static const char* vbwsel_text[]={"AUTO","0.01","0.03", "0.1", "0.3","   "};
 #endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_rbw_acb)
@@ -2088,14 +2091,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_agc_acb){
   (void)item;
   (void)data;
   if(b){
-#if 0
-    if (S_IS_AUTO(setting.agc))
-      b->icon = BUTTON_ICON_CHECK_AUTO;
-    else
-      b->icon = setting.agc ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
-#else
     b->icon = AUTO_ICON(setting.agc);
-#endif
     return;
   }
   toggle_AGC();
@@ -2494,7 +2490,7 @@ static const menuitem_t menu_reffer[] = {
 
 static const menuitem_t menu_atten[] = {
   { MT_ADV_CALLBACK | MT_LOW, 0,           "AUTO",    menu_atten_acb},
-  { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL",  "0 - 30dB"},
+  { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL\n\b%s",  "0 - 30dB"},
   { MT_ADV_CALLBACK | MT_HIGH,0,           "0dB",     menu_atten_high_acb},
   { MT_ADV_CALLBACK | MT_HIGH,30,          "22.5 - 40dB",    menu_atten_high_acb},
   { MT_FORM | MT_NONE,   0, NULL, menu_back} // next-> menu_back
@@ -2502,7 +2498,7 @@ static const menuitem_t menu_atten[] = {
 
 static const menuitem_t menu_reflevel[] = {
   { MT_ADV_CALLBACK,0,        "AUTO",    menu_reflevel_acb},
-  { MT_KEYPAD,  KM_REFLEVEL,  "MANUAL",  NULL},
+  { MT_KEYPAD,  KM_REFLEVEL,  "MANUAL\n\b%s",  NULL},
   { MT_CANCEL, 0,      S_LARROW" BACK", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
@@ -2533,8 +2529,8 @@ const menuitem_t menu_marker_modify[] = {
 #ifdef __LIMITS__
 static const menuitem_t menu_limit_modify[] =
 {
-  { MT_KEYPAD,   KM_LIMIT_FREQ,   "FREQUENCY",          "Frequency"},
-  { MT_KEYPAD,   KM_LIMIT_LEVEL,  "LEVEL",              "Level"},
+  { MT_KEYPAD,   KM_LIMIT_FREQ,   "FREQUENCY\n\b%s",          "Frequency"},
+  { MT_KEYPAD,   KM_LIMIT_LEVEL,  "LEVEL\n\b%s",              "Level"},
   { MT_CALLBACK, 0,               "DISABLE",            menu_limit_disable_cb},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
@@ -2613,8 +2609,8 @@ static const menuitem_t menu_scanning_speed[] =
 // { MT_ADV_CALLBACK,     SD_PRECISE, PRECISE",           menu_scanning_speed_acb},
 // { MT_ADV_CALLBACK | MT_LOW,SD_FAST,  "FAST",           menu_scanning_speed_acb},
 // { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,    "FAST\nSPEEDUP",   "2..20"},
-  { MT_KEYPAD, KM_SAMPLETIME,        "SAMPLE\nDELAY",   "250..10000, 0=auto"},              // This must be item 4 to match highlighting
-  { MT_KEYPAD, KM_OFFSET_DELAY,      "OFFSET\nDELAY",   "250..10000, 0=auto"},              // This must be item 5 to match highlighting
+  { MT_KEYPAD, KM_SAMPLETIME,        "SDELAY\n\b%s",   "250..10000, 0=auto"},              // This must be item 4 to match highlighting
+  { MT_KEYPAD, KM_OFFSET_DELAY,      "ODELAY\n\b%s",   "250..10000, 0=auto"},              // This must be item 5 to match highlighting
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
@@ -2646,9 +2642,9 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_ADV_CALLBACK | MT_LOW,SD_FAST,   "FAST",            menu_scanning_speed_acb},
 #endif
 #ifdef TINYSA4
- { MT_KEYPAD,           KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
+ { MT_KEYPAD,           KM_FAST_SPEEDUP,"SPEEDUP\n\b%s",  "2..20, 0=disable"},
 #else
- { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"FAST\nSPEEDUP",  "2..20, 0=disable"},
+ { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"PEEDUP\n\b%s",  "2..20, 0=disable"},
 #endif
  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
@@ -2663,12 +2659,12 @@ static const menuitem_t menu_settings3[] =
 //  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
-  { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
+  { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "Enter ULTRA mode start freq"},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nDIRECT",    menu_direct_acb},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
-  { MT_KEYPAD,  KM_R,  "R",           "Set R"},
-  { MT_KEYPAD,  KM_MOD,  "MODULO",           "Set MODULO"},
-  { MT_KEYPAD,  KM_CP,  "CP",           "Set CP"},
+  { MT_KEYPAD,  KM_R,  "R\n\b%s",           "Set R"},
+  { MT_KEYPAD,  KM_MOD,  "MODULO\n\b%s",           "Set MODULO"},
+  { MT_KEYPAD,  KM_CP,  "CP",             "Set CP"},
 #ifdef __WAIT_CTS_WHILE_SLEEPING__
   { MT_ADV_CALLBACK,     0,     "SLEEP\nWAIT",    menu_sleep_acb},
 #endif
@@ -2680,7 +2676,7 @@ static const menuitem_t menu_settings3[] =
 #else
 #ifdef __ULTRA__
   { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
-  { MT_KEYPAD,   KM_LPF,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
+  { MT_KEYPAD,   KM_ULTRA_START,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
   { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
 #endif
   { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
@@ -2711,7 +2707,7 @@ static const menuitem_t menu_settings4[] =
   { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
 #endif
 #ifdef __NOISE_FIGURE__
-  { MT_KEYPAD,   KM_NF,        "NOISE\nFIGURE", "Enter tinySA noise figure"},
+  { MT_KEYPAD,   KM_NF,        "NF\n\b%s", "Enter tinySA noise figure"},
 #endif
 #ifdef __SD_CARD_LOAD__
   { MT_CALLBACK,        0 ,     "LOAD\nCONFIG.INI",    menu_load_config_cb},
@@ -2723,8 +2719,8 @@ static const menuitem_t menu_settings4[] =
 #endif
   { MT_ADV_CALLBACK,     0,     "LINEAR\nAVERAGING",          menu_linear_averaging_acb},
 //  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
-  { MT_KEYPAD,   KM_DIRECT_START,     "DIRECT\nSTART", ""},
-  { MT_KEYPAD,   KM_DIRECT_STOP,     "DIRECT\nSTOP", ""},
+  { MT_KEYPAD,   KM_DIRECT_START,     "DSTART\n\b%s", ""},
+  { MT_KEYPAD,   KM_DIRECT_STOP,     "DSTOP\n\b%s", ""},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -2735,13 +2731,13 @@ static const menuitem_t menu_settings2[] =
   { MT_ADV_CALLBACK, 0,             "LNA",           menu_settings_lna_acb},
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BPF",           menu_settings_bpf_acb},
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BELOW IF",      menu_settings_below_if_acb},
-  { MT_KEYPAD,   KM_DECAY,      "DECAY",   "0..1000000ms or sweeps"},
+  { MT_KEYPAD,   KM_DECAY,      "DECAY\n\b%s",   "0..1000000ms or sweeps"},
 #ifdef __QUASI_PEAK__
-  { MT_KEYPAD,   KM_ATTACK,      "ATTACK",   "0..100000ms"},
+  { MT_KEYPAD,   KM_ATTACK,      "ATTACK\n\b%s",   "0..100000ms"},
 #endif
 #ifdef TINYSA4
-  { MT_KEYPAD,   KM_NOISE,      "NOISE\nLEVEL",   "2..20 dB"},
-  { MT_KEYPAD,   KM_30MHZ,      "ACTUAL\n30MHz*100", "Enter actual 30MHz * 100"},
+  { MT_KEYPAD,   KM_NOISE,      "NOISE LEV\n\b%s",   "2..20 dB"},
+  { MT_KEYPAD,   KM_30MHZ,      "30MHz*100\n\b%s", "Enter actual 30MHz * 100"},
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
@@ -2796,10 +2792,10 @@ static const menuitem_t menu_settings[] =
 {
   { MT_SUBMENU, 0,              "LEVEL\nCORRECTION",  menu_actual_power},
   { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
-  { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ",           "0=auto IF"},
+  { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ\n\b%s",           "0=auto IF"},
   { MT_SUBMENU,0,               "SCAN\nSPEED",        menu_scanning_speed},
 #ifndef TINYSA4
-  { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
+  { MT_KEYPAD, KM_REPEAT,       "SAMPLE REP\n\b%s",    "1..100"},
 #endif
 #ifdef TINYSA4
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
@@ -2896,7 +2892,7 @@ static const menuitem_t menu_config[] = {
   { MT_ADV_CALLBACK,0,          "%s",          menu_spur_acb},
 #endif
 #ifdef TINYSA4
-  { MT_KEYPAD, KM_REPEAT,       "SAMPLE\nREPEAT",    "1..100"},
+  { MT_KEYPAD, KM_REPEAT,       "SAMPLE REP\n\b%s",    "1..100"},
 #endif
 #ifdef __LCD_BRIGHTNESS__
   { MT_CALLBACK, 0, "BRIGHTNESS", menu_brightness_cb},
@@ -2998,7 +2994,7 @@ static const menuitem_t menu_trigger[] = {
   { MT_ADV_CALLBACK, T_NORMAL,   "NORMAL",         menu_trigger_acb},
   { MT_ADV_CALLBACK, T_SINGLE,   "SINGLE",         menu_trigger_acb},
 //  { MT_ADV_CALLBACK, T_DONE,     "READY",          menu_trigger_acb},
-  { MT_KEYPAD,       KM_TRIGGER, "TRIGGER\nLEVEL", NULL},
+  { MT_KEYPAD,       KM_TRIGGER, "TRIGGER LEV\n\b%s", NULL},
   { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
   { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
   { MT_ADV_CALLBACK, T_MODE,     "%s\nTRIGGER",     menu_trigger_acb},
@@ -3012,7 +3008,7 @@ static const menuitem_t menu_level[] = {
   { MT_SUBMENU, 0,              "ATTENUATE",    menu_atten},
 //  { MT_SUBMENU,0,             "CALC",         menu_average},
   { MT_SUBMENU, 0,              "UNIT",         menu_unit},
-  { MT_KEYPAD,  KM_EXT_GAIN,      "EXTERNAL\nGAIN",NULL},
+  { MT_KEYPAD,  KM_EXT_GAIN,      "EXT GAIN\n\b%s",NULL},
 #ifdef TINYSA4
   { MT_ADV_CALLBACK | MT_LOW ,0,"LNA",          menu_extra_lna_acb},
  #endif
@@ -3024,12 +3020,12 @@ static const menuitem_t menu_level[] = {
 };
 
 static const menuitem_t menu_stimulus[] = {
-  { MT_KEYPAD,  KM_START,       "START",       NULL},
-  { MT_KEYPAD,  KM_STOP,        "STOP",        NULL},
-  { MT_KEYPAD,  KM_CENTER,      "CENTER",      NULL},
-  { MT_KEYPAD,  KM_SPAN,        "SPAN",        NULL},
+  { MT_KEYPAD,  KM_START,       "START\n\b%s",       NULL},
+  { MT_KEYPAD,  KM_STOP,        "STOP\n\b%s",        NULL},
+  { MT_KEYPAD,  KM_CENTER,      "CENTER\n\b%s",      NULL},
+  { MT_KEYPAD,  KM_SPAN,        "SPAN\n\b%s",        NULL},
   { MT_KEYPAD,  KM_CW,          "ZERO SPAN",   NULL},
-  { MT_KEYPAD,  KM_VAR,         "JOG STEP\n%s","0 - AUTO"},
+  { MT_KEYPAD,  KM_VAR,         "JOG STEP\n\b%s","0 = AUTO"},
   { MT_SUBMENU,0,               "RBW",         menu_rbw},
   { MT_ADV_CALLBACK,0,          "SHIFT\nFREQ", menu_shift_acb},
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
@@ -3070,13 +3066,13 @@ static void menu_item_modify_attribute(                     // To modify menu bu
     const menuitem_t *menu, int item, ui_button_t *button)
 {
   if (menu == menu_settings) {
-    if (item == 2)
-      button->icon = setting.auto_IF ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
+//    if (item == 2)
+//      button->icon = setting.auto_IF ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
   } else if (menu == menu_scanning_speed) {
-    if (item == 0)
-      button->icon = setting.step_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
-    else if (item == 1)
-      button->icon =setting.offset_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
+//    if (item == 0)
+//      button->icon = setting.step_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
+//    else if (item == 1)
+//      button->icon =setting.offset_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
   } else if (menu == menu_display) {
     if (item == 4)
       button->icon = setting.sweep_time_us != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
@@ -3097,23 +3093,23 @@ static void fetch_numeric_target(uint8_t mode)
   switch (mode) {
   case KM_START:
     uistat.freq_value = get_sweep_frequency(ST_START) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QMHz", uistat.freq_value);
     break;
   case KM_STOP:
     uistat.freq_value = get_sweep_frequency(ST_STOP) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_CENTER:
     uistat.freq_value = get_sweep_frequency(ST_CENTER) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%QHz", uistat.freq_value);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_SPAN:
     uistat.freq_value = get_sweep_frequency(ST_SPAN);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_CW:
     uistat.freq_value = get_sweep_frequency(ST_CW) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_SCALE:
   case KM_LINEAR_SCALE:
@@ -3134,29 +3130,44 @@ static void fetch_numeric_target(uint8_t mode)
     break;
   case KM_IF:
     uistat.freq_value = setting.frequency_IF;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
+    if (!setting.auto_IF)
+      plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
+    else
+      plot_printf(uistat.text, sizeof uistat.text, "AUTO");
     break;
 #ifdef TINYSA4
   case KM_IF2:
     uistat.freq_value = config.frequency_IF2;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_R:
-    uistat.value = SI4463_R;
-    plot_printf(uistat.text, sizeof uistat.text, "%3d", uistat.value);
+    uistat.value = setting.R;
+    if (setting.R)
+      plot_printf(uistat.text, sizeof uistat.text, "%d", setting.R);
+    else
+      plot_printf(uistat.text, sizeof uistat.text, "AUTO");
     break;
   case KM_MOD:
+    if (local_modulo)
+      plot_printf(uistat.text, sizeof uistat.text, "%d", local_modulo);
+    else
+      plot_printf(uistat.text, sizeof uistat.text, "AUTO");
+   break;
+  case KM_CP:
     uistat.value = ADF4350_modulo;
-    plot_printf(uistat.text, sizeof uistat.text, "%4d", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%d", ADF4350_modulo);
     break;
 #endif
   case KM_SAMPLETIME:
     uistat.value = setting.step_delay;
-    plot_printf(uistat.text, sizeof uistat.text, "%3dus", ((int32_t)uistat.value));
+    if (uistat.value)
+      plot_printf(uistat.text, sizeof uistat.text, "%dus", ((int32_t)uistat.value));
+    else
+      plot_printf(uistat.text, sizeof uistat.text, "AUTO");
     break;
   case KM_REPEAT:
     uistat.value = setting.repeat;
-    plot_printf(uistat.text, sizeof uistat.text, "%2d", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
     break;
   case KM_LOWOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode
@@ -3179,32 +3190,32 @@ static void fetch_numeric_target(uint8_t mode)
     break;
   case KM_DECAY:
     uistat.value = setting.decay;
-    plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
     break;
 #ifdef __QUASI_PEAK__
   case KM_ATTACK:
     uistat.value = setting.attack;
-    plot_printf(uistat.text, sizeof uistat.text, "%5d", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
     break;
 #endif
 #ifdef __ULTRA__
-  case KM_LPF:
+  case KM_ULTRA_START:
     uistat.freq_value = config.ultra_threshold;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value );
     break;
   case KM_DIRECT_START:
     uistat.freq_value = config.direct_start;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_DIRECT_STOP:
     uistat.freq_value = config.direct_stop;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
 #endif
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
     uistat.freq_value = setting.limits[current_trace][active_limit].frequency;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_LIMIT_LEVEL:
     uistat.value = value(setting.limits[current_trace][active_limit].level);
@@ -3213,17 +3224,17 @@ static void fetch_numeric_target(uint8_t mode)
 #endif
   case KM_NOISE:
     uistat.value = setting.noise;
-    plot_printf(uistat.text, sizeof uistat.text, "%3d", ((int32_t)uistat.value));
+    plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
     break;
 #ifdef TINYSA4
   case KM_30MHZ:
     uistat.freq_value = config.setting_frequency_30mhz;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%.5QHz", uistat.freq_value);
     break;
 #else
   case KM_10MHZ:
     uistat.freq_value = config.setting_frequency_10mhz;
-    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value / 1000000.0);
+    plot_printf(uistat.text, sizeof uistat.text, "%3.6fMHz", uistat.freq_value);
     break;
 #endif
   case KM_EXT_GAIN:
@@ -3249,7 +3260,7 @@ static void fetch_numeric_target(uint8_t mode)
   case KM_MARKER:
     if (active_marker >=0) {
       uistat.freq_value = markers[active_marker].frequency;
-      plot_printf(uistat.text, sizeof uistat.text, "%3.3fMHz", uistat.freq_value / 1000000.0);
+      plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     }
     break;
   case KM_MODULATION:
@@ -3260,7 +3271,11 @@ static void fetch_numeric_target(uint8_t mode)
     break;
   case KM_VAR:
     uistat.freq_value = setting.frequency_var;
-    plot_printf(uistat.text, sizeof uistat.text, setting.frequency_var ? "%QHz" : " AUTO", setting.frequency_var);
+    if ( setting.frequency_var)
+      plot_printf(uistat.text, sizeof uistat.text, "%.4QHz", setting.frequency_var);
+    else
+      plot_printf(uistat.text, sizeof uistat.text, "AUTO");
+
     break;
 #ifdef __NOISE_FIGURE__
   case KM_NF:
@@ -3307,7 +3322,6 @@ set_numeric_value(void)
     config_save();
     break;
   case KM_IF:
-    setting.auto_IF = false;
     set_IF(uistat.freq_value);
 //    config_save();
     break;
@@ -3355,7 +3369,7 @@ set_numeric_value(void)
     break;
 #endif
 #ifdef __ULTRA__
-  case KM_LPF:
+  case KM_ULTRA_START:
     config.ultra_threshold = uistat.value;
     config_save();
     ultra_threshold = config.ultra_threshold;
