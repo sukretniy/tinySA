@@ -1520,7 +1520,15 @@ static void trace_print_value_string(     // Only used at one place
   if (FREQ_IS_CW()) {
     plot_printf(ptr2, sizeof(buf2) - 9, "%.3Fs", idx*setting.actual_sweep_time_us/(float)((sweep_points - 1)*ONE_SECOND_TIME));
   } else {
-    plot_printf(ptr2, sizeof(buf2) - 9, "%9.5QHz", freq);
+    freq_t step = getFrequency(1)-getFrequency(0);
+    int digits = 1;
+    if (freq>1000000 && step != 0) {
+      while (step < 1000000 && digits<5) {
+        digits++;
+        step = step*10;
+      }
+    }
+    plot_printf(ptr2, sizeof(buf2) - 9, "%9.*QHz", digits, freq);
   }
   const char *format;
   if (UNIT_IS_LINEAR(setting.unit))

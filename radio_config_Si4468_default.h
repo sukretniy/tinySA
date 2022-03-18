@@ -185,7 +185,7 @@
 // Descriptions:
 //   MODEM_AGC_CONTROL - Miscellaneous control bits for the Automatic Gain Control (AGC) function in the RX Chain.
 */
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE0
+#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE0 // 0xE0
 
 /*
 // Set properties:           RF_MODEM_AGC_WINDOW_SIZE_12
@@ -463,7 +463,7 @@
 //   FRR_CTL_C_MODE - Fast Response Register C Configuration.
 //   FRR_CTL_D_MODE - Fast Response Register D Configuration.
 */
-#define RF_FRR_CTL_A_MODE_4 0x11, 0x02, 0x04, 0x00, 0x0A, 0x00, 0x00, 0x00
+#define RF_FRR_CTL_A_MODE_4 0x11, 0x02, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00
 
 /*
 // Set properties:           RF_PREAMBLE_CONFIG_STD_1_1
@@ -586,7 +586,7 @@
 // Descriptions:
 //   MODEM_AGC_CONTROL - Miscellaneous control bits for the Automatic Gain Control (AGC) function in the RX Chain.
 */
-#define RF_MODEM_AGC_CONTROL_1_1 0x11, 0x20, 0x01, 0x35, 0xE2
+#define RF_MODEM_AGC_CONTROL_1_1 0x11, 0x20, 0x01, 0x35, 0x00  // 0xE2
 
 /*
 // Set properties:           RF_MODEM_AGC_WINDOW_SIZE_12_1
@@ -608,7 +608,7 @@
 //   MODEM_OOK_CNT1 - OOK control.
 //   MODEM_OOK_MISC - Selects the detector(s) used for demodulation of an OOK signal, or for demodulation of a (G)FSK signal when using the asynchronous demodulator.
 */
-#define RF_MODEM_AGC_WINDOW_SIZE_12_1 0x11, 0x20, 0x0C, 0x38, 0x22, 0x07, 0x07, 0x80, 0x02, 0x4C, 0xCD, 0x00, 0x27, 0x0C, 0x84, 0x23
+#define RF_MODEM_AGC_WINDOW_SIZE_12_1 0x11, 0x20, 0x0C, 0x38, 0x22, 0x00, 0x00, 0x80, 0x02, 0x4C, 0xCD, 0x00, 0x27, 0x0C, 0x84, 0x23
 
 /*
 // Set properties:           RF_MODEM_RAW_CONTROL_10
@@ -628,7 +628,7 @@
 //   MODEM_RSSI_CONTROL2 - RSSI Jump Detection control.
 //   MODEM_RSSI_COMP - RSSI compensation value.
 */
-#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x8F, 0x02, 0x7F, 0x01, 0x00, 0xFF, 0x08, 0x18, 0x1A, 0x40
+#define RF_MODEM_RAW_CONTROL_10 0x11, 0x20, 0x0A, 0x45, 0x8F, 0x02, 0x7F, 0x01, 0x00, 0xFF, 0x08, 0x08, 0x1A, 0x40
 
 /*
 // Set properties:           RF_MODEM_RAW_SEARCH2_2_1

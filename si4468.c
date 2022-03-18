@@ -1609,10 +1609,10 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_600kHz, -10,6000,  8},
  {SI4463_RBW_850kHz, -9,8500,  8},
 #else
- {SI4463_RBW_02kHz,  18,3,    20},
- {SI4463_RBW_1kHz,   13,10,    15},
- {SI4463_RBW_3kHz,   8,30,   10},
- {SI4463_RBW_10kHz,  3,100,   10},
+ {SI4463_RBW_02kHz,  18,3,    25},
+ {SI4463_RBW_1kHz,   18,10,    15},
+ {SI4463_RBW_3kHz,   13,30,   10},
+ {SI4463_RBW_10kHz,  18,100,   20},
  {SI4463_RBW_30kHz,  3,300,  15},
  {SI4463_RBW_100kHz, -2,1000, 15},      // OK
  {SI4463_RBW_300kHz, -2,3000, 10},

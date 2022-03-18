@@ -2235,7 +2235,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 #endif
   }
   frequency_step_x10 = 3000;  // default value for zero span
-  if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) {
+  if (setting.frequency_step > 0) {
     frequency_step_x10 = (setting.frequency_step)/100;
   }
 
@@ -2243,17 +2243,11 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   if (temp_actual_rbw_x10 == 0) {        // if auto rbw
 
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
-#ifdef __SI4432__
-      if (setting.fast_speedup > 2)
-        temp_actual_rbw_x10 = 6*frequency_step_x10; // rbw is six times the frequency step to ensure no gaps in coverage as there are some weird jumps
-      else
-        temp_actual_rbw_x10 = 4*frequency_step_x10; // rbw is four times the frequency step to ensure no gaps in coverage as there are some weird jumps
-#endif
-#ifdef __SI4463__
       temp_actual_rbw_x10 = frequency_step_x10;
-#endif
+    } else if (setting.step_delay_mode==SD_PRECISE) {
+      temp_actual_rbw_x10 = 4*frequency_step_x10;
     } else {
-      temp_actual_rbw_x10 = 2*frequency_step_x10; // rbw is twice the frequency step to ensure no gaps in coverage
+      temp_actual_rbw_x10 = 2*frequency_step_x10;
     }
   }
 #ifdef __SI4432__
@@ -2276,26 +2270,31 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   SI4432_Sel =  MODE_SELECT(setting.mode);
 #endif
 #ifdef __SI4463__
-//  if (setting.spur_removal && actual_rbw_x10 > 3000)      // Will depend on BPF width <------------------ TODO -------------------------
-//    actual_rbw_x10 = 3000;                         // if spur suppression reduce max rbw to fit within BPF
+  // Not needed
 #endif
-  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the SI4432 can realize
-  if (setting.frequency_step > 0 && MODE_INPUT(setting.mode)) { // When doing frequency scanning in input mode
-#ifdef TINYSA4
-    if (frequency_step_x10 > actual_rbw_x10) {
-	  vbwSteps = 1+((frequency_step_x10 + actual_rbw_x10 - 1) / actual_rbw_x10); //((int)(2 * (frequency_step_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
+
+  actual_rbw_x10 = set_rbw(actual_rbw_x10);  // see what rbw the be can realized
+
+
+  if (setting.frequency_step > 0) {
+    freq_t target_frequency_step_x10;
+
+    if (setting.step_delay_mode==SD_FAST) {
+      target_frequency_step_x10 = frequency_step_x10;
+    } else if (setting.step_delay_mode==SD_PRECISE) {
+      target_frequency_step_x10 = 4*frequency_step_x10;
+    } else {
+      target_frequency_step_x10 = 2*frequency_step_x10;
     }
-#else
-	vbwSteps = ((int)(2 * (frequency_step_x10 + (actual_rbw_x10/2)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
-#endif
-    if (setting.step_delay_mode==SD_PRECISE)    // if in Precise scanning
-      vbwSteps *= 2;                            // use twice as many steps
-    if (vbwSteps < 1)                            // at least one step, should never happen
-      vbwSteps = 1;
-  } else {                      // in all other modes
-    frequency_step_x10 = actual_rbw_x10;
+
+    if (target_frequency_step_x10 > actual_rbw_x10) { // RBW too small
+      vbwSteps = (target_frequency_step_x10 + actual_rbw_x10 - 1) / actual_rbw_x10; //((int)(2 * (frequency_step_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
+      if (vbwSteps<1)
+        vbwSteps = 1;
+    }
   }
-#ifdef TINYSA4
+
+  #ifdef TINYSA4
 done:
   fill_spur_table();    // IF frequency depends on selected RBW
 #endif
@@ -3563,7 +3562,10 @@ again:                                                              // Spur redu
                   ADF4351_R_counter(3);
               } else
 #endif
-                ADF4351_R_counter(1);
+                if (get_sweep_frequency(ST_SPAN)<500000)
+                  ADF4351_R_counter(3);
+                else
+                  ADF4351_R_counter(1);
             }
           } else {
             if (local_modulo == 0) {
