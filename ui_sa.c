@@ -660,7 +660,7 @@ UI_FUNCTION_CALLBACK(menu_curve_confirm_cb)
   (void)item;
   if (data) {
     float new_offset = local_actual_level - peakLevel + config.correction_value[current_curve][current_curve_index];        // calculate offset based on difference between measured peak level and known peak level
-    if (new_offset > -25 && new_offset < 25) {
+    if (new_offset > -30 && new_offset < 30) {
       config.correction_value[current_curve][current_curve_index] = new_offset;
       config_save();
     }
@@ -3706,11 +3706,13 @@ redraw_cal_status:
     calculate_step_delay();
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
   }
-  ili9341_set_foreground((setting.step_delay || setting.sweep_time_us ) ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
 #if 0                   // Activate for sweep time debugging
   lcd_printf(x, y, "%cScan:\n%5.3Fs", fscan[setting.step_delay_mode&3], (float)setting.sweep_time_us/ONE_SECOND_TIME);
 #endif
-  lcd_printf(x, y, "%cScan:\n%5.3Fs", fscan[setting.step_delay_mode&3], (float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
+  ili9341_set_foreground((setting.step_delay_mode&3) != 0 ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
+  lcd_printf(x, y, "%cScan:", fscan[setting.step_delay_mode&3]);
+  ili9341_set_foreground((setting.step_delay || setting.sweep_time_us ) ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
+  lcd_printf(x, y+YSTEP, "%5.3Fs",(float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
   y = add_quick_menu(y+=YSTEP, (menuitem_t *)menu_sweep_speed);
 
 
