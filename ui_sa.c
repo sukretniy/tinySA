@@ -441,6 +441,10 @@ enum {
 #ifdef TINYSA4
   KM_DIRECT_START,
   KM_DIRECT_STOP,
+#ifdef __USE_RTC__
+  KM_RTC_DATE,
+  KM_RTC_TIME,
+#endif
 #endif
   KM_NONE // always at enum end
 };
@@ -509,6 +513,10 @@ static const struct {
 #ifdef TINYSA4
 [KM_DIRECT_START] = {keypads_freq        , "DIRECT\nSTART"}, // KM_DIRECT_START
 [KM_DIRECT_STOP]  = {keypads_freq        , "DIRECT\nSTOP"}, // KM_DIRECT_STOP
+#ifdef __USE_RTC__
+[KM_RTC_DATE]     = {keypads_positive    , "SET DATE\n YYMMDD"}, // Date
+[KM_RTC_TIME]     = {keypads_positive    , "SET TIME\n HHMMSS"}, // Time
+#endif
 #endif
 };
 
@@ -2881,6 +2889,15 @@ const menuitem_t menu_touch[] = {
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
+#ifdef __USE_RTC__
+const menuitem_t menu_date_time[] = {
+  { MT_KEYPAD, KM_RTC_TIME,  "SET TIME\n\b%s",                          0 },        // MUST BE BEFORE DATE
+  { MT_KEYPAD, KM_RTC_DATE,  "SET DATE\n\b%s",                          0 },
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
+
 static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0,                        "TOUCH",     menu_touch},
   { MT_CALLBACK, CONFIG_MENUITEM_SELFTEST, "SELF TEST", menu_config_cb},
@@ -2896,6 +2913,9 @@ static const menuitem_t menu_config[] = {
 #endif
 #ifdef __LCD_BRIGHTNESS__
   { MT_CALLBACK, 0, "BRIGHTNESS", menu_brightness_cb},
+#endif
+#ifdef __USE_RTC__
+  { MT_SUBMENU,  0, "DATE\nTIME", menu_date_time},
 #endif
   { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
 #ifndef TINYSA4
@@ -3283,6 +3303,26 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
     break;
 #endif
+#ifdef __USE_RTC__
+  case KM_RTC_TIME:
+  {
+    uint32_t tr = rtc_get_tr_bin(); // TR read first
+    plot_printf(uistat.text, sizeof uistat.text, "%02d:%02d:%02d",
+      RTC_TR_HOUR(dr),
+      RTC_TR_MIN(dr),
+      RTC_TR_SEC(dr));
+  }
+  break;
+  case KM_RTC_DATE:
+  {
+    uint32_t dr = rtc_get_dr_bin(); // DR read second
+    plot_printf(uistat.text, sizeof uistat.text, "20%02d/%02d/%02d",
+      RTC_DR_YEAR(dr),
+      RTC_DR_MONTH(dr),
+      RTC_DR_DAY(dr));
+  }
+    break;
+#endif
   }
 }
 
@@ -3471,6 +3511,47 @@ set_numeric_value(void)
     dirty = true;
     break;
 #endif
+#ifdef __USE_RTC__
+  case KM_RTC_DATE:
+  case KM_RTC_TIME:
+    {
+      int i = 0;
+      uint32_t  dt_buf[2];
+      dt_buf[0] = rtc_get_tr_bcd(); // TR should be read first for sync
+      dt_buf[1] = rtc_get_dr_bcd(); // DR should be read second
+      //            0    1   2       4      5     6
+      // time[] ={sec, min, hr, 0, day, month, year, 0}
+      uint8_t   *time = (uint8_t*)dt_buf;
+      for (; i < 6 && kp_buf[i]!=0; i++) kp_buf[i]-= '0';
+      for (; i < 6                ; i++) kp_buf[i] =   0;
+      for (i = 0; i < 3; i++) kp_buf[i] = (kp_buf[2*i]<<4) | kp_buf[2*i+1]; // BCD format
+      if (keypad_mode == KM_RTC_DATE) {
+        // Month limit 1 - 12 (in BCD)
+             if (kp_buf[1] <    1) kp_buf[1] =    1;
+        else if (kp_buf[1] > 0x12) kp_buf[1] = 0x12;
+        // Day limit (depend from month):
+        uint8_t day_max = 28 + ((0b11101100000000000010111110111011001100>>(kp_buf[1]<<1))&3);
+        day_max = ((day_max/10)<<4)|(day_max%10); // to BCD
+             if (kp_buf[2] <  1)      kp_buf[2] = 1;
+        else if (kp_buf[2] > day_max) kp_buf[2] = day_max;
+        time[6] = kp_buf[0]; // year
+        time[5] = kp_buf[1]; // month
+        time[4] = kp_buf[2]; // day
+      }
+      else {
+        // Hour limit 0 - 23, min limit 0 - 59, sec limit 0 - 59 (in BCD)
+        if (kp_buf[0] > 0x23) kp_buf[0] = 0x23;
+        if (kp_buf[1] > 0x59) kp_buf[1] = 0x59;
+        if (kp_buf[2] > 0x59) kp_buf[2] = 0x59;
+        time[2] = kp_buf[0]; // hour
+        time[1] = kp_buf[1]; // min
+        time[0] = kp_buf[2]; // sec
+      }
+      rtc_set_time(dt_buf[1], dt_buf[0]);
+    }
+    break;
+#endif
+
   }
 }
 

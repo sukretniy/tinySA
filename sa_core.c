@@ -3563,7 +3563,7 @@ again:                                                              // Spur redu
               } else
 #endif
                 if (get_sweep_frequency(ST_SPAN)<500000)
-                  ADF4351_R_counter(3);
+                  ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
                 else
                   ADF4351_R_counter(1);
             }
@@ -4639,6 +4639,9 @@ static volatile int dummy;
     int delta = 0;
     int target_level = AUTO_TARGET_LEVEL;
 #ifdef TINYSA4
+    freq_t min_target_freq = get_sweep_frequency(ST_START);
+    if (min_target_freq > 30000000) // 30M and lower has zero correction
+      target_level += PURE_TO_float(get_frequency_correction(min_target_freq));
     if (setting.extra_lna)
       target_level = LNA_AUTO_TARGET_LEVEL;
 #endif

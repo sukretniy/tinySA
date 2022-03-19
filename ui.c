@@ -1045,7 +1045,13 @@ draw_numeric_input(const char *buf)
 {
   uint16_t i;
   uint16_t x = 10 + 10 * FONT_WIDTH + 4;
-  uint16_t xsim = (0b00100100100100100 >>(2-(period_pos()%3)))&(~1);
+  uint16_t xsim;
+#ifdef __USE_RTC__
+  if (keypad_mode == KM_RTC_DATE || keypad_mode == KM_RTC_TIME)
+    xsim = 0b01010100;
+  else
+#endif
+  xsim = (0b00100100100100100 >>(2-(period_pos()%3)))&(~1);
   ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
   ili9341_set_background(LCD_INPUT_BG_COLOR);
   for (i = 0; buf[i]; i++) {
@@ -2103,7 +2109,7 @@ void close_file(FRESULT res)
     res = f_close(fs_file);
 //  time = chVTGetSystemTimeX() - time;
 //  shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, (LCD_WIDTH*LCD_HEIGHT*sizeof(uint16_t)+sizeof(bmp_header_v4))*10000/time);
-  drawMessageBox("Save", res == FR_OK ? fs_filename : "  Write failed  ", 2000);
+  drawMessageBox("Save:", res == FR_OK ? fs_filename : "  Write failed  ", 2000);
   redraw_request|= REDRAW_AREA;
 }
 static bool
