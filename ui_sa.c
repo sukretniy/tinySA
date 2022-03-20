@@ -2649,6 +2649,7 @@ static const menuitem_t menu_sweep_speed[] =
 #else
  { MT_ADV_CALLBACK | MT_LOW,SD_FAST,   "FAST",            menu_scanning_speed_acb},
 #endif
+ { MT_ADV_CALLBACK,     SD_NOISE_SOURCE,      "NOISE\nSOURCE",   menu_scanning_speed_acb},
 #ifdef TINYSA4
  { MT_KEYPAD,           KM_FAST_SPEEDUP,"SPEEDUP\n\b%s",  "2..20, 0=disable"},
 #else
@@ -3782,16 +3783,16 @@ redraw_cal_status:
   }
 #endif
   // Sweep time: SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL
-  static const char fscan[]={0, 'P', 'F', 'M'};
+  static const char fscan[]={0, 'P', 'F', 'N', 'M'};
   if (dirty) {
     calculate_step_delay();
     setting.actual_sweep_time_us = calc_min_sweep_time_us();
   }
 #if 0                   // Activate for sweep time debugging
-  lcd_printf(x, y, "%cScan:\n%5.3Fs", fscan[setting.step_delay_mode&3], (float)setting.sweep_time_us/ONE_SECOND_TIME);
+  lcd_printf(x, y, "%cScan:\n%5.3Fs", fscan[setting.step_delay_mode&7], (float)setting.sweep_time_us/ONE_SECOND_TIME);
 #endif
-  ili9341_set_foreground((setting.step_delay_mode&3) != 0 ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
-  lcd_printf(x, y, "%cScan:", fscan[setting.step_delay_mode&3]);
+  ili9341_set_foreground((setting.step_delay_mode&7) != 0 ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
+  lcd_printf(x, y, "%cScan:", fscan[setting.step_delay_mode&7]);
   ili9341_set_foreground((setting.step_delay || setting.sweep_time_us ) ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
   lcd_printf(x, y+YSTEP, "%5.3Fs",(float)setting.actual_sweep_time_us/ONE_SECOND_TIME);
   y = add_quick_menu(y+=YSTEP, (menuitem_t *)menu_sweep_speed);

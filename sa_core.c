@@ -1246,9 +1246,9 @@ void set_harmonic(int h)
 void set_step_delay(int d)                  // override RSSI measurement delay or set to one of three auto modes
 {
 
-  if ((3 <= d && d < 10) || d > 30000)         // values 0 (normal scan), 1 (precise scan) and 2(fast scan) have special meaning and are auto calculated
+  if ((SD_MANUAL <= d && d < 10) || d > 30000)         // values 0 (normal scan), 1 (precise scan) and 2(fast scan) have special meaning and are auto calculated
     return;
-  if (d <3) {
+  if (d <SD_MANUAL) {
     setting.step_delay_mode = d;
     setting.step_delay = 0;
     setting.offset_delay = 0;
@@ -2279,7 +2279,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   if (setting.frequency_step > 0) {
     freq_t target_frequency_step_x10;
 
-    if (setting.step_delay_mode==SD_FAST) {
+    if (setting.step_delay_mode==SD_FAST || setting.step_delay_mode==SD_NOISE_SOURCE) {
       target_frequency_step_x10 = frequency_step_x10;
     } else if (setting.step_delay_mode==SD_PRECISE) {
       target_frequency_step_x10 = 4*frequency_step_x10;
@@ -2287,7 +2287,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
       target_frequency_step_x10 = 2*frequency_step_x10;
     }
 
-    if (target_frequency_step_x10 > actual_rbw_x10) { // RBW too small
+    if (target_frequency_step_x10 > actual_rbw_x10 && !(setting.step_delay_mode==SD_NOISE_SOURCE)) { // RBW too small
       vbwSteps = (target_frequency_step_x10 + actual_rbw_x10 - 1) / actual_rbw_x10; //((int)(2 * (frequency_step_x10 + (actual_rbw_x10/8)) / actual_rbw_x10)); // calculate # steps in between each frequency step due to rbw being less than frequency step
       if (vbwSteps<1)
         vbwSteps = 1;

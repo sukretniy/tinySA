@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -1156,7 +1156,7 @@ void set_trace_refpos(float refpos);
 #define S_STATE(X) ((X)&1)
 enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 
-enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_MANUAL };
+enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_NOISE_SOURCE, SD_MANUAL };
 
 enum {W_OFF, W_SMALL, W_BIG};
 

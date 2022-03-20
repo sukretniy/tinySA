@@ -2077,8 +2077,13 @@ static void update_level_meter(void){
 //    ili9341_fill(OFFSETX+minimum_text_width, graph_bottom+1, area_width-minimum_text_width, CHART_BOTTOM - graph_bottom);
   ili9341_set_foreground(LCD_FG_COLOR);
   int x_max = area_width+OFFSETX;
-  int w = ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+1,3, x_max);         // TODO Size 4 does not transfer to remote desktop??????
-  ili9341_fill(OFFSETX, graph_bottom+34, x_max - OFFSETX, 11);
+#ifdef TINYSA4
+#define BIG_SIZE 5
+#else
+#define BIG_SIZE 3
+#endif
+  int w = ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+1,BIG_SIZE, x_max);         // TODO Size 4 does not transfer to remote desktop??????
+  ili9341_fill(OFFSETX, graph_bottom+BIG_SIZE*11+1, x_max - OFFSETX, CHART_BOTTOM - (graph_bottom+BIG_SIZE*11+1) + 1);
 
   if (w < x_max)
     ili9341_fill(w, graph_bottom+1, x_max - w, CHART_BOTTOM - graph_bottom+1);
