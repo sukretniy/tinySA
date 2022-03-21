@@ -433,8 +433,10 @@ calculate:
     c = c - '0';
     if (c >= 'A' - '0') c = (c&(~0x20)) - ('A' - '0') + 10;
     if (c >= radix) break;
-    if (d<=0) d--;
-    value = value * radix + c;
+    if (value < (~(freq_t)0)/radix) {
+      if (d<=0) d--;
+      value = value * radix + c;
+    }
   }
   if (d == 1)
     d = 0;
