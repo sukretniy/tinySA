@@ -378,6 +378,8 @@ if __name__ == '__main__':
     if opt.command:
         for c in opt.command:
             nv.send_command(c + "\r")
+        data = nv.fetch_data()
+        print(data);
 
     if opt.capture:
         print("capturing...")

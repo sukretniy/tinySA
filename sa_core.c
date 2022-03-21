@@ -1884,6 +1884,9 @@ void setup_sa(void)
 #ifdef TINYSA4
 static int fast_counter = 0;
 #endif
+#ifdef __ULTRA__
+int old_drive = -1;
+#endif
 
 void set_freq(int V, freq_t freq)    // translate the requested frequency into a setting of the SI4432
 {
@@ -1968,6 +1971,23 @@ void set_freq(int V, freq_t freq)    // translate the requested frequency into a
     }
 #endif
     if (freq) {
+      // ----------------------------- set mixer drive --------------------------------------------
+      int target_drive = setting.lo_drive;
+      if (target_drive & 0x04){     // Automatic mixer drive
+        if (freq < 100000000ULL)       // below 100MHz
+          target_drive = 0;
+        else if (freq < 1200000000ULL) // below 1.2GHz
+          target_drive = 1;
+        else if (freq < 2000000000ULL)  // below 3GHz
+          target_drive = 2;
+        else
+          target_drive = 3;
+      }
+      if (old_drive != target_drive) {
+        ADF4351_drive(target_drive);       // Max drive
+        old_drive = target_drive;
+      }
+
       real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq);
     }
   } else if (V==ADF4351_LO2) {
@@ -2055,7 +2075,6 @@ case M_LOW:     // Mixed into 0
     set_AGC_LNA();
 #ifdef TINYSA4
     ADF4351_enable(true);
-//    ADF4351_drive(setting.lo_drive);
     ADF4351_enable_aux_out(setting.tracking_output);
     ADF4351_enable_out(true);
 #endif
@@ -2143,7 +2162,6 @@ case M_GENLOW:  // Mixed output from 0
 #endif
 #ifdef TINYSA4
     ADF4351_enable_out(true);
-//    ADF4351_drive(setting.lo_drive);
     ADF4351_enable(true);
     ADF4351_enable_aux_out(setting.tracking_output);
 
@@ -2795,9 +2813,6 @@ void clock_at_48MHz(void)
   }
 }
 
-#ifdef __ULTRA__
-int old_drive = -1;
-#endif
 #ifdef TINYSA4
 int test_output = false;
 int test_output_switch = false;
@@ -2915,14 +2930,15 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     }
   }
 #ifdef TINYSA4
+#if 0   // moved to set_freq
   // ----------------------------- set mixer drive --------------------------------------------
   int target_drive = setting.lo_drive;
   if (target_drive & 0x04){     // Automatic mixer drive
-    if (f < 100000000ULL)
+    if (f < 100000000ULL)       // below 100MHz
       target_drive = 0;
-    else if (f < 2400000000ULL)
+    else if (f < 2400000000ULL) // below 2.4GHz
       target_drive = 1;
-    else if (f < 3000000000ULL)
+    else if (f < 3000000000ULL)  // below 3GHz
       target_drive = 2;
     else
       target_drive = 3;
@@ -2931,6 +2947,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     ADF4351_drive(target_drive);       // Max drive
     old_drive = target_drive;
   }
+#endif
 #endif
 #ifdef TINYSA3
 #ifdef __ULTRA__

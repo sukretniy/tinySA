@@ -443,6 +443,10 @@ calculate:
   case 'M': d += 6; break;
   case 'G': d += 9; break;
   }
+  while (d < 0) {
+    value /= radix;
+    d++;
+  }
   while (d-->0)
     value *= radix;
   return value;
