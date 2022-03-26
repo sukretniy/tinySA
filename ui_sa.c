@@ -2652,7 +2652,7 @@ static const menuitem_t menu_sweep_speed[] =
 #ifdef TINYSA4
  { MT_KEYPAD,           KM_FAST_SPEEDUP,"SPEEDUP\n\b%s",  "2..20, 0=disable"},
 #else
- { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"PEEDUP\n\b%s",  "2..20, 0=disable"},
+ { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"SPEEDUP\n\b%s",  "2..20, 0=disable"},
 #endif
  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
@@ -3184,6 +3184,10 @@ static void fetch_numeric_target(uint8_t mode)
       plot_printf(uistat.text, sizeof uistat.text, "%dus", ((int32_t)uistat.value));
     else
       plot_printf(uistat.text, sizeof uistat.text, "AUTO");
+    break;
+  case KM_FAST_SPEEDUP:
+    uistat.value = setting.fast_speedup;
+    plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
     break;
   case KM_REPEAT:
     uistat.value = setting.repeat;
