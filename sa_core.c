@@ -4169,7 +4169,7 @@ static bool sweep(bool break_on_operation)
       ili9341_set_background(LCD_BG_COLOR);
       ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
 
-      if (local_sweep_time > 10 * ONE_SECOND_TIME) {
+      if (local_sweep_time > 2 * ONE_SECOND_TIME) {
         plot_into_index(measured);
         redraw_request |= REDRAW_CELLS | REDRAW_BATTERY;
         // plot trace and other indications as raster
