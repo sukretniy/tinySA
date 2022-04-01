@@ -713,6 +713,7 @@ typedef struct config {
   int8_t    cor_nfm;
   uint8_t  _brightness;
   uint8_t high_out_adf4350;
+  uint8_t flip;
 #ifdef __ULTRA__
   uint8_t    direct;
 #endif
@@ -994,6 +995,7 @@ void ili9341_init(void);
 void ili9341_test(int mode);
 void ili9341_bulk(int x, int y, int w, int h);              // send data to display, in DMA mode use it, but wait DMA complete
 void ili9341_fill(int x, int y, int w, int h);
+void ili9341_flip(bool flip);
 
 // Double buffer mode parser
 #if DISPLAY_CELL_BUFFER_COUNT == 1

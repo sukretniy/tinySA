@@ -385,6 +385,8 @@ void
 touch_cal_exec(void)
 {
   int x1, x2, y1, y2;
+  int old_flip = config.flip;
+  config.flip = 0;
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_clear_screen();
@@ -412,6 +414,8 @@ touch_cal_exec(void)
   config.touch_cal[1] = y1;
   config.touch_cal[2] = (x2 - x1) * 16 / LCD_WIDTH;
   config.touch_cal[3] = (y2 - y1) * 16 / LCD_HEIGHT;
+
+  config.flip = old_flip;
 
   config_save();            // Auto save touch calibration
 
@@ -466,8 +470,15 @@ touch_position(int *x, int *y)
     return;
   }
 #endif
-  *x = (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2];
-  *y = (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3];
+  int tx = (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2];
+  int ty = (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3];
+
+  if (config.flip) {
+    tx = LCD_WIDTH - 1 - tx;
+    ty = LCD_HEIGHT - 1 - ty;
+  }
+  *x = tx;
+  *y = ty;
 }
 
 void

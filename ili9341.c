@@ -620,6 +620,12 @@ void ili9341_fill(int x, int y, int w, int h)
 //  while (SPI_IN_TX_RX(LCD_SPI));
 }
 
+void ili9341_flip(bool flip) {
+  uint8_t memAcc = flip ? DISPLAY_ROTATION_180 : DISPLAY_ROTATION_0;
+  send_command(ILI9341_MEMORY_ACCESS_CONTROL, 1, &memAcc);
+}
+
+
 static void ili9341_DMA_bulk(uint16_t x, uint16_t y, uint16_t w, uint16_t h, pixel_t *buffer){
 #if 1
   ili9341_setWindow(x, y ,w, h);

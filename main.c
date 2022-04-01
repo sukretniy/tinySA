@@ -1906,7 +1906,7 @@ static const VNAShellCommand commands[] =
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"trace"       , cmd_trace       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"trigger"     , cmd_trigger     , CMD_RUN_IN_LOAD},
-    {"marker"      , cmd_marker      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    {"marker"      , cmd_marker      , CMD_RUN_IN_LOAD},
 #ifdef ENABLE_USART_COMMAND
     {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
     {"usart_cfg"   , cmd_usart_cfg   , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
@@ -2227,7 +2227,7 @@ static void VNAShell_executeLine(char *line)
   if (scp) {
     if (scp->flags & CMD_WAIT_MUTEX) {
       shell_function = scp->sc_function;
-      operation_requested|=OP_CONSOLE;
+      operation_requested|=OP_CONSOLE;      // this will abort current sweep to give priority to the new request
       // Wait execute command in sweep thread
       do {
         osalThreadSleepMilliseconds(10);

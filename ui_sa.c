@@ -2234,6 +2234,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
 //  draw_cal_status();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_flip_acb)
+{
+  (void) data;
+  (void) item;
+  if (b){
+    return;
+  }
+  config.flip = ! config.flip;
+  ili9341_flip(config.flip);
+  config_save();
+  redraw_request|= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS;
+}
+
 static UI_FUNCTION_ADV_CALLBACK(menu_shift_acb)
 {
   (void) data;
@@ -2988,6 +3001,7 @@ static const menuitem_t menu_display[] = {
   { MT_KEYPAD,      KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
   { MT_SUBMENU,     0,             "SWEEP\nPOINTS",   menu_sweep_points},
   { MT_SUBMENU,     0,             "SWEEP\nACCURACY",  menu_sweep_speed},
+  { MT_ADV_CALLBACK,0,             "ROTATE\nDISPLAY",    menu_flip_acb},
 //#ifdef __REMOTE_DESKTOP__
 //  { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
 //#endif
