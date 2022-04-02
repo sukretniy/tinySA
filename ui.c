@@ -957,7 +957,7 @@ menu_invoke(int item)
     if (menu->data <= KM_CW) {      // One of the frequency input keypads
       if (MODE_LOW(setting.mode))
         kp_help_text = VARIANT("0..350MHz",range_text);
-      else if (menu->data <= KM_SPAN)
+      else if (menu->data == KM_SPAN)
         kp_help_text = VARIANT("0..720Mhz",range_text);
       else
         kp_help_text = VARIANT("240..960Mhz",range_text);
