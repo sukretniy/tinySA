@@ -3579,9 +3579,15 @@ again:                                                              // Spur redu
                   ADF4351_R_counter(3);
               } else
 #endif
-                if (get_sweep_frequency(ST_SPAN)<500000)
-                  ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
-                else
+                if (get_sweep_frequency(ST_SPAN)<500000) {
+                  if (actual_rbw_x10 < 1000) {
+                    freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
+                    if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
+                      ADF4351_R_counter(4);    // To avoid PLL Loop shoulders at multiple of 10MHz
+                    else
+                      ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
+                  }
+                } else
                   ADF4351_R_counter(1);
             }
           } else {
