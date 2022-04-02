@@ -21,8 +21,9 @@ This repository contains source of tinySA firmware.
 
 # Support
 
-General tinySA support questions should be posted here: Please ask general support questions [here]: https://groups.io/g/tinysa/messages
-Use github only for firmware bugs and preferrably cross post to: https://groups.io/g/tinysa/messages
+General tinySA support questions should be posted here: https://groups.io/g/tinysa/messages
+
+Use github issue list only for firmware bugs and preferrably cross post to: https://groups.io/g/tinysa/messages
 
 ## Prepare ARM Cross Tools
 
