@@ -1465,8 +1465,8 @@ int16_t Si446x_RSSI(void)
 #endif
 #endif
     if (--i <= 0) break;
-//    if (setting.repeat > 3)
-//      my_microsecond_delay(30);
+    if (setting.repeat > 3)
+      my_microsecond_delay(100);
   }while(1);
 
   if (setting.repeat > 1 && setting.exp_aver == 1)

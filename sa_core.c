@@ -5837,37 +5837,43 @@ quit:
     set_refer_output(-1);
 #ifdef TINYSA4
   } else if (test == 1) {
-    float p2, p1, p;
+    float average, p;
+    freq_t end_freq = 100000000;
+    if (setting.test_argument > 0)
+      end_freq =setting.test_argument;
+
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SILENCE);
+    freq_t f;
 #ifdef TINYSA4
-//    setting.auto_IF = false;
-//    setting.frequency_IF=config.frequency_IF1+ STATIC_DEFAULT_SPUR_OFFSET/2;
-    freq_t f = 47300000;           // Start search at 2.2MHz
     setting.frequency_step = 1000;
 #else
-    setting.auto_IF = false;
+   setting.auto_IF = false;
    setting.frequency_IF=DEFAULT_IF;
-   freq_t f = 400000;           // Start search at 400kHz
    setting.frequency_step = 30000;
  #endif
-    if (setting.test_argument > 0)
-      setting.frequency_step=setting.test_argument;
     //  int i = 0;                     // Index in spur table (temp_t)
     set_RBW(setting.frequency_step/100);
     last_spur = 0;
     for (int j = 0; j < 4; j++) {
       int k=0;
-      p2 = PURE_TO_float(perform(false, 0, f, false));
+#ifdef TINYSA4
+      f = 2200000;           // Start search at 2.2MHz
+#else
+      f = 400000;           // Start search at 400kHz
+ #endif
+      average = PURE_TO_float(perform(false, 0, f, false));
       vbwSteps = 1;
       f += setting.frequency_step;
-      p1 = PURE_TO_float(perform(false, 1, f, false));
+      average += PURE_TO_float(perform(false, 1, f, false));
+      average /= 2.0;
       f += setting.frequency_step;
-      shell_printf("\n\rStarting with %4.2f, %4.2f and IF at %D and step of %D\n\r", p2, p1, setting.frequency_IF, setting.frequency_step );
-      while (f < DEFAULT_MAX_FREQ && !global_abort) {
+      shell_printf("\n\rStarting with average of %4.2f and IF at %DHz and step of %DHz till %DHz\n\r", average, setting.frequency_IF, setting.frequency_step, end_freq );
+//      while (f < DEFAULT_MAX_FREQ && !global_abort) {
+      while (f < end_freq && !global_abort) {
         if ((k++ % 1000) == 0)
-          shell_printf("Pass %d, freq %D\n\r", j, f);
+          shell_printf("Pass %d, freq %D\r", j, f);
         int r = 0;
         do {
           p = PURE_TO_float(perform(false, 1, f, false));
@@ -5876,18 +5882,15 @@ quit:
 #else
 #define SPUR_DELTA  15
 #endif
-//        shell_printf("%ld %4.2f\n\r", f, p);
-//        if ( p2 < p1 - SPUR_DELTA  && p < p1 - SPUR_DELTA) {
-        } while ( p2 < p - SPUR_DELTA && r++ < 4);
+        } while ( average + SPUR_DELTA < p  && r++ < 4);
         if (r >= 4) {
-          shell_printf("Pass %d, spur of %4.2f at %D with count %d\n\r", j, p,f/1000, add_spur(f));
+          shell_printf("Pass %d, spur of %4.2f at %DkHz with count %d\n\r", j, p,f/1000, add_spur(f));
         }
-        p2 = (p2*9+p1)/10;
-        p1 = p;
+        average = (average*19+p)/20;
         f += setting.frequency_step;
       }
     }
-    shell_printf("\n\rTable for IF at %d and step of %d\n\r", setting.frequency_IF, setting.frequency_step);
+    shell_printf("\n\rTable for IF at %D and step of %D\n\r", setting.frequency_IF, setting.frequency_step);
     for (int j = 0; j < last_spur; j++) {
       if ((int)stored_t[j] >= 1)
         shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);

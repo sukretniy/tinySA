@@ -940,7 +940,7 @@ config_t config = {
   .ext_zero_level = 174,
   .receive_switch_offset = 0.0,
 #ifdef __NOISE_FIGURE__
-  .noise_figure = 7.2,
+  .noise_figure = 5.0,
 #endif
 #endif
   .sweep_voltage = 3.3,
