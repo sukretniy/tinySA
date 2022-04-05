@@ -311,7 +311,7 @@ void reset_settings(int m)
   setting.ultra = S_AUTO_OFF;
 #endif
 #ifdef TINYSA4
-  setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2; ;
+  setting.frequency_IF = config.frequency_IF1; ;
 #else
   setting.frequency_IF = DEFAULT_IF;
 #endif
@@ -738,7 +738,7 @@ void set_IF(int f)
   if (f == 0) {
     setting.auto_IF = true;
 #ifdef TINYSA4
-    setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
+    setting.frequency_IF = config.frequency_IF1;
 #endif
   } else {
     setting.auto_IF = false;
@@ -1660,7 +1660,8 @@ void calculate_step_delay(void)
 #ifdef __SI4463__
       SI4432_step_delay   = step_delay_table[i].step_delay;
       SI4432_offset_delay = step_delay_table[i].offset_delay;
-      spur_gate           = step_delay_table[i].spur_div_1000 * 1000;
+      spur_gate           = actual_rbw_x10 * (100 * 4);
+//      spur_gate           = step_delay_table[i].spur_div_1000 * 1000;
       noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
       log_averaging_correction = step_delay_table[i].log_aver_correction;
 #endif
@@ -2489,20 +2490,8 @@ search_maximum(int m, freq_t center, int span)
 #ifdef TINYSA3
 static const unsigned int spur_IF =            DEFAULT_IF;       // The IF frequency for which the spur table is value
 static const unsigned int spur_alternate_IF =  DEFAULT_SPUR_IF;       // if the frequency is found in the spur table use this IF frequency
-#endif
-static  freq_t spur_table[] =                                 // Frequencies to avoid
+static  const freq_t spur_table[] =                                 // Frequencies to avoid
 {
-#ifdef TINYSA4
- 243775000,             // OK
- 325000000,             // !!! This is a double spur
- 325190000,             // !!! This is a double spur
- 390123000,
- 487541650,             // OK This is linked to the MODULO of the ADF4350
- 650687000,             // OK
- 731780000,             // OK
- 977400000,
- 977400000*2,
-#else
 // 580000,            // 433.8 MHz table
 // 880000,    //?
  960000,
@@ -2543,15 +2532,31 @@ static  freq_t spur_table[] =                                 // Frequencies to 
  287950000,
 // 288029520,
  332494215,
-
-
-#endif
 };
+const int spur_table_size = (sizeof spur_table)/sizeof(freq_t);
+#endif
+#ifdef TINYSA4
+#define MAX_SPUR_TABLE_SIZE 100
+static  freq_t spur_table[MAX_SPUR_TABLE_SIZE] =  // Frequencies to avoid
+{
+ 243775000,             // OK
+ 325000000,             // !!! This is a double spur
+ 325190000,             // !!! This is a double spur
+ 390123000,
+ 487541650,             // OK This is linked to the MODULO of the ADF4350
+ 650687000,             // OK
+ 731780000,             // OK
+ 977400000,
+ 977400000*2,
+};
+
+int spur_table_size = 9;
+#endif
 
 int binary_search(freq_t f)
 {
   int L = 0;
-  int R =  (sizeof spur_table)/sizeof(int) - 1;
+  int R =  spur_table_size - 1;
   freq_t fmin =  f - spur_gate;
   freq_t fplus = f + spur_gate;
 #if 0
@@ -2587,6 +2592,7 @@ static const uint8_t spur_mul[] = {1, 1, 1, 2, 1, 2, 3};
 
 void fill_spur_table(void)
 {
+  return; // TODO remove spur table updating.
   uint8_t i;
   freq_t corr_IF;
   for (i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
@@ -2595,7 +2601,7 @@ void fill_spur_table(void)
     if (!setting.auto_IF)
       corr_IF = setting.frequency_IF;
     else {
-      corr_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2 - DEFAULT_SPUR_OFFSET/2;
+      corr_IF = config.frequency_IF1 - DEFAULT_SPUR_OFFSET/2;
       setting.frequency_IF = corr_IF;
     }
    if (i != 5)  // <------------------- Index of the 3/2 entry in the spur tables
@@ -2618,10 +2624,11 @@ void fill_spur_table(void)
   if (!setting.auto_IF)
     corr_IF = setting.frequency_IF;
   else {
-    corr_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2 - DEFAULT_SPUR_OFFSET/2;
+    corr_IF = config.frequency_IF1 - DEFAULT_SPUR_OFFSET/2;
   }
   spur_table[i++] = corr_IF - IF_OFFSET*3/2;
   spur_table[i++] = corr_IF*2 - IF_OFFSET;
+  spur_table_size = i;
 }
 #endif
 
@@ -2642,10 +2649,10 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
     return(F_NOSPUR);
 #endif
   int L = 0;
-  int R =  (sizeof spur_table)/sizeof(int) - 1;
+  int R =  spur_table_size - 1;
 #ifdef TINYSA4
-  freq_t fmin =  f - spur_gate*8;
-  freq_t fplus = f + spur_gate*8;
+  freq_t fmin =  f - spur_gate; //*8;
+  freq_t fplus = f + spur_gate; //*8;
 #else
   freq_t fmin =  f - spur_gate;
   freq_t fplus = f + spur_gate;
@@ -3259,7 +3266,7 @@ modulation_again:
   int local_vbw_steps = vbwSteps;
   freq_t local_IF;
 #ifdef TINYSA4
-  local_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
+  local_IF = config.frequency_IF1;
   if (setting.mode == M_LOW && setting.frequency_step > 0 && ultra &&
       ((f < ULTRA_MAX_FREQ &&  f > MAX_LO_FREQ - local_IF) ||
        ( f > config.ultra_threshold && f < MIN_BELOW_LO + local_IF))
@@ -3323,7 +3330,7 @@ again:                                                              // Spur redu
       else
       {
 #ifdef TINYSA4
-        local_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
+        local_IF = config.frequency_IF1;
 #if 0
         if ( S_IS_AUTO(setting.below_IF)) {
 //          if (f < 2000000 && S_IS_AUTO(setting.spur_removal))
@@ -3378,37 +3385,21 @@ again:                                                              // Spur redu
             {              // below/above IF
               if ((debug_avoid && debug_avoid_second) || spur_second_pass) {
                 setting.below_IF = S_AUTO_ON;
-#ifdef TINYSA4
-                local_IF  = local_IF + DEFAULT_SPUR_OFFSET/4;    // apply IF spur shift
-#endif
               } else {
                 setting.below_IF = S_AUTO_OFF;               // use below IF in second pass
-#ifdef TINYSA4
-                local_IF  = local_IF - DEFAULT_SPUR_OFFSET/4;    // apply IF spur shift
-#endif
               }
             }
-            else if (setting.auto_IF)
+            else // if (setting.auto_IF)
             {
 #ifdef TINYSA4
               LO_shifting = true;
 #endif
               if ((debug_avoid && debug_avoid_second) || spur_second_pass) {
 #ifdef TINYSA4
-                if (config.frequency_IF1-6500000 < f && f < config.frequency_IF1+500000 ) {
-                  local_IF  = local_IF + DEFAULT_SPUR_OFFSET*3/4;    // apply IF spur shift
-                  if (debug_avoid)
-                    stored_t[i] = -90.0;                                       // Display when to do spur shift in the stored trace
-                } else {
-                  local_IF  = local_IF + DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
-                }
+                local_IF  = local_IF + DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 3000 ? 200000 : 0);    // apply IF spur shift
                 LO_shifted = true;
               } else {
-                if (config.frequency_IF1-6500000 < f && f < config.frequency_IF1+500000) {
-                  local_IF  = local_IF - DEFAULT_SPUR_OFFSET*3/4;    // apply IF spur shift
-                } else {
-                  local_IF  = local_IF - DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
-                }
+                local_IF  = local_IF - (actual_rbw_x10 > 3000 ? 200000 : 0);// - DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
               }
 #else
                 local_IF  = local_IF + 500000;                  // apply IF spur shift
@@ -3421,7 +3412,7 @@ again:                                                              // Spur redu
             if (debug_avoid) {
               if (spur_flag == F_NEAR_SPUR) {
                 stored_t[i] = -70.0;                                       // Display when to do spur shift in the stored trace
-                local_IF -= DEFAULT_SPUR_OFFSET/2;
+  //              local_IF -= DEFAULT_SPUR_OFFSET/2;
               } else if (spur_flag == F_AT_SPUR){
                 stored_t[i] = -60.0;
                 // Display when to do spur shift in the stored trace
@@ -3442,13 +3433,16 @@ again:                                                              // Spur redu
             } else
             if(spur_flag) {         // check if alternate IF is needed to avoid spur.
               if (spur_flag == F_NEAR_SPUR) {
-                local_IF -= DEFAULT_SPUR_OFFSET/2;
+//                local_IF -= DEFAULT_SPUR_OFFSET/2;
               } else {
+#ifndef TINYSA4
                 if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
                   setting.below_IF = S_AUTO_ON;
                   local_IF = local_IF;                          // No spur removal and no spur, center in IF
-                } else if (setting.auto_IF) {
-                  local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
+                } else
+#endif
+                if (setting.auto_IF) {
+                  local_IF = local_IF + DEFAULT_SPUR_OFFSET;
                   //                if (actual_rbw_x10 == 6000 )
                   //                  local_IF = local_IF + 50000;
                   LO_shifted = true;
@@ -3466,7 +3460,7 @@ again:                                                              // Spur redu
             else
             {
 #ifdef TINYSA4
-              local_IF = local_IF - 800000 + actual_rbw_x10*100;                  // No spure removal and no spur, center in IF but avoid mirror
+//              local_IF = local_IF - 800000 + actual_rbw_x10*100;                  // No spure removal and no spur, center in IF but avoid mirror
 #else
               local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
 #endif
@@ -3592,10 +3586,10 @@ again:                                                              // Spur redu
             }
           } else {
             if (local_modulo == 0) {
-              if (actual_rbw_x10 >= 3000)
-                ADF4351_modulo(1000);
-              else
-                ADF4351_modulo(60);
+//              if (actual_rbw_x10 >= 3000)
+                ADF4351_modulo(4000);
+//              else
+//                ADF4351_modulo(60);
             }
 #if 0
             if (setting.frequency_step < 100000) {
@@ -5592,7 +5586,7 @@ void test_prepare(int i)
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
 #ifdef TINYSA4
-  setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;                // Default frequency
+  setting.frequency_IF = config.frequency_IF1;                // Default frequency
   setting.extra_lna = false;
 #else
   setting.frequency_IF = DEFAULT_IF;                // Default frequency
@@ -5629,7 +5623,7 @@ common_silent:
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
 #ifdef TINYSA4
-    setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;                // Center on SAW filters
+    setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/3;                // Center on SAW filters
     set_refer_output(0);
 #else
     setting.frequency_IF = DEFAULT_IF+210000;                // Center on SAW filters
@@ -5731,21 +5725,59 @@ common_silent:
 
 extern void menu_autosettings_cb(int item, uint16_t data);
 
+#ifdef TINYSA4
 int last_spur = 0;
-int add_spur(int f)
+int add_spur(int f, float p)
 {
   for (int i = 0; i < last_spur; i++) {
-    if (temp_t[i] == f) {
+    if (temp_t[i]-1 <= f && f <= temp_t[i]+1) {
       stored_t[i] += 1;
+      if (stored2_t[i] < p)
+        stored2_t[i] = p;
       return stored_t[i];
     }
   }
   if (last_spur < POINTS_COUNT) {
     temp_t[last_spur] = f;
+#if TRACES_MAX == 4
+    stored2_t[last_spur] = p;
+#endif
     stored_t[last_spur++] = 1;
   }
   return 1;
 }
+
+void sort_spur_freq(void) {
+  for (int counter = 0 ; counter < last_spur - 1; counter++)
+  {
+    for (int counter1 = 0 ; counter1 < last_spur - counter - 1; counter1++)
+    {
+      if (temp_t[counter1] > temp_t[counter1+1]) //increasing frequency
+      {
+        float swap_var = temp_t[counter1]; temp_t[counter1] = temp_t[counter1+1]; temp_t[counter1+1] = swap_var;
+              swap_var = stored_t[counter1]; stored_t[counter1] = stored_t[counter1+1]; stored_t[counter1+1] = swap_var;
+              swap_var = stored2_t[counter1]; stored2_t[counter1] = stored2_t[counter1+1]; stored2_t[counter1+1] = swap_var;
+      }
+    }
+  }
+}
+
+void sort_spur_level(void) {
+  for (int counter = 0 ; counter < last_spur - 1; counter++)
+  {
+    for (int counter1 = 0 ; counter1 < last_spur - counter - 1; counter1++)
+    {
+      if (stored2_t[counter1] < stored2_t[counter1+1]) // decreasing level
+      {
+        float swap_var = temp_t[counter1]; temp_t[counter1] = temp_t[counter1+1]; temp_t[counter1+1] = swap_var;
+              swap_var = stored_t[counter1]; stored_t[counter1] = stored_t[counter1+1]; stored_t[counter1+1] = swap_var;
+              swap_var = stored2_t[counter1]; stored2_t[counter1] = stored2_t[counter1+1]; stored2_t[counter1+1] = swap_var;
+      }
+    }
+  }
+}
+
+#endif
 
 //static bool test_wait = false;
 static int test_step = 0;
@@ -5837,65 +5869,82 @@ quit:
     set_refer_output(-1);
 #ifdef TINYSA4
   } else if (test == 1) {
-    float average, p;
-    freq_t end_freq = 100000000;
-    if (setting.test_argument > 0)
-      end_freq =setting.test_argument;
+    float average, p, p_min = -115.0;
+    freq_t start = get_sweep_frequency(ST_START);
+    freq_t stop  = get_sweep_frequency(ST_STOP);
 
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SILENCE);
+    setting.stored[TRACE_STORED] = true;    // Prevent overwriting when used
+    setting.stored[TRACE_TEMP] = true;
+    setting.stored[TRACE_STORED2] = true;
     freq_t f;
 #ifdef TINYSA4
-    setting.frequency_step = 1000;
+    setting.frequency_step = 3000;
 #else
    setting.auto_IF = false;
    setting.frequency_IF=DEFAULT_IF;
    setting.frequency_step = 30000;
  #endif
+   if (setting.test_argument > 0)
+     setting.frequency_step = setting.test_argument;
     //  int i = 0;                     // Index in spur table (temp_t)
     set_RBW(setting.frequency_step/100);
     last_spur = 0;
     for (int j = 0; j < 4; j++) {
       int k=0;
-#ifdef TINYSA4
-      f = 2200000;           // Start search at 2.2MHz
-#else
-      f = 400000;           // Start search at 400kHz
- #endif
+      f = start;
       average = PURE_TO_float(perform(false, 0, f, false));
       vbwSteps = 1;
       f += setting.frequency_step;
       average += PURE_TO_float(perform(false, 1, f, false));
       average /= 2.0;
       f += setting.frequency_step;
-      shell_printf("\n\rStarting with average of %4.2f and IF at %DHz and step of %DHz till %DHz\n\r", average, setting.frequency_IF, setting.frequency_step, end_freq );
+      shell_printf("\n\rStarting with average of %4.2f and IF at %DHz and step of %DHz till %DHz\n\r", average, setting.frequency_IF, setting.frequency_step, stop );
 //      while (f < DEFAULT_MAX_FREQ && !global_abort) {
-      while (f < end_freq && !global_abort) {
+      while (f < stop && !global_abort) {
         if ((k++ % 1000) == 0)
-          shell_printf("Pass %d, freq %D\r", j, f);
-        int r = 0;
+          shell_printf("Pass %d, freq %D\r", j+1, f);
+        int cnt = 0;
+        p = 0;
+#define SPUR_CHECK_COUNT 1 // 4
         do {
-          p = PURE_TO_float(perform(false, 1, f, false));
+          cnt++;
+          p += PURE_TO_float(perform(false, 1, f, false));
 #ifdef TINYSA4
 #define SPUR_DELTA  10
 #else
 #define SPUR_DELTA  15
 #endif
-        } while ( average + SPUR_DELTA < p  && r++ < 4);
-        if (r >= 4) {
-          shell_printf("Pass %d, spur of %4.2f at %DkHz with count %d\n\r", j, p,f/1000, add_spur(f));
+        } while ( average + SPUR_DELTA < p/cnt  && cnt < SPUR_CHECK_COUNT);
+        p /= cnt;
+        if (cnt == SPUR_CHECK_COUNT && p > p_min && average + SPUR_DELTA < p/cnt) {
+          shell_printf("Pass %d, %4.2fdBm spur at %DkHz with count %d\n\r", j+1, p,f/1000, add_spur(f, p));
         }
         average = (average*19+p)/20;
         f += setting.frequency_step;
       }
     }
     shell_printf("\n\rTable for IF at %D and step of %D\n\r", setting.frequency_IF, setting.frequency_step);
+    shell_printf("Freq(kHz), count, level(dBm), level with spur removal\n\r");
+    in_selftest = false;
+    setting.spur_removal = S_ON;
+    sort_spur_level();                  // Reduce table to only strongest spurs
+    if (last_spur > MAX_SPUR_TABLE_SIZE)
+      last_spur = MAX_SPUR_TABLE_SIZE;
+    sort_spur_freq();
     for (int j = 0; j < last_spur; j++) {
-      if ((int)stored_t[j] >= 1)
-        shell_printf("%d, %d\n\r", ((int)temp_t[j])/1000, (int)stored_t[j]);
+      if ((int)stored_t[j] >= 1) {
+        shell_printf("%d, %d, %4.2f, %4.2f\n\r", ((int)temp_t[j])/1000, (int)stored_t[j], stored2_t[j], PURE_TO_float(perform(false, 1, (freq_t)temp_t[j], false)));
+        if (j < MAX_SPUR_TABLE_SIZE)
+          spur_table[j] = temp_t[j];
+      }
     }
+    spur_table_size = (last_spur < MAX_SPUR_TABLE_SIZE ? last_spur : MAX_SPUR_TABLE_SIZE);
     reset_settings(M_LOW);
+    set_sweep_frequency(ST_START, start);
+    set_sweep_frequency(ST_STOP, stop);
 #endif
   } else if (false && test == 2) {                                   // Attenuator test
     in_selftest = true;
@@ -5942,7 +5991,7 @@ quit:
 #ifdef TINYSA4
     int old_setting_r = setting.R;
     setting.R = 1;                              // force to highest scan speed
-    setting.frequency_IF=config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/2;
+    setting.frequency_IF=config.frequency_IF1;
     setting.step_delay = 15000;
 #else
     setting.frequency_IF=DEFAULT_IF;
@@ -6367,7 +6416,7 @@ void calibrate(void)
   setting.test_argument = -7;
   self_test(0);
   int if_error = peakFreq - 30000000;
-  if (if_error > -500000 && if_error < 500000) {
+  if (if_error > -1000000 && if_error < 1000000) {
     config.frequency_IF1 += if_error;
     fill_spur_table();
   }

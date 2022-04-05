@@ -1128,7 +1128,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_spur_acb)
 #endif
 #endif
 
-#if 0
 #ifdef __ULTRA__
 static UI_FUNCTION_ADV_CALLBACK(menu_debug_spur_acb)
 {
@@ -1142,7 +1141,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_spur_acb)
   //  menu_move_back();
   ui_mode_normal();
 }
-#endif
 #endif
 
 #ifdef TINYSA4
@@ -2723,6 +2721,7 @@ static const menuitem_t menu_settings4[] =
 {
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
+ { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
 #if 0                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
@@ -3759,13 +3758,16 @@ redraw_cal_status:
     lcd_printf(x, y, "Calc:\n%s", averageText[setting.average[0]]);
     y = add_quick_menu(y+= YSTEP, (menuitem_t *)menu_average);
   }
-  // Spur
-#ifdef __SPUR__
+#ifdef __SPUR__  // Spur
+#ifdef TINYSA3
   if (setting.spur_removal != S_OFF) {
+#endif
     ili9341_set_foreground(setting.spur_removal == S_ON ? LCD_BRIGHT_COLOR_GREEN : LCD_FG_COLOR);
-    lcd_printf(x, y, "Spur:\n%s", S_IS_AUTO(setting.spur_removal) ? "AUTO" : "ON");
+    lcd_printf(x, y, "Spur:\n%s", S_IS_AUTO(setting.spur_removal) ? "AUTO" : (setting.spur_removal == S_OFF ?"OFF" : "ON"));
     y = add_quick_menu(y += YSTEP, (menuitem_t *)menu_config);
+#ifdef TINYSA3
   }
+#endif
   if (setting.mirror_masking) {
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
     ili9341_drawstring("Mask:\nON", x, y);

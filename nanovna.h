@@ -167,6 +167,9 @@
 
 #define actual_t  measured[TRACE_ACTUAL]
 #define stored_t  measured[TRACE_STORED]
+#if TRACES_MAX == 4
+#define stored2_t  measured[TRACE_STORED2]
+#endif
 #define temp_t    measured[TRACE_TEMP]
 // #define age_t     measured[TRACE_AGE]
 
