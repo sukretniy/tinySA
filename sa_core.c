@@ -157,6 +157,7 @@ const freq_t fh_high[] = { 480000000, 960000000, 1920000000, 2880000000, 3840000
 #endif
 
 uint8_t in_selftest = false;
+uint8_t in_step_test = false;
 
 void update_min_max_freq(void)
 {
@@ -1625,9 +1626,9 @@ static const struct {
   {  8500,       150,           50,      400,   -90,    0.7},
   {  6000,       150,           50,      300,   -95,    0.8},
   {  3000,       150,           50,      200,   -95,    1.3},
-  {  1000,       350,          100,      100,   -105,   0.3},
-  {   300,       420,          120,      100,   -110,   0.7},
-  {   100,      1280,          120,      100,   -115,   0.5},
+  {  1000,       170,          100,      100,   -105,   0.3},
+  {   300,       300,          120,      100,   -110,   0.7},
+  {   100,       700,          120,      100,   -115,   0.5},
   {    30,      1600,          300,      100,   -120,   0.7},
   {    10,      4000,          600,      100,   -122,   1.1},
   {     3,     18700,        12000,      100,   -125,   1.0}
@@ -1665,11 +1666,7 @@ void calculate_step_delay(void)
       noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
       log_averaging_correction = step_delay_table[i].log_aver_correction;
 #endif
-      if (setting.step_delay_mode == SD_PRECISE
-#ifdef TINYSA4
-          || setting.increased_R
-#endif
-          )    // In precise mode wait twice as long for RSSI to stabilize
+      if (setting.step_delay_mode == SD_PRECISE)    // In precise mode wait twice as long for RSSI to stabilize
         SI4432_step_delay += (SI4432_step_delay>>2) ;
       if (setting.fast_speedup >0)
         SI4432_offset_delay = SI4432_step_delay / setting.fast_speedup;
@@ -2539,6 +2536,20 @@ const int spur_table_size = (sizeof spur_table)/sizeof(freq_t);
 #define MAX_SPUR_TABLE_SIZE 100
 static  freq_t spur_table[MAX_SPUR_TABLE_SIZE] =  // Frequencies to avoid
 {
+#if 1
+ 6363000,
+ 21363000,
+ 60000000,
+ 120000000,
+ 180000000,
+ 300000000,
+ 480000000,
+ 487700000,
+ 540000000,
+ 650892000,
+ 704886000,
+ 720000000,
+#else
  243775000,             // OK
  325000000,             // !!! This is a double spur
  325190000,             // !!! This is a double spur
@@ -2548,9 +2559,10 @@ static  freq_t spur_table[MAX_SPUR_TABLE_SIZE] =  // Frequencies to avoid
  731780000,             // OK
  977400000,
  977400000*2,
+#endif
 };
 
-int spur_table_size = 9;
+int spur_table_size = 12;
 #endif
 
 int binary_search(freq_t f)
@@ -2586,13 +2598,13 @@ int binary_search(freq_t f)
 }
 
 #ifdef TINYSA4
-static const uint8_t spur_div[] = {4, 3, 3, 5, 2, 3, 4};
-static const uint8_t spur_mul[] = {1, 1, 1, 2, 1, 2, 3};
+static const uint8_t spur_div[] = {3, 3, 5, 2, 3, 4};        // 4/1 removed
+static const uint8_t spur_mul[] = {1, 1, 2, 1, 2, 3};
 #define IF_OFFSET   468750*4        //
 
 void fill_spur_table(void)
 {
-  return; // TODO remove spur table updating.
+//  return; // TODO remove spur table updating.
   uint8_t i;
   freq_t corr_IF;
   for (i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
@@ -3409,6 +3421,7 @@ again:                                                              // Spur redu
           } else {
             int spur_flag = avoid_spur(lf);
 #ifdef TINYSA4
+#if 0
             if (debug_avoid) {
               if (spur_flag == F_NEAR_SPUR) {
                 stored_t[i] = -70.0;                                       // Display when to do spur shift in the stored trace
@@ -3431,22 +3444,29 @@ again:                                                              // Spur redu
                 stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
               }
             } else
+#endif
             if(spur_flag) {         // check if alternate IF is needed to avoid spur.
               if (spur_flag == F_NEAR_SPUR) {
+                if (debug_avoid) stored_t[i] = -70.0;                                  // Display when to do spur shift in the stored trace
+
 //                local_IF -= DEFAULT_SPUR_OFFSET/2;
-              } else {
-#ifndef TINYSA4
+              } else if (spur_flag == F_AT_SPUR && (!debug_avoid || debug_avoid_second)) {
+                if (debug_avoid) stored_t[i] = -60.0;                                  // Display when to do spur shift in the stored trace
+//#ifndef TINYSA4
                 if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
                   setting.below_IF = S_AUTO_ON;
                   local_IF = local_IF;                          // No spur removal and no spur, center in IF
                 } else
-#endif
+//#endif
                 if (setting.auto_IF) {
-                  local_IF = local_IF + DEFAULT_SPUR_OFFSET;
+                  local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
                   //                if (actual_rbw_x10 == 6000 )
                   //                  local_IF = local_IF + 50000;
                   LO_shifted = true;
                 }
+              } else
+              {
+                if (debug_avoid) stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
               }
             }
 #else
@@ -3545,20 +3565,14 @@ again:                                                              // Spur redu
           if (setting.mode == M_GENLOW) {
             if (local_modulo == 0) ADF4351_modulo(1000);
             ADF4351_R_counter(3);
-          } else if ( ( (lf > 8000000 && lf < 800000000) || (lf > 500000000 && lf < 520000000)  ) /* && lf >= TXCO_DIV3 */ && MODE_INPUT(setting.mode)) {
-#if 0
-            if (local_modulo == 0) {
-              if (actual_rbw_x10 >= 3000)
-                ADF4351_modulo(1000);
-              else
-                ADF4351_modulo(60);
-            }
-#endif
+          } else if (lf > 8000000 && lf < 800000000 && MODE_INPUT(setting.mode)) {
+            if (local_modulo == 0) ADF4351_modulo(4000);
+
             freq_t tf = ((lf + actual_rbw_x10*200) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 && tf != 180000000) {   // 30MHz
-              setting.increased_R = true;
-              if ( (tf / TCXO) & 1 )    // Odd harmonic of 30MHz
+              if ( (tf / TCXO) & 1 ) {    // Odd harmonic of 30MHz
                 ADF4351_R_counter(-3);
+              }
               else
                 ADF4351_R_counter(3);
             } else {
@@ -3573,18 +3587,20 @@ again:                                                              // Spur redu
                   ADF4351_R_counter(3);
               } else
 #endif
-                if (get_sweep_frequency(ST_SPAN)<500000) {
-                  if (actual_rbw_x10 < 1000) {
+                if (get_sweep_frequency(ST_SPAN)<5000000) { // When scanning less then 5MHz
+                  if (actual_rbw_x10 <= 3000) {
+                    setting.increased_R = true;
                     freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
                     if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
                       ADF4351_R_counter(4);    // To avoid PLL Loop shoulders at multiple of 10MHz
                     else
                       ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
-                  }
+                  } else
+                    ADF4351_R_counter(1);
                 } else
                   ADF4351_R_counter(1);
             }
-          } else {
+          } else {                          // Input above 800 MHz
             if (local_modulo == 0) {
 //              if (actual_rbw_x10 >= 3000)
                 ADF4351_modulo(4000);
@@ -3632,7 +3648,7 @@ again:                                                              // Spur redu
           if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
             error_f *= setting.harmonic;
           }
-//          if (error_f > actual_rbw_x10 * 5)        //RBW / 4
+          if (error_f > actual_rbw_x10 * 5)        //RBW / 4
             local_IF += error_f;
         } else if ( real_old_freq[ADF4351_LO] < target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
@@ -3644,7 +3660,7 @@ again:                                                              // Spur redu
           if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
             error_f *= setting.harmonic;
           }
-//          if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
+          if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
             local_IF += error_f;
         }
         }
@@ -3887,7 +3903,7 @@ again:                                                              // Spur redu
 #ifdef TINYSA4
     if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
       int my_step_delay = SI4432_step_delay;
-      if (f < 2000000 && actual_rbw_x10 == 3)
+      if (f < 2000000 && actual_rbw_x10 == 3 && !in_step_test)
         my_step_delay = my_step_delay * 2;
 //      if (LO_shifted) // || SI4463_offset_changed)
 //        my_step_delay = my_step_delay * 2;
@@ -3898,7 +3914,30 @@ again:                                                              // Spur redu
           my_step_delay = 0;
       }
 #endif
-      my_microsecond_delay(my_step_delay * (old_R > 5  ? 8 : (old_R > 3  ? 2 : 1)));
+      if (!in_step_test) {
+        if (old_R >= 5) {
+          if (my_step_delay <500)
+            my_step_delay *= 6;
+          else if (my_step_delay <1000)
+                my_step_delay *= 4;
+        } else if (old_R == 4) {
+          if (my_step_delay <500)
+            my_step_delay *= 4;
+          else if (my_step_delay <1000)
+                my_step_delay *= 2;
+          else if (my_step_delay <10000)
+                my_step_delay += my_step_delay>>1;
+          } else if (old_R == 3) {
+          if (my_step_delay <500)
+            my_step_delay *= 3;
+          else if (my_step_delay <1000)
+                my_step_delay += my_step_delay>>2;
+        } else if (old_R <= -3) {
+          if (my_step_delay <1000)
+            my_step_delay += my_step_delay >> 1 ;
+        }
+      }
+      my_microsecond_delay(my_step_delay);
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
       SI4463_offset_changed = false;
@@ -5777,6 +5816,21 @@ void sort_spur_level(void) {
   }
 }
 
+void sort_spur_count(void) {
+  for (int counter = 0 ; counter < last_spur - 1; counter++)
+  {
+    for (int counter1 = 0 ; counter1 < last_spur - counter - 1; counter1++)
+    {
+      if (stored_t[counter1] < stored_t[counter1+1]) // decreasing count
+      {
+        float swap_var = temp_t[counter1]; temp_t[counter1] = temp_t[counter1+1]; temp_t[counter1+1] = swap_var;
+              swap_var = stored_t[counter1]; stored_t[counter1] = stored_t[counter1+1]; stored_t[counter1+1] = swap_var;
+              swap_var = stored2_t[counter1]; stored2_t[counter1] = stored2_t[counter1+1]; stored2_t[counter1+1] = swap_var;
+      }
+    }
+  }
+}
+
 #endif
 
 //static bool test_wait = false;
@@ -5872,13 +5926,14 @@ quit:
     float average, p, p_min = -115.0;
     freq_t start = get_sweep_frequency(ST_START);
     freq_t stop  = get_sweep_frequency(ST_STOP);
-
+    debug_avoid = false;
     in_selftest = true;               // Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SILENCE);
     setting.stored[TRACE_STORED] = true;    // Prevent overwriting when used
     setting.stored[TRACE_TEMP] = true;
     setting.stored[TRACE_STORED2] = true;
+    setting.below_IF = S_OFF;
     freq_t f;
 #ifdef TINYSA4
     setting.frequency_step = 3000;
@@ -5890,6 +5945,7 @@ quit:
    if (setting.test_argument > 0)
      setting.frequency_step = setting.test_argument;
     //  int i = 0;                     // Index in spur table (temp_t)
+   spur_table_size = 0;         // Reset table before scanning
     set_RBW(setting.frequency_step/100);
     last_spur = 0;
     for (int j = 0; j < 4; j++) {
@@ -5908,18 +5964,17 @@ quit:
           shell_printf("Pass %d, freq %D\r", j+1, f);
         int cnt = 0;
         p = 0;
-#define SPUR_CHECK_COUNT 1 // 4
+#define SPUR_CHECK_COUNT 4 // 4
         do {
           cnt++;
-          p += PURE_TO_float(perform(false, 1, f, false));
+          p = PURE_TO_float(perform(false, 1, f, false));
 #ifdef TINYSA4
 #define SPUR_DELTA  10
 #else
 #define SPUR_DELTA  15
 #endif
-        } while ( average + SPUR_DELTA < p/cnt  && cnt < SPUR_CHECK_COUNT);
-        p /= cnt;
-        if (cnt == SPUR_CHECK_COUNT && p > p_min && average + SPUR_DELTA < p/cnt) {
+        } while ( average + SPUR_DELTA < p  && cnt < SPUR_CHECK_COUNT);
+        if (cnt == SPUR_CHECK_COUNT /* && p > p_min */ && average + SPUR_DELTA < p) {
           shell_printf("Pass %d, %4.2fdBm spur at %DkHz with count %d\n\r", j+1, p,f/1000, add_spur(f, p));
         }
         average = (average*19+p)/20;
@@ -5930,18 +5985,21 @@ quit:
     shell_printf("Freq(kHz), count, level(dBm), level with spur removal\n\r");
     in_selftest = false;
     setting.spur_removal = S_ON;
+    sort_spur_count();                  // Reduce table to most certain spurs
+    if (last_spur > MAX_SPUR_TABLE_SIZE)
+      last_spur = MAX_SPUR_TABLE_SIZE;
     sort_spur_level();                  // Reduce table to only strongest spurs
     if (last_spur > MAX_SPUR_TABLE_SIZE)
       last_spur = MAX_SPUR_TABLE_SIZE;
     sort_spur_freq();
+    spur_table_size = 0;
     for (int j = 0; j < last_spur; j++) {
       if ((int)stored_t[j] >= 1) {
         shell_printf("%d, %d, %4.2f, %4.2f\n\r", ((int)temp_t[j])/1000, (int)stored_t[j], stored2_t[j], PURE_TO_float(perform(false, 1, (freq_t)temp_t[j], false)));
-        if (j < MAX_SPUR_TABLE_SIZE)
-          spur_table[j] = temp_t[j];
+        if (j < MAX_SPUR_TABLE_SIZE && (int)stored_t[j] >= 3)
+          spur_table[spur_table_size++] = temp_t[j];
       }
     }
-    spur_table_size = (last_spur < MAX_SPUR_TABLE_SIZE ? last_spur : MAX_SPUR_TABLE_SIZE);
     reset_settings(M_LOW);
     set_sweep_frequency(ST_START, start);
     set_sweep_frequency(ST_STOP, stop);
@@ -5983,6 +6041,11 @@ quit:
     reset_settings(M_LOW);
 #ifdef TINYSA4
   } else if (test == 3) {                       // RBW step time search
+#define R_TABLE_SIZE 5
+static int R_table[R_TABLE_SIZE] = {1,3,-3,4,5};
+
+    int calculate_step[R_TABLE_SIZE][SI4432_RBW_count];
+    in_step_test = true;
     in_selftest = true;
     ui_mode_normal();
     test_prepare(TEST_RBW);
@@ -5992,7 +6055,7 @@ quit:
     int old_setting_r = setting.R;
     setting.R = 1;                              // force to highest scan speed
     setting.frequency_IF=config.frequency_IF1;
-    setting.step_delay = 15000;
+    setting.step_delay = 25000;
 #else
     setting.frequency_IF=DEFAULT_IF;
     setting.step_delay = 8000;
@@ -6002,7 +6065,8 @@ quit:
         j = setting.test_argument;
 // do_again:
 #ifdef TINYSA4
-      setting.R = 1;                              // force to highest scan speed
+      for (int r=0;r<R_TABLE_SIZE;r++) {
+      setting.R = R_table[r];                              // force to highest scan speed
 #endif
       test_prepare(TEST_RBW);
       setting.spur_removal = S_OFF;
@@ -6018,8 +6082,11 @@ quit:
         setting.step_delay = 1000;
       setting.offset_delay = setting.step_delay ;
       setting.rbw_x10 = force_rbw(j);
-
-      shell_printf("RBW = %f, ",setting.rbw_x10/10.0);
+#ifdef TINYSA4
+      shell_printf("RBW=%5.1f, R=%+d, ",setting.rbw_x10/10.0, setting.R);
+#else
+      shell_printf("RBW=%5.1f, ",setting.rbw_x10/10.0);
+#endif
 #if 0
       set_sweep_frequency(ST_SPAN, (freq_t)(setting.rbw_x10 * 1000));     // Wide
 #else
@@ -6043,11 +6110,11 @@ quit:
          aver_noise += actual_t[i];
       aver_noise /= 50;
       float saved_aver_noise = aver_noise;
-      shell_printf("Start level, noise, delay = %f, %f, %d\n\r",peakLevel, aver_noise, setting.step_delay);
+      shell_printf("Start level=%6.1f, noise=%4.1f, delay=%5d\n\r",peakLevel, aver_noise, setting.step_delay);
 
 #if 1                                                                       // Enable for step delay tuning
       float saved_peakLevel = peakLevel;
-      while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 1.5 && aver_noise < saved_aver_noise + 5) {
+      while (setting.step_delay > 10 && test_value != 0 && test_value > saved_peakLevel - 1.5 && aver_noise < saved_aver_noise + 2) {
         test_prepare(TEST_RBW);
         setting.spur_removal = S_OFF;
         setting.step_delay_mode = SD_NORMAL;
@@ -6064,7 +6131,7 @@ quit:
         for (int i=0;i<50;i++)
            aver_noise += actual_t[i];
         aver_noise /= 50;
-      shell_printf(" Level, noise, delay = %f, %f, %d\n\r",peakLevel, aver_noise, setting.step_delay);
+//        shell_printf(" Level, noise, delay = %f, %f, %d\n\r",peakLevel, aver_noise, setting.step_delay);
       }
 
       setting.step_delay = setting.step_delay * 5 / 4;          // back one level
@@ -6097,14 +6164,33 @@ quit:
         setting.offset_delay = setting.offset_delay * 5 / 4;            // back one level
       }
 #endif
-      shell_printf("End level = %f, noise = %f, step time = %d, fast delay = %d\n\r",peakLevel, aver_noise, setting.step_delay, setting.offset_delay);
-      shell_printf("---------------------------------------------\n\r");
 #ifdef TINYSA4
-      setting.R = old_setting_r;
+      calculate_step[r][j] = setting.step_delay;
+      shell_printf("RBW=%5.1f, R=%+d, End level=%6.1f, noise=%4.1f, delay=%5d, fast delay=%d\n\r",setting.rbw_x10/10.0, setting.R, peakLevel, aver_noise, setting.step_delay, setting.offset_delay);
+#else
+      calculate_step[j] = setting.step_delay;
+      shell_printf("End level=%5.1f, noise=%6.1f, delay=%5d, fast delay = %d\n\r",peakLevel, aver_noise, setting.step_delay, setting.offset_delay);
 #endif
+      shell_printf("---------------------------------------------\n\r");
+      }
       if (setting.test_argument != 0)
         break;
     }
+
+#ifdef TINYSA4
+      setting.R = old_setting_r;
+#endif
+    for (int j= 0; j < SI4432_RBW_count; j++ ) {
+#ifdef TINYSA4
+      for (int r=0;r<R_TABLE_SIZE;r++) {
+        shell_printf("RBW=%4.1f, R=%+d, time=%5d, fast delay=%4d\n\r",force_rbw(j)/10.0, R_table[r], calculate_step[r][j], setting.offset_delay);
+      }
+#else
+      shell_printf("RBW=%4.1f, time=%5d, fast delay=%4d\n\r",force_rbw(j)/10.0, calculate_step[r][j], setting.offset_delay);
+#endif
+    }
+    in_step_test = false;
+    in_selftest = false;
     reset_settings(M_LOW);
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
