@@ -2604,7 +2604,7 @@ static const uint8_t spur_mul[] = {1, 1, 2, 1, 2, 3};
 
 void fill_spur_table(void)
 {
-//  return; // TODO remove spur table updating.
+  return; // TODO remove spur table updating.
   uint8_t i;
   freq_t corr_IF;
   for (i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
@@ -5257,10 +5257,10 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 30,    1,      CAL_LEVEL,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
- TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,990,    10,    -85,    0,      -85),         // 6 Wide band noise floor high mode
+ TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,990,    10,    -90,    0,      -90),         // 6 Direct path with harmonic
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    27,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
- TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       880,    1,     -100,    0,      -100),       // 9 LPF cutoff
+ TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       880,    1,     -95,    0,      -100),       // 9 LPF cutoff
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      CAL_LEVEL,    10,     -50),      // 10 Switch isolation using high attenuation
  TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 11 test display
  TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 12 Measure atten step accuracy
