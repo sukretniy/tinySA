@@ -3452,12 +3452,12 @@ again:                                                              // Spur redu
 //                local_IF -= DEFAULT_SPUR_OFFSET/2;
               } else if (spur_flag == F_AT_SPUR && (!debug_avoid || debug_avoid_second)) {
                 if (debug_avoid) stored_t[i] = -60.0;                                  // Display when to do spur shift in the stored trace
-//#ifndef TINYSA4
+#ifndef TINYSA4
                 if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
                   setting.below_IF = S_AUTO_ON;
                   local_IF = local_IF;                          // No spur removal and no spur, center in IF
                 } else
-//#endif
+#endif
                 if (setting.auto_IF) {
                   local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
                   //                if (actual_rbw_x10 == 6000 )
