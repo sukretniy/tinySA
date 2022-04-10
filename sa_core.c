@@ -2533,36 +2533,74 @@ static  const freq_t spur_table[] =                                 // Frequenci
 const int spur_table_size = (sizeof spur_table)/sizeof(freq_t);
 #endif
 #ifdef TINYSA4
-#define MAX_SPUR_TABLE_SIZE 100
-static  freq_t spur_table[MAX_SPUR_TABLE_SIZE] =  // Frequencies to avoid
+#define STATIC_SPUR_TABLE_SIZE 55
+static  const freq_t static_spur_table[STATIC_SPUR_TABLE_SIZE] =     // Valid for IF=977.4MHz
 {
-#if 1
- 6363000,
- 21363000,
- 60000000,
- 120000000,
- 180000000,
- 300000000,
- 480000000,
- 487700000,
- 540000000,
- 650892000,
- 704886000,
- 720000000,
-#else
- 243775000,             // OK
- 325000000,             // !!! This is a double spur
- 325190000,             // !!! This is a double spur
- 390123000,
- 487541650,             // OK This is linked to the MODULO of the ADF4350
- 650687000,             // OK
- 731780000,             // OK
- 977400000,
- 977400000*2,
-#endif
+ 5233000,
+ 6300000,
+ 16483000,
+ 16783000,
+ 21300000,
+ 26134000,
+ 36300000,
+ 41134000,
+ 51300000,
+ 66000000,
+ 66300000,
+ 70800000,
+ 72000000,
+ 78000000,
+ 85200000,
+ 101134000,
+ 113134000,
+ 114000000,
+ 115200000,
+ 243881127,
+ 471300000,
+ 487762254,
+ 501300000,
+ 508800000,
+ 650974672,
+ 688800000,
+ 699667000,
+ 702865000,
+ 703094000,
+ 703465000,
+ 706616000,
+ 707216000,
+ 708667000,
+ 710366000,
+ 710966000,
+ 711667000,
+ 711667000,
+ 714115000,
+ 714668000,
+ 718465000,
+ 718800000,
+ 721616000,
+ 722216000,
+ 726300000,
+ 729715000,
+ 732865000,
+ 738667000,
+ 740366000,
+ 740966000,
+ 741667000,
+ 747865000,
+ 756667000,
+ 759116000,
+ 793465000,
+ 797216000,
 };
 
-int spur_table_size = 12;
+#define MAX_DYNAMIC_SPUR_TABLE_SIZE 100
+static  freq_t dynamic_spur_table[MAX_DYNAMIC_SPUR_TABLE_SIZE];       // Frequencies to be calculated
+static int dynamic_spur_table_size = 0;
+static int always_use_dynamic_table = false;
+
+static  freq_t *spur_table = (freq_t *)static_spur_table;
+int spur_table_size = STATIC_SPUR_TABLE_SIZE;
+
 #endif
 
 int binary_search(freq_t f)
@@ -2585,28 +2623,51 @@ int binary_search(freq_t f)
        return true; // index is m
   }
 #ifdef TINYSA4  
-#if 1
+#if 0
   if (!setting.auto_IF && setting.frequency_IF-2000000 < f && f < setting.frequency_IF -200000)
     return true;
   if(config.frequency_IF1+200000 > f && config.frequency_IF1 < f+200000)
     return true;
-#endif
   if(4*config.frequency_IF1 > fmin && 4*config.frequency_IF1 < fplus)
     return true;
+#endif
 #endif
   return false;
 }
 
 #ifdef TINYSA4
-static const uint8_t spur_div[] = {3, 3, 5, 2, 3, 4};        // 4/1 removed
-static const uint8_t spur_mul[] = {1, 1, 2, 1, 2, 3};
-#define IF_OFFSET   468750*4        //
+//static const uint8_t spur_div[] = {3, 3, 5, 2, 3, 4};        // 4/1 removed
+//static const uint8_t spur_mul[] = {1, 1, 2, 1, 2, 3};
+//#define IF_OFFSET   468750*4        //
 
+#define SPUR_FACTOR 937746
 void fill_spur_table(void)
 {
-  return; // TODO remove spur table updating.
-  uint8_t i;
   freq_t corr_IF;
+
+  if (always_use_dynamic_table) {
+    spur_table = dynamic_spur_table;
+    spur_table_size = dynamic_spur_table_size;
+    return;
+  }
+  if (actual_rbw_x10 < 200) {         // if less then 20kHz use static table
+    spur_table = (freq_t *)static_spur_table;
+    spur_table_size = STATIC_SPUR_TABLE_SIZE;
+    return;
+  }
+  if (!setting.auto_IF)
+    corr_IF = setting.frequency_IF;
+  else {
+    corr_IF = config.frequency_IF1;
+  }
+  dynamic_spur_table_size = 0;
+  dynamic_spur_table[dynamic_spur_table_size++] = corr_IF/4 -SPUR_FACTOR/2;
+  dynamic_spur_table[dynamic_spur_table_size++] = corr_IF/2 -SPUR_FACTOR;
+  dynamic_spur_table[dynamic_spur_table_size++] = corr_IF*2/3 -SPUR_FACTOR*2/3;
+  spur_table = dynamic_spur_table;
+  spur_table_size = dynamic_spur_table_size;
+#if 0
+  return; // TODO remove spur table updating.
   for (i=0; i < sizeof(spur_div)/sizeof(uint8_t); i++)
   {
 
@@ -2641,6 +2702,7 @@ void fill_spur_table(void)
   spur_table[i++] = corr_IF - IF_OFFSET*3/2;
   spur_table[i++] = corr_IF*2 - IF_OFFSET;
   spur_table_size = i;
+#endif
 }
 #endif
 
@@ -2681,6 +2743,7 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
       R = m - 1;
     else
     {
+#if 0
 #ifdef TINYSA4
       int w = ((unsigned int)m >= sizeof(spur_div)/sizeof(uint8_t) ? 3 : 1);
       fmin =  f - spur_gate*w;
@@ -2688,6 +2751,7 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
       if (spur_table[m] < fmin || spur_table[m] > fplus)
         return F_NEAR_SPUR; // index is m
       else
+#endif
 #endif
         return F_AT_SPUR;
     }
@@ -3342,7 +3406,10 @@ again:                                                              // Spur redu
       else
       {
 #ifdef TINYSA4
-        local_IF = config.frequency_IF1;
+        if (actual_rbw_x10 < 200 )
+          local_IF = 977400000; // static spur table IF
+        else
+          local_IF = config.frequency_IF1;
 #if 0
         if ( S_IS_AUTO(setting.below_IF)) {
 //          if (f < 2000000 && S_IS_AUTO(setting.spur_removal))
@@ -5786,6 +5853,19 @@ int add_spur(int f, float p)
   return 1;
 }
 
+void sort_dynamic_spur_table(void) {
+  for (int counter = 0 ; counter < dynamic_spur_table_size - 1; counter++)
+  {
+    for (int counter1 = 0 ; counter1 < dynamic_spur_table_size - counter - 1; counter1++)
+    {
+      if (dynamic_spur_table[counter1] > dynamic_spur_table[counter1+1]) //increasing frequency
+      {
+        float swap_var = dynamic_spur_table[counter1]; dynamic_spur_table[counter1] = dynamic_spur_table[counter1+1]; dynamic_spur_table[counter1+1] = swap_var;
+      }
+    }
+  }
+}
+
 void sort_spur_freq(void) {
   for (int counter = 0 ; counter < last_spur - 1; counter++)
   {
@@ -5923,7 +6003,7 @@ quit:
     set_refer_output(-1);
 #ifdef TINYSA4
   } else if (test == 1) {
-    float average, p, p_min = -115.0;
+    float average, p;
     freq_t start = get_sweep_frequency(ST_START);
     freq_t stop  = get_sweep_frequency(ST_STOP);
     debug_avoid = false;
@@ -5942,10 +6022,14 @@ quit:
    setting.frequency_IF=DEFAULT_IF;
    setting.frequency_step = 30000;
  #endif
-   if (setting.test_argument > 0)
+   if (setting.test_argument > 0) {
      setting.frequency_step = setting.test_argument;
+     shell_printf("\n\rResetting spur table\n\r");
     //  int i = 0;                     // Index in spur table (temp_t)
-   spur_table_size = 0;         // Reset table before scanning
+     dynamic_spur_table_size = 0;         // Reset table before scanning
+   } else
+     shell_printf("\n\rAdding to current dynamic spur table\n\r");
+
     set_RBW(setting.frequency_step/100);
     last_spur = 0;
     for (int j = 0; j < 4; j++) {
@@ -5964,7 +6048,7 @@ quit:
           shell_printf("Pass %d, freq %D\r", j+1, f);
         int cnt = 0;
         p = 0;
-#define SPUR_CHECK_COUNT 4 // 4
+#define SPUR_CHECK_COUNT 2 // 4
         do {
           cnt++;
           p = PURE_TO_float(perform(false, 1, f, false));
@@ -5974,7 +6058,7 @@ quit:
 #define SPUR_DELTA  15
 #endif
         } while ( average + SPUR_DELTA < p  && cnt < SPUR_CHECK_COUNT);
-        if (cnt == SPUR_CHECK_COUNT /* && p > p_min */ && average + SPUR_DELTA < p) {
+        if (cnt == SPUR_CHECK_COUNT && average + SPUR_DELTA < p) {
           shell_printf("Pass %d, %4.2fdBm spur at %DkHz with count %d\n\r", j+1, p,f/1000, add_spur(f, p));
         }
         average = (average*19+p)/20;
@@ -5986,20 +6070,21 @@ quit:
     in_selftest = false;
     setting.spur_removal = S_ON;
     sort_spur_count();                  // Reduce table to most certain spurs
-    if (last_spur > MAX_SPUR_TABLE_SIZE)
-      last_spur = MAX_SPUR_TABLE_SIZE;
+    if (last_spur > MAX_DYNAMIC_SPUR_TABLE_SIZE)
+      last_spur = MAX_DYNAMIC_SPUR_TABLE_SIZE;
     sort_spur_level();                  // Reduce table to only strongest spurs
-    if (last_spur > MAX_SPUR_TABLE_SIZE)
-      last_spur = MAX_SPUR_TABLE_SIZE;
+    if (last_spur > MAX_DYNAMIC_SPUR_TABLE_SIZE)
+      last_spur = MAX_DYNAMIC_SPUR_TABLE_SIZE;
     sort_spur_freq();
-    spur_table_size = 0;
+//    dynamic_spur_table_size = 0;
     for (int j = 0; j < last_spur; j++) {
-      if ((int)stored_t[j] >= 1) {
+      if ((int)stored_t[j] >= 1 && j < MAX_DYNAMIC_SPUR_TABLE_SIZE && (int)stored_t[j] > SPUR_CHECK_COUNT-2 && stored_t[j] - stored2_t[j] > 2) {
         shell_printf("%d, %d, %4.2f, %4.2f\n\r", ((int)temp_t[j])/1000, (int)stored_t[j], stored2_t[j], PURE_TO_float(perform(false, 1, (freq_t)temp_t[j], false)));
-        if (j < MAX_SPUR_TABLE_SIZE && (int)stored_t[j] >= 3)
-          spur_table[spur_table_size++] = temp_t[j];
+        dynamic_spur_table[dynamic_spur_table_size++] = temp_t[j];
       }
     }
+    sort_dynamic_spur_table();
+    always_use_dynamic_table = true;
     reset_settings(M_LOW);
     set_sweep_frequency(ST_START, start);
     set_sweep_frequency(ST_STOP, stop);

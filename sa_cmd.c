@@ -470,7 +470,7 @@ VNA_SHELL_FUNCTION(cmd_if1)
     usage_printf("if1 {975M..979M}\r\n%QHz\r\n", config.frequency_IF1);
     return;
   } else {
-    freq_t a = (freq_t)my_atoi(argv[0]);
+    freq_t a = (freq_t)my_atoui(argv[0]);
     if (a!= 0 &&( a < (DEFAULT_IF - (freq_t)80000000) || a>(DEFAULT_IF + (freq_t)80000000)))
       goto usage;
     config.frequency_IF1 = a;
