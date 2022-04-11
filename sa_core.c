@@ -1661,7 +1661,7 @@ void calculate_step_delay(void)
 #ifdef __SI4463__
       SI4432_step_delay   = step_delay_table[i].step_delay;
       SI4432_offset_delay = step_delay_table[i].offset_delay;
-      spur_gate           = actual_rbw_x10 * (100 * 4);
+      spur_gate           = actual_rbw_x10 * (100/2);
 //      spur_gate           = step_delay_table[i].spur_div_1000 * 1000;
       noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
       log_averaging_correction = step_delay_table[i].log_aver_correction;
@@ -1972,11 +1972,11 @@ void set_freq(int V, freq_t freq)    // translate the requested frequency into a
       // ----------------------------- set mixer drive --------------------------------------------
       int target_drive = setting.lo_drive;
       if (target_drive & 0x04){     // Automatic mixer drive
-        if (freq < 100000000ULL)       // below 100MHz
+        if (freq-970000000 < 600000000ULL)       // below 100MHz
           target_drive = 0;
-        else if (freq < 1200000000ULL) // below 1.2GHz
+        else if (freq-970000000 < 1200000000ULL) // below 1.2GHz
           target_drive = 1;
-        else if (freq < 2000000000ULL)  // below 3GHz
+        else if (freq-970000000 < 2000000000ULL)  // below 3GHz
           target_drive = 2;
         else
           target_drive = 3;
@@ -2650,7 +2650,7 @@ void fill_spur_table(void)
     spur_table_size = dynamic_spur_table_size;
     return;
   }
-  if (actual_rbw_x10 < 200) {         // if less then 20kHz use static table
+  if (actual_rbw_x10 < 1100) {         // if less then 1100kHz use static table
     spur_table = (freq_t *)static_spur_table;
     spur_table_size = STATIC_SPUR_TABLE_SIZE;
     return;
@@ -3526,7 +3526,7 @@ again:                                                              // Spur redu
                 } else
 #endif
                 if (setting.auto_IF) {
-                  local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
+                  local_IF = local_IF + (actual_rbw_x10 > 5000 ? DEFAULT_SPUR_OFFSET : DEFAULT_SPUR_OFFSET/2); // TODO find better way to shift spur away at large RBW/2;
                   //                if (actual_rbw_x10 == 6000 )
                   //                  local_IF = local_IF + 50000;
                   LO_shifted = true;
@@ -3641,7 +3641,7 @@ again:                                                              // Spur redu
                 ADF4351_R_counter(-3);
               }
               else
-                ADF4351_R_counter(3);
+                ADF4351_R_counter(4);
             } else {
 #if 0
               if (actual_rbw_x10 < 1000) {
@@ -3987,6 +3987,8 @@ again:                                                              // Spur redu
             my_step_delay *= 6;
           else if (my_step_delay <1000)
                 my_step_delay *= 4;
+          else
+            my_step_delay *= 2;
         } else if (old_R == 4) {
           if (my_step_delay <500)
             my_step_delay *= 4;
