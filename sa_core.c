@@ -66,6 +66,7 @@ static float old_a = -150;          // cached value to reduce writes to level re
 int spur_gate = 100;
 
 #ifdef __ULTRA__
+#define DEFAULT_ULTRA_THRESHOLD 800000000ULL
 freq_t ultra_threshold;
 bool ultra;
 #endif
@@ -231,7 +232,7 @@ void reset_settings(int m)
   setting.mode = m;
   setting.sweep = false;
 #ifdef __ULTRA__
-  ultra_threshold = config.ultra_threshold;
+  ultra_threshold = (config.ultra_threshold == 0 ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
   ultra = config.ultra;
 #endif
 #ifdef TINYSA4
@@ -357,8 +358,8 @@ void reset_settings(int m)
     setting.lo_drive=5;
     setting.extra_lna = false;
 #endif
-    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
-    setting.correction_value = config.correction_value[CORRECTION_LOW];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
+//    setting.correction_value = config.correction_value[CORRECTION_LOW];
     break;
   case M_GENLOW:
 #ifdef TINYSA4
@@ -374,11 +375,11 @@ void reset_settings(int m)
     setting.step_delay_mode = SD_FAST;
 #ifdef TINYSA4
     setting.extra_lna = false;
-    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_OUT];
-    setting.correction_value = config.correction_value[CORRECTION_LOW_OUT];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_OUT];
+//    setting.correction_value = config.correction_value[CORRECTION_LOW_OUT];
 #else
-    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
-    setting.correction_value = config.correction_value[CORRECTION_LOW];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
+//    setting.correction_value = config.correction_value[CORRECTION_LOW];
 #endif
 //    level_min = SL_GENLOW_LEVEL_MIN + LOW_OUT_OFFSET;
 //    level_max = SL_GENLOW_LEVEL_MAX + LOW_OUT_OFFSET;
@@ -391,8 +392,8 @@ void reset_settings(int m)
 #ifdef TINYSA4
     setting.extra_lna = false;
 #endif
-    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
-    setting.correction_value = config.correction_value[CORRECTION_HIGH];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
+//    setting.correction_value = config.correction_value[CORRECTION_HIGH];
     break;
   case M_GENHIGH:
 #ifdef TINYSA4
@@ -407,8 +408,8 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 2*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
-    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
-    setting.correction_value = config.correction_value[CORRECTION_HIGH];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
+//    setting.correction_value = config.correction_value[CORRECTION_HIGH];
 //    level_min = SL_GENHIGH_LEVEL_MIN + config.high_level_output_offset;
 //    level_max = SL_GENHIGH_LEVEL_MAX + config.high_level_output_offset;
 //    level_range = level_max - level_min;
@@ -650,6 +651,7 @@ void toggle_extra_lna(void)
 void set_extra_lna(int t)
 {
   setting.extra_lna = t;
+#if 0
   if (setting.extra_lna) {
     setting.correction_frequency = config.correction_frequency[CORRECTION_LNA];
     setting.correction_value = config.correction_value[CORRECTION_LNA];
@@ -657,6 +659,7 @@ void set_extra_lna(int t)
     setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
     setting.correction_value = config.correction_value[CORRECTION_LOW];
   }
+#endif
   dirty = true;
 }
 #endif
@@ -1661,7 +1664,7 @@ void calculate_step_delay(void)
 #ifdef __SI4463__
       SI4432_step_delay   = step_delay_table[i].step_delay;
       SI4432_offset_delay = step_delay_table[i].offset_delay;
-      spur_gate           = actual_rbw_x10 * (100/2);
+      spur_gate           = actual_rbw_x10 * (actual_rbw_x10 > 5000 ? (100/2) : 100);
 //      spur_gate           = step_delay_table[i].spur_div_1000 * 1000;
       noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
       log_averaging_correction = step_delay_table[i].log_aver_correction;
@@ -1713,8 +1716,8 @@ static const float correction_value[CORRECTION_POINTS] =
 #define SCALE_FACTOR 5     // min scaled correction = 2^15, max scaled correction = 256 * 2^15
                             // min scaled f = 6, max scaled f =  1024
 
-static int32_t scaled_correction_multi[CORRECTION_POINTS];
-static int32_t scaled_correction_value[CORRECTION_POINTS];
+static int32_t scaled_correction_multi[CORRECTION_SIZE][CORRECTION_POINTS];
+static int32_t scaled_correction_value[CORRECTION_SIZE][CORRECTION_POINTS];
 
 #if 0                       // Not implemented
 static const int8_t scaled_atten_correction[16][16] =
@@ -1731,12 +1734,14 @@ static const int8_t scaled_atten_correction[16][16] =
 
 static void calculate_correction(void)
 {
-  scaled_correction_value[0] = setting.correction_value[0]  * (1 << (SCALE_FACTOR));
+  for (int c = 0; c < CORRECTION_SIZE; c++) {
+  scaled_correction_value[c][0] = config.correction_value[c][0]  * (1 << (SCALE_FACTOR));
   for (int i = 1; i < CORRECTION_POINTS; i++) {
-    scaled_correction_value[i] = setting.correction_value[i]  * (1 << (SCALE_FACTOR));
-    int32_t m = scaled_correction_value[i] - scaled_correction_value[i-1];
+    scaled_correction_value[c][i] = config.correction_value[c][i]  * (1 << (SCALE_FACTOR));
+    int32_t m = scaled_correction_value[c][i] - scaled_correction_value[c][i-1];
 //    int32_t d = (setting.correction_frequency[i] - setting.correction_frequency[i-1]) >> SCALE_FACTOR;
-    scaled_correction_multi[i] = m; // (int32_t) ( m / d );
+    scaled_correction_multi[c][i] = m; // (int32_t) ( m / d );
+  }
   }
 }
 #pragma GCC push_options
@@ -1745,19 +1750,27 @@ static void calculate_correction(void)
 pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
 {
   pureRSSI_t cv = 0;
-  if (setting.mode == M_GENHIGH)
+  int c=CORRECTION_LOW;
+  if (setting.mode == M_GENHIGH) {
+    c = CORRECTION_HIGH;
     return(0.0);
-#ifdef __ULTRA__
-  if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
-    if ( f > ULTRA_MAX_FREQ) {
-#ifdef TINYSA4
-      cv += float_TO_PURE_RSSI(8.5);                                        // +9dB correction.
-#else
-      cv += float_TO_PURE_RSSI(13.5);                                        // +dB correction. TODO !!!!!!!!!!!!!!!!!
-#endif
-    }
   }
+#ifdef TINYSA4
+  if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
+    c = CORRECTION_LOW_ULTRA;
+    if ( f > ULTRA_MAX_FREQ) {
+      cv += float_TO_PURE_RSSI(8.5);                                        // +9dB correction.
+    }
+    if (setting.extra_lna)
+      c += 1;
+  } else if (setting.mode == M_GENLOW){
+    c = CORRECTION_LOW_OUT;
+  }
+#else
+  if (MODE_HIGH(setting.mode))
+    c = CORRECTION_HIGH;
 #endif
+
 
 #ifdef TINYSA4
 #if 0                       // Not implemented
@@ -1783,28 +1796,28 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   }
 #endif
   int i = 0;
-  while (f > setting.correction_frequency[i] && i < CORRECTION_POINTS)
+  while (f > config.correction_frequency[c][i] && i < CORRECTION_POINTS)
     i++;
   if (i >= CORRECTION_POINTS) {
-    cv += scaled_correction_value[CORRECTION_POINTS-1] >> (SCALE_FACTOR - 5);
+    cv += scaled_correction_value[c][CORRECTION_POINTS-1] >> (SCALE_FACTOR - 5);
     goto done;
   }
   if (i == 0) {
-    cv += scaled_correction_value[0] >> (SCALE_FACTOR - 5);
+    cv += scaled_correction_value[c][0] >> (SCALE_FACTOR - 5);
     goto done;
   }
-  f = f - setting.correction_frequency[i-1];
+  f = f - config.correction_frequency[c][i-1];
 #if 0
   freq_t m = (setting.correction_frequency[i] - setting.correction_frequency[i-1]) >> SCALE_FACTOR ;
   float multi = (setting.correction_value[i] - setting.correction_value[i-1]) * (1 << (SCALE_FACTOR -1)) / (float)m;
   float cv = setting.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
 #else
   int32_t scaled_f = f >> FREQ_SCALE_FACTOR;
-  int32_t scaled_f_divider = (setting.correction_frequency[i] - setting.correction_frequency[i-1]) >> FREQ_SCALE_FACTOR;
+  int32_t scaled_f_divider = (config.correction_frequency[c][i] - config.correction_frequency[c][i-1]) >> FREQ_SCALE_FACTOR;
   if (scaled_f_divider!=0)
-    cv += (scaled_correction_value[i-1] + ((scaled_f * scaled_correction_multi[i])/scaled_f_divider)) >> (SCALE_FACTOR - 5) ;
+    cv += (scaled_correction_value[c][i-1] + ((scaled_f * scaled_correction_multi[c][i])/scaled_f_divider)) >> (SCALE_FACTOR - 5) ;
   else
-    cv += scaled_correction_value[i-1] >> (SCALE_FACTOR - 5) ;
+    cv += scaled_correction_value[c][i-1] >> (SCALE_FACTOR - 5) ;
 #endif
 done:
   return(cv);
@@ -2640,6 +2653,8 @@ int binary_search(freq_t f)
 //static const uint8_t spur_mul[] = {1, 1, 2, 1, 2, 3};
 //#define IF_OFFSET   468750*4        //
 
+#define RBW_FOR_STATIC_TABLE    1100
+
 #define SPUR_FACTOR 937746
 void fill_spur_table(void)
 {
@@ -2650,7 +2665,7 @@ void fill_spur_table(void)
     spur_table_size = dynamic_spur_table_size;
     return;
   }
-  if (actual_rbw_x10 < 1100) {         // if less then 1100kHz use static table
+  if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE) {         // if less then 1100kHz use static table
     spur_table = (freq_t *)static_spur_table;
     spur_table_size = STATIC_SPUR_TABLE_SIZE;
     return;
@@ -3345,7 +3360,7 @@ modulation_again:
   local_IF = config.frequency_IF1;
   if (setting.mode == M_LOW && setting.frequency_step > 0 && ultra &&
       ((f < ULTRA_MAX_FREQ &&  f > MAX_LO_FREQ - local_IF) ||
-       ( f > config.ultra_threshold && f < MIN_BELOW_LO + local_IF))
+       ( f > ultra_threshold && f < MIN_BELOW_LO + local_IF))
       ) {
     local_vbw_steps *= 2;
   }
@@ -3406,7 +3421,7 @@ again:                                                              // Spur redu
       else
       {
 #ifdef TINYSA4
-        if (actual_rbw_x10 < 200 )
+        if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE )
           local_IF = 977400000; // static spur table IF
         else
           local_IF = config.frequency_IF1;
@@ -3475,10 +3490,10 @@ again:                                                              // Spur redu
 #endif
               if ((debug_avoid && debug_avoid_second) || spur_second_pass) {
 #ifdef TINYSA4
-                local_IF  = local_IF + DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 3000 ? 200000 : 0);    // apply IF spur shift
+                local_IF  = local_IF + DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);    // apply IF spur shift
                 LO_shifted = true;
               } else {
-                local_IF  = local_IF - (actual_rbw_x10 > 3000 ? 200000 : 0);// - DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
+                local_IF  = local_IF; // - (actual_rbw_x10 > 5000 ? 200000 : 0);// - DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
               }
 #else
                 local_IF  = local_IF + 500000;                  // apply IF spur shift
@@ -3526,7 +3541,7 @@ again:                                                              // Spur redu
                 } else
 #endif
                 if (setting.auto_IF) {
-                  local_IF = local_IF + (actual_rbw_x10 > 5000 ? DEFAULT_SPUR_OFFSET : DEFAULT_SPUR_OFFSET/2); // TODO find better way to shift spur away at large RBW/2;
+                  local_IF = local_IF + (actual_rbw_x10 > 2000 ? DEFAULT_SPUR_OFFSET : DEFAULT_SPUR_OFFSET/2); // TODO find better way to shift spur away at large RBW/2;
                   //                if (actual_rbw_x10 == 6000 )
                   //                  local_IF = local_IF + 50000;
                   LO_shifted = true;
@@ -3632,7 +3647,7 @@ again:                                                              // Spur redu
           if (setting.mode == M_GENLOW) {
             if (local_modulo == 0) ADF4351_modulo(1000);
             ADF4351_R_counter(3);
-          } else if (lf > 8000000 && lf < 800000000 && MODE_INPUT(setting.mode)) {
+          } else if (lf > 8000000 && lf < 1000000000 && MODE_INPUT(setting.mode)) {
             if (local_modulo == 0) ADF4351_modulo(4000);
 
             freq_t tf = ((lf + actual_rbw_x10*200) / TCXO) * TCXO;
@@ -4190,7 +4205,14 @@ static bool sweep(bool break_on_operation)
   temppeakLevel = -150;
   float temp_min_level = 100;          // Initialize the peak search algorithm
   int16_t downslope = true;
-
+#ifdef __ULTRA__
+  if (setting.mode == M_LOW && config.ultra_threshold == 0) {
+    if (getFrequency(sweep_points-1) <= 800000000)
+      ultra_threshold = 800000000;
+    else
+      ultra_threshold = 700000000;
+  }
+#endif
   // ------------------------- start sweep loop -----------------------------------
   for (int i = 0; i < sweep_points ; i++) {
     debug_avoid_second = false;
@@ -6103,7 +6125,7 @@ quit:
       if (setting.test_argument)
         set_sweep_frequency(ST_CENTER, ((freq_t)setting.test_argument));
 #ifdef __ULTRA__
-      ultra_threshold = config.ultra_threshold;
+      ultra_threshold = (config.ultra_threshold == 0 ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
 #endif
       test_acquire(TEST_LEVEL);                        // Acquire test
 	  test_validate(TEST_LEVEL);                       // Validate test

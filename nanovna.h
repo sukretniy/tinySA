@@ -190,9 +190,11 @@ typedef uint32_t freq_t;
  #define CORRECTION_POINTS  20       // Frequency dependent level correction table entries
  #define CORRECTION_LOW      0
  #define CORRECTION_LNA      1
- #define CORRECTION_LOW_OUT  2
- #define CORRECTION_HIGH     3
- #define CORRECTION_SIZE     4
+ #define CORRECTION_LOW_ULTRA 2
+ #define CORRECTION_LNA_ULTRA 3
+ #define CORRECTION_LOW_OUT  4
+ #define CORRECTION_HIGH     5
+ #define CORRECTION_SIZE     6
 #endif
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
@@ -1132,8 +1134,8 @@ typedef struct setting
   systime_t actual_sweep_time_us;
   systime_t additional_step_delay_us;
 
-  freq_t  *correction_frequency;
-  float   *correction_value;
+//  freq_t  *correction_frequency;
+//  float   *correction_value;
 
 #ifdef __ULTRA__
   uint8_t ultra;    // enum ??

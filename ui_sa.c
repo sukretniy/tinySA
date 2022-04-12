@@ -725,6 +725,38 @@ static UI_FUNCTION_CALLBACK(menu_lna_curve_prepare_cb)
   }
 }
 
+static UI_FUNCTION_CALLBACK(menu_lna_u_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (config.low_level_offset == 100)
+    return;
+  kp_help_text = "Enter actual input level";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    local_actual_level = uistat.value;
+    current_curve = CORRECTION_LNA_ULTRA;
+    menu_push_submenu(menu_curve);
+  }
+}
+
+static UI_FUNCTION_CALLBACK(menu_ultra_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (config.low_level_offset == 100)
+    return;
+  kp_help_text = "Enter actual input level";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    local_actual_level = uistat.value;
+    current_curve = CORRECTION_LOW_ULTRA;
+    menu_push_submenu(menu_curve);
+  }
+}
+
 static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
 {
   (void)item;
@@ -2803,6 +2835,8 @@ static const menuitem_t menu_actual_power[] =
 #ifdef TINYSA4
  { MT_CALLBACK,     0,                  "INPUT\nCURVE",  menu_input_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "LNA\nCURVE",    menu_lna_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "ULTRA\nCURVE",  menu_ultra_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "LNA_U\nCURVE",    menu_lna_u_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "OUTPUT\nCURVE", menu_output_curve_prepare_cb},
 #endif
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
@@ -3429,8 +3463,9 @@ set_numeric_value(void)
 #ifdef __ULTRA__
   case KM_ULTRA_START:
     config.ultra_threshold = uistat.value;
+    reset_settings(setting.mode);
     config_save();
-    ultra_threshold = config.ultra_threshold;
+    //ultra_threshold = config.ultra_threshold;
     break;
   case KM_DIRECT_START:
     config.direct_start = uistat.value;
