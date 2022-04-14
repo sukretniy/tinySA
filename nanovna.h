@@ -96,6 +96,9 @@
 #define __WAIT_CTS_WHILE_SLEEPING__
 #define __MARKER_CACHE__
 #define TINYSA4_4
+#ifdef TINYSA4_4
+#define __SI5351__
+#endif
 //#define __FFT_VBW__
 //#define __FFT_DECONV__
 #else

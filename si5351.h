@@ -76,10 +76,11 @@
 #define SI5351_CRYSTAL_LOAD_8PF  	(2<<6)
 #define SI5351_CRYSTAL_LOAD_10PF  	(3<<6)
 
-#define SI5351_CRYSTAL_FREQ_25MHZ 	25000000
+//#define SI5351_CRYSTAL_FREQ_25MHZ 	25000000
 
 bool si5351_init(void);
 void si5351_set_frequency(int channel, int freq, uint8_t drive_strength);
 int si5351_set_frequency_with_offset(uint32_t freq, int offset, uint8_t drive_strength);
+extern char  pll_lock_failed;
 
 #endif //__SI5351_H__

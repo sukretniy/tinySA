@@ -2711,7 +2711,7 @@ static const menuitem_t menu_settings3[] =
 //  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
-  { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "Enter ULTRA mode start freq"},
+  { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "0=auto"},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nDIRECT",    menu_direct_acb},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R\n\b%s",           "Set R"},
@@ -3464,7 +3464,7 @@ set_numeric_value(void)
   case KM_ULTRA_START:
     config.ultra_threshold = uistat.value;
     reset_settings(setting.mode);
-    config_save();
+//    config_save(); // TODO not now
     //ultra_threshold = config.ultra_threshold;
     break;
   case KM_DIRECT_START:

@@ -259,7 +259,7 @@ bool PE4302_Write_Byte(unsigned char DATA )
 
 #define maskedWrite(reg, bit, mask, value)   (reg) &= ~(((uint32_t)mask) << (bit)); (reg) |=  ((((uint32_t) (value)) & ((uint32_t)mask)) << (bit));
 
-
+freq_t local_setting_frequency_30mhz_x100 = 3000000000;
 
 #define CS_ADF0_HIGH     {palSetLine(LINE_LO_SEL);ADF_CS_DELAY;}
 #define CS_ADF1_HIGH     {ADF_CS_DELAY;palSetLine(LINE_LO_SEL);}
@@ -295,10 +295,25 @@ int64_t
 
 int old_R = 0;
 
+#ifdef __SI5351__
+#include "si5351.h"
+#else
+int si5351_available = false;
+#endif
+
+
 void ADF4351_Setup(void)
 {
 //  palSetPadMode(GPIOA, 1, PAL_MODE_OUTPUT_PUSHPULL );
 //  palSetPadMode(GPIOA, 2, PAL_MODE_OUTPUT_PUSHPULL );
+
+
+  local_setting_frequency_30mhz_x100 = config.setting_frequency_30mhz;
+#ifdef __SI5351__
+  si5351_available = si5351_init();
+  if (si5351_available)
+    si5351_set_frequency(0, 29999000, 0);
+#endif
 
 //  SPI3_CLK_HIGH;
 //  SPI3_SDI_HIGH;
@@ -415,10 +430,9 @@ void ADF4351_R_counter(int R)
   }
   if (R<1)
     return;
-
   bitWrite(registers[2], 25, dbl); // Reference doubler
   for (int channel=0; channel < 6; channel++) {
-    PFDRFout[channel] = (config.setting_frequency_30mhz * (dbl?2:1)) / R;
+    PFDRFout[channel] = (local_setting_frequency_30mhz_x100 * (dbl?2:1)) / R;
   }
   clear_frequency_cache();                              // When R changes the possible frequencies will change
   maskedWrite(registers[2],14, 0x3FF, R);
@@ -430,8 +444,26 @@ void ADF4351_R_counter(int R)
 void ADF4351_recalculate_PFDRFout(void){
   int local_r = old_R;
   old_R = -1;
+#ifdef __SI5351__
+  if (si5351_available)
+    si5351_set_frequency(0, local_setting_frequency_30mhz_x100/100, 0);
+#endif
   ADF4351_R_counter(local_r);
 }
+
+#ifdef __SI5351__
+static int shifted = -2;
+void ADF4350_shift_ref(int f) {
+  if (f == shifted)
+    return;
+  shifted = f;
+  if (f)
+    local_setting_frequency_30mhz_x100 = 2999000000;
+  else
+    local_setting_frequency_30mhz_x100 = 3000000000;
+  ADF4351_recalculate_PFDRFout();
+}
+#endif
 
 void ADF4351_mux(int R)
 {
@@ -1703,10 +1735,10 @@ freq_t SI4463_set_freq(freq_t freq)
     si_set_offset(0);
     SI4463_offset_active = false;
   }
-  uint32_t R = (freq * output_divider) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz) - 1;        // R between 0x00 and 0x7f (127)
+  uint32_t R = (freq * output_divider) / (Npresc ? 2*local_setting_frequency_30mhz_x100 : 4*local_setting_frequency_30mhz_x100) - 1;        // R between 0x00 and 0x7f (127)
   uint64_t MOD = 524288; // = 2^19
-  uint32_t  F = ((freq * output_divider*MOD) / (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)) - R*MOD;
-  freq_t actual_freq = (R*MOD + F) * (Npresc ? 2*config.setting_frequency_30mhz : 4*config.setting_frequency_30mhz)/ output_divider/MOD;
+  uint32_t  F = ((freq * output_divider*MOD) / (Npresc ? 2*local_setting_frequency_30mhz_x100 : 4*local_setting_frequency_30mhz_x100)) - R*MOD;
+  freq_t actual_freq = (R*MOD + F) * (Npresc ? 2*local_setting_frequency_30mhz_x100 : 4*local_setting_frequency_30mhz_x100)/ output_divider/MOD;
 #if 0       // Only for debugging
   int delta = freq - actual_freq;
   if (delta < -100 || delta > 100 ){

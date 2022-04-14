@@ -173,9 +173,11 @@ void ADF4351_enable(int p);
 void ADF4351_enable_aux_out(int p);
 void ADF4351_enable_out(int p);
 int ADF4351_locked(void);
+void ADF4350_shift_ref(int f);
 
 void ADF4351_enable(int s);
 void ADF4351_enable_aux_out(int s);
+extern int si5351_available;
 #endif
 
 #ifdef __SI4463__

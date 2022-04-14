@@ -913,7 +913,7 @@ config_t config = {
   .vbat_offset = 220,
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
-  .ultra_threshold = 800000000,
+  .ultra_threshold = 0,
   .low_level_offset =       100.0,    // Uncalibrated
   .high_level_offset =      100,      // Uncalibrated
   .lna_level_offset = 100,
@@ -929,10 +929,10 @@ config_t config = {
   },
   .correction_value =
   {
-   { 10.5,  +3,     +1   ,   -0.1,      0,       0,       -1.1,       +1.5,      +1.8,     +9.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // low in
-   { 10.5,  +3,     +1   ,   -0.1,      0,       0,       -1.1,       +1.5,      +1.8,     +9.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // lna in
-   { 10.5,  +3,     +1   ,   -0.1,      0,       0,       -1.1,       +1.5,      +1.8,     +3.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // low ultra in
-   { 10.5,  +3,     +1   ,   -0.1,      0,       0,       -1.1,       +1.5,      +1.8,     +3.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // lna ultra in
+   { 10.5,  +3,     +1   ,   -0.1,      0,       0,       +1.1,       +1.5,      +1.8,     +9.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // low in
+   { 10.5,  +3,     +1   ,   -0.1,      0,       0,       +1.1,       +1.5,      +1.8,     +9.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // lna in
+   { 10.5,  +3,     +1   ,   -0.1,      0,       0,       +1.1,       +1.5,      +1.8,     +3.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // low ultra in
+   { 10.5,  +3,     +1   ,   -0.1,      0,       0,       +1.1,       +1.5,      +1.8,     +3.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // lna ultra in
     { 11.5,  7,      6,      3.5,      1.5,       0.5,       -0.2,     0,         0,         -0.5,       +1.5,        +2,         +4,         +6.5,       +9,         +13,        +13,        +13,         +13,       +13,     }, // low out
   },
   .setting_frequency_30mhz = 30000000ULL * FREQ_MULTIPLIER,
@@ -1075,8 +1075,11 @@ VNA_SHELL_FUNCTION(cmd_hop)
     }
   } else
     step = 1;
-
-  pause_sweep();
+  int old_sweep = sweep_mode;
+  if (old_sweep & SWEEP_ENABLE)
+    pause_sweep();
+  else
+    dirty = true;
   // Output data after if set (faster data recive)
   uint16_t mask = 3;
   if (argc == 4) {
@@ -1092,7 +1095,6 @@ VNA_SHELL_FUNCTION(cmd_hop)
       shell_printf("frequency range is invalid\r\n");
       return;
   }
-
   if (mask) {
     int old_vbwSteps = vbwSteps;
 //    vbwSteps = 1;
@@ -1106,7 +1108,8 @@ VNA_SHELL_FUNCTION(cmd_hop)
     }
     vbwSteps = old_vbwSteps;
   }
-  resume_sweep();
+  if (old_sweep & SWEEP_ENABLE)
+    resume_sweep();
 }
 #endif
 

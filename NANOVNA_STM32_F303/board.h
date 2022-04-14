@@ -115,8 +115,12 @@
 #endif
 #define GPIO_PB13               13
 #define LINE_PB13               PAL_LINE(GPIOB, GPIO_PB13)
+#define GPIO_SCL               13
+#define LINE_SCL               PAL_LINE(GPIOB, GPIO_PB13)
 #define GPIO_PB14               14
 #define LINE_PB14               PAL_LINE(GPIOB, GPIO_PB14)
+#define GPIO_SDA              14
+#define LINE_SDA               PAL_LINE(GPIOB, GPIO_PB14)
 #define GPIO_ULTRA              15
 #define LINE_ULTRA              PAL_LINE(GPIOB,GPIO_ULTRA)
 
@@ -299,8 +303,8 @@
                                      PIN_OTYPE_PUSHPULL(10) |      \
                                      PIN_OTYPE_PUSHPULL(11) |      \
                                      PIN_OTYPE_PUSHPULL(12) | \
-                                     PIN_OTYPE_PUSHPULL(13) | \
-                                     PIN_OTYPE_PUSHPULL(14) | \
+                                     PIN_OTYPE_OPENDRAIN(13) | \
+                                     PIN_OTYPE_OPENDRAIN(14) | \
                                      PIN_OTYPE_PUSHPULL(15))
 #define VAL_GPIOB_OSPEEDR           (PIN_OSPEED_100M(GPIOB_XN) | \
                                      PIN_OSPEED_100M(GPIOB_YN) | \

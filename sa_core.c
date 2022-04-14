@@ -1629,8 +1629,8 @@ static const struct {
   {  8500,       150,           50,      400,   -90,    0.7},
   {  6000,       150,           50,      300,   -95,    0.8},
   {  3000,       150,           50,      200,   -95,    1.3},
-  {  1000,       170,          100,      100,   -105,   0.3},
-  {   300,       300,          120,      100,   -110,   0.7},
+  {  1000,       300,          100,      100,   -105,   0.3},
+  {   300,       400,          120,      100,   -110,   0.7},
   {   100,       700,          120,      100,   -115,   0.5},
   {    30,      1600,          300,      100,   -120,   0.7},
   {    10,      4000,          600,      100,   -122,   1.1},
@@ -3642,6 +3642,49 @@ again:                                                              // Spur redu
 #define TCXO    30000000
 #define TXCO_DIV3   10000000
 
+#ifdef __SI5351__
+        if (si5351_available) {
+        if (setting.R == 0) {
+          setting.increased_R = false;
+          if (setting.mode == M_GENLOW) {
+            if (local_modulo == 0) ADF4351_modulo(1000);
+            ADF4350_shift_ref(false);
+            ADF4351_R_counter(3);
+          } else if (lf > 8000000 && MODE_INPUT(setting.mode)) {
+            if (local_modulo == 0) ADF4351_modulo(4000);
+
+            freq_t tf = ((lf + actual_rbw_x10*200) / TXCO_DIV3) * TXCO_DIV3;
+            if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200) {   // 10MHz
+              ADF4350_shift_ref(true);
+            } else {
+              ADF4350_shift_ref(false);
+            }
+          }
+          if (get_sweep_frequency(ST_SPAN)<5000000) { // When scanning less then 5MHz
+            if (actual_rbw_x10 <= 3000) {
+              setting.increased_R = true;
+              freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
+              if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
+                ADF4351_R_counter(4);    // To avoid PLL Loop shoulders at multiple of 10MHz
+              else
+                ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
+            } else
+              ADF4351_R_counter(1);
+          } else
+            ADF4351_R_counter(1);
+
+        } else {
+          freq_t tf = ((lf + actual_rbw_x10*200) / TXCO_DIV3) * TXCO_DIV3;
+          if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200) {   // 30MHz
+            ADF4350_shift_ref(true);
+          } else {
+            ADF4350_shift_ref(false);
+          }
+          ADF4351_R_counter(setting.R);
+        }
+        } else
+#endif
+        {
         if (setting.R == 0) {
           setting.increased_R = false;
           if (setting.mode == M_GENLOW) {
@@ -3699,6 +3742,7 @@ again:                                                              // Spur redu
           }
         } else {
           ADF4351_R_counter(setting.R);
+        }
         }
 #endif          // __ADF4351__
 #if 0

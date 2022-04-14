@@ -22,32 +22,34 @@
 #ifdef __SI5351__
 #include "si5351.h"
 
-inline int palReadLine(uint32_t line) {
-  return ( palReadPort(PAL_PORT(line)) & (1<<PAL_PAD(line)) )
-}
+//inline int palReadLine(uint32_t line) {
+//  return ( palReadPort(PAL_PORT(line)) & (1<<PAL_PAD(line)) )
+//}
+char  pll_lock_failed = 0;
+int si5351_available = false;
 
     /*
      * Software i2c bus
      */
-#define I2C_DELAY     my_microsecond_delay(10);
+#define I2C_DELAY     my_microsecond_delay(20);
 
     static inline void scl_low(void) {
-      palClearLine(LINE_PB13);
+      palClearLine(LINE_SCL);
         I2C_DELAY;
     }
 
     static inline void scl_high(void) {
-      palSetLine(LINE_PB13);
+      palSetLine(LINE_SCL);
         I2C_DELAY;
     }
 
     static inline void sda_low(void) {
-      palClearLine(LINE_PB14);
+      palClearLine(LINE_SDA);
         I2C_DELAY;
     }
 
     static inline void sda_high(void) {
-      palSetLine(LINE_PB14);
+      palSetLine(LINE_SDA);
         I2C_DELAY;
     }
 
@@ -68,7 +70,7 @@ inline int palReadLine(uint32_t line) {
         while(bits--) {
             scl_high();
             ret<<= 1;
-            if (palReadLine(LINE_PB14)) ret|=1;
+            if (palReadLine(LINE_SDA)) ret|=1;
             scl_low();
         }
 //        soft_i2c_sda.set_mode(GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LOW); // Output low
@@ -91,12 +93,14 @@ inline int palReadLine(uint32_t line) {
         return ret;
     }
 
-    void i2c_init() {
+    void i2c_init(void) {
 //        soft_i2c_clk.set_mode(GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
 //        soft_i2c_sda.set_mode(GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
         i2c_begin();
         i2c_end();
     }
+#define I2C_WRITE           0
+#define I2C_READ            1
 
     bool i2c_probe(uint8_t devAddr) {
         i2c_begin();
@@ -162,7 +166,7 @@ static bool si5351_read(uint8_t reg, uint8_t* buf)
     int v = i2c_read(addr, reg);
     if (v < 0)
       return false;
-    *buf = (uint8_t) v
+    *buf = (uint8_t) v;
     return true;
 }
 
@@ -176,21 +180,21 @@ static bool si5351_write(uint8_t reg, uint8_t dat)
 static bool si5351_bulk_write(const uint8_t *buf, int len)
 {
   int addr = SI5351_I2C_ADDR>>1;
-  int s = i2c_write_buf(addr, buf, len);
-  return s > 0;
+  int s = i2c_write_buf(addr, (uint8_t* )buf, len);
+  return s >= 0;
 }
 
 // register addr, length, data, ...
 static const uint8_t si5351_configs[] = {
   2, SI5351_REG_3_OUTPUT_ENABLE_CONTROL, 0xff,
   4, SI5351_REG_16_CLK0_CONTROL, SI5351_CLK_POWERDOWN, SI5351_CLK_POWERDOWN, SI5351_CLK_POWERDOWN,
-  2, SI5351_REG_183_CRYSTAL_LOAD, SI5351_CRYSTAL_LOAD_8PF,
-  // setup PLL (26MHz * 32 = 832MHz, 32/2-2=14)
-  9, SI5351_REG_26_PLL_A, /*P3*/0, 1, /*P1*/0, 14, 0, /*P3/P2*/0, 0, 0,
+//  2, SI5351_REG_183_CRYSTAL_LOAD, SI5351_CRYSTAL_LOAD_8PF,
+  // setup PLL (30MHz * 30 = 900MHz, 30/2-2=13)
+  9, SI5351_REG_26_PLL_A, /*P3*/0, 1, /*P1*/0, 13, 0, /*P3/P2*/0, 0, 0,
   // RESET PLL
   2, SI5351_REG_177_PLL_RESET, SI5351_PLL_RESET_A | SI5351_PLL_RESET_B,
-  // setup multisynth (832MHz / 104 = 8MHz, 104/2-2=50)
-  9, SI5351_REG_58_MULTISYNTH2, /*P3*/0, 1, /*P1*/0, 50, 0, /*P2|P3*/0, 0, 0,
+  // setup multisynth (900MHz / 30 = 30MHz, 30/2-2=13)
+  9, SI5351_REG_42_MULTISYNTH0, /*P3*/0, 1, /*P1*/0, 13, 0, /*P2|P3*/0, 0, 0,
 #ifdef __ENABLE_CLK2__
   2, SI5351_REG_18_CLK2_CONTROL, SI5351_CLK_DRIVE_STRENGTH_2MA | SI5351_CLK_INPUT_MULTISYNTH_N | SI5351_CLK_INTEGER_MODE,
   2, SI5351_REG_3_OUTPUT_ENABLE_CONTROL, 0,
@@ -216,7 +220,7 @@ static bool si5351_wait_ready(void)
     return false;
 }
 
-#if 0
+#if 1
 static void si5351_wait_pll_lock(void)
 {
     systime_t start = chVTGetSystemTime();
@@ -242,6 +246,7 @@ bool si5351_init(void)
 {
   if (!si5351_wait_ready())
       return false;
+  my_microsecond_delay(200);
   const uint8_t *p = si5351_configs;
   while (*p) {
     uint8_t len = *p++;
@@ -249,6 +254,9 @@ bool si5351_init(void)
         return false;
     p += len;
   }
+  si5351_wait_pll_lock();
+  if (pll_lock_failed)
+    return false;
   return true;
 }
 
@@ -421,8 +429,8 @@ static uint32_t gcd(uint32_t x, uint32_t y)
   return x;
 }
 
-#define XTALFREQ 26000000L
-#define PLL_N 32
+#define XTALFREQ 30000000L
+#define PLL_N 30
 #define PLLFREQ (XTALFREQ * PLL_N)
 
 static void si5351_set_frequency_fixedpll(
@@ -470,7 +478,7 @@ static void si5351_set_frequency_fixeddiv(
 void si5351_set_frequency(int channel, int freq, uint8_t drive_strength)
 {
   if (freq <= 100000000) {
-    si5351_setupPLL(SI5351_PLL_B, 32, 0, 1);
+    si5351_setupPLL(SI5351_PLL_B, 30, 0, 1);
     si5351_set_frequency_fixedpll(channel, SI5351_PLL_B, PLLFREQ, freq, SI5351_R_DIV_1, drive_strength);
   } else if (freq < 150000000) {
     si5351_set_frequency_fixeddiv(channel, SI5351_PLL_B, freq, 6, drive_strength);
@@ -531,7 +539,7 @@ int si5351_set_frequency_with_offset(uint32_t freq, int offset, uint8_t drive_st
     // fractional divider mode. only PLL A is used.
     if (current_band == 1 || current_band == 2){
     	si5351_reset_pll();
-    	si5351_setupPLL(SI5351_PLL_A, 32, 0, 1);
+    	si5351_setupPLL(SI5351_PLL_A, PLL_N, 0, 1);
     }
 
     if (rdiv == SI5351_R_DIV_8) {
