@@ -81,6 +81,7 @@
 bool si5351_init(void);
 void si5351_set_frequency(int channel, int freq, uint8_t drive_strength);
 int si5351_set_frequency_with_offset(uint32_t freq, int offset, uint8_t drive_strength);
+void si5351_set_int_mul_div(int channel, int multi, int div, uint8_t drive_strength);
 extern char  pll_lock_failed;
 
 #endif //__SI5351_H__

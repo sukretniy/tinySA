@@ -3654,7 +3654,7 @@ again:                                                              // Spur redu
             if (local_modulo == 0) ADF4351_modulo(4000);
 
             freq_t tf = ((lf + actual_rbw_x10*200) / TXCO_DIV3) * TXCO_DIV3;
-            if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200) {   // 10MHz
+            if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 && actual_rbw_x10 < 300) {   // 10MHz
               ADF4350_shift_ref(true);
             } else {
               ADF4350_shift_ref(false);
@@ -3675,7 +3675,7 @@ again:                                                              // Spur redu
 
         } else {
           freq_t tf = ((lf + actual_rbw_x10*200) / TXCO_DIV3) * TXCO_DIV3;
-          if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200) {   // 30MHz
+          if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200  && actual_rbw_x10 < 300) {   // 30MHz
             ADF4350_shift_ref(true);
           } else {
             ADF4350_shift_ref(false);
@@ -4041,6 +4041,13 @@ again:                                                              // Spur redu
       }
 #endif
       if (!in_step_test) {
+        if (my_step_delay < 250) {
+          if ((134000000 < lf && lf <142000000) ||
+              (161400000 < lf && lf <163400000) ||
+              (182800000 < lf && lf <184800000) ||
+              (206000000 < lf && lf <207000000) )
+            my_step_delay = 300;
+        }
         if (old_R >= 5) {
           if (my_step_delay <500)
             my_step_delay *= 6;

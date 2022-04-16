@@ -246,7 +246,7 @@ bool si5351_init(void)
 {
   if (!si5351_wait_ready())
       return false;
-  my_microsecond_delay(200);
+//  my_microsecond_delay(200);
   const uint8_t *p = si5351_configs;
   while (*p) {
     uint8_t len = *p++;
@@ -478,15 +478,20 @@ static void si5351_set_frequency_fixeddiv(
 void si5351_set_frequency(int channel, int freq, uint8_t drive_strength)
 {
   if (freq <= 100000000) {
-    si5351_setupPLL(SI5351_PLL_B, 30, 0, 1);
-    si5351_set_frequency_fixedpll(channel, SI5351_PLL_B, PLLFREQ, freq, SI5351_R_DIV_1, drive_strength);
+    si5351_setupPLL(SI5351_PLL_A, 30, 0, 1);
+    si5351_set_frequency_fixedpll(channel, SI5351_PLL_A, PLLFREQ, freq, SI5351_R_DIV_1, drive_strength);
   } else if (freq < 150000000) {
-    si5351_set_frequency_fixeddiv(channel, SI5351_PLL_B, freq, 6, drive_strength);
+    si5351_set_frequency_fixeddiv(channel, SI5351_PLL_A, freq, 6, drive_strength);
   } else {
-    si5351_set_frequency_fixeddiv(channel, SI5351_PLL_B, freq, 4, drive_strength);
+    si5351_set_frequency_fixeddiv(channel, SI5351_PLL_A, freq, 4, drive_strength);
   }
 }
 
+void si5351_set_int_mul_div(int channel, int multi, int div, uint8_t drive_strength)
+{
+  si5351_setupPLL(SI5351_PLL_A, multi, 0, 1);
+  si5351_setupMultisynth(channel, SI5351_PLL_A, div, 0, 1, SI5351_R_DIV_1, drive_strength);
+}
 
 static int current_band = -1;
 
