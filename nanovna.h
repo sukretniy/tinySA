@@ -79,8 +79,11 @@
 #define __LISTEN__
 #define __CHANNEL_POWER__
 #define __LIMITS__
+#ifdef TINYSA3
 #define __MCU_CLOCK_SHIFT__
+#endif
 #ifdef TINYSA4
+#define __MCU_CLOCK_SHIFT__
 #define __ULTRA__
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
@@ -130,6 +133,7 @@
 #define MAX_LOW_OUTPUT_FREQ ((freq_t)1100000000)
 #define HIGH_MIN_FREQ_MHZ   136// 825
 #define HIGH_MAX_FREQ_MHZ   1130
+#define MINIMUM_DIRECT_FREQ 830000000ULL
 #define ULTRA_MAX_FREQ      5350000000ULL
 //#define ULTRA_MAX_FREQ      2900000000ULL
 #define MAX_LO_FREQ         4350000000ULL

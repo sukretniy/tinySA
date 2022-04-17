@@ -2928,7 +2928,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int modulation_count_iter = 0;
   int spur_second_pass = false;
 #ifdef __NEW_SWITCHES__
-  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f > config.ultra_threshold) );
+  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ) );
 #else
   const int direct = false;
 #endif
@@ -3809,6 +3809,7 @@ again:                                                              // Spur redu
 #endif
     }       // ----------------- LO's set --------------------------
 
+
 #ifdef __MCU_CLOCK_SHIFT__
         if (setting.mode == M_LOW && !in_selftest) {         // Avoid 48MHz spur
           int set_below = false;
@@ -4042,10 +4043,11 @@ again:                                                              // Spur redu
 #endif
       if (!in_step_test) {
         if (my_step_delay < 250) {
-          if ((134000000 < lf && lf <142000000) ||
-              (161400000 < lf && lf <163400000) ||
-              (182800000 < lf && lf <184800000) ||
-              (206000000 < lf && lf <207000000) )
+          if ((120000000 < lf && lf <124000000) ||
+              (139900000 < lf && lf <144000000) ||
+              (161400000 < lf && lf <165400000) ||
+              (182800000 < lf && lf <186800000) ||
+              (206000000 < lf && lf <209000000) )
             my_step_delay = 300;
         }
         if (old_R >= 5) {
@@ -6422,7 +6424,8 @@ static int R_table[R_TABLE_SIZE] = {1,3,-3,4,5};
       set_sweep_frequency(ST_SPAN, 0);
       break;
     }
-  } else if (false && test == 6) {
+#ifdef TINYSA4
+  } else if (test == 6) {
     in_selftest = true;               // MCU Spur search
     reset_settings(M_LOW);
     test_prepare(TEST_SPUR);
@@ -6440,6 +6443,7 @@ static int R_table[R_TABLE_SIZE] = {1,3,-3,4,5};
       shell_printf("%d: %9.3q\n\r",i, peakFreq);
       test_validate(TEST_SPUR);                       // Validate test
     }
+#endif
 #ifdef TINYSA4
   } else if (test == 7) {                       // RBW level test, param -1 keeps correction
     int arg = setting.test_argument;
