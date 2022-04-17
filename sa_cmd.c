@@ -932,11 +932,18 @@ VNA_SHELL_FUNCTION(cmd_f)
 }
 #endif
 
+//#define CORRECTION_LOW      0
+//#define CORRECTION_LNA      1
+//#define CORRECTION_LOW_ULTRA 2
+//#define CORRECTION_LNA_ULTRA 3
+//#define CORRECTION_LOW_OUT  4
+//#define CORRECTION_HIGH     5
+
 VNA_SHELL_FUNCTION(cmd_correction)
 {
   (void)argc;
 #ifdef TINYSA4
-  static const char cmd[] = "low|lna|out|high";
+  static const char cmd[] = "low|lna|ultra|ultra_lna|out|high";
   static const char range[] = "0-19";
 #else
   static const char cmd[] = "low|high";

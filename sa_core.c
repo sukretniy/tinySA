@@ -3824,7 +3824,7 @@ again:                                                              // Spur redu
           if (lf > 40000000){
             uint32_t tf = lf;
             while (tf > 240000000) tf -= 240000000;       // Wrap between 0-48MHz
-            while (tf > 48000000) tf -= 48000000;       // Wrap between 0-48MHz
+            while (tf >  48000000) tf -=  48000000;       // Wrap between 0-48MHz
             if (tf < 20000000 )
               set_below = true;
           }
@@ -4042,14 +4042,10 @@ again:                                                              // Spur redu
       }
 #endif
       if (!in_step_test) {
-        if (my_step_delay < 250) {
-          if ((120000000 < lf && lf <124000000) ||
-              (139900000 < lf && lf <144000000) ||
-              (161400000 < lf && lf <165400000) ||
-              (182800000 < lf && lf <186800000) ||
-              (206000000 < lf && lf <209000000) )
+        if (my_step_delay < 300 && old_R == 1) {
+          if ((100000000 < lf && lf <250000000))
             my_step_delay = 300;
-        }
+        } else
         if (old_R >= 5) {
           if (my_step_delay <500)
             my_step_delay *= 6;
@@ -4352,7 +4348,7 @@ static bool sweep(bool break_on_operation)
       ili9341_set_background(LCD_BG_COLOR);
       ili9341_fill(OFFSETX+pos, CHART_BOTTOM+1, WIDTH-pos, 1);
 
-      if (local_sweep_time > 2 * ONE_SECOND_TIME) {
+      if (local_sweep_time > 10 * ONE_SECOND_TIME) {
         plot_into_index(measured);
         redraw_request |= REDRAW_CELLS | REDRAW_BATTERY;
         // plot trace and other indications as raster
