@@ -79,8 +79,10 @@ static volatile vna_shellcmd_t  shell_function = 0;
 void update_frequencies(void);
 static void set_frequencies(freq_t start, freq_t stop, uint16_t points);
 static bool sweep(bool break_on_operation);
+static long_t my_atoi(const char *p);
 
 uint8_t sweep_mode = SWEEP_ENABLE;
+uint16_t sweep_once_count = 1;
 uint16_t redraw_request = 0; // contains REDRAW_XXX flags
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
@@ -157,7 +159,10 @@ static THD_FUNCTION(Thread1, arg)
         *t++ = *f++;
 
       completed = sweep(true);
-      sweep_mode&=~SWEEP_ONCE;
+      if (sweep_once_count>1) {
+        sweep_once_count--;
+      } else
+        sweep_mode&=~SWEEP_ONCE;
     } else if (sweep_mode & SWEEP_SELFTEST) {
       // call from lowest level to save stack space
       self_test(setting.test);
@@ -245,7 +250,7 @@ void enableTracesAtComplete(uint8_t mask){
 int
 is_paused(void)
 {
-  return !(sweep_mode & SWEEP_ENABLE);
+  return !(sweep_mode & (SWEEP_ENABLE|SWEEP_ONCE));
 }
 
 static inline void
@@ -258,6 +263,13 @@ static inline void
 resume_sweep(void)
 {
   sweep_mode |= SWEEP_ENABLE;
+}
+
+static inline void
+resume_once(uint16_t c)
+{
+  sweep_once_count = c;
+  sweep_mode |= SWEEP_ONCE;
 }
 
 void
@@ -344,14 +356,28 @@ VNA_SHELL_FUNCTION(cmd_pause)
   draw_cal_status();
 }
 
+VNA_SHELL_FUNCTION(cmd_status)
+{
+  (void)argc;
+  (void)argv;
+  if (is_paused())
+    shell_printf("Paused\r\n");
+  else
+    shell_printf("Resumed\r\n");
+}
+
 VNA_SHELL_FUNCTION(cmd_resume)
 {
   (void)argc;
   (void)argv;
-
+  uint16_t c = 0;
   // restore frequencies array and cal
   update_frequencies();
-  resume_sweep();
+  if (argc == 1) {
+    c = my_atoi(argv[0]);
+    resume_once(c) ;
+  } else
+    resume_sweep();
 }
 
 VNA_SHELL_FUNCTION(cmd_reset)
@@ -827,6 +853,9 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
 
 VNA_SHELL_FUNCTION(cmd_sd_read)
 {
+  DIR dj;
+  FILINFO fno;
+  FRESULT res;
   char *buf = (char *)spi_buffer;
   if (argc != 1 || argv[0][0] == '?')
   {
@@ -837,14 +866,24 @@ VNA_SHELL_FUNCTION(cmd_sd_read)
   if (cmd_sd_card_mount() != FR_OK)
     return;
 
-  if (f_open(fs_file, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK){
+  res = f_findfirst(&dj, &fno, "", filename);
+  if (res != FR_OK || fno.fname[0] == 0)
+    goto error;
+
+
+  if (f_open(fs_file, fno.fname, FA_OPEN_EXISTING | FA_READ) != FR_OK){
+error:
     shell_printf("err: no file\r\n");
     return;
   }
   // shell_printf("sd_read: %s\r\n", filename);
   // number of bytes to follow (file size)
   uint32_t filesize = f_size(fs_file);
+#if 1
+  shell_printf("%u\r\n", filesize);
+#else
   streamWrite(shell_stream, (void *)&filesize, 4);
+#endif
   UINT size = 0;
   // file data (send all data from file)
   while (f_read(fs_file, buf, 512, &size) == FR_OK && size > 0)
@@ -856,6 +895,8 @@ VNA_SHELL_FUNCTION(cmd_sd_read)
 
 VNA_SHELL_FUNCTION(cmd_sd_delete)
 {
+  DIR dj;
+  FILINFO fno;
   FRESULT res;
   if (argc != 1 || argv[0][0] == '?') {
      usage_printf("sd_delete {filename}\r\n");
@@ -863,9 +904,14 @@ VNA_SHELL_FUNCTION(cmd_sd_delete)
   }
   if (cmd_sd_card_mount() != FR_OK)
     return;
-  const char *filename = argv[0];
-  res = f_unlink(filename);
-  shell_printf("delete: %s %s\r\n", filename, res == FR_OK ? "OK" : "err");
+  res = f_findfirst(&dj, &fno, "", argv[0]);
+  while (res == FR_OK && fno.fname[0])
+  {
+    res = f_unlink(fno.fname);
+    shell_printf("delete: %s %s\r\n", fno.fname, res == FR_OK ? "OK" : "err");
+    res = f_findnext(&dj, &fno);
+  }
+
   return;
 }
 #endif
@@ -1908,6 +1954,7 @@ static const VNAShellCommand commands[] =
     {"touchtest"   , cmd_touchtest   , CMD_WAIT_MUTEX},
     {"pause"       , cmd_pause       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"resume"      , cmd_resume      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    {"status"      , cmd_status      , CMD_RUN_IN_LOAD},
     {"caloutput"   , cmd_caloutput   , CMD_RUN_IN_LOAD},
     {"save"        , cmd_save        , CMD_RUN_IN_LOAD},
     {"recall"      , cmd_recall      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},

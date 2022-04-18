@@ -3242,9 +3242,6 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
     if (setting.frequency_step != 0) {
       correct_RSSI_freq = get_frequency_correction(f);
-#ifdef TINYSA4
-//      correct_RSSI_freq += float_TO_PURE_RSSI(direct ? -6.0 : 0); // TODO add impact of direct
-#endif
     }
   }
 // #define DEBUG_CORRECTION
@@ -3421,7 +3418,7 @@ again:                                                              // Spur redu
       else
       {
 #ifdef TINYSA4
-        if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE )
+        if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE && setting.mode == M_LOW )
           local_IF = 977400000; // static spur table IF
         else
           local_IF = config.frequency_IF1;
