@@ -1647,15 +1647,17 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_600kHz, -10,6000,  8},
  {SI4463_RBW_850kHz, -9,8500,  8},
 #else
- {SI4463_RBW_02kHz,  15,3,    25},   // 20 ->15
- {SI4463_RBW_1kHz,   15,10,    15},  // 20 -> 15
- {SI4463_RBW_3kHz,   10,30,   10},   //15 ->10
- {SI4463_RBW_10kHz,  10,100,   20},  // 20 ->10
- {SI4463_RBW_30kHz,  0,300,  15},    // 5 -> 0
- {SI4463_RBW_100kHz, 0,1000, 15},      // 0 -> 0
- {SI4463_RBW_300kHz, 0,3000, 10},       // 300k must have RSSI correction = 0
- {SI4463_RBW_600kHz, 5, 6000, 20},      // 0 -> 5
- {SI4463_RBW_850kHz, 5,8500,  18},     // 10 ->5
+
+#define NOISE_BASE_CORRECTION   10
+ {SI4463_RBW_02kHz,  15,3,  NOISE_BASE_CORRECTION + 10},   // 15 ->10
+ {SI4463_RBW_1kHz,   15,10, NOISE_BASE_CORRECTION +  -5},  //  5 -> -5
+ {SI4463_RBW_3kHz,   10,30, NOISE_BASE_CORRECTION +  -5},   // 0 ->-5
+ {SI4463_RBW_10kHz,  10,100,NOISE_BASE_CORRECTION +  0},  // 0 -> 0
+ {SI4463_RBW_30kHz,  0,300, NOISE_BASE_CORRECTION +  -5},    //  5 -> -5
+ {SI4463_RBW_100kHz, 0,1000,NOISE_BASE_CORRECTION +  -5},      // 5 -> -5
+ {SI4463_RBW_300kHz, 0,3000,NOISE_BASE_CORRECTION},       // 300k must have RSSI correction = 0
+ {SI4463_RBW_600kHz, 5,6000,NOISE_BASE_CORRECTION +  0},      // 10-?0
+ {SI4463_RBW_850kHz, 5,8500,NOISE_BASE_CORRECTION +  10},     // 8->10
 #endif
 };
 
