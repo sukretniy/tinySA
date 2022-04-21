@@ -790,7 +790,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
     if (old_offset == 100) old_offset = 0;
     float new_offset = uistat.value - (-25.0) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
     if (uistat.value == 100) new_offset = 100;
-    if ((new_offset > -5 && new_offset < 5) || new_offset == 100) {
+    if ((new_offset > -10 && new_offset < 10) || new_offset == 100) {
       config.low_level_output_offset = new_offset;
       config_save();
     }
@@ -1311,8 +1311,17 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
   if (uistat.value != 1234)
     return;
   clear_all_config_prop_data();
+#ifdef TINYSA4
+#define SCB_AIRCR_VECTKEYSTAT_LSB 16
+#define SCB_AIRCR_VECTKEYSTAT       (0xFFFF << SCB_AIRCR_VECTKEYSTAT_LSB)
+#define SCB_AIRCR_VECTKEY       (0x05FA << SCB_AIRCR_VECTKEYSTAT_LSB)
+#define SCB_AIRCR_SYSRESETREQ         (1 << 2)
+  SCB->AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+          while(true);
+#else
   reset_settings(M_LOW);
   ui_mode_normal();
+#endif
 }
 
 float nf_gain;

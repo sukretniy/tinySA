@@ -97,7 +97,7 @@ static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 #endif
 
 #ifdef TINYSA4
-const float si_drive_dBm []     = {-43.8, -30.0, -21.8, -17.2, -14.2, -11.9, -10.1, -8.6, -7.3, -6.2, -5.2, -4.3, -3.5, -2.8 ,  -2.2,  -1.5, -1, -0.5, 0};
+const float si_drive_dBm []     = {-44.30, -29.98, -19.41, -16.80, -13.79, -11.49, -9.67, -8.18, -6.98, -5.87, -4.91, -4.16, -3.31, -2.62 ,  -1.99,  -1.41, -0.95, -0.47, 0};
 const float adf_drive_dBm[]     = {-15,-12,-9,-6};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) adf_drive_dBm;
@@ -106,7 +106,7 @@ const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0
 #endif
 
 #ifdef TINYSA4
-#define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 23 - config.switch_offset)
+#define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 25.0)
 #define RECEIVE_SWITCH_ATTENUATION  (29 - config.receive_switch_offset)
 //#define POWER_OFFSET    -18             // Max level with all enabled
 //#define POWER_RANGE     70

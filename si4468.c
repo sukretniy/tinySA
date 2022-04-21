@@ -1648,7 +1648,7 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_850kHz, -9,8500,  8},
 #else
 
-#define NOISE_BASE_CORRECTION   10
+#define NOISE_BASE_CORRECTION   7
  {SI4463_RBW_02kHz,  15,3,  NOISE_BASE_CORRECTION + 10},   // 15 ->10
  {SI4463_RBW_1kHz,   15,10, NOISE_BASE_CORRECTION +  -5},  //  5 -> -5
  {SI4463_RBW_3kHz,   10,30, NOISE_BASE_CORRECTION +  -5},   // 0 ->-5
