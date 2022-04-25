@@ -380,6 +380,18 @@ VNA_SHELL_FUNCTION(cmd_resume)
     resume_sweep();
 }
 
+VNA_SHELL_FUNCTION(cmd_repeat)
+{
+  (void)argc;
+  (void)argv;
+  uint16_t c = 0;
+  if (argc == 1) {
+    c = my_atoi(argv[0]);
+    set_repeat(c);
+  } else
+    set_repeat(1);
+}
+
 VNA_SHELL_FUNCTION(cmd_reset)
 {
   (void)argc;
@@ -1394,10 +1406,11 @@ VNA_SHELL_FUNCTION(cmd_sweep)
     return;
   }
   // Parse sweep {go|abort}
-  static const char sweep_cmd2[] = "go|abort";
+  static const char sweep_cmd2[] = "normal|precise|fast|noise|go|abort";
   int type2 = get_str_index(argv[0], sweep_cmd2);
-  if (type2==0) { setting.sweep = true; return;}
-  if (type2==1) { setting.sweep = false; return;}
+  if (type2 >=0 && type2 <= 3) { set_step_delay(type2);return;}
+  if (type2==4) { setting.sweep = true; return;}
+  if (type2==5) { setting.sweep = false; return;}
   //  Parse sweep {start(Hz)} [stop(Hz)]
   set_sweep_frequency(ST_START, value0);
   if (value1)
@@ -1954,6 +1967,7 @@ static const VNAShellCommand commands[] =
     {"touchtest"   , cmd_touchtest   , CMD_WAIT_MUTEX},
     {"pause"       , cmd_pause       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"resume"      , cmd_resume      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    {"repeat"      , cmd_repeat      , CMD_RUN_IN_LOAD},
     {"status"      , cmd_status      , CMD_RUN_IN_LOAD},
     {"caloutput"   , cmd_caloutput   , CMD_RUN_IN_LOAD},
     {"save"        , cmd_save        , CMD_RUN_IN_LOAD},

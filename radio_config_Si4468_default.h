@@ -656,14 +656,15 @@
 
 /*
 // Set properties:           RF_MODEM_RSSI_MUTE_1_1
-// Number of properties:     1
+// Number of properties:     2
 // Group ID:                 0x20
 // Start ID:                 0x57
-// Default values:           0x00, 
+// Default values:           0x00, 0x00
 // Descriptions:
 //   MODEM_RSSI_MUTE - Configures muting of the RSSI to avoid false RSSI interrupts.
+//   MODEM_FAST_RSSI_DELAY - Configures the delay after RX to capture the RSSI.
 */
-#define RF_MODEM_RSSI_MUTE_1_1 0x11, 0x20, 0x01, 0x57, 0x00
+#define RF_MODEM_RSSI_MUTE_1_1 0x11, 0x20, 0x02, 0x57, 0x00, 0x00
 
 /*
 // Set properties:           RF_MODEM_DSA_CTRL1_5_1
