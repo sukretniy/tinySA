@@ -1756,6 +1756,8 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
     return(0.0);
   }
 #ifdef TINYSA4
+  if (setting.extra_lna)
+    c += 1;
   if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
     c = CORRECTION_LOW_ULTRA;
     if ( f > ULTRA_MAX_FREQ) {

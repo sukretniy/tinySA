@@ -457,6 +457,8 @@ VNA_SHELL_FUNCTION(cmd_ultra_start)
   } else {
     freq_t a = (freq_t)my_atoi(argv[0]);
     config.ultra_threshold = a;
+    ultra_threshold = (config.ultra_threshold == 0 ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
+    dirty = true;
     config_save();
   }
 }
