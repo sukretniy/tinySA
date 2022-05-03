@@ -372,7 +372,8 @@ VNA_SHELL_FUNCTION(cmd_resume)
   (void)argv;
   uint16_t c = 0;
   // restore frequencies array and cal
-  update_frequencies();
+  // if (dirty)
+    update_frequencies();
   if (argc == 1) {
     c = my_atoi(argv[0]);
     resume_once(c) ;

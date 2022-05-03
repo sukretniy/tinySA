@@ -757,8 +757,8 @@ void set_IF2(int f)
 {
 
   config.frequency_IF2 = f;
-  dirty = true;
   config_save();
+  dirty = true;
 }
 
 void set_R(int f)
@@ -3934,11 +3934,15 @@ again:                                                              // Spur redu
 #ifdef __SI4432__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
       // if ultra fast scanning is needed prefill the SI4432 RSSI read buffer
+      if (scandirty)
+        my_microsecond_delay(6400);            // Extra time to avoid gap when filling SI4468
       SI4432_Fill(MODE_SELECT(setting.mode), 0);
     }
 #endif
 #ifdef __SI4463__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME && setting.exp_aver == 1) {
+      if (scandirty)
+        my_microsecond_delay(16000);            // Extra time to avoid gap when filling SI4468
       SI446x_Fill(MODE_SELECT(setting.mode), -1);   // First get_RSSI will fail
     }
 #endif
@@ -4015,6 +4019,9 @@ again:                                                              // Spur redu
       }
 #endif
 #ifdef __SI4463__
+      if (scandirty)
+        my_microsecond_delay(10000);            // Extra time to avoid gap when filling SI4468
+
       if (/* S_STATE(setting.spur_removal) == 0 &&  */ SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
         SI446x_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
