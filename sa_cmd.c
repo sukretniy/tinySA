@@ -465,6 +465,33 @@ VNA_SHELL_FUNCTION(cmd_ultra_start)
 #endif
 
 #ifdef TINYSA4
+VNA_SHELL_FUNCTION(cmd_direct)
+{
+  if (argv[0][0] == '?')
+    goto usage;
+  freq_t value = 0;
+  if (argc == 2) value = my_atoui(argv[1]);
+  // Parse direct {start|stop} {freq(Hz)}
+  static const char direct_cmd[] = "start|stop|on|off";
+  int type = get_str_index(argv[0], direct_cmd);
+  switch(type) {
+  case 0:
+    config.direct_start = value;
+    return;
+  case 1:
+    config.direct_stop = value;
+    return;
+  case 2:
+    config.direct = true;
+    return;
+  case 3:
+    config.direct = false;
+    return;
+  }
+usage:
+  usage_printf("direct {%s} {freq(Hz)}\r\n", direct_cmd);
+}
+
 VNA_SHELL_FUNCTION(cmd_if1)
 {
   if (argc != 1 || argv[0][0] == '?') {

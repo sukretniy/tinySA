@@ -50,6 +50,7 @@ float *imag = (float *) &spi_buffer[512];
 uint8_t scandirty = true;
 bool debug_avoid = false;
 bool debug_avoid_second = false;
+bool progress_bar = true;
 #ifdef __ULTRA__
 bool debug_spur = false;
 #endif
@@ -232,7 +233,7 @@ void reset_settings(int m)
   setting.mode = m;
   setting.sweep = false;
 #ifdef __ULTRA__
-  ultra_threshold = (config.ultra_threshold == 0 ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
+  ultra_threshold = (config.ultra_threshold == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
   ultra = config.ultra;
 #endif
 #ifdef TINYSA4
@@ -4254,7 +4255,7 @@ static bool sweep(bool break_on_operation)
   float temp_min_level = 100;          // Initialize the peak search algorithm
   int16_t downslope = true;
 #ifdef __ULTRA__
-  if (setting.mode == M_LOW && config.ultra_threshold == 0) {
+  if (setting.mode == M_LOW && config.ultra_threshold == ULTRA_AUTO) {
     if (getFrequency(sweep_points-1) <= 800000000)
       ultra_threshold = 800000000;
     else
@@ -4285,7 +4286,11 @@ static bool sweep(bool break_on_operation)
 #endif
             ) {                        // break loop if needed
       abort:
-      if (setting.actual_sweep_time_us > ONE_SECOND_TIME /* && MODE_INPUT(setting.mode) */) {
+      if (
+#ifdef TINYSA4
+          progress_bar &&
+#endif
+          setting.actual_sweep_time_us > ONE_SECOND_TIME /* && MODE_INPUT(setting.mode) */) {
         ili9341_set_background(LCD_BG_COLOR);
         ili9341_fill(OFFSETX, CHART_BOTTOM+1, WIDTH, 1);                    // Erase progress bar
 #ifdef __SWEEP_RESTART__
@@ -4339,7 +4344,11 @@ static bool sweep(bool break_on_operation)
     systime_t local_sweep_time = sa_ST2US(chVTGetSystemTimeX() - start_of_sweep_timestamp);
     if (setting.actual_sweep_time_us > ONE_SECOND_TIME)
       local_sweep_time = setting.actual_sweep_time_us;
-    if (show_bar && (( local_sweep_time > ONE_SECOND_TIME && (i & 0x07) == 0) /* || ( local_sweep_time > ONE_SECOND_TIME*10)*/ ) )
+    if (
+#ifdef TINYSA4
+          progress_bar &&
+#endif
+          show_bar && (( local_sweep_time > ONE_SECOND_TIME && (i & 0x07) == 0) /* || ( local_sweep_time > ONE_SECOND_TIME*10)*/ ) )
     {
       int pos = i * (WIDTH+1) / sweep_points;
       ili9341_set_background(LCD_SWEEP_LINE_COLOR);
@@ -6173,7 +6182,7 @@ quit:
       if (setting.test_argument)
         set_sweep_frequency(ST_CENTER, ((freq_t)setting.test_argument));
 #ifdef __ULTRA__
-      ultra_threshold = (config.ultra_threshold == 0 ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
+      ultra_threshold = (config.ultra_threshold == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
 #endif
       test_acquire(TEST_LEVEL);                        // Acquire test
 	  test_validate(TEST_LEVEL);                       // Validate test

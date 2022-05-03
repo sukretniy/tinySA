@@ -1176,6 +1176,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_spur_acb)
 #endif
 
 #ifdef TINYSA4
+static UI_FUNCTION_ADV_CALLBACK(menu_progress_bar_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = progress_bar == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  progress_bar = !progress_bar;
+  //  menu_move_back();
+  ui_mode_normal();
+}
+
 static UI_FUNCTION_ADV_CALLBACK(menu_extra_lna_acb)
 {
   (void)data;
@@ -2720,7 +2733,7 @@ static const menuitem_t menu_settings3[] =
 //  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
-  { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "0=auto"},
+  { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "10G=auto"},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nDIRECT",    menu_direct_acb},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R\n\b%s",           "Set R"},
@@ -2763,6 +2776,7 @@ static const menuitem_t menu_settings4[] =
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
+ { MT_ADV_CALLBACK,     0,     "PROGRESS\nBAR",        menu_progress_bar_acb},
 #if 0                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
@@ -3471,17 +3485,17 @@ set_numeric_value(void)
 #endif
 #ifdef __ULTRA__
   case KM_ULTRA_START:
-    config.ultra_threshold = uistat.value;
+    config.ultra_threshold = uistat.freq_value;
     reset_settings(setting.mode);
 //    config_save(); // TODO not now
     //ultra_threshold = config.ultra_threshold;
     break;
   case KM_DIRECT_START:
-    config.direct_start = uistat.value;
+    config.direct_start = uistat.freq_value;
     config_save();
     break;
   case KM_DIRECT_STOP:
-    config.direct_stop = uistat.value;
+    config.direct_stop = uistat.freq_value;
     config_save();
     break;
 #endif

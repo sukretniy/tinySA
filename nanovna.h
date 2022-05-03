@@ -93,6 +93,7 @@
 #define __NOISE_FIGURE__
 #define __VBW__
 #define __SWEEP_RESTART__
+// #define DIRECT_CORRECTION        // Not enough space for config in one flash page.
 #define DB_PER_DEGREE_BELOW               0.056
 #define DB_PER_DEGREE_ABOVE               0.069
 #define CENTER_TEMPERATURE          34.0
@@ -135,6 +136,7 @@
 #define HIGH_MAX_FREQ_MHZ   1130
 #define MINIMUM_DIRECT_FREQ 830000000ULL
 #define ULTRA_MAX_FREQ      5350000000ULL
+#define ULTRA_AUTO  10000000000ULL // 10GHz
 //#define ULTRA_MAX_FREQ      2900000000ULL
 #define MAX_LO_FREQ         4350000000ULL
 //#define LOW_MAX_FREQ         800000000ULL
@@ -199,9 +201,17 @@ typedef uint32_t freq_t;
  #define CORRECTION_LNA      1
  #define CORRECTION_LOW_ULTRA 2
  #define CORRECTION_LNA_ULTRA 3
- #define CORRECTION_LOW_OUT  4
- #define CORRECTION_HIGH     5
- #define CORRECTION_SIZE     6
+ #ifdef  DIRECT_CORRECTION
+   #define CORRECTION_DIRECT   4
+   #define CORRECTION_LNA_DIRECT   5
+   #define CORRECTION_LOW_OUT  6
+   #define CORRECTION_HIGH     7
+   #define CORRECTION_SIZE     8
+#else
+  #define CORRECTION_LOW_OUT  4
+  #define CORRECTION_HIGH     5
+  #define CORRECTION_SIZE     6
+#endif
 #endif
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
@@ -433,6 +443,8 @@ extern float high_out_offset(void);
 #define LOW_OUT_OFFSET low_out_offset()
 #define HIGH_OUT_OFFSET high_out_offset()
 extern bool debug_avoid;
+extern bool progress_bar;
+
 extern void toggle_debug_avoid(void);
 extern float log_averaging_correction;
 #else
