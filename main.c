@@ -2040,7 +2040,7 @@ static const VNAShellCommand commands[] =
 #endif
 #ifdef __ULTRA__
     { "ultra", cmd_ultra,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
-    { "ultra_start", cmd_ultra_start, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
+//    { "ultra_start", cmd_ultra_start, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
 #endif
     { "load", cmd_load,   CMD_RUN_IN_LOAD },
     { "ext_gain", cmd_ext_gain, CMD_RUN_IN_LOAD},

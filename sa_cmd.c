@@ -153,12 +153,52 @@ VNA_SHELL_FUNCTION(cmd_lna)
 #ifdef __ULTRA__
 VNA_SHELL_FUNCTION(cmd_ultra)
 {
-  int m = generic_option_cmd("ultra", "off|on", argc, argv[0]);
-  if (m>=0) {
+  const char *ultra_cmd = "off|on|auto|start";
+  if (argc<1 || argc>2)
+    goto usage;
+  if (argv[0][0] == '?')
+    goto usage;
+  int m = get_str_index(argv[0], ultra_cmd);
+  freq_t a = ULTRA_AUTO;
+  switch(m) {
+  case 0:
+  case 1:
     config.ultra = m;
     update_min_max_freq();
+    break;
+  case 2:
+    goto auto_label;
+  case 3:
+    if (argc != 2)
+      goto usage;
+    a = my_atoui(argv[1]);
+    auto_label:
+    config.ultra_threshold = a;
+    ultra_threshold = a;
+    dirty = true;
+    break;
+  default:
+    {
+     usage:
+      usage_printf("ultra %s {freq}\r\n", ultra_cmd);
+    }
   }
 }
+/*
+VNA_SHELL_FUNCTION(cmd_ultra_start)
+{
+  if (argc != 1 || argv[0][0] == '?') {
+    usage_printf("ultra_start {0..4290M}\r\n%QHz\r\n", config.ultra_threshold);
+    return;
+  } else {
+    freq_t a = (freq_t)my_atoi(argv[0]);
+    config.ultra_threshold = a;
+    ultra_threshold = (config.ultra_threshold == 0 ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
+    dirty = true;
+    config_save();
+  }
+}
+*/
 #endif
 
 VNA_SHELL_FUNCTION(cmd_output)
@@ -447,22 +487,6 @@ VNA_SHELL_FUNCTION(cmd_zero)
   }
   config.ext_zero_level = my_atoi(argv[0]);
 }
-
-#ifdef __ULTRA__
-VNA_SHELL_FUNCTION(cmd_ultra_start)
-{
-  if (argc != 1 || argv[0][0] == '?') {
-    usage_printf("ultra_start {0..4290M}\r\n%QHz\r\n", config.ultra_threshold);
-    return;
-  } else {
-    freq_t a = (freq_t)my_atoi(argv[0]);
-    config.ultra_threshold = a;
-    ultra_threshold = (config.ultra_threshold == 0 ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
-    dirty = true;
-    config_save();
-  }
-}
-#endif
 
 #ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_direct)

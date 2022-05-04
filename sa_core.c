@@ -4019,10 +4019,10 @@ again:                                                              // Spur redu
       }
 #endif
 #ifdef __SI4463__
-      if (scandirty)
-        my_microsecond_delay(10000);            // Extra time to avoid gap when filling SI4468
 
       if (/* S_STATE(setting.spur_removal) == 0 &&  */ SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME) {
+//        if (scandirty)
+//          my_microsecond_delay(10000);            // Extra time to avoid gap when filling SI4468
         SI446x_Fill(MODE_SELECT(setting.mode), 1);                       // fast mode possible to pre-fill RSSI buffer
       }
 #endif
