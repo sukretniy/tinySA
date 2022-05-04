@@ -3458,7 +3458,7 @@ again:                                                              // Spur redu
 #endif
 #ifdef __ULTRA__
           if (S_IS_AUTO(setting.below_IF)) {
-            if ((freq_t)lf + (freq_t)local_IF> MAX_LO_FREQ && lf < ULTRA_MAX_FREQ)
+            if ((freq_t)lf + (freq_t)local_IF> MAX_LO_FREQ && lf <= ULTRA_MAX_FREQ)
               setting.below_IF = S_AUTO_ON; // Only way to reach this range.
             else
               setting.below_IF = S_AUTO_OFF; // default is above IF
@@ -3467,7 +3467,9 @@ again:                                                              // Spur redu
           if (S_STATE(setting.spur_removal)){         // If in low input mode and spur reduction is on
             if (setting.below_IF == S_AUTO_OFF &&       // Auto and not yet in below IF
 #ifdef TINYSA4
-                ( lf > ULTRA_MAX_FREQ || lf < local_IF/2  || ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > MIN_BELOW_LO + local_IF) )
+                ( lf > ULTRA_MAX_FREQ ||    // Harmonic mode
+                    lf < 400000000 ||       // below 400MHz use below IF
+                    ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > 2 * local_IF + 10000000) )
 #else
 #ifdef __ULTRA__
                 ( (lf > ULTRA_MAX_FREQ && (lf + local_IF) / setting.harmonic < MAX_LO_FREQ) || lf < local_IF - MIN_LO_FREQ  || ( lf + (uint32_t)local_IF< MAX_LO_FREQ && lf > MIN_BELOW_LO + local_IF) )
@@ -3942,7 +3944,7 @@ again:                                                              // Spur redu
 #ifdef __SI4463__
     if (i == 0 && setting.frequency_step == 0 && setting.trigger == T_AUTO && S_STATE(setting.spur_removal) == 0 && SI4432_step_delay == 0 && setting.repeat == 1 && setting.sweep_time_us < 100*ONE_MS_TIME && setting.exp_aver == 1) {
       if (scandirty)
-        my_microsecond_delay(16000);            // Extra time to avoid gap when filling SI4468
+        my_microsecond_delay(20000);            // Extra time to avoid gap when filling SI4468
       SI446x_Fill(MODE_SELECT(setting.mode), -1);   // First get_RSSI will fail
     }
 #endif

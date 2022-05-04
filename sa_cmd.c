@@ -491,6 +491,8 @@ VNA_SHELL_FUNCTION(cmd_zero)
 #ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_direct)
 {
+  if (argc<1 || argc>2)
+    goto usage;
   if (argv[0][0] == '?')
     goto usage;
   freq_t value = 0;
