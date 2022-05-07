@@ -83,6 +83,9 @@ int linear_averaging = true;
 static freq_t old_freq[5] = { 0, 0, 0, 0,0};
 static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
 static long real_offset = 0;
+#ifdef __ULTRA__
+static int LO_harmonic;
+#endif
 
 void clear_frequency_cache(void)
 {
@@ -1762,7 +1765,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
     c = CORRECTION_LOW_ULTRA;
     if ( f > ULTRA_MAX_FREQ) {
-      cv += float_TO_PURE_RSSI(8.5);                                        // +9dB correction.
+      cv -= float_TO_PURE_RSSI(config.harmonic_level_offset);                                        // +10.5dB correction.
     }
     if (setting.extra_lna)
       c += 1;
@@ -1988,7 +1991,9 @@ void set_freq(int V, freq_t freq)    // translate the requested frequency into a
       // ----------------------------- set mixer drive --------------------------------------------
       int target_drive = setting.lo_drive;
       if (target_drive & 0x04){     // Automatic mixer drive
-        if (freq-970000000 < 600000000ULL)       // below 100MHz
+        if (LO_harmonic)
+          target_drive = 3;
+        else if (freq-970000000 < 600000000ULL)       // below 100MHz
           target_drive = 0;
         else if (freq-970000000 < 1200000000ULL) // below 1.2GHz
           target_drive = 1;
@@ -2850,9 +2855,6 @@ static int is_below = false;
 static int LO_shifted;
 static int LO_mirrored;
 static int LO_shifting;
-#endif
-#ifdef __ULTRA__
-static int LO_harmonic;
 #endif
 
 static void calculate_static_correction(void)                   // Calculate the static part of the RSSI correction
@@ -4146,8 +4148,8 @@ again:                                                              // Spur redu
 #ifdef TINYSA4
     if (LO_shifting)
       pureRSSI -= float_TO_PURE_RSSI(config.shift_level_offset);
-    if (LO_harmonic)
-      pureRSSI -= float_TO_PURE_RSSI(config.harmonic_level_offset);
+//    if (LO_harmonic)
+//      pureRSSI -= float_TO_PURE_RSSI(config.harmonic_level_offset);
 #endif
 
     if (RSSI < pureRSSI)                                     // Take max during subscanning

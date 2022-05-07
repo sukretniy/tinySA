@@ -1528,6 +1528,10 @@ static void trace_print_value_string(     // Only used at one place
         step = step*10;
       }
     }
+#ifdef TINYSA4
+    if (freq >= 1000000000)
+      digits += 3;
+#endif
     plot_printf(ptr2, sizeof(buf2) - 9, "%9.*QHz", digits, freq);
   }
   const char *format;
