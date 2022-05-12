@@ -338,7 +338,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   //                                     0    1      2
 #ifdef TINYSA4
-  static const char cmd_mode_list[] = "low|high|switch|receive_switch|lna|harmonic|shift";
+  static const char cmd_mode_list[] = "low|high|switch|receive_switch|lna|harmonic|shift|drive1|drive2";
 #else
   static const char cmd_mode_list[] = "low|high|switch|receive_switch";
 #endif
@@ -354,6 +354,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     shell_printf(p, "lna",          config.lna_level_offset);
     shell_printf(p, "harmonic",     config.harmonic_level_offset);
     shell_printf(p, "shift",        config.shift_level_offset);
+    shell_printf(p, "drive1",       config.drive1_level_offset);
+    shell_printf(p, "drive2",       config.drive2_level_offset);
 #endif
     return;
   }
@@ -374,6 +376,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       case 4: config.lna_level_offset = v; break;
       case 5: config.harmonic_level_offset = v; break;
       case 6: config.shift_level_offset = v; break;
+      case 7: config.drive1_level_offset = v; break;
+      case 8: config.drive2_level_offset = v; break;
 #endif
       default: goto usage;
     }
@@ -684,7 +688,7 @@ VNA_SHELL_FUNCTION(cmd_d)
   (void) argc;
   (void) argv;
   int32_t a = my_atoi(argv[0]);
-#ifdef TINYSA4
+#if false
   int32_t d;
   if (argc == 2)
     d = my_atoi(argv[1]);

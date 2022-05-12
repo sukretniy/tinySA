@@ -139,6 +139,8 @@
 #define ULTRA_AUTO  10000000000ULL // 10GHz
 //#define ULTRA_MAX_FREQ      2900000000ULL
 #define MAX_LO_FREQ         4350000000ULL
+#define MAX_ABOVE_IF_FREQ   3350000000ULL
+#define MIN_BELOW_IF_FREQ   2300000000ULL
 //#define LOW_MAX_FREQ         800000000ULL
 #define MIN_BELOW_LO         550000000ULL
 #ifdef __NEW_SWITCHES__
@@ -707,6 +709,8 @@ typedef struct config {
   float lna_level_offset;
   float harmonic_level_offset;
   float shift_level_offset;
+  float drive1_level_offset;
+  float drive2_level_offset;
 #endif
 #ifdef __NOISE_FIGURE__
   float noise_figure;

@@ -70,6 +70,7 @@ int spur_gate = 100;
 #define DEFAULT_ULTRA_THRESHOLD 800000000ULL
 freq_t ultra_threshold;
 bool ultra;
+static int LO_harmonic;
 #endif
 #ifdef TINYSA4
 int noise_level;
@@ -83,9 +84,11 @@ int linear_averaging = true;
 static freq_t old_freq[5] = { 0, 0, 0, 0,0};
 static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
 static long real_offset = 0;
-#ifdef __ULTRA__
-static int LO_harmonic;
-#endif
+
+
+static int LO_spur_shifted;
+static int LO_mirrored;
+static volatile int LO_shifting;
 
 void clear_frequency_cache(void)
 {
@@ -107,6 +110,11 @@ const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,   
 float *drive_dBm = (float *) adf_drive_dBm;
 #else
 const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0, 3, 6, 9, 12, 16};
+#endif
+
+#ifdef __ULTRA__
+int old_drive = -1;
+int actual_drive = -1;
 #endif
 
 #ifdef TINYSA4
@@ -875,6 +883,33 @@ static pureRSSI_t get_signal_path_loss(void){  //  loss as positive number
 #endif  
 }
 
+void correct_high_output_level(void)
+{
+  float a = setting.level - level_max();
+#ifdef TINYSA4
+  if (!config.high_out_adf4350) {
+    float dt = Si446x_get_temp() - CENTER_TEMPERATURE;
+    if (dt > 0)
+      a += dt * DB_PER_DEGREE_ABOVE;  // Temperature correction
+    else
+      a += dt * DB_PER_DEGREE_BELOW;  // Temperature correction
+  }
+#endif
+  if (a <= -SWITCH_ATTENUATION) {
+    setting.atten_step = true;
+    a = a + SWITCH_ATTENUATION;
+  } else {
+    setting.atten_step = false;
+  }
+
+  unsigned int d = MIN_DRIVE;
+  while (drive_dBm[d] - level_max() < a && d < MAX_DRIVE)       // Find level equal or above requested level
+    d++;
+  //    if (d == 8 && v < -12)  // Round towards closest level
+  //      d = 7;
+  setting.level = drive_dBm[d] + config.high_level_output_offset - (setting.atten_step ? SWITCH_ATTENUATION : 0);
+}
+
 void set_level(float v)     // Set the output level in dB  in high/low output
 {
   if (setting.mode == M_GENHIGH) {
@@ -904,6 +939,7 @@ void set_level(float v)     // Set the output level in dB  in high/low output
 //    set_attenuation(setting.level - LOW_OUT_OFFSET);
   }
   setting.level = v;
+  if (setting.mode == M_GENHIGH) correct_high_output_level();
   dirty = true;
 }
 
@@ -1751,7 +1787,7 @@ static void calculate_correction(void)
 #pragma GCC push_options
 #pragma GCC optimize ("Og")             // "Os" causes problem
 
-pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI correction to compensate for imperfect LPF
+pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI correction to subtract for imperfect LPF
 {
   pureRSSI_t cv = 0;
   int c=CORRECTION_LOW;
@@ -1762,13 +1798,29 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
 #ifdef TINYSA4
   if (setting.extra_lna)
     c += 1;
-  if (setting.mode == M_LOW && ultra && f > ultra_threshold) {
-    c = CORRECTION_LOW_ULTRA;
-    if ( f > ULTRA_MAX_FREQ) {
-      cv -= float_TO_PURE_RSSI(config.harmonic_level_offset);                                        // +10.5dB correction.
+  if (setting.mode == M_LOW) {
+    switch(actual_drive) {
+    case 1:
+      cv += float_TO_PURE_RSSI(-1);
+      break;
+    case 2:
+      cv += float_TO_PURE_RSSI(-1.5);
+      break;
+    case 3:
+      cv += float_TO_PURE_RSSI(-2);
+      break;
     }
-    if (setting.extra_lna)
-      c += 1;
+    if (ultra && f > ultra_threshold) {
+      c = CORRECTION_LOW_ULTRA;
+      if (LO_harmonic) {
+        cv += float_TO_PURE_RSSI(config.harmonic_level_offset);                                        // +10.5dB correction.
+      }
+      if (setting.extra_lna)
+        c += 1;
+    }
+//    if (LO_shifting)
+//      cv += float_TO_PURE_RSSI(config.shift_level_offset);
+
   } else if (setting.mode == M_GENLOW){
     c = CORRECTION_LOW_OUT;
   }
@@ -1901,9 +1953,6 @@ void setup_sa(void)
 #ifdef TINYSA4
 static int fast_counter = 0;
 #endif
-#ifdef __ULTRA__
-int old_drive = -1;
-#endif
 
 void set_freq(int V, freq_t freq)    // translate the requested frequency into a setting of the SI4432
 {
@@ -1988,25 +2037,26 @@ void set_freq(int V, freq_t freq)    // translate the requested frequency into a
     }
 #endif
     if (freq) {
+#if 0   // moved
       // ----------------------------- set mixer drive --------------------------------------------
       int target_drive = setting.lo_drive;
       if (target_drive & 0x04){     // Automatic mixer drive
         if (LO_harmonic)
           target_drive = 3;
-        else if (freq-970000000 < 600000000ULL)       // below 100MHz
+        else if (freq-970000000 <  600000000ULL)       // below 600MHz
           target_drive = 0;
         else if (freq-970000000 < 1200000000ULL) // below 1.2GHz
           target_drive = 1;
-        else if (freq-970000000 < 2000000000ULL)  // below 3GHz
-          target_drive = 2;
+//        else if (freq-970000000 < 2000000000ULL)  // below 2GHz
+//          target_drive = 2;
         else
-          target_drive = 3;
+          target_drive = 2;
       }
       if (old_drive != target_drive) {
         ADF4351_drive(target_drive);       // Max drive
         old_drive = target_drive;
       }
-
+#endif
       real_old_freq[V] = ADF4351_set_frequency(V-ADF4351_LO,freq);
     }
   } else if (V==ADF4351_LO2) {
@@ -2851,11 +2901,7 @@ static systime_t sweep_elapsed = 0;                             // Time since fi
 uint8_t signal_is_AM = false;
 static uint8_t check_for_AM = false;
 static int is_below = false;
-#ifdef TINYSA4
-static int LO_shifted;
-static int LO_mirrored;
-static int LO_shifting;
-#endif
+
 
 static void calculate_static_correction(void)                   // Calculate the static part of the RSSI correction
 {
@@ -3243,19 +3289,6 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       auto_set_AGC_LNA(true, 0);
   }
 #endif
-  // Calculate the RSSI correction for later use
-  if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
-    if (setting.frequency_step != 0) {
-      correct_RSSI_freq = get_frequency_correction(f);
-    }
-  }
-// #define DEBUG_CORRECTION
-#ifdef DEBUG_CORRECTION
-  if (SDU1.config->usbp->state == USB_ACTIVE) {
-    shell_printf ("%d:%Q %f\r\n", i, f, PURE_TO_float(correct_RSSI_freq));
-    osalThreadSleepMilliseconds(2);
-}
-#endif
 
 
   // ----------------------------- Initiate modulation ---------------------------
@@ -3360,12 +3393,14 @@ modulation_again:
   freq_t local_IF;
 #ifdef TINYSA4
   local_IF = config.frequency_IF1;
+#if 0
   if (setting.mode == M_LOW && setting.frequency_step > 0 && ultra &&
       ((f < ULTRA_MAX_FREQ &&  f > MAX_LO_FREQ - local_IF) ||
        ( f > ultra_threshold && f < MIN_BELOW_LO + local_IF))
       ) {
     local_vbw_steps *= 2;
   }
+#endif
 #endif
 
   // -----------------------------------START vbwsteps loop ------------------------------------
@@ -3410,7 +3445,7 @@ again:                                                              // Spur redu
 
     local_IF=0;                                                     // For all high modes
 #ifdef TINYSA4
-    LO_shifted = false;
+    LO_spur_shifted = false;
     LO_mirrored = false;
     LO_shifting = false;
 #endif
@@ -3460,7 +3495,7 @@ again:                                                              // Spur redu
 #endif
 #ifdef __ULTRA__
           if (S_IS_AUTO(setting.below_IF)) {
-            if ((freq_t)lf + (freq_t)local_IF> MAX_LO_FREQ && lf <= ULTRA_MAX_FREQ)
+            if ((freq_t)lf > MAX_ABOVE_IF_FREQ /* && lf <= ULTRA_MAX_FREQ */ )
               setting.below_IF = S_AUTO_ON; // Only way to reach this range.
             else
               setting.below_IF = S_AUTO_OFF; // default is above IF
@@ -3471,7 +3506,7 @@ again:                                                              // Spur redu
 #ifdef TINYSA4
                 ( lf > ULTRA_MAX_FREQ ||    // Harmonic mode
                     lf < 400000000 ||       // below 400MHz use below IF
-                    ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > 2 * local_IF + 10000000) )
+                    ( lf < MAX_ABOVE_IF_FREQ && lf > MIN_BELOW_IF_FREQ) ) // From 2.1GHz to 3.35GHz use below IF
 #else
 #ifdef __ULTRA__
                 ( (lf > ULTRA_MAX_FREQ && (lf + local_IF) / setting.harmonic < MAX_LO_FREQ) || lf < local_IF - MIN_LO_FREQ  || ( lf + (uint32_t)local_IF< MAX_LO_FREQ && lf > MIN_BELOW_LO + local_IF) )
@@ -3489,13 +3524,14 @@ again:                                                              // Spur redu
             }
             else // if (setting.auto_IF)
             {
-#ifdef TINYSA4
-              LO_shifting = true;
-#endif
               if ((debug_avoid && debug_avoid_second) || spur_second_pass) {
 #ifdef TINYSA4
                 local_IF  = local_IF + DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);    // apply IF spur shift
-                LO_shifted = true;
+                LO_spur_shifted = true;
+#ifdef TINYSA4
+                LO_shifting = true;
+#endif
+
               } else {
                 local_IF  = local_IF; // - (actual_rbw_x10 > 5000 ? 200000 : 0);// - DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
               }
@@ -3523,7 +3559,7 @@ again:                                                              // Spur redu
                     local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
                     //                if (actual_rbw_x10 == 6000 )
                     //                  local_IF = local_IF + 50000;
-                    LO_shifted = true;
+                    LO_spur_shifted = true;
                   }
                 }
               } else {
@@ -3548,7 +3584,7 @@ again:                                                              // Spur redu
                   local_IF = local_IF + (actual_rbw_x10 > 2000 ? DEFAULT_SPUR_OFFSET : DEFAULT_SPUR_OFFSET/2); // TODO find better way to shift spur away at large RBW/2;
                   //                if (actual_rbw_x10 == 6000 )
                   //                  local_IF = local_IF + 50000;
-                  LO_shifted = true;
+                  LO_spur_shifted = true;
                 }
               } else
               {
@@ -3763,6 +3799,26 @@ again:                                                              // Spur redu
           target_f /= setting.harmonic;
           LO_harmonic = true;
         }
+        // ----------------------------- set mixer drive --------------------------------------------
+        if (setting.mode == M_LOW) {
+          actual_drive = setting.lo_drive;
+          if (actual_drive & 0x04){     // Automatic mixer drive
+            if (LO_harmonic)
+              actual_drive = 3;
+            else if (lf <  600000000ULL)       // below 600MHz
+              actual_drive = 0;
+            else if (lf < 1200000000ULL) // below 1.2GHz
+              actual_drive = 1;
+            else if (lf < 2000000000ULL)  // below 2GHz
+              actual_drive = 2;
+            else
+              actual_drive = 3;
+          }
+          if (old_drive != actual_drive) {
+            ADF4351_drive(actual_drive);       // Max drive
+            old_drive = actual_drive;
+          }
+        }
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
         if (actual_rbw_x10 < 10000 || setting.frequency_step < 100000) { //TODO always compensate for the moment as this eliminates artifacts at larger RBW
@@ -3775,10 +3831,9 @@ again:                                                              // Spur redu
             goto correct_min;
           }
         correct_plus:
-          if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
+         if (LO_harmonic)
             error_f *= setting.harmonic;
-          }
-          if (error_f > actual_rbw_x10 * 5)        //RBW / 4
+          if (error_f > actual_rbw_x10 * 5 || LO_harmonic)        //RBW / 4
             local_IF += error_f;
         } else if ( real_old_freq[ADF4351_LO] < target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
@@ -3787,10 +3842,10 @@ again:                                                              // Spur redu
             goto correct_plus;
           }
         correct_min:
-          if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
+          if (LO_harmonic) {
             error_f *= setting.harmonic;
           }
-          if ( error_f < - actual_rbw_x10 * 5)     //RBW / 4
+          if ( error_f < - actual_rbw_x10 * 5 || LO_harmonic)     //RBW / 4
             local_IF += error_f;
         }
         }
@@ -3897,7 +3952,7 @@ again:                                                              // Spur redu
        if (delta < actual_rbw_x10*100)
          spur = '!';
      }
-     char shifted = ( LO_shifted ? '>' : ' ');
+     char shifted = ( LO_spur_shifted ? '>' : ' ');
      if (SDU1.config->usbp->state == USB_ACTIVE)
        shell_printf ("%d:%c%c%c%cLO=%11.6Lq:%11.6Lq\tIF=%11.6Lq:%11.6Lq\tOF=%11.6d\tF=%11.6Lq:%11.6Lq\tD=%.2f:%.2f %c%c%c\r\n",
                      i,   spur, shifted,(LO_mirrored ? 'm' : ' '), (LO_harmonic ? 'h':' ' ),
@@ -3911,6 +3966,22 @@ again:                                                              // Spur redu
     }
 #endif
     // ------------------------- end of processing when in output mode ------------------------------------------------
+
+
+    // Calculate the RSSI correction for later use
+    if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
+      if (setting.frequency_step != 0 || (i==0 && scandirty)) {
+        correct_RSSI_freq = get_frequency_correction(f);
+      }
+    }
+  // #define DEBUG_CORRECTION
+  #ifdef DEBUG_CORRECTION
+    if (SDU1.config->usbp->state == USB_ACTIVE) {
+      shell_printf ("%d:%Q %f\r\n", i, f, PURE_TO_float(correct_RSSI_freq));
+      osalThreadSleepMilliseconds(2);
+    }
+  #endif
+
 
     skip_LO_setting:
     if (i == 0 && t == 0)                                                   // if first point in scan (here is get 1 point data)
@@ -4005,6 +4076,9 @@ again:                                                              // Spur redu
 #endif
 #ifdef __SI4463__
         pureRSSI = Si446x_RSSI();
+        if (LO_shifting)
+          pureRSSI -= float_TO_PURE_RSSI(config.shift_level_offset);
+
 #endif
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
           goto abort; //return 0;                                                           // abort
@@ -4043,7 +4117,7 @@ again:                                                              // Spur redu
       int my_step_delay = SI4432_step_delay;
       if (f < 2000000 && actual_rbw_x10 == 3 && !in_step_test)
         my_step_delay = my_step_delay * 2;
-//      if (LO_shifted) // || SI4463_offset_changed)
+//      if (LO_spur_shifted) // || SI4463_offset_changed)
 //        my_step_delay = my_step_delay * 2;
 #if 0   // Always have some delay before measuring RSSI
       if (old_R < 4 && actual_rbw_x10 >= 1000 && SI4463_frequency_changed && ADF4351_frequency_changed) {
@@ -4099,8 +4173,11 @@ again:                                                              // Spur redu
 #ifdef __SI4463__
       if (real_old_freq[SI4463_RX] == 0)
         pureRSSI = 0;
-      else
+      else {
         pureRSSI = Si446x_RSSI();
+        if (LO_shifting)
+          pureRSSI -= float_TO_PURE_RSSI(config.shift_level_offset);
+      }
 //#define __DEBUG_FREQUENCY_SETTING__
 #ifdef __DEBUG_FREQUENCY_SETTING__                 // For debugging the frequency calculation
   stored_t[i] = -60.0 + (real_old_freq[ADF4351_LO] - f - old_freq[2])/10;
@@ -4143,13 +4220,6 @@ again:                                                              // Spur redu
           setting.below_IF = S_AUTO_OFF;                            // make sure it is off for next pass
       }
     }
-#endif
-
-#ifdef TINYSA4
-    if (LO_shifting)
-      pureRSSI -= float_TO_PURE_RSSI(config.shift_level_offset);
-//    if (LO_harmonic)
-//      pureRSSI -= float_TO_PURE_RSSI(config.harmonic_level_offset);
 #endif
 
     if (RSSI < pureRSSI)                                     // Take max during subscanning

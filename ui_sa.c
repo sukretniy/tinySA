@@ -3296,7 +3296,10 @@ static void fetch_numeric_target(uint8_t mode)
 #ifdef __ULTRA__
   case KM_ULTRA_START:
     uistat.freq_value = config.ultra_threshold;
-    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value );
+    if (config.ultra_threshold == ULTRA_AUTO)
+      plot_printf(uistat.text, sizeof uistat.text, "AUTO");
+    else
+      plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value );
     break;
   case KM_DIRECT_START:
     uistat.freq_value = config.direct_start;
