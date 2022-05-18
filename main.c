@@ -2530,6 +2530,7 @@ int main(void)
   config.cor_am = 0;        // Should be removed from config
   config.cor_nfm = 0;
   config.cor_wfm = 0;
+  ili9341_flip(config.flip);
 
   if (caldata_recall(0) == -1) {
     load_LCD_properties();

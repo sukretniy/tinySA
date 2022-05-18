@@ -3602,8 +3602,10 @@ again:                                                              // Spur redu
             else
             {
 #ifdef TINYSA4
-              if (lf<2000000)   // below 2MHz
+              if (lf<4000000) {   // below 4MHz
                 local_IF += DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);                  // Shift to avoid zero Hz peak
+                LO_spur_shifted = true;
+              }
 #else
               local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
 #endif
@@ -5892,7 +5894,7 @@ common_silent:
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
 #ifdef TINYSA4
-    setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/3;                // Center on SAW filters
+    setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/3;  // This is the place where the
     set_refer_output(0);
 #else
     setting.frequency_IF = DEFAULT_IF+210000;                // Center on SAW filters
@@ -6749,11 +6751,15 @@ void calibrate(void)
   int local_test_status;
   int old_sweep_points = setting._sweep_points;
 #ifdef TINYSA4
+  setting.auto_IF = true;
+  setting.frequency_IF = config.frequency_IF1;
   setting.test_argument = -7;
   self_test(0);
   int if_error = peakFreq - 30000000;
   if (if_error > -1000000 && if_error < 1000000) {
     config.frequency_IF1 += if_error;
+    setting.auto_IF = true;
+    setting.frequency_IF = config.frequency_IF1;
     fill_spur_table();
   }
 #endif
