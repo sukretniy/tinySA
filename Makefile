@@ -291,6 +291,15 @@ RULESPATH = $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk
 #include $(CHIBIOS)/memory.mk
 
+
+ifeq ($(TARGET),F303)
+clean:
+	rm -f -rf build/tinySA4.* build/lst/*.* build/obj/*.*
+else
+clean:
+	rm -f -rf build/tinySA.*
+endif
+
 flash: build/ch.bin
 	dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/ch.bin
 

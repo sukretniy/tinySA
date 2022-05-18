@@ -3458,7 +3458,7 @@ again:                                                              // Spur redu
       else
       {
 #ifdef TINYSA4
-        if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE && setting.mode == M_LOW )
+        if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE && setting.mode == M_LOW && lf > static_spur_table[0] -  RBW_FOR_STATIC_TABLE * 100)
           local_IF = 977400000; // static spur table IF
         else
           local_IF = config.frequency_IF1;
@@ -3602,7 +3602,8 @@ again:                                                              // Spur redu
             else
             {
 #ifdef TINYSA4
-//              local_IF = local_IF - 800000 + actual_rbw_x10*100;                  // No spure removal and no spur, center in IF but avoid mirror
+              if (lf<2000000)   // below 2MHz
+                local_IF += DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);                  // Shift to avoid zero Hz peak
 #else
               local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
 #endif
