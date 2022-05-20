@@ -981,7 +981,8 @@ config_t config = {
   .harmonic_level_offset = 7,
   .shift_level_offset = -0.5,
   .drive1_level_offset = -1,
-  .drive2_level_offset = -1.5,
+  .drive2_level_offset = -2.5,
+  .drive3_level_offset = -3,
   .correction_frequency =
   {
    { 10000, 100000, 1000000, 5000000, 15000000, 30000000, 145000000, 400000000, 720000000, 800000000, 800000001, 1519000000, 1527000000, 3000000000, 3500000000, 4000000000, 4500000000, 5000000000, 5500000000, 6000000000 }, // low in
@@ -1181,7 +1182,7 @@ VNA_SHELL_FUNCTION(cmd_hop)
     int old_vbwSteps = vbwSteps;
 //    vbwSteps = 1;
     for (freq_t f = start; f <= stop; f += step) {
-        if (mask & 1) shell_printf("%Q ", f);
+        if (mask & 1) shell_printf("%U ", f);
         float v = PURE_TO_float(perform(false, 0, f, false));
         if (mask & 2) shell_printf("%f ", v);
         shell_printf("\r\n");

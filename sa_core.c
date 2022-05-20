@@ -1805,13 +1805,13 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (setting.mode == M_LOW) {
     switch(actual_drive) {
     case 1:
-      cv += float_TO_PURE_RSSI(-1);
+      cv += float_TO_PURE_RSSI(config.drive1_level_offset);
       break;
     case 2:
-      cv += float_TO_PURE_RSSI(-1.5);
+      cv += float_TO_PURE_RSSI(config.drive2_level_offset);
       break;
     case 3:
-      cv += float_TO_PURE_RSSI(-2);
+      cv += float_TO_PURE_RSSI(config.drive3_level_offset);
       break;
     }
     if (ultra && f > ultra_threshold) {
@@ -3812,11 +3812,11 @@ again:                                                              // Spur redu
           if (actual_drive & 0x04){     // Automatic mixer drive
             if (LO_harmonic)
               actual_drive = 3;
-            else if (lf <  600000000ULL)       // below 600MHz
+            else if (lf <  DRIVE0_MAX_FREQ)       // below 600MHz
               actual_drive = 0;
-            else if (lf < 1200000000ULL) // below 1.2GHz
+            else if (lf < DRIVE1_MAX_FREQ) // below 1.2GHz
               actual_drive = 1;
-            else if (lf < 2000000000ULL)  // below 2GHz
+            else if (lf < DRIVE2_MAX_FREQ)  // below 2GHz
               actual_drive = 2;
             else
               actual_drive = 3;
