@@ -119,7 +119,7 @@ int actual_drive = -1;
 
 #ifdef TINYSA4
 #define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 25.0)
-#define RECEIVE_SWITCH_ATTENUATION  (29 - config.receive_switch_offset)
+#define RECEIVE_SWITCH_ATTENUATION  (29 + config.receive_switch_offset)
 //#define POWER_OFFSET    -18             // Max level with all enabled
 //#define POWER_RANGE     70
 #define MAX_DRIVE   ((setting.mode == M_GENHIGH && config.high_out_adf4350 ) ? 3 : 18)
@@ -139,7 +139,7 @@ int actual_drive = -1;
 #endif
 #else
 #define SWITCH_ATTENUATION  (29 - config.switch_offset)
-#define RECEIVE_SWITCH_ATTENUATION  (24 - config.receive_switch_offset)
+#define RECEIVE_SWITCH_ATTENUATION  (24 + config.receive_switch_offset)
 #define POWER_OFFSET    15
 #define MAX_DRIVE   (setting.mode == M_GENHIGH ? 13 : 11)  // The value of 13 is linked to the SL_GENHIGH_LEVEL_MAX of 9
 #define MIN_DRIVE   8
@@ -171,6 +171,7 @@ const freq_t fh_high[] = { 480000000, 960000000, 1920000000, 2880000000, 3840000
 
 uint8_t in_selftest = false;
 uint8_t in_step_test = false;
+uint8_t in_calibration = false;
 
 void update_min_max_freq(void)
 {
@@ -1147,21 +1148,24 @@ void set_actual_power(float o)              // Set peak level to known value
 {
   if (!markers[0].index)
     return;
-  float new_offset = o -   measured[markers[0].trace][markers[0].index] + get_level_offset();        //  offset based on difference between measured peak level and known peak level
+  float new_offset = o -   measured[markers[0].trace][markers[0].index];        //  offset based on difference between measured peak level and known peak level
   if (o == 100) new_offset = 0;
   if (setting.mode == M_HIGH) {
-    config.high_level_offset = new_offset;
+    config.high_level_offset += new_offset;
   } else if (setting.mode == M_LOW) {
 #ifdef TINYSA4
-    if (setting.extra_lna)
-      config.lna_level_offset = new_offset;
+    if (setting.spur_removal == S_ON && in_calibration)     // measuring the shift offset
+      config.shift_level_offset += new_offset;
+
+    else if (setting.extra_lna)
+      config.lna_level_offset += new_offset;
     else
 #endif
     {
       if (setting.atten_step)
-        config.receive_switch_offset -= new_offset;
+        config.receive_switch_offset += new_offset;
       else
-        config.low_level_offset = new_offset;
+        config.low_level_offset += new_offset;
     }
   }
   dirty = true;
@@ -3602,7 +3606,7 @@ again:                                                              // Spur redu
             else
             {
 #ifdef TINYSA4
-              if (lf<4000000) {   // below 4MHz
+              if (lf<2000000) {   // below 2MHz
                 local_IF += DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);                  // Shift to avoid zero Hz peak
                 LO_spur_shifted = true;
               }
@@ -4080,7 +4084,7 @@ again:                                                              // Spur redu
 #ifdef __SI4463__
         pureRSSI = Si446x_RSSI();
         if (LO_shifting)
-          pureRSSI -= float_TO_PURE_RSSI(config.shift_level_offset);
+          pureRSSI += float_TO_PURE_RSSI(config.shift_level_offset);
 
 #endif
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
@@ -4179,7 +4183,7 @@ again:                                                              // Spur redu
       else {
         pureRSSI = Si446x_RSSI();
         if (LO_shifting)
-          pureRSSI -= float_TO_PURE_RSSI(config.shift_level_offset);
+          pureRSSI += float_TO_PURE_RSSI(config.shift_level_offset);
       }
 //#define __DEBUG_FREQUENCY_SETTING__
 #ifdef __DEBUG_FREQUENCY_SETTING__                 // For debugging the frequency calculation
@@ -6746,13 +6750,19 @@ void calibrate_modulation(int modulation, int8_t *correction)
 #define CALIBRATE_RBWS  1
 const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
+#ifdef TINYSA4
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_SHIFT, CS_MAX };
+#else
+enum {CS_NORMAL, CS_SWITCH, CS_MAX };
+#endif
+
 void calibrate(void)
 {
   int local_test_status;
   int old_sweep_points = setting._sweep_points;
 #ifdef TINYSA4
-  setting.auto_IF = true;
-  setting.frequency_IF = config.frequency_IF1;
+//  setting.auto_IF = true;                         // set in selftest
+//  setting.frequency_IF = config.frequency_IF1;    // set in selftest
   setting.test_argument = -7;
   self_test(0);
   int if_error = peakFreq - 30000000;
@@ -6764,10 +6774,13 @@ void calibrate(void)
   }
 #endif
   reset_calibration();
-#ifdef TINYSA4
-  bool calibrate_lna = false;
-#endif
-  bool calibrate_switch = false;
+  in_calibration = true;
+  int calibration_stage = CS_NORMAL;
+  config.low_level_offset = 0;
+  config.high_level_offset = 0;
+  config.lna_level_offset = 0;
+  config.receive_switch_offset = 0;
+  config.shift_level_offset = -5;
 again:
   for (int k = 0; k<2; k++) {
     for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
@@ -6782,14 +6795,32 @@ again:
       set_sweep_frequency(ST_CENTER, 30000000);
       set_sweep_frequency(ST_SPAN,    5000000);
       setting.rbw_x10 = 3000;
+      setting.repeat = 10;
       int test_case = TEST_POWER;
-      setting.atten_step = calibrate_switch;
+
+//      setting.atten_step = false;
+//#ifdef TINYSA4
+//       set_extra_lna(false);
+//       setting.below_IF = S_AUTO_OFF;
+//#endif
+      switch(calibration_stage) {
+      case CS_NORMAL:
+        break;
+      case CS_SWITCH:
+        setting.atten_step = true;
+        break;
 #ifdef TINYSA4
-      if (!calibrate_switch)
-        set_extra_lna(calibrate_lna);
+      case CS_LNA:
+        set_extra_lna(true);
+        break;
+      case CS_SHIFT:
+        setting.below_IF = S_OFF;
+        setting.spur_removal = S_ON;
+        break;
 #endif
+      }
       set_average(0, AV_100);
-      for (int m=1; m<20; m++) {
+      for (int m=1; m<3; m++) {
         test_acquire(test_case);                        // Acquire test
         local_test_status = test_validate(test_case);
       }
@@ -6852,17 +6883,13 @@ again:
       }
     }
   }
-#ifdef TINYSA4
-  if (!calibrate_lna) {
-    calibrate_lna = true;
+  calibration_stage++;
+  if (calibration_stage < CS_MAX)
     goto again;
-  }
-#endif
-  if (!calibrate_switch) {
-    calibrate_switch = true;
-    goto again;
-  }
-#if 0               // No high input calibration as CAL OUTPUT is unreliable
+  setting.below_IF = S_AUTO_OFF;
+  in_calibration = false;
+
+  #if 0               // No high input calibration as CAL OUTPUT is unreliable
 
   set_RBW(100);
   test_prepare(TEST_POWER+1);
