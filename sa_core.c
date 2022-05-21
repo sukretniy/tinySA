@@ -1802,7 +1802,29 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
 #ifdef TINYSA4
   if (setting.extra_lna)
     c += 1;
+
   if (setting.mode == M_LOW) {
+
+    //
+    //  ----------------   duplication of code
+    //
+    actual_drive = setting.lo_drive;
+    if (actual_drive & 0x04){     // Automatic mixer drive
+      if (LO_harmonic)
+        actual_drive = 3;
+//      else if (f <  DRIVE0_MAX_FREQ)       // below 600MHz
+//        actual_drive = 0;
+      else if (f < DRIVE1_MAX_FREQ) // below 1.2GHz
+        actual_drive = 1;
+      else if (f < DRIVE2_MAX_FREQ)  // below 2GHz
+        actual_drive = 2;
+      else
+        actual_drive = 3;
+    }
+    //
+    //  ----------------- end duplication of code
+    //
+
     switch(actual_drive) {
     case 1:
       cv += float_TO_PURE_RSSI(config.drive1_level_offset);
@@ -3808,12 +3830,16 @@ again:                                                              // Spur redu
         }
         // ----------------------------- set mixer drive --------------------------------------------
         if (setting.mode == M_LOW) {
+
+          //
+          //  ----------------- start duplication of code
+          //
           actual_drive = setting.lo_drive;
           if (actual_drive & 0x04){     // Automatic mixer drive
             if (LO_harmonic)
               actual_drive = 3;
-            else if (lf <  DRIVE0_MAX_FREQ)       // below 600MHz
-              actual_drive = 0;
+//            else if (lf <  DRIVE0_MAX_FREQ)       // below 600MHz
+//              actual_drive = 0;
             else if (lf < DRIVE1_MAX_FREQ) // below 1.2GHz
               actual_drive = 1;
             else if (lf < DRIVE2_MAX_FREQ)  // below 2GHz
@@ -3821,6 +3847,9 @@ again:                                                              // Spur redu
             else
               actual_drive = 3;
           }
+          //
+          //  ----------------- end duplication of code
+          //
           if (old_drive != actual_drive) {
             ADF4351_drive(actual_drive);       // Max drive
             old_drive = actual_drive;

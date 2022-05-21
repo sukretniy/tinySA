@@ -510,6 +510,8 @@ void ADF4351_drive(int p)
 //  registers[4] &= ~(((uint32_t)0x3) << 3);
 //  registers[4] |=  (((uint32_t)  p) << 3);
   ADF4351_Set(0);
+  my_microsecond_delay(1000);
+
 }
 
 void ADF4351_aux_drive(int p)
