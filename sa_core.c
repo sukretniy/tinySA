@@ -1825,17 +1825,14 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
     //  ----------------- end duplication of code
     //
 
-    switch(actual_drive) {
-    case 1:
+    if (actual_drive >= 1)
       cv += float_TO_PURE_RSSI(config.drive1_level_offset);
-      break;
-    case 2:
+    if (actual_drive >= 2)
       cv += float_TO_PURE_RSSI(config.drive2_level_offset);
-      break;
-    case 3:
+    if (actual_drive >= 3)
       cv += float_TO_PURE_RSSI(config.drive3_level_offset);
-      break;
-    }
+
+
     if (ultra && f > ultra_threshold) {
       c = CORRECTION_LOW_ULTRA;
       if (LO_harmonic) {
@@ -3630,7 +3627,7 @@ again:                                                              // Spur redu
 #ifdef TINYSA4
               if (lf<2000000) {   // below 2MHz
                 local_IF += DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);                  // Shift to avoid zero Hz peak
-                LO_spur_shifted = true;
+                LO_shifting = true;
               }
 #else
               local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
