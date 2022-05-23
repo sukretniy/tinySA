@@ -139,13 +139,15 @@
 #define ULTRA_AUTO         10000000000ULL // 10GHz
 //#define ULTRA_MAX_FREQ      2900000000ULL
 #define MAX_LO_FREQ         4350000000ULL
-#define MAX_ABOVE_IF_FREQ   3350000000ULL           // Range to use for below IF
-#define MIN_BELOW_IF_FREQ   2300000000ULL           // Range to use for below IF
+#define MAX_ABOVE_IF_FREQ   3360000000ULL           // Range to use for below IF
+#define MIN_BELOW_IF_FREQ   2310000000ULL           // Range to use for below IF
 //#define LOW_MAX_FREQ         800000000ULL
 #define MIN_BELOW_LO         550000000ULL   // not used????
 #define DRIVE0_MAX_FREQ      600000000ULL            // LO drive 0
 #define DRIVE1_MAX_FREQ     1200000000ULL           // LO drive 1
-#define DRIVE2_MAX_FREQ     2000000000ULL           // LO drive 2
+#define DRIVE2_MAX_FREQ     2100000000ULL           // LO drive 2
+
+#define USE_SHIFT2_RBW  4000        // use shift2_level_offset if actual_rbw_x10 is larger then this.
 #ifdef __NEW_SWITCHES__
 #define DIRECT_START config.direct_start
 #define DIRECT_STOP  config.direct_stop
@@ -711,7 +713,8 @@ typedef struct config {
 #ifdef TINYSA4
   float lna_level_offset;
   float harmonic_level_offset;
-  float shift_level_offset;
+  float shift1_level_offset;
+  float shift2_level_offset;
   float drive1_level_offset;
   float drive2_level_offset;
   float drive3_level_offset;

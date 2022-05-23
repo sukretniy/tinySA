@@ -1154,10 +1154,7 @@ void set_actual_power(float o)              // Set peak level to known value
     config.high_level_offset += new_offset;
   } else if (setting.mode == M_LOW) {
 #ifdef TINYSA4
-    if (setting.spur_removal == S_ON && in_calibration)     // measuring the shift offset
-      config.shift_level_offset += new_offset;
-
-    else if (setting.extra_lna)
+    if (setting.extra_lna)
       config.lna_level_offset += new_offset;
     else
 #endif
@@ -1842,7 +1839,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
         c += 1;
     }
 //    if (LO_shifting)
-//      cv += float_TO_PURE_RSSI(config.shift_level_offset);
+//      cv += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : config.shift1_level_offset);
 
   } else if (setting.mode == M_GENLOW){
     c = CORRECTION_LOW_OUT;
@@ -4110,7 +4107,7 @@ again:                                                              // Spur redu
 #ifdef __SI4463__
         pureRSSI = Si446x_RSSI();
         if (LO_shifting)
-          pureRSSI += float_TO_PURE_RSSI(config.shift_level_offset);
+          pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : config.shift1_level_offset);
 
 #endif
         if (break_on_operation && operation_requested)                        // allow aborting a wait for trigger
@@ -4209,7 +4206,7 @@ again:                                                              // Spur redu
       else {
         pureRSSI = Si446x_RSSI();
         if (LO_shifting)
-          pureRSSI += float_TO_PURE_RSSI(config.shift_level_offset);
+          pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : config.shift1_level_offset);
       }
 //#define __DEBUG_FREQUENCY_SETTING__
 #ifdef __DEBUG_FREQUENCY_SETTING__                 // For debugging the frequency calculation
@@ -5474,13 +5471,13 @@ marker_search_right_min(int m)
 // -------------------- Self testing -------------------------------------------------
 
 enum {
-  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN, TC_DISPLAY, TC_LEVEL, TC_SWITCH
+  TC_SIGNAL, TC_BELOW, TC_ABOVE, TC_FLAT, TC_MEASURE, TC_SET, TC_END, TC_ATTEN, TC_DISPLAY, TC_LEVEL, TC_SWITCH, TC_JUMP
 };
 
 enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_30MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH,
 #ifdef TINYSA4
-  TP_30MHZ_ULTRA, TP_30MHZ_DIRECT, TP_30MHZ_LNA,
+  TP_30MHZ_ULTRA, TP_30MHZ_DIRECT, TP_30MHZ_LNA,TP_SILENT_LNA
 #endif
 };
 
@@ -5489,6 +5486,7 @@ enum {
 #define W2P(w) (sweep_points * w / 100)     // convert width in % to actual sweep points
 
 #ifdef TINYSA4
+freq_t test_freq = 0;
 //#define CAL_LEVEL   -23.5
 //#define CAL_LEVEL   -24.2
 #define CAL_LEVEL -35.50
@@ -5544,13 +5542,15 @@ const test_case_t test_case [] =
 #define TEST_SPUR    23
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
 #define TEST_LEVEL  24
- TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ,       30.000,     0,      CAL_LEVEL,   50,     -55),      // 23 Measure level
- TEST_CASE_STRUCT(TC_LEVEL,   TP_30MHZ_LNA,   30.000,     0,      CAL_LEVEL,   50,     -55),      // 23 Measure level
- TEST_CASE_STRUCT(TC_LEVEL,   TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   50,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,     TP_30MHZ,       30.000,     0,      CAL_LEVEL,   50,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,     TP_30MHZ_LNA,   30.000,     0,      CAL_LEVEL,   50,     -55),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,     TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   50,     -55),      // 23 Measure level
 #define TEST_NOISE  27
- TEST_CASE_STRUCT(TC_LEVEL,   TP_SILENT,       201.000,     0,      -166,   50,     -166),      // 23 Measure level
+ TEST_CASE_STRUCT(TC_LEVEL,     TP_SILENT,       201.000,     0,      -166,   50,     -166),      // 23 Measure level
 #define TEST_NOISE_RBW  28
  TEST_CASE_STRUCT(TC_MEASURE,   TP_SILENT,       201,     1,      -166,    10,     -166),      // 16 Measure RBW step time
+#define TEST_JUMP 29
+ TEST_CASE_STRUCT(TC_JUMP,      TP_30MHZ_LNA,   30,     0.001,      -40,    0,     -80),      // 16 Measure jumps
 };
 #else
 {//               Condition     Preparation     Center  Span    Pass    Width(%)Stop
@@ -5809,6 +5809,26 @@ int validate_level(int i) {
   return(status);
 }
 
+#ifdef TINYSA4
+float measure_jump(int i) {
+  redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
+  draw_all(TRUE);
+  float left=0,
+      right = 0;
+  int h_p = setting._sweep_points/2;
+  for (int j = 0; j < h_p; j++) {
+    left += actual_t[j];
+  }
+  left /= h_p;
+  for (int j = h_p; j < h_p*2; j++) {
+    right += actual_t[j];
+  }
+  right /= h_p;
+  if (i <= 1)              // for 2MHz jump
+    return(right-left); // returns level jump low to high frequency.
+  return (left - right);
+}
+#endif
 
 int test_validate(int i)
 {
@@ -5906,6 +5926,9 @@ void test_prepare(int i)
   case TPH_SILENT:                             // No input signal
     set_mode(M_HIGH);
     goto common_silent;
+#ifdef TINYSA4
+  case TP_SILENT_LNA:                             // No input signal
+#endif
   case TP_SILENT:                             // No input signal
     set_mode(M_LOW);
 common_silent:
@@ -6002,6 +6025,7 @@ common_silent:
     saved_direct_stop = config.direct_stop;
     config.direct_stop = 1000000000;
     break;
+  case TP_SILENT_LNA:
   case TP_30MHZ_LNA:
     setting.extra_lna = true;
     break;
@@ -6019,7 +6043,14 @@ common_silent:
   TRACE_ENABLE(TRACE_STORED_FLAG);
   setting.stored[TRACE_STORED] = true;
   set_reflevel(test_case[i].pass+10);
-  set_sweep_frequency(ST_CENTER, (freq_t)(test_case[i].center * 1000000));
+#ifdef TINYSA4
+  if (test_case[i].kind == TC_JUMP) {
+    set_sweep_frequency(ST_CENTER, test_freq);
+    setting.repeat = 10;
+  }
+  else
+#endif
+    set_sweep_frequency(ST_CENTER, (freq_t)(test_case[i].center * 1000000));
   set_sweep_frequency(ST_SPAN, (freq_t)(test_case[i].span * 1000000));
   draw_cal_status();
 }
@@ -6777,7 +6808,43 @@ void calibrate_modulation(int modulation, int8_t *correction)
 const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
 #ifdef TINYSA4
-enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_SHIFT, CS_MAX };
+
+#define JUMP_FREQS 4
+const freq_t jump_freqs[JUMP_FREQS] = {2000000, 2000000, 1200000000, 2100000000, };
+
+
+void set_jump_config(int i, float v) {
+  switch (i) {
+  case 0:
+    config.shift1_level_offset = v;
+    break;
+  case 1:
+    config.shift2_level_offset = v;
+    break;
+  case 2:
+    config.drive2_level_offset = v;
+    break;
+  case 3:
+    config.drive3_level_offset = v;
+    break;
+  }
+}
+
+float get_jump_config(int i) {
+  switch (i) {
+  case 0:
+    return config.shift1_level_offset;
+  case 1:
+    return config.shift2_level_offset;
+  case 2:
+    return config.drive2_level_offset;
+  case 3:
+    return config.drive3_level_offset;
+  }
+  return 0;
+}
+
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_MAX };
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
 #endif
@@ -6798,6 +6865,41 @@ void calibrate(void)
     setting.frequency_IF = config.frequency_IF1;
     fill_spur_table();
   }
+#if 1   // Jump calibration not yet enabled
+  //for (int j = 0; j < CALIBRATE_RBWS; j++) {
+  //  set_RBW(power_rbw[j]);
+
+  setting.scale = 1;
+  set_trace_scale(1);
+  for (int i =0; i<JUMP_FREQS; i++) {
+    test_freq = jump_freqs[i];
+    set_jump_config(i, -2);
+    test_prepare(TEST_JUMP);
+    set_RBW(1000);
+    set_auto_reflevel(true);
+    //setting.scale = 1;
+    if (i <= 1) {
+      if (i == 1)
+        set_RBW(8500);
+      set_refer_output(5);          // 2MHz
+      setting.spur_removal = S_OFF;
+    } else {
+      set_reflevel(-70);
+      set_refer_output(0);          // 30MHz
+      setting.spur_removal = S_AUTO_OFF;
+    }
+    test_acquire(TEST_JUMP);                        // Acquire test
+    set_jump_config(i, get_jump_config(i) + measure_jump(i));
+    chThdSleepMilliseconds(1000);
+    test_acquire(TEST_JUMP);                        // Acquire test
+    set_jump_config(i, get_jump_config(i) + measure_jump(i));
+    chThdSleepMilliseconds(1000);
+  }
+  setting.scale = 10;
+  set_trace_scale(10);
+
+
+#endif
 #endif
   reset_calibration();
   in_calibration = true;
@@ -6806,7 +6908,6 @@ void calibrate(void)
   config.high_level_offset = 0;
   config.lna_level_offset = 0;
   config.receive_switch_offset = 0;
-  config.shift_level_offset = -5;
 again:
   for (int k = 0; k<2; k++) {
     for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
@@ -6838,10 +6939,6 @@ again:
 #ifdef TINYSA4
       case CS_LNA:
         set_extra_lna(true);
-        break;
-      case CS_SHIFT:
-        setting.below_IF = S_OFF;
-        setting.spur_removal = S_ON;
         break;
 #endif
       }

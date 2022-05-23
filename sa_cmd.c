@@ -338,7 +338,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   //                                     0    1      2
 #ifdef TINYSA4
-  static const char cmd_mode_list[] = "low|high|switch|receive_switch|lna|harmonic|shift|drive1|drive2|drive3";
+  static const char cmd_mode_list[] = "low|high|switch|receive_switch|lna|harmonic|shift1|shift2|drive1|drive2|drive3";
 #else
   static const char cmd_mode_list[] = "low|high|switch|receive_switch";
 #endif
@@ -353,7 +353,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 #ifdef TINYSA4
     shell_printf(p, "lna",          config.lna_level_offset);
     shell_printf(p, "harmonic",     config.harmonic_level_offset);
-    shell_printf(p, "shift",        config.shift_level_offset);
+    shell_printf(p, "shift1",       config.shift1_level_offset);
+    shell_printf(p, "shift2",       config.shift2_level_offset);
     shell_printf(p, "drive1",       config.drive1_level_offset);
     shell_printf(p, "drive2",       config.drive2_level_offset);
     shell_printf(p, "drive3",       config.drive3_level_offset);
@@ -376,10 +377,11 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 #ifdef TINYSA4
       case 4: config.lna_level_offset = v; break;
       case 5: config.harmonic_level_offset = v; break;
-      case 6: config.shift_level_offset = v; break;
-      case 7: config.drive1_level_offset = v; break;
-      case 8: config.drive2_level_offset = v; break;
-      case 9: config.drive3_level_offset = v; break;
+      case 6: config.shift1_level_offset = v; break;
+      case 7: config.shift2_level_offset = v; break;
+      case 8: config.drive1_level_offset = v; break;
+      case 9: config.drive2_level_offset = v; break;
+      case 10: config.drive3_level_offset = v; break;
 #endif
       default: goto usage;
     }
