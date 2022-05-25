@@ -1366,6 +1366,7 @@ extern void ui_init(void);
 extern void ui_process(void);
 int current_menu_is_form(void);
 extern float nf_gain;
+extern const char * const averageText[];
 
 void ui_mode_normal(void);
 void ui_mode_menu(void);
@@ -1645,7 +1646,7 @@ extern void SI4463_set_output_level(int t);
 extern freq_t SI4463_set_freq(freq_t freq);
 extern uint16_t set_rbw(uint16_t rbw_x10);
 extern uint16_t force_rbw(int f);
-extern void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen);
+extern int SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen);
 extern void SI4463_set_gpio(int i, int s);
 extern void si_set_offset(int16_t offset);
 extern void si_fm_offset(int16_t offset);

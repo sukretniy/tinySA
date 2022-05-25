@@ -6906,7 +6906,9 @@ void calibrate(void)
   int calibration_stage = CS_NORMAL;
   config.low_level_offset = 0;
   config.high_level_offset = 0;
+#ifdef TINYSA4
   config.lna_level_offset = 0;
+#endif
   config.receive_switch_offset = 0;
 again:
   for (int k = 0; k<2; k++) {

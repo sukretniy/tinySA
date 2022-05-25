@@ -2501,15 +2501,30 @@ int main(void)
 
   spi_init();
 
-#ifdef TINYSA4
-  disk_initialize(0);
-//  SD_PowerOn();
-#endif
+
+  /*
+   * Set LCD display brightness (use DAC2 for control)
+   * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
+   */
+  dac_init();
+  DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
+  #ifdef  __LCD_BRIGHTNESS__
+    lcd_setBrightness(DEFAULT_BRIGHTNESS);
+  #endif
+  DAC->DHR12R1 = 0;                  // Setup DAC: CH1 value
 
   /*
  * SPI LCD Initialize
  */
   ili9341_init();
+
+#ifdef TINYSA4
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_drawstring("Starting...", 0,0);
+
+  disk_initialize(0);
+//  SD_PowerOn();
+#endif
 
 
 /*
@@ -2634,14 +2649,11 @@ int main(void)
    * Set LCD display brightness (use DAC2 for control)
    * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
    */
-  dac_init();
-  DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
-  #ifdef  __LCD_BRIGHTNESS__
+   #ifdef  __LCD_BRIGHTNESS__
     lcd_setBrightness(config._brightness);
   #else
     DAC->DHR12R2 = config.dac_value; // Setup DAC: CH2 value
   #endif
-  DAC->DHR12R1 = 0;                  // Setup DAC: CH1 value
 
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO-1, Thread1, NULL);
 

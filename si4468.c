@@ -66,7 +66,7 @@
 #else
 // On 48M MCU STM32_PCLK2 = 48M, SPI = 48M/2 = 24M
 //#define SI4432_SPI_SPEED       SPI_BR_DIV2
-#define SI4432_SPI_SPEED       SPI_BR_DIV4
+#define SI4432_SPI_SPEED       SPI_BR_DIV8
 #endif
 
 
@@ -670,9 +670,10 @@ static uint8_t SI4463_in_tx_mode = false;
 static int SI4463_output_level = 0x20;
 
 static si446x_state_t SI4463_get_state(void);
-static void SI4463_set_state(si446x_state_t);
+static int SI4463_set_state(si446x_state_t);
 
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
+#define SI4463_CTS_TIMEOUT  1000000
 #ifdef __WAIT_CTS_WHILE_SLEEPING__
 extern volatile int sleep;
 #if 0
@@ -684,7 +685,20 @@ extern volatile int sleep;
   } \
   };
 #else
-#define SI4463_WAIT_CTS       while (!SI4463_READ_CTS) ;
+
+inline int SI4463_wait_CTS(void) {
+  int t=0;
+  while (!SI4463_READ_CTS) {
+    t++;
+    if (t >=SI4463_CTS_TIMEOUT)
+      return -1;
+  }
+  return 0;
+}
+
+#define SI4463_WAIT_CTS  SI4463_wait_CTS()
+
+//#define SI4463_WAIT_CTS      {int t=0; while (!SI4463_READ_CTS) { t++; if (t >=SI4463_CTS_TIMEOUT) ili9341_drawstring("SI4486 deadlock", 0,20);} }
 #endif
 #else
 #define SI4463_WAIT_CTS       while (!SI4463_READ_CTS) ;
@@ -751,11 +765,11 @@ static uint8_t SI4463_get_response(void* buff, uint8_t len)
 #endif
 
 
-void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
+void SI4463_do_first_api(void* data, uint8_t len, void* out, uint8_t outLen)
 {
   uint8_t *ptr = (uint8_t *)data;
   set_SPI_mode(SPI_MODE_SI);
-  SI4463_WAIT_CTS;         // Wait for CTS
+//  SI4463_WAIT_CTS;         // Wait for CTS
   SI_CS_LOW;
 #if 1                                               // Inline transfer
   while (len--){
@@ -797,6 +811,56 @@ void SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
 #endif
   }
   SI_CS_HIGH;
+}
+
+
+int SI4463_do_api(void* data, uint8_t len, void* out, uint8_t outLen)
+{
+  uint8_t *ptr = (uint8_t *)data;
+  set_SPI_mode(SPI_MODE_SI);
+  if (SI4463_WAIT_CTS)  return -1;         // Wait for CTS
+  SI_CS_LOW;
+#if 1                                               // Inline transfer
+  while (len--){
+    while (SPI_TX_IS_NOT_EMPTY(SI4432_SPI));
+    SPI_WRITE_8BIT(SI4432_SPI, *ptr++);
+  }
+  while (SPI_IS_BUSY(SI4432_SPI));
+#else
+  while (len--)
+    shiftOut(*ptr++); // (pgm_read_byte(&((uint8_t*)data)[i]));
+#endif
+  SI_CS_HIGH;
+
+  if(out == NULL) return 0; // If we have an output buffer then read command response into it
+
+  while (SPI_RX_IS_NOT_EMPTY(SI4432_SPI))
+    (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes from SPI RX buffer
+  if (SI4463_WAIT_CTS)  return -1;         // Wait for CTS
+
+  SI_CS_LOW;
+#if 1
+  SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_READ_CMD_BUFF);
+  SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
+  while (SPI_IS_BUSY(SI4432_SPI));
+  SPI_READ_16BIT(SI4432_SPI);        // drop SI446X_CMD_READ_CMD_BUFF and CTS 0xFF
+#else
+  shiftOut( SI446X_CMD_READ_CMD_BUFF );
+  shiftIn();                         // Should always be 0xFF
+#endif
+  // Get response data
+  ptr = (uint8_t *)out;
+  while (outLen--){
+#if 1                                               // Inline transfer
+    SPI_WRITE_8BIT(SI4432_SPI, 0xFF);
+    while (SPI_RX_IS_EMPTY(SI4432_SPI)); //wait rx data in buffer
+    *ptr++ = SPI_READ_8BIT(SI4432_SPI);
+#else
+    *ptr++ = shiftIn();
+#endif
+  }
+  SI_CS_HIGH;
+  return 0;
 }
 
 #ifdef notused
@@ -866,13 +930,13 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 static const uint8_t SI4468_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 
 // Set new state
-static void SI4463_set_state(si446x_state_t newState)
+static int SI4463_set_state(si446x_state_t newState)
 {
   uint8_t data[] = {
         SI446X_CMD_CHANGE_STATE,
         newState
   };
-  SI4463_do_api(data, sizeof(data), NULL, 0);
+  return SI4463_do_api(data, sizeof(data), NULL, 0);
 }
 
 static uint8_t gpio_state[5] = {
@@ -883,7 +947,7 @@ static uint8_t gpio_state[5] = {
   SI446X_GPIO_MODE_DRIVE1
 };
 
-void SI4463_refresh_gpio(void)
+int SI4463_refresh_gpio(void)
 {
   uint8_t data2[] = {
     SI446X_CMD_GPIO_PIN_CFG,
@@ -895,7 +959,7 @@ void SI4463_refresh_gpio(void)
     0,             // SDO
     0              // GEN_CONFIG
   };
-  SI4463_do_api(data2, sizeof(data2), NULL, 0);
+  return SI4463_do_api(data2, sizeof(data2), NULL, 0);
 }
 
 void SI4463_set_gpio(int i, int s)
@@ -1002,13 +1066,14 @@ void SI4463_start_tx(uint8_t CHANNEL)
 }
 
 
-void SI4463_start_rx(uint8_t CHANNEL)
+int SI4463_start_rx(uint8_t CHANNEL)
 {
   si446x_state_t s = SI4463_get_state();
   if (s == SI446X_STATE_TX){
-    SI4463_set_state(SI446X_STATE_READY);
+    if (SI4463_set_state(SI446X_STATE_READY))
+      return -1;
   }
-  SI4463_refresh_gpio();
+  if (SI4463_refresh_gpio()) return -1;
 
 
 #if 0
@@ -1042,7 +1107,8 @@ void SI4463_start_rx(uint8_t CHANNEL)
     SI446X_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX
   };
 //retry:
-  SI4463_do_api(data, sizeof(data), NULL, 0);
+  if (SI4463_do_api(data, sizeof(data), NULL, 0))
+    return -1;
 
 #if 0       // Get state for debugging
   si446x_state_t s = SI4463_get_state();
@@ -1058,6 +1124,7 @@ void SI4463_start_rx(uint8_t CHANNEL)
   }
 #endif
   SI4463_in_tx_mode = false;
+  return 0;
 }
 
 
@@ -1861,20 +1928,30 @@ freq_t SI4463_set_freq(freq_t freq)
 
 void SI4463_init_rx(void)
 {
-// reset:
+ reset:
   SI_SDN_LOW;
-  my_microsecond_delay(100);
+  my_microsecond_delay(10000);
   SI_SDN_HIGH;
-  my_microsecond_delay(1000);
+  my_microsecond_delay(10000);
   SI_SDN_LOW;
-  my_microsecond_delay(1000);
+  my_microsecond_delay(100000);
+  if (SI4463_WAIT_CTS) {
+    ili9341_drawstring("SI4468 Reset fail", 0,10);
+    goto reset;
+  }
   for(uint16_t i=0;i<sizeof(SI4468_config);i++)
   {
-    SI4463_do_api((void *)&SI4468_config[i+1], SI4468_config[i], NULL, 0);
+    if (SI4463_do_api((void *)&SI4468_config[i+1], SI4468_config[i], NULL, 0)){
+      ili9341_drawstring("SI4468 Configure fail", 0,10);
+      goto reset;
+    }
     i += SI4468_config[i];
   }
   clear_frequency_cache();
-  SI4463_start_rx(SI4463_channel);
+  if (SI4463_start_rx(SI4463_channel)) {
+    ili9341_drawstring("SI4468 Start fail", 0,10);
+    goto reset;
+  }
   // Si446x_getInfo(&SI4463_info);
   prev_band = -1; // 433MHz
 }

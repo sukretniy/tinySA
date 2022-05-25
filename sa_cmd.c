@@ -79,6 +79,7 @@ VNA_SHELL_FUNCTION(cmd_modulation )
 
 VNA_SHELL_FUNCTION(cmd_calc )
 {
+  int t = 0;
 #ifdef TINYSA4
   static const char cmd_cal[] = "off|minh|maxh|maxd|aver4|aver16|aver|quasip|log|lin";
 #else
@@ -86,11 +87,10 @@ VNA_SHELL_FUNCTION(cmd_calc )
 #endif
   if (argc < 1) {
   usage:
-    usage_printf("calc [{trace#}] %s\r\n", cmd_cal);
+    usage_printf("calc [{trace#}] %s\r\n%s\r\n", cmd_cal,averageText[setting.average[t]]);
     return;
   }
   int next_arg = 0;
-  int t = 0;
   if ('0' <= argv[0][0] && argv[0][0] <= '9') {
     t = my_atoi(argv[0]) - 1;
     next_arg++;
@@ -302,7 +302,7 @@ VNA_SHELL_FUNCTION(cmd_level)
 VNA_SHELL_FUNCTION(cmd_sweeptime)
 {
   if (argc != 1  || argv[0][0] == '?') {
-    usage_printf("sweeptime 0.003..60\r\n");
+    usage_printf("sweeptime 0.003..60\r\n%5.3Fs\r\n",((float)setting.actual_sweep_time_us)/ONE_SECOND_TIME);
     return;
   }
   float f = my_atof(argv[0]);
@@ -449,9 +449,9 @@ VNA_SHELL_FUNCTION(cmd_rbw)
   if (argc != 1 || argv[0][0] == '?') {
   usage:
 #ifdef TINYSA4
-	usage_printf("rbw 0.3..850|auto\r\n");
+	usage_printf("rbw 0.3..850|auto\r\n%.1FHz\r\n", actual_rbw_x10*100.0);
 #else
-	usage_printf("rbw 2..600|auto\r\n");
+	usage_printf("rbw 2..600|auto\r\n%.1FHz\r\n", actual_rbw_x10*100.0);
 #endif
 	return;
   }

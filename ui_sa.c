@@ -1338,7 +1338,7 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
 }
 
 float nf_gain;
-const char * const averageText[] = { "OFF", "MIN", "MAX", "MAXD", " A 4", "A 16", "AVER", "QUASI", "TABLE", "DECONV"};
+const char * const averageText[] = { "OFF", "MINH", "MAXH", "MAXD", " AVER4", "A16", "AVER", "QUASI", "TABLE", "DECONV"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 {
