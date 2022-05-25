@@ -92,12 +92,14 @@
 #define LINE_LO_SEL             PAL_LINE(GPIOB, GPIO_LO_SEL)
 #define __NEW_SWITCHES__
 #ifdef __NEW_SWITCHES__
-#define GPIO_SD_CD              12
-#define LINE_SD_CD              PAL_LINE(GPIOB, GPIO_SD_CD)
+#define GPIOB_SD_CD              12
+#define GPIOB_RX_SDN             7
 #else
-#define GPIO_SD_CD              7
-#define LINE_SD_CD              PAL_LINE(GPIOB, GPIO_SD_CD)
+#define GPIOB_SD_CD              7
+#define GPIOB_RX_SDN             12
 #endif
+#define LINE_SD_CD              PAL_LINE(GPIOB, GPIOB_SD_CD)
+#define LINE_RX_SDN             PAL_LINE(GPIOB, GPIOB_RX_SDN)
 #define GPIO_RX_SEL             8
 #define LINE_RX_SEL             PAL_LINE(GPIOB, GPIO_RX_SEL)
 #define GPIO_RX_CTS             9
@@ -106,13 +108,6 @@
 #define GPIO_LCD_CD_PORT        GPIOB
 #define GPIO_LCD_CS             11
 #define GPIO_LCD_CS_PORT        GPIOB
-#ifdef __NEW_SWITCHES__
-#define GPIO_RX_SDN             7
-#define LINE_RX_SDN             PAL_LINE(GPIOB, GPIO_RX_SDN)
-#else
-#define GPIO_RX_SDN             12
-#define LINE_RX_SDN             PAL_LINE(GPIOB, GPIO_RX_SDN)
-#endif
 #define GPIO_PB13               13
 #define LINE_PB13               PAL_LINE(GPIOB, GPIO_PB13)
 #define GPIO_SCL               13
@@ -281,12 +276,12 @@
                                      PIN_MODE_ALTERNATE(GPIOB_SPI_MISO) | \
                                      PIN_MODE_ALTERNATE(GPIOB_SPI_MOSI) | \
                                      PIN_MODE_OUTPUT(6) |           \
-                                     PIN_MODE_INPUT(GPIO_SD_CD) |           \
+                                     PIN_MODE_INPUT(GPIOB_SD_CD) |           \
                                      PIN_MODE_OUTPUT(8) | \
                                      PIN_MODE_INPUT(9) | \
                                      PIN_MODE_OUTPUT(10) |          \
                                      PIN_MODE_OUTPUT(11) |          \
-                                     PIN_MODE_OUTPUT(12) | \
+                                     PIN_MODE_OUTPUT(GPIOB_RX_SDN) | \
                                      PIN_MODE_OUTPUT(13) | \
                                      PIN_MODE_OUTPUT(14) | \
                                      PIN_MODE_OUTPUT(15))
@@ -297,7 +292,7 @@
                                      PIN_OTYPE_PUSHPULL(GPIOB_SPI_MISO) |       \
                                      PIN_OTYPE_PUSHPULL(GPIOB_SPI_MOSI) |       \
                                      PIN_OTYPE_PUSHPULL(6) |       \
-                                     PIN_OTYPE_PUSHPULL(GPIO_SD_CD) |       \
+                                     PIN_OTYPE_PUSHPULL(7) |       \
                                      PIN_OTYPE_PUSHPULL(8) | \
                                      PIN_OTYPE_PUSHPULL(9) | \
                                      PIN_OTYPE_PUSHPULL(10) |      \
@@ -313,7 +308,7 @@
                                      PIN_OSPEED_100M(GPIOB_SPI_MISO) |          \
                                      PIN_OSPEED_100M(GPIOB_SPI_MOSI) |          \
                                      PIN_OSPEED_100M(6) |          \
-                                     PIN_OSPEED_100M(GPIO_SD_CD) |          \
+                                     PIN_OSPEED_100M(7) |          \
                                      PIN_OSPEED_100M(8) | \
                                      PIN_OSPEED_100M(9) | \
                                      PIN_OSPEED_100M(10) |         \
@@ -329,7 +324,7 @@
                                      PIN_PUPDR_PULLUP(GPIOB_SPI_MISO) |         \
                                      PIN_PUPDR_PULLUP(GPIOB_SPI_MOSI) |         \
                                      PIN_PUPDR_PULLUP(6) |         \
-                                     PIN_PUPDR_PULLUP(GPIO_SD_CD) |         \
+                                     PIN_PUPDR_PULLUP(7) |         \
                                      PIN_PUPDR_PULLUP(8) | \
                                      PIN_PUPDR_PULLUP(9) | \
                                      PIN_PUPDR_PULLUP(10) |        \
@@ -345,7 +340,7 @@
                                      PIN_ODR_HIGH(GPIOB_SPI_MISO) |             \
                                      PIN_ODR_HIGH(GPIOB_SPI_MOSI) |             \
                                      PIN_ODR_HIGH(6) |             \
-                                     PIN_ODR_HIGH(GPIO_SD_CD) |             \
+                                     PIN_ODR_HIGH(7) |             \
                                      PIN_ODR_HIGH(8) | \
                                      PIN_ODR_HIGH(9) | \
                                      PIN_ODR_HIGH(10) |            \
@@ -361,7 +356,7 @@
                                      PIN_AFIO_AF(GPIOB_SPI_MISO, 5) | \
                                      PIN_AFIO_AF(GPIOB_SPI_MOSI, 5) | \
                                      PIN_AFIO_AF(6, 0) |           \
-                                     PIN_AFIO_AF(GPIO_SD_CD, 0))
+                                     PIN_AFIO_AF(7, 0))
 #define VAL_GPIOB_AFRH              (PIN_AFIO_AF(8, 0) | \
                                      PIN_AFIO_AF(9, 0) | \
                                      PIN_AFIO_AF(10, 0) |          \

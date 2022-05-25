@@ -1231,7 +1231,7 @@ void testLog(void){
 //               SD card SPI functions
 //*******************************************************
 bool SD_Inserted(void){
-  return !(palReadPort(GPIOB)&(1<<GPIO_SD_CD));
+  return !(palReadPort(GPIOB)&(1<<GPIOB_SD_CD));
 }
 
 static void SD_Select_SPI(void) {

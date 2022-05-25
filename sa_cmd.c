@@ -81,9 +81,9 @@ VNA_SHELL_FUNCTION(cmd_calc )
 {
   int t = 0;
 #ifdef TINYSA4
-  static const char cmd_cal[] = "off|minh|maxh|maxd|aver4|aver16|aver|quasip|log|lin";
+  static const char cmd_cal[] = "off|minh|maxh|maxd|aver4|aver16|aver|quasi|log|lin";
 #else
-  static const char cmd_cal[] = "off|minh|maxh|maxd|aver4|aver16|aver|quasip";
+  static const char cmd_cal[] = "off|minh|maxh|maxd|aver4|aver16|aver|quasi";
 #endif
   if (argc < 1) {
   usage:

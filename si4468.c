@@ -673,7 +673,7 @@ static si446x_state_t SI4463_get_state(void);
 static int SI4463_set_state(si446x_state_t);
 
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
-#define SI4463_CTS_TIMEOUT  1000000
+#define SI4463_CTS_TIMEOUT  10000000
 #ifdef __WAIT_CTS_WHILE_SLEEPING__
 extern volatile int sleep;
 #if 0

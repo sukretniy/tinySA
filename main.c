@@ -2465,11 +2465,7 @@ int main(void)
   palClearPad(GPIOB, GPIOA_RF_PWR);
   chThdSleepMilliseconds(200);
 #endif
-#ifdef TINYSA4
-  palSetPad(GPIOB, GPIOA_RF_PWR);
-#else
   palSetPad(GPIOB, GPIO_RF_PWR);
-#endif
   chThdSleepMilliseconds(500);
 #endif
 
