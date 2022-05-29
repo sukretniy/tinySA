@@ -1735,7 +1735,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.subtract[current_trace]);
       else
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nOFF");
-      b->icon = setting.subtract[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+      // b->icon = setting.subtract[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;  // icon not needed
     } else if (data == 4) {
       if (current_trace == TRACES_MAX-1)
         b->fg = LCD_DARK_GREY;
@@ -1743,7 +1743,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
         b->icon = setting.normalized[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     } else if (data == 3) {
       plot_printf(b->text, sizeof(b->text), "CALC\n%s", averageText[setting.average[current_trace]]);
-      b->icon = setting.average[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+      // b->icon = setting.average[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK; // icon not needed
     }
     return;
   }

@@ -270,7 +270,7 @@ VNA_SHELL_FUNCTION(cmd_agc)
 VNA_SHELL_FUNCTION(cmd_attenuate)
 {
   if (argc != 1 || argv[0][0] == '?') {
-    usage_printf("attenuate 0..31|auto\r\n");
+    usage_printf("attenuate 0..31|auto\r\n%4.2F\r\n", get_attenuation());
     return;
   }
   if (get_str_index(argv[0],"auto") == 0) {

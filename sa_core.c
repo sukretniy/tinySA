@@ -67,7 +67,6 @@ static float old_a = -150;          // cached value to reduce writes to level re
 int spur_gate = 100;
 
 #ifdef __ULTRA__
-#define DEFAULT_ULTRA_THRESHOLD 800000000ULL
 freq_t ultra_threshold;
 bool ultra;
 static int LO_harmonic;
@@ -4937,7 +4936,7 @@ static volatile int dummy;
 #endif
   // -------------------------- auto attenuate ----------------------------------
 #ifdef TINYSA4
-#define AUTO_TARGET_LEVEL   (actual_rbw_x10  >= 10 ? -30 : -40)
+#define AUTO_TARGET_LEVEL   (actual_rbw_x10  >= 10 ? -35 : -40)
 #define LNA_AUTO_TARGET_LEVEL   -45
 #else
 #define AUTO_TARGET_LEVEL   -25
