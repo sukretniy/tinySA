@@ -3896,6 +3896,13 @@ redraw_cal_status:
     y = add_quick_menu(y, (menuitem_t *)menu_level);
     y += YSTEP;
   }
+
+  if (config.ultra_start != ULTRA_AUTO){
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    lcd_printf(x, y, "Ultra:\n%3QHz", ultra_start);
+    y = add_quick_menu(y += YSTEP, (menuitem_t *)menu_config);
+  }
+
 #endif
   // Cal output
   if (setting.refer >= 0) {

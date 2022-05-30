@@ -5757,6 +5757,7 @@ int validate_atten(int i) {
     //    float a = ((float)j)/2.0;
     float a = atten_step[j];
     set_attenuation(a);
+    setting.repeat = 10;
     test_acquire(TEST_LEVEL);                        // Acquire test, does also the averaging.
     test_validate(TEST_LEVEL);                       // Validate test, does nothing actually
     if (j == 0)
