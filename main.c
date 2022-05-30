@@ -963,7 +963,7 @@ config_t config = {
   .cor_nfm = 0, //-18,
   .ext_zero_level = 128,
 #ifdef __ULTRA
-  .ultra_threshold = 350000000,
+  .ultra_start = 350000000,
   .ultra = false,
 #endif
 #endif
@@ -972,7 +972,7 @@ config_t config = {
   .vbat_offset = 220,
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
-  .ultra_threshold = ULTRA_AUTO,
+  .ultra_start = ULTRA_AUTO,
   .low_level_offset =       100.0,    // Uncalibrated
   .high_level_offset =      100,      // Uncalibrated
   .lna_level_offset = 100,

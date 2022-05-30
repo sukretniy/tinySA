@@ -330,7 +330,7 @@ extern float channel_power_watt[3];
 extern const char * const unit_string[];
 extern uint16_t vbwSteps;
 #ifdef __ULTRA__
-extern freq_t ultra_threshold;
+extern freq_t ultra_start;
 extern bool ultra;
 #endif
 #ifdef TINYSA4
@@ -739,7 +739,7 @@ typedef struct config {
   freq_t frequency_IF2;
 #endif
 #ifdef __ULTRA__
-  freq_t ultra_threshold;
+  freq_t ultra_start;
   freq_t direct_start;
   freq_t direct_stop;
   int8_t    ultra;
@@ -1102,6 +1102,7 @@ typedef struct setting
   uint8_t subtract[TRACES_MAX];// index
   uint8_t measurement;         // enum
   uint8_t spur_removal;        // enum
+  uint8_t disable_correction;
   int8_t normalized_trace;
 
   int8_t  tracking;            // -1...1 Can NOT convert to bool!!!!!!

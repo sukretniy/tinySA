@@ -67,7 +67,7 @@ static float old_a = -150;          // cached value to reduce writes to level re
 int spur_gate = 100;
 
 #ifdef __ULTRA__
-freq_t ultra_threshold;
+freq_t ultra_start;
 bool ultra;
 static int LO_harmonic;
 #endif
@@ -244,7 +244,7 @@ void reset_settings(int m)
   setting.mode = m;
   setting.sweep = false;
 #ifdef __ULTRA__
-  ultra_threshold = (config.ultra_threshold == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
+  ultra_start = (config.ultra_start == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_start);
   ultra = config.ultra;
 #endif
 #ifdef TINYSA4
@@ -1829,7 +1829,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
       cv += float_TO_PURE_RSSI(config.drive3_level_offset);
 
 
-    if (ultra && f > ultra_threshold) {
+    if (ultra && f > ultra_start) {
       c = CORRECTION_LOW_ULTRA;
       if (LO_harmonic) {
         cv += float_TO_PURE_RSSI(config.harmonic_level_offset);                                        // +10.5dB correction.
@@ -1871,6 +1871,10 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   if (f > ULTRA_MAX_FREQ) {
     cv += float_TO_PURE_RSSI(+4);       // 4dB loss in harmonic mode
   }
+#endif
+#ifdef TINYSA4
+  if (setting.disable_correction)
+    goto done;
 #endif
   int i = 0;
   while (f > config.correction_frequency[c][i] && i < CORRECTION_POINTS)
@@ -3387,7 +3391,7 @@ modulation_again:
 #endif
     {
       enable_ADF_output(true);
-    if (ultra && f > ultra_threshold) {
+    if (ultra && f > ultra_start) {
         enable_ultra(true);
 #ifdef __NEW_SWITCHES__
         enable_direct(false);
@@ -3415,7 +3419,7 @@ modulation_again:
 #if 0
   if (setting.mode == M_LOW && setting.frequency_step > 0 && ultra &&
       ((f < ULTRA_MAX_FREQ &&  f > MAX_LO_FREQ - local_IF) ||
-       ( f > ultra_threshold && f < MIN_BELOW_LO + local_IF))
+       ( f > ultra_start && f < MIN_BELOW_LO + local_IF))
       ) {
     local_vbw_steps *= 2;
   }
@@ -3505,7 +3509,7 @@ again:                                                              // Spur redu
         } else {
 #ifdef __ULTRA__
           if (S_IS_AUTO(setting.spur_removal)) {
-            if (ultra && lf >= ultra_threshold) {
+            if (ultra && lf >= ultra_start) {
               setting.spur_removal= S_AUTO_ON;
             } else {
               setting.spur_removal= S_AUTO_OFF;
@@ -4365,11 +4369,11 @@ static bool sweep(bool break_on_operation)
   float temp_min_level = 100;          // Initialize the peak search algorithm
   int16_t downslope = true;
 #ifdef __ULTRA__
-  if (setting.mode == M_LOW && config.ultra_threshold == ULTRA_AUTO) {
+  if (setting.mode == M_LOW && config.ultra_start == ULTRA_AUTO) {
     if (getFrequency(sweep_points-1) <= 800000000)
-      ultra_threshold = 800000000;
+      ultra_start = 800000000;
     else
-      ultra_threshold = 700000000;
+      ultra_start = 700000000;
   }
 #endif
   // ------------------------- start sweep loop -----------------------------------
@@ -5913,7 +5917,7 @@ void test_prepare(int i)
 #endif
 #ifdef __ULTRA__
   ultra = true;
-  ultra_threshold = 2000000000;
+  ultra_start = 2000000000;
 #endif
   setting.auto_IF = true;
   setting.auto_attenuation = false;
@@ -6013,10 +6017,10 @@ common_silent:
   switch(test_case[i].setup) {                // Prepare test conditions
 #ifdef TINYSA4
   case TP_30MHZ_ULTRA:
-    ultra_threshold = 0;
+    ultra_start = 0;
     break;
   case TP_30MHZ_DIRECT:
-    ultra_threshold = 800000000;
+    ultra_start = 800000000;
     saved_direct = config.direct;
     config.direct = true;
     saved_direct_start = config.direct_start;
@@ -6326,7 +6330,7 @@ quit:
       if (setting.test_argument)
         set_sweep_frequency(ST_CENTER, ((freq_t)setting.test_argument));
 #ifdef __ULTRA__
-      ultra_threshold = (config.ultra_threshold == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_threshold);
+      ultra_start = (config.ultra_start == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_start);
 #endif
       test_acquire(TEST_LEVEL);                        // Acquire test
 	  test_validate(TEST_LEVEL);                       // Validate test

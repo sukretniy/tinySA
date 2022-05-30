@@ -171,10 +171,12 @@ VNA_SHELL_FUNCTION(cmd_ultra)
   case 3:
     if (argc != 2)
       goto usage;
+    if (get_str_index(argv[1], ultra_cmd)== 2)
+       goto auto_label;
     a = my_atoui(argv[1]);
     auto_label:
-    config.ultra_threshold = a;
-    ultra_threshold = a;
+    config.ultra_start = a;
+    ultra_start = a;
     dirty = true;
     break;
   default:
@@ -1006,14 +1008,27 @@ VNA_SHELL_FUNCTION(cmd_correction)
 {
   (void)argc;
 #ifdef TINYSA4
-  static const char cmd[] = "low|lna|ultra|ultra_lna|out|high";
+  static const char cmd[] = "low|lna|ultra|ultra_lna|out|high|off|on";
   static const char range[] = "0-19";
 #else
   static const char cmd[] = "low|high";
   static const char range[] = "0-9";
 #endif
   int m = get_str_index(argv[0], cmd);
-  if (argc == 1) {
+  if (argc == 1 && m >=0) {
+#ifdef TINYSA4
+    switch(m) {
+    case 6: // Off
+      setting.disable_correction = true;
+      goto show;
+    case 7: // on
+      setting.disable_correction = false;
+    show:
+      dirty = true;       // recalculate intermediate table
+      shell_printf("correction %s\r\n", (setting.disable_correction ? "off":"on"));
+      return;
+    }
+#endif
     shell_printf("index frequency value\r\n");
     for (int i=0; i<CORRECTION_POINTS; i++) {
       shell_printf("correction %s %d %D %.1f\r\n", argv[0], i, config.correction_frequency[m][i], config.correction_value[m][i]);
