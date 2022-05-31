@@ -834,7 +834,7 @@ VNA_SHELL_FUNCTION(cmd_capture)
 static FRESULT cmd_sd_card_mount(void){
   const FRESULT res = f_mount(fs_volume, "", 1);
   if (res != FR_OK)
-    shell_printf("err: no card\r\n");
+    shell_printf("err %d: no card\r\n",res);
   return res;
 }
 
@@ -861,6 +861,8 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
     shell_printf("%s %u\r\n", fno.fname, fno.fsize);
     res = f_findnext(&dj, &fno);
   }
+  if (res != FR_OK)
+    shell_printf("err %d\r\n",res);
   f_closedir(&dj);
 }
 
@@ -886,7 +888,7 @@ VNA_SHELL_FUNCTION(cmd_sd_read)
 
   if (f_open(fs_file, fno.fname, FA_OPEN_EXISTING | FA_READ) != FR_OK){
 error:
-    shell_printf("err: no file\r\n");
+    shell_printf("err %d: no file\r\n",res);
     return;
   }
   // shell_printf("sd_read: %s\r\n", filename);
@@ -899,9 +901,10 @@ error:
 #endif
   UINT size = 0;
   // file data (send all data from file)
-  while (f_read(fs_file, buf, 512, &size) == FR_OK && size > 0)
+  while ((res=f_read(fs_file, buf, 512, &size)) == FR_OK && size > 0)
     streamWrite(shell_stream, (void *)buf, size);
-
+  if (res != FR_OK)
+    goto error;
   f_close(fs_file);
   return;
 }
