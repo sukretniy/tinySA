@@ -1786,7 +1786,7 @@ freq_t SI4463_set_freq(freq_t freq)
 //  SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE1);       // For measuring duration of set_freq
   int S = 4 ;               // Approx 100 Hz channels
   SI4463_channel = 0;
-  if (freq >= 822000000 && freq <= 1130000000)         {       // 822 to 1130MHz
+  if (freq >= 822000000 && freq <= 1150000000)         {       // 822 to 1130MHz
     SI4463_band = 0;
     output_divider = 4 * FREQ_MULTIPLIER;
   } else if (freq >= 411000000 && freq <= 566000000) {    // 411 to  568MHz

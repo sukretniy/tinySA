@@ -1322,6 +1322,7 @@ void set_average(int t, int v)
       && (v != AV_QUASI)
 #endif
       );
+  dirty = true;
   if (enable) {
     setting.scan_after_dirty[t] = 0;
   }
@@ -5612,7 +5613,7 @@ static void test_acquire(int i)
   pause_sweep();
   if (test_case[i].kind == TC_LEVEL) {
     float summed_peak_level = 0;
-#define LEVEL_TEST_SWEEPS    10
+#define LEVEL_TEST_SWEEPS    2
     for (int k=0; k<LEVEL_TEST_SWEEPS; k++) {
       sweep(false);
       float local_peak_level = 0.0;
