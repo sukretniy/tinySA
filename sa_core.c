@@ -103,7 +103,7 @@ static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 #endif
 
 #ifdef TINYSA4
-const float si_drive_dBm []     = {-44.30, -29.98, -19.41, -16.80, -13.79, -11.49, -9.67, -8.18, -6.98, -5.87, -4.91, -4.16, -3.31, -2.62 ,  -1.99,  -1.41, -0.95, -0.47, 0};
+const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , 2.1,  -1.5,  -1, -0.47, 0};
 const float adf_drive_dBm[]     = {-15,-12,-9,-6};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) adf_drive_dBm;
@@ -117,12 +117,12 @@ int actual_drive = -1;
 #endif
 
 #ifdef TINYSA4
-#define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 25.0)
+#define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 25.0 + config.out_switch_offset)
 #define RECEIVE_SWITCH_ATTENUATION  (29 + config.receive_switch_offset)
 //#define POWER_OFFSET    -18             // Max level with all enabled
 //#define POWER_RANGE     70
 #define MAX_DRIVE   ((setting.mode == M_GENHIGH && config.high_out_adf4350 ) ? 3 : 18)
-#define MIN_DRIVE   ((setting.mode == M_GENHIGH && config.high_out_adf4350 ) ? 0: 1)
+#define MIN_DRIVE   ((setting.mode == M_GENHIGH && config.high_out_adf4350 ) ? 0: 0)
 //#define SL_GENHIGH_LEVEL_MIN    -15
 //#define SL_GENHIGH_LEVEL_RANGE    9
 
@@ -3149,7 +3149,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         float ls=setting.level_sweep;                                           // calculate and set the output level
         if (ls > 0)
           ls += 0.5;
-        else
+        else if (ls < 0)
           ls -= 0.5;
         float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0 /* + get_level_offset() */ ;
         correct_RSSI_freq = get_frequency_correction(f);  // No direct in output

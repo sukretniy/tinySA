@@ -340,7 +340,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   //                                     0    1      2
 #ifdef TINYSA4
-  static const char cmd_mode_list[] = "low|high|switch|receive_switch|lna|harmonic|shift1|shift2|drive1|drive2|drive3";
+  static const char cmd_mode_list[] = "low|high|switch|receive_switch|out_switch|lna|harmonic|shift1|shift2|drive1|drive2|drive3";
 #else
   static const char cmd_mode_list[] = "low|high|switch|receive_switch";
 #endif
@@ -353,6 +353,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     shell_printf(p, "switch",       config.switch_offset);
     shell_printf(p, "receive_switch",config.receive_switch_offset);
 #ifdef TINYSA4
+    shell_printf(p, "out_switch",   config.out_switch_offset);
     shell_printf(p, "lna",          config.lna_level_offset);
     shell_printf(p, "harmonic",     config.harmonic_level_offset);
     shell_printf(p, "shift1",       config.shift1_level_offset);
@@ -377,13 +378,14 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       case 2: config.switch_offset = v; break;
       case 3: config.receive_switch_offset = v; break;
 #ifdef TINYSA4
-      case 4: config.lna_level_offset = v; break;
-      case 5: config.harmonic_level_offset = v; break;
-      case 6: config.shift1_level_offset = v; break;
-      case 7: config.shift2_level_offset = v; break;
-      case 8: config.drive1_level_offset = v; break;
-      case 9: config.drive2_level_offset = v; break;
-      case 10: config.drive3_level_offset = v; break;
+      case 4: config.out_switch_offset = v; break;
+      case 5: config.lna_level_offset = v; break;
+      case 6: config.harmonic_level_offset = v; break;
+      case 7: config.shift1_level_offset = v; break;
+      case 8: config.shift2_level_offset = v; break;
+      case 9: config.drive1_level_offset = v; break;
+      case 10: config.drive2_level_offset = v; break;
+      case 11: config.drive3_level_offset = v; break;
 #endif
       default: goto usage;
     }
@@ -1137,7 +1139,7 @@ VNA_SHELL_FUNCTION(cmd_q)
   static const char cmd[] = "s|d|a";
   if (argc < 1) {
     usage:
-    usage_printf("q s|d 0..18|a 0..63  %s\r\n", cmd);
+    usage_printf("q [s 0..1|d 0..18|a 0..63]  %s\r\n", cmd);
     test_output=false;
     return;
   }
@@ -1153,7 +1155,7 @@ VNA_SHELL_FUNCTION(cmd_q)
   argc--;
   switch (m) {
   case -1: goto usage;
-  case 0:  test_output_switch = true; break;
+  case 0:  test_output_switch = argv[i++][0] - '0'; argc--;  break;
   case 1: test_output_drive = atoi(argv[i++]); argc--; break;
   case 2: test_output_attenuate = atoi(argv[i++]); argc--; break;
   }

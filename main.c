@@ -1030,6 +1030,9 @@ config_t config = {
   .high_out_adf4350 = true,
   .ext_zero_level = 174,
   .receive_switch_offset = 0.0,
+#ifdef TINYSA4
+  .out_switch_offset = 0.0,
+#endif
 #ifdef __NOISE_FIGURE__
   .noise_figure = 5.0,
 #endif
@@ -2598,7 +2601,7 @@ int main(void)
     int i = 5;
     while (i--)
       *t++ = *f++;
-
+#if 0       // Set mode not working reliably
     set_mode(b.mode);
     switch (b.mode) {
     case M_LOW:
@@ -2613,7 +2616,7 @@ int main(void)
       menu_push_submenu(menu_highoutputmode);
       break;
     }
-
+#endif
     if (b.frequency0 != 0 || b.frequency1 != 0) {
     if (b.mode <= M_HIGH){
       set_sweep_frequency(ST_START, b.frequency0);
