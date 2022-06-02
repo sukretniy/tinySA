@@ -103,7 +103,7 @@ static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 #endif
 
 #ifdef TINYSA4
-const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , 2.1,  -1.5,  -1, -0.47, 0};
+const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , -2.1,  -1.5,  -1, -0.47, 0};
 const float adf_drive_dBm[]     = {-15,-12,-9,-6};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) adf_drive_dBm;
@@ -3200,13 +3200,16 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           d = MAX_DRIVE-3;        // Start in the middle
 #endif
 
-          while (a - BELOW_MAX_DRIVE(d) > 0 && d < MAX_DRIVE) { // Increase if needed
+          float blw =  BELOW_MAX_DRIVE(d);
+          while (a > blw && d < MAX_DRIVE) { // Increase if needed
             d++;
+            blw =  BELOW_MAX_DRIVE(d);
           }
-          while (a - BELOW_MAX_DRIVE(d) < - 28 && d > LOWEST_LEVEL) { // reduce till it fits attenuator (31 - 3)
+          while (a + 28 < blw && d > LOWEST_LEVEL) { // reduce till it fits attenuator (31 - 3)
             d--;
+            blw =  BELOW_MAX_DRIVE(d);
           }
-          a -= BELOW_MAX_DRIVE(d);
+          a -= blw;
 #ifdef __SI4432__
           SI4432_Sel = SI4432_RX ;
           SI4432_Drive(d);
@@ -3236,6 +3239,11 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           setting.attenuate_x2 = (int)(a * 2);
           PE4302_Write_Byte(setting.attenuate_x2);
 #endif
+#if 0
+          if (SDU1.config->usbp->state == USB_ACTIVE)
+             shell_printf ("level=%f, d=%d, a=%f, s=%d\r\n", setting.level, d, a, (very_low_flag ? 1 : 0));
+#endif
+
         }
       }
     }
