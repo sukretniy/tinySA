@@ -1205,7 +1205,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_extra_lna_acb)
   //  menu_move_back(false);
   ui_mode_normal();
 }
-
+#ifndef __NEW_SWITCHES__
 static UI_FUNCTION_ADV_CALLBACK(menu_adf_out_acb)
 {
   (void)data;
@@ -1218,6 +1218,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_adf_out_acb)
   //  menu_move_back(false);
   ui_mode_normal();
 }
+#endif
 
 #ifdef __WAIT_CTS_WHILE_SLEEPING__
 volatile int sleep = 0;
@@ -2735,7 +2736,9 @@ static const menuitem_t menu_settings3[] =
 {
 #ifdef TINYSA4
 //  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+#ifndef __NEW_SWITCHES__
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
+#endif
   { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
   { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "10G=auto"},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nDIRECT",    menu_direct_acb},

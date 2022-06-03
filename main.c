@@ -1020,14 +1020,17 @@ config_t config = {
    { 10.5,  +3,     +1   ,   -0.1,      0,       0,       +1.1,       +1.5,      +1.8,     +9.7,      +3.8,      +3.5,      +4,       +8,       +10.5,        +13,        +17.5,        +20,        +24,          +28,}, // lna in
 #endif
 #endif
-    { 11.5,  7,      6,      3.5,      1.5,       0.5,       -0.2,     0,         0,         -0.5,       +1.5,        +2,         +4,         +6.5,       +9,         +13,        +13,        +13,         +13,       +13,     }, // low out
+      { 0,     0,      0   ,   0,       0,          0,         0,        0,         0,         0,      0,      0,      0,       0,       0,        0,        0,       0,       0,          0}, // low out
+//    { 11.5,  7,      6,      3.5,      1.5,       0.5,       -0.2,     0,         0,         -0.5,       +1.5,        +2,         +4,         +6.5,       +9,         +13,        +13,        +13,         +13,       +13,     }, // low out
   },
   .setting_frequency_30mhz = 30000000ULL * FREQ_MULTIPLIER,
   .cor_am = 0,
   .cor_wfm = 0,
   .cor_nfm = 0,
   .ultra = false,
+#ifndef __NEW_SWITCHES__
   .high_out_adf4350 = true,
+#endif
   .ext_zero_level = 174,
   .receive_switch_offset = 0.0,
 #ifdef TINYSA4

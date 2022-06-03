@@ -51,6 +51,7 @@
 #define __SI4468__
 #define __ADF4351__
 #define __NEW_SWITCHES__
+#define __ULTRA_OUT__        // Use ADF output over LOW out
 // #define __SI5351__
 #endif
 #define __PE4302__
@@ -439,8 +440,10 @@ void enable_ultra(int);
 #endif
 #ifdef TINYSA4
 void clear_frequency_cache(void);
+#ifndef __NEW_SWITCHES__
 void toggle_high_out_adf4350(void);
 extern int high_out_adf4350;
+#endif
 void set_30mhz(freq_t);
 void set_IF2(int f);
 void set_R(int f);
@@ -750,7 +753,9 @@ typedef struct config {
   int8_t    cor_wfm;
   int8_t    cor_nfm;
   uint8_t  _brightness;
+#ifndef __NEW_SWITCHES__
   uint8_t high_out_adf4350;
+#endif
   uint8_t flip;
 #ifdef __ULTRA__
   uint8_t    direct;

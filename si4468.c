@@ -622,6 +622,10 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 
 void ADF4351_enable(int s)
 {
+  static int old_s = -1;
+  if (s == old_s)
+    return;
+  old_s = s;
   if (s)
     bitClear(registers[4], 11);     // Inverse logic!!!!!
   else
@@ -631,6 +635,10 @@ void ADF4351_enable(int s)
 
 void ADF4351_enable_aux_out(int s)
 {
+  static int old_s = -1;
+  if (s == old_s)
+    return;
+  old_s = s;
   if (s)
     bitSet(registers[4], 8);
   else
@@ -640,6 +648,10 @@ void ADF4351_enable_aux_out(int s)
 
 void ADF4351_enable_out(int s)
 {
+  static int old_s = -1;
+  if (s == old_s)
+    return;
+  old_s = s;
   if (s) {
     bitClear(registers[4], 11);     // Disable VCO power down
     bitClear(registers[2], 5);      // Disable power down
