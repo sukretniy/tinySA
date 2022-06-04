@@ -4440,11 +4440,14 @@ static bool sweep(bool break_on_operation)
   float temp_min_level = 100;          // Initialize the peak search algorithm
   int16_t downslope = true;
 #ifdef __ULTRA__
-  if (setting.mode == M_LOW && config.ultra_start == ULTRA_AUTO) {
-    if (getFrequency(sweep_points-1) <= 800000000)
-      ultra_start = 800000000;
-    else
-      ultra_start = 700000000;
+  if (config.ultra_start == ULTRA_AUTO) {
+    if (setting.mode == M_LOW){
+      if (getFrequency(sweep_points-1) <= 800000000)
+        ultra_start = 800000000;
+      else
+        ultra_start = 700000000;
+    } else if (setting.mode == M_GENLOW)
+      ultra_start = MINIMUM_DIRECT_FREQ;
   }
 #endif
   // ------------------------- start sweep loop -----------------------------------
