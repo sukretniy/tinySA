@@ -801,7 +801,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
 #ifdef TINYSA4
 static const int item_to_mode[3] = { 0,2,3 };
 #else
-static const int item_to_mode[3] = { 0,1,2,3 };
+static const int item_to_mode[4] = { 0,1,2,3 };
 #endif
 static UI_FUNCTION_ADV_CALLBACK(menu_mode_acb)
 {
