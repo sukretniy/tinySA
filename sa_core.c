@@ -106,7 +106,7 @@ static freq_t real_old_freq[4] = { 0, 0, 0, 0};
 const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , -2.1,  -1.5,  -1, -0.47, 0};
 const float adf_drive_dBm[]     = {-15,-12,-9,-6};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
-float *drive_dBm = (float *) adf_drive_dBm;
+float *drive_dBm = (float *) si_drive_dBm;
 #else
 const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0, 3, 6, 9, 12, 16};
 #endif
@@ -202,7 +202,7 @@ void update_min_max_freq(void)
     minFreq = 0;
 #ifdef TINYSA4
 #ifdef __ULTRA_OUT__
-    maxFreq = MAX_LO_FREQ;
+    maxFreq = ULTRA_MAX_FREQ; // MAX_LO_FREQ;
 #else
     maxFreq = MAX_LOW_OUTPUT_FREQ;
 #endif
@@ -262,9 +262,7 @@ void reset_settings(int m)
   ultra = config.ultra;
 #endif
 #ifdef TINYSA4
-#ifndef __NEW_SWITCHES__
-  drive_dBm = (float *) (setting.mode == M_GENHIGH && config.high_out_adf4350 ? adf_drive_dBm : si_drive_dBm);
-#endif
+  drive_dBm = (float *) (setting.mode == M_GENHIGH ? adf_drive_dBm : si_drive_dBm);
   setting.exp_aver = 1;
   setting.increased_R = false;
 #endif
@@ -3027,7 +3025,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int modulation_count_iter = 0;
   int spur_second_pass = false;
 #ifdef __NEW_SWITCHES__
-  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ) );
+  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ && f < ultra_start) );
 #else
   const int direct = false;
 #endif
@@ -3421,43 +3419,15 @@ modulation_again:
   }
 #ifdef __ULTRA__
   // -------------- set ultra or direct ---------------------------------
-  if (setting.mode == M_LOW || setting.mode == M_GENLOW) {
+  if (setting.mode == M_LOW) {
 #ifdef __NEW_SWITCHES__
     if (direct) {
-#ifdef __ULTRA_OUT__
-      if (f > MAX_LOW_OUTPUT_FREQ) {
-//        SI4463_init_rx();
-        ADF4351_enable_aux_out(true);
-        ADF4351_enable_out(true);
-        ADF4351_enable(true);
-        enable_ADF_output(true);
-
-        enable_direct(false);
-        enable_ultra(true);
-        enable_high(false);
-      } else {
-
-        ADF4351_enable_aux_out(false);
-        ADF4351_enable_out(false);
-        ADF4351_enable(false);
-        enable_ADF_output(false);
-
-//        SI4463_init_tx();
-        enable_ultra(true);
-        enable_direct(true);
-        enable_high(true);
-      }
-#else
       enable_ultra(true);
       enable_direct(true);
       enable_high(true);
-      enable_ADF_output(false);
-#endif
     } else
 #endif
-    {
-      enable_ADF_output(true);
-    if (ultra && f > ultra_start) {
+      if (ultra && f > ultra_start) {
         enable_ultra(true);
 #ifdef __NEW_SWITCHES__
         enable_direct(false);
@@ -3470,6 +3440,48 @@ modulation_again:
         enable_direct(false);
 #endif
       }
+  } else if (setting.mode == M_GENLOW) {
+    if (ultra && f > ultra_start) {             // Ultra mode output using both SI and ADF
+      if (!SI4463_is_in_tx_mode())
+        SI4463_init_tx();
+      enable_ADF_output(true);
+      enable_ultra(true);
+      enable_direct(false);
+      enable_high(false);
+    } else if (direct) {
+      if (f > MAX_LOW_OUTPUT_FREQ) {            // Direct mode output using only ADF via mixer leakage
+        enable_ADF_output(true);
+        if (SI4463_is_in_tx_mode())
+          SI4463_init_rx();
+
+        ADF4351_enable_aux_out(true);
+        ADF4351_enable_out(true);
+        ADF4351_enable(true);
+
+        enable_direct(false);
+        enable_ultra(true);
+        enable_high(false);
+
+      } else {                                  // Direct mode output using only SI
+        if (!SI4463_is_in_tx_mode())
+          SI4463_init_tx();
+        enable_ADF_output(false);
+        ADF4351_enable_aux_out(false);
+        ADF4351_enable_out(false);
+        ADF4351_enable(false);
+
+        enable_ultra(true);
+        enable_direct(true);
+        enable_high(true);
+      }
+
+    } else {                                     // Normal output mode using both SI and ADF
+      if (!SI4463_is_in_tx_mode())
+        SI4463_init_tx();
+      enable_ADF_output(true);
+      enable_ultra(false);
+      enable_high(false);
+      enable_direct(false);
     }
   }
 #endif
@@ -3702,6 +3714,14 @@ again:                                                              // Spur redu
           }
         }
       } else {              // Output mode
+#ifdef __ULTRA__
+        if (S_IS_AUTO(setting.below_IF)) {
+          if ((freq_t)lf > MAX_ABOVE_IF_FREQ && lf <= ULTRA_MAX_FREQ )
+            setting.below_IF = S_AUTO_ON; // Only way to reach this range. Use below IF in harmonic mode
+          else
+            setting.below_IF = S_AUTO_OFF; // default is above IF, Use below IF in harmonic mode
+        }
+#endif
         if (setting.modulation == MO_EXTERNAL)    // VERY SPECIAL CASE !!!!!! LO input via high port
           local_IF += lf;
       }
@@ -3714,7 +3734,7 @@ again:                                                              // Spur redu
 #ifdef TINYSA4
       int inverted_f = false;
 #endif
-      if (setting.mode == M_LOW  && !direct && !setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
+      if ((setting.mode == M_LOW ||setting.mode == M_GENLOW)  && !direct && !setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
 #ifdef __ULTRA__
         if (lf < local_IF)
 #endif
@@ -4447,7 +4467,7 @@ static bool sweep(bool break_on_operation)
       else
         ultra_start = 700000000;
     } else if (setting.mode == M_GENLOW)
-      ultra_start = MINIMUM_DIRECT_FREQ;
+      ultra_start = config.ultra_start;
   }
 #endif
   // ------------------------- start sweep loop -----------------------------------

@@ -1975,6 +1975,11 @@ void SI4463_init_tx(void)
   prev_band = -1; // 433MHz
 }
 
+int SI4463_is_in_tx_mode(void)
+{
+  return SI4463_in_tx_mode;
+}
+
 void enable_extra_lna(int s)
 {
   static int old_extra_lna = -1;

@@ -1662,6 +1662,7 @@ extern void si_fm_offset(int16_t offset);
 extern bool ADF4351_frequency_changed;
 extern bool SI4463_frequency_changed;
 extern bool SI4463_offset_changed;
+extern int SI4463_is_in_tx_mode(void);
 extern int16_t SI4463_noise_correction_x10;
 void switch_SI4463_RSSI_correction(bool);
 extern int old_R;
