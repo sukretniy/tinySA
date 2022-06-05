@@ -3025,7 +3025,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int modulation_count_iter = 0;
   int spur_second_pass = false;
 #ifdef __NEW_SWITCHES__
-  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ && f < ultra_start) );
+  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ && f < ultra_start && setting.clean_output) );
 #else
   const int direct = false;
 #endif
@@ -3441,7 +3441,7 @@ modulation_again:
 #endif
       }
   } else if (setting.mode == M_GENLOW) {
-    if (ultra && f > ultra_start) {             // Ultra mode output using both SI and ADF
+    if (ultra && (f > ultra_start || (!setting.clean_output && f > 800000000))) {             // Ultra mode output using both SI and ADF
       if (!SI4463_is_in_tx_mode())
         SI4463_init_tx();
       enable_ADF_output(true);

@@ -563,6 +563,7 @@ static const menuitem_t  menu_measure_noise_figure[];
 #endif
 static const menuitem_t  menu_sweep[];
 static const menuitem_t  menu_settings[];
+static const menuitem_t  menu_lowoutput_settings[];
 extern bool dirty;
 char range_text[20];
 
@@ -1010,7 +1011,30 @@ static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
 #endif
 }
 #endif
+#ifdef TINYSA4
+static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
+{
+  (void)item;
+  if (b){
+    if (data == 255) {     b->param_1.text = setting.clean_output ? "CLEAN" : "ACCURATE"; return; }
+    b->icon = data == setting.clean_output ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+  switch(data) {
+  case 255:
+    menu_push_submenu(menu_lowoutput_settings);
+    return;
+  case 0:
+    setting.clean_output = false;
+    break;
+  case 1:
+    setting.clean_output = true;
+    break;
+  }
+  menu_move_back(false);
+}
 
+#endif
 // const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
 const char *menu_modulation_text[]={"None", "AM", "NFM", "WFM", "External"};
 
@@ -2484,6 +2508,14 @@ static const menuitem_t  menu_sweep[] = {
   { MT_FORM | MT_SUBMENU,  0,                   "SWEEP POINTS",   menu_sweep_points_form},
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
+#ifdef TINYSA4
+static const menuitem_t  menu_lowoutput_settings[] = {
+  { MT_FORM | MT_ADV_CALLBACK,  1,              "OPTIMIZE FOR CLEAN SIGNAL",       menu_lowoutput_settings_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "OPTIMIZE FOR ACCURATE SIGNAL",    menu_lowoutput_settings_acb},
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings},
+  { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+#endif
 
 char low_level_help_text[12] = "-76..-6";
 char center_text[18] = "FREQ: %s";
@@ -2500,7 +2532,7 @@ const menuitem_t  menu_lowoutputmode[] = {
 #endif
   { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",   "-100..+100"},
 #ifdef TINYSA4
-  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings},
+  { MT_FORM | MT_ADV_CALLBACK,  255, "OPTIMIZE: %s",     menu_lowoutput_settings_acb},
 #endif
   { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel

@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -1184,6 +1184,7 @@ typedef struct setting
   int R;            // KM_R
   int32_t exp_aver;
   bool increased_R;
+  bool clean_output;
 #endif
   int64_t test_argument;            // used for tests
   uint32_t checksum;            // must be last and at 4 byte boundary
