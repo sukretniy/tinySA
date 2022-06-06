@@ -1014,10 +1014,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
 #ifdef TINYSA4
 static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
 {
+  static char mode_string[26];
   (void)item;
   if (b){
-    if (data == 255) {     b->param_1.text = setting.clean_output ? "CLEAN" : "ACCURATE"; return; }
-    b->icon = data == setting.clean_output ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    if (data == 255) {
+      plot_printf(mode_string, sizeof mode_string, "%s %s %s",
+                  (get_sweep_frequency(ST_START) < MINIMUM_DIRECT_FREQ ? "SINUS" : "" ),
+                  (get_sweep_frequency(ST_STOP) >= MINIMUM_DIRECT_FREQ ? "SQUARE WAVE" : ""),
+                  (get_sweep_frequency(ST_STOP) > MAX_LOW_OUTPUT_FREQ && setting.mixer_output ? "MIXER" : ""));
+      b->param_1.text = mode_string;
+      return; }
+    b->icon = data == setting.mixer_output ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
   switch(data) {
@@ -1025,10 +1032,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
     menu_push_submenu(menu_lowoutput_settings);
     return;
   case 0:
-    setting.clean_output = false;
+    setting.mixer_output = false;
     break;
   case 1:
-    setting.clean_output = true;
+    setting.mixer_output = true;
     break;
   }
   menu_move_back(false);
@@ -2510,8 +2517,8 @@ static const menuitem_t  menu_sweep[] = {
 };
 #ifdef TINYSA4
 static const menuitem_t  menu_lowoutput_settings[] = {
-  { MT_FORM | MT_ADV_CALLBACK,  1,              "OPTIMIZE FOR CLEAN SIGNAL",       menu_lowoutput_settings_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "OPTIMIZE FOR ACCURATE SIGNAL",    menu_lowoutput_settings_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  1,              "SQUARE WAVE max 4.4GHz",       menu_lowoutput_settings_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "MIXER max 5.4GHz",    menu_lowoutput_settings_acb},
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings},
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
@@ -2532,7 +2539,7 @@ const menuitem_t  menu_lowoutputmode[] = {
 #endif
   { MT_FORM | MT_KEYPAD,  KM_EXT_GAIN,            "EXTERNAL GAIN: %s",   "-100..+100"},
 #ifdef TINYSA4
-  { MT_FORM | MT_ADV_CALLBACK,  255, "OPTIMIZE: %s",     menu_lowoutput_settings_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  255, "OUTPUT: %s",     menu_lowoutput_settings_acb},
 #endif
   { MT_FORM | MT_CANCEL,   0,                   "MODE",             NULL },
   { MT_FORM | MT_NONE, 0, NULL, NULL } // sentinel

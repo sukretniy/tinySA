@@ -1184,7 +1184,7 @@ typedef struct setting
   int R;            // KM_R
   int32_t exp_aver;
   bool increased_R;
-  bool clean_output;
+  bool mixer_output;
 #endif
   int64_t test_argument;            // used for tests
   uint32_t checksum;            // must be last and at 4 byte boundary
