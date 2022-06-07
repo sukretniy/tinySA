@@ -2906,10 +2906,10 @@ static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };
 //
 //  Offset is 14.4Hz when below 600MHz and 28.8 when above.
 //
-#define LND  96
-#define HND  48
-#define LWD  1024
-#define HWD  512
+#define LND  96     // low range near FM
+#define HND  48     // High range near FM
+#define LWD  1024   // Low range wide FM
+#define HWD  512    // High range wide FM
 #endif
 
 #define S1  1.5
@@ -4472,8 +4472,12 @@ static bool sweep(bool break_on_operation)
         ultra_start = 800000000;
       else
         ultra_start = 700000000;
-    } else if (setting.mode == M_GENLOW)
-      ultra_start = config.ultra_start;
+    } else if (setting.mode == M_GENLOW) {
+      if (setting.mixer_output)
+        ultra_start = MAX_LOW_OUTPUT_FREQ;
+      else
+        ultra_start = config.ultra_start;
+    }
   }
 #endif
   // ------------------------- start sweep loop -----------------------------------

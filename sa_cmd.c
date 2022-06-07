@@ -205,11 +205,24 @@ VNA_SHELL_FUNCTION(cmd_ultra_start)
 
 VNA_SHELL_FUNCTION(cmd_output)
 {
+#ifdef TINYSA4
+  int m = generic_option_cmd("output", "on|off|normal|mixer", argc, argv[0]);
+#else
   int m = generic_option_cmd("output", "on|off", argc, argv[0]);
-  if (m>=0) {
+#endif
+  switch(m)
+  {
+  case 0:
+  case 1:
     setting.mute = m;
-    dirty = true;
+    break;
+#ifdef TINYSA4
+  case 2:
+  case 3:
+    setting.mixer_output = m-2;
+#endif
   }
+  dirty = true;
 }
 
 VNA_SHELL_FUNCTION(cmd_load)

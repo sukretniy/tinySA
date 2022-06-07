@@ -505,6 +505,8 @@ void ADF4351_CP(int p)
 
 void ADF4351_drive(int p)
 {
+  if (((registers[4] >> 3) & 0x03 ) == (p & 0x03))
+    return;
   maskedWrite(registers[4],3, 0x3, p);
 //  p &= 0x03;
 //  registers[4] &= ~(((uint32_t)0x3) << 3);
@@ -516,6 +518,8 @@ void ADF4351_drive(int p)
 
 void ADF4351_aux_drive(int p)
 {
+  if (((registers[4] >> 6) & 0x03 ) == (p & 0x03))
+    return;
   maskedWrite(registers[4],6, 0x3, p);
 //  p &= 0x03;
 //  registers[4] &= ~(((uint32_t)0x3) << 6);
@@ -622,10 +626,8 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 
 void ADF4351_enable(int s)
 {
-  static int old_s = -1;
-  if (s == old_s)
+  if (bitRead(registers[4],11) != (s & 0x01))
     return;
-  old_s = s;
   if (s)
     bitClear(registers[4], 11);     // Inverse logic!!!!!
   else
@@ -635,10 +637,8 @@ void ADF4351_enable(int s)
 
 void ADF4351_enable_aux_out(int s)
 {
-  static int old_s = -1;
-  if (s == old_s)
+  if (bitRead(registers[4],8) == (s & 0x01))
     return;
-  old_s = s;
   if (s)
     bitSet(registers[4], 8);
   else
@@ -648,10 +648,8 @@ void ADF4351_enable_aux_out(int s)
 
 void ADF4351_enable_out(int s)
 {
-  static int old_s = -1;
-  if (s == old_s)
+  if (bitRead(registers[4],5) == (s & 0x01))
     return;
-  old_s = s;
   if (s) {
     bitClear(registers[4], 11);     // Disable VCO power down
     bitClear(registers[2], 5);      // Disable power down
@@ -976,6 +974,8 @@ int SI4463_refresh_gpio(void)
 
 void SI4463_set_gpio(int i, int s)
 {
+  if (gpio_state[i] == s)
+    return;
   gpio_state[i] = s;
 #if 0   // debug gpio
   gpio_state[2] = 3;
@@ -2019,10 +2019,6 @@ void enable_rx_output(int s)
 
 void enable_high(int s)
 {
-static int old_s = 2;
-  if (s == old_s)
-    return;
-  old_s = s;
 #ifdef __NEW_SWITCHES__
   if (s)
     SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE0);
