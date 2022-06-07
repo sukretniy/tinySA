@@ -2517,8 +2517,8 @@ static const menuitem_t  menu_sweep[] = {
 };
 #ifdef TINYSA4
 static const menuitem_t  menu_lowoutput_settings[] = {
-  { MT_FORM | MT_ADV_CALLBACK,  1,              "SQUARE WAVE max 4.4GHz",       menu_lowoutput_settings_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "MIXER max 5.4GHz",    menu_lowoutput_settings_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "SQUARE WAVE max 4.4GHz",       menu_lowoutput_settings_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  1,              "MIXER max 5.4GHz",    menu_lowoutput_settings_acb},
   { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings},
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };

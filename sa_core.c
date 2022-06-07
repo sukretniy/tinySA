@@ -2908,8 +2908,8 @@ static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };
 //
 #define LND  96
 #define HND  48
-#define LWD  512
-#define HWD  256
+#define LWD  1024
+#define HWD  512
 #endif
 
 #define S1  1.5
@@ -3162,8 +3162,14 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     if (setting.mode == M_GENLOW) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
 #ifdef TINYSA4
       if (test_output) {
-        enable_rx_output(!test_output_switch);
-        SI4463_set_output_level(test_output_drive);
+        if (f < MAX_LOW_OUTPUT_FREQ || setting.mixer_output)
+          enable_rx_output(!test_output_switch);
+        else
+          enable_direct(!test_output_switch);
+        if (f > MAX_LOW_OUTPUT_FREQ && !setting.mixer_output)
+          ADF4351_drive(test_output_drive);
+        else
+          SI4463_set_output_level(test_output_drive);
         PE4302_Write_Byte(test_output_attenuate);
       } else
 #endif
@@ -3441,7 +3447,7 @@ modulation_again:
 #endif
       }
   } else if (setting.mode == M_GENLOW) {
-    if (ultra && (f > ultra_start || (!setting.mixer_output && f > MAX_LOW_OUTPUT_FREQ))) {             // Ultra mode output using both SI and ADF
+    if (ultra && (f > ultra_start || (setting.mixer_output && f > MAX_LOW_OUTPUT_FREQ))) {             // Ultra mode output using both SI and ADF
       if (!SI4463_is_in_tx_mode())
         SI4463_init_tx();
       enable_ADF_output(true);
@@ -4413,9 +4419,9 @@ static bool sweep(bool break_on_operation)
   int refreshing = false;
 
   if (MODE_OUTPUT(setting.mode) && config.cor_nfm == 0) {                          // Calibrate the modulation frequencies at first use
-#ifndef TINYSA4
+//#ifndef TINYSA4
     calibrate_modulation(MO_AM, &config.cor_am);    // No AM mondulation for now
-#endif
+//#endif
     calibrate_modulation(MO_NFM, &config.cor_nfm);
     calibrate_modulation(MO_WFM, &config.cor_wfm);
   }
@@ -6892,7 +6898,7 @@ void calibrate_modulation(int modulation, int8_t *correction)
 {
   if (*correction == 0) {
     setting.modulation = modulation;
-    setting.modulation_frequency = 5000;
+    setting.modulation_frequency = 7000;
     in_selftest = true;
     perform(false,0, 30000000, false);
     perform(false,1, 30000000, false);
