@@ -78,12 +78,14 @@ checksum(const void *start, size_t len)
   return value;
 }
 
+
 int
 config_save(void)
 {
   uint16_t *src = (uint16_t*)&config;
   uint16_t *dst = (uint16_t*)SAVE_CONFIG_ADDR;
   int count = sizeof(config_t) / sizeof(uint16_t);
+
 
   config.magic = CONFIG_MAGIC;
   config.checksum = checksum(&config, sizeof config - sizeof config.checksum);
@@ -92,6 +94,9 @@ config_save(void)
 
   /* erase flash pages */
   flash_erase_page((uint32_t)dst);
+#if SAVE_CONFIG_SIZE > FLASH_PAGESIZE       // two flash pages
+  flash_erase_page(((uint32_t)dst) + FLASH_PAGESIZE);
+#endif
 
   /* write to flash */
   while (count-- > 0) {
@@ -156,6 +161,7 @@ caldata_save(uint16_t id)
     flash_program_half_word((uint32_t)dst, *src++);
     dst++;
   }
+#if 0
   // Flash stored trace to flash
   count = sizeof(stored_t) /  sizeof(uint16_t);
   src = (uint16_t*)&stored_t[0];
@@ -163,7 +169,7 @@ caldata_save(uint16_t id)
     flash_program_half_word((uint32_t)dst, *src++);
     dst++;
   }
-
+#endif
   /* after saving data, make active configuration points to flash */
 //  active_props = (setting_t*)saveareas[id];
 //  lastsaveid = id;
@@ -220,9 +226,11 @@ caldata_recall(uint16_t id)
 
   /* duplicated saved data onto sram to be able to modify marker/trace */
   memcpy(dst, src, sizeof(setting_t));
+#if 0
   // Restore stored trace
   src = &(src[1]);
   memcpy(stored_t, src, sizeof(stored_t));
+#endif
   update_min_max_freq();
   update_frequencies();
   set_scale(setting.scale);

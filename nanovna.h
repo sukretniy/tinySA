@@ -212,15 +212,21 @@ typedef uint32_t freq_t;
  #define CORRECTION_LOW_ULTRA 2
  #define CORRECTION_LNA_ULTRA 3
  #ifdef  DIRECT_CORRECTION
-   #define CORRECTION_DIRECT   4
-   #define CORRECTION_LNA_DIRECT   5
-   #define CORRECTION_LOW_OUT  6
-   #define CORRECTION_HIGH     7
-   #define CORRECTION_SIZE     8
+   #define CORRECTION_DIRECT         4
+   #define CORRECTION_LNA_DIRECT     5
+   #define CORRECTION_LOW_OUT        6
+   #define CORRECTION_LOW_OUT_DIRECT 7
+   #define CORRECTION_LOW_OUT_ADF    8
+   #define CORRECTION_LOW_OUT_MIXER  9
+   #define CORRECTION_HIGH           10
+   #define CORRECTION_SIZE           11
 #else
-  #define CORRECTION_LOW_OUT  4
-  #define CORRECTION_HIGH     5
-  #define CORRECTION_SIZE     6
+  #define CORRECTION_LOW_OUT        4
+  #define CORRECTION_LOW_OUT_DIRECT 5
+  #define CORRECTION_LOW_OUT_ADF    6
+  #define CORRECTION_LOW_OUT_MIXER  7
+  #define CORRECTION_HIGH           8
+  #define CORRECTION_SIZE           9
 #endif
 #endif
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
@@ -1239,23 +1245,33 @@ extern int linear_averaging;
 // config save area (flash7 addr)
 #ifdef TINYSA3
 #define SAVE_CONFIG_ADDR        0x0801D000
+#define SAVE_CONFIG_SIZE        FLASH_PAGESIZE
+#define FLASH_END               0x08020000
 #endif
 
 #ifdef TINYSA4
-#define SAVE_CONFIG_ADDR        0x0803A800
+#define SAVE_CONFIG_ADDR        0x0803C000
+#define SAVE_CONFIG_SIZE        FLASH_PAGESIZE*2
+#define FLASH_END               0x08040000
 #endif
 
-#define SAVE_CONFIG_SIZE        0x00000800
+typedef char assert_config[sizeof(config_t)> SAVE_CONFIG_SIZE ? -1 : 1];        // Check config size
+
 // setting_t save area (save area + config size)
 #define SAVE_PROP_CONFIG_ADDR   (SAVE_CONFIG_ADDR + SAVE_CONFIG_SIZE)
+
 #ifdef TINYSA4
-#define SAVE_PROP_CONFIG_SIZE   0x00001000
+#define SAVE_PROP_CONFIG_SIZE   0x00000800
 #else
 #define SAVE_PROP_CONFIG_SIZE   0x00000800
 #endif
+
+typedef char assert_setting[sizeof(setting_t)> SAVE_PROP_CONFIG_SIZE ? -1 : 1]; // Check setting size
+
 // Should include all save slots
 #define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX * SAVE_PROP_CONFIG_SIZE)
 
+typedef char assert_flash[ SAVE_CONFIG_ADDR + SAVE_CONFIG_AREA_SIZE >= FLASH_END ? -1 : 1];
 
 #else
 #define SAVEAREA_MAX 4
