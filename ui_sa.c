@@ -1033,9 +1033,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
     return;
   case 0:
     setting.mixer_output = false;
+    dirty = true;
     break;
   case 1:
     setting.mixer_output = true;
+    dirty = true;
     break;
   }
   menu_move_back(false);
@@ -3168,20 +3170,28 @@ static const menuitem_t menu_stimulus[] = {
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 
+#ifdef TINYSA4
+const menuitem_t menu_mode[] = {
+//  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "Spectrum Analyzer",      menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "Signal Generator",     menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Calibration Output: %s",   menu_sreffer_acb},
+  { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
+};
+#else
 const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "%s to LOW in",      menu_mode_acb},
-#ifndef TINYSA4
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "%s to HIGH in",     menu_mode_acb},
-#endif
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "%s to LOW out",     menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Cal. output: %s",   menu_sreffer_acb},
 //  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings3},
-
 //  { MT_FORM | MT_CANCEL,   0, S_RARROW" BACK", NULL },
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
+#endif
 
 static const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "PRESET",       menu_load_preset},

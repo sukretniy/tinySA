@@ -2032,13 +2032,11 @@ void enable_high(int s)
 #endif
 }
 
-void enable_ADF_output(int f)
+void enable_ADF_output(int f, int t)
 {
-  static int old_f = 2;
-  if (f==old_f)
-    return;
-  old_f = f;
+  ADF4351_enable(f);
   ADF4351_enable_out(f);
+  ADF4351_enable_aux_out(t);
 }
 
 #ifdef __NEW_SWITCHES__

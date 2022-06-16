@@ -171,12 +171,13 @@ void ADF4351_drive(int p);
 void ADF4351_aux_drive(int p);
 void ADF4351_enable(int p);
 void ADF4351_enable_aux_out(int p);
-void ADF4351_enable_out(int p);
 int ADF4351_locked(void);
 void ADF4350_shift_ref(int f);
 
-void ADF4351_enable(int s);
-void ADF4351_enable_aux_out(int s);
+//void ADF4351_enable_out(int p);
+//void ADF4351_enable(int s);
+//void ADF4351_enable_aux_out(int s);
+
 extern int si5351_available;
 #endif
 
@@ -206,7 +207,7 @@ void enable_ultra(int s);
 void enable_rx_output(int s);
 void enable_high(int s);
 void enable_direct(int s);
-void enable_ADF_output(int f);
+void enable_ADF_output(int f, int t);
 #endif
 
 

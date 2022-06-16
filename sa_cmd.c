@@ -1149,28 +1149,31 @@ VNA_SHELL_FUNCTION(cmd_caloutput)
 #ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_q)
 {
-  static const char cmd[] = "s|d|a";
   if (argc < 1) {
     usage:
-    usage_printf("q [s 0..1|d 0..18|a 0..63]  %s\r\n", cmd);
+    usage_printf("q [s0..1|d0..18|a0..63|p0..4]\r\n");
     test_output=false;
+    test_output_switch = false;
+    test_output_drive = 0;
+    test_output_attenuate = 0;
+    test_path = 0;
     return;
   }
   int i = 0;
   test_output=true;
-  test_output_switch = false;
-  test_output_drive = MAX_DRIVE;
-  test_output_attenuate = 0;
-  again:
+  dirty = true;
+again:
   if (argc == 0)
     return;
-  int m = get_str_index(argv[i++], cmd);
+  char *a = argv[i++];
+  char m = *a++;
   argc--;
   switch (m) {
-  case -1: goto usage;
-  case 0:  test_output_switch = argv[i++][0] - '0'; argc--;  break;
-  case 1: test_output_drive = atoi(argv[i++]); argc--; break;
-  case 2: test_output_attenuate = atoi(argv[i++]); argc--; break;
+  default: goto usage;
+  case 's':  test_output_switch = *a - '0'; break;
+  case 'd': test_output_drive = atoi(a); break;
+  case 'a': test_output_attenuate = atoi(a); break;
+  case 'p': test_path = *a - '0'; break;
   }
   goto again;
 }
