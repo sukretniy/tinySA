@@ -112,7 +112,7 @@ int actual_drive = -1;
 
 #ifdef TINYSA4
 const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , -2.1,  -1.5,  -1, -0.47, 0};
-const float adf_drive_dBm[]     = {-15,-12,-9,-6};
+const float adf_drive_dBm[]     = {-13.5,-9,-4.5, 0};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) si_drive_dBm;
 const int min_drive = 0;
@@ -120,8 +120,8 @@ int max_drive = 18;
 
 #ifdef __NEW_SWITCHES__
 #define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH) ? 40 : 25.0 + config.out_switch_offset)
-#define MAX_DRIVE   ((setting.mode == M_GENHIGH) ? 3 : 18)
-#define MIN_DRIVE   ((setting.mode == M_GENHIGH) ? 0: 0)
+#define MAX_DRIVE   max_drive // ((setting.mode == M_GENHIGH) ? 3 : 18)
+#define MIN_DRIVE   min_drive // ((setting.mode == M_GENHIGH) ? 0: 0)
 #define SL_GENHIGH_LEVEL_MIN    (drive_dBm[MIN_DRIVE])
 #else
 #define SWITCH_ATTENUATION  ((setting.mode == M_GENHIGH && config.high_out_adf4350) ? 40 : 25.0 + config.out_switch_offset)
@@ -145,10 +145,11 @@ int max_drive = 18;
 #define MAX_ATTENUATE 31.5
 #endif
 
-//    0         1         2            3           4
-enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_ULTRA, PATH_LEAKAGE};
+//    0         1         2            3           4             5
+enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_ULTRA, PATH_LEAKAGE, PATH_HIGH};
 int signal_path = PATH_OFF;
 
+#ifdef TINYSA4
 void set_output_drive(int d)
 {
   if (signal_path == PATH_LEAKAGE)
@@ -182,6 +183,7 @@ void set_output_step_atten(int s)
 #endif
   }
 }
+
 void set_output_path(freq_t f, float level)
 {
   if (test_output) {
@@ -194,6 +196,8 @@ void set_output_path(freq_t f, float level)
   }
   if (setting.mute)
     signal_path = PATH_OFF;
+  else if (MODE_HIGH(setting.mode))
+      signal_path = PATH_HIGH;
   else if (f < MINIMUM_DIRECT_FREQ || (config.ultra && config.ultra_start != ULTRA_AUTO && f < config.ultra_start))
     signal_path = PATH_LOW;
   else if (f <= MAX_LOW_OUTPUT_FREQ && ( config.ultra_start == ULTRA_AUTO || f < config.ultra_start))
@@ -221,12 +225,18 @@ void set_output_path(freq_t f, float level)
       level += dt * DB_PER_DEGREE_BELOW;  // Temperature correction
   }
 
+  if (signal_path == PATH_HIGH) {
+    return;                 //TODO setup high path
+  }
   level += 3.0;        // Always 3dB in attenuator
 
+  float switch_atten = SWITCH_ATTENUATION;
+  if (signal_path == PATH_LEAKAGE)
+    switch_atten = 40.0;
   int very_low_flag = false;
   float a = level - level_max();                 // convert to all settings maximum power output equals a = zero
-  if (a < -SWITCH_ATTENUATION) {
-    a = a + SWITCH_ATTENUATION;
+  if (a < -switch_atten) {
+    a = a + switch_atten;
     very_low_flag = true;
   }
   set_output_step_atten(very_low_flag);
@@ -322,6 +332,50 @@ void set_output_path(freq_t f, float level)
 
 }
 
+void set_input_path(freq_t f)
+{
+  if (MODE_HIGH(setting.mode))
+      signal_path = PATH_HIGH;
+  else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > 700) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
+      signal_path = PATH_ULTRA;
+  else if (config.direct && f >= config.direct_start && f < config.direct_stop)
+    signal_path = PATH_DIRECT;
+  else
+    signal_path = PATH_LOW;
+
+  if (signal_path == PATH_HIGH) {
+    return;                 // TODO setup high input path
+  }
+  enable_extra_lna(setting.extra_lna);
+  enable_rx_output(setting.atten_step);
+
+  switch(signal_path) {
+  case PATH_LOW:
+    enable_ultra(false);
+    enable_high(false);
+    enable_direct(false);
+    goto common;
+
+  case PATH_DIRECT:
+    enable_ADF_output(false, false);
+    enable_ultra(!setting.atten_step);
+    enable_direct(true);
+    enable_high(true);
+    goto common2;
+  case PATH_ULTRA:
+    enable_ultra(true);
+    enable_direct(false);
+    enable_high(false);
+    common:
+    enable_ADF_output(true, setting.tracking);
+    common2:
+    if (SI4463_is_in_tx_mode())
+      SI4463_init_rx();
+    break;
+  }
+
+}
+#endif
 
 #else
 const int8_t drive_dBm [16] = {-38, -32, -30, -27, -24, -19, -15, -12, -5, -2, 0, 3, 6, 9, 12, 16};
@@ -1100,7 +1154,7 @@ void correct_high_output_level(void)
     setting.atten_step = false;
   }
 
-  unsigned int d = MIN_DRIVE;
+  int d = MIN_DRIVE;
   while (drive_dBm[d] - level_max() < a && d < MAX_DRIVE)       // Find level equal or above requested level
     d++;
   //    if (d == 8 && v < -12)  // Round towards closest level
@@ -2119,18 +2173,14 @@ void setup_sa(void)
   PE4302_init();
   PE4302_Write_Byte(0);
 #endif
-#ifdef __SI4463__
-  SI4463_init_rx();            // Must be before ADF4351_setup!!!!
-#endif
 #ifdef TINYSA4
+  SI4463_init_rx();            // Must be before ADF4351_setup!!!!
   ADF4351_Setup();
+#if 0
   enable_extra_lna(false);
-#ifdef __ULTRA__
   enable_ultra(false);
-#endif
   enable_rx_output(false);
   enable_high(false);
-#ifdef __NEW_SWITCHES__
   enable_direct(false);
 #endif
   fill_spur_table();
@@ -2331,24 +2381,6 @@ case M_LOW:     // Mixed into 0
     } else {
       set_switch_receive();
     }
-#endif
-#ifdef __SI4463__
-    SI4463_init_rx();            // Must be before ADF4351_setup!!!!
-    if (setting.atten_step) {// use switch as attenuator
-      enable_rx_output(true);
-    } else {
-       enable_rx_output(false);
-    }
-#ifdef __NEW_SWITCHES__
-  enable_direct(false);
-#endif
-  #endif
-    set_AGC_LNA();
-#ifdef TINYSA4
-    enable_ADF_output(true, setting.tracking_output);
-#endif
-
-#ifdef __SI4432__
     SI4432_Sel = SI4432_LO ;
     if (setting.tracking_output)
       set_switch_transmit();
@@ -2359,12 +2391,21 @@ case M_LOW:     // Mixed into 0
     // set_calibration_freq(setting.refer);
 #endif
 #ifdef TINYSA4
+#if 0
+    SI4463_init_rx();            // Must be before ADF4351_setup!!!!
+    if (setting.atten_step) {// use switch as attenuator
+      enable_rx_output(true);
+    } else {
+       enable_rx_output(false);
+    }
+    enable_direct(false);
+    enable_ADF_output(true, setting.tracking_output);
     enable_high(false);
     enable_extra_lna(setting.extra_lna);
-#endif
-#ifdef __ULTRA__
     enable_ultra(false);
 #endif
+#endif
+    set_AGC_LNA();
     break;
 case M_HIGH:    // Direct into 1
 mute:
@@ -2382,11 +2423,10 @@ mute:
        set_switch_receive();
      }
 #endif
-#ifdef __SI4463__
-    SI4463_init_rx();
-#endif
-    set_AGC_LNA();
 #ifdef TINYSA4
+#if 0
+    if (SI4463_is_in_tx_mode())
+      SI4463_init_rx();
     enable_ADF_output(false, setting.tracking_output);
     if (setting.atten_step) {// use switch as attenuator
       enable_rx_output(true);
@@ -2394,14 +2434,12 @@ mute:
        enable_rx_output(false);
     }
     enable_high(true);
-#ifdef __NEW_SWITCHES__
     enable_direct(false);
-#endif
     enable_extra_lna(false);
-#endif
-#ifdef __ULTRA__
     enable_ultra(false);
 #endif
+#endif
+    set_AGC_LNA();
     break;
 case M_GENLOW:  // Mixed output from 0
     if (setting.mute)
@@ -2424,41 +2462,21 @@ case M_GENLOW:  // Mixed output from 0
       SI4432_Transmit(12);                 // Fix LO drive a 10dBm
     }
 #endif
-#if 0
-#ifdef __SI4468__
-    SI4463_init_tx();
-#endif
-#ifdef TINYSA4
-    enable_ADF_output(true, setting.tracking_output);
-
-    if (setting.atten_step) { // use switch as attenuator
-      enable_rx_output(false);
-    } else {
-      enable_rx_output(true);
-    }
-    SI4463_set_output_level(setting.rx_drive);
-    enable_high(false);
-#ifdef __NEW_SWITCHES__
-    enable_direct(false);
-#endif
-    enable_extra_lna(false);
-#endif
-#ifdef __ULTRA__
-    enable_ultra(false);
-#endif
-#endif
     break;
 case M_GENHIGH: // Direct output from 1
     if (setting.mute)
       goto mute;
 #ifdef TINYSA4
-	  enable_high(true);              // Must be first to protect SAW filters
+    enable_high(true);              // Must be first to protect SAW filters
     enable_extra_lna(false);
-#endif
-#ifdef __ULTRA__
     enable_ultra(false);
-#endif
-#ifdef __SI4432__
+    SI4463_init_rx();
+    enable_rx_output(true);       // to protect the SI
+    enable_ADF_output(true, true);
+    ADF4351_aux_drive(setting.lo_drive);
+    enable_extra_lna(false);
+    enable_ultra(true);                   // Open low output
+#else
     SI4432_Sel = SI4432_RX ;
     SI4432_Receive();
     set_switch_receive();
@@ -2470,20 +2488,9 @@ case M_GENHIGH: // Direct output from 1
       set_switch_transmit();
     }
     SI4432_Transmit(setting.lo_drive);
-#endif
-#ifdef TINYSA4
-#ifdef __SI4468__
-      SI4463_init_rx();
-      enable_rx_output(true);       // to protect the SI
-#endif
-      enable_ADF_output(true, true);
-      ADF4351_aux_drive(setting.lo_drive);
-      enable_extra_lna(false);
-      enable_ultra(true);                   // Open low output
-#endif
+  #endif
     break;
   }
-
 }
 
 void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# steps in between needed if frequency step is largen than maximum rbw)
@@ -3154,11 +3161,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int modulation_delay = 0;
   int modulation_index = 0;
   int modulation_count_iter = 0;
-  int spur_second_pass = false;
 #ifdef __NEW_SWITCHES__
-  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ && f < ultra_start) );
+//  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ && f < ultra_start) );
 #else
-  const int direct = false;
+//  const int direct = false;
 #endif
 #ifdef TINYSA4
   if (i == 0 && old_temp != Si446x_get_temp()) {
@@ -3296,7 +3302,11 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   // ------------------------------------- START Set the output level ----------------------------------
 
   if (( setting.frequency_step != 0 || setting.level_sweep != 0.0 || (i == 0 && scandirty))) {     // Initialize or adapt output levels
-    if (setting.mode == M_GENLOW) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
+#ifdef TINYSA4
+    if (setting.mode == M_LOW)
+      set_input_path(f);
+#endif
+    else if (setting.mode == M_GENLOW) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
         float ls=setting.level_sweep;                                           // calculate and set the output level
         if (ls > 0)
           ls += 0.5;
@@ -3378,7 +3388,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #endif
       }
 
-      unsigned int d = MIN_DRIVE;
+      int d = MIN_DRIVE;
       while (drive_dBm[d] - level_max() < a && d < MAX_DRIVE)       // Find level equal or above requested level
         d++;
       //    if (d == 8 && v < -12)  // Round towards closest level
@@ -3423,7 +3433,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #else
 #define MO_FREQ_COR 0
 #endif
-      modulation_delay = ((1000000-MO_FREQ_COR)/ MODULATION_STEPS ) / setting.modulation_frequency;     // 5 steps so 1MHz/5
+      modulation_delay = ((1000000-MO_FREQ_COR)/ MODULATION_STEPS ) / setting.modulation_frequency;     // 8 steps so 1MHz/8
       modulation_counter = 0;
       if (setting.modulation == MO_AM)          // -14 default
         modulation_delay += config.cor_am;
@@ -3450,7 +3460,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   }
 modulation_again:
   // -----------------------------------------------------  apply modulation for output modes ---------------------------------------
-  if (MODE_OUTPUT(setting.mode)){
+  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE){
     if (setting.modulation == MO_AM) {               // AM modulation
       int p = setting.attenuate_x2 + am_modulation[modulation_counter];
       if      (p>63) p = 63;
@@ -3473,76 +3483,10 @@ modulation_again:
     modulation_counter++;
     if (modulation_counter == MODULATION_STEPS)
       modulation_counter = 0;
-    if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) {
+    if (setting.modulation != MO_EXTERNAL) {
       my_microsecond_delay(modulation_delay);
     }
   }
-#ifdef __ULTRA__
-  // -------------- set ultra or direct ---------------------------------
-  if (setting.mode == M_LOW) {
-#ifdef __NEW_SWITCHES__
-    if (direct) {
-      enable_ultra(true);
-      enable_direct(true);
-      enable_high(true);
-    } else
-#endif
-      if (ultra && f > ultra_start) {
-        enable_ultra(true);
-#ifdef __NEW_SWITCHES__
-        enable_direct(false);
-        enable_high(false);
-#endif
-      } else {
-        enable_ultra(false);
-#ifdef __NEW_SWITCHES__
-        enable_high(false);
-        enable_direct(false);
-#endif
-      }
-  } else if (setting.mode == M_GENLOW) {
-#if 0
-    if (ultra && (f > ultra_start || (setting.mixer_output && f > MAX_LOW_OUTPUT_FREQ))) {             // Ultra mode output using both SI and ADF
-      if (!SI4463_is_in_tx_mode())
-        SI4463_init_tx();
-      enable_ADF_output(true);
-      enable_ultra(true);
-      enable_direct(false);
-      enable_high(false);
-    } else if (direct) {
-      if (f > MAX_LOW_OUTPUT_FREQ) {            // Direct mode output using only ADF via mixer leakage
-        enable_ADF_output(true);
-        if (SI4463_is_in_tx_mode())
-          SI4463_init_rx();
-
-        enable_ADF_output(true, true);
-
-        enable_direct(false);
-        enable_ultra(setting.atten_step);
-        enable_high(false);
-
-      } else {                                  // Direct mode output using only SI
-        if (!SI4463_is_in_tx_mode())
-          SI4463_init_tx();
-        enable_ADF_output(false, false);
-
-
-        enable_ultra(true);
-        enable_direct(true);
-        enable_high(true);
-      }
-
-    } else {                                     // Normal output mode using both SI and ADF
-      if (!SI4463_is_in_tx_mode())
-        SI4463_init_tx();
-      enable_ADF_output(true, false);
-      enable_ultra(false);
-      enable_high(false);
-      enable_direct(false);
-    }
-#endif
-  }
-#endif
     // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
   if (debug_avoid){                 // For debugging the spur avoidance control
@@ -3592,13 +3536,22 @@ modulation_again:
         lf += offs;
 #endif
     }
-// -------------- START Calculate the IF -----------------------------
+    int spur_second_pass = false;
+
+#ifdef TINYSA4
+    int direct = (signal_path == PATH_DIRECT || signal_path == PATH_LEAKAGE);
+#else
+    int direct = MODE_HIGH(setting.mode);
+#endif
+
 
     if (/* MODE_INPUT(setting.mode) && */ i > 0 && FREQ_IS_CW())              // In input mode in zero span mode after first setting of the LO's
       goto skip_LO_setting;                                             // No more LO changes required, save some time and jump over the code
 
+
+    // -------------- START Calculate the IF -----------------------------
+
 #ifdef __SPUR__
-    spur_second_pass = false;
 again:                                                              // Spur reduction jumps to here for second measurement
 #endif
 
@@ -3809,6 +3762,7 @@ again:                                                              // Spur redu
       }
       else
         target_f = local_IF+lf;                                                 // otherwise to above IF, local_IF == 0 in high mode
+
 #ifdef __SI4432__
 #ifdef __HARMONIC__
 #ifdef TINYSA3
@@ -4025,12 +3979,10 @@ again:                                                              // Spur redu
         }
 #endif
       } else if (setting.mode == M_HIGH || direct) {
-#ifdef __ULTRA_OUT__
-        if (f > MAX_LOW_OUTPUT_FREQ)
-          set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
-        else
-#endif
+        if (signal_path == PATH_DIRECT)
           set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
+        else
+          set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
         local_IF = 0;
       } else if (setting.mode == M_GENHIGH) {
         local_IF = 0;

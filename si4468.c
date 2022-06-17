@@ -313,6 +313,7 @@ void ADF4351_Setup(void)
   si5351_available = si5351_init();
   if (si5351_available)
     si5351_set_frequency(0, 30000000, 0);
+  //si5351_available = false; // Don't use shifting
 #endif
 
 //  SPI3_CLK_HIGH;
@@ -633,6 +634,9 @@ void ADF4351_enable(int s)
   else
     bitSet(registers[4], 11);
   ADF4351_Set(0);
+  if (s)
+    osalThreadSleepMilliseconds(2);
+
 }
 
 void ADF4351_enable_aux_out(int s)
@@ -2011,6 +2015,10 @@ static int old_ultra = 2;
 
 void enable_rx_output(int s)
 {
+static int old_rx_mode = 2;
+  if (s == old_rx_mode)
+    return;
+  old_rx_mode = s;
   if (s)
     SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE1);
   else
@@ -2019,6 +2027,10 @@ void enable_rx_output(int s)
 
 void enable_high(int s)
 {
+static int old_high = 2;
+  if (old_high == s)
+    return;
+  old_high = s;
 #ifdef __NEW_SWITCHES__
   if (s)
     SI4463_set_gpio(2,SI446X_GPIO_MODE_DRIVE0);
