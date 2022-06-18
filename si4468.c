@@ -634,8 +634,7 @@ void ADF4351_enable(int s)
   else
     bitSet(registers[4], 11);
   ADF4351_Set(0);
-  if (s)
-    osalThreadSleepMilliseconds(2);
+  osalThreadSleepMilliseconds(10);
 
 }
 
@@ -648,6 +647,7 @@ void ADF4351_enable_aux_out(int s)
   else
     bitClear(registers[4], 8);
   ADF4351_Set(0);
+  osalThreadSleepMilliseconds(10);
 }
 
 void ADF4351_enable_out(int s)
@@ -664,6 +664,7 @@ void ADF4351_enable_out(int s)
     bitSet(registers[4], 11);        // Enable VCO power down
   }
   ADF4351_Set(0);
+  osalThreadSleepMilliseconds(1);
 }
 
 
@@ -2046,7 +2047,7 @@ static int old_high = 2;
 
 void enable_ADF_output(int f, int t)
 {
-  ADF4351_enable(f);
+  ADF4351_enable(true);
   ADF4351_enable_out(f);
   ADF4351_enable_aux_out(t);
 }

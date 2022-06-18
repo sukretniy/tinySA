@@ -112,7 +112,7 @@ int actual_drive = -1;
 
 #ifdef TINYSA4
 const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , -2.1,  -1.5,  -1, -0.47, 0};
-const float adf_drive_dBm[]     = {-13.5,-9,-4.5, 0};
+const float adf_drive_dBm[]     = {-13,-8.5,-4.2, 0};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) si_drive_dBm;
 const int min_drive = 0;
@@ -228,11 +228,11 @@ void set_output_path(freq_t f, float level)
   if (signal_path == PATH_HIGH) {
     return;                 //TODO setup high path
   }
-  level += 3.0;        // Always 3dB in attenuator
+  if (signal_path != PATH_LEAKAGE) level += 3.0;        // Always 3dB in attenuator
 
   float switch_atten = SWITCH_ATTENUATION;
   if (signal_path == PATH_LEAKAGE)
-    switch_atten = 40.0;
+    switch_atten = 44.0;
   int very_low_flag = false;
   float a = level - level_max();                 // convert to all settings maximum power output equals a = zero
   if (a < -switch_atten) {
@@ -267,7 +267,7 @@ void set_output_path(freq_t f, float level)
   }
   a -= blw;
   set_output_drive(d);
-  a -= 3.0;                 // Always at least 3dB attenuation
+  if (signal_path != PATH_LEAKAGE) a -= 3.0;                 // Always at least 3dB attenuation
   if (a > 0) {
     a = 0;
     if (!level_error) redraw_request |= REDRAW_CAL_STATUS;
@@ -359,7 +359,6 @@ void set_input_path(freq_t f)
   case PATH_DIRECT:
     enable_ADF_output(false, false);
     enable_ultra(!setting.atten_step);
-    enable_direct(true);
     enable_high(true);
     goto common2;
   case PATH_ULTRA:
