@@ -199,9 +199,9 @@ void set_output_path(freq_t f, float level)
     signal_path = PATH_OFF;
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
-  else if (f < MINIMUM_DIRECT_FREQ || (config.ultra && config.ultra_start != ULTRA_AUTO && f < config.ultra_start))
+  else if ((f < MINIMUM_DIRECT_FREQ && config.ultra_start != ULTRA_AUTO && f < config.ultra_start) || (config.ultra && config.ultra_start != ULTRA_AUTO && f < config.ultra_start))
     signal_path = PATH_LOW;
-  else if (f <= MAX_LOW_OUTPUT_FREQ && ( config.ultra_start == ULTRA_AUTO || f < config.ultra_start))
+  else if (f <= MAX_LOW_OUTPUT_FREQ && config.ultra_start != ULTRA_AUTO && f < config.ultra_start)
     signal_path = PATH_DIRECT;
   else if (config.ultra && setting.mixer_output)
     signal_path = PATH_ULTRA;
@@ -211,7 +211,7 @@ void set_output_path(freq_t f, float level)
   switch (signal_path) {
   case PATH_LEAKAGE:
     drive_dBm = (float *)adf_drive_dBm;
-    max_drive = 2;
+    max_drive = 1;
     break;
   default:
     drive_dBm = (float *)si_drive_dBm;
@@ -3937,7 +3937,7 @@ again:                                                              // Spur redu
           LO_harmonic = true;
         }
         // ----------------------------- set mixer drive --------------------------------------------
-        if (setting.mode == M_LOW) {
+        if (setting.mode == M_LOW || setting.mode == M_GENLOW) {
 
           //
           //  ----------------- start duplication of code
@@ -3958,7 +3958,7 @@ again:                                                              // Spur redu
           //
           //  ----------------- end duplication of code
           //
-          ADF4351_drive(actual_drive);       // Max drive
+          if (signal_path == PATH_LOW || signal_path == PATH_ULTRA) ADF4351_drive(actual_drive);       // Max drive
         }
         set_freq(ADF4351_LO, target_f);
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
