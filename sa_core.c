@@ -112,7 +112,7 @@ int actual_drive = -1;
 
 #ifdef TINYSA4
 const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , -2.1,  -1.5,  -1, -0.47, 0};
-const float adf_drive_dBm[]     = {-13,-8.5,-4.2, 0};
+const float adf_drive_dBm[]     = {-13,-7.5,-4.2, 0};
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) si_drive_dBm;
 const int min_drive = 0;
@@ -170,7 +170,8 @@ void set_output_step_atten(int s)
 {
   setting.atten_step = s;
   if (signal_path == PATH_LEAKAGE)
-    enable_ultra(!s);
+//    enable_ultra(!s);
+    enable_direct(s);
   else {
 #ifdef TINYSA3
     SI4432_Sel = SI4432_RX ;
@@ -228,20 +229,26 @@ void set_output_path(freq_t f, float level)
   if (signal_path == PATH_HIGH) {
     return;                 //TODO setup high path
   }
-  if (signal_path != PATH_LEAKAGE) level += 3.0;        // Always 3dB in attenuator
+//  if (signal_path != PATH_LEAKAGE)
+    level += 3.0;        // Always 3dB in attenuator
 
   float switch_atten = SWITCH_ATTENUATION;
   if (signal_path == PATH_LEAKAGE)
+#if 0
     switch_atten = 44.0;
-  int very_low_flag = false;
+#else
+  switch_atten = 31.0;
+#endif
   float a = level - level_max();                 // convert to all settings maximum power output equals a = zero
-  if (a < -switch_atten) {
+  if (a < -28 + BELOW_MAX_DRIVE(0)) {           // Switch needed
     a = a + switch_atten;
-    very_low_flag = true;
-  }
-  set_output_step_atten(very_low_flag);
+    setting.atten_step = true;
+  } else
+    setting.atten_step = false;
+
+//  set_output_step_atten(setting.atten_step);
 #ifdef TINYSA4
-#define LOWEST_LEVEL (very_low_flag ? 0 : MIN_DRIVE)
+#define LOWEST_LEVEL (setting.atten_step ? 0 : MIN_DRIVE)
 #else
 #define LOWEST_LEVEL MIN_DRIVE
 #endif
@@ -267,7 +274,8 @@ void set_output_path(freq_t f, float level)
   }
   a -= blw;
   set_output_drive(d);
-  if (signal_path != PATH_LEAKAGE) a -= 3.0;                 // Always at least 3dB attenuation
+//  if (signal_path != PATH_LEAKAGE)
+    a -= 3.0;                 // Always at least 3dB attenuation
   if (a > 0) {
     a = 0;
     if (!level_error) redraw_request |= REDRAW_CAL_STATUS;
@@ -283,7 +291,7 @@ void set_output_path(freq_t f, float level)
   PE4302_Write_Byte(setting.attenuate_x2);
 #if 0
   if (SDU1.config->usbp->state == USB_ACTIVE)
-    shell_printf ("level=%f, drive=%d, atten=%f, switch=%d\r\n", level, d, a, (very_low_flag ? 1 : 0));
+    shell_printf ("level=%f, drive=%d, atten=%f, switch=%d\r\n", level, d, a, (setting.atten_step ? 1 : 0));
 #endif
 
   enable_extra_lna(false);
@@ -301,8 +309,13 @@ void set_output_path(freq_t f, float level)
 
     enable_ADF_output(true, false);
 
+#if 0
     enable_direct(false);
     enable_ultra(!setting.atten_step);
+#else
+    enable_direct(setting.atten_step);
+    enable_ultra(true);
+#endif
     enable_high(false);
 
     break;
@@ -313,18 +326,19 @@ void set_output_path(freq_t f, float level)
     goto common;
 
   case PATH_DIRECT:
-    enable_ADF_output(false, false);
-    enable_ultra(!setting.atten_step);
+    enable_ultra(true);
     enable_direct(true);
     enable_high(true);
+    enable_ADF_output(false, false);
     goto common2;
   case PATH_ULTRA:
     enable_ultra(true);
     enable_direct(false);
     enable_high(false);
-    common:
+  common:
     enable_ADF_output(true, false);
-    common2:
+  common2:
+    enable_rx_output(!setting.atten_step);
     if (!SI4463_is_in_tx_mode())
       SI4463_init_tx();
     break;
@@ -3352,7 +3366,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           PE4302_Write_Byte(setting.attenuate_x2);
 #if 0
           if (SDU1.config->usbp->state == USB_ACTIVE)
-             shell_printf ("level=%f, d=%d, a=%f, s=%d\r\n", setting.level, d, a, (very_low_flag ? 1 : 0));
+             shell_printf ("level=%f, d=%d, a=%f, s=%d\r\n", setting.level, d, a, (setting.atten_step ? 1 : 0));
 #endif
 #endif
       }
