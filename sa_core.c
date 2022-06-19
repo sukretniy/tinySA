@@ -199,19 +199,19 @@ void set_output_path(freq_t f, float level)
     signal_path = PATH_OFF;
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
-  else if ((f < MINIMUM_DIRECT_FREQ && config.ultra_start != ULTRA_AUTO && f < config.ultra_start) || (config.ultra && config.ultra_start != ULTRA_AUTO && f < config.ultra_start))
-    signal_path = PATH_LOW;
-  else if (f <= MAX_LOW_OUTPUT_FREQ && config.ultra_start != ULTRA_AUTO && f < config.ultra_start)
-    signal_path = PATH_DIRECT;
-  else if (config.ultra && setting.mixer_output)
+  else if (setting.mixer_output && (f >= MAX_LOW_OUTPUT_FREQ || (config.ultra_start != ULTRA_AUTO && f > config.ultra_start)))
     signal_path = PATH_ULTRA;
-  else
+  else if (!setting.mixer_output && (f >= MAX_LOW_OUTPUT_FREQ || (config.ultra_start != ULTRA_AUTO && f > config.ultra_start)))
     signal_path = PATH_LEAKAGE;
+  else if (f > MINIMUM_DIRECT_FREQ)
+    signal_path = PATH_DIRECT;
+  else
+    signal_path = PATH_LOW;
 
   switch (signal_path) {
   case PATH_LEAKAGE:
     drive_dBm = (float *)adf_drive_dBm;
-    max_drive = 1;
+    max_drive = 2;
     break;
   default:
     drive_dBm = (float *)si_drive_dBm;
@@ -2045,9 +2045,6 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
     return(0.0);
   }
 #ifdef TINYSA4
-  if (setting.extra_lna)
-    c += 1;
-
   if (setting.mode == M_LOW) {
 
     //
@@ -2077,20 +2074,42 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
     if (actual_drive >= 3)
       cv += float_TO_PURE_RSSI(config.drive3_level_offset);
 
-
-    if (ultra && f > ultra_start) {
+    switch (signal_path) {
+    case PATH_LOW:
+      c = CORRECTION_LOW;
+      break;
+    case PATH_ULTRA:
       c = CORRECTION_LOW_ULTRA;
       if (LO_harmonic) {
         cv += float_TO_PURE_RSSI(config.harmonic_level_offset);                                        // +10.5dB correction.
       }
-      if (setting.extra_lna)
-        c += 1;
+      break;
+#ifdef CORRECTION_DIRECT
+    case PATH_DIRECT:
+      c = CORRECTION_DIRECT;
+      break;
+#endif
     }
+    if (setting.extra_lna)
+      c += 1;
 //    if (LO_shifting)
 //      cv += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : config.shift1_level_offset);
 
   } else if (setting.mode == M_GENLOW){
-    c = CORRECTION_LOW_OUT;
+    switch (signal_path) {
+    case PATH_LOW:
+      c = CORRECTION_LOW_OUT;
+      break;
+    case PATH_ULTRA:
+      c = CORRECTION_LOW_OUT_MIXER;
+      break;
+    case PATH_DIRECT:
+      c = CORRECTION_LOW_OUT_DIRECT;
+      break;
+    case PATH_LEAKAGE:
+      c = CORRECTION_LOW_OUT_ADF;
+      break;
+    }
   }
 #else
   if (MODE_HIGH(setting.mode))

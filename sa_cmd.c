@@ -1012,18 +1012,26 @@ VNA_SHELL_FUNCTION(cmd_f)
 }
 #endif
 
-//#define CORRECTION_LOW      0
-//#define CORRECTION_LNA      1
-//#define CORRECTION_LOW_ULTRA 2
-//#define CORRECTION_LNA_ULTRA 3
-//#define CORRECTION_LOW_OUT  4
-//#define CORRECTION_HIGH     5
+//#ifdef  DIRECT_CORRECTION
+//  #define CORRECTION_DIRECT         4
+//  #define CORRECTION_LNA_DIRECT     5
+//#endif
+//  #define CORRECTION_LOW_OUT        6
+//  #define CORRECTION_LOW_OUT_DIRECT 7
+//  #define CORRECTION_LOW_OUT_ADF    8
+//  #define CORRECTION_LOW_OUT_MIXER  9
+//  #define CORRECTION_HIGH           10
+//  #define CORRECTION_SIZE           11
 
 VNA_SHELL_FUNCTION(cmd_correction)
 {
   (void)argc;
 #ifdef TINYSA4
-  static const char cmd[] = "low|lna|ultra|ultra_lna|out|high|off|on";
+#ifdef  DIRECT_CORRECTION
+  static const char cmd[] = "low|lna|ultra|ultra_lna|direct|direct_lna|out|out_direct|out_adf|out_mixer|high|off|on";
+#else
+  static const char cmd[] = "low|lna|ultra|ultra_lna|out|out_direct|out_adf|out_mixer|high|off|on";
+#endif
   static const char range[] = "0-19";
 #else
   static const char cmd[] = "low|high";
@@ -1033,10 +1041,10 @@ VNA_SHELL_FUNCTION(cmd_correction)
   if (argc == 1 && m >=0) {
 #ifdef TINYSA4
     switch(m) {
-    case 6: // Off
+    case CORRECTION_SIZE: // Off
       setting.disable_correction = true;
       goto show;
-    case 7: // on
+    case CORRECTION_SIZE+1: // on
       setting.disable_correction = false;
     show:
       dirty = true;       // recalculate intermediate table
