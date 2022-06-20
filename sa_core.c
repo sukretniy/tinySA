@@ -190,12 +190,13 @@ void set_output_path(freq_t f, float level)
   if (test_output) {
     signal_path = test_path;
     setting.mixer_output = (signal_path == PATH_ULTRA);
-   setting.atten_step = test_output_switch;
-    set_output_drive(test_output_drive);
-    PE4302_Write_Byte(test_output_attenuate);
-    goto set_path;
-  }
-  if (setting.mute)
+    if (test_output_drive >=0) {
+      setting.atten_step = test_output_switch;
+      set_output_drive(test_output_drive);
+      PE4302_Write_Byte(test_output_attenuate);
+      goto set_path;
+    }
+  } else if (setting.mute)
     signal_path = PATH_OFF;
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;

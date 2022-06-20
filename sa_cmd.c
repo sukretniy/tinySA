@@ -1159,7 +1159,7 @@ VNA_SHELL_FUNCTION(cmd_q)
 {
   if (argc < 1) {
     usage:
-    usage_printf("q [s0..1|d0..18|a0..63|p0..4]\r\n");
+    usage_printf("q [s0..1|d-1,0..18|a0..63|p0..4]\r\n");
     test_output=false;
     test_output_switch = false;
     test_output_drive = 0;
