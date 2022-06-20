@@ -1028,9 +1028,9 @@ VNA_SHELL_FUNCTION(cmd_correction)
   (void)argc;
 #ifdef TINYSA4
 #ifdef  DIRECT_CORRECTION
-  static const char cmd[] = "low|lna|ultra|ultra_lna|direct|direct_lna|out|out_direct|out_adf|out_mixer|high|off|on";
+  static const char cmd[] = "low|lna|ultra|ultra_lna|direct|direct_lna|out|out_direct|out_adf|out_ultra|high|off|on";
 #else
-  static const char cmd[] = "low|lna|ultra|ultra_lna|out|out_direct|out_adf|out_mixer|high|off|on";
+  static const char cmd[] = "low|lna|ultra|ultra_lna|out|out_direct|out_adf|out_ultra|high|off|on";
 #endif
   static const char range[] = "0-19";
 #else
