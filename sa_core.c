@@ -2043,7 +2043,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   int c=CORRECTION_LOW;
   if (setting.mode == M_GENHIGH) {
     c = CORRECTION_HIGH;
-    return(0.0);
+    return float_TO_PURE_RSSI(0.0);
   }
 #ifdef TINYSA4
   if (setting.mode == M_LOW) {

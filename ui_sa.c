@@ -3961,6 +3961,12 @@ redraw_cal_status:
     y = add_quick_menu(y += YSTEP, (menuitem_t *)menu_config);
   }
 
+  if (setting.disable_correction){
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    lcd_printf(x, y, "Corr:\nOFF");
+    y += 2*YSTEP;
+  }
+
 #endif
   // Cal output
   if (setting.refer >= 0) {
