@@ -1012,13 +1012,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
 }
 #endif
 #ifdef TINYSA4
+
+enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_ULTRA, PATH_LEAKAGE, PATH_HIGH};
+const char *path_text[]={"OFF", "LOW", "DIRECT", "ULTRA", "ADF", "High"};
+extern int signal_path;
+extern int test_path;
+extern int test_output;
+
 static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
 {
   static char mode_string[26];
   (void)item;
   if (b){
     if (data == 255) {
-      plot_printf(mode_string, sizeof mode_string, "%s %s %s",
+      plot_printf(mode_string, sizeof mode_string, "%s %s %s %s",
+                  (!test_output ? "" : path_text[test_path]),
                   (get_sweep_frequency(ST_START) < MINIMUM_DIRECT_FREQ ? "SINUS" : "" ),
                   (get_sweep_frequency(ST_STOP) >= MINIMUM_DIRECT_FREQ ? "SQUARE WAVE" : ""),
                   (get_sweep_frequency(ST_STOP) > MAX_LOW_OUTPUT_FREQ && setting.mixer_output ? "MIXER" : ""));
@@ -3334,7 +3342,11 @@ static void fetch_numeric_target(uint8_t mode)
     if (setting.level_sweep != 0)
       plot_printf(uistat.text, sizeof uistat.text, "%.1f to %.1fdBm", uistat.value, end_level);
     else
+#ifdef TINYSA4
+      plot_printf(uistat.text, sizeof uistat.text, "%+.1fdBm %s", uistat.value, (setting.disable_correction?"Uncorrected":""));
+#else
       plot_printf(uistat.text, sizeof uistat.text, "%+.1fdBm", uistat.value);
+#endif
     break;
   case KM_HIGHOUTLEVEL:
     uistat.value = get_level();           // compensation for dB offset during low output mode

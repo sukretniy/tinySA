@@ -1165,6 +1165,7 @@ VNA_SHELL_FUNCTION(cmd_q)
     test_output_drive = 0;
     test_output_attenuate = 0;
     test_path = 0;
+    dirty = true;
     return;
   }
   int i = 0;

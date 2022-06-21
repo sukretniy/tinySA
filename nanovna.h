@@ -1636,6 +1636,8 @@ float to_dBm(float);
 float dBm_to_Watt(float);
 uint32_t calc_min_sweep_time_us(void);
 pureRSSI_t perform(bool b, int i, freq_t f, int e);
+extern pureRSSI_t get_frequency_correction(freq_t f);
+
 void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 

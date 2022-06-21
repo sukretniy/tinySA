@@ -196,9 +196,10 @@ void set_output_path(freq_t f, float level)
       PE4302_Write_Byte(test_output_attenuate);
       goto set_path;
     }
-  } else if (setting.mute)
+  } else if (setting.mute) {
     signal_path = PATH_OFF;
-  else if (MODE_HIGH(setting.mode))
+    goto set_path;
+  } else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
   else if (setting.mixer_output && (f >= MAX_LOW_OUTPUT_FREQ || (config.ultra_start != ULTRA_AUTO && f > config.ultra_start)))
     signal_path = PATH_ULTRA;
@@ -208,6 +209,8 @@ void set_output_path(freq_t f, float level)
     signal_path = PATH_DIRECT;
   else
     signal_path = PATH_LOW;
+
+  level += PURE_TO_float(get_frequency_correction(f));
 
   switch (signal_path) {
   case PATH_LEAKAGE:
@@ -349,7 +352,9 @@ void set_output_path(freq_t f, float level)
 
 void set_input_path(freq_t f)
 {
-  if (MODE_HIGH(setting.mode))
+  if (test_output)
+    signal_path = test_path;
+  else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
   else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > 700) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
       signal_path = PATH_ULTRA;
@@ -2098,6 +2103,8 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
 
   } else if (setting.mode == M_GENLOW){
     switch (signal_path) {
+    case PATH_OFF:
+      return 0;
     case PATH_LOW:
       c = CORRECTION_LOW_OUT;
       break;
@@ -3346,13 +3353,14 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         else if (ls < 0)
           ls -= 0.5;
         float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0 /* + get_level_offset() */ ;
+#ifdef TINYSA4
+        {
+          set_output_path(f, a);
+#else
         correct_RSSI_freq = get_frequency_correction(f);
         a += PURE_TO_float(correct_RSSI_freq);
         if (a != old_a) {
           old_a = a;
-#ifdef TINYSA4
-          set_output_path(f, a);
-#else
           a = a - level_max();                 // convert to all settings maximum power output equals a = zero
           if (a < -SWITCH_ATTENUATION) {
             a = a + SWITCH_ATTENUATION;
