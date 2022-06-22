@@ -3185,12 +3185,12 @@ void clock_at_48MHz(void)
   }
 }
 
-#ifdef TINYSA4
 int test_output = false;
 int test_output_switch = false;
 int test_output_drive = 0;
 int test_path = 0;
 int test_output_attenuate = 0;
+#ifdef TINYSA4
 bool level_error = false;
 static float old_temp = 0.0;
 #endif
@@ -3345,8 +3345,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef TINYSA4
     if (setting.mode == M_LOW)
       set_input_path(f);
+    else
 #endif
-    else if (setting.mode == M_GENLOW) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
+    if (setting.mode == M_GENLOW) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
         float ls=setting.level_sweep;                                           // calculate and set the output level
         if (ls > 0)
           ls += 0.5;
@@ -3354,9 +3355,17 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           ls -= 0.5;
         float a = ((int)((setting.level + ((float)i / sweep_points) * ls)*2.0)) / 2.0 /* + get_level_offset() */ ;
 #ifdef TINYSA4
-        {
-          set_output_path(f, a);
+        set_output_path(f, a);
 #else
+        int d;
+#if 0
+        if (test_output) {
+          setting.atten_step = test_output_switch;
+          d = test_output_drive;
+          setting.attenuate_x2 = test_output_attenuate;
+          goto set_path;
+        }
+#endif
         correct_RSSI_freq = get_frequency_correction(f);
         a += PURE_TO_float(correct_RSSI_freq);
         if (a != old_a) {
@@ -3364,14 +3373,11 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           a = a - level_max();                 // convert to all settings maximum power output equals a = zero
           if (a < -SWITCH_ATTENUATION) {
             a = a + SWITCH_ATTENUATION;
-            SI4432_Sel = SI4432_RX ;
-            set_switch_receive();
+            setting.atten_step = true;
           } else {
-            SI4432_Sel = SI4432_RX ;
-            set_switch_transmit();
+            setting.atten_step = false;
           }
 #define LOWEST_LEVEL MIN_DRIVE
-          int d;
           d = MAX_DRIVE-3;        // Start in the middle
           float blw =  BELOW_MAX_DRIVE(d);
           while (a > blw && d < MAX_DRIVE) { // Increase if needed
@@ -3383,18 +3389,24 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
             blw =  BELOW_MAX_DRIVE(d);
           }
           a -= blw;
-          SI4432_Sel = SI4432_RX ;
-          SI4432_Drive(d);
-          if (a > 0) {
+          if (a > 0)
             a = 0;
           if (a < -31.5)
             a = -31.5;
           a = -a - 0.25;        // Rounding
           setting.attenuate_x2 = (int)(a * 2);
+//        set_path:
+          SI4432_Sel = SI4432_RX ;
+          SI4432_Drive(d);
+          SI4432_Sel = SI4432_RX ;
+          if ( setting.atten_step)
+            set_switch_receive();
+          else
+            set_switch_transmit();
           PE4302_Write_Byte(setting.attenuate_x2);
 #if 0
           if (SDU1.config->usbp->state == USB_ACTIVE)
-             shell_printf ("level=%f, d=%d, a=%f, s=%d\r\n", setting.level, d, a, (setting.atten_step ? 1 : 0));
+             shell_printf ("level=%f, d=%d, a=%d, s=%d\r\n", setting.level, d, setting.attenuate_x2, (setting.atten_step ? 1 : 0));
 #endif
 #endif
       }

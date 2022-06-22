@@ -2093,8 +2093,8 @@ static const VNAShellCommand commands[] =
    { "u", cmd_u,    CMD_WAIT_MUTEX },
 #endif
 #ifdef TINYSA4
-   { "g", cmd_g,    CMD_WAIT_MUTEX },
    { "q", cmd_q,    CMD_WAIT_MUTEX },
+   { "g", cmd_g,    CMD_WAIT_MUTEX },
    { "n", cmd_n,    CMD_WAIT_MUTEX },
    { "z", cmd_z,    CMD_WAIT_MUTEX },
 #endif

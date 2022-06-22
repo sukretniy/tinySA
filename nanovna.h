@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -343,14 +343,14 @@ extern bool ultra;
 #ifdef TINYSA4
 extern float measured_noise_figure;
 extern float *drive_dBm;
+extern bool level_error;
+#else
+extern const int8_t drive_dBm [];
 extern int test_output;
 extern int test_output_switch;
 extern int test_output_drive;
 extern int test_output_attenuate;
 extern int test_path;
-extern bool level_error;
-#else
-extern const int8_t drive_dBm [];
 #endif
 extern uint8_t signal_is_AM;
 extern const uint32_t reffer_freq[];
@@ -1272,7 +1272,7 @@ typedef char assert_setting[sizeof(setting_t)> SAVE_PROP_CONFIG_SIZE ? -1 : 1]; 
 // Should include all save slots
 #define SAVE_CONFIG_AREA_SIZE   (SAVE_CONFIG_SIZE + SAVEAREA_MAX * SAVE_PROP_CONFIG_SIZE)
 
-typedef char assert_flash[ SAVE_CONFIG_ADDR + SAVE_CONFIG_AREA_SIZE >= FLASH_END ? -1 : 1];
+typedef char assert_flash[ SAVE_CONFIG_ADDR + SAVE_CONFIG_AREA_SIZE > FLASH_END ? -1 : 1];
 
 #else
 #define SAVEAREA_MAX 4

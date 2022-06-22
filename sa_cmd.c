@@ -1154,7 +1154,7 @@ VNA_SHELL_FUNCTION(cmd_caloutput)
     set_refer_output(m - 1);
 }
 
-#ifdef TINYSA4
+#if 0
 VNA_SHELL_FUNCTION(cmd_q)
 {
   if (argc < 1) {
@@ -1182,10 +1182,15 @@ again:
   case 's':  test_output_switch = *a - '0'; break;
   case 'd': test_output_drive = atoi(a); break;
   case 'a': test_output_attenuate = atoi(a); break;
+#ifdef TINYSA4
   case 'p': test_path = *a - '0'; break;
+#endif
   }
   goto again;
 }
+#endif
+
+#ifdef TINYSA4
 
 extern float Si446x_get_temp(void);
 VNA_SHELL_FUNCTION(cmd_k)
