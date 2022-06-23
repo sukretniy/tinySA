@@ -211,23 +211,14 @@ typedef uint32_t freq_t;
  #define CORRECTION_LNA      1
  #define CORRECTION_LOW_ULTRA 2
  #define CORRECTION_LNA_ULTRA 3
- #ifdef  DIRECT_CORRECTION
-   #define CORRECTION_DIRECT         4
-   #define CORRECTION_LNA_DIRECT     5
-   #define CORRECTION_LOW_OUT        6
-   #define CORRECTION_LOW_OUT_DIRECT 7
-   #define CORRECTION_LOW_OUT_ADF    8
-   #define CORRECTION_LOW_OUT_MIXER  9
-   #define CORRECTION_HIGH           10
-   #define CORRECTION_SIZE           11
-#else
-  #define CORRECTION_LOW_OUT        4
-  #define CORRECTION_LOW_OUT_DIRECT 5
-  #define CORRECTION_LOW_OUT_ADF    6
-  #define CORRECTION_LOW_OUT_MIXER  7
-  #define CORRECTION_HIGH           8
-  #define CORRECTION_SIZE           9
-#endif
+ #define CORRECTION_DIRECT         4
+ #define CORRECTION_LNA_DIRECT     5
+ #define CORRECTION_LOW_OUT        6
+ #define CORRECTION_LOW_OUT_DIRECT 7
+ #define CORRECTION_LOW_OUT_ADF    8
+ #define CORRECTION_LOW_OUT_MIXER  9
+ #define CORRECTION_HIGH           10
+ #define CORRECTION_SIZE           11
 #endif
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
@@ -1659,6 +1650,15 @@ extern void SI4432_Listen(int s);
 
 #ifdef TINYSA4
 // si4432.c
+
+
+enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};
+#define PATH_TEXT {"OFF", "LOW", "DIRECT", "ADF", "ULTRA", "High"}
+extern const char *path_text[];
+extern int signal_path;
+extern int test_path;
+extern int test_output;
+
 
 extern void ADF4351_mux(int R);
 extern void ADF4351_force_refresh(void);

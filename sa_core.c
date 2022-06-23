@@ -146,10 +146,13 @@ int max_drive = 18;
 #endif
 
 //    0         1         2            3             4           5
-enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};
+// enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};
 int signal_path = PATH_OFF;
 
 #ifdef TINYSA4
+
+const char *path_text[]=PATH_TEXT;
+
 void set_output_drive(int d)
 {
   if (signal_path == PATH_LEAKAGE)
@@ -530,6 +533,7 @@ void reset_settings(int m)
   setting.increased_R = false;
 #endif
   update_min_max_freq();
+  test_output = false;
   setting.frequency_var = 0;
   sweep_mode |= SWEEP_ENABLE;
   setting.unit_scale_index = 0;
@@ -1434,7 +1438,11 @@ void set_actual_power(float o)              // Set peak level to known value
     config.high_level_offset += new_offset;
   } else if (setting.mode == M_LOW) {
 #ifdef TINYSA4
-    if (setting.extra_lna)
+    if (signal_path == PATH_ULTRA)
+          config.ultra_level_offset += new_offset;
+    else if (signal_path == PATH_DIRECT)
+          config.direct_level_offset += new_offset;
+    else if (setting.extra_lna)
       config.lna_level_offset += new_offset;
     else
 #endif
@@ -1460,12 +1468,12 @@ float get_level_offset(void)
   if (setting.mode == M_LOW) {
     int lev;
 #ifdef TINYSA4
-    if (setting.extra_lna) {
-      lev = config.lna_level_offset;
-    } else if (signal_path == PATH_DIRECT) {
+    if (signal_path == PATH_DIRECT) {
       lev = config.direct_level_offset;
     } else if (signal_path == PATH_ULTRA) {
       lev = config.ultra_level_offset;
+    } else if (setting.extra_lna) {
+      lev = config.lna_level_offset;
     } else
 #endif
     {
@@ -7018,7 +7026,7 @@ float get_jump_config(int i) {
   return 0;
 }
 
-enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_MAX };
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA990, CS_DIRECT, CS_MAX };
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
 #endif
@@ -7030,6 +7038,7 @@ void calibrate(void)
 #ifdef TINYSA4
 //  setting.auto_IF = true;                         // set in selftest
 //  setting.frequency_IF = config.frequency_IF1;    // set in selftest
+  float direct_level=0.0;
   setting.test_argument = -7;
   self_test(0);
   int if_error = peakFreq - 30000000;
@@ -7113,8 +7122,22 @@ again:
         setting.atten_step = true;
         break;
 #ifdef TINYSA4
+      case CS_ULTRA:
+        test_output = true;
+        test_path = 2;      // Ultra path
+        break;
       case CS_LNA:
         set_extra_lna(true);
+        break;
+      case CS_ULTRA990:
+        set_sweep_frequency(ST_CENTER, 990000000);
+        test_output = true;
+        test_path = 3;      // Ultra path at 990MHz
+        break;
+      case CS_DIRECT:
+        set_sweep_frequency(ST_CENTER, 990000000);
+        test_output = true;
+        test_path = 5;      // Direct path at 990MHz
         break;
 #endif
       }
@@ -7164,7 +7187,7 @@ again:
 #endif
 #endif
       if (k ==0 || k == 1) {
-        if (peakLevel < -50) {
+        if (calibration_stage == CS_NORMAL && peakLevel < -50) {
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
           ili9341_drawstring_7x13("Signal level too low", 30, 140);
           ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
@@ -7176,7 +7199,14 @@ again:
           ili9341_drawstring_7x13("Calibration failed", 30, 140);
           goto quit;
         } else {
-          set_actual_power(CAL_LEVEL);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
+#ifdef TINYSA4
+          if (calibration_stage == CS_ULTRA990)
+            direct_level = peakLevel;
+          else if (calibration_stage == CS_DIRECT)
+            set_actual_power(direct_level);
+          else
+#endif
+            set_actual_power(CAL_LEVEL);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
           chThdSleepMilliseconds(1000);
         }
       }

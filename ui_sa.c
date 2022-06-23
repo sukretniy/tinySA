@@ -1013,11 +1013,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
 #endif
 #ifdef TINYSA4
 
-enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_ULTRA, PATH_LEAKAGE, PATH_HIGH};
-const char *path_text[]={"OFF", "LOW", "DIRECT", "ULTRA", "ADF", "High"};
-extern int signal_path;
-extern int test_path;
-extern int test_output;
 
 static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
 {
@@ -3974,9 +3969,15 @@ redraw_cal_status:
   }
 
   if (setting.disable_correction){
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
     lcd_printf(x, y, "Corr:\nOFF");
-    y += 2*YSTEP;
+    y += 2*YSTEP + YSTEP/2;
+  }
+
+  if (test_output){
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
+    lcd_printf(x, y, "Path:\n%s", path_text[signal_path]);
+    y += 2*YSTEP + YSTEP/2;
   }
 
 #endif
