@@ -353,7 +353,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   //                                     0    1      2
 #ifdef TINYSA4
-  static const char cmd_mode_list[] = "low|high|switch|receive_switch|out_switch|lna|harmonic|shift1|shift2|drive1|drive2|drive3";
+  static const char cmd_mode_list[] = "low|high|switch|receive_switch|out_switch|lna|harmonic|shift1|shift2|drive1|drive2|drive3|direct|ultra";
 #else
   static const char cmd_mode_list[] = "low|high|switch|receive_switch";
 #endif
@@ -374,6 +374,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     shell_printf(p, "drive1",       config.drive1_level_offset);
     shell_printf(p, "drive2",       config.drive2_level_offset);
     shell_printf(p, "drive3",       config.drive3_level_offset);
+    shell_printf(p, "direct",       config.direct_level_offset);
+    shell_printf(p, "ultra",        config.ultra_level_offset);
 #endif
     return;
   }
@@ -399,6 +401,8 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       case 9: config.drive1_level_offset = v; break;
       case 10: config.drive2_level_offset = v; break;
       case 11: config.drive3_level_offset = v; break;
+      case 12: config.direct_level_offset = v; break;
+      case 13: config.ultra_level_offset = v; break;
 #endif
       default: goto usage;
     }
@@ -1028,9 +1032,9 @@ VNA_SHELL_FUNCTION(cmd_correction)
   (void)argc;
 #ifdef TINYSA4
 #ifdef  DIRECT_CORRECTION
-  static const char cmd[] = "low|lna|ultra|ultra_lna|direct|direct_lna|out|out_direct|out_adf|out_ultra|high|off|on";
+  static const char cmd[] = "low|lna|ultra|ultra_lna|direct|direct_lna|out|out_direct|out_ultra|out_adf|high|off|on";
 #else
-  static const char cmd[] = "low|lna|ultra|ultra_lna|out|out_direct|out_adf|out_ultra|high|off|on";
+  static const char cmd[] = "low|lna|ultra|ultra_lna|out|out_direct|out_ultra|out_adf|high|off|on";
 #endif
   static const char range[] = "0-19";
 #else
@@ -1154,7 +1158,7 @@ VNA_SHELL_FUNCTION(cmd_caloutput)
     set_refer_output(m - 1);
 }
 
-#if 0
+#ifdef TINYSA4
 VNA_SHELL_FUNCTION(cmd_q)
 {
   if (argc < 1) {

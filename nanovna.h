@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -346,12 +346,12 @@ extern float *drive_dBm;
 extern bool level_error;
 #else
 extern const int8_t drive_dBm [];
+#endif
 extern int test_output;
 extern int test_output_switch;
 extern int test_output_drive;
 extern int test_output_attenuate;
 extern int test_path;
-#endif
 extern uint8_t signal_is_AM;
 extern const uint32_t reffer_freq[];
 extern freq_t minFreq;
@@ -731,6 +731,8 @@ typedef struct config {
   float drive1_level_offset;
   float drive2_level_offset;
   float drive3_level_offset;
+  float direct_level_offset;
+  float ultra_level_offset;
 #endif
 #ifdef __NOISE_FIGURE__
   float noise_figure;

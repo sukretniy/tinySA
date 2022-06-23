@@ -145,8 +145,8 @@ int max_drive = 18;
 #define MAX_ATTENUATE 31.5
 #endif
 
-//    0         1         2            3           4             5
-enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_ULTRA, PATH_LEAKAGE, PATH_HIGH};
+//    0         1         2            3             4           5
+enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};
 int signal_path = PATH_OFF;
 
 #ifdef TINYSA4
@@ -350,10 +350,17 @@ void set_output_path(freq_t f, float level)
 
 }
 
+static void calculate_static_correction(void);
 void set_input_path(freq_t f)
 {
-  if (test_output)
-    signal_path = test_path;
+  if (test_output) {
+    setting.extra_lna = test_path & 0x01;
+    switch ((test_path & 0xFE)>>1) {
+    case 0: signal_path = PATH_LOW; break;
+    case 1: signal_path = PATH_ULTRA; break;
+    case 2: signal_path = PATH_DIRECT; break;
+    }
+  }
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
   else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > 700) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
@@ -372,14 +379,15 @@ void set_input_path(freq_t f)
   switch(signal_path) {
   case PATH_LOW:
     enable_ultra(false);
-    enable_high(false);
     enable_direct(false);
+    enable_high(false);
     goto common;
 
   case PATH_DIRECT:
-    enable_ADF_output(false, false);
-    enable_ultra(!setting.atten_step);
+    enable_ultra(true);
+    enable_direct(true);
     enable_high(true);
+    enable_ADF_output(false, false);
     goto common2;
   case PATH_ULTRA:
     enable_ultra(true);
@@ -392,6 +400,8 @@ void set_input_path(freq_t f)
       SI4463_init_rx();
     break;
   }
+  if (test_output)
+    calculate_static_correction();
 
 }
 #endif
@@ -1448,18 +1458,20 @@ float get_level_offset(void)
     return(config.high_level_offset);
   }
   if (setting.mode == M_LOW) {
+    int lev;
 #ifdef TINYSA4
     if (setting.extra_lna) {
-      if (config.lna_level_offset == 100)
-        return 0;
-      return(config.lna_level_offset);
+      lev = config.lna_level_offset;
+    } else if (signal_path == PATH_DIRECT) {
+      lev = config.direct_level_offset;
+    } else if (signal_path == PATH_ULTRA) {
+      lev = config.ultra_level_offset;
     } else
 #endif
     {
-      if (config.low_level_offset == 100)
-        return 0;
-      return(config.low_level_offset);
+      lev = config.low_level_offset;
     }
+    return(lev == 100? 0 : lev);
   }
   if (setting.mode == M_GENLOW) {
     return(LOW_OUT_OFFSET);
@@ -3408,8 +3420,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           if (SDU1.config->usbp->state == USB_ACTIVE)
              shell_printf ("level=%f, d=%d, a=%d, s=%d\r\n", setting.level, d, setting.attenuate_x2, (setting.atten_step ? 1 : 0));
 #endif
+        }
 #endif
-      }
     }
     else if (setting.mode == M_GENHIGH) {
 #ifdef TINYSA4
