@@ -366,7 +366,7 @@ void set_input_path(freq_t f)
   }
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
-  else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > 700) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
+  else if(ultra && ((config.ultra_start == ULTRA_AUTO && f > 700) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
       signal_path = PATH_ULTRA;
   else if (config.direct && f >= config.direct_start && f < config.direct_stop)
     signal_path = PATH_DIRECT;
@@ -603,7 +603,7 @@ void reset_settings(int m)
   setting.tracking_output = false;
   setting.measurement = M_OFF;
 #ifdef __ULTRA__
-  setting.ultra = S_AUTO_OFF;
+//  setting.ultra = S_AUTO_OFF;
 #endif
 #ifdef TINYSA4
   setting.frequency_IF = config.frequency_IF1; ;
@@ -997,6 +997,7 @@ void toggle_below_IF(void)
   dirty = true;
 }
 
+#if 0
 #ifdef __ULTRA__
 void toggle_ultra(void)
 {
@@ -1008,6 +1009,7 @@ void toggle_ultra(void)
     setting.ultra = true;
   dirty = true;
 }
+#endif
 #endif
 
 void set_modulation(int m)
@@ -1446,15 +1448,13 @@ void set_actual_power(float o)              // Set peak level to known value
       config.lna_level_offset += new_offset;
     else
 #endif
-    {
-      if (setting.atten_step)
-        config.receive_switch_offset += new_offset;
-      else
-        config.low_level_offset += new_offset;
-    }
+    if (setting.atten_step)
+      config.receive_switch_offset += new_offset;
+    else
+      config.low_level_offset += new_offset;
   }
   dirty = true;
-  config_save();
+//  config_save();
   // dirty = true;             // No HW update required, only status panel refresh
 }
 
@@ -1472,13 +1472,16 @@ float get_level_offset(void)
       lev = config.direct_level_offset;
     } else if (signal_path == PATH_ULTRA) {
       lev = config.ultra_level_offset;
-    } else if (setting.extra_lna) {
-      lev = config.lna_level_offset;
     } else
 #endif
     {
       lev = config.low_level_offset;
     }
+#ifdef TINYSA4
+    if (lev != 1000 && setting.extra_lna) {
+      lev += config.lna_level_offset;
+    }
+#endif
     return(lev == 100? 0 : lev);
   }
   if (setting.mode == M_GENLOW) {
@@ -7036,6 +7039,7 @@ void calibrate(void)
   int local_test_status;
   int old_sweep_points = setting._sweep_points;
 #ifdef TINYSA4
+  int old_ultra = config.ultra;
 //  setting.auto_IF = true;                         // set in selftest
 //  setting.frequency_IF = config.frequency_IF1;    // set in selftest
   float direct_level=0.0;
@@ -7098,6 +7102,11 @@ again:
     for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
 #if 1
       reset_settings(M_LOW);
+
+      config.ultra = true;          // Enable ultra
+      maxFreq = 12000000000;
+      ultra = true;
+
       set_refer_output(0);
 #ifdef TINYSA4
       set_attenuation(0);
@@ -7217,6 +7226,10 @@ again:
     goto again;
   setting.below_IF = S_AUTO_OFF;
   in_calibration = false;
+#ifdef TINYSA4
+  ultra = old_ultra;
+  config.ultra = old_ultra;
+#endif
 
   #if 0               // No high input calibration as CAL OUTPUT is unreliable
 
@@ -7254,15 +7267,8 @@ quit:
   set_sweep_points(old_sweep_points);
   in_selftest = false;
 //  set_refer_output(-1);
-#ifdef TINYSA4
-  reset_settings(M_LOW);
-//  set_extra_lna(false);
-//  set_average(0,AV_OFF);
-  set_refer_output(-1);
-#else
   reset_settings(M_LOW);
   set_refer_output(-1);
-#endif
   test_wait = false;
 }
 
