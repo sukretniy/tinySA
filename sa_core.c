@@ -366,7 +366,7 @@ void set_input_path(freq_t f)
   }
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
-  else if(ultra && ((config.ultra_start == ULTRA_AUTO && f > 700) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
+  else if(ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
       signal_path = PATH_ULTRA;
   else if (config.direct && f >= config.direct_start && f < config.direct_stop)
     signal_path = PATH_DIRECT;
