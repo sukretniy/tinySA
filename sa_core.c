@@ -7139,12 +7139,12 @@ again:
         set_extra_lna(true);
         break;
       case CS_ULTRA990:
-        set_sweep_frequency(ST_CENTER, 990000000);
+        set_sweep_frequency(ST_CENTER, 900000000);
         test_output = true;
         test_path = 3;      // Ultra path at 990MHz
         break;
       case CS_DIRECT:
-        set_sweep_frequency(ST_CENTER, 990000000);
+        set_sweep_frequency(ST_CENTER, 900000000);
         test_output = true;
         test_path = 5;      // Direct path at 990MHz
         break;

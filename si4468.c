@@ -1762,6 +1762,23 @@ void switch_SI4463_RSSI_correction(bool enabled){
   SI4463_RSSI_correction_enabled = enabled;
 };
 
+void SI4463_set_IF(int band) {
+// Set properties:           MODEM_IF_FREQ
+// Number of properties:     3
+// Group ID:                 0x20
+// Start ID:                 0x1b
+// Descriptions:
+//   MODEM_IF_FREQ - Set the IF frequency as a function of frequency band.
+  // #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
+//#define RF_MODEM_TX_RAMP_DELAY_12 0x11, 0x20, 0x03, 0x18, 0x03, 0xC0, 0x00
+
+static const uint8_t if_freq_high[6] = { 0x03, 0x03, 0x03, 0x03, 0, 0x02};
+static const uint8_t if_freq_low[6] =  { 0xc0, 0x60, 0x80, 0x40, 0, 0x80};
+
+  uint8_t data3[] = { 0x11, 0x20, 0x03, 0x1b, if_freq_high[band], if_freq_low[band] };
+  SI4463_do_api(data3, sizeof(data3), NULL, 0);
+}
+
 
 uint16_t force_rbw(int f)
 {
@@ -1775,6 +1792,7 @@ uint16_t force_rbw(int f)
     SI4463_do_api((void *)&config[i+1], config[i], NULL, 0);
     i += config[i]+1;
   }
+  if (prev_band != 0) SI4463_set_IF(prev_band);         // restore IF frequency if not in band zero
   SI4463_clear_int_status();
   SI4463_short_start_rx();           // This can cause recalibration
 //  SI4463_wait_for_cts();
@@ -1928,15 +1946,18 @@ freq_t SI4463_set_freq(freq_t freq)
     // #define RF_MODEM_CLKGEN_BAND_1 0x11, 0x20, 0x01, 0x51, 0x0A
     uint8_t data2[] = {
                        0x11, 0x20, 0x01, 0x51,
-                       0x10 + (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
+                      /* 0x10 + */ (uint8_t)(SI4463_band + (Npresc ? 0x08 : 0))           // 0x08 for high performance mode, 0x10 to skip recal
     };
     SI4463_do_api(data2, sizeof(data2), NULL, 0);
+
+
+    SI4463_set_IF(SI4463_band);
     prev_band = SI4463_band;
   }
   if (SI4463_in_tx_mode)
     SI4463_start_tx(0);
   else {
-    SI4463_start_rx(SI4463_channel);
+    SI4463_short_start_rx();
   }
 //  SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE0);        // For measuring duration of set_freq
   SI4463_frequency_changed = true;
