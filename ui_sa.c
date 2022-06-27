@@ -1365,7 +1365,7 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
   if (uistat.value != 1234)
     return;
   clear_all_config_prop_data();
-#ifdef TINYSA4
+#ifndef TINYSA4
 #define SCB_AIRCR_VECTKEYSTAT_LSB 16
 #define SCB_AIRCR_VECTKEYSTAT       (0xFFFF << SCB_AIRCR_VECTKEYSTAT_LSB)
 #define SCB_AIRCR_VECTKEY       (0x05FA << SCB_AIRCR_VECTKEYSTAT_LSB)
@@ -1373,9 +1373,13 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
   SCB->AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
           while(true);
 #else
-  reset_settings(M_LOW);
-  ui_mode_normal();
+  rccEnableWWDG(FALSE);
+  WWDG->CFR = 0x60;
+  WWDG->CR = 0xff;
+  /* wait forever */
 #endif
+  while (1)
+    ;
 }
 
 float nf_gain;

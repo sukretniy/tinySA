@@ -407,7 +407,6 @@ VNA_SHELL_FUNCTION(cmd_reset)
   }
 #endif
   shell_printf("Performing reset\r\n");
-
   rccEnableWWDG(FALSE);
   WWDG->CFR = 0x60;
   WWDG->CR = 0xff;

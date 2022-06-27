@@ -1957,7 +1957,7 @@ freq_t SI4463_set_freq(freq_t freq)
   if (SI4463_in_tx_mode)
     SI4463_start_tx(0);
   else {
-    SI4463_short_start_rx();
+    SI4463_start_rx(0);
   }
 //  SI4463_set_gpio(3,SI446X_GPIO_MODE_DRIVE0);        // For measuring duration of set_freq
   SI4463_frequency_changed = true;

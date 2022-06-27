@@ -740,7 +740,7 @@ void set_refer_output(int v)
 {
   setting.refer = v;
   set_calibration_freq(setting.refer);
-//  dirty = true;
+  dirty = true;
 }
 
 void set_decay(int d)
@@ -1966,7 +1966,7 @@ static const struct {
   {  3000,       150,           50,      200,   -95,    1.3},
   {  1000,       300,          100,      100,   -105,   0.3},
   {   300,       400,          120,      100,   -110,   0.7},
-  {   100,       700,          120,      100,   -115,   0.5},
+  {   100,       900,          120,      100,   -115,   0.5},
   {    30,      1600,          300,      100,   -120,   0.7},
   {    10,      4000,          600,      100,   -122,   1.1},
   {     3,     18700,        12000,      100,   -125,   1.0}
@@ -2577,8 +2577,8 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
 
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
       temp_actual_rbw_x10 = frequency_step_x10;
-    } else if (setting.step_delay_mode==SD_PRECISE) {
-      temp_actual_rbw_x10 = 4*frequency_step_x10;
+//    } else if (setting.step_delay_mode==SD_PRECISE) {
+//      temp_actual_rbw_x10 = 4*frequency_step_x10;
     } else {
       temp_actual_rbw_x10 = 2*frequency_step_x10;
     }
@@ -7102,13 +7102,11 @@ again:
     for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
 #if 1
       reset_settings(M_LOW);
-
+      set_refer_output(0);
+#ifdef TINYSA4
       config.ultra = true;          // Enable ultra
       maxFreq = 12000000000;
       ultra = true;
-
-      set_refer_output(0);
-#ifdef TINYSA4
       set_attenuation(0);
 #else
       set_attenuation(10);
@@ -7139,14 +7137,14 @@ again:
         set_extra_lna(true);
         break;
       case CS_ULTRA990:
-        set_sweep_frequency(ST_CENTER, 900000000);
+        set_sweep_frequency(ST_CENTER, 150000000);
         test_output = true;
-        test_path = 3;      // Ultra path at 990MHz
+        test_path = 0;      // Normal path at 900MHz
         break;
       case CS_DIRECT:
-        set_sweep_frequency(ST_CENTER, 900000000);
+        set_sweep_frequency(ST_CENTER, 150000000);
         test_output = true;
-        test_path = 5;      // Direct path at 990MHz
+        test_path = 4;      // Direct path at 900MHz
         break;
 #endif
       }
