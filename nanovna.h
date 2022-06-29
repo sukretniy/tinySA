@@ -724,6 +724,8 @@ typedef struct config {
   float drive3_level_offset;
   float direct_level_offset;
   float ultra_level_offset;
+  float direct_lna_level_offset;
+  float ultra_lna_level_offset;
 #endif
 #ifdef __NOISE_FIGURE__
   float noise_figure;

@@ -986,8 +986,10 @@ config_t config = {
   .drive1_level_offset = 0,
   .drive2_level_offset = -1.5,
   .drive3_level_offset = -0.5,
-  .direct_level_offset =       100.0,    // Uncalibrated
-  .ultra_level_offset =        100.0,    // Uncalibrated
+  .direct_level_offset =       0.0,    // Uncalibrated
+  .ultra_level_offset =        0.0,    // Uncalibrated
+  .direct_lna_level_offset = 0,
+  .ultra_lna_level_offset = 0,
   .correction_frequency =
   {
 /* low      */   { 10000,   20000,  30000,  70000,  100000,     500000,     600000,     900000,     2000000,    30000000,   130000000,  350000000,  490000000,  540000000,  600000000,  720000000,  790000000,  810000000,  820000000,  830000000 },

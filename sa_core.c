@@ -1440,11 +1440,17 @@ void set_actual_power(float o)              // Set peak level to known value
     config.high_level_offset += new_offset;
   } else if (setting.mode == M_LOW) {
 #ifdef TINYSA4
-    if (signal_path == PATH_ULTRA)
-          config.ultra_level_offset += new_offset;
-    else if (signal_path == PATH_DIRECT)
-          config.direct_level_offset += new_offset;
-    else if (setting.extra_lna)
+    if (signal_path == PATH_ULTRA) {
+      if (setting.extra_lna)
+        config.ultra_lna_level_offset += new_offset;
+      else
+        config.ultra_level_offset += new_offset;
+    } else if (signal_path == PATH_DIRECT) {
+      if (setting.extra_lna)
+        config.direct_lna_level_offset += new_offset;
+      else
+        config.direct_level_offset += new_offset;
+    } else if (setting.extra_lna)
       config.lna_level_offset += new_offset;
     else
 #endif
@@ -1469,19 +1475,20 @@ float get_level_offset(void)
     int lev;
 #ifdef TINYSA4
     if (signal_path == PATH_DIRECT) {
-      lev = config.direct_level_offset;
+      if (setting.extra_lna)
+        lev = config.direct_lna_level_offset;
+      else
+        lev = config.direct_level_offset;
     } else if (signal_path == PATH_ULTRA) {
-      lev = config.ultra_level_offset;
-    } else
+      if (setting.extra_lna)
+        lev = config.ultra_lna_level_offset;
+      else
+        lev = config.ultra_level_offset;
+    } else if (setting.extra_lna)
+      lev = config.lna_level_offset;
+    else
 #endif
-    {
       lev = config.low_level_offset;
-    }
-#ifdef TINYSA4
-    if (lev != 1000 && setting.extra_lna) {
-      lev += config.lna_level_offset;
-    }
-#endif
     return(lev == 100? 0 : lev);
   }
   if (setting.mode == M_GENLOW) {
@@ -7032,7 +7039,7 @@ float get_jump_config(int i) {
   return 0;
 }
 
-enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA990, CS_DIRECT, CS_MAX };
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_ULTRA990, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
 #endif
@@ -7137,8 +7144,13 @@ again:
         test_output = true;
         test_path = 2;      // Ultra path
         break;
+      case CS_ULTRA_LNA:
+        test_output = true;
+        test_path = 3;      // Ultra lna path
+        break;
       case CS_LNA:
-        set_extra_lna(true);
+        test_output = true;
+        test_path = 1;      // Normal lna path
         break;
       case CS_ULTRA990:
         set_sweep_frequency(ST_CENTER, 150000000);
@@ -7149,6 +7161,11 @@ again:
         set_sweep_frequency(ST_CENTER, 150000000);
         test_output = true;
         test_path = 4;      // Direct path at 900MHz
+        break;
+      case CS_DIRECT_LNA:
+        set_sweep_frequency(ST_CENTER, 150000000);
+        test_output = true;
+        test_path = 5;      // Direct lna path at 900MHz
         break;
 #endif
       }
@@ -7212,13 +7229,13 @@ again:
         } else {
 #ifdef TINYSA4
           if (calibration_stage == CS_ULTRA990)
-            direct_level = peakLevel;
-          else if (calibration_stage == CS_DIRECT)
+            direct_level = marker_to_value(0);
+          else if (calibration_stage == CS_DIRECT || calibration_stage == CS_DIRECT_LNA)
             set_actual_power(direct_level);
           else
 #endif
             set_actual_power(CAL_LEVEL);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
-          chThdSleepMilliseconds(1000);
+          chThdSleepMilliseconds(500);
         }
       }
     }
