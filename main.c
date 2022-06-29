@@ -2540,7 +2540,12 @@ int main(void)
   if (has_new_switch)
     config.switch_offset = -5.0;
 #endif
-  config_recall();
+  if(config_recall()) {
+    uint32_t *f = &backup;     // Clear backup when no valid config data
+    int i = 5;
+    while (i--)
+      *f++ = 0;
+  }
   config.cor_am = 0;        // Should be removed from config
   config.cor_nfm = 0;
   config.cor_wfm = 0;

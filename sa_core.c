@@ -366,10 +366,10 @@ void set_input_path(freq_t f)
   }
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
-  else if(ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
-      signal_path = PATH_ULTRA;
   else if (config.direct && f >= config.direct_start && f < config.direct_stop)
     signal_path = PATH_DIRECT;
+  else if(ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
+      signal_path = PATH_ULTRA;
   else
     signal_path = PATH_LOW;
 
@@ -1434,7 +1434,7 @@ void set_actual_power(float o)              // Set peak level to known value
 {
   if (!markers[0].index)
     return;
-  float new_offset = o -   measured[markers[0].trace][markers[0].index];        //  offset based on difference between measured peak level and known peak level
+  float new_offset = o -   marker_to_value(0); // measured[markers[0].trace][markers[0].index];        //  offset based on difference between measured peak level and known peak level
   if (o == 100) new_offset = 0;
   if (setting.mode == M_HIGH) {
     config.high_level_offset += new_offset;
@@ -2076,6 +2076,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
 #ifdef TINYSA4
   if (setting.mode == M_LOW) {
 
+    cv = float_TO_PURE_RSSI(get_level_offset());
     //
     //  ----------------   duplication of code
     //
@@ -3160,7 +3161,9 @@ static void calculate_static_correction(void)                   // Calculate the
 #endif
       - get_signal_path_loss()
       + float_TO_PURE_RSSI(
+#ifndef TINYSA4
           + get_level_offset()
+#endif
           + get_attenuation()
 #ifdef TINYSA4
           - (S_STATE(setting.agc)? 0 : 33)
@@ -5673,7 +5676,7 @@ enum {
 freq_t test_freq = 0;
 //#define CAL_LEVEL   -23.5
 //#define CAL_LEVEL   -24.2
-#define CAL_LEVEL -35.50
+#define CAL_LEVEL -35.60
 #else
 #define CAL_LEVEL   (has_esd ? -26.2 : -25)
 #endif
@@ -7112,7 +7115,8 @@ again:
       set_attenuation(10);
 #endif
       set_sweep_frequency(ST_CENTER, 30000000);
-      set_sweep_frequency(ST_SPAN,    5000000);
+      set_sweep_frequency(ST_SPAN,    10000);
+      markers[0].mtype |= M_AVER;
       setting.rbw_x10 = 3000;
       setting.repeat = 10;
       int test_case = TEST_POWER;
