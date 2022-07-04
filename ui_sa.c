@@ -3249,7 +3249,7 @@ static void fetch_numeric_target(uint8_t mode)
   switch (mode) {
   case KM_START:
     uistat.freq_value = get_sweep_frequency(ST_START) + (setting.frequency_offset - FREQUENCY_SHIFT);
-    plot_printf(uistat.text, sizeof uistat.text, "%.3QMHz", uistat.freq_value);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_STOP:
     uistat.freq_value = get_sweep_frequency(ST_STOP) + (setting.frequency_offset - FREQUENCY_SHIFT);

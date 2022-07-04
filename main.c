@@ -2435,16 +2435,36 @@ static void dac_init(void){
   rccEnableDAC1(false); // Enable DAC1
 }
 
+#ifdef TINYSA4__
+#define PULSE {   palClearPad(GPIOB, 14); my_microsecond_delay(2); palSetPad(GPIOB, 14); }
+#else
+#define PULSE
+#endif
+
 int main(void)
 {
   halInit();
+  /*
+   *  Initiate 1 micro second timer
+   */
+  #ifdef TINYSA4
+   gptStart(&GPTD4, &gpt4cfg);
+    gptPolledDelay(&GPTD4, 10); // 10 us delay
+  #else
+    gptStart(&GPTD14, &gpt4cfg);
+    gptPolledDelay(&GPTD14, 10); // 10 us delay
+  #endif
+
+  PULSE
   chSysInit();
+  PULSE
  /*
   * Initialize RTC library (not used ChibiOS RTC module)
   */
   #ifdef __USE_RTC__
     rtc_init();
   #endif
+  PULSE
 
   //palSetPadMode(GPIOB, 8, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
   //palSetPadMode(GPIOB, 9, PAL_MODE_ALTERNATE(1) | PAL_STM32_OTYPE_OPENDRAIN);
@@ -2499,6 +2519,7 @@ int main(void)
 #endif
 
   spi_init();
+  PULSE
 
 
   /*
@@ -2506,6 +2527,7 @@ int main(void)
    * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
    */
   dac_init();
+  PULSE
   DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
   #ifdef  __LCD_BRIGHTNESS__
     lcd_setBrightness(DEFAULT_BRIGHTNESS);
@@ -2516,12 +2538,16 @@ int main(void)
  * SPI LCD Initialize
  */
   ili9341_init();
+  PULSE
 
 #ifdef TINYSA4
   ili9341_set_foreground(LCD_FG_COLOR);
+  PULSE
   ili9341_drawstring("Starting...", 0,0);
+  PULSE
 
   disk_initialize(0);
+  PULSE
 //  SD_PowerOn();
 #endif
 

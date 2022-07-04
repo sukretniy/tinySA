@@ -7122,8 +7122,12 @@ again:
       set_attenuation(10);
 #endif
       set_sweep_frequency(ST_CENTER, 30000000);
+#ifdef TINYSA4
       set_sweep_frequency(ST_SPAN,    10000);
       markers[0].mtype |= M_AVER;
+#else
+      set_sweep_frequency(ST_SPAN,    5000000);
+#endif
       setting.rbw_x10 = 3000;
       setting.repeat = 10;
       int test_case = TEST_POWER;
