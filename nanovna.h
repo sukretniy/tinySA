@@ -558,7 +558,7 @@ extern uint16_t graph_bottom;
 #define MENU_BUTTON_MIN         9
 #else
 #define MENU_BUTTON_MAX        16
-#define MENU_BUTTON_MIN         8
+#define MENU_BUTTON_MIN         7
 #endif
 #define MENU_BUTTON_WIDTH      80
 #define MENU_BUTTON_BORDER      1
