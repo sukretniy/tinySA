@@ -78,6 +78,21 @@
 #define SPI_READ_8BIT(spi)       *(__IO uint8_t*)(&spi->DR)
 #define SPI_READ_16BIT(spi)      *(__IO uint16_t*)(&spi->DR)
 
+//*****************************************************
+// DMA channels macros
+//*****************************************************
+#define dmaChannelSetMemory(ch, addr)          {(ch)->CMAR = (uint32_t)(addr);}
+#define dmaChannelSetPeripheral(ch, addr)      {(ch)->CPAR = (uint32_t)(addr);}
+#define dmaChannelSetTransactionSize(ch, size) {(ch)->CNDTR= (uint32_t)(size);}
+#define dmaChannelGetTransactionSize(ch)       ((ch)->CNDTR)
+#define dmaChannelSetMode(ch, mode)            {(ch)->CCR  = (uint32_t)(mode);}
+#define dmaChannelEnable(ch)                   {(ch)->CCR |= STM32_DMA_CR_EN;}
+#define dmaChannelDisable(ch)                  {(ch)->CCR &=~STM32_DMA_CR_EN;}
+#define dmaChannelWaitCompletion(ch)           {while ((ch)->CNDTR > 0); (ch)->CCR = 0;}
+
+#define STM32_DMA_CR_BYTE       (STM32_DMA_CR_PSIZE_BYTE | STM32_DMA_CR_MSIZE_BYTE)
+#define STM32_DMA_CR_HWORD      (STM32_DMA_CR_PSIZE_HWORD | STM32_DMA_CR_MSIZE_HWORD)
+
 #ifdef TINYSA4
 #define SPI_MODE_LCD          0x00
 #define SPI_MODE_SD_CARD      0x01
