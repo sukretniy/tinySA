@@ -21,7 +21,7 @@
 #include "hal.h"
 #include "nanovna.h"
 
-#define ADC_FULL_SCALE  3300
+#define ADC_FULL_SCALE  3000
 #define F303_ADC_VREF_ALWAYS_ON
 
 #define ADC_CHSELR_VREFINT      ADC_CHANNEL_IN18
@@ -163,7 +163,7 @@ int16_t adc_vbat_read(void)
 //  uint16_t TemperatureC2 = (uint16_t)((V25-ts)/Avg_Slope+25);
 //  uint16_t TemperatureC = (uint16_t)((V25-ts)/avg_slope+25);
 
-  // vbat_raw = (3300 * 2 * vbat / 4095) * (VREFINT_CAL / vrefint)
+  // vbat_raw = (3000 * 2 * vbat / 4095) * (VREFINT_CAL / vrefint)
   // uint16_t vbat_raw = (ADC_FULL_SCALE * VREFINT_CAL * (float)vbat * 2 / (vrefint * ((1<<12)-1)));
   // For speed divide not on 4095, divide on 4096, get little error, but no matter
   vbat_raw = ((ADC_FULL_SCALE * 2 * vbat)>>12) * VREFINT_CAL / vrefint;
