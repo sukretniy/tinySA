@@ -309,7 +309,7 @@ void spi_init(void)
 #ifdef __USE_DISPLAY_DMA__
   // Enable DMA, need for spi
   rccEnableDMA1(false);
-  rccEnableDMA2(false);
+//  rccEnableDMA2(false);
   dmaChannelSetPeripheral(LCD_DMA_TX, &LCD_SPI->DR); // DMA Peripheral Tx
 #ifdef __USE_DISPLAY_DMA_RX__
   dmaChannelSetPeripheral(LCD_DMA_RX, &LCD_SPI->DR); // DMA Peripheral Rx
