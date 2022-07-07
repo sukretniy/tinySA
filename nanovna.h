@@ -52,7 +52,7 @@
 #define __ADF4351__
 #define __NEW_SWITCHES__
 #define __ULTRA_OUT__        // Use ADF output over LOW out
-// #define __SI5351__
+#define __SI5351__
 #endif
 #define __PE4302__
 //#define __SIMULATION__

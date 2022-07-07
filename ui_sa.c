@@ -800,7 +800,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
 }
 
 #ifdef TINYSA4
-static const int item_to_mode[3] = { 0,2,3 };
+static const int item_to_mode[2] = { 0,2 };
 #else
 static const int item_to_mode[4] = { 0,1,2,3 };
 #endif
@@ -2513,7 +2513,7 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "Narrow FM", menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "Wide FM",   menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "External",  menu_modulation_acb},
-  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..6kHz"},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..5kHz"},
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
@@ -2526,9 +2526,9 @@ static const menuitem_t  menu_sweep[] = {
 };
 #ifdef TINYSA4
 static const menuitem_t  menu_lowoutput_settings[] = {
-  { MT_FORM | MT_ADV_CALLBACK,  0,              "SQUARE WAVE max 4.4GHz",       menu_lowoutput_settings_acb},
-  { MT_FORM | MT_ADV_CALLBACK,  1,              "MIXER max 5.4GHz",    menu_lowoutput_settings_acb},
-  { MT_FORM | MT_SUBMENU,  255, S_RARROW" Settings", menu_settings},
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "Cleanest signal, max 4.4GHz",       menu_lowoutput_settings_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  1,              "Highest accuracy, max 5.4GHz",    menu_lowoutput_settings_acb},
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW"Expert Settings", menu_settings},
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -3182,7 +3182,7 @@ const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "Spectrum Analyzer",      menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "Signal Generator",     menu_mode_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
+//  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Calibration Output: %s",   menu_sreffer_acb},
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
 };
