@@ -1564,7 +1564,7 @@ extern const menuitem_t  menu_mode[];
 extern void menu_push_submenu(const menuitem_t *submenu);
 
 typedef struct {
-  uint32_t    frequency0, frequency1;
+  freq_t    frequency0, frequency1;
   uint8_t attenuation;
   uint8_t reflevel;
   uint8_t RBW;
@@ -1574,7 +1574,17 @@ typedef struct {
 
 #define backup (*(uint32_t *)0x40002850)   // backup registers 5 * 32 bits
 
+#ifdef TINYSA4
+#define MAX_BACKUP_SIZE 16
+#define USED_BACKUP_SIZE 5
+#else
+#define MAX_BACKUP_SIZE 5
+#define USED_BACKUP_SIZE 3
+#endif
 
+#if USED_BACKUP_SIZE > MAX_BACKUP_SIZE
+#error "backup_t too large"
+#endif
 /*
  * misclinous
  */

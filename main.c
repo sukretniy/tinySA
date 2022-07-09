@@ -154,7 +154,7 @@ static THD_FUNCTION(Thread1, arg)
       b.mode = setting.mode;
       uint32_t *f = (uint32_t *)&b;
       uint32_t *t = &backup;
-      int i = 5;
+      int i = USED_BACKUP_SIZE;
       while (i--)
         *t++ = *f++;
 
@@ -2576,7 +2576,7 @@ int main(void)
 #endif
   if(config_recall()) {
     uint32_t *f = &backup;     // Clear backup when no valid config data
-    int i = 5;
+    int i = USED_BACKUP_SIZE;
     while (i--)
       *f++ = 0;
   }
@@ -2632,10 +2632,10 @@ int main(void)
     backup_t b;
     uint32_t *f = &backup;
     uint32_t *t = (uint32_t *)&b;
-    int i = 5;
+    int i = USED_BACKUP_SIZE;
     while (i--)
       *t++ = *f++;
-#if 0       // Set mode not working reliably
+#ifdef TINYSA4       // Set mode not working reliably
     set_mode(b.mode);
     switch (b.mode) {
     case M_LOW:

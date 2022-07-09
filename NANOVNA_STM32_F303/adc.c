@@ -21,7 +21,7 @@
 #include "hal.h"
 #include "nanovna.h"
 
-#define ADC_FULL_SCALE  3000
+#define ADC_FULL_SCALE  3300
 #define F303_ADC_VREF_ALWAYS_ON
 
 #define ADC_CHSELR_VREFINT      ADC_CHANNEL_IN18
