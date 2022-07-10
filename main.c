@@ -37,6 +37,7 @@ int32_t frequencyExtra;
 // #define VNA_SHELL_THREAD
 
 static BaseSequentialStream *shell_stream;
+threads_queue_t shell_thread;
 
 // Shell new line
 #define VNA_SHELL_NEWLINE_STR    "\r\n"
@@ -193,16 +194,18 @@ static THD_FUNCTION(Thread1, arg)
     // Run Shell command in sweep thread
     if (shell_function) {
       operation_requested = OP_NONE; // otherwise commands  will be aborted
-      shell_function(shell_nargs - 1, &shell_args[1]);
-      shell_function = 0;
-      osalThreadSleepMilliseconds(10);
+      do {
+        shell_function(shell_nargs - 1, &shell_args[1]);
+        shell_function = 0;
+        // Resume shell thread
+        osalThreadDequeueNextI(&shell_thread, MSG_OK);
+      } while (shell_function);
       if (dirty) {
         if (MODE_OUTPUT(setting.mode))
           draw_menu();    // update screen if in output mode and dirty
         else
           redraw_request |= REDRAW_CAL_STATUS | REDRAW_AREA | REDRAW_FREQUENCY;
       }
-//      continue;
     }
 //    START_PROFILE
     // Process UI inputs
@@ -2184,7 +2187,11 @@ void shell_reset_console(void){
 }
 
 
-static void shell_init_connection(void){
+static void shell_init_connection(void) {
+/*
+ * Init shell thread object (need for switch threads)
+ */
+  osalThreadQueueObjectInit(&shell_thread);
 /*
  * Initializes and start serial-over-USB CDC driver SDU1, connected to USBD1
  */
@@ -2333,9 +2340,10 @@ static void VNAShell_executeLine(char *line)
       shell_function = scp->sc_function;
       operation_requested|=OP_CONSOLE;      // this will abort current sweep to give priority to the new request
       // Wait execute command in sweep thread
-      do {
-        osalThreadSleepMilliseconds(10);
-      } while (shell_function);
+      osalThreadEnqueueTimeoutS(&shell_thread, TIME_INFINITE);
+//      do {
+//        osalThreadSleepMilliseconds(10);
+//      } while (shell_function);
     } else {
       operation_requested = false; // otherwise commands  will be aborted
       scp->sc_function(shell_nargs - 1, &shell_args[1]);
