@@ -323,6 +323,7 @@ void spi_init(void)
 static uint16_t current_spi_mode;
 void set_SPI_mode(uint16_t mode){
   if (current_spi_mode == mode) return;
+  dmaChannelWaitCompletionRxTx();
   // Disable current mode
   switch(current_spi_mode){
     case SPI_MODE_LCD:
