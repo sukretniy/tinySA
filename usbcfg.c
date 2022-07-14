@@ -235,8 +235,6 @@ static const USBEndpointConfig ep1config = {
   0x0040,
   &ep1instate,
   &ep1outstate,
-  2,
-  NULL
 };
 
 /**
@@ -256,8 +254,6 @@ static const USBEndpointConfig ep2config = {
   0x0000,
   &ep2instate,
   NULL,
-  1,
-  NULL
 };
 
 /*

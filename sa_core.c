@@ -2095,7 +2095,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
 //        actual_drive = 0;
       else if (f < DRIVE1_MAX_FREQ) // below 1.2GHz
         actual_drive = 1;
-      else if (f < DRIVE2_MAX_FREQ)  // below 2GHz
+      else if (f < DRIVE2_MAX_FREQ)  // below 2.1GHz
         actual_drive = 2;
       else
         actual_drive = 3;
@@ -7005,7 +7005,7 @@ const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 #ifdef TINYSA4
 
 #define JUMP_FREQS 4
-const freq_t jump_freqs[JUMP_FREQS] = {2000000, 2000000, 1200000000, 2100000000, };
+const freq_t jump_freqs[JUMP_FREQS] = {2000000, 2000000, DRIVE1_MAX_FREQ, DRIVE2_MAX_FREQ, };
 
 
 void set_jump_config(int i, float v) {
@@ -7039,7 +7039,13 @@ float get_jump_config(int i) {
   return 0;
 }
 
-enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_ULTRA990, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
+void calibration_busy(void) {
+  ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+  ili9341_drawstring_7x13("Calibration busy", 40, 200);
+}
+
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
+#define DRIRECT_CAL_FREQ    510000000   // 510MHz
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
 #endif
@@ -7074,6 +7080,7 @@ void calibrate(void)
     test_prepare(TEST_JUMP);
     set_RBW(1000);
     set_auto_reflevel(true);
+    setting.repeat = 10;
     //setting.scale = 1;
     if (i <= 1) {
       if (i == 1)
@@ -7087,10 +7094,12 @@ void calibrate(void)
     }
     test_acquire(TEST_JUMP);                        // Acquire test
     set_jump_config(i, get_jump_config(i) + measure_jump(i));
-    chThdSleepMilliseconds(1000);
+    calibration_busy();
+    chThdSleepMilliseconds(500);
     test_acquire(TEST_JUMP);                        // Acquire test
     set_jump_config(i, get_jump_config(i) + measure_jump(i));
-    chThdSleepMilliseconds(1000);
+    calibration_busy();
+    chThdSleepMilliseconds(500);
   }
   setting.scale = 10;
   set_trace_scale(10);
@@ -7123,13 +7132,14 @@ again:
 #endif
       set_sweep_frequency(ST_CENTER, 30000000);
 #ifdef TINYSA4
-      set_sweep_frequency(ST_SPAN,    10000);
+      set_sweep_frequency(ST_SPAN,    1000);
       markers[0].mtype |= M_AVER;
+      setting.repeat = 100;
 #else
       set_sweep_frequency(ST_SPAN,    5000000);
+      setting.repeat = 10;
 #endif
       setting.rbw_x10 = 3000;
-      setting.repeat = 10;
       int test_case = TEST_POWER;
 
 //      setting.atten_step = false;
@@ -7156,27 +7166,28 @@ again:
         test_output = true;
         test_path = 1;      // Normal lna path
         break;
-      case CS_ULTRA990:
-        set_sweep_frequency(ST_CENTER, 150000000);
+      case CS_DIRECT_REF:
+        set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
         test_output = true;
         test_path = 0;      // Normal path at 900MHz
         break;
       case CS_DIRECT:
-        set_sweep_frequency(ST_CENTER, 150000000);
+        set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
         test_output = true;
         test_path = 4;      // Direct path at 900MHz
         break;
       case CS_DIRECT_LNA:
-        set_sweep_frequency(ST_CENTER, 150000000);
+        set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
         test_output = true;
         test_path = 5;      // Direct lna path at 900MHz
         break;
 #endif
       }
       set_average(0, AV_100);
-      for (int m=1; m<3; m++) {
+      for (int m=1; m<=1; m++) {
         test_acquire(test_case);                        // Acquire test
         local_test_status = test_validate(test_case);
+        calibration_busy();
       }
       local_test_status = TS_PASS;
 #else
@@ -7221,24 +7232,25 @@ again:
       if (k ==0 || k == 1) {
         if (calibration_stage == CS_NORMAL && peakLevel < -50) {
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
-          ili9341_drawstring_7x13("Signal level too low", 30, 140);
-          ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 160);
+          ili9341_drawstring_7x13("Signal level too low", 30, 200);
+          ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 220);
           goto quit;
         }
         //    chThdSleepMilliseconds(1000);
         if (local_test_status != TS_PASS) {
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
-          ili9341_drawstring_7x13("Calibration failed", 30, 140);
+          ili9341_drawstring_7x13("Calibration failed", 30, 200);
           goto quit;
         } else {
 #ifdef TINYSA4
-          if (calibration_stage == CS_ULTRA990)
+          if (calibration_stage == CS_DIRECT_REF)
             direct_level = marker_to_value(0);
           else if (calibration_stage == CS_DIRECT || calibration_stage == CS_DIRECT_LNA)
             set_actual_power(direct_level);
           else
 #endif
             set_actual_power(CAL_LEVEL);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
+          calibration_busy();
           chThdSleepMilliseconds(500);
         }
       }
@@ -7282,9 +7294,9 @@ again:
 #endif
   config_save();
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Calibration complete", 40, 140);
+  ili9341_drawstring_7x13("Calibration complete", 40, 200);
 quit:
-  ili9341_drawstring_7x13("Touch screen to continue", 40, 200);
+  ili9341_drawstring_7x13("Touch screen to continue", 40, 220);
   wait_user();
   ili9341_clear_screen();
   set_sweep_points(old_sweep_points);
