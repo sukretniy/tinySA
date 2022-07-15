@@ -107,7 +107,7 @@ uint8_t completed = false;
 uint8_t enable_after_complete = 0;
 
 #ifdef TINYSA4
-static THD_WORKING_AREA(waThread1, 1124);
+static THD_WORKING_AREA(waThread1, 1224);
 #else
 static THD_WORKING_AREA(waThread1, 768);
 bool has_esd = false;
@@ -951,7 +951,7 @@ config_t config = {
 #endif
 #ifdef TINYSA3
   .vbat_offset = 500,
-  .low_level_offset =       100,    // Uncalibrated
+  .low_level_offset =       0,    // Uncalibrated
   .high_level_offset =      100,    // Uncalibrated
   .correction_frequency = { { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
                             { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 }},
@@ -978,14 +978,15 @@ config_t config = {
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
   .ultra_start = ULTRA_AUTO,
-  .low_level_offset =       100.0,    // Uncalibrated
-  .high_level_offset =      100,      // Uncalibrated
+  .low_level_offset =       0,    // Uncalibrated
+  .high_level_offset =      0,      // Uncalibrated
   .lna_level_offset = 0,
-  .low_level_output_offset =   100.0,    // Uncalibrated
+  .low_level_output_offset =   100,    // Uncalibrated
   .high_level_output_offset =  0,    // Uncalibrated, but checking code is not yet present
   .harmonic_level_offset = 10.5,
   .shift1_level_offset = 0.5,
   .shift2_level_offset = 3,
+  .shift3_level_offset = 0,
   .drive1_level_offset = 0,
   .drive2_level_offset = -1.5,
   .drive3_level_offset = -0.5,
@@ -1025,6 +1026,7 @@ config_t config = {
   .cor_wfm = 0,
   .cor_nfm = 0,
   .ultra = false,
+  .is_calibrated = false,
 #ifndef __NEW_SWITCHES__
   .high_out_adf4350 = true,
 #endif
@@ -2453,8 +2455,10 @@ static void dac_init(void){
 }
 
 #ifdef TINYSA4__
+#undef PULSE
 #define PULSE {   palClearPad(GPIOB, 14); my_microsecond_delay(2); palSetPad(GPIOB, 14); }
 #else
+#undef PULSE
 #define PULSE
 #endif
 

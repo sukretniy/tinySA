@@ -149,6 +149,7 @@
 #define DRIVE0_MAX_FREQ      600000000ULL            // LO drive 0
 #define DRIVE1_MAX_FREQ     1200000000ULL           // LO drive 1
 #define DRIVE2_MAX_FREQ     2100000000ULL           // LO drive 2
+#define LOW_SHIFT_FREQ      2000000ULL              // shift IF to avoid zero Hz within IF
 
 #define USE_SHIFT2_RBW  4000        // use shift2_level_offset if actual_rbw_x10 is larger then this.
 #ifdef __NEW_SWITCHES__
@@ -338,7 +339,7 @@ extern bool level_error;
 #else
 extern const int8_t drive_dBm [];
 #endif
-extern int test_output;
+extern int force_signal_path;
 extern int test_output_switch;
 extern int test_output_drive;
 extern int test_output_attenuate;
@@ -367,7 +368,7 @@ int search_is_greater(void);
 void set_auto_attenuation(void);
 void set_auto_reflevel(bool);
 int is_paused(void);
-void set_actual_power(float);
+float set_actual_power(float);
 void SetGenerate(int);
 void set_RBW(uint32_t rbw_x10);
 #ifdef __VBW__
@@ -719,6 +720,7 @@ typedef struct config {
   float harmonic_level_offset;
   float shift1_level_offset;
   float shift2_level_offset;
+  float shift3_level_offset;
   float drive1_level_offset;
   float drive2_level_offset;
   float drive3_level_offset;
@@ -750,6 +752,7 @@ typedef struct config {
   freq_t direct_stop;
   int8_t    ultra;
 #endif
+  uint8_t   is_calibrated;
   uint8_t   _mode;
   int8_t    cor_am;
   int8_t    cor_wfm;
@@ -1669,7 +1672,7 @@ enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};
 extern const char *path_text[];
 extern int signal_path;
 extern int test_path;
-extern int test_output;
+extern int force_signal_path;
 
 
 extern void ADF4351_mux(int R);

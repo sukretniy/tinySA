@@ -698,7 +698,7 @@ static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (config.low_level_offset == 100)
+  if (!config.is_calibrated)
     return;
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
@@ -714,7 +714,7 @@ static UI_FUNCTION_CALLBACK(menu_lna_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (config.low_level_offset == 100)
+  if (!config.is_calibrated)
     return;
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
@@ -730,7 +730,7 @@ static UI_FUNCTION_CALLBACK(menu_lna_u_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (config.low_level_offset == 100)
+  if (!config.is_calibrated)
     return;
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
@@ -746,7 +746,7 @@ static UI_FUNCTION_CALLBACK(menu_ultra_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (config.low_level_offset == 100)
+  if (!config.is_calibrated)
     return;
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
@@ -1021,7 +1021,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
   if (b){
     if (data == 255) {
       plot_printf(mode_string, sizeof mode_string, "%s %s %s %s",
-                  (!test_output ? "" : path_text[test_path]),
+                  (!force_signal_path ? "" : path_text[test_path]),
                   (get_sweep_frequency(ST_START) < MINIMUM_DIRECT_FREQ ? "SINUS" : "" ),
                   (get_sweep_frequency(ST_STOP) >= MINIMUM_DIRECT_FREQ ? "SQUARE WAVE" : ""),
                   (get_sweep_frequency(ST_STOP) > MAX_LOW_OUTPUT_FREQ && setting.mixer_output ? "MIXER" : ""));
@@ -3978,7 +3978,7 @@ redraw_cal_status:
     y += 2*YSTEP + YSTEP/2;
   }
 
-  if (test_output){
+  if (force_signal_path){
     ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
     lcd_printf(x, y, "Path:\n%s", path_text[signal_path]);
     y += 2*YSTEP + YSTEP/2;
