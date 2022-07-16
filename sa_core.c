@@ -7056,7 +7056,7 @@ void calibration_busy(void) {
 }
 
 enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
-#define DRIRECT_CAL_FREQ    510000000   // 510MHz
+#define DRIRECT_CAL_FREQ    990000000   // 990MHz
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
 #endif
@@ -7158,34 +7158,35 @@ void calibrate(void)
           break;
         case CS_SWITCH:
           setting.atten_step = true;
+          force_signal_path = false;
           break;
 #ifdef TINYSA4
         case CS_ULTRA:
-          force_signal_path = true;
           test_path = 2;      // Ultra path
+          force_signal_path = true;
           break;
         case CS_ULTRA_LNA:
-          force_signal_path = true;
           test_path = 3;      // Ultra lna path
+          force_signal_path = true;
           break;
         case CS_LNA:
-          force_signal_path = true;
           test_path = 1;      // Normal lna path
+          force_signal_path = true;
           break;
         case CS_DIRECT_REF:
           set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
+          test_path = 2;      // Ultra
           force_signal_path = true;
-          test_path = 0;      // Normal path at 900MHz
           break;
         case CS_DIRECT:
           set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
-          force_signal_path = true;
           test_path = 4;      // Direct path at 900MHz
+          force_signal_path = true;
           break;
         case CS_DIRECT_LNA:
           set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
-          force_signal_path = true;
           test_path = 5;      // Direct lna path at 900MHz
+          force_signal_path = true;
           break;
 #endif
         }
