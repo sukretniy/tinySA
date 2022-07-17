@@ -1400,6 +1400,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
     //      reset_settings(setting.mode);
     if (0) {
     no_measurement:
+      drawMessageBox("Error", "Incorrect input", 2000);
+      redraw_request|= REDRAW_AREA;
+
       data = M_OFF;
     }
     if (setting.measurement == M_LINEARITY) {
@@ -1511,7 +1514,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
 #ifdef TINYSA3
       center = uistat.value;
 #endif
+#ifdef TINYSA4
+      kp_help_text = "Modulation frequency: 500hz .. 10kHz";
+#else
       kp_help_text = "Modulation frequency: 3 .. 10kHz";
+#endif
       ui_mode_keypad(KM_SPAN);
 //      if (uistat.value < 3000)
 //        break;
@@ -1539,9 +1546,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_CENTER);
       set_marker_frequency(0, uistat.value);
 #ifdef TINYSA4
-      kp_help_text = "Modulation frequency: 1 .. 10kHz";
+      kp_help_text = "Modulation frequency: 500Hz .. 10kHz";
       ui_mode_keypad(KM_SPAN);
-      if (uistat.value < 1000 || uistat.value > 10000)
+      if (uistat.value < 500 || uistat.value > 10000)
         goto no_measurement;
       set_RBW(uistat.value/300);
 #else
@@ -2178,6 +2185,9 @@ static void choose_active_marker(void)
     }
   active_marker = MARKER_INVALID;
 }
+#ifdef TINYSA4
+#define __HARMONIC__
+#endif
 
 #ifdef __HARMONIC__
 static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
@@ -2797,6 +2807,9 @@ static const menuitem_t menu_settings3[] =
 #ifdef __WAIT_CTS_WHILE_SLEEPING__
   { MT_ADV_CALLBACK,     0,     "SLEEP\nWAIT",    menu_sleep_acb},
 #endif
+#ifdef __HARMONIC__
+  { MT_SUBMENU          ,0,               "HARMONIC",         menu_harmonic},
+#endif
 //  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
@@ -2845,9 +2858,6 @@ static const menuitem_t menu_settings4[] =
 //  { MT_CALLBACK,        1 ,     "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
   { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
-#ifdef __HARMONIC__
-  { MT_SUBMENU,0,               "HARMONIC",         menu_harmonic},
-#endif
   { MT_ADV_CALLBACK,     0,     "LINEAR\nAVERAGING",          menu_linear_averaging_acb},
 //  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_KEYPAD,   KM_DIRECT_START,     "DSTART\n\b%s", ""},

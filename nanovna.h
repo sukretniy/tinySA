@@ -90,7 +90,7 @@
 #define __USE_SD_CARD__           // Enable SD card support
 #define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root)
 #define __LCD_BRIGHTNESS__        // LCD or hardware allow change brightness, add menu item for this
-//#define __HARMONIC__
+#define __HARMONIC__
 #define __NOISE_FIGURE__
 #define __VBW__
 #define __SWEEP_RESTART__

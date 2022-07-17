@@ -642,9 +642,10 @@ void ADF4351_enable_aux_out(int s)
 {
   if (bitRead(registers[4],8) == (s & 0x01))
     return;
-  if (s)
+  if (s) {
     bitSet(registers[4], 8);
-  else
+    maskedWrite(registers[4],6, 0x3, 3); // Max drive aux out
+  } else
     bitClear(registers[4], 8);
   ADF4351_Set(0);
   osalThreadSleepMilliseconds(10);

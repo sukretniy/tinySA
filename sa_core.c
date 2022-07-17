@@ -397,7 +397,7 @@ void set_input_path(freq_t f)
     enable_direct(false);
     enable_high(false);
     common:
-    enable_ADF_output(true, setting.tracking);
+    enable_ADF_output(true, setting.tracking_output);
     common2:
     if (SI4463_is_in_tx_mode())
       SI4463_init_rx();
@@ -454,7 +454,10 @@ void update_min_max_freq(void)
 #ifdef __ULTRA__
     if (ultra)
 #ifdef TINYSA4
-      maxFreq = 12000000000; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
+      if (setting.harmonic)
+        maxFreq = setting.harmonic * MAX_LO_FREQ - DEFAULT_IF; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
+      else
+        maxFreq = ULTRA_MAX_FREQ;
 #else
       maxFreq = 3000000000; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
 #endif
