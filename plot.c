@@ -1100,7 +1100,11 @@ draw_cell(int m, int n)
 //  PULSE;
 #endif
 // Draw trigger line
-  if (setting.trigger != T_AUTO) {
+  if (setting.trigger != T_AUTO
+#ifdef __DRAW_LINE__
+      || setting.draw_line
+#endif
+      ) {
 	c = GET_PALTETTE_COLOR(LCD_TRIGGER_COLOR);
     int tp = get_trigger_level() - y0;
     if (tp>=0 && tp < h)

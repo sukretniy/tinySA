@@ -268,7 +268,7 @@ resume_sweep(void)
   sweep_mode |= SWEEP_ENABLE;
 }
 
-static inline void
+void
 resume_once(uint16_t c)
 {
   sweep_once_count = c;

@@ -58,6 +58,7 @@
 //#define __SIMULATION__
 #define __SCROLL__                // Add waterfall option
 #define __LEVEL_METER__
+#define __DRAW_LINE__
 #define __ICONS__
 #define __MEASURE__
 #define __LINEARITY__             // Not available
@@ -264,8 +265,10 @@ void set_marker_frequency(int m, freq_t f);
 void set_marker_time(int m, float f);
 void set_marker_index(int m, int16_t idx);
 void toggle_sweep(void);
+void resume_once(uint16_t c);
 void toggle_mute(void);
 void toggle_pulse(void);
+void toggle_draw_line(void);
 void load_default_properties(void);
 
 enum {
@@ -1128,6 +1131,7 @@ typedef struct setting
   uint8_t harmonic;            // used harmonic number 1...5
   uint8_t fast_speedup;        // 0 - 20
   uint8_t  _traces;            // enabled traces flags
+  uint8_t   draw_line;          // uses the trigger level setting
 
   uint16_t linearity_step;     // range equal POINTS_COUNT
   uint16_t _sweep_points;

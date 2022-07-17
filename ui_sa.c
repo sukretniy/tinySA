@@ -474,7 +474,7 @@ static const struct {
 #endif
 [KM_REPEAT]       = {keypads_positive    , "SAMPLE\nREPEAT"},    // KM_REPEA #15
 [KM_EXT_GAIN]     = {keypads_plusmin     , "EXT\nGAIN"},    // KM_EXT_GAIN
-[KM_TRIGGER]      = {keypads_plusmin_unit, "TRIGGER\nLEVEL"},    // KM_TRIGGER
+[KM_TRIGGER]      = {keypads_plusmin_unit, "LEVEL"},    // KM_TRIGGER
 [KM_LEVELSWEEP]   = {keypads_plusmin     , "LEVEL\nSWEEP"},    // KM_LEVELSWEEP
 [KM_SWEEP_TIME]   = {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
 [KM_OFFSET_DELAY] = {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY #20
@@ -1783,10 +1783,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     else if (data == 2)               // freeze
       b->icon = setting.stored[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     else if (data == 5) {
-      if (setting.subtract[current_trace])
+      if (setting.subtract[current_trace]) {
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.subtract[current_trace]);
-      else
+        b->icon = BUTTON_ICON_CHECK;
+      } else {
         plot_printf(b->text, sizeof(b->text), "SUBTRACT\nOFF");
+        b->icon = BUTTON_ICON_NOCHECK;
+      }
       // b->icon = setting.subtract[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;  // icon not needed
     } else if (data == 4) {
       if (current_trace == TRACES_MAX-1)
@@ -1794,6 +1797,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
       else
         b->icon = setting.normalized[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     } else if (data == 3) {
+      b->icon = setting.average[current_trace] != AV_OFF ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
       plot_printf(b->text, sizeof(b->text), "CALC\n%s", averageText[setting.average[current_trace]]);
       // b->icon = setting.average[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK; // icon not needed
     }
@@ -1903,14 +1907,31 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   (void)item;
   (void)data;
   if (b){
+#ifdef TINYSA4
+    if (!(sweep_mode & SWEEP_ENABLE)){
+      plot_printf(b->text, sizeof(b->text), "SINGLE\nSWEEP");
+      b->icon = (sweep_mode & SWEEP_ONCE) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    } else {
+      plot_printf(b->text, sizeof(b->text), "WATER\nFALL");
+      b->icon = setting.waterfall ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    }
+#else
     b->icon = setting.waterfall ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+#endif
     return;
   }
-  setting.waterfall++; if (setting.waterfall>W_BIG)setting.waterfall = W_OFF;
-  if (setting.waterfall != W_OFF)
-    setting.level_meter = false;
-  set_waterfall();
-  ui_mode_normal();
+#ifdef TINYSA4
+  if (is_paused()) {
+    resume_once(1);
+  } else
+#endif
+  {
+    setting.waterfall++; if (setting.waterfall>W_BIG)setting.waterfall = W_OFF;
+    if (setting.waterfall != W_OFF)
+      setting.level_meter = false;
+    set_waterfall();
+    ui_mode_normal();
+  }
 }
 
 #ifdef __LEVEL_METER__
@@ -2278,6 +2299,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_pulse_acb){
   toggle_pulse();
 }
 
+#ifdef __DRAW_LINE__
+static UI_FUNCTION_ADV_CALLBACK(menu_settings_draw_line_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = setting.draw_line ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  toggle_draw_line();
+  if (setting.draw_line) {
+    kp_help_text = "Level";
+    ui_mode_keypad(KM_TRIGGER);
+    set_trigger(T_AUTO);
+  }
+}
+#endif
 #ifdef __HAM_BAND__
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_ham_bands){
   (void)item;
@@ -2333,7 +2370,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
   (void) data;
   (void) item;
   if (b){
-    b->icon = is_paused() ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->icon = !(sweep_mode & SWEEP_ENABLE) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     return;
   }
   toggle_sweep();
@@ -3112,9 +3149,12 @@ static const menuitem_t menu_traces[] =
 
 static const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK,0,             "PAUSE\nSWEEP",    menu_pause_acb},
-  { MT_ADV_CALLBACK,1,             "WATER\nFALL",     menu_waterfall_acb},
+  { MT_ADV_CALLBACK,1,             MT_CUSTOM_LABEL,   menu_waterfall_acb},
 #ifdef __LEVEL_METER__
   { MT_ADV_CALLBACK,1,             "BIG\nNUMBER",     menu_level_meter_acb},
+#endif
+#ifdef __DRAW_LINE__
+  { MT_ADV_CALLBACK,1,             "DRAW\nLINE",      menu_settings_draw_line_acb},
 #endif
 #ifdef __VBW__
   { MT_SUBMENU,     0,             "VBW",             menu_vbw},
@@ -3628,7 +3668,6 @@ set_numeric_value(void)
       set_trigger(T_NORMAL);
     set_trigger_level(to_dBm(uistat.value));
     completed = true;
-
     break;
   case KM_GRIDLINES:
     set_gridlines(uistat.value);

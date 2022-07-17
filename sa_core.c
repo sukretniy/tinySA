@@ -577,6 +577,9 @@ void reset_settings(int m)
   setting.harmonic = 0;
 #endif
 #endif
+#ifdef __DRAW_LINE__
+  setting.draw_line = false;
+#endif
   setting.show_stored = 0;
   setting.auto_attenuation = false;
   setting.normalize_level = 0.0;
@@ -894,6 +897,14 @@ void toggle_pulse(void)
   setting.pulse = !setting.pulse;
   dirty = true;
 }
+
+#ifdef __DRAW_LINE__
+void toggle_draw_line(void)
+{
+  setting.draw_line = !setting.draw_line;
+  dirty = true;
+}
+#endif
 
 void toggle_debug_avoid(void)
 {
