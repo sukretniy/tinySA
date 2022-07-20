@@ -1444,8 +1444,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       freq_t right =  uistat.value;
       set_sweep_frequency(ST_CENTER, (left+right)/2);
       freq_t local_span = (right - left)*10;
+#ifdef TINYSA4
+      if (local_span < 3000)
+        local_span = 3000;
+#else
       if (local_span < 30000)
         local_span = 30000;
+#endif
       set_sweep_frequency(ST_SPAN, local_span);
       set_average(0,AV_4);
 //      set_measurement(M_OIP3);
@@ -1520,9 +1525,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       kp_help_text = "Modulation frequency: 3 .. 10kHz";
 #endif
       ui_mode_keypad(KM_SPAN);
-//      if (uistat.value < 3000)
-//        break;
       span = uistat.value;
+#ifdef TINYSA4
+      if (span < 500 || span > 10000)
+        goto no_measurement;
+#endif
 #ifdef TINYSA4
       set_RBW((span * 5 / 50) / 100);
 #endif

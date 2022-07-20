@@ -1379,6 +1379,8 @@ set_sweep_frequency(int type, freq_t freq)
         center = START_MIN + span;
       if (center > STOP_MAX - span)
         center = STOP_MAX - span;
+      if (span != 0 && span < sweep_points)
+        span = sweep_points;
       setting.frequency0 = center - span;
       setting.frequency1 = center + span;
       break;

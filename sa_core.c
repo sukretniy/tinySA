@@ -3964,7 +3964,7 @@ again:                                                              // Spur redu
           if (setting.mode == M_GENLOW) {
             if (local_modulo == 0) ADF4351_modulo(1000);
             ADF4351_R_counter(3);
-          } else if (lf > 8000000 && lf < 1000000000 && MODE_INPUT(setting.mode)) {
+          } else if (lf > 8000000 && lf < 3000000000 && MODE_INPUT(setting.mode)) {
             if (local_modulo == 0) ADF4351_modulo(4000);
 
             freq_t tf = ((lf + actual_rbw_x10*200) / TCXO) * TCXO;
@@ -5372,8 +5372,13 @@ static volatile int dummy;
       set_marker_index(1, r);
       freq_t lf = markers[0].frequency;
       freq_t rf = markers[1].frequency;
-      markers[2].enabled = search_maximum(2, lf - (rf - lf), 12);
-      markers[3].enabled = search_maximum(3, rf + (rf - lf), 12);
+#ifdef TINYSA4
+#define OIP3_SPAN   40
+#else
+#define OIP3_SPAN   12
+#endif
+      markers[2].enabled = search_maximum(2, lf - (rf - lf), 40);
+      markers[3].enabled = search_maximum(3, rf + (rf - lf), 40);
     } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
       // Position phase noise marker at requested offset
       set_marker_index(1, markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4));
