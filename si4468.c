@@ -1590,8 +1590,8 @@ int16_t Si446x_RSSI(void)
 #endif
 #endif
     if (--i <= 0) break;
-    if (setting.repeat > 3)
-      my_microsecond_delay(100);
+    if (setting.repeat > 1)
+      my_microsecond_delay(SI4432_step_delay);
   }while(1);
 
   if (setting.repeat > 1 && setting.exp_aver == 1)
@@ -1780,6 +1780,19 @@ static const uint8_t if_freq_low[6] =  { 0xc0, 0x60, 0x80, 0x40, 0, 0x80};
   SI4463_do_api(data3, sizeof(data3), NULL, 0);
 }
 
+void SI4463_set_modem_DSM(void) {
+// Set properties:           MODEM_DSM_CTRL
+// Number of properties:     1
+// Group ID:                 0x20
+// Start ID:                 0x02
+// Descriptions:
+//   MODEM_DSM_CTRL - Miscellaneous control bits for the Delta-Sigma Modulator (DSM) in the PLL Synthesizer.
+//#define MODEM_DSM_CTRL 0x11, 0x20, 0x01, 0x02, 0x07
+
+  static const uint8_t data3[] = { 0x11, 0x20, 0x01, 0x02, 0x03};
+  SI4463_do_api((uint8_t *)data3, sizeof(data3), NULL, 0);
+}
+
 
 uint16_t force_rbw(int f)
 {
@@ -1794,6 +1807,7 @@ uint16_t force_rbw(int f)
     i += config[i]+1;
   }
   if (prev_band != 0) SI4463_set_IF(prev_band);         // restore IF frequency if not in band zero
+  if (setting.frequency_step < 100) SI4463_set_modem_DSM();   // Set small frequency steps if needed
   SI4463_clear_int_status();
   SI4463_short_start_rx();           // This can cause recalibration
 //  SI4463_wait_for_cts();
