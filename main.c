@@ -1346,19 +1346,21 @@ set_sweep_frequency(int type, freq_t freq)
   if (freq > STOP_MAX)
     freq = STOP_MAX;
   bool cw_mode = FREQ_IS_CW(); // remember old mode
-  freq_t center, span;
+  freq_t center, span=0;
   switch (type) {
     case ST_START:
       setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
       setting.frequency0 = freq;
       // if start > stop then make start = stop
       if (setting.frequency1 < freq) setting.frequency1 = freq;
+      span = (setting.frequency1 - setting.frequency0)/2;
       break;
     case ST_STOP:
       setting.freq_mode &= ~FREQ_MODE_CENTER_SPAN;
       setting.frequency1 = freq;
       // if start > stop then make start = stop
       if (setting.frequency0 > freq) setting.frequency0 = freq;
+      span = (setting.frequency1 - setting.frequency0)/2;
       break;
     case ST_CENTER:
       setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
@@ -1379,16 +1381,22 @@ set_sweep_frequency(int type, freq_t freq)
         center = START_MIN + span;
       if (center > STOP_MAX - span)
         center = STOP_MAX - span;
-      if (span != 0 && span < sweep_points)
-        span = sweep_points;
       setting.frequency0 = center - span;
       setting.frequency1 = center + span;
       break;
     case ST_CW:
+    force_cw:
       setting.freq_mode |= FREQ_MODE_CENTER_SPAN;
       setting.frequency0 = freq;
       setting.frequency1 = freq;
+      span = 0;
       break;
+  }
+  if (span !=0 && span < sweep_points/2) {
+    freq = (setting.frequency1 + setting.frequency0)/2;
+    if (freq & 0x0001)
+      freq++;
+    goto force_cw;
   }
   if (!cw_mode && FREQ_IS_CW()) // switch to CW mode
     setting.sweep_time_us = 0;  // use minimum as start

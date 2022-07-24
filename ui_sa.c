@@ -1574,10 +1574,16 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       set_RBW(uistat.value/100);
 #endif
       // actual_rbw_x10
+#ifdef TINYSA4
       kp_help_text = "Frequency deviation: 3 .. 500kHz";
+#define MINIMUM_DEVIATION   1500
+#else
+      kp_help_text = "Frequency deviation: 500Hz .. 500kHz";
+#define MINIMUM_DEVIATION   12000
+#endif
       ui_mode_keypad(KM_SPAN);
-      if (uistat.value < 12000)
-        uistat.value = 12000;   // minimum span
+      if (uistat.value < MINIMUM_DEVIATION)
+        uistat.value = MINIMUM_DEVIATION;   // minimum span
       set_sweep_frequency(ST_SPAN, uistat.value*4);
 //      set_measurement(M_FM);
       break;
@@ -2715,6 +2721,9 @@ const menuitem_t menu_marker_search[] = {
   { MT_CALLBACK, 3, "MAX\n" S_RARROW" RIGHT", menu_marker_search_cb },
   { MT_ADV_CALLBACK, 0, "ENTER\n%s",          menu_enter_marker_acb},
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING",menu_marker_modify_acb },
+#ifdef TINYSA4
+  { MT_KEYPAD,   KM_NOISE,      "PEAK\n\b%s",   "2..20 dB"},
+#endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 
@@ -2865,7 +2874,6 @@ static const menuitem_t menu_settings3[] =
 #ifndef __NEW_SWITCHES__
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
 #endif
-  { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
   { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "10G=auto"},
   { MT_ADV_CALLBACK,     0,     "ENABLE\nDIRECT",    menu_direct_acb},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
@@ -2890,8 +2898,6 @@ static const menuitem_t menu_settings3[] =
   { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
 #endif
   { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
-  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
-  { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
   { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
 #ifdef __HARMONIC__
   { MT_SUBMENU | MT_HIGH,0,               "HARMONIC",         menu_harmonic},
@@ -2945,7 +2951,6 @@ static const menuitem_t menu_settings2[] =
   { MT_KEYPAD,   KM_ATTACK,      "ATTACK\n\b%s",   "0..100000ms"},
 #endif
 #ifdef TINYSA4
-  { MT_KEYPAD,   KM_NOISE,      "NOISE LEV\n\b%s",   "2..20 dB"},
   { MT_KEYPAD,   KM_30MHZ,      "30MHz*100\n\b%s", "Enter actual 30MHz * 100"},
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
@@ -3002,18 +3007,10 @@ static const menuitem_t menu_actual_power[] =
 static const menuitem_t menu_settings[] =
 {
   { MT_SUBMENU, 0,              "LEVEL\nCORRECTION",  menu_actual_power},
-  { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ\n\b%s",           "0=auto IF"},
   { MT_SUBMENU,0,               "SCAN\nSPEED",        menu_scanning_speed},
-#ifndef TINYSA4
-  { MT_KEYPAD, KM_REPEAT,       "SAMPLE REP\n\b%s",    "1..100"},
-#endif
 #ifdef TINYSA4
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
-  { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
-#ifdef __USE_SERIAL_CONSOLE__
-  { MT_SUBMENU,  0, "CONNECTION", menu_connection},
-#endif
 #else
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
 #endif
@@ -3100,6 +3097,21 @@ const menuitem_t menu_date_time[] = {
 };
 #endif
 
+static const menuitem_t menu_config2[] =
+{
+ { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
+ { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
+#ifdef __ULTRA__
+ { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
+#endif
+ { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+ { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
+#ifdef __USE_SERIAL_CONSOLE__
+ { MT_SUBMENU,          0, "CONNECTION", menu_connection},
+#endif
+ { MT_SUBMENU,          0, "EXPERT\nCONFIG", menu_settings},
+ { MT_NONE,             0, NULL, menu_back} // next-> menu_back
+};
 
 static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0,                        "TOUCH",     menu_touch},
@@ -3111,19 +3123,18 @@ static const menuitem_t menu_config[] = {
 #ifdef __SPUR__
   { MT_ADV_CALLBACK,0,          "%s",          menu_spur_acb},
 #endif
-#ifdef TINYSA4
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE REP\n\b%s",    "1..100"},
-#endif
 #ifdef __LCD_BRIGHTNESS__
   { MT_CALLBACK, 0, "BRIGHTNESS", menu_brightness_cb},
 #endif
 #ifdef __USE_RTC__
   { MT_SUBMENU,  0, "DATE\nTIME", menu_date_time},
 #endif
-  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
+//  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
 #ifndef TINYSA4
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
 #endif
+  { MT_SUBMENU,  0, S_RARROW"MORE", menu_config2},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 #if 0

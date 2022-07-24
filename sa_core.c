@@ -3151,7 +3151,7 @@ static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };
 #endif
 
 #define S1  1.5
-static const int fm_modulation[MODULATION_TABLES][MODULATION_STEPS] =  // Avoid sign changes in NFM
+static const int fm_modulation[MODULATION_TABLES][MODULATION_STEPS] =
 {
 #ifdef TINYSA4
 // { 0*LND,(int)( 1.5*LND ), 2*LND, (int)(1.5*LND), 0*LND, (int)(-1.5*LND), (int)-2*LND, (int)(-1.5*LND)},                // High range, MO_NFM
@@ -3160,7 +3160,7 @@ static const int fm_modulation[MODULATION_TABLES][MODULATION_STEPS] =  // Avoid 
  { 0*HN2D,(int)( 1.5*HN2D ), 2*HN2D, (int)(1.5*HN2D), 0*HN2D, (int)(-1.5*HN2D), (int)-2*HN2D, (int)(-1.5*HN2D)},                // High range, NFM2
  { 0*HN3D,(int)( 1.5*HN3D ), 2*HN3D, (int)(1.5*HN3D), 0*HN3D, (int)(-1.5*HN3D), (int)-2*HN3D, (int)(-1.5*HN3D)},                // High range, NFM3
  { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, MO_WFM
-#else
+#else  // Avoid sign changes in NFM
  { 2*LND,(int)( (2+S1)*LND ), 4*LND, (int)((2+S1)*LND), 2*LND, (int)((2-S1)*LND), 0, (int)((2-S1)*LND)},                // Low range, MO_NFM
  { 0*LWD,(int)( S1*LWD ), 2*LWD, (int)(S1*LWD), 0*LWD, (int)(-S1*LWD), (int)-2*LWD, (int)(-S1*LWD)},    // Low range, MO_WFM
  { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},                // High range, MO_NFM
@@ -7205,7 +7205,7 @@ void calibrate(void)
 #ifdef TINYSA4
         set_sweep_frequency(ST_SPAN,    1000);
         markers[0].mtype |= M_AVER;
-        setting.repeat = 100;
+        setting.repeat = 10;
 #else
         set_sweep_frequency(ST_SPAN,    5000000);
         setting.repeat = 10;

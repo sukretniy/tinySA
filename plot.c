@@ -122,7 +122,6 @@ void update_grid(void)
   }
   if (config.gridlines < 3)
     config.gridlines = 6;
-
   while (gdigit > 1) {
     grid = 5 * gdigit;
     if (fspan / grid >= config.gridlines)
@@ -137,9 +136,13 @@ void update_grid(void)
   }
 
   grid_span = grid;
-  grid_offset = (WIDTH) * ((fstart % grid) / 100) / (fspan / 100);
-  grid_width = (WIDTH) * (grid / 100) / (fspan / 1000);
-
+  if (grid > 1000) {
+    grid_offset = (WIDTH) * ((fstart % grid) / 100) / (fspan / 100);
+    grid_width = (WIDTH) * (grid / 100) / (fspan / 1000);
+  } else {
+    grid_offset = (WIDTH) * ((fstart % grid)) / (fspan);
+    grid_width = (WIDTH) * (grid) / (fspan/10);
+  }
   if (setting.waterfall)
     set_waterfall();
 #ifdef __LEVEL_METER__
