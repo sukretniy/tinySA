@@ -1548,10 +1548,10 @@ static void trace_print_value_string(     // Only used at one place
 #else
   if (bold) format++; // Skip small prefix for bold output
 #endif
-  cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
+  cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"c/Hz":""), (mtype & M_AVER?"/T":""));
 #ifdef __LEVEL_METER__
   if (level_text[0] == 0)
-    plot_printf(level_text, sizeof(level_text), &format[3], v, unit_string[unit_index], (mtype & M_NOISE?"/Hz":"") ,(mtype & M_AVER?"/T":""));
+    plot_printf(level_text, sizeof(level_text), &format[3], v, unit_string[unit_index], (mtype & M_NOISE?"c/Hz":"") ,(mtype & M_AVER?"/T":""));
 #endif
 }
 

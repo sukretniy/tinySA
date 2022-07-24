@@ -1326,9 +1326,11 @@ void limits_update(void)
     int prev = -1;
     if (setting.average[t] != AV_TABLE)
       continue;
+    int count = 0;
     for (int i = 0; i<LIMITS_MAX; i++)
     {
       if (setting.limits[t][i].enabled) {
+        count++;
         while (j < sweep_points && (getFrequency(j) < setting.limits[t][i].frequency /* || setting.limits[t][i].frequency == 0 */)) {
           if (prev < 0)
             measured[t][j] = setting.limits[t][i].level;
@@ -3133,41 +3135,49 @@ static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };
 #define HND  8
 #define LWD  96 // Total WFM deviation is LWD * 4 * 156.25 = 30kHz when below 600MHz
 #define HWD  48
+#define MODULATION_TABLES 4
 #endif
 #ifdef TINYSA4
 //
 //  Offset is 14.4Hz when below 600MHz and 28.8 when above.
 //
-#define LND  96     // low range near FM
-#define HND  48     // High range near FM
-#define LWD  1024   // Low range wide FM
-#define HWD  512    // High range wide FM
+//#define LND  96     // low range near FM
+#define HND  36     // High range near FM
+#define HN2D  44     // High range near FM
+#define HN3D  80     // High range near FM
+//#define LWD  1024   // Low range wide FM
+#define HWD  1300    // High range wide FM 512
+#define MODULATION_TABLES 4
 #endif
 
 #define S1  1.5
-static const int fm_modulation[4][MODULATION_STEPS] =  // Avoid sign changes in NFM
+static const int fm_modulation[MODULATION_TABLES][MODULATION_STEPS] =  // Avoid sign changes in NFM
 {
- { 2*LND,(int)( (2+S1)*LND ), 4*LND, (int)((2+S1)*LND), 2*LND, (int)((2-S1)*LND), 0, (int)((2-S1)*LND)},                // Low range, NFM
- { 0*LWD,(int)( S1*LWD ), 2*LWD, (int)(S1*LWD), 0*LWD, (int)(-S1*LWD), (int)-2*LWD, (int)(-S1*LWD)},    // Low range, WFM
- { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},                // High range, NFM
- { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, WFM
+#ifdef TINYSA4
+// { 0*LND,(int)( 1.5*LND ), 2*LND, (int)(1.5*LND), 0*LND, (int)(-1.5*LND), (int)-2*LND, (int)(-1.5*LND)},                // High range, MO_NFM
+// { 0*LWD,(int)( S1*LWD ), 2*LWD, (int)(S1*LWD), 0*LWD, (int)(-S1*LWD), (int)-2*LWD, (int)(-S1*LWD)},    // Low range, MO_WFM
+ { 0*HND,(int)( 1.5*HND ), 2*HND, (int)(1.5*HND), 0*HND, (int)(-1.5*HND), (int)-2*HND, (int)(-1.5*HND)},                // High range, NFM
+ { 0*HN2D,(int)( 1.5*HN2D ), 2*HN2D, (int)(1.5*HN2D), 0*HN2D, (int)(-1.5*HN2D), (int)-2*HN2D, (int)(-1.5*HN2D)},                // High range, NFM2
+ { 0*HN3D,(int)( 1.5*HN3D ), 2*HN3D, (int)(1.5*HN3D), 0*HN3D, (int)(-1.5*HN3D), (int)-2*HN3D, (int)(-1.5*HN3D)},                // High range, NFM3
+ { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, MO_WFM
+#else
+ { 2*LND,(int)( (2+S1)*LND ), 4*LND, (int)((2+S1)*LND), 2*LND, (int)((2-S1)*LND), 0, (int)((2-S1)*LND)},                // Low range, MO_NFM
+ { 0*LWD,(int)( S1*LWD ), 2*LWD, (int)(S1*LWD), 0*LWD, (int)(-S1*LWD), (int)-2*LWD, (int)(-S1*LWD)},    // Low range, MO_WFM
+ { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},                // High range, MO_NFM
+ { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, MO_WFM
+#endif
 };    // narrow FM modulation avoid sign changes
 
 #undef S1
+#ifdef TINYSA3
 static const int fm_modulation_offset[4] =
 {
-#ifdef TINYSA4
-   5000, //85000,
-   0, //80000,
-   -2700, //165000,
-  0, //160000
-#else
    85000,
    80000,
   165000,
   160000
-#endif
 };
+#endif
 
 
 deviceRSSI_t age[POINTS_COUNT];     // Array used for 1: calculating the age of any max and 2: buffer for fast sweep RSSI values;
@@ -3256,7 +3266,7 @@ static float old_temp = 0.0;
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
-  int modulation_index = 0;
+  int modulation_index;
   int modulation_count_iter = 0;
 #ifdef __NEW_SWITCHES__
 //  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ && f < ultra_start) );
@@ -3545,9 +3555,25 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #endif
       modulation_delay = ((1000000-MO_FREQ_COR)/ MODULATION_STEPS ) / setting.modulation_frequency;     // 8 steps so 1MHz/8
       modulation_counter = 0;
+      modulation_index = 0;
       if (setting.modulation == MO_AM)          // -14 default
         modulation_delay += config.cor_am;
-      else  {                               // must be FM
+      else  {
+#ifdef TINYSA4
+        switch(setting.modulation){
+        case MO_NFM:
+          modulation_delay += config.cor_nfm;
+          break;
+          modulation_delay += config.cor_nfm2;
+          break;
+          modulation_delay += config.cor_nfm3;
+          break;
+          modulation_delay += config.cor_wfm;
+          break;
+        }
+        modulation_index = setting.modulation - MO_NFM;
+#else
+        // must be FM
         if (setting.modulation == MO_WFM) {         // -17 default
           modulation_delay += config.cor_wfm;
           modulation_index = 1;
@@ -3555,16 +3581,18 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           modulation_delay += config.cor_nfm;  // -17 default
           // modulation_index = 0; // default value
         }
+#endif
 #ifdef TINYSA4
-        if ((setting.mode == M_GENLOW) ||
-            (setting.mode == M_GENHIGH  && f > ((freq_t)480000000) ) )
+        if (false)
 #else
         if ((setting.mode == M_GENLOW  && f > ((freq_t)480000000) - DEFAULT_IF) ||
             (setting.mode == M_GENHIGH  && f > ((freq_t)480000000) ) )
 #endif
           modulation_index += 2;
         current_fm_modulation = (int *)fm_modulation[modulation_index];
+#ifdef TINYSA3
         f -= fm_modulation_offset[modulation_index];           // Shift output frequency
+#endif
       }
     }
   }
@@ -4530,10 +4558,12 @@ static bool sweep(bool break_on_operation)
   int refreshing = false;
 
   if (MODE_OUTPUT(setting.mode) && config.cor_nfm == 0) {                          // Calibrate the modulation frequencies at first use
-//#ifndef TINYSA4
-    calibrate_modulation(MO_AM, &config.cor_am);    // No AM mondulation for now
-//#endif
+    calibrate_modulation(MO_AM, &config.cor_am);
     calibrate_modulation(MO_NFM, &config.cor_nfm);
+#ifdef TINYSA4
+    calibrate_modulation(MO_NFM2, &config.cor_nfm2);
+    calibrate_modulation(MO_NFM3, &config.cor_nfm3);
+#endif
     calibrate_modulation(MO_WFM, &config.cor_wfm);
   }
 
@@ -6750,7 +6780,23 @@ static int R_table[R_TABLE_SIZE] = {1,3,-3,4,5};
     perform(false,0, 30000000, false);
     perform(false,1, 30000000, false);
     config.cor_nfm = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
+#ifdef TINYSA4
+    setting.modulation = MO_NFM2;
+    setting.modulation_frequency = 5000;
+    in_selftest = true;
+    config.cor_nfm2 = 0;
+    perform(false,0, 30000000, false);
+    perform(false,1, 30000000, false);
+    config.cor_nfm2 = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
 
+    setting.modulation = MO_NFM3;
+    setting.modulation_frequency = 5000;
+    in_selftest = true;
+    config.cor_nfm3 = 0;
+    perform(false,0, 30000000, false);
+    perform(false,1, 30000000, false);
+    config.cor_nfm3 = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency))/8;
+#endif
     setting.modulation = MO_WFM;
     setting.modulation_frequency = 5000;
     in_selftest = true;
@@ -7021,6 +7067,7 @@ void calibrate_modulation(int modulation, int8_t *correction)
     in_selftest = false;
     *correction = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency ))/8;
     setting.modulation = M_OFF;
+    setting.modulation_frequency = 1000;
   }
 }
 

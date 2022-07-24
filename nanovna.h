@@ -280,7 +280,11 @@ enum {
 };
 
 enum {
-  MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL,
+  MO_NONE, MO_AM, MO_NFM,
+#ifdef TINYSA4
+  MO_NFM2, MO_NFM3,
+#endif
+  MO_WFM, MO_EXTERNAL, MO_MAX
 };
 
 #define MODE_OUTPUT(x)  ((x) == M_GENLOW || (x) == M_GENHIGH )
@@ -760,6 +764,10 @@ typedef struct config {
   int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
+#ifdef TINYSA4
+  int8_t    cor_nfm2;
+  int8_t    cor_nfm3;
+#endif
   uint8_t  _brightness;
 #ifndef __NEW_SWITCHES__
   uint8_t high_out_adf4350;
@@ -1326,7 +1334,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e56 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e57 /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
@@ -1383,9 +1391,9 @@ void clear_all_config_prop_data(void);
 // Set structure align as WORD (save flash memory)
 #pragma pack(push, 2)
 typedef struct {
-  uint8_t type;
-  uint8_t data;
-  char *label;
+  const uint8_t type;
+  const uint8_t data;
+  const char *label;
   const void *reference;
 } menuitem_t;
 #pragma pack(pop)

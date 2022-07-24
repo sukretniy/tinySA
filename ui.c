@@ -1234,7 +1234,7 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
       text = button.text;
     }
     else
-      text = m->label;
+      text = (char *)m->label;
     // Only keypad retrieves value
     if (MT_MASK(m->type) == MT_KEYPAD) {
       fetch_numeric_target(m->data);

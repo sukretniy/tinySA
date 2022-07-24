@@ -1048,12 +1048,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
 
 #endif
 // const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
-const char *menu_modulation_text[]={"None", "AM", "NFM", "WFM", "External"};
+const char *menu_modulation_text[MO_MAX]=
+{  "None", "AM 30%",
+#ifdef TINYSA4
+   "FM 2.5kHz",
+   "FM 3kHz",
+   "FM 5kHz",
+#else
+   "FM 5kHz",
+#endif
+   "FM 75kHz", "External"};
 
 static UI_FUNCTION_ADV_CALLBACK(menu_modulation_acb)
 {
   (void)item;
   if (b){
+    plot_printf(b->text, sizeof b->text, "%s", menu_modulation_text[data]);
     b->icon = data == setting.modulation ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
   }
@@ -1063,9 +1073,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_modulation_acb)
     set_level_sweep(0);
   }
   set_modulation(data);
-  menu_move_back(false);
-//  ui_mode_normal();   // Stay in menu mode
-//  draw_cal_status();
+//  menu_move_back(false);  // Don't move back
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
@@ -1075,7 +1083,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
     if (setting.modulation == MO_NONE || setting.modulation == MO_EXTERNAL)
       plot_printf(b->text, sizeof b->text, "MOD: %s", menu_modulation_text[setting.modulation]);
     else {
-      plot_printf(b->text, sizeof b->text, "MOD: %5.3fkHz %s", setting.modulation_frequency / 1000.0, menu_modulation_text[setting.modulation]);
+      plot_printf(b->text, sizeof b->text, "MOD: %4dHz %s", (int)(setting.modulation_frequency), menu_modulation_text[setting.modulation]);
     }
     return;
   }
@@ -1964,6 +1972,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
 {
   (void)item;
   if(b){
+    int count = 0;
+    for (int i=0;i<LIMITS_MAX;i++) {if (setting.limits[current_trace][i].enabled) count++; }
+    if (count == 0) setting.limits[current_trace][0].enabled = true;
     plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.2F%s", (float)setting.limits[current_trace][data].frequency, value(setting.limits[current_trace][data].level),unit_string[setting.unit]);
     b->icon = (setting.limits[current_trace][data].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
     return;
@@ -2083,6 +2094,13 @@ static UI_FUNCTION_CALLBACK(menu_limit_disable_cb)
 {
   (void)item;
   (void)data;
+  int count = 0;
+  for (int i=0;i<LIMITS_MAX;i++) {if (setting.limits[current_trace][i].enabled) count++; }
+  if (count == 1 && setting.limits[current_trace][active_limit].enabled) {
+    drawMessageBox("Error", "At least one entry",1000);
+    return;
+  }
+
   if (active_limit<LIMITS_MAX){
     setting.limits[current_trace][active_limit].enabled = false;
     dirty = true;
@@ -2562,11 +2580,17 @@ static const menuitem_t menu_lo_drive[] = {
 
 static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
-  { MT_FORM | MT_ADV_CALLBACK, MO_NONE,              "None",      menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,  "AM",   menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK, MO_NFM,               "Narrow FM", menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK, MO_WFM,               "Wide FM",   menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL, "External",  menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_NONE,             MT_CUSTOM_LABEL,    menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,      MT_CUSTOM_LABEL,    menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_NFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
+#ifdef TINYSA4
+  { MT_FORM | MT_ADV_CALLBACK, MO_NFM2,              MT_CUSTOM_LABEL,    menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK, MO_NFM3,              MT_CUSTOM_LABEL,    menu_modulation_acb},
+#endif
+  { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
+#ifndef TINYSA4
+  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL,MT_CUSTOM_LABEL,    menu_modulation_acb},
+#endif
   { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..5kHz"},
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
