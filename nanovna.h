@@ -266,6 +266,10 @@ void set_marker_time(int m, float f);
 void set_marker_index(int m, int16_t idx);
 void toggle_sweep(void);
 void resume_once(uint16_t c);
+#ifdef TINYSA4
+void set_deviation(int d);
+void set_depth(int d);
+#endif
 void toggle_mute(void);
 void toggle_pulse(void);
 void toggle_draw_line(void);
@@ -1152,6 +1156,10 @@ typedef struct setting
   int16_t  refer;               // -1 disabled
 
   uint16_t modulation_frequency;  // 50...6000
+#ifdef TINYSA4
+  uint16_t modulation_depth_x100;      // AM (30% - 100%) multiplied by 100
+  uint16_t modulation_deviation_div100;  // FM (2.5kHz to 100kHz) divided by 100
+#endif
   int decay;                      // KM_DECAY   < 1000000
   int attack;                     // KM_ATTACK  <   20000
 

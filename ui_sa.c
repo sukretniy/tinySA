@@ -416,6 +416,7 @@ enum {
   KM_HIGHOUTLEVEL,
 #ifdef TINYSA4
   KM_COR_AM,  KM_COR_WFM, KM_COR_NFM,
+  KM_DEVIATION, KM_DEPTH,
   KM_IF2,
   // #30
   KM_R,KM_MOD,KM_CP,
@@ -487,6 +488,8 @@ static const struct {
 [KM_COR_AM]       = {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
 [KM_COR_WFM]      = {keypads_plusmin     , "COR\nWFM"},    // KM_COR_WFM
 [KM_COR_NFM]      = {keypads_plusmin     , "COR\nNFM"},    // KM_COR_NFM
+[KM_DEVIATION]    = {keypads_freq        , "DEVIATION"}, // KM_DEVIATION
+[KM_DEPTH]        = {keypads_positive    , "DEPTH%"}, // KM_DEPTH
 [KM_IF2]          = {keypads_freq        , "IF2"}, // KM_IF2
 [KM_R]            = {keypads_plusmin     , "R"}, // KM_R    #30
 [KM_MOD]          = {keypads_positive    , "MODULO"}, // KM_MOD
@@ -1083,7 +1086,14 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
     if (setting.modulation == MO_NONE || setting.modulation == MO_EXTERNAL)
       plot_printf(b->text, sizeof b->text, "MOD: %s", menu_modulation_text[setting.modulation]);
     else {
+#ifdef TINYSA4
+      if (setting.modulation == MO_AM)
+        plot_printf(b->text, sizeof b->text, "MOD: %4dHz %s", (int)(setting.modulation_frequency), menu_modulation_text[setting.modulation]);
+      else
+        plot_printf(b->text, sizeof b->text, "MOD: %4dHz FM %4QHz DEVIATION", (int)(setting.modulation_frequency), (freq_t)(setting.modulation_deviation_div100*100));
+#else
       plot_printf(b->text, sizeof b->text, "MOD: %4dHz %s", (int)(setting.modulation_frequency), menu_modulation_text[setting.modulation]);
+#endif
     }
     return;
   }
@@ -2588,12 +2598,16 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
   { MT_FORM | MT_ADV_CALLBACK, MO_NONE,             MT_CUSTOM_LABEL,    menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,      MT_CUSTOM_LABEL,    menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK, MO_NFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
 #ifdef TINYSA4
-  { MT_FORM | MT_ADV_CALLBACK, MO_NFM2,              MT_CUSTOM_LABEL,    menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK, MO_NFM3,              MT_CUSTOM_LABEL,    menu_modulation_acb},
-#endif
+  { MT_FORM | MT_KEYPAD,   KM_DEPTH,               "DEPTH: %s%%",         "0..100"},
+  { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              "FM",               menu_modulation_acb},
+  { MT_FORM | MT_KEYPAD,   KM_DEVIATION,            "DEVIATION: %s",         "1kHz..300kHz"},
+//  { MT_FORM | MT_ADV_CALLBACK, MO_NFM2,              MT_CUSTOM_LABEL,    menu_modulation_acb},
+//  { MT_FORM | MT_ADV_CALLBACK, MO_NFM3,              MT_CUSTOM_LABEL,    menu_modulation_acb},
+#else
+  { MT_FORM | MT_ADV_CALLBACK, MO_NFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
+#endif
 #ifndef TINYSA4
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL,MT_CUSTOM_LABEL,    menu_modulation_acb},
 #endif
@@ -3528,6 +3542,16 @@ static void fetch_numeric_target(uint8_t mode)
       plot_printf(uistat.text, sizeof uistat.text, "%7.0fHz", uistat.value);
     }
     break;
+#ifdef TINYSA4
+  case KM_DEVIATION:
+    uistat.freq_value = setting.modulation_deviation_div100 * 100;
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
+    break;
+  case KM_DEPTH:
+    uistat.value = setting.modulation_depth_x100;
+    plot_printf(uistat.text, sizeof uistat.text, "%3d", (int)uistat.value);
+    break;
+#endif
   case KM_VAR:
     uistat.freq_value = setting.frequency_var;
     if ( setting.frequency_var)
@@ -3738,6 +3762,12 @@ set_numeric_value(void)
     config.cor_nfm = -(int)uistat.value;
     config_save();
     dirty = true;
+    break;
+  case KM_DEVIATION:
+    set_deviation((int)uistat.freq_value);
+    break;
+  case KM_DEPTH:
+    set_depth((int)uistat.value);
     break;
 #endif
   case KM_VAR:

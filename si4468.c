@@ -221,8 +221,8 @@ void PE4302_init(void) {
 static unsigned char old_attenuation = 255;
 bool PE4302_Write_Byte(unsigned char DATA )
 {
-  if (old_attenuation == DATA)
-    return false;
+//  if (old_attenuation == DATA)                /// Must always have same execution time
+//    return false;
   old_attenuation = DATA;
 #ifdef __ARW621__
   DATA = DATA << 1;

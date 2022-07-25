@@ -597,6 +597,8 @@ void reset_settings(int m)
   setting.tracking = false;
   setting.modulation = MO_NONE;
   setting.modulation_frequency = 1000;
+  setting.modulation_depth_x100 = 80; // %80
+  setting.modulation_deviation_div100 = 30; // 3kHz
   setting.step_delay = 0;
   setting.offset_delay = 0;
   setting.step_delay_mode = SD_NORMAL;
@@ -1033,9 +1035,21 @@ void set_modulation(int m)
   dirty = true;
 }
 
+void set_deviation(int d)
+{
+  setting.modulation_deviation_div100  = d/100;
+  dirty = true;
+}
+
+void set_depth(int d)
+{
+  setting.modulation_depth_x100  = d;
+  dirty = true;
+}
+
 void set_modulation_frequency(int f)
 {
-  if (50 <= f && f <= 6000) {
+  if (50 <= f && f <= 10000) {
     setting.modulation_frequency = f;
     dirty = true;
   }
@@ -1294,23 +1308,30 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
     a = -a;
   } else
 #endif
+#ifdef USE_INPUT_STEP_ATTENUATE
+  if (setting.mode == M_LOW && a > MAX_ATTENUATE) {
+    setting.atten_step = 1;
+    a = a - RECEIVE_SWITCH_ATTENUATION;
+  } else
+  if (setting.mode == M_HIGH && a > 0) {
+    setting.atten_step = 1;
+    a = a - SWITCH_ATTENUATION;
+  } else
+#endif
   {
-    if (setting.mode == M_LOW && a > MAX_ATTENUATE) {
-      setting.atten_step = 1;
-      a = a - RECEIVE_SWITCH_ATTENUATION;
-    } else if (setting.mode == M_HIGH && a > 0) {
-      setting.atten_step = 1;
-      a = a - SWITCH_ATTENUATION;
-    } else
-      setting.atten_step = 0;
+    setting.atten_step = 0;
     setting.auto_attenuation = false;
-    dirty = true;
   }
+  dirty = true;
   if (a<0.0)
       a = 0;
   if (a> MAX_ATTENUATE)
     a = MAX_ATTENUATE;
-  if (setting.mode == M_HIGH)   // No attenuator in high mode
+  if (setting.mode == M_HIGH     // No attenuator in high mode
+#ifdef TINYSA4
+      || (setting.mode == M_LOW && setting.extra_lna)    // No attenuator with LNA
+#endif
+      )
     a = 0;
   if (setting.attenuate_x2 == a*2)
     return;
@@ -3124,10 +3145,40 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
 
 static int modulation_counter = 0;
 
-#define MODULATION_STEPS    8
-static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };         // AM modulation
+#define AM_MODULATION_STEPS 8
+// AM modulation always
+static const int am_modulation[AM_MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 10, 12, 10 };         // AM modulation
 
-#ifdef TINYSA3
+
+#ifdef TINYSA4
+static int modulation_steps = 8;
+#define MAX_MODULATION_STEPS    128
+
+// Max = 10000 / 28.8
+static const int sinus[MAX_MODULATION_STEPS/4+1] = {0,    17,     34,     51,     68,     84,     101,    117,    133,    148,    164,    179,    193,    207,    220,    233,    246,    257,    268,    279,    289,    298,    306,    314,    321,    327,    332,    337,    341,    343,    346,    347,    347 };
+//
+//  Offset is 14.4Hz when below 600MHz and 28.8 when above.
+//
+#define HND  36     // High range near FM
+#define HN2D  44     // High range near FM
+#define HN3D  80     // High range near FM
+#define HWD  1300    // High range wide FM 512
+#define MODULATION_TABLES 4
+static int fm_modulation[MAX_MODULATION_STEPS+1];
+#if 0
+=
+{
+ { 0*HND,(int)( 1.5*HND ), 2*HND, (int)(1.5*HND), 0*HND, (int)(-1.5*HND), (int)-2*HND, (int)(-1.5*HND)},                // High range, NFM
+ { 0*HN2D,(int)( 1.5*HN2D ), 2*HN2D, (int)(1.5*HN2D), 0*HN2D, (int)(-1.5*HN2D), (int)-2*HN2D, (int)(-1.5*HN2D)},                // High range, NFM2
+ { 0*HN3D,(int)( 1.5*HN3D ), 2*HN3D, (int)(1.5*HN3D), 0*HN3D, (int)(-1.5*HN3D), (int)-2*HN3D, (int)(-1.5*HN3D)},                // High range, NFM3
+ { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, MO_WFM
+};
+#endif
+#endif
+#ifdef TINYSA3// Avoid sign changes in NFM
+#define modulation_steps    8
+#define MAX_MODULATION_STEPS    8
+
 //
 //  Offset is 156.25Hz when below 600MHz and 312.5 when above.
 //
@@ -3136,37 +3187,15 @@ static const int am_modulation[MODULATION_STEPS] =  { 5, 1, 0, 1, 5, 9, 11, 9 };
 #define LWD  96 // Total WFM deviation is LWD * 4 * 156.25 = 30kHz when below 600MHz
 #define HWD  48
 #define MODULATION_TABLES 4
-#endif
-#ifdef TINYSA4
-//
-//  Offset is 14.4Hz when below 600MHz and 28.8 when above.
-//
-//#define LND  96     // low range near FM
-#define HND  36     // High range near FM
-#define HN2D  44     // High range near FM
-#define HN3D  80     // High range near FM
-//#define LWD  1024   // Low range wide FM
-#define HWD  1300    // High range wide FM 512
-#define MODULATION_TABLES 4
-#endif
-
 #define S1  1.5
-static const int fm_modulation[MODULATION_TABLES][MODULATION_STEPS] =
+static const int fm_modulation[MODULATION_TABLES][MAX_MODULATION_STEPS] =
 {
-#ifdef TINYSA4
-// { 0*LND,(int)( 1.5*LND ), 2*LND, (int)(1.5*LND), 0*LND, (int)(-1.5*LND), (int)-2*LND, (int)(-1.5*LND)},                // High range, MO_NFM
-// { 0*LWD,(int)( S1*LWD ), 2*LWD, (int)(S1*LWD), 0*LWD, (int)(-S1*LWD), (int)-2*LWD, (int)(-S1*LWD)},    // Low range, MO_WFM
- { 0*HND,(int)( 1.5*HND ), 2*HND, (int)(1.5*HND), 0*HND, (int)(-1.5*HND), (int)-2*HND, (int)(-1.5*HND)},                // High range, NFM
- { 0*HN2D,(int)( 1.5*HN2D ), 2*HN2D, (int)(1.5*HN2D), 0*HN2D, (int)(-1.5*HN2D), (int)-2*HN2D, (int)(-1.5*HN2D)},                // High range, NFM2
- { 0*HN3D,(int)( 1.5*HN3D ), 2*HN3D, (int)(1.5*HN3D), 0*HN3D, (int)(-1.5*HN3D), (int)-2*HN3D, (int)(-1.5*HN3D)},                // High range, NFM3
- { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, MO_WFM
-#else  // Avoid sign changes in NFM
  { 2*LND,(int)( (2+S1)*LND ), 4*LND, (int)((2+S1)*LND), 2*LND, (int)((2-S1)*LND), 0, (int)((2-S1)*LND)},                // Low range, MO_NFM
  { 0*LWD,(int)( S1*LWD ), 2*LWD, (int)(S1*LWD), 0*LWD, (int)(-S1*LWD), (int)-2*LWD, (int)(-S1*LWD)},    // Low range, MO_WFM
  { 2*HND,(int)( 3.5*HND ), 4*HND, (int)(3.5*HND), 2*HND, (int)(0.5*HND), 0, (int)(0.5*HND)},                // High range, MO_NFM
  { 0*HWD,(int)( 1.5*HWD ), 2*HWD, (int)(1.5*HWD), 0*HWD, (int)(-1.5*HWD), (int)-2*HWD, (int)(-1.5*HWD)},    // HIgh range, MO_WFM
-#endif
 };    // narrow FM modulation avoid sign changes
+#endif
 
 #undef S1
 #ifdef TINYSA3
@@ -3266,7 +3295,9 @@ static float old_temp = 0.0;
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
   int modulation_delay = 0;
-  int modulation_index;
+#ifdef TINYSA3
+  int modulation_table;
+#endif
   int modulation_count_iter = 0;
 #ifdef __NEW_SWITCHES__
 //  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ && f < ultra_start) );
@@ -3338,6 +3369,45 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef __MCU_CLOCK_SHIFT__
       clock_at_48MHz();
 #endif
+
+#ifdef TINYSA4                      // Calculate FM modulation
+      if (setting.modulation == MO_AM) {
+        int sinus_index = 1;
+        modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
+        while ( (modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 10 && modulation_steps > 4) {
+          sinus_index <<= 1;
+          modulation_steps >>= 1;
+        }
+        int offset347 = setting.modulation_depth_x100 * 347 / 100;
+        for (int i = 0; i < modulation_steps/4 + 1; i++) {
+          fm_modulation[i] = (694 - offset347 + offset347 * sinus[i*sinus_index]/347);
+          fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
+          fm_modulation[modulation_steps/2 + i] = (694 - offset347 - offset347 * sinus[i*sinus_index]/347);
+          fm_modulation[modulation_steps - i] = fm_modulation[modulation_steps/2 + i];
+        }
+        for (int i=0; i < modulation_steps; i++) {
+          fm_modulation[i] = 10.0*logf(fm_modulation[i]*fm_modulation[i]/(694.0*694.0));
+          if (fm_modulation[i] < -63)
+            fm_modulation[i] = -63;
+        }
+      }
+      if (setting.modulation == MO_WFM) {
+        int sinus_index = 1;
+        modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
+        while ( (modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency + config.cor_wfm) < 10 && modulation_steps > 4) {
+          sinus_index <<= 1;
+          modulation_steps >>= 1;
+        }
+        for (int i = 0; i < modulation_steps/4 + 1; i++) {
+          fm_modulation[i] = setting.modulation_deviation_div100 * sinus[i*sinus_index]/100;
+          fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
+          fm_modulation[modulation_steps/2 + i] = -fm_modulation[i];
+          fm_modulation[modulation_steps - i] = -fm_modulation[i];
+        }
+      }
+#endif
+
+
     }
     //    if (MODE_OUTPUT(setting.mode) && setting.additional_step_delay_us < 500)     // Minimum wait time to prevent LO from lockup during output frequency sweep
     //      setting.additional_step_delay_us = 500;
@@ -3550,48 +3620,57 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
 #ifdef TINYSA3
 #define MO_FREQ_COR 65000
-#else
+      modulation_table = 0;
+ #else
 #define MO_FREQ_COR 0
 #endif
-      modulation_delay = ((1000000-MO_FREQ_COR)/ MODULATION_STEPS ) / setting.modulation_frequency;     // 8 steps so 1MHz/8
       modulation_counter = 0;
-      modulation_index = 0;
-      if (setting.modulation == MO_AM)          // -14 default
+//      if (in_selftest) {
+//        modulation_steps = 8;
+//        modulation_delay = 0;
+//      } else
+        if (setting.modulation == MO_AM) {          // -14 default
+        modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 1MHz/8
         modulation_delay += config.cor_am;
-      else  {
+#ifdef TINYSA4
+//        modulation_steps = 8;
+#endif
+      } else  {
+        modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 1MHz/8
 #ifdef TINYSA4
         switch(setting.modulation){
         case MO_NFM:
           modulation_delay += config.cor_nfm;
           break;
+        case MO_NFM2:
           modulation_delay += config.cor_nfm2;
           break;
+        case MO_NFM3:
           modulation_delay += config.cor_nfm3;
           break;
+        case MO_WFM:
           modulation_delay += config.cor_wfm;
           break;
         }
-        modulation_index = setting.modulation - MO_NFM;
+//        modulation_table = setting.modulation - MO_NFM;
 #else
         // must be FM
         if (setting.modulation == MO_WFM) {         // -17 default
           modulation_delay += config.cor_wfm;
-          modulation_index = 1;
+          modulation_table = 1;
         } else {                                // must be NFM
           modulation_delay += config.cor_nfm;  // -17 default
-          // modulation_index = 0; // default value
+          // modulation_table = 0; // default value
         }
 #endif
 #ifdef TINYSA4
-        if (false)
+        current_fm_modulation = (int *)fm_modulation;
 #else
         if ((setting.mode == M_GENLOW  && f > ((freq_t)480000000) - DEFAULT_IF) ||
             (setting.mode == M_GENHIGH  && f > ((freq_t)480000000) ) )
-#endif
-          modulation_index += 2;
-        current_fm_modulation = (int *)fm_modulation[modulation_index];
-#ifdef TINYSA3
-        f -= fm_modulation_offset[modulation_index];           // Shift output frequency
+          modulation_table += 2;
+        current_fm_modulation = (int *)fm_modulation[modulation_table];
+        f -= fm_modulation_offset[modulation_table];           // Shift output frequency
 #endif
       }
     }
@@ -3600,7 +3679,11 @@ modulation_again:
   // -----------------------------------------------------  apply modulation for output modes ---------------------------------------
   if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE){
     if (setting.modulation == MO_AM) {               // AM modulation
+#ifdef TINYSA4
+      int p = setting.attenuate_x2 - fm_modulation[modulation_counter];
+#else
       int p = setting.attenuate_x2 + am_modulation[modulation_counter];
+#endif
       if      (p>63) p = 63;
       else if (p< 0) p =  0;
 #ifdef __PE4302__
@@ -3619,9 +3702,9 @@ modulation_again:
 #endif
     }
     modulation_counter++;
-    if (modulation_counter == MODULATION_STEPS)
+    if (modulation_counter >= modulation_steps)
       modulation_counter = 0;
-    if (setting.modulation != MO_EXTERNAL) {
+    if (setting.modulation != MO_EXTERNAL && !in_selftest) {  // latter is for frequency calculation
       my_microsecond_delay(modulation_delay);
     }
   }
@@ -4261,9 +4344,9 @@ again:                                                              // Spur redu
         return(0);         // abort
       if ( i==1 && MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) { // if in output mode with modulation and LO setup done
 //        i = 1;              // Everything set so skip LO setting
-#define MODULATION_CYCLES_TEST   10000
-        if (in_selftest && modulation_count_iter++ >= 10000) {
-          start_of_sweep_timestamp = sa_ST2US(chVTGetSystemTimeX() - start_of_sweep_timestamp)*MODULATION_STEPS/MODULATION_CYCLES_TEST;  // uS per cycle
+#define MODULATION_CYCLES_TEST   100000
+        if (in_selftest && modulation_count_iter++ >= MODULATION_CYCLES_TEST) {
+          start_of_sweep_timestamp = sa_ST2US(chVTGetSystemTimeX() - start_of_sweep_timestamp)/MODULATION_CYCLES_TEST;  // uS per cycle
           return 0;
         }
         goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
@@ -4559,12 +4642,15 @@ static bool sweep(bool break_on_operation)
 
   if (MODE_OUTPUT(setting.mode) && config.cor_nfm == 0) {                          // Calibrate the modulation frequencies at first use
     calibrate_modulation(MO_AM, &config.cor_am);
+#ifdef TINYSA3
     calibrate_modulation(MO_NFM, &config.cor_nfm);
-#ifdef TINYSA4
+#endif
+#if 0
     calibrate_modulation(MO_NFM2, &config.cor_nfm2);
     calibrate_modulation(MO_NFM3, &config.cor_nfm3);
 #endif
-    calibrate_modulation(MO_WFM, &config.cor_wfm);
+ //   calibrate_modulation(MO_WFM, &config.cor_wfm);
+    config.cor_wfm = -14;
   }
 
   if (dirty) {                    // Calculate new scanning solution
@@ -7061,11 +7147,12 @@ void calibrate_modulation(int modulation, int8_t *correction)
   if (*correction == 0) {
     setting.modulation = modulation;
     setting.modulation_frequency = 7000;
+    dirty = true;
     in_selftest = true;
     perform(false,0, 30000000, false);
     perform(false,1, 30000000, false);
     in_selftest = false;
-    *correction = -(start_of_sweep_timestamp - (ONE_SECOND_TIME / setting.modulation_frequency ))/8;
+    *correction = -start_of_sweep_timestamp;  // uses 10 microsecond delay
     setting.modulation = M_OFF;
     setting.modulation_frequency = 1000;
   }
