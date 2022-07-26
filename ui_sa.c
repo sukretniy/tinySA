@@ -1088,9 +1088,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
     else {
 #ifdef TINYSA4
       if (setting.modulation == MO_AM)
-        plot_printf(b->text, sizeof b->text, "MOD: %4dHz %s", (int)(setting.modulation_frequency), menu_modulation_text[setting.modulation]);
+        plot_printf(b->text, sizeof b->text, "MOD: %4dHz AM %d%%", (int)(setting.modulation_frequency), setting.modulation_depth_x100);
       else
-        plot_printf(b->text, sizeof b->text, "MOD: %4dHz FM %4QHz DEVIATION", (int)(setting.modulation_frequency), (freq_t)(setting.modulation_deviation_div100*100));
+        plot_printf(b->text, sizeof b->text, "MOD: %4dHz FM %4QHz", (int)(setting.modulation_frequency), (freq_t)(setting.modulation_deviation_div100*100));
 #else
       plot_printf(b->text, sizeof b->text, "MOD: %4dHz %s", (int)(setting.modulation_frequency), menu_modulation_text[setting.modulation]);
 #endif
@@ -2597,7 +2597,7 @@ static const menuitem_t menu_lo_drive[] = {
 static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_TITLE,    0,  "MODULATION",NULL},
   { MT_FORM | MT_ADV_CALLBACK, MO_NONE,             MT_CUSTOM_LABEL,    menu_modulation_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,      MT_CUSTOM_LABEL,    menu_modulation_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,      "AM",    menu_modulation_acb},
 #ifdef TINYSA4
   { MT_FORM | MT_KEYPAD,   KM_DEPTH,               "DEPTH: %s%%",         "0..100"},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              "FM",               menu_modulation_acb},

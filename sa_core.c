@@ -3144,6 +3144,7 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
 }
 
 static int modulation_counter = 0;
+static int cycle_counter = 0;
 
 #define AM_MODULATION_STEPS 8
 // AM modulation always
@@ -3373,8 +3374,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef TINYSA4                      // Calculate FM modulation
       if (setting.modulation == MO_AM) {
         int sinus_index = 1;
+        config.cor_am = -18;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
-        while ( (modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 10 && modulation_steps > 4) {
+        while ( (modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
@@ -3393,8 +3395,10 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       }
       if (setting.modulation == MO_WFM) {
         int sinus_index = 1;
+        config.cor_am = -18;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
-        while ( (modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency + config.cor_wfm) < 10 && modulation_steps > 4) {
+        //modulation_steps = 8;  // <-----------------TEMP!!!!!
+        while ( (modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
@@ -3625,6 +3629,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #define MO_FREQ_COR 0
 #endif
       modulation_counter = 0;
+      cycle_counter = 0;
 //      if (in_selftest) {
 //        modulation_steps = 8;
 //        modulation_delay = 0;
@@ -3635,7 +3640,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef TINYSA4
 //        modulation_steps = 8;
 #endif
-      } else  {
+      } else  { // Must be FM
         modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 1MHz/8
 #ifdef TINYSA4
         switch(setting.modulation){
@@ -3649,14 +3654,14 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           modulation_delay += config.cor_nfm3;
           break;
         case MO_WFM:
-          modulation_delay += config.cor_wfm;
+          modulation_delay += config.cor_am;
           break;
         }
-//        modulation_table = setting.modulation - MO_NFM;
+//        modulation_steps = setting.modulation - MO_NFM;
 #else
         // must be FM
         if (setting.modulation == MO_WFM) {         // -17 default
-          modulation_delay += config.cor_wfm;
+          modulation_delay += config.cor_am;
           modulation_table = 1;
         } else {                                // must be NFM
           modulation_delay += config.cor_nfm;  // -17 default
@@ -3677,7 +3682,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   }
 modulation_again:
   // -----------------------------------------------------  apply modulation for output modes ---------------------------------------
-  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE){
+  if (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL){
     if (setting.modulation == MO_AM) {               // AM modulation
 #ifdef TINYSA4
       int p = setting.attenuate_x2 - fm_modulation[modulation_counter];
@@ -3702,11 +3707,26 @@ modulation_again:
 #endif
     }
     modulation_counter++;
-    if (modulation_counter >= modulation_steps)
+    if (modulation_counter >= modulation_steps) {
       modulation_counter = 0;
-    if (setting.modulation != MO_EXTERNAL && !in_selftest) {  // latter is for frequency calculation
+      cycle_counter++;
+      if (config.cor_am == -18) {
+        if (chVTGetSystemTimeX() - start_of_sweep_timestamp > 1000) {    // 100 ms, System tick 10000 per second
+          start_of_sweep_timestamp = chVTGetSystemTimeX();
+          modulation_delay -= config.cor_am;
+          int actual_delay = 100000 / cycle_counter / modulation_steps;           // In units of 1 microsecond
+          config.cor_am += modulation_delay - actual_delay;
+          if (config.cor_am >0)
+            config.cor_am = 0;
+          modulation_delay += config.cor_am;
+          cycle_counter = 0;
+        }
+        my_microsecond_delay(modulation_delay);
+      }
+      else
+        my_microsecond_delay(modulation_delay);
+    } else
       my_microsecond_delay(modulation_delay);
-    }
   }
     // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);
@@ -4344,11 +4364,14 @@ again:                                                              // Spur redu
         return(0);         // abort
       if ( i==1 && MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL) { // if in output mode with modulation and LO setup done
 //        i = 1;              // Everything set so skip LO setting
+
+#if 0
 #define MODULATION_CYCLES_TEST   100000
         if (in_selftest && modulation_count_iter++ >= MODULATION_CYCLES_TEST) {
           start_of_sweep_timestamp = sa_ST2US(chVTGetSystemTimeX() - start_of_sweep_timestamp)/MODULATION_CYCLES_TEST;  // uS per cycle
           return 0;
         }
+#endif
         goto modulation_again;                                             // Keep repeating sweep loop till user aborts by input
       }
       return(0);
@@ -4639,7 +4662,7 @@ static bool sweep(bool break_on_operation)
 
   modulation_counter = 0;                                             // init modulation counter in case needed
   int refreshing = false;
-
+#if 0
   if (MODE_OUTPUT(setting.mode) && config.cor_nfm == 0) {                          // Calibrate the modulation frequencies at first use
     calibrate_modulation(MO_AM, &config.cor_am);
 #ifdef TINYSA3
@@ -4652,6 +4675,7 @@ static bool sweep(bool break_on_operation)
  //   calibrate_modulation(MO_WFM, &config.cor_wfm);
     config.cor_wfm = -14;
   }
+#endif
 
   if (dirty) {                    // Calculate new scanning solution
     sweep_counter = 0;
