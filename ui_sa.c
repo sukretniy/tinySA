@@ -2599,19 +2599,18 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_ADV_CALLBACK, MO_NONE,             MT_CUSTOM_LABEL,    menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,      "AM",    menu_modulation_acb},
 #ifdef TINYSA4
-  { MT_FORM | MT_KEYPAD,   KM_DEPTH,               "DEPTH: %s%%",         "0..100"},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              "FM",               menu_modulation_acb},
-  { MT_FORM | MT_KEYPAD,   KM_DEVIATION,            "DEVIATION: %s",         "1kHz..300kHz"},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..5kHz"},
+  { MT_FORM | MT_KEYPAD,   KM_DEPTH,               "AM DEPTH: %s%%",         "0..100"},
+  { MT_FORM | MT_KEYPAD,   KM_DEVIATION,            "FM DEVIATION: %s",         "1kHz..300kHz"},
 //  { MT_FORM | MT_ADV_CALLBACK, MO_NFM2,              MT_CUSTOM_LABEL,    menu_modulation_acb},
 //  { MT_FORM | MT_ADV_CALLBACK, MO_NFM3,              MT_CUSTOM_LABEL,    menu_modulation_acb},
 #else
   { MT_FORM | MT_ADV_CALLBACK, MO_NFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
-#endif
-#ifndef TINYSA4
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL,MT_CUSTOM_LABEL,    menu_modulation_acb},
-#endif
   { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..5kHz"},
+#endif
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 

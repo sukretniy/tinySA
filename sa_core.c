@@ -275,7 +275,10 @@ void set_output_path(freq_t f, float level)
     d++;
     blw =  BELOW_MAX_DRIVE(d);
   }
-  while (a + 28 < blw && d > LOWEST_LEVEL) { // reduce till it fits attenuator (31 - 3)
+  int ar = 28;
+  if (setting.modulation == MO_AM) // reserve attenuator range for AM modulation
+    ar = 4;
+  while (a + ar < blw && d > LOWEST_LEVEL) { // reduce till it fits attenuator ((ar+3) - 3)
     d--;
     blw =  BELOW_MAX_DRIVE(d);
   }
@@ -285,11 +288,11 @@ void set_output_path(freq_t f, float level)
     a -= 3.0;                 // Always at least 3dB attenuation
   if (a > 0) {
     a = 0;
-    if (!level_error) redraw_request |= REDRAW_CAL_STATUS;
-    level_error = true;
+    if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
+  } else if (setting.modulation == MO_AM && a < -10) {          // Insufficient headroom for modulation
+    if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true); }
   } else {
-    if (level_error) redraw_request |= REDRAW_CAL_STATUS;
-    level_error = false;
+    if (level_error)  { level_error = false; redraw_request |= REDRAW_CAL_STATUS; draw_all(true); }
   }
   if (a < -31.5)
     a = -31.5;
@@ -3689,7 +3692,7 @@ modulation_again:
 #else
       int p = setting.attenuate_x2 + am_modulation[modulation_counter];
 #endif
-      if      (p>63) p = 63;
+      if      (p>63)p = 63;
       else if (p< 0) p =  0;
 #ifdef __PE4302__
       PE4302_Write_Byte(p);
