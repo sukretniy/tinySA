@@ -2442,7 +2442,7 @@ THD_FUNCTION(myshellThread, p)
 #pragma GCC pop_options
 
 static const GPTConfig gpt4cfg = {
-  1000000, // 1 MHz timer clock.
+  8000000, // 8 MHz timer clock.
   NULL, // No callback
   0, 0
 };
@@ -2450,9 +2450,18 @@ static const GPTConfig gpt4cfg = {
 void my_microsecond_delay(int t)
 {
 #ifdef TINYSA4
-  if (t>1) gptPolledDelay(&GPTD4, t); // t us delay
+  if (t>1) gptPolledDelay(&GPTD4, t<<3); // t us delay
 #else
-  if (t>1) gptPolledDelay(&GPTD14, t); // t us delay
+  if (t>1) gptPolledDelay(&GPTD14, t<<3); // t us delay
+#endif
+}
+
+void my_veryfast_delay(int t) // In 8MHz ticks
+{
+#ifdef TINYSA4
+  if (t>0) gptPolledDelay(&GPTD4, t);
+#else
+  if (t>0) gptPolledDelay(&GPTD14, t);
 #endif
 }
 
@@ -2480,10 +2489,10 @@ int main(void)
    */
   #ifdef TINYSA4
    gptStart(&GPTD4, &gpt4cfg);
-    gptPolledDelay(&GPTD4, 10); // 10 us delay
+    gptPolledDelay(&GPTD4, 80); // 10 us delay
   #else
     gptStart(&GPTD14, &gpt4cfg);
-    gptPolledDelay(&GPTD14, 10); // 10 us delay
+    gptPolledDelay(&GPTD14, 80); // 10 us delay
   #endif
 
   PULSE
@@ -2588,10 +2597,10 @@ int main(void)
  */
 #ifdef TINYSA4
  gptStart(&GPTD4, &gpt4cfg);
-  gptPolledDelay(&GPTD4, 10); // 10 us delay
+  gptPolledDelay(&GPTD4, 80); // 10 us delay
 #else
   gptStart(&GPTD14, &gpt4cfg);
-  gptPolledDelay(&GPTD14, 10); // 10 us delay
+  gptPolledDelay(&GPTD14, 80); // 10 us delay
 #endif
 
 /* restore config */

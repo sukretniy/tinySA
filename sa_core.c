@@ -3377,9 +3377,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef TINYSA4                      // Calculate FM modulation
       if (setting.modulation == MO_AM) {
         int sinus_index = 1;
-        config.cor_am = -18;        // Initialize with some spare
+        config.cor_am = -180;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
-        while ( (modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
+        while ( (modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
@@ -3391,17 +3391,17 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           fm_modulation[modulation_steps - i] = fm_modulation[modulation_steps/2 + i];
         }
         for (int i=0; i < modulation_steps; i++) {
-          fm_modulation[i] = 10.0*logf(fm_modulation[i]*fm_modulation[i]/(694.0*694.0));
+          fm_modulation[i] = roundf(10.0*logf(fm_modulation[i]*fm_modulation[i]/(694.0*694.0)));
           if (fm_modulation[i] < -63)
             fm_modulation[i] = -63;
         }
       }
       if (setting.modulation == MO_WFM) {
         int sinus_index = 1;
-        config.cor_am = -18;        // Initialize with some spare
+        config.cor_am = -180;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
         //modulation_steps = 8;  // <-----------------TEMP!!!!!
-        while ( (modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
+        while ( (modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
@@ -3638,13 +3638,13 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 //        modulation_delay = 0;
 //      } else
         if (setting.modulation == MO_AM) {          // -14 default
-        modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 1MHz/8
+        modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 8MHz/8
         modulation_delay += config.cor_am;
 #ifdef TINYSA4
 //        modulation_steps = 8;
 #endif
       } else  { // Must be FM
-        modulation_delay = (1000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 1MHz/8
+        modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 8MHz/8
 #ifdef TINYSA4
         switch(setting.modulation){
         case MO_NFM:
@@ -3713,23 +3713,23 @@ modulation_again:
     if (modulation_counter >= modulation_steps) {
       modulation_counter = 0;
       cycle_counter++;
-      if (config.cor_am == -18) {
+      if (config.cor_am == -180) {
         if (chVTGetSystemTimeX() - start_of_sweep_timestamp > 1000) {    // 100 ms, System tick 10000 per second
           start_of_sweep_timestamp = chVTGetSystemTimeX();
           modulation_delay -= config.cor_am;
-          int actual_delay = 100000 / cycle_counter / modulation_steps;           // In units of 1 microsecond
+          int actual_delay = 800000 / cycle_counter / modulation_steps;           // In units of 1/8 microsecond
           config.cor_am += modulation_delay - actual_delay;
           if (config.cor_am >0)
             config.cor_am = 0;
           modulation_delay += config.cor_am;
           cycle_counter = 0;
         }
-        my_microsecond_delay(modulation_delay);
+        my_veryfast_delay(modulation_delay);
       }
       else
-        my_microsecond_delay(modulation_delay);
+        my_veryfast_delay(modulation_delay);
     } else
-      my_microsecond_delay(modulation_delay);
+      my_veryfast_delay(modulation_delay);
   }
     // -------------------------------- Acquisition loop for one requested frequency covering spur avoidance and vbwsteps ------------------------
   pureRSSI_t RSSI = float_TO_PURE_RSSI(-150);

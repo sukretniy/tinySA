@@ -243,6 +243,7 @@ void update_frequencies(void);
 void set_sweep_frequency(int type, freq_t frequency);
 freq_t get_sweep_frequency(int type);
 void my_microsecond_delay(int t);
+void my_veryfast_delay(int t);
 float my_atof(const char *p);
 freq_t my_atoui(const char *p);
 int shell_printf(const char *fmt, ...);
@@ -720,6 +721,7 @@ typedef struct config {
   uint32_t _serial_speed;
   uint16_t dac_value;
   uint16_t vbat_offset;
+  int16_t    cor_am;
   float low_level_offset;
   float high_level_offset;
   float low_level_output_offset;
@@ -765,7 +767,6 @@ typedef struct config {
 #endif
   uint8_t   is_calibrated;
   uint8_t   _mode;
-  int8_t    cor_am;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
 #ifdef TINYSA4
