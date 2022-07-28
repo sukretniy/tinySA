@@ -313,7 +313,7 @@ void ADF4351_Setup(void)
   si5351_available = si5351_init();
   if (si5351_available)
     si5351_set_frequency(0, 30000000, 0);
-  //si5351_available = false; // Don't use shifting
+  si5351_available = false; // Don't use shifting
 #endif
 
 //  SPI3_CLK_HIGH;
@@ -364,7 +364,7 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
 
 void ADF4351_Set(int channel)
 {
-#if 0
+#if 1
   for (int i = 5; i >= 0; i--) {
     if (registers[i] != old_registers[i])
       goto update;

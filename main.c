@@ -2447,22 +2447,24 @@ static const GPTConfig gpt4cfg = {
   0, 0
 };
 
+#ifdef TINYSA4
+#define DELAY_TIMER GPTD4
+#else
+#define DELAY_TIMER GPTD14
+#endif
+
 void my_microsecond_delay(int t)
 {
-#ifdef TINYSA4
-  if (t>1) gptPolledDelay(&GPTD4, t<<3); // t us delay
-#else
-  if (t>1) gptPolledDelay(&GPTD14, t<<3); // t us delay
-#endif
+  while (t >= 0x1000) { // 16 bit timer
+    gptPolledDelay(&DELAY_TIMER, 0x1000<<3); // t us delay
+    t -= 0x1000;
+  }
+  if (t>1) gptPolledDelay(&DELAY_TIMER, t<<3); // t us delay
 }
 
 void my_veryfast_delay(int t) // In 8MHz ticks
 {
-#ifdef TINYSA4
-  if (t>0) gptPolledDelay(&GPTD4, t);
-#else
-  if (t>0) gptPolledDelay(&GPTD14, t);
-#endif
+  if (t>0) gptPolledDelay(&DELAY_TIMER, t);
 }
 
 /* Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200
@@ -2485,15 +2487,10 @@ int main(void)
 {
   halInit();
   /*
-   *  Initiate 1 micro second timer
+   *  Initiate 1/8 micro second timer
    */
-  #ifdef TINYSA4
-   gptStart(&GPTD4, &gpt4cfg);
-    gptPolledDelay(&GPTD4, 80); // 10 us delay
-  #else
-    gptStart(&GPTD14, &gpt4cfg);
-    gptPolledDelay(&GPTD14, 80); // 10 us delay
-  #endif
+  gptStart(&DELAY_TIMER, &gpt4cfg);
+  gptPolledDelay(&DELAY_TIMER, 80); // 10 us delay
 
   PULSE
   chSysInit();
@@ -2595,13 +2592,8 @@ int main(void)
 /*
  *  Initiate 1 micro second timer
  */
-#ifdef TINYSA4
- gptStart(&GPTD4, &gpt4cfg);
-  gptPolledDelay(&GPTD4, 80); // 10 us delay
-#else
-  gptStart(&GPTD14, &gpt4cfg);
-  gptPolledDelay(&GPTD14, 80); // 10 us delay
-#endif
+ gptStart(&DELAY_TIMER, &gpt4cfg);
+ gptPolledDelay(&DELAY_TIMER, 80); // 10 us delay
 
 /* restore config */
 #ifdef TINYSA3

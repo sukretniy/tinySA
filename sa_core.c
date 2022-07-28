@@ -236,8 +236,10 @@ void set_output_path(freq_t f, float level)
   if (signal_path == PATH_HIGH) {
     return;                 //TODO setup high path
   }
+
+#define ATTENUATION_RESERVE 3.0   // Always 3dB in attenuator
 //  if (signal_path != PATH_LEAKAGE)
-    level += 3.0;        // Always 3dB in attenuator
+    level += ATTENUATION_RESERVE;
 
   float switch_atten = SWITCH_ATTENUATION;
   if (signal_path == PATH_LEAKAGE)
@@ -275,17 +277,17 @@ void set_output_path(freq_t f, float level)
     d++;
     blw =  BELOW_MAX_DRIVE(d);
   }
-  int ar = 28;
+  int ar = 31 - ATTENUATION_RESERVE;
   if (setting.modulation == MO_AM) // reserve attenuator range for AM modulation
     ar = 4;
-  while (a + ar < blw && d > LOWEST_LEVEL) { // reduce till it fits attenuator ((ar+3) - 3)
+  while (a + ar < blw && d > LOWEST_LEVEL) { // reduce till it fits attenuator ((ar+ATTENUATION_RESERVE) ..  ATTENUATION_RESERVE)
     d--;
     blw =  BELOW_MAX_DRIVE(d);
   }
   a -= blw;
   set_output_drive(d);
 //  if (signal_path != PATH_LEAKAGE)
-    a -= 3.0;                 // Always at least 3dB attenuation
+    a -= ATTENUATION_RESERVE;
   if (a > 0) {
     a = 0;
     if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
@@ -2015,15 +2017,15 @@ static const struct {
   float log_aver_correction;
 } step_delay_table[]={
 //  RBWx10 step_delay  offset_delay spur_gate (value divided by 1000)
-  {  8500,       150,           50,      400,   -90,    0.7},
-  {  6000,       150,           50,      300,   -95,    0.8},
-  {  3000,       150,           50,      200,   -95,    1.3},
-  {  1000,       300,          100,      100,   -105,   0.3},
-  {   300,       400,          120,      100,   -110,   0.7},
-  {   100,       900,          120,      100,   -115,   0.5},
-  {    30,      1600,          300,      100,   -120,   0.7},
-  {    10,      4000,          600,      100,   -122,   1.1},
-  {     3,     18700,        12000,      100,   -125,   1.0}
+  {  8500,       150,          150,      400,   -90,    0.7},
+  {  6000,       150,          150,      300,   -95,    0.8},
+  {  3000,       150,          150,      200,   -95,    1.3},
+  {  1000,       300,          300,      100,   -105,   0.3},
+  {   300,       400,          400,      100,   -110,   0.7},
+  {   100,       900,          900,      100,   -115,   0.5},
+  {    30,      1600,         1600,      100,   -120,   0.7},
+  {    10,      4000,         4000,      100,   -122,   1.1},
+  {     3,     18700,        18700,      100,   -125,   1.0}
 };
 #endif
 
@@ -2634,7 +2636,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   if (temp_actual_rbw_x10 == 0) {        // if auto rbw
 
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
-      temp_actual_rbw_x10 = frequency_step_x10;
+      temp_actual_rbw_x10 = 2*frequency_step_x10;
 //    } else if (setting.step_delay_mode==SD_PRECISE) {
 //      temp_actual_rbw_x10 = 4*frequency_step_x10;
     } else {
@@ -4191,7 +4193,7 @@ again:                                                              // Spur redu
           //
           if (signal_path == PATH_LOW || signal_path == PATH_ULTRA) ADF4351_drive(actual_drive);       // Max drive
         }
-        set_freq(ADF4351_LO, target_f);
+        set_freq(ADF4351_LO, (target_f/10000)*10000);  // <----------- TESTING !!!!!!!!!!!!!!
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
         if (actual_rbw_x10 < 10000 || setting.frequency_step < 100000) { //TODO always compensate for the moment as this eliminates artifacts at larger RBW
         int32_t error_f = 0;
