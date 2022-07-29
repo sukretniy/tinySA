@@ -7225,8 +7225,8 @@ const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
 #ifdef TINYSA4
 
-#define JUMP_FREQS 5
-const freq_t jump_freqs[JUMP_FREQS] = {LOW_SHIFT_FREQ, LOW_SHIFT_FREQ, DRIVE1_MAX_FREQ, DRIVE2_MAX_FREQ, MAX_ABOVE_IF_FREQ };
+#define JUMP_FREQS 6
+const freq_t jump_freqs[JUMP_FREQS] = {LOW_SHIFT_FREQ, LOW_SHIFT_FREQ, DRIVE1_MAX_FREQ, DRIVE2_MAX_FREQ, MAX_ABOVE_IF_FREQ, ULTRA_MAX_FREQ };
 
 
 void set_jump_config(int i, float v) {
@@ -7246,6 +7246,8 @@ void set_jump_config(int i, float v) {
   case 4:
     config.shift3_level_offset = v;
     break;
+  case 5:
+    config.harmonic_level_offset = v;
   }
 }
 
@@ -7261,6 +7263,8 @@ float get_jump_config(int i) {
     return config.drive3_level_offset;
   case 4:
     return config.shift3_level_offset;
+  case 5:
+    return config.harmonic_level_offset;
   }
   return 0;
 }
@@ -7272,6 +7276,7 @@ void calibration_busy(void) {
 
 enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
 #define DRIRECT_CAL_FREQ    990000000   // 990MHz
+#define ULTRA_HARMONIC_CAL_FREQ 5340000000
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
 #endif
@@ -7308,7 +7313,14 @@ void calibrate(void)
     set_auto_reflevel(true);
     setting.repeat = 10;
     //setting.scale = 1;
-    if (i <= 1) {
+    if (i == 5) {
+      set_sweep_points(51);
+      set_sweep_frequency(ST_SPAN,    50);
+      setting.rbw_x10 = 3;
+      test_path = 3;      // Ultra lna path
+      force_signal_path = true;
+      set_reflevel(-95);
+    } else if (i <= 1) {
       if (i == 1)
         set_RBW(8500);
       set_refer_output(5);          // 2MHz
@@ -7329,7 +7341,8 @@ void calibrate(void)
   }
   setting.scale = 10;
   set_trace_scale(10);
-
+  set_sweep_points(POINTS_COUNT);
+  force_signal_path = false;
 
 #endif
 #endif

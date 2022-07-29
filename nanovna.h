@@ -137,7 +137,7 @@
 #define HIGH_MIN_FREQ_MHZ   136// 825
 #define HIGH_MAX_FREQ_MHZ   1130
 #define MINIMUM_DIRECT_FREQ  823000000ULL
-#define ULTRA_MAX_FREQ      5350000000ULL           // Start of harmonic mode
+#define ULTRA_MAX_FREQ      5340000000ULL           // Start of harmonic mode
 #define DEFAULT_ULTRA_THRESHOLD 700000000ULL
 
 #define ULTRA_AUTO         10000000000ULL // 10GHz
