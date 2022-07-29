@@ -3326,20 +3326,12 @@ static const menuitem_t menu_top[] = {
 static void menu_item_modify_attribute(                     // To modify menu buttons with keypad modes
     const menuitem_t *menu, int item, ui_button_t *button)
 {
-  if (menu == menu_settings) {
-//    if (item == 2)
-//      button->icon = setting.auto_IF ? BUTTON_ICON_CHECK_AUTO : BUTTON_ICON_CHECK_MANUAL;
-  } else if (menu == menu_scanning_speed) {
-//    if (item == 0)
-//      button->icon = setting.step_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
-//    else if (item == 1)
-//      button->icon =setting.offset_delay > 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
-  } else if (menu == menu_display) {
-    if (item == 4)
+  if (menu == menu_display) {
+    if (item == 5)
       button->icon = setting.sweep_time_us != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
-  } else if (menu == menu_sweep_speed) {
-    if (item == 3)
-    button->icon = setting.fast_speedup != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
+//  } else if (menu == menu_sweep_speed) {
+//    if (item == 3)
+//    button->icon = setting.fast_speedup != 0 ? BUTTON_ICON_CHECK_MANUAL : BUTTON_ICON_CHECK_AUTO;
   } else if (menu == menu_reflevel) {
     if (item == 1)
       button->icon = setting.auto_reflevel ? BUTTON_ICON_GROUP: BUTTON_ICON_GROUP_CHECKED;
@@ -3379,7 +3371,7 @@ static void fetch_numeric_target(uint8_t mode)
     break;
   case KM_REFLEVEL:
     uistat.value = setting.reflevel;
-    plot_printf(uistat.text, sizeof uistat.text, "%f", uistat.value);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3F", uistat.value);
     break;
   case KM_ATTENUATION:
     uistat.value = get_attenuation();

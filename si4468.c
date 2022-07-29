@@ -364,7 +364,7 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
 
 void ADF4351_Set(int channel)
 {
-#if 1
+#if 0
   for (int i = 5; i >= 0; i--) {
     if (registers[i] != old_registers[i])
       goto update;
@@ -435,11 +435,10 @@ void ADF4351_R_counter(int R)
   for (int channel=0; channel < 6; channel++) {
     PFDRFout[channel] = (local_setting_frequency_30mhz_x100 * (dbl?2:1)) / R;
   }
-  clear_frequency_cache();                              // When R changes the possible frequencies will change
   maskedWrite(registers[2],14, 0x3FF, R);
-//  registers[2] &= ~(((uint32_t)0x3FF) << 14);
-//  registers[2] |=  (((uint32_t)    R) << 14);
-  ADF4351_Set(0);
+//   ADF4351_Set(0);            // Let next frequency set do the writing
+//  ADF4351_force_refresh();
+  clear_frequency_cache();                              // When R changes the possible frequencies will change
 }
 
 void ADF4351_recalculate_PFDRFout(void){

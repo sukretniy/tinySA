@@ -1517,8 +1517,10 @@ static void trace_print_value_string(     // Only used at one place
     unit_index+= MAX_UNIT_TYPE;
     freq_t  ref_freq = markers[ref_marker].frequency;
     int ridx = markers[ref_marker].index;
-    if (ridx > idx) {freq = ref_freq - freq; idx = ridx - idx; *ptr2++ = '-';}
-    else            {freq = freq - ref_freq; idx = idx - ridx; *ptr2++ = '+';}
+    if (ridx > idx) {idx = ridx - idx; *ptr2++ = '-';}
+    else            {idx = idx - ridx; *ptr2++ = '+';}
+    if (ref_freq > freq) {freq = ref_freq - freq;}
+    else                 {freq = freq - ref_freq;}
     v-= marker_to_value(ref_marker);
   } else
     freq += (setting.frequency_offset - FREQUENCY_SHIFT);

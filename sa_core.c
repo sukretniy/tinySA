@@ -236,8 +236,13 @@ void set_output_path(freq_t f, float level)
   if (signal_path == PATH_HIGH) {
     return;                 //TODO setup high path
   }
-
+#if 1       // Symetric modulation
+  float ATTENUATION_RESERVE = 3.0;
+  if (setting.modulation == MO_AM)
+    ATTENUATION_RESERVE = 6.0;
+#else
 #define ATTENUATION_RESERVE 3.0   // Always 3dB in attenuator
+#endif
 //  if (signal_path != PATH_LEAKAGE)
     level += ATTENUATION_RESERVE;
 
@@ -279,7 +284,7 @@ void set_output_path(freq_t f, float level)
   }
   int ar = 31 - ATTENUATION_RESERVE;
   if (setting.modulation == MO_AM) // reserve attenuator range for AM modulation
-    ar = 4;
+    ar = 6;
   while (a + ar < blw && d > LOWEST_LEVEL) { // reduce till it fits attenuator ((ar+ATTENUATION_RESERVE) ..  ATTENUATION_RESERVE)
     d--;
     blw =  BELOW_MAX_DRIVE(d);
@@ -1254,8 +1259,16 @@ void set_level(float v)     // Set the output level in dB  in high/low output
     v -= LOW_OUT_OFFSET;
     if (v < SL_GENLOW_LEVEL_MIN)
       v = SL_GENLOW_LEVEL_MIN;
-    if (v > SL_GENLOW_LEVEL_MAX)
-      v = SL_GENLOW_LEVEL_MAX;
+#if 1 // Symetric modulation
+
+    if (setting.modulation == MO_AM) {
+//    if (v > SL_GENLOW_LEVEL_MAX -3)
+//      v = SL_GENLOW_LEVEL_MAX - 3;
+    } else
+#endif
+      if (v > SL_GENLOW_LEVEL_MAX)
+        v = SL_GENLOW_LEVEL_MAX;
+
     v += LOW_OUT_OFFSET;
 //    set_attenuation(setting.level - LOW_OUT_OFFSET);
   }
@@ -3304,7 +3317,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 #ifdef TINYSA3
   int modulation_table;
 #endif
-  int modulation_count_iter = 0;
+//  int modulation_count_iter = 0;
 #ifdef __NEW_SWITCHES__
 //  int direct = ((setting.mode == M_LOW && config.direct  && f > DIRECT_START && f<DIRECT_STOP) || (setting.mode == M_GENLOW && f >= MINIMUM_DIRECT_FREQ && f < ultra_start) );
 #else
@@ -3376,7 +3389,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       clock_at_48MHz();
 #endif
 
-#ifdef TINYSA4                      // Calculate FM modulation
+#ifdef TINYSA4                      // Calculate AM/FM modulation
       if (setting.modulation == MO_AM) {
         int sinus_index = 1;
         config.cor_am = -180;        // Initialize with some spare
@@ -3385,15 +3398,28 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
-        int offset347 = setting.modulation_depth_x100 * 347 / 100;
+        int offset347 = (setting.modulation_depth_x100 < 100 ? setting.modulation_depth_x100 - 6: setting.modulation_depth_x100) * 347 / 100;
         for (int i = 0; i < modulation_steps/4 + 1; i++) {
+#if 1           // Symetric modulation
+          fm_modulation[i] = offset347 * sinus[i*sinus_index]/347;
+          fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
+          fm_modulation[modulation_steps/2 + i] = - offset347 * sinus[i*sinus_index]/347;
+          fm_modulation[modulation_steps - i] = fm_modulation[modulation_steps/2 + i];
+#else
           fm_modulation[i] = (694 - offset347 + offset347 * sinus[i*sinus_index]/347);
           fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
           fm_modulation[modulation_steps/2 + i] = (694 - offset347 - offset347 * sinus[i*sinus_index]/347);
           fm_modulation[modulation_steps - i] = fm_modulation[modulation_steps/2 + i];
+#endif
         }
         for (int i=0; i < modulation_steps; i++) {
+#if 1 // symetrical modulation
+          fm_modulation[i] = roundf(20.0*logf(1.0+(fm_modulation[i]/347.0)));
+#else
           fm_modulation[i] = roundf(10.0*logf(fm_modulation[i]*fm_modulation[i]/(694.0*694.0)));
+#endif
+          if (fm_modulation[i] > 12)
+            fm_modulation[i] = 12;
           if (fm_modulation[i] < -63)
             fm_modulation[i] = -63;
         }
@@ -3403,7 +3429,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         config.cor_am = -180;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
         //modulation_steps = 8;  // <-----------------TEMP!!!!!
-        while ( (modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
+        while ( (modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 100 && modulation_steps > 4) {
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
@@ -3695,7 +3721,7 @@ modulation_again:
       int p = setting.attenuate_x2 + am_modulation[modulation_counter];
 #endif
       if      (p>63)p = 63;
-      else if (p< 0) p =  0;
+      else if (p< 0)  { p =  0; if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}}
 #ifdef __PE4302__
       PE4302_Write_Byte(p);
 #endif
@@ -4075,7 +4101,7 @@ again:                                                              // Spur redu
               setting.increased_R = true;
               freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
               if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
-                ADF4351_R_counter(4);    // To avoid PLL Loop shoulders at multiple of 10MHz
+                ADF4351_R_counter(2);    // To avoid PLL Loop shoulders at multiple of 10MHz
               else
                 ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
             } else
@@ -4126,7 +4152,7 @@ again:                                                              // Spur redu
                   if (actual_rbw_x10 <= 3000) {
                     setting.increased_R = true;
                     freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
-                    if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
+                    if (tf + actual_rbw_x10*1000 >= lf  && tf < lf + actual_rbw_x10*1000) // 10MHz
                       ADF4351_R_counter(4);    // To avoid PLL Loop shoulders at multiple of 10MHz
                     else
                       ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
@@ -4193,7 +4219,14 @@ again:                                                              // Spur redu
           //
           if (signal_path == PATH_LOW || signal_path == PATH_ULTRA) ADF4351_drive(actual_drive);       // Max drive
         }
-        set_freq(ADF4351_LO, (target_f/10000)*10000);  // <----------- TESTING !!!!!!!!!!!!!!
+        if (signal_path == PATH_LEAKAGE)
+          set_freq(ADF4351_LO, target_f);
+        else {
+#define MAX_COMPENSATION    50000
+          if ( target_f < real_old_freq[ADF4351_LO] - MAX_COMPENSATION || target_f > real_old_freq[ADF4351_LO] + MAX_COMPENSATION )
+            set_freq(ADF4351_LO, target_f);
+        }
+
 #if 1                                                               // Compensate frequency ADF4350 error with SI4468
         if (actual_rbw_x10 < 10000 || setting.frequency_step < 100000) { //TODO always compensate for the moment as this eliminates artifacts at larger RBW
         int32_t error_f = 0;
@@ -5332,7 +5365,7 @@ static volatile int dummy;
     if ((chVTGetSystemTimeX() - sweep_elapsed > MS2ST(1000) && ( delta < -5 || delta > +5)) || delta > 10 ) {
       setting.attenuate_x2 += delta + delta;
       if (setting.attenuate_x2 < 0)
-        setting.attenuate_x2= 0;
+        setting.attenuate_x2 = 0;
       if (setting.attenuate_x2 > 60)
         setting.attenuate_x2 = 60;
       changed = true;
