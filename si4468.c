@@ -66,7 +66,7 @@
 #else
 // On 48M MCU STM32_PCLK2 = 48M, SPI = 48M/2 = 24M
 //#define SI4432_SPI_SPEED       SPI_BR_DIV2
-#define SI4432_SPI_SPEED       SPI_BR_DIV8
+#define SI4432_SPI_SPEED       SPI_BR_DIV4
 #endif
 
 

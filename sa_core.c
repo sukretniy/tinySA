@@ -236,13 +236,9 @@ void set_output_path(freq_t f, float level)
   if (signal_path == PATH_HIGH) {
     return;                 //TODO setup high path
   }
-#if 1       // Symetric modulation
   float ATTENUATION_RESERVE = 3.0;
   if (setting.modulation == MO_AM)
     ATTENUATION_RESERVE = 6.0;
-#else
-#define ATTENUATION_RESERVE 3.0   // Always 3dB in attenuator
-#endif
 //  if (signal_path != PATH_LEAKAGE)
     level += ATTENUATION_RESERVE;
 
@@ -482,7 +478,7 @@ void update_min_max_freq(void)
     minFreq = 0;
 #ifdef TINYSA4
 #ifdef __ULTRA_OUT__
-    maxFreq = ULTRA_MAX_FREQ; // MAX_LO_FREQ;
+    maxFreq = ULTRA_MAX_FREQ+60000000; // Add 60MHz to go to 5.40GHz
 #else
     maxFreq = MAX_LOW_OUTPUT_FREQ;
 #endif
@@ -1259,13 +1255,10 @@ void set_level(float v)     // Set the output level in dB  in high/low output
     v -= LOW_OUT_OFFSET;
     if (v < SL_GENLOW_LEVEL_MIN)
       v = SL_GENLOW_LEVEL_MIN;
-#if 1 // Symetric modulation
-
     if (setting.modulation == MO_AM) {
 //    if (v > SL_GENLOW_LEVEL_MAX -3)
 //      v = SL_GENLOW_LEVEL_MAX - 3;
     } else
-#endif
       if (v > SL_GENLOW_LEVEL_MAX)
         v = SL_GENLOW_LEVEL_MAX;
 
@@ -3389,35 +3382,26 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       clock_at_48MHz();
 #endif
 
+#define INITIAL_MODULATION_CORRECTION   -180
+
 #ifdef TINYSA4                      // Calculate AM/FM modulation
       if (setting.modulation == MO_AM) {
         int sinus_index = 1;
-        config.cor_am = -180;        // Initialize with some spare
+        config.cor_am = INITIAL_MODULATION_CORRECTION;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
         while ( (modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
         int offset347 = (setting.modulation_depth_x100 < 100 ? setting.modulation_depth_x100 - 6: setting.modulation_depth_x100) * 347 / 100;
-        for (int i = 0; i < modulation_steps/4 + 1; i++) {
-#if 1           // Symetric modulation
+        for (int i = 0; i < modulation_steps/4+1; i++) {
           fm_modulation[i] = offset347 * sinus[i*sinus_index]/347;
           fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
           fm_modulation[modulation_steps/2 + i] = - offset347 * sinus[i*sinus_index]/347;
           fm_modulation[modulation_steps - i] = fm_modulation[modulation_steps/2 + i];
-#else
-          fm_modulation[i] = (694 - offset347 + offset347 * sinus[i*sinus_index]/347);
-          fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
-          fm_modulation[modulation_steps/2 + i] = (694 - offset347 - offset347 * sinus[i*sinus_index]/347);
-          fm_modulation[modulation_steps - i] = fm_modulation[modulation_steps/2 + i];
-#endif
         }
         for (int i=0; i < modulation_steps; i++) {
-#if 1 // symetrical modulation
           fm_modulation[i] = roundf(20.0*logf(1.0+(fm_modulation[i]/347.0)));
-#else
-          fm_modulation[i] = roundf(10.0*logf(fm_modulation[i]*fm_modulation[i]/(694.0*694.0)));
-#endif
           if (fm_modulation[i] > 12)
             fm_modulation[i] = 12;
           if (fm_modulation[i] < -63)
@@ -3426,14 +3410,14 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
       }
       if (setting.modulation == MO_WFM) {
         int sinus_index = 1;
-        config.cor_am = -180;        // Initialize with some spare
+        config.cor_am = INITIAL_MODULATION_CORRECTION;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
         //modulation_steps = 8;  // <-----------------TEMP!!!!!
-        while ( (modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 100 && modulation_steps > 4) {
+        while ( ((modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am)) < 100 && modulation_steps > 4) {
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
-        for (int i = 0; i < modulation_steps/4 + 1; i++) {
+        for (int i = 0; i < modulation_steps/4+1; i++) {
           fm_modulation[i] = setting.modulation_deviation_div100 * sinus[i*sinus_index]/100;
           fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
           fm_modulation[modulation_steps/2 + i] = -fm_modulation[i];
@@ -3741,7 +3725,7 @@ modulation_again:
     if (modulation_counter >= modulation_steps) {
       modulation_counter = 0;
       cycle_counter++;
-      if (config.cor_am == -180) {
+      if (config.cor_am == INITIAL_MODULATION_CORRECTION) {
         if (chVTGetSystemTimeX() - start_of_sweep_timestamp > 1000) {    // 100 ms, System tick 10000 per second
           start_of_sweep_timestamp = chVTGetSystemTimeX();
           modulation_delay -= config.cor_am;
@@ -3999,7 +3983,7 @@ again:                                                              // Spur redu
       } else {              // Output mode
 #ifdef __ULTRA__
         if (S_IS_AUTO(setting.below_IF)) {
-          if ((freq_t)lf > MAX_ABOVE_IF_FREQ && lf <= ULTRA_MAX_FREQ )
+          if ((freq_t)lf > MAX_ABOVE_IF_FREQ && lf <= ULTRA_MAX_FREQ + 60000000)
             setting.below_IF = S_AUTO_ON; // Only way to reach this range. Use below IF in harmonic mode
           else
             setting.below_IF = S_AUTO_OFF; // default is above IF, Use below IF in harmonic mode
@@ -4136,31 +4120,31 @@ again:                                                              // Spur redu
               }
               else
                 ADF4351_R_counter(4);
-            } else {
-#if 0
-              if (actual_rbw_x10 < 1000) {
-                freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
-                if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
-                  setting.increased_R = true;
-                  ADF4351_R_counter(4);
-                else
-                  setting.increased_R = true;
-                  ADF4351_R_counter(3);
-              } else
-#endif
-                if (get_sweep_frequency(ST_SPAN)<5000000) { // When scanning less then 5MHz
-                  if (actual_rbw_x10 <= 3000) {
-                    setting.increased_R = true;
-                    freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
-                    if (tf + actual_rbw_x10*1000 >= lf  && tf < lf + actual_rbw_x10*1000) // 10MHz
-                      ADF4351_R_counter(4);    // To avoid PLL Loop shoulders at multiple of 10MHz
-                    else
-                      ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
-                  } else
-                    ADF4351_R_counter(1);
-                } else
-                  ADF4351_R_counter(1);
             }
+#if 0
+            else if (actual_rbw_x10 < 1000) {
+              freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
+              if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
+                setting.increased_R = true;
+              ADF4351_R_counter(4);
+              else
+                setting.increased_R = true;
+              ADF4351_R_counter(3);
+            }
+#endif
+            else if (get_sweep_frequency(ST_SPAN)<5000000) { // When scanning less then 5MHz
+              if (actual_rbw_x10 <= 3000) {
+                setting.increased_R = true;
+                freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
+                if (tf + actual_rbw_x10*1000 >= lf  && tf < lf + actual_rbw_x10*1000) // 10MHz
+                  ADF4351_R_counter(2);    // To avoid PLL Loop shoulders at multiple of 10MHz
+                else
+                  ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
+              } else
+                ADF4351_R_counter(1);
+            } else
+              ADF4351_R_counter(1);
+
           } else {                          // Input above 800 MHz
             if (local_modulo == 0) {
 //              if (actual_rbw_x10 >= 3000)
@@ -4191,7 +4175,7 @@ again:                                                              // Spur redu
         } else
           target_f = local_IF+lf; // otherwise to above IF
 #endif
-        if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
+        if (setting.harmonic && lf > ( setting.mode == M_GENLOW ? ULTRA_MAX_FREQ + 60000000:ULTRA_MAX_FREQ) ) {
           target_f /= setting.harmonic;
           LO_harmonic = true;
         }
