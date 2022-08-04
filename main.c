@@ -183,8 +183,14 @@ static THD_FUNCTION(Thread1, arg)
 #ifdef __CALIBRATE__
       } else if (sweep_mode & SWEEP_CALIBRATE) {
       // call from lowest level to save stack space
-      calibrate();
-      sweep_mode = SWEEP_ENABLE;
+        calibrate();
+        sweep_mode = SWEEP_ENABLE;
+#endif
+#ifdef TINYSA4
+      } else if (sweep_mode & SWEEP_CALIBRATE_HARMONIC) {
+      // call from lowest level to save stack space
+        calibrate_harmonic();
+        sweep_mode = SWEEP_ENABLE;
 #endif
       } else {
 //      if (setting.mode != -1)

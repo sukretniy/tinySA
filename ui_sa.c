@@ -932,6 +932,12 @@ static UI_FUNCTION_CALLBACK(menu_calibrate_cb)
   case 2:
     reset_calibration();
     break;
+#ifdef TINYSA4
+  case 3:
+    sweep_mode = SWEEP_CALIBRATE_HARMONIC;
+    menu_move_back(true);
+    break;
+#endif
   }
 }
 #endif
@@ -1058,7 +1064,7 @@ const char *menu_modulation_text[MO_MAX]=
    "FM 3kHz",
    "FM 5kHz",
 #else
-   "FM 5kHz",
+   "FM 4kHz",
 #endif
    "FM 75kHz", "External"};
 
@@ -1815,11 +1821,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
       b->icon = setting.stored[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     else if (data == 5) {
       if (setting.subtract[current_trace]) {
-        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.subtract[current_trace]);
         b->icon = BUTTON_ICON_CHECK;
+        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nTRACE %d", setting.subtract[current_trace]);
       } else {
-        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nOFF");
         b->icon = BUTTON_ICON_NOCHECK;
+        plot_printf(b->text, sizeof(b->text), "SUBTRACT\nOFF");
       }
       // b->icon = setting.subtract[current_trace] ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;  // icon not needed
     } else if (data == 4) {
@@ -1940,14 +1946,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   if (b){
 #ifdef TINYSA4
     if (!(sweep_mode & SWEEP_ENABLE)){
-      plot_printf(b->text, sizeof(b->text), "SINGLE\nSWEEP");
       b->icon = (sweep_mode & SWEEP_ONCE) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+      plot_printf(b->text, sizeof(b->text), "SINGLE\nSWEEP");
     } else {
-      plot_printf(b->text, sizeof(b->text), "WATER\nFALL");
       b->icon = setting.waterfall ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+      plot_printf(b->text, sizeof(b->text), "WATER\nFALL");
     }
 #else
     b->icon = setting.waterfall ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    plot_printf(b->text, sizeof(b->text), "WATER\nFALL");
 #endif
     return;
   }
@@ -1991,8 +1998,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
     int count = 0;
     for (int i=0;i<LIMITS_MAX;i++) {if (setting.limits[current_trace][i].enabled) count++; }
     if (count == 0) setting.limits[current_trace][0].enabled = true;
-    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.2F%s", (float)setting.limits[current_trace][data].frequency, value(setting.limits[current_trace][data].level),unit_string[setting.unit]);
     b->icon = (setting.limits[current_trace][data].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
+    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.2F%s", (float)setting.limits[current_trace][data].frequency, value(setting.limits[current_trace][data].level),unit_string[setting.unit]);
     return;
   }
   active_limit = data;
@@ -3077,7 +3084,10 @@ static const menuitem_t menu_calibrate[] =
 {
   { MT_FORM | MT_TITLE,      0, "Connect HIGH and LOW",  NULL},
   { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
-  { MT_FORM | MT_CALLBACK,   0, "RESET CALIBRATION",          menu_calibrate_cb},
+  { MT_FORM | MT_CALLBACK,   0, "RESET CALIBRATION",         menu_calibrate_cb},
+#ifdef TINYSA4
+  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE HARMONIC",        menu_calibrate_cb},
+#endif
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -3118,6 +3128,7 @@ static const menuitem_t menu_config2[] =
  { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
 #endif
  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+ { MT_KEYPAD,  KM_VAR,         "JOG STEP\n\b%s","0 = AUTO"},
  { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
 #ifdef __USE_SERIAL_CONSOLE__
  { MT_SUBMENU,          0, "CONNECTION", menu_connection},
@@ -3211,9 +3222,6 @@ static const menuitem_t menu_display[] = {
 #ifdef __DRAW_LINE__
   { MT_ADV_CALLBACK,1,             "DRAW\nLINE",      menu_settings_draw_line_acb},
 #endif
-#ifdef __VBW__
-  { MT_SUBMENU,     0,             "VBW",             menu_vbw},
-#endif
   { MT_KEYPAD,      KM_SWEEP_TIME, "SWEEP\nTIME",     "0..600s, 0=disable"},       // This must be item 3 to match highlighting
   { MT_SUBMENU,     0,             "SWEEP\nPOINTS",   menu_sweep_points},
   { MT_SUBMENU,     0,             "SWEEP\nACCURACY",  menu_sweep_speed},
@@ -3276,8 +3284,10 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_CENTER,      "CENTER\n\b%s",      NULL},
   { MT_KEYPAD,  KM_SPAN,        "SPAN\n\b%s",        NULL},
   { MT_KEYPAD,  KM_CW,          "ZERO SPAN",   NULL},
-  { MT_KEYPAD,  KM_VAR,         "JOG STEP\n\b%s","0 = AUTO"},
   { MT_SUBMENU,0,               "RBW",         menu_rbw},
+#ifdef __VBW__
+  { MT_SUBMENU,     0,             "VBW",             menu_vbw},
+#endif
   { MT_ADV_CALLBACK,0,          "SHIFT\nFREQ", menu_shift_acb},
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };

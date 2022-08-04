@@ -57,13 +57,21 @@ VNA_SHELL_FUNCTION(cmd_mode)
 
 VNA_SHELL_FUNCTION(cmd_modulation )
 {
+#ifdef TINYSA4
+  static const char cmd_mod[] = "off|am|fm|freq|depth|deviation";
+#else
   static const char cmd_mod[] = "off|am|nfm|wfm|extern|freq";
+#endif
   if (argc < 1) {
   usage:
     usage_printf("modulation %s 100..6000\r\n", cmd_mod);
     return;
   }
+#ifdef TINYSA4
+  static const int cmd_mod_val[] = { MO_NONE, MO_AM, MO_WFM, -1, -1, -1};
+#else
   static const int cmd_mod_val[] = { MO_NONE, MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL, -1};
+#endif
   int m = get_str_index(argv[0], cmd_mod);
   if (m<0)
      goto usage;
@@ -73,7 +81,16 @@ VNA_SHELL_FUNCTION(cmd_modulation )
     if (argc != 2)
       goto usage;
     int a = my_atoi(argv[1]);
+#ifdef TINYSA4
+    switch(m) {
+    case 3: set_modulation_frequency(a); break;
+    case 4: set_depth(a); break;
+    case 5: set_deviation(a); break;
+
+    }
+#else
     set_modulation_frequency(a);
+#endif
   }
 }
 

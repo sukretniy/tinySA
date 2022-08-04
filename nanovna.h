@@ -318,6 +318,7 @@ enum {
 #define SWEEP_REMOTE    0x10
 #ifdef __LISTEN__
 #define SWEEP_LISTEN    0x20
+#define SWEEP_CALIBRATE_HARMONIC 0x40
 //#define SWEEP_FACTORY    0x20
 #endif
 
@@ -1661,6 +1662,7 @@ void self_test(int);
 //extern int setting_test;
 void wait_user(void);
 void calibrate(void);
+void calibrate_harmonic(void);
 float to_dBm(float);
 float dBm_to_Watt(float);
 uint32_t calc_min_sweep_time_us(void);

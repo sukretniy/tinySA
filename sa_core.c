@@ -602,9 +602,11 @@ void reset_settings(int m)
   setting.lna = S_AUTO_OFF;
   setting.tracking = false;
   setting.modulation = MO_NONE;
-  setting.modulation_frequency = 1000;
+  setting.modulation_frequency = 400;
+#ifdef TINYSA4
   setting.modulation_depth_x100 = 80; // %80
   setting.modulation_deviation_div100 = 30; // 3kHz
+#endif
   setting.step_delay = 0;
   setting.offset_delay = 0;
   setting.step_delay_mode = SD_NORMAL;
@@ -1041,6 +1043,7 @@ void set_modulation(int m)
   dirty = true;
 }
 
+#ifdef TINYSA4
 void set_deviation(int d)
 {
   setting.modulation_deviation_div100  = d/100;
@@ -1052,10 +1055,15 @@ void set_depth(int d)
   setting.modulation_depth_x100  = d;
   dirty = true;
 }
+#endif
 
 void set_modulation_frequency(int f)
 {
   if (50 <= f && f <= 10000) {
+#ifdef TINYSA4
+      if (setting.modulation == MO_WFM && f > 1000)
+        f = 1000;
+#endif
     setting.modulation_frequency = f;
     dirty = true;
   }
@@ -3194,10 +3202,10 @@ static int fm_modulation[MAX_MODULATION_STEPS+1];
 //
 //  Offset is 156.25Hz when below 600MHz and 312.5 when above.
 //
-#define LND  16   // Total NFM deviation is LND * 4 * 156.25 = 5kHz when below 600MHz or 600MHz - 434MHz
-#define HND  8
-#define LWD  96 // Total WFM deviation is LWD * 4 * 156.25 = 30kHz when below 600MHz
-#define HWD  48
+#define LND  12   // Total NFM deviation is LND * 4 * 156.25 = 5kHz when below 600MHz or 600MHz - 434MHz
+#define HND  6
+#define LWD  240 // Total WFM deviation is LWD * 4 * 156.25 = 75kHz when below 600MHz
+#define HWD  120
 #define MODULATION_TABLES 4
 #define S1  1.5
 static const int fm_modulation[MODULATION_TABLES][MAX_MODULATION_STEPS] =
@@ -3308,7 +3316,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 {
   int modulation_delay = 0;
 #ifdef TINYSA3
-  int modulation_table;
+  int modulation_table = 0;
 #endif
 //  int modulation_count_iter = 0;
 #ifdef __NEW_SWITCHES__
@@ -3424,6 +3432,8 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           fm_modulation[modulation_steps - i] = -fm_modulation[i];
         }
       }
+#else
+      config.cor_am = INITIAL_MODULATION_CORRECTION;
 #endif
 
 
@@ -3637,62 +3647,25 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   int *current_fm_modulation = 0;
   if (MODE_OUTPUT(setting.mode)) {
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
-#ifdef TINYSA3
-#define MO_FREQ_COR 65000
-      modulation_table = 0;
- #else
-#define MO_FREQ_COR 0
-#endif
       modulation_counter = 0;
       cycle_counter = 0;
-//      if (in_selftest) {
-//        modulation_steps = 8;
-//        modulation_delay = 0;
-//      } else
-        if (setting.modulation == MO_AM) {          // -14 default
-        modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 8MHz/8
-        modulation_delay += config.cor_am;
-#ifdef TINYSA4
-//        modulation_steps = 8;
-#endif
-      } else  { // Must be FM
-        modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 8MHz/8
-#ifdef TINYSA4
-        switch(setting.modulation){
-        case MO_NFM:
-          modulation_delay += config.cor_nfm;
-          break;
-        case MO_NFM2:
-          modulation_delay += config.cor_nfm2;
-          break;
-        case MO_NFM3:
-          modulation_delay += config.cor_nfm3;
-          break;
-        case MO_WFM:
-          modulation_delay += config.cor_am;
-          break;
-        }
-//        modulation_steps = setting.modulation - MO_NFM;
-#else
-        // must be FM
-        if (setting.modulation == MO_WFM) {         // -17 default
-          modulation_delay += config.cor_am;
-          modulation_table = 1;
-        } else {                                // must be NFM
-          modulation_delay += config.cor_nfm;  // -17 default
-          // modulation_table = 0; // default value
-        }
+      modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 8MHz/8
+      modulation_delay += config.cor_am;
+#ifdef TINYSA3
+      if (setting.modulation == MO_WFM)
+        modulation_table = 1;
 #endif
 #ifdef TINYSA4
-        current_fm_modulation = (int *)fm_modulation;
+      current_fm_modulation = (int *)fm_modulation;
 #else
+      if(setting.modulation == MO_WFM || setting.modulation == MO_NFM) {
         if ((setting.mode == M_GENLOW  && f > ((freq_t)480000000) - DEFAULT_IF) ||
             (setting.mode == M_GENHIGH  && f > ((freq_t)480000000) ) )
           modulation_table += 2;
         current_fm_modulation = (int *)fm_modulation[modulation_table];
         f -= fm_modulation_offset[modulation_table];           // Shift output frequency
-#endif
       }
+#endif
     }
   }
 modulation_again:
@@ -3705,7 +3678,12 @@ modulation_again:
       int p = setting.attenuate_x2 + am_modulation[modulation_counter];
 #endif
       if      (p>63)p = 63;
-      else if (p< 0)  { p =  0; if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}}
+      else if (p< 0)  {
+        p =  0;
+#ifdef TINSYA4
+      if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
+#endif
+      }
 #ifdef __PE4302__
       PE4302_Write_Byte(p);
 #endif
@@ -3727,7 +3705,7 @@ modulation_again:
       cycle_counter++;
       if (config.cor_am == INITIAL_MODULATION_CORRECTION) {
         if (chVTGetSystemTimeX() - start_of_sweep_timestamp > 1000) {    // 100 ms, System tick 10000 per second
-          start_of_sweep_timestamp = chVTGetSystemTimeX();
+         start_of_sweep_timestamp = chVTGetSystemTimeX();
           modulation_delay -= config.cor_am;
           int actual_delay = 800000 / cycle_counter / modulation_steps;           // In units of 1/8 microsecond
           config.cor_am += modulation_delay - actual_delay;
@@ -6892,6 +6870,7 @@ static int R_table[R_TABLE_SIZE] = {1,3,-3,4,5};
     setting.step_delay_mode = SD_NORMAL;
     setting.step_delay = 0;
 #endif
+#if 0                   // No longer needed
   } else if (false && test == 4) {           // Calibrate modulation frequencies
     reset_settings(M_LOW);
     set_mode(M_GENLOW);
@@ -6939,6 +6918,7 @@ static int R_table[R_TABLE_SIZE] = {1,3,-3,4,5};
 
     //    shell_printf("\n\rCycle time = %d\n\r", start_of_sweep_timestamp);
     reset_settings(M_LOW);
+#endif
   } else if (false && test == 5) {
 //    reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
@@ -7200,7 +7180,7 @@ void calibrate_modulation(int modulation, int8_t *correction)
     in_selftest = false;
     *correction = -start_of_sweep_timestamp;  // uses 10 microsecond delay
     setting.modulation = M_OFF;
-    setting.modulation_frequency = 1000;
+    setting.modulation_frequency = 400;
   }
 }
 
@@ -7253,16 +7233,64 @@ float get_jump_config(int i) {
   return 0;
 }
 
-void calibration_busy(void) {
-  ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Calibration busy", 40, 200);
-}
-
 enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
 #define DRIRECT_CAL_FREQ    990000000   // 990MHz
 #define ULTRA_HARMONIC_CAL_FREQ 5340000000
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
+#endif
+
+void calibration_busy(void) {
+  ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+  ili9341_drawstring_7x13("Calibration busy", 40, 200);
+}
+
+
+#ifdef TINYSA4
+void calibrate_harmonic(void)
+{
+  int old_sweep_points = setting._sweep_points;
+  int old_ultra = config.ultra;
+  config.ultra = true;
+//  setting.auto_IF = true;                         // set in selftest
+//  setting.frequency_IF = config.frequency_IF1;    // set in selftest
+  set_sweep_points(450);
+//  setting.scale = 1;
+//  set_trace_scale(1);
+  int i = JUMP_FREQS - 1;
+  {
+    test_freq = jump_freqs[i];
+    set_jump_config(i, -2);
+    test_prepare(TEST_JUMP);
+    set_RBW(1000);
+//    set_auto_reflevel(true);
+    set_reflevel(-20);
+    setting.repeat = 10;
+    test_acquire(TEST_JUMP);                        // Acquire test
+    set_jump_config(i, get_jump_config(i) + measure_jump(i));
+    calibration_busy();
+    chThdSleepMilliseconds(500);
+    test_acquire(TEST_JUMP);                        // Acquire test
+    set_jump_config(i, get_jump_config(i) + measure_jump(i));
+    calibration_busy();
+    chThdSleepMilliseconds(500);
+  }
+  config.ultra = old_ultra;
+  setting.scale = 10;
+  set_trace_scale(10);
+  force_signal_path = false;
+  config_save();
+  ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+  ili9341_drawstring_7x13("Calibration complete", 40, 200);
+  ili9341_drawstring_7x13("Touch screen to continue", 40, 220);
+  wait_user();
+  ili9341_clear_screen();
+  set_sweep_points(old_sweep_points);
+  in_selftest = false;
+  reset_settings(M_LOW);
+  set_refer_output(-1);
+  test_wait = false;
+}
 #endif
 
 void calibrate(void)
@@ -7289,7 +7317,7 @@ void calibrate(void)
 
   setting.scale = 1;
   set_trace_scale(1);
-  for (int i =0; i<JUMP_FREQS; i++) {
+  for (int i =0; i<JUMP_FREQS-1; i++) { // Don't do harmonic
     test_freq = jump_freqs[i];
     set_jump_config(i, -2);
     test_prepare(TEST_JUMP);
