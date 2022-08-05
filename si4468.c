@@ -444,6 +444,7 @@ void ADF4351_R_counter(int R)
 void ADF4351_recalculate_PFDRFout(void){
   int local_r = old_R;
   old_R = -1;
+  local_setting_frequency_30mhz_x100 = config.setting_frequency_30mhz;
   ADF4351_R_counter(local_r);
 }
 
@@ -458,7 +459,7 @@ void ADF4350_shift_ref(int f) {
   if (f == shifted)
     return;
   shifted = false;
-  local_setting_frequency_30mhz_x100 = 3000000000;
+  local_setting_frequency_30mhz_x100 = config.setting_frequency_30mhz;
   if (shifted) {
     local_setting_frequency_30mhz_x100 = (local_setting_frequency_30mhz_x100 * SHIFT_MUL) / SHIFT_DIV;
   }

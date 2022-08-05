@@ -404,7 +404,7 @@ enum {
   // #10
   KM_SAMPLETIME, KM_LOWOUTLEVEL, KM_DECAY, KM_NOISE,
 #ifdef TINYSA4
-  KM_30MHZ, 
+  KM_FREQ_CORR,
 #else
   KM_10MHZ, 
 #endif
@@ -469,7 +469,7 @@ static const struct {
 [KM_DECAY]        = {keypads_positive    , "DECAY"},    // KM_DECAY
 [KM_NOISE]        = {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
 #ifdef TINYSA4
-[KM_30MHZ]        = {keypads_freq        , "FREQ"},    // KM_30MHz
+[KM_FREQ_CORR]    = {keypads_plusmin     , "PPB"},    // KM_FREQ_CORR
 #else
 [KM_10MHZ]        = {keypads_freq        , "FREQ"},    // KM_10MHz
 #endif
@@ -2971,7 +2971,7 @@ static const menuitem_t menu_settings2[] =
   { MT_KEYPAD,   KM_ATTACK,      "ATTACK\n\b%s",   "0..100000ms"},
 #endif
 #ifdef TINYSA4
-  { MT_KEYPAD,   KM_30MHZ,      "30MHz*100\n\b%s", "Enter actual 30MHz * 100"},
+  { MT_KEYPAD,   KM_FREQ_CORR,    "FREQ CORR\n\b%s", "Enter ppb correction"},
 #endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
@@ -3501,9 +3501,13 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
     break;
 #ifdef TINYSA4
-  case KM_30MHZ:
-    uistat.freq_value = config.setting_frequency_30mhz;
-    plot_printf(uistat.text, sizeof uistat.text, "%.5QHz", uistat.freq_value);
+  case KM_FREQ_CORR:
+    if (config.setting_frequency_30mhz >= 3000000000ULL)
+      uistat.value = (config.setting_frequency_30mhz - 3000000000ULL)/3;
+    else
+      uistat.value = - ((int)(3000000000ULL - config.setting_frequency_30mhz))/3;
+
+    plot_printf(uistat.text, sizeof uistat.text, "%d", (int32_t)uistat.value);
     break;
 #else
   case KM_10MHZ:
@@ -3711,8 +3715,8 @@ set_numeric_value(void)
     set_noise(uistat.value);
     break;
 #ifdef TINYSA4
-  case KM_30MHZ:
-    set_30mhz(uistat.freq_value);
+  case KM_FREQ_CORR:
+    set_actual_freq(uistat.value);
     break;
 #else
   case KM_10MHZ:

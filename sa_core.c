@@ -803,15 +803,19 @@ void set_gridlines(int d)
 }
 
 #ifdef TINYSA4
-void set_30mhz(freq_t f)
+
+int set_actual_freq(int f)
 {
-//  if (f < 29000000 || f > 31000000)
-//    return;
-  config.setting_frequency_30mhz = f;
+  if (get_sweep_frequency(ST_CENTER) > 1000000000)
+    return -1;
+  if (f < - 10000 || f > +10000)
+    return -1;
+  config.setting_frequency_30mhz = 3000000000 + f * 3 ;
   ADF4351_recalculate_PFDRFout();
   config_save();
   dirty = true;
   update_grid();
+  return 0;
 }
 #else
 void set_10mhz(freq_t f)
@@ -7325,7 +7329,7 @@ void calibrate(void)
     set_auto_reflevel(true);
     setting.repeat = 10;
     //setting.scale = 1;
-    if (i == 5) {
+    if (i == 5) {                       // Not used !!!!!
       set_sweep_points(51);
       set_sweep_frequency(ST_SPAN,    50);
       setting.rbw_x10 = 3;

@@ -456,7 +456,7 @@ void clear_frequency_cache(void);
 void toggle_high_out_adf4350(void);
 extern int high_out_adf4350;
 #endif
-void set_30mhz(freq_t);
+int set_actual_freq(int);
 void set_IF2(int f);
 void set_R(int f);
 extern void set_modulo(uint32_t f);

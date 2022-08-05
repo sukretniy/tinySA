@@ -591,7 +591,7 @@ VNA_SHELL_FUNCTION(cmd_actual_freq)
     shell_printf("%DHz\r\n", config.setting_frequency_30mhz);
     return;
   } else {
-    set_30mhz(my_atoui(argv[0]));
+    set_actual_freq(my_atoui(argv[0]));
   }
 }
 #endif
