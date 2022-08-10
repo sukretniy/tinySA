@@ -3929,6 +3929,10 @@ redraw_cal_status:
       ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
       ili9341_drawstring("LEVEL\nERROR", 0 , 80);
     }
+    if (depth_error) {
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
+      ili9341_drawstring("DEPTH\nERROR", 0 , 140);
+    }
 #endif
     return;
   }

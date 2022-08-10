@@ -288,7 +288,8 @@ void set_output_path(freq_t f, float level)
   a -= blw;
   set_output_drive(d);
 //  if (signal_path != PATH_LEAKAGE)
-    a -= ATTENUATION_RESERVE;
+  a -= ATTENUATION_RESERVE;
+  depth_error = false;
   if (a > 0) {
     a = 0;
     if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
@@ -541,6 +542,7 @@ void reset_settings(int m)
   drive_dBm = (float *) (setting.mode == M_GENHIGH ? adf_drive_dBm : si_drive_dBm);
   setting.exp_aver = 1;
   setting.increased_R = false;
+  setting.mixer_output = true;
 #endif
   update_min_max_freq();
   force_signal_path = false;
@@ -602,7 +604,7 @@ void reset_settings(int m)
   setting.lna = S_AUTO_OFF;
   setting.tracking = false;
   setting.modulation = MO_NONE;
-  setting.modulation_frequency = 400;
+  setting.modulation_frequency = 1000;
 #ifdef TINYSA4
   setting.modulation_depth_x100 = 80; // %80
   setting.modulation_deviation_div100 = 30; // 3kHz
@@ -806,9 +808,7 @@ void set_gridlines(int d)
 
 int set_actual_freq(int f)
 {
-  if (get_sweep_frequency(ST_CENTER) > 1000000000)
-    return -1;
-  if (f < - 10000 || f > +10000)
+  if (f < - 100000 || f > +100000)
     return -1;
   config.setting_frequency_30mhz = 3000000000 + f * 3 ;
   ADF4351_recalculate_PFDRFout();
@@ -3312,6 +3312,7 @@ int test_path = 0;
 int test_output_attenuate = 0;
 #ifdef TINYSA4
 bool level_error = false;
+bool depth_error = false;
 static float old_temp = 0.0;
 #endif
 
@@ -3681,11 +3682,11 @@ modulation_again:
 #else
       int p = setting.attenuate_x2 + am_modulation[modulation_counter];
 #endif
-      if      (p>63)p = 63;
-      else if (p< 0)  {
+      if      (p>63) { p = 63;}
+      else if (p< 0) {
         p =  0;
-#ifdef TINSYA4
-      if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
+#ifdef TINYSA4
+        if (!depth_error) { depth_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
 #endif
       }
 #ifdef __PE4302__

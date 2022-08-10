@@ -349,6 +349,7 @@ extern bool ultra;
 extern float measured_noise_figure;
 extern float *drive_dBm;
 extern bool level_error;
+extern bool depth_error;
 #else
 extern const int8_t drive_dBm [];
 #endif
@@ -1206,7 +1207,7 @@ typedef struct setting
 #ifdef __ULTRA__
   uint8_t ultra;    // enum ??
 #endif
-  #ifdef TINYSA4
+#ifdef TINYSA4
   bool    extra_lna;
   int R;            // KM_R
   int32_t exp_aver;
