@@ -3532,8 +3532,13 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%.3Fs", uistat.value);
     break;
   case KM_TRIGGER:
-    uistat.value = setting.trigger_level;
-    plot_printf(uistat.text, sizeof uistat.text, "%.1fdB", uistat.value);
+    uistat.value = value(setting.trigger_level);
+    char *format;
+    if (UNIT_IS_LINEAR(setting.unit))
+      format = "%.3F%s"; // 5 characters incl u, m, etc...
+    else
+      format = "%.1f%s";
+    plot_printf(uistat.text, sizeof uistat.text, format, uistat.value,unit_string[setting.unit]);
     break;
   case KM_MARKER:
     if (active_marker >=0) {
