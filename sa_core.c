@@ -138,7 +138,7 @@ int max_drive = 18;
 #define SL_GENHIGH_LEVEL_MAX    drive_dBm[MAX_DRIVE]
 
 #define SL_GENLOW_LEVEL_MIN    -124
-#define SL_GENLOW_LEVEL_MAX   -16
+#define SL_GENLOW_LEVEL_MAX   -18.5
 #ifdef TINYSA4_4
 #define MAX_ATTENUATE (setting.extra_lna ? 0 : 31.5)
 #else
@@ -7427,11 +7427,13 @@ void calibrate(void)
           set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
           test_path = 4;      // Direct path at 900MHz
           force_signal_path = true;
+          config.direct_level_offset -= 1.0;
           break;
         case CS_DIRECT_LNA:
           set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
           test_path = 5;      // Direct lna path at 900MHz
           force_signal_path = true;
+          config.direct_lna_level_offset += 1.0;
           break;
 #endif
         }
@@ -7496,8 +7498,13 @@ void calibrate(void)
 #ifdef TINYSA4
         if (calibration_stage == CS_DIRECT_REF)
           direct_level = marker_to_value(0);
-        else if (calibration_stage == CS_DIRECT || calibration_stage == CS_DIRECT_LNA)
+        else if (calibration_stage == CS_DIRECT){
+          config.direct_level_offset += 1.0;
           offset = set_actual_power(direct_level);
+        } else if (calibration_stage == CS_DIRECT_LNA){
+          config.direct_lna_level_offset -= 1.0;
+          offset = set_actual_power(direct_level);
+        }
         else
 #endif
           offset = set_actual_power(CAL_LEVEL);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
