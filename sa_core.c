@@ -1185,7 +1185,7 @@ float low_out_offset(void)
     if (config.low_level_offset == 100)
       return 0;
     else
-      return config.low_level_offset;
+      return - config.low_level_offset;
   } else
     return config.low_level_output_offset;
 }
@@ -1197,7 +1197,7 @@ float high_out_offset(void)
     if (config.high_level_offset == 100)
       return 0;
     else
-      return config.high_level_offset;
+      return - config.high_level_offset;
   } else
     return config.high_level_output_offset;
 }
@@ -1246,6 +1246,12 @@ void correct_high_output_level(void)
 
 void set_level(float v)     // Set the output level in dB  in high/low output
 {
+#if 1
+  if (v < level_min())
+    v = level_min();
+  if (v > level_max())
+    v = level_max();
+#else
   if (setting.mode == M_GENHIGH) {
     v -= config.high_level_output_offset;
     if (v < SL_GENHIGH_LEVEL_MIN)
@@ -1253,16 +1259,6 @@ void set_level(float v)     // Set the output level in dB  in high/low output
     if (v > SL_GENHIGH_LEVEL_MAX)
       v = SL_GENHIGH_LEVEL_MAX;
     v += config.high_level_output_offset;
-#if 0
-    unsigned int d = MIN_DRIVE;
-    v = v - config.high_level_output_offset;
-    while (drive_dBm[d] < v && d < MAX_DRIVE)       // Find level equal or above requested level
-      d++;
-//    if (d == 8 && v < -12)  // Round towards closest level
-//      d = 7;
-    v = drive_dBm[d] + config.high_level_output_offset;
-    set_lo_drive(d);
-#endif
   } else {                  // This MUST be low output level
     v -= LOW_OUT_OFFSET;
     if (v < SL_GENLOW_LEVEL_MIN)
@@ -1277,6 +1273,7 @@ void set_level(float v)     // Set the output level in dB  in high/low output
     v += LOW_OUT_OFFSET;
 //    set_attenuation(setting.level - LOW_OUT_OFFSET);
   }
+#endif
   setting.level = v;
   if (setting.mode == M_GENHIGH) correct_high_output_level();
   dirty = true;
