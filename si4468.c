@@ -1796,8 +1796,8 @@ void SI4463_set_modem_DSM(void) {
 
 uint16_t force_rbw(int f)
 {
-  if (SI4463_in_tx_mode || f >= (int)(sizeof(RBW_choices)/sizeof(RBW_t)))
-    return(0);
+  if (/*SI4463_in_tx_mode || */ f >= (int)(sizeof(RBW_choices)/sizeof(RBW_t)))
+    return(0);          // RBW can be selected before switch to input mode is made
   SI4463_set_state(SI446X_STATE_READY);
   const uint8_t *config = RBW_choices[f].reg;
   uint16_t i=0;

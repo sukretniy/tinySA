@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -743,6 +743,7 @@ typedef struct config {
   float ultra_level_offset;
   float direct_lna_level_offset;
   float ultra_lna_level_offset;
+  float adf_level_offset;
 #endif
 #ifdef __NOISE_FIGURE__
   float noise_figure;

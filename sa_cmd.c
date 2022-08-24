@@ -370,7 +370,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   //                                     0    1      2
 #ifdef TINYSA4
-  static const char cmd_mode_list[] = "low|switch|receive_switch|out_switch|lna|harmonic|shift1|shift2|shift3|drive1|drive2|drive3|direct|direct_lna|ultra|ultra_lna";
+  static const char cmd_mode_list[] = "low|switch|receive_switch|out_switch|lna|harmonic|shift1|shift2|shift3|drive1|drive2|drive3|direct|direct_lna|ultra|ultra_lna|adf";
 #else
   static const char cmd_mode_list[] = "low|high|switch|receive_switch";
 #endif
@@ -402,6 +402,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     shell_printf(p, "direct_lna",   config.direct_lna_level_offset);
     shell_printf(p, "ultra",        config.ultra_level_offset);
     shell_printf(p, "ultra_lna",    config.ultra_lna_level_offset);
+    shell_printf(p, "adf",          config.adf_level_offset);
 #endif
     return;
   }
@@ -437,6 +438,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       case 13: config.direct_lna_level_offset = v; break;
       case 14: config.ultra_level_offset = v; break;
       case 15: config.ultra_lna_level_offset = v; break;
+      case 16: config.adf_level_offset = v; break;
 #endif
       default: goto usage;
     }

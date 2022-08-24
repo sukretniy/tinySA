@@ -1554,7 +1554,7 @@ float get_level_offset(void)
     return(lev == 100? 0 : lev);
   }
   if (setting.mode == M_GENLOW) {
-    return(LOW_OUT_OFFSET);
+      return(LOW_OUT_OFFSET);
   }
   if (setting.mode == M_GENHIGH) {
     return(config.high_level_output_offset);
@@ -2071,6 +2071,8 @@ void calculate_step_delay(void)
       SI4432_step_delay   = step_delay_table[i].step_delay;
       SI4432_offset_delay = step_delay_table[i].offset_delay;
       spur_gate           = actual_rbw_x10 * (actual_rbw_x10 > 5000 ? (100/2) : 100);
+      if (spur_gate < 30000)
+        spur_gate = 30000;
 //      spur_gate           = step_delay_table[i].spur_div_1000 * 1000;
       noise_level         = step_delay_table[i].noise_level - PURE_TO_float(get_signal_path_loss());
       log_averaging_correction = step_delay_table[i].log_aver_correction;
@@ -2214,6 +2216,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
       break;
     case PATH_LEAKAGE:
       c = CORRECTION_LOW_OUT_ADF;
+      cv += float_TO_PURE_RSSI(-config.adf_level_offset);
       break;
     }
   }
@@ -2925,7 +2928,7 @@ static  const freq_t spur_table[] =                                 // Frequenci
 const int spur_table_size = (sizeof spur_table)/sizeof(freq_t);
 #endif
 #ifdef TINYSA4
-#define STATIC_SPUR_TABLE_SIZE 55
+#define STATIC_SPUR_TABLE_SIZE 56
 static  const freq_t static_spur_table[STATIC_SPUR_TABLE_SIZE] =     // Valid for IF=977.4MHz
 {
  5233000,
@@ -2949,6 +2952,7 @@ static  const freq_t static_spur_table[STATIC_SPUR_TABLE_SIZE] =     // Valid fo
  115200000,
  243881127,
  471300000,
+ 487750054,
  487762254,
  501300000,
  508800000,
@@ -4094,7 +4098,8 @@ again:                                                              // Spur redu
             if (local_modulo == 0) ADF4351_modulo(4000);
 
             freq_t tf = ((lf + actual_rbw_x10*200) / TCXO) * TCXO;
-            if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 && tf != 180000000) {   // 30MHz
+            if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 /* && tf != 180000000 */ ) {   // 30MHz
+              setting.increased_R = true;
               if ( (tf / TCXO) & 1 ) {    // Odd harmonic of 30MHz
                 ADF4351_R_counter(-3);
               }

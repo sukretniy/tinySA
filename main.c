@@ -1000,6 +1000,7 @@ config_t config = {
   .ultra_level_offset =        0.0,    // Uncalibrated
   .direct_lna_level_offset = 0,
   .ultra_lna_level_offset = 0,
+  .adf_level_offset = 0,
   .correction_frequency =
   {
    /* low */   {   10000,  40000,  100000,     300000,     500000,     900000,     4000000,    6000000,    30000000,   90000000,   210000000,  300000000,  380000000,  510000000,  600000000,  690000000,  780000000,  810000000,  820000000,  830000000},

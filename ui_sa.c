@@ -765,8 +765,11 @@ static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (config.low_level_output_offset == 100)
+  if (config.low_level_output_offset == 100) {
+    drawMessageBox("Error", "First set OUTPUT LEVEL", 2000);
+    redraw_request|= REDRAW_AREA;
     return;
+  }
   current_curve = CORRECTION_LOW_OUT;
   menu_push_submenu(menu_curve);
 }
@@ -2884,7 +2887,73 @@ static const menuitem_t menu_sweep_speed[] =
 };
 
 #ifdef TINYSA4
+static const menuitem_t menu_curve3[] = {
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(14,6), MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_curve2[] = {
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(7,7), MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve3},
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_curve[] = {
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(0,7), MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve2},
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_curve_confirm[] = {
+  { MT_CALLBACK, 1,               "OK",       menu_curve_confirm_cb },
+  { MT_CALLBACK, 0,               "CANCEL",   menu_curve_confirm_cb },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+static const menuitem_t menu_noise_figure_confirm[] = {
+  { MT_CALLBACK, 1,               "STORE\nTINYSA NF",       menu_noise_figure_confirm_cb },
+  { MT_CALLBACK, 0,               "CANCEL",   menu_noise_figure_confirm_cb },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+
+#endif
+
+static const menuitem_t menu_actual_power[] =
+{
+ { MT_KEYPAD,           KM_ACTUALPOWER, "INPUT\nLEVEL",  "dBm"},
+ { MT_ADV_CALLBACK,     0,              "OUTPUT\nLEVEL", menu_output_level_acb},
+#ifdef TINYSA4
+ { MT_CALLBACK,     0,                  "INPUT\nCURVE",  menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "LNA\nCURVE",    menu_lna_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "ULTRA\nCURVE",  menu_ultra_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "LNA_U\nCURVE",    menu_lna_u_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "OUTPUT\nCURVE", menu_output_curve_prepare_cb},
+#endif
+  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+
+#ifdef TINYSA4
 static const menuitem_t menu_settings4[];
+#endif
+
+#ifdef TINYSA4
+static const menuitem_t menu_settings4[] =
+{
+ { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
+ { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
+ { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
+#if 0                                                                           // only used during development
+  { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
+  { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
+  { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
+#endif
+//  { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
+  { MT_ADV_CALLBACK,     0,     "LINEAR\nAVERAGING",          menu_linear_averaging_acb},
+//  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
+  { MT_KEYPAD,   KM_DIRECT_START,     "DSTART\n\b%s", ""},
+  { MT_KEYPAD,   KM_DIRECT_STOP,     "DSTOP\n\b%s", ""},
+  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
 #endif
 
 static const menuitem_t menu_settings3[] =
@@ -2932,17 +3001,35 @@ static const menuitem_t menu_settings3[] =
 #endif  // TINYSA4
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
-#ifdef TINYSA4
-static const menuitem_t menu_settings4[] =
+
+static const menuitem_t menu_settings2[] =
 {
- { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
- { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
- { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
- { MT_ADV_CALLBACK,     0,     "PROGRESS\nBAR",        menu_progress_bar_acb},
-#if 0                                                                           // only used during development
-  { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
-  { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
-  { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
+  { MT_ADV_CALLBACK, 0,             "AGC",           menu_settings_agc_acb},
+  { MT_ADV_CALLBACK, 0,             "LNA",           menu_settings_lna_acb},
+  { MT_ADV_CALLBACK | MT_LOW, 0,    "BPF",           menu_settings_bpf_acb},
+  { MT_ADV_CALLBACK | MT_LOW, 0,    "BELOW IF",      menu_settings_below_if_acb},
+  { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ\n\b%s",           "0=auto IF"},
+  { MT_KEYPAD,   KM_DECAY,      "DECAY\n\b%s",   "0..1000000ms or sweeps"},
+#ifdef __QUASI_PEAK__
+  { MT_KEYPAD,   KM_ATTACK,      "ATTACK\n\b%s",   "0..100000ms"},
+#endif
+  { MT_SUBMENU,0,               "SCAN\nSPEED",        menu_scanning_speed},
+#ifdef TINYSA4
+  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
+#else
+  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
+#endif
+  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
+  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+
+
+static const menuitem_t menu_settings[] =
+{
+  { MT_SUBMENU, 0,              "LEVEL\nCORRECTION",  menu_actual_power},
+  { MT_ADV_CALLBACK,     0,     "PROGRESS\nBAR",        menu_progress_bar_acb},
+#ifdef TINYSA4
+  { MT_KEYPAD,   KM_FREQ_CORR,    "FREQ CORR\n\b%s", "Enter ppb correction"},
 #endif
 #ifdef __NOISE_FIGURE__
   { MT_KEYPAD,   KM_NF,        "NF\n\b%s", "Enter tinySA noise figure"},
@@ -2951,90 +3038,7 @@ static const menuitem_t menu_settings4[] =
   { MT_CALLBACK,        0 ,     "LOAD\nCONFIG.INI",    menu_load_config_cb},
 //  { MT_CALLBACK,        1 ,     "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
-  { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
-  { MT_ADV_CALLBACK,     0,     "LINEAR\nAVERAGING",          menu_linear_averaging_acb},
-//  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
-  { MT_KEYPAD,   KM_DIRECT_START,     "DSTART\n\b%s", ""},
-  { MT_KEYPAD,   KM_DIRECT_STOP,     "DSTOP\n\b%s", ""},
-  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
-};
-#endif
-
-static const menuitem_t menu_settings2[] =
-{
-  { MT_ADV_CALLBACK, 0,             "AGC",           menu_settings_agc_acb},
-  { MT_ADV_CALLBACK, 0,             "LNA",           menu_settings_lna_acb},
-  { MT_ADV_CALLBACK | MT_LOW, 0,    "BPF",           menu_settings_bpf_acb},
-  { MT_ADV_CALLBACK | MT_LOW, 0,    "BELOW IF",      menu_settings_below_if_acb},
-  { MT_KEYPAD,   KM_DECAY,      "DECAY\n\b%s",   "0..1000000ms or sweeps"},
-#ifdef __QUASI_PEAK__
-  { MT_KEYPAD,   KM_ATTACK,      "ATTACK\n\b%s",   "0..100000ms"},
-#endif
-#ifdef TINYSA4
-  { MT_KEYPAD,   KM_FREQ_CORR,    "FREQ CORR\n\b%s", "Enter ppb correction"},
-#endif
-  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
-  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
-};
-
-#ifdef TINYSA4
-static const menuitem_t menu_curve3[] = {
-  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(14,6), MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_curve2[] = {
-  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(7,7), MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve3},
-  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_curve[] = {
-  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(0,7), MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve2},
-  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_curve_confirm[] = {
-  { MT_CALLBACK, 1,               "OK",       menu_curve_confirm_cb },
-  { MT_CALLBACK, 0,               "CANCEL",   menu_curve_confirm_cb },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-static const menuitem_t menu_noise_figure_confirm[] = {
-  { MT_CALLBACK, 1,               "STORE\nTINYSA NF",       menu_noise_figure_confirm_cb },
-  { MT_CALLBACK, 0,               "CANCEL",   menu_noise_figure_confirm_cb },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
-
-#endif
-
-static const menuitem_t menu_actual_power[] =
-{
- { MT_KEYPAD,           KM_ACTUALPOWER, "INPUT\nLEVEL",  "dBm"},
- { MT_ADV_CALLBACK,     0,              "OUTPUT\nLEVEL", menu_output_level_acb},
-#ifdef TINYSA4
- { MT_CALLBACK,     0,                  "INPUT\nCURVE",  menu_input_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "LNA\nCURVE",    menu_lna_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "ULTRA\nCURVE",  menu_ultra_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "LNA_U\nCURVE",    menu_lna_u_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "OUTPUT\nCURVE", menu_output_curve_prepare_cb},
-#endif
-  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
-};
-
-
-static const menuitem_t menu_settings[] =
-{
-  { MT_SUBMENU, 0,              "LEVEL\nCORRECTION",  menu_actual_power},
-  { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ\n\b%s",           "0=auto IF"},
-  { MT_SUBMENU,0,               "SCAN\nSPEED",        menu_scanning_speed},
-#ifdef TINYSA4
-  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
-#else
-  { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
-#endif
-  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings2},
+  { MT_SUBMENU,  0,             "INTERNALS",     menu_settings2},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
@@ -3154,7 +3158,6 @@ static const menuitem_t menu_config[] = {
 #ifdef __USE_RTC__
   { MT_SUBMENU,  0, "DATE\nTIME", menu_date_time},
 #endif
-//  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings},
 #ifndef TINYSA4
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
 #endif
