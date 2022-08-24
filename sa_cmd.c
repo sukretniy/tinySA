@@ -370,19 +370,25 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
 {
   //                                     0    1      2
 #ifdef TINYSA4
-  static const char cmd_mode_list[] = "low|high|switch|receive_switch|out_switch|lna|harmonic|shift1|shift2|shift3|drive1|drive2|drive3|direct|direct_lna|ultra|ultra_lna";
+  static const char cmd_mode_list[] = "low|switch|receive_switch|out_switch|lna|harmonic|shift1|shift2|shift3|drive1|drive2|drive3|direct|direct_lna|ultra|ultra_lna";
 #else
   static const char cmd_mode_list[] = "low|high|switch|receive_switch";
 #endif
   if (argc == 0) {
     const char *p = "leveloffset %s %.1f\r\n";
+#ifdef TINYSA3
     shell_printf(p, "low",          config.low_level_offset);
     shell_printf(p, "high",         config.high_level_offset);
     shell_printf(p, "low output",   config.low_level_output_offset);
     shell_printf(p, "high output",  config.high_level_output_offset);
     shell_printf(p, "switch",       config.switch_offset);
     shell_printf(p, "receive_switch",config.receive_switch_offset);
+#endif
 #ifdef TINYSA4
+    shell_printf(p, "low",          config.low_level_offset);
+    shell_printf(p, "low output",   config.low_level_output_offset);
+    shell_printf(p, "switch",       config.switch_offset);
+    shell_printf(p, "receive_switch",config.receive_switch_offset);
     shell_printf(p, "out_switch",   config.out_switch_offset);
     shell_printf(p, "lna",          config.lna_level_offset);
     shell_printf(p, "harmonic",     config.harmonic_level_offset);
@@ -408,24 +414,29 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
   if (argc == 2){
     v = my_atof(argv[1]);
     switch (mode){
+#ifdef TINYSA3
       case 0: config.low_level_offset = v; break;
       case 1: config.high_level_offset = v; break;
       case 2: config.switch_offset = v; break;
       case 3: config.receive_switch_offset = v; break;
+#endif
 #ifdef TINYSA4
-      case 4: config.out_switch_offset = v; break;
-      case 5: config.lna_level_offset = v; break;
-      case 6: config.harmonic_level_offset = v; break;
-      case 7: config.shift1_level_offset = v; break;
-      case 8: config.shift2_level_offset = v; break;
-      case 9: config.shift3_level_offset = v; break;
-      case 10: config.drive1_level_offset = v; break;
-      case 11: config.drive2_level_offset = v; break;
-      case 12: config.drive3_level_offset = v; break;
-      case 13: config.direct_level_offset = v; break;
-      case 14: config.direct_lna_level_offset = v; break;
-      case 15: config.ultra_level_offset = v; break;
-      case 16: config.ultra_lna_level_offset = v; break;
+      case 0: config.low_level_offset = v; break;
+      case 1: config.switch_offset = v; break;
+      case 2: config.receive_switch_offset = v; break;
+      case 3: config.out_switch_offset = v; break;
+      case 4: config.lna_level_offset = v; break;
+      case 5: config.harmonic_level_offset = v; break;
+      case 6: config.shift1_level_offset = v; break;
+      case 7: config.shift2_level_offset = v; break;
+      case 8: config.shift3_level_offset = v; break;
+      case 9: config.drive1_level_offset = v; break;
+      case 10: config.drive2_level_offset = v; break;
+      case 11: config.drive3_level_offset = v; break;
+      case 12: config.direct_level_offset = v; break;
+      case 13: config.direct_lna_level_offset = v; break;
+      case 14: config.ultra_level_offset = v; break;
+      case 15: config.ultra_lna_level_offset = v; break;
 #endif
       default: goto usage;
     }

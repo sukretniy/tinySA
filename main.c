@@ -739,7 +739,7 @@ VNA_SHELL_FUNCTION(cmd_data)
     static const uint8_t sel_conv[]={TRACE_TEMP, TRACE_STORED, TRACE_ACTUAL};
     float *data = measured[sel_conv[sel]];
     for (i = 0; i < sweep_points; i++)
-      shell_printf("%f\r\n", value(data[i]));
+      shell_printf("%e\r\n", value(data[i]));
     return;
   }
 usage:
@@ -1138,9 +1138,9 @@ do_scan:
     if (mask) {
       for (i = 0; i < sweep_points; i++) {
         if (mask & 1) shell_printf("%U ", getFrequency(i));
-        if (mask & 2) shell_printf("%f %f ", value(measured[TRACE_ACTUAL][i]), 0.0);
-        if (mask & 4) shell_printf("%f %f ", value(measured[TRACE_STORED][i]), 0.0);
-        if (mask & 8) shell_printf("%f %f ", value(measured[TRACE_TEMP][i]), 0.0);
+        if (mask & 2) shell_printf("%e %f ", value(measured[TRACE_ACTUAL][i]), 0.0);
+        if (mask & 4) shell_printf("%e %f ", value(measured[TRACE_STORED][i]), 0.0);
+        if (mask & 8) shell_printf("%e %f ", value(measured[TRACE_TEMP][i]), 0.0);
         shell_printf("\r\n");
       }
     }
@@ -1632,7 +1632,7 @@ show_one:
         goto usage;
       float v = my_atof(argv[next_arg]);
       measured[t][i] = v;
-      goto update;
+      return;
       }
     }
     goto usage;
@@ -1654,7 +1654,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
   if (argc == 0) {
     for (t = 0; t < MARKERS_MAX; t++) {
       if (markers[t].enabled) {
-        shell_printf("%d %d %D %.2f\r\n", t+1, markers[t].index, markers[t].frequency, marker_to_value(t));
+        shell_printf("%d %d %D %.2e\r\n", t+1, markers[t].index, markers[t].frequency, marker_to_value(t));
       }
     }
     return;
@@ -1673,7 +1673,7 @@ VNA_SHELL_FUNCTION(cmd_marker)
     goto usage;
   if (argc == 1) {
   display_marker:
-    shell_printf("%d %d %D %.2f\r\n", t+1, markers[t].index, markers[t].frequency, marker_to_value(t));
+    shell_printf("%d %d %D %.2e\r\n", t+1, markers[t].index, markers[t].frequency, marker_to_value(t));
     active_marker = t;
     // select active marker
     markers[t].enabled = TRUE;

@@ -588,7 +588,7 @@ void reset_settings(int m)
 #ifdef __DRAW_LINE__
   setting.draw_line = false;
 #endif
-  setting.show_stored = 0;
+//  setting.show_stored = 0;
   setting.auto_attenuation = false;
   setting.normalize_level = 0.0;
   setting.normalized_trace = -1;
@@ -1418,7 +1418,7 @@ void store_trace(int f, int t)
 
 void set_clear_storage(void)
 {
-  setting.show_stored = false;
+//  setting.show_stored = false;
 //  setting.subtract = false;
   TRACE_DISABLE(TRACE_STORED_FLAG);
   // dirty = true;             // No HW update required, only status panel refresh

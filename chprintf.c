@@ -32,6 +32,10 @@
 //#include "memstreams.h"
 #include <math.h>
 
+
+#pragma GCC optimize ("Og")
+
+
 // Enable [flags], support:
 // ' ' Prepends a space for positive signed-numeric types. positive = ' ', negative = '-'. This flag is ignored if the + flag exists.
 #define CHPRINTF_USE_SPACE_FLAG
@@ -164,7 +168,7 @@ ulong_freq(char *p, ulong_t freq, uint32_t width, uint32_t precision)
   return p;
 }
 
-#if CHPRINTF_USE_FLOAT
+//#if CHPRINTF_USE_FLOAT
 static char *ftoa(char *p, float num, uint32_t precision) {
   // Check precision limit
   if (precision > FLOAT_PRECISION)
@@ -222,7 +226,26 @@ static char *ftoaS(char *p, float num, int precision) {
     *p++ = prefix;
   return p;
 }
-#endif
+
+static char *etoa(char *p, float num, uint32_t precision) {
+  int exp = 0;
+  if (num == 0) { *p++ = '0'; return p; }
+  while (num < 10) { num *= 10.0; exp--; }
+  while (num > 10) { num /= 10.0; exp++; }
+  *p++ = ((int)num) + '0'; num *=10.0;
+  *p++ = '.';
+  if (precision == 0) precision = 6;
+  while (precision--) { *p++ = (((int)num) % 10) + '0'; num *=10.0; }
+  *p++ = 'e';
+  if (exp < 0) {  *p++ = '-'; exp = -exp;} else *p++ = '+';
+  *p++ = (((int)exp) / 10 ) + '0';
+  *p++ = (((int)exp) % 10 ) + '0';
+  return p;
+}
+
+
+
+//#endif
 
 /**
  * @brief   System formatted output function.
@@ -405,9 +428,10 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
         precision = MAX_FREQ_PRESCISION;
       p=ulong_freq(p, value.ux, width, precision);
       break;
-#if CHPRINTF_USE_FLOAT
+//#if CHPRINTF_USE_FLOAT
     case 'F':
     case 'f':
+    case 'e':
       if (state & _32_BIT_FLOAT)
         value.u = va_arg(ap, uint32_t);
       else
@@ -427,9 +451,9 @@ int chvprintf(BaseSequentialStream *chp, const char *fmt, va_list ap) {
         *p++ = 0x19;
         break;
       }
-      p = (c=='F') ? ftoaS(p, value.f, precision) : ftoa(p, value.f, state&DEFAULT_PRESCISION ? FLOAT_PRECISION : precision);
+      p = (c=='F') ? ftoaS(p, value.f, precision) : ((c=='e') ? etoa(p, value.f, precision) : ftoa(p, value.f, state&DEFAULT_PRESCISION ? FLOAT_PRECISION : precision));
       break;
-#endif
+//#endif
     case 'X':
     case 'x':
       c = 16;
