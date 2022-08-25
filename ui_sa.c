@@ -3084,13 +3084,24 @@ static const menuitem_t menu_measure[] = {
 };
 
 #ifdef __CALIBRATE__
+#ifdef TINYSA4
+static const menuitem_t menu_calibrate_harmonic[] =
+{
+  { MT_FORM | MT_TITLE,      0, "Connect 5.34GHz at -50 to -10dBm",  NULL},
+#ifdef TINYSA4
+  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",        menu_calibrate_cb},
+#endif
+  { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
 static const menuitem_t menu_calibrate[] =
 {
   { MT_FORM | MT_TITLE,      0, "Connect HIGH and LOW",  NULL},
   { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
   { MT_FORM | MT_CALLBACK,   0, "RESET CALIBRATION",         menu_calibrate_cb},
 #ifdef TINYSA4
-  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE HARMONIC",        menu_calibrate_cb},
+  { MT_FORM | MT_SUBMENU,   0, "CALIBRATE HARMONIC",        menu_calibrate_harmonic},
 #endif
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };

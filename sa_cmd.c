@@ -403,6 +403,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     shell_printf(p, "ultra",        config.ultra_level_offset);
     shell_printf(p, "ultra_lna",    config.ultra_lna_level_offset);
     shell_printf(p, "adf",          config.adf_level_offset);
+    shell_printf(p, "direct output",config.direct_level_output_offset);
 #endif
     return;
   }
@@ -450,6 +451,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     switch (mode){
       case 0: config.low_level_output_offset = v; break;
       case 1: config.high_level_output_offset = v; break;
+      case 12: config.direct_level_output_offset = v; break;
       default: goto usage;
     }
     dirty = true;

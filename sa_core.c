@@ -1187,7 +1187,7 @@ float low_out_offset(void)
     else
       return - config.low_level_offset;
   } else
-    return config.low_level_output_offset;
+    return - config.low_level_output_offset;
 }
 
 float high_out_offset(void)
@@ -2213,10 +2213,11 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
       break;
     case PATH_DIRECT:
       c = CORRECTION_LOW_OUT_DIRECT;
+      cv += float_TO_PURE_RSSI(config.direct_level_output_offset);
       break;
     case PATH_LEAKAGE:
       c = CORRECTION_LOW_OUT_ADF;
-      cv += float_TO_PURE_RSSI(-config.adf_level_offset);
+      cv += float_TO_PURE_RSSI(config.adf_level_offset);
       break;
     }
   }

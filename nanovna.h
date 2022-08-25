@@ -744,6 +744,7 @@ typedef struct config {
   float direct_lna_level_offset;
   float ultra_lna_level_offset;
   float adf_level_offset;
+  float direct_level_output_offset;
 #endif
 #ifdef __NOISE_FIGURE__
   float noise_figure;
