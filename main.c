@@ -2025,6 +2025,9 @@ static const VNAShellCommand commands[] =
     {"trace"       , cmd_trace       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"trigger"     , cmd_trigger     , CMD_RUN_IN_LOAD},
     {"marker"      , cmd_marker      , CMD_RUN_IN_LOAD},
+#ifdef __DRAW_LINE__
+    {"line"        , cmd_line        , CMD_RUN_IN_LOAD},
+#endif
 #ifdef ENABLE_USART_COMMAND
     {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
     {"usart_cfg"   , cmd_usart_cfg   , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},

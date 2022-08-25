@@ -397,7 +397,10 @@ void set_input_path(freq_t f)
     enable_ultra(true);
     enable_direct(true);
     enable_high(true);
-    enable_ADF_output(false, false);
+    if (setting.tracking_output)
+      enable_ADF_output(true, true);
+    else
+      enable_ADF_output(false, false);
     goto common2;
   case PATH_ULTRA:
     enable_ultra(true);
@@ -4151,16 +4154,6 @@ again:                                                              // Spur redu
         }
         }
 #endif          // __ADF4351__
-#if 0
-       freq_t target_f;
-        if (!setting.tracking && S_STATE(setting.below_IF)) { // if in low input mode and below IF
-          if (lf > local_IF + 138000000)
-            target_f = lf - local_IF; // set LO SI4432 to below IF frequency
-          else
-            target_f = local_IF-lf; // set LO SI4432 to below IF frequency
-        } else
-          target_f = local_IF+lf; // otherwise to above IF
-#endif
         if (setting.harmonic && lf > ( setting.mode == M_GENLOW ? ULTRA_MAX_FREQ + 60000000:ULTRA_MAX_FREQ) ) {
           target_f /= setting.harmonic;
           LO_harmonic = true;
@@ -4228,9 +4221,11 @@ again:                                                              // Spur redu
         }
 #endif
       } else if (setting.mode == M_HIGH || direct) {
-        if (signal_path == PATH_DIRECT)
+        if (signal_path == PATH_DIRECT) {
           set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
-        else
+          if (setting.tracking_output)
+            set_freq (ADF4351_LO, lf);
+        } else
           set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
         local_IF = 0;
       } else if (setting.mode == M_GENHIGH) {
