@@ -927,7 +927,8 @@ static UI_FUNCTION_CALLBACK(menu_scale_cb)
 static UI_FUNCTION_CALLBACK(menu_calibrate_cb)
 {
   (void)data;
-  switch (item) {
+  (void)item;
+  switch (data) {
   case 1:
     sweep_mode = SWEEP_CALIBRATE;
     menu_move_back(true);
@@ -938,6 +939,7 @@ static UI_FUNCTION_CALLBACK(menu_calibrate_cb)
 #ifdef TINYSA4
   case 3:
     sweep_mode = SWEEP_CALIBRATE_HARMONIC;
+    menu_move_back(false);
     menu_move_back(true);
     break;
 #endif
@@ -3089,7 +3091,7 @@ static const menuitem_t menu_calibrate_harmonic[] =
 {
   { MT_FORM | MT_TITLE,      0, "Connect 5.34GHz at -50 to -10dBm",  NULL},
 #ifdef TINYSA4
-  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",        menu_calibrate_cb},
+  { MT_FORM | MT_CALLBACK,   3, "CALIBRATE",        menu_calibrate_cb},
 #endif
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
@@ -3098,8 +3100,8 @@ static const menuitem_t menu_calibrate_harmonic[] =
 static const menuitem_t menu_calibrate[] =
 {
   { MT_FORM | MT_TITLE,      0, "Connect HIGH and LOW",  NULL},
-  { MT_FORM | MT_CALLBACK,   0, "CALIBRATE",                 menu_calibrate_cb},
-  { MT_FORM | MT_CALLBACK,   0, "RESET CALIBRATION",         menu_calibrate_cb},
+  { MT_FORM | MT_CALLBACK,   1, "CALIBRATE",                 menu_calibrate_cb},
+  { MT_FORM | MT_CALLBACK,   2, "RESET CALIBRATION",         menu_calibrate_cb},
 #ifdef TINYSA4
   { MT_FORM | MT_SUBMENU,   0, "CALIBRATE HARMONIC",        menu_calibrate_harmonic},
 #endif

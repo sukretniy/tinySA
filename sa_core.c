@@ -5917,6 +5917,8 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_MEASURE,   TP_SILENT,       201,     1,      -166,    10,     -166),      // 16 Measure RBW step time
 #define TEST_JUMP 29
  TEST_CASE_STRUCT(TC_JUMP,      TP_30MHZ_LNA,   30,     0.001,      -40,    0,     CAL_LEVEL),      // 16 Measure jumps
+#define TEST_JUMP_HARMONIC 30
+ TEST_CASE_STRUCT(TC_JUMP,      TP_30MHZ,       30,     0.001,      -40,    0,     CAL_LEVEL),      // 16 Measure jumps
 };
 #else
 {//               Condition     Preparation     Center  Span    Pass    Width(%)Stop
@@ -5991,6 +5993,7 @@ static void test_acquire(int i)
   TRACE_ENABLE(TRACE_STORED_FLAG);
   plot_into_index(measured);
   redraw_request |= REDRAW_CELLS | REDRAW_FREQUENCY;
+//  draw_all(TRUE);
 }
 
 int cell_printf(int16_t x, int16_t y, const char *fmt, ...);
@@ -7264,16 +7267,21 @@ void calibrate_harmonic(void)
   {
     test_freq = jump_freqs[i];
     set_jump_config(i, -2);
-    test_prepare(TEST_JUMP);
+    test_prepare(TEST_JUMP_HARMONIC);
     set_RBW(1000);
 //    set_auto_reflevel(true);
     set_reflevel(-20);
     setting.repeat = 10;
-    test_acquire(TEST_JUMP);                        // Acquire test
+    test_acquire(TEST_JUMP_HARMONIC);                        // Acquire test
+    if (peakLevel < -50) {
+      ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
+      ili9341_drawstring_7x13("Signal level too low", 30, 200);
+      goto quit;
+    }
     set_jump_config(i, get_jump_config(i) + measure_jump(i));
     calibration_busy();
     chThdSleepMilliseconds(500);
-    test_acquire(TEST_JUMP);                        // Acquire test
+    test_acquire(TEST_JUMP_HARMONIC);                        // Acquire test
     set_jump_config(i, get_jump_config(i) + measure_jump(i));
     calibration_busy();
     chThdSleepMilliseconds(500);
@@ -7285,6 +7293,7 @@ void calibrate_harmonic(void)
   config_save();
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 40, 200);
+  quit:
   ili9341_drawstring_7x13("Touch screen to continue", 40, 220);
   wait_user();
   ili9341_clear_screen();
