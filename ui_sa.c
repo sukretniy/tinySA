@@ -563,6 +563,7 @@ static const menuitem_t  menu_settings3[];
 static const menuitem_t  menu_curve[];
 static const menuitem_t  menu_curve_confirm[];
 static const menuitem_t  menu_measure_noise_figure[];
+static const menuitem_t  menu_calibrate_harmonic[];
 #endif
 static const menuitem_t  menu_sweep[];
 static const menuitem_t  menu_settings[];
@@ -790,12 +791,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
   setting.mute = false;
   perform(false, 0, 30000000, false);
   perform(false, 1, 30000000, false);
+  kp_help_text = "Enter actual level of 30MHz output";
   kp_buf[0]=0;
   ui_mode_keypad(KM_LEVEL);
   if (kp_buf[0] != 0) {
     float old_offset = config.low_level_output_offset;
     if (old_offset == 100) old_offset = 0;
+#ifdef TINYSA4
     float new_offset = uistat.value - (-25.0) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
+#else
+    float new_offset = uistat.value - (-25.0) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
+#endif
     if (uistat.value == 100) new_offset = 100;
     if ((new_offset > -10 && new_offset < 10) || new_offset == 100) {
       config.low_level_output_offset = new_offset;
@@ -804,6 +810,71 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
   }
   reset_settings(old_m);
 }
+
+#ifdef TINYSA4
+static UI_FUNCTION_ADV_CALLBACK(menu_output_level2_acb)
+{
+  (void)item;
+  (void)data;
+  if (b){
+    return;
+  }
+  int old_m = setting.mode;
+  reset_settings(M_GENLOW);
+  set_level(-30);
+  set_sweep_frequency(ST_CW, 1000000000);
+  setting.mute = false;
+  perform(false, 0, 1000000000, false);
+  perform(false, 1, 1000000000, false);
+  kp_help_text = "Enter actual level of 1GHz output";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    float old_offset = config.direct_level_output_offset;
+    float new_offset = (-30.0) - uistat.value  + old_offset;        // calculate offset based on difference between measured peak level and known peak level
+    if (new_offset > -10 && new_offset < 10) {
+      config.direct_level_output_offset = new_offset;
+      config_save();
+    }
+  }
+  reset_settings(old_m);
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_output_level3_acb)
+{
+  (void)item;
+  (void)data;
+  if (b){
+    return;
+  }
+  int old_m = setting.mode;
+  reset_settings(M_GENLOW);
+
+  force_signal_path = true;
+  test_path = PATH_LEAKAGE;
+  test_output_drive = -1;
+
+  set_level(-30);
+  set_sweep_frequency(ST_CW, 1200000000);
+  setting.mute = false;
+  perform(false, 0, 1200000000, false);
+  perform(false, 1, 1200000000, false);
+  kp_help_text = "Enter actual level of 1.2GHz output";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    float old_offset = config.adf_level_offset;
+    float new_offset = (-30.0) - uistat.value  + old_offset;        // calculate offset based on difference between measured peak level and known peak level
+    if (new_offset > -10 && new_offset < 10) {
+      config.adf_level_offset = new_offset;
+      config_save();
+    }
+  }
+  force_signal_path = false;
+  reset_settings(old_m);
+}
+
+#endif
 
 #ifdef TINYSA4
 static const int item_to_mode[2] = { 0,2 };
@@ -931,6 +1002,9 @@ static UI_FUNCTION_CALLBACK(menu_calibrate_cb)
   switch (data) {
   case 1:
     sweep_mode = SWEEP_CALIBRATE;
+#ifdef TINYSA4
+    menu_move_back(false);
+#endif
     menu_move_back(true);
     break;
   case 2:
@@ -2920,16 +2994,28 @@ static const menuitem_t menu_noise_figure_confirm[] = {
 
 #endif
 
+#ifdef TINYSA4
+static const menuitem_t menu_actual_power2[] =
+{
+ { MT_ADV_CALLBACK,     0,              "30MHz\nLEVEL", menu_output_level_acb},
+ { MT_ADV_CALLBACK,     0,              "1GHz\nLEVEL", menu_output_level2_acb},
+ { MT_ADV_CALLBACK,     0,              "1.2GHz\nLEVEL", menu_output_level3_acb},
+  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
 static const menuitem_t menu_actual_power[] =
 {
- { MT_KEYPAD,           KM_ACTUALPOWER, "INPUT\nLEVEL",  "dBm"},
- { MT_ADV_CALLBACK,     0,              "OUTPUT\nLEVEL", menu_output_level_acb},
+ { MT_KEYPAD,           KM_ACTUALPOWER, "INPUT\nLEVEL",  "Enter actual level under marker"},
 #ifdef TINYSA4
+ { MT_SUBMENU,      0,                  "OUTPUT\nLEVEL", menu_actual_power2},
  { MT_CALLBACK,     0,                  "INPUT\nCURVE",  menu_input_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "LNA\nCURVE",    menu_lna_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "ULTRA\nCURVE",  menu_ultra_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "LNA_U\nCURVE",    menu_lna_u_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "OUTPUT\nCURVE", menu_output_curve_prepare_cb},
+#else
+ { MT_ADV_CALLBACK,     0,              "OUTPUT\nLEVEL", menu_output_level_acb},
 #endif
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
@@ -2988,14 +3074,9 @@ static const menuitem_t menu_settings3[] =
   { MT_KEYPAD,   KM_ULTRA_START,        "ULTRA\nSTART",   "Enter ULTRA mode start freq"},
   { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
 #endif
-  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
-  { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
 #ifdef __HARMONIC__
   { MT_SUBMENU | MT_HIGH,0,               "HARMONIC",         menu_harmonic},
 //  { MT_ADV_CALLBACK,0,          "SPUR\nREMOVAL",          menu_harmonic_spur_acb},
-#endif
-#ifdef __USE_SERIAL_CONSOLE__
-  { MT_SUBMENU,  0, "CONNECTION", menu_connection},
 #endif
 #ifdef __HAM_BAND__
   { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
@@ -3011,37 +3092,40 @@ static const menuitem_t menu_settings2[] =
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BPF",           menu_settings_bpf_acb},
   { MT_ADV_CALLBACK | MT_LOW, 0,    "BELOW IF",      menu_settings_below_if_acb},
   { MT_KEYPAD | MT_LOW, KM_IF,  "IF FREQ\n\b%s",           "0=auto IF"},
+#ifdef TINYSA4
+  #ifdef __QUASI_PEAK__
   { MT_KEYPAD,   KM_DECAY,      "DECAY\n\b%s",   "0..1000000ms or sweeps"},
-#ifdef __QUASI_PEAK__
   { MT_KEYPAD,   KM_ATTACK,      "ATTACK\n\b%s",   "0..100000ms"},
+#endif
 #endif
   { MT_SUBMENU,0,               "SCAN\nSPEED",        menu_scanning_speed},
 #ifdef TINYSA4
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_mixer_drive},
+  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
 #else
   { MT_SUBMENU | MT_LOW,0,      "MIXER\nDRIVE",      menu_lo_drive},
+  { MT_KEYPAD,   KM_10MHZ,      "CORRECT\nFREQUENCY", "Enter actual l0MHz frequency"},
 #endif
-  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
 
 static const menuitem_t menu_settings[] =
 {
-  { MT_SUBMENU, 0,              "LEVEL\nCORRECTION",  menu_actual_power},
-  { MT_ADV_CALLBACK,     0,     "PROGRESS\nBAR",        menu_progress_bar_acb},
 #ifdef TINYSA4
-  { MT_KEYPAD,   KM_FREQ_CORR,    "FREQ CORR\n\b%s", "Enter ppb correction"},
+  { MT_ADV_CALLBACK,0,              "PROGRESS\nBAR",        menu_progress_bar_acb},
+  { MT_KEYPAD,      KM_FREQ_CORR,   "FREQ CORR\n\b%s",      "Enter ppb correction"},
+  { MT_SUBMENU,     0,              "CALIBRATE\nHARMONIC",  menu_calibrate_harmonic},
 #endif
 #ifdef __NOISE_FIGURE__
-  { MT_KEYPAD,   KM_NF,        "NF\n\b%s", "Enter tinySA noise figure"},
+  { MT_KEYPAD,      KM_NF,          "NF\n\b%s",             "Enter tinySA noise figure"},
 #endif
 #ifdef __SD_CARD_LOAD__
-  { MT_CALLBACK,        0 ,     "LOAD\nCONFIG.INI",    menu_load_config_cb},
-//  { MT_CALLBACK,        1 ,     "LOAD\nSETTING.INI",    menu_load_config_cb},
+  { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
+//  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
-  { MT_SUBMENU,  0,             "INTERNALS",     menu_settings2},
-  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
+  { MT_SUBMENU,     0,              "INTERNALS",            menu_settings2},
+  { MT_NONE,        0, NULL, menu_back} // next-> menu_back
 };
 
 #ifdef __NOISE_FIGURE__
@@ -3095,18 +3179,34 @@ static const menuitem_t menu_calibrate_harmonic[] =
 #endif
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
-#endif
 
+static const menuitem_t menu_calibrate_normal[] =
+{
+  { MT_FORM | MT_TITLE,      0, "Connect CAL and RF",  NULL},
+#ifdef TINYSA4
+  { MT_FORM | MT_CALLBACK,   1, "CALIBRATE",        menu_calibrate_cb},
+#endif
+  { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_calibrate[] =
+{
+  { MT_FORM | MT_SUBMENU,   1, "CALIBRATE 100kHz to 5.34GHz",   menu_calibrate_normal},
+  { MT_FORM | MT_SUBMENU,   1, "CALIBRATE above 5.34GHz",       menu_calibrate_harmonic},
+  { MT_FORM | MT_CALLBACK,   2, "RESET CALIBRATION",            menu_calibrate_cb},
+  { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+
+#else
 static const menuitem_t menu_calibrate[] =
 {
   { MT_FORM | MT_TITLE,      0, "Connect HIGH and LOW",  NULL},
   { MT_FORM | MT_CALLBACK,   1, "CALIBRATE",                 menu_calibrate_cb},
   { MT_FORM | MT_CALLBACK,   2, "RESET CALIBRATION",         menu_calibrate_cb},
-#ifdef TINYSA4
-  { MT_FORM | MT_SUBMENU,   0, "CALIBRATE HARMONIC",        menu_calibrate_harmonic},
-#endif
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
+#endif
+
 #endif
 
 #ifdef __USE_SERIAL_CONSOLE__
@@ -3150,7 +3250,12 @@ static const menuitem_t menu_config2[] =
 #ifdef __USE_SERIAL_CONSOLE__
  { MT_SUBMENU,          0, "CONNECTION", menu_connection},
 #endif
+ { MT_SUBMENU,     0,              "LEVEL\nCORRECTION",    menu_actual_power},
+#ifdef TINYSA4
  { MT_SUBMENU,          0, "EXPERT\nCONFIG", menu_settings},
+#else
+ { MT_SUBMENU,          0, "EXPERT\nCONFIG", menu_settings2},
+#endif
  { MT_NONE,             0, NULL, menu_back} // next-> menu_back
 };
 

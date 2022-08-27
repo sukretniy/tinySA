@@ -1190,7 +1190,7 @@ float low_out_offset(void)
     else
       return - config.low_level_offset;
   } else
-    return - config.low_level_output_offset;
+    return config.low_level_output_offset;
 }
 
 float high_out_offset(void)

@@ -451,7 +451,9 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
     switch (mode){
       case 0: config.low_level_output_offset = v; break;
       case 1: config.high_level_output_offset = v; break;
+#ifdef TINYSA4
       case 12: config.direct_level_output_offset = v; break;
+#endif
       default: goto usage;
     }
     dirty = true;
@@ -585,31 +587,6 @@ usage:
   usage_printf("direct {%s} {freq(Hz)}\r\n", direct_cmd);
 }
 
-#ifdef __DRAW_LINE__
-VNA_SHELL_FUNCTION(cmd_line)
-{
-  if (argc != 1  || argv[0][0] == '?')
-    goto usage;
-  int type = get_str_index(argv[0], "off");
-  switch(type) {
-  case -1: {
-      float l = my_atof(argv[0]);
-      setting.draw_line = true;
-      set_trigger_level(to_dBm(l));
-      set_trigger(T_AUTO);
-      redraw_request |= REDRAW_AREA;
-    }
-    return;
-  case 0:
-    setting.draw_line = false;
-    redraw_request |= REDRAW_AREA;
-    return;
-  }
-usage:
-  usage_printf("line off|{level}\r\n");
-}
-#endif
-
 VNA_SHELL_FUNCTION(cmd_if1)
 {
   if (argc != 1 || argv[0][0] == '?') {
@@ -635,6 +612,33 @@ VNA_SHELL_FUNCTION(cmd_actual_freq)
   }
 }
 #endif
+
+
+#ifdef __DRAW_LINE__
+VNA_SHELL_FUNCTION(cmd_line)
+{
+  if (argc != 1  || argv[0][0] == '?')
+    goto usage;
+  int type = get_str_index(argv[0], "off");
+  switch(type) {
+  case -1: {
+      float l = my_atof(argv[0]);
+      setting.draw_line = true;
+      set_trigger_level(to_dBm(l));
+      set_trigger(T_AUTO);
+      redraw_request |= REDRAW_AREA;
+    }
+    return;
+  case 0:
+    setting.draw_line = false;
+    redraw_request |= REDRAW_AREA;
+    return;
+  }
+usage:
+  usage_printf("line off|{level}\r\n");
+}
+#endif
+
 
 #ifdef TINYSA3
 VNA_SHELL_FUNCTION(cmd_actual_freq)
