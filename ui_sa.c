@@ -786,7 +786,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
   }
   int old_m = setting.mode;
   reset_settings(M_GENLOW);
-  set_level(-25);
+#ifdef TINYSA4
+#define TEST_LEVEL -30
+#else
+#define TEST_LEVEL -25
+#endif
+  set_level(TEST_LEVEL);
   set_sweep_frequency(ST_CW, 30000000);
   setting.mute = false;
   perform(false, 0, 30000000, false);
@@ -797,11 +802,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
   if (kp_buf[0] != 0) {
     float old_offset = config.low_level_output_offset;
     if (old_offset == 100) old_offset = 0;
-#ifdef TINYSA4
-    float new_offset = uistat.value - (-25.0) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
-#else
-    float new_offset = uistat.value - (-25.0) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
-#endif
+    float new_offset = uistat.value - (TEST_LEVEL) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
     if (uistat.value == 100) new_offset = 100;
     if ((new_offset > -10 && new_offset < 10) || new_offset == 100) {
       config.low_level_output_offset = new_offset;
