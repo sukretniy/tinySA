@@ -2115,6 +2115,7 @@ static const VNAShellCommand commands[] =
    { "g", cmd_g,    CMD_WAIT_MUTEX },
    { "n", cmd_n,    CMD_WAIT_MUTEX },
    { "z", cmd_z,    CMD_WAIT_MUTEX },
+   { "r", cmd_r,    CMD_WAIT_MUTEX },
 #endif
 #ifdef __ADF4351__
     { "x", cmd_x,    CMD_WAIT_MUTEX },

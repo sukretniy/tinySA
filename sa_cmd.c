@@ -1056,6 +1056,16 @@ VNA_SHELL_FUNCTION(cmd_g)
   int a = my_atoi(argv[1]);
   SI4463_set_gpio(p,a);
 }
+
+VNA_SHELL_FUNCTION(cmd_r)
+{
+  (void)argc;
+  int r = my_atoi(argv[0]);
+  set_R(r);
+}
+
+
+
 #endif
 
 VNA_SHELL_FUNCTION(cmd_w)

@@ -558,6 +558,7 @@ static const menuitem_t  menu_marker_ref_select[];
 static const menuitem_t  menu_connection[];
 #endif
 //static const menuitem_t  menu_drive_wide[];
+static const menuitem_t  menu_config[];
 #ifdef TINYSA4
 static const menuitem_t  menu_settings3[];
 static const menuitem_t  menu_curve[];
@@ -2214,8 +2215,8 @@ static UI_FUNCTION_CALLBACK(menu_limit_disable_cb)
 #endif
 
 #ifdef TINYSA4
-static const uint16_t rbwsel_x10[]={0,3,10,30,100,300,1000,3000,6000,8500};
-static const char* rbwsel_text[]={"AUTO","300","1k","3k","10k","30k","100k","300k","600k","850k"};
+static const uint16_t rbwsel_x10[]={0,2,10,30,100,300,1000,3000,6000,8500};
+static const char* rbwsel_text[]={"AUTO","200","1k","3k","10k","30k","100k","300k","600k","850k"};
 #else
 static const uint16_t rbwsel_x10[]={0,30,100,300,1000,3000,6000};
 #endif
@@ -2712,7 +2713,7 @@ static const menuitem_t  menu_sweep[] = {
 static const menuitem_t  menu_lowoutput_settings[] = {
   { MT_FORM | MT_ADV_CALLBACK,  0,              "Cleanest signal, max 4.4GHz",       menu_lowoutput_settings_acb},
   { MT_FORM | MT_ADV_CALLBACK,  1,              "Highest accuracy, max 5.4GHz",    menu_lowoutput_settings_acb},
-  { MT_FORM | MT_SUBMENU,  255, S_RARROW"Expert Settings", menu_settings},
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW"Config", menu_config},
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 #endif

@@ -270,7 +270,7 @@ freq_t local_setting_frequency_30mhz_x100 = 3000000000;
 #define CS_ADF_LOW(ch)   {palClearLine(ch);ADF_CS_DELAY;}
 #define CS_ADF_HIGH(ch)  {ADF_CS_DELAY;palSetLine(ch);}
 
-uint32_t registers[6] =  {0xC80000, 0x8008011, 0x1800C642, 0x48963,0xA5003C , 0x580005} ;         //10 MHz ref
+uint32_t registers[6] =  {0xC88000, 0x8008011, 0x1800C642, 0x48963,0xA5003C , 0x580005} ;         //10 MHz ref
 uint32_t old_registers[6];
 
 int debug = 0;
@@ -620,7 +620,8 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
     if (MOD == 1) MOD = 2;
     registers[1] = 0;
     registers[1] = MOD << 3;
-    registers[1] = registers[1] + 1 ; // restore register address "001"
+    registers[1] |= 1 ; // restore register address "001"
+    registers[1] |= 1 << 15;  // Set PHASE to 1
     bitSet (registers[1], 27); // Prescaler at 8/9
     return actual_freq;
 }
@@ -1736,7 +1737,7 @@ static const RBW_t RBW_choices[] =
 #else
 
 #define NOISE_BASE_CORRECTION   7
- {SI4463_RBW_02kHz,  15,3,  NOISE_BASE_CORRECTION + 10}, //
+ {SI4463_RBW_02kHz,  15,2,  NOISE_BASE_CORRECTION +  -5}, //
  {SI4463_RBW_1kHz,   15,10, NOISE_BASE_CORRECTION +  -5},//
  {SI4463_RBW_3kHz,   10,30, NOISE_BASE_CORRECTION +  -5},//
  {SI4463_RBW_10kHz,  14,100,NOISE_BASE_CORRECTION +  0}, //
@@ -1744,7 +1745,7 @@ static const RBW_t RBW_choices[] =
  {SI4463_RBW_100kHz, 0,1000,NOISE_BASE_CORRECTION +  -5},//
  {SI4463_RBW_300kHz, 0,3000,NOISE_BASE_CORRECTION},      // 300k must have RSSI correction = 0
  {SI4463_RBW_600kHz, 5,6000,NOISE_BASE_CORRECTION +  0}, //
- {SI4463_RBW_850kHz, 8,8500,NOISE_BASE_CORRECTION +  10},//
+ {SI4463_RBW_850kHz, 8,8500,NOISE_BASE_CORRECTION +  5},//
 #endif
 };
 

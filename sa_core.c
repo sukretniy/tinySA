@@ -3180,6 +3180,74 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
   return F_NOSPUR;
 }
 
+
+static uint16_t max_index[MAX_MAX];
+static uint16_t cur_max = 0;
+float temppeakLevel = -150;
+int16_t downslope = true;
+int peak_finding_index;
+float peak_finding_level;
+
+
+void add_to_peak_finding(float *trace_data, int i) {
+  // START_PROFILE
+  if (i == 0 || getFrequency(i) < actual_rbw_x10 * 200) {   // Prepare peak finding
+    cur_max = 0;          // Always at least one maximum
+    temppeakIndex = 0;
+    temppeakLevel = trace_data[0];
+    max_index[0] = 0;
+    downslope = true;
+    peak_finding_index = 0;
+    peak_finding_level = temppeakLevel;
+  }
+  if (cur_max == 0 && peak_finding_level <  trace_data[i]) {
+    peak_finding_index = i;
+    peak_finding_level = trace_data[i];
+  }
+  if (downslope) {                               // If in down slope peak finding
+    if (temppeakLevel > trace_data[i]) {           // Follow down
+      temppeakIndex = i;                         // Latest minimum
+      temppeakLevel = trace_data[i];
+    } else if (temppeakLevel + setting.noise < trace_data[i] ) {    // Local minimum found
+      temppeakIndex = i;                         // This is now the latest maximum
+      temppeakLevel = trace_data[i];
+      downslope = false;
+    }
+  } else {                                      // up slope peak finding
+    if (temppeakLevel < trace_data[i]) {    // Follow up
+      temppeakIndex = i;
+      temppeakLevel = trace_data[i];
+    } else if (trace_data[i] < temppeakLevel - setting.noise) {    // Local max found
+
+      // maintain sorted peak table
+      int j = 0;                                            // Insert max in sorted table
+      while (j<cur_max && trace_data[max_index[j]] >= temppeakLevel)   // Find where to insert
+        j++;
+      if (j < MAX_MAX) {                                    // Larger then one of the previous found
+        int k = MAX_MAX-1;
+        while (k > j) {                                      // Shift to make room for max
+          max_index[k] = max_index[k-1];
+          //              maxlevel_index[k] = maxlevel_index[k-1];        // Only for debugging
+          k--;
+        }
+        max_index[j] = temppeakIndex;
+        //            maxlevel_index[j] = trace_data[temppeakIndex];      // Only for debugging
+        if (cur_max < MAX_MAX) {
+          cur_max++;
+        }
+        //STOP_PROFILE
+      }
+      // Insert done
+      temppeakIndex = i;            // Latest minimum
+      temppeakLevel = trace_data[i];
+
+      downslope = true;
+    }
+  }        // end of peak finding
+}
+
+
+
 static int modulation_counter = 0;
 static int cycle_counter = 0;
 
@@ -4638,9 +4706,6 @@ again:                                                              // Spur redu
 
 }
 
-static uint16_t max_index[MAX_MAX];
-static uint16_t cur_max = 0;
-
 static uint8_t low_count = 0;
 static uint8_t sweep_counter = 0;           // Only used for HW refresh
 
@@ -4648,8 +4713,8 @@ static uint8_t sweep_counter = 0;           // Only used for HW refresh
 static bool sweep(bool break_on_operation)
 {
   float RSSI;
-  float local_peakLevel = -150.0;
-  int local_peakIndex = 0;
+//  float local_peakLevel = -150.0;
+//  int local_peakIndex = 0;
 #ifdef __SI4432__
   freq_t agc_peak_freq = 0;
   float agc_peak_rssi = -150;
@@ -4667,7 +4732,7 @@ static bool sweep(bool break_on_operation)
 #ifdef TINYSA4
   palClearLine(LINE_LED);
 #endif
-//  float temp_min_level = 100;
+  float temp_min_level = 100;
 
   //  spur_old_stepdelay = 0;
   //  shell_printf("\r\n");
@@ -4725,9 +4790,6 @@ static bool sweep(bool break_on_operation)
 
   sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
-  temppeakLevel = -150;
-  float temp_min_level = 100;          // Initialize the peak search algorithm
-  int16_t downslope = true;
 #ifdef __ULTRA__
   if (config.ultra_start == ULTRA_AUTO) {
     if (setting.mode == M_LOW){
@@ -5139,63 +5201,11 @@ static volatile int dummy;
       // --------------------------- find peak and add to peak table if found  ------------------------
 
 
-      // START_PROFILE
-      if (i == 0 || getFrequency(i) < actual_rbw_x10 * 200) {   // Prepare peak finding
-        cur_max = 0;          // Always at least one maximum
-        temppeakIndex = 0;
-        temppeakLevel = actual_t[0];
-        max_index[0] = 0;
-        downslope = true;
-        local_peakIndex = 0;
-        local_peakLevel = temppeakLevel;
-      }
-      if (cur_max == 0 && local_peakLevel <  actual_t[i]) {
-        local_peakIndex = i;
-        local_peakLevel = actual_t[i];
-      }
-      if (downslope) {                               // If in down slope peak finding
-        if (temppeakLevel > actual_t[i]) {           // Follow down
-          temppeakIndex = i;                         // Latest minimum
-          temppeakLevel = actual_t[i];
-        } else if (temppeakLevel + setting.noise < actual_t[i] ) {    // Local minimum found
-          temppeakIndex = i;                         // This is now the latest maximum
-          temppeakLevel = actual_t[i];
-          downslope = false;
-        }
-      } else {                                      // up slope peak finding
-        if (temppeakLevel < actual_t[i]) {    // Follow up
-          temppeakIndex = i;
-          temppeakLevel = actual_t[i];
-        } else if (actual_t[i] < temppeakLevel - setting.noise) {    // Local max found
+      add_to_peak_finding(actual_t, i);
 
-          // maintain sorted peak table
-          int j = 0;                                            // Insert max in sorted table
-          while (j<cur_max && actual_t[max_index[j]] >= temppeakLevel)   // Find where to insert
-            j++;
-          if (j < MAX_MAX) {                                    // Larger then one of the previous found
-            int k = MAX_MAX-1;
-            while (k > j) {                                      // Shift to make room for max
-              max_index[k] = max_index[k-1];
-              //              maxlevel_index[k] = maxlevel_index[k-1];        // Only for debugging
-              k--;
-            }
-            max_index[j] = temppeakIndex;
-            //            maxlevel_index[j] = actual_t[temppeakIndex];      // Only for debugging
-            if (cur_max < MAX_MAX) {
-              cur_max++;
-            }
-            //STOP_PROFILE
-          }
-          // Insert done
-          temppeakIndex = i;            // Latest minimum
-          temppeakLevel = actual_t[i];
-
-          downslope = true;
-        }
-      }        // end of peak finding
+      }
+      }
     }
-    }
-  }
 
 
   // ---------------------- end of postprocessing -----------------------------
@@ -5460,8 +5470,14 @@ static volatile int dummy;
 
   // --------------------- set tracking markers from maximum table -----------------
 
+  for (int t=0; t < TRACES_MAX; t++) {
+  if (t != 0) {
+    for (int i=0;i<sweep_points; i++)
+      add_to_peak_finding(measured[t], i);
+  }
+
   if (cur_max == 0) {
-    max_index[0] = local_peakIndex;
+    max_index[0] = peak_finding_index;
     cur_max = 1;
   }
   if (MODE_INPUT(setting.mode)) {               // Assign maxima found to tracking markers
@@ -5469,7 +5485,7 @@ static volatile int dummy;
     int m = 0;
     while (i < cur_max) {                                 // For all maxima found
       while (m < MARKERS_MAX) {
-        if (markers[m].enabled && markers[m].mtype & M_TRACKING) {   // Available marker found
+        if (markers[m].enabled && markers[m].mtype & M_TRACKING && markers[m].trace == t) {   // Available marker found
           markers[m].index = max_index[i];
           interpolate_maximum(m);
           m++;
@@ -5480,12 +5496,12 @@ static volatile int dummy;
       i++;
     }
     while (m < MARKERS_MAX) {                  // Insufficient maxima found
-      if (markers[m].enabled && markers[m].mtype & M_TRACKING) {    // More available markers found
+      if (markers[m].enabled && markers[m].mtype & M_TRACKING  && markers[m].trace == t) {    // More available markers found
         set_marker_index(m, 0); // Enabled but no max so set to left most frequency
       }
       m++;                              // Try next marker
     }
-
+  }
     // ----------------------- now follow all the special marker calculations for the measurement modes ----------------------------
 
 
@@ -5607,7 +5623,7 @@ static volatile int dummy;
       peakIndex = max_index[0];
       cur_max = 1;
     } else
-      peakIndex = local_peakIndex;
+      peakIndex = peak_finding_index;
     peakLevel = actual_t[peakIndex];
     peakFreq = getFrequency(peakIndex);
     min_level = temp_min_level;
