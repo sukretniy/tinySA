@@ -584,7 +584,7 @@ void reset_settings(int m)
     TRACE_ENABLE(TRACE_STORED_FLAG);
   } else
 #ifdef TINYSA4
-    TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG|TRACE_STORED2);
+    TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG|TRACE_STORED2_FLAG);
 #else
   TRACE_DISABLE(TRACE_STORED_FLAG|TRACE_TEMP_FLAG);
 #endif
@@ -2298,9 +2298,10 @@ done:
 
 
 float peakLevel;
-float min_level;
+//float min_level;
 freq_t peakFreq;
-int peakIndex = 0;
+int peakIndex;
+int peakTrace;
 float temppeakLevel;
 uint16_t temppeakIndex;
 // volatile int t;
@@ -5195,13 +5196,13 @@ static volatile int dummy;
 #endif
         }
       }
-      if ( actual_t[i] > -174.0 && temp_min_level > actual_t[i])   // Remember minimum
-        temp_min_level = actual_t[i];
+//      if ( actual_t[i] > -174.0 && temp_min_level > actual_t[i])   // Remember minimum
+//        temp_min_level = actual_t[i];
 
       // --------------------------- find peak and add to peak table if found  ------------------------
 
 
-      add_to_peak_finding(actual_t, i);
+//      add_to_peak_finding(actual_t, i);
 
       }
       }
@@ -5217,7 +5218,7 @@ static volatile int dummy;
   // --------------- check if maximum is above trigger level -----------------
 
   if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
-    if (actual_t[max_index[0]] < setting.trigger_level) {
+    if (measured[peakTrace][peakIndex] < setting.trigger_level) {
       goto again;                                                   // not yet, sweep again
     } else {
       if (setting.trigger == T_SINGLE) {
@@ -5288,6 +5289,57 @@ static volatile int dummy;
   if (MODE_OUTPUT(setting.mode) && (sweep_mode & SWEEP_ENABLE) )                            // Sweep time is calculated, we can sweep again in output mode
     goto again;                                             // Keep repeating sweep loop till user aborts by input
 
+
+  // --------------------- set tracking markers from maximum table and find max/min -----------------
+
+  peakLevel = -170;
+  temp_min_level = 100;
+  for (int t=TRACES_MAX-1; t >= 0; t--) {
+    if (IS_TRACE_ENABLE(t)) {
+      float *trace_data = measured[t];
+      for (int i=0;i<sweep_points; i++) {
+        add_to_peak_finding(trace_data, i);
+        if ( trace_data[i] > -174.0 && temp_min_level > trace_data[i])   // Remember minimum
+          temp_min_level = trace_data[i];
+      }
+      if (trace_data[peak_finding_index] > peakLevel) {
+        peakIndex = peak_finding_index;
+        peakLevel = trace_data[peakIndex];
+        peakFreq = getFrequency(peakIndex);
+        peakTrace = t;
+      }
+
+      if (cur_max == 0) {                           // Always at least one maximum per trace
+        max_index[0] = peak_finding_index;
+        cur_max = 1;
+      }
+
+      if (MODE_INPUT(setting.mode)) {               // Assign maxima found to tracking markers
+        int i = 0;
+        int m = 0;
+        while (i < cur_max) {                                 // For all maxima found
+          while (m < MARKERS_MAX) {
+            if (markers[m].enabled && markers[m].mtype & M_TRACKING && markers[m].trace == t) {   // Available marker found
+              markers[m].index = max_index[i];
+              interpolate_maximum(m);
+              m++;
+              break;                          // Next maximum
+            }
+            m++;                              // Try next marker
+          }
+          i++;
+        }
+        while (m < MARKERS_MAX) {                  // Insufficient maxima found
+          if (markers[m].enabled && markers[m].mtype & M_TRACKING  && markers[m].trace == t) {    // More available markers found
+            set_marker_index(m, 0); // Enabled but no max so set to left most frequency
+          }
+          m++;                              // Try next marker
+        }
+      }
+    }
+
+
+
 #define __MIRROR_MASKING__
 #ifdef __MIRROR_MASKING__
 #ifdef __SI4432__
@@ -5340,7 +5392,7 @@ static volatile int dummy;
     if (setting.extra_lna)
       target_level = LNA_AUTO_TARGET_LEVEL;
 #endif
-    int actual_max_level = (max_index[0] == 0 ? -100 :(int) (actual_t[max_index[0]] - get_attenuation()) ) + setting.external_gain; // If no max found reduce attenuation
+    int actual_max_level = (peakIndex == 0 ? -100 :(int) (measured[peakTrace][peakIndex] - get_attenuation()) ) + setting.external_gain; // If no max found reduce attenuation
     if (actual_max_level < target_level && setting.attenuate_x2 > 0) {
       delta = - (target_level - actual_max_level);
     } else if (actual_max_level > target_level && setting.attenuate_x2 < 60) {
@@ -5383,7 +5435,7 @@ static volatile int dummy;
 #ifdef __SI4432__
   if (!in_selftest && MODE_INPUT(setting.mode)) {
     if (S_IS_AUTO(setting.agc)) {
-      int actual_max_level = actual_t[max_index[0]] - get_attenuation() + setting.external_gain;        // No need to use float
+      int actual_max_level = measured[peakTrace][peakIndex] - get_attenuation() + setting.external_gain;        // No need to use float
       if (UNIT_IS_LINEAR(setting.unit)) { // Auto AGC in linear mode
         if (actual_max_level > - 45)
           auto_set_AGC_LNA(false, 0); // Strong signal, no AGC and no LNA
@@ -5412,13 +5464,14 @@ static volatile int dummy;
 #endif
 
 
+
   // -------------------------- auto reflevel ---------------------------------
-  if (max_index[0] > 0)
-    temppeakLevel = actual_t[max_index[0]];
+  //    if (max_index[0] > 0)
+  //      temppeakLevel = actual_t[max_index[0]];
 
   if (!in_selftest && MODE_INPUT(setting.mode) && setting.auto_reflevel) {  // Auto reflevel
 
-    float r = value(temppeakLevel);
+    float r = value(peakLevel);
     float s_max = r / setting.scale;                  // Peak level normalized to /div
 
     if (UNIT_IS_LINEAR(setting.unit)) {            // Linear scales can not have negative values
@@ -5468,165 +5521,125 @@ static volatile int dummy;
     }
   }
 
-  // --------------------- set tracking markers from maximum table -----------------
 
-  for (int t=0; t < TRACES_MAX; t++) {
-  if (t != 0) {
-    for (int i=0;i<sweep_points; i++)
-      add_to_peak_finding(measured[t], i);
-  }
 
-  if (cur_max == 0) {
-    max_index[0] = peak_finding_index;
-    cur_max = 1;
-  }
-  if (MODE_INPUT(setting.mode)) {               // Assign maxima found to tracking markers
-    int i = 0;
-    int m = 0;
-    while (i < cur_max) {                                 // For all maxima found
-      while (m < MARKERS_MAX) {
-        if (markers[m].enabled && markers[m].mtype & M_TRACKING && markers[m].trace == t) {   // Available marker found
-          markers[m].index = max_index[i];
-          interpolate_maximum(m);
-          m++;
-          break;                          // Next maximum
-        }
-        m++;                              // Try next marker
-      }
-      i++;
-    }
-    while (m < MARKERS_MAX) {                  // Insufficient maxima found
-      if (markers[m].enabled && markers[m].mtype & M_TRACKING  && markers[m].trace == t) {    // More available markers found
-        set_marker_index(m, 0); // Enabled but no max so set to left most frequency
-      }
-      m++;                              // Try next marker
-    }
-  }
-    // ----------------------- now follow all the special marker calculations for the measurement modes ----------------------------
+  // ----------------------- now follow all the special marker calculations for the measurement modes ----------------------------
 
 
 #ifdef __MEASURE__
-    if (setting.measurement == M_IMD && markers[0].index > 10) {                    // ----- IMD measurement
+  if (setting.measurement == M_IMD && markers[0].index > 10) {                    // ----- IMD measurement
 #ifdef TINYSA4
 #define H_SPACING   7
 #else
 #define H_SPACING   4
 #endif
-      for (int i=1; i < MARKER_COUNT;i++)
-        markers[i].enabled = search_maximum(i, getFrequency(markers[0].index)*(i+1), (i+1)*H_SPACING);
+    for (int i=1; i < MARKER_COUNT;i++)
+      markers[i].enabled = search_maximum(i, getFrequency(markers[0].index)*(i+1), (i+1)*H_SPACING);
 #ifdef TINYSA4
-    } else if (setting.measurement == M_AM  && markers[0].index > 10) { // ----------AM measurement
-      int l = markers[1].index;
-      int r = markers[2].index;
-      if (r < l) {
-        l = markers[2].index;
-        r = markers[1].index;
-        markers[1].index = l;
-        markers[2].index = r;
-      }
-      freq_t lf = getFrequency(l);
-      freq_t rf = getFrequency(r);
-      markers[1].frequency = lf;
-      markers[2].frequency = rf;
+  } else if (setting.measurement == M_AM  && markers[0].index > 10) { // ----------AM measurement
+    int l = markers[1].index;
+    int r = markers[2].index;
+    if (r < l) {
+      l = markers[2].index;
+      r = markers[1].index;
+      markers[1].index = l;
+      markers[2].index = r;
+    }
+    freq_t lf = getFrequency(l);
+    freq_t rf = getFrequency(r);
+    markers[1].frequency = lf;
+    markers[2].frequency = rf;
 #endif
-    } else if (setting.measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) { // ----------IOP measurement
-      int l = markers[0].index;
-      int r = markers[1].index;
-      if (r < l) {
-        l = markers[1].index;
-        r = markers[0].index;
-      }
-      set_marker_index(0, l);
-      set_marker_index(1, r);
-      freq_t lf = markers[0].frequency;
-      freq_t rf = markers[1].frequency;
+  } else if (setting.measurement == M_OIP3  && markers[0].index > 10 && markers[1].index > 10) { // ----------IOP measurement
+    int l = markers[0].index;
+    int r = markers[1].index;
+    if (r < l) {
+      l = markers[1].index;
+      r = markers[0].index;
+    }
+    set_marker_index(0, l);
+    set_marker_index(1, r);
+    freq_t lf = markers[0].frequency;
+    freq_t rf = markers[1].frequency;
 #ifdef TINYSA4
 #define OIP3_SPAN   40
 #else
 #define OIP3_SPAN   12
 #endif
-      markers[2].enabled = search_maximum(2, lf - (rf - lf), 40);
-      markers[3].enabled = search_maximum(3, rf + (rf - lf), 40);
-    } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
-      // Position phase noise marker at requested offset
-      set_marker_index(1, markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4));
-    } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
-      int t1 = 0;
-      int t2 = 0;
-      float v = actual_t[markers[0].index] - (in_selftest ? 6.0 : 3.0);
-      while (t1 < markers[0].index && actual_t[t1+1] < v)                                        // Find left -3dB point
-        t1++;
-      if (t1< markers[0].index)
-        set_marker_index(1, t1);
-      t2 = setting._sweep_points-1;;
-      while (t2 > markers[0].index && actual_t[t2-1] < v)                // find right -3dB point
-        t2--;
-      if (t2 > markers[0].index)
-        set_marker_index(2, t2);
+    markers[2].enabled = search_maximum(2, lf - (rf - lf), 40);
+    markers[3].enabled = search_maximum(3, rf + (rf - lf), 40);
+  } else if (setting.measurement == M_PHASE_NOISE  && markers[0].index > 10) {    //  ------------Phase noise measurement
+    // Position phase noise marker at requested offset
+    set_marker_index(1, markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4));
+  } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
+    int t1 = 0;
+    int t2 = 0;
+    float v = actual_t[markers[0].index] - (in_selftest ? 6.0 : 3.0);
+    while (t1 < markers[0].index && actual_t[t1+1] < v)                                        // Find left -3dB point
+      t1++;
+    if (t1< markers[0].index)
+      set_marker_index(1, t1);
+    t2 = setting._sweep_points-1;;
+    while (t2 > markers[0].index && actual_t[t2-1] < v)                // find right -3dB point
+      t2--;
+    if (t2 > markers[0].index)
+      set_marker_index(2, t2);
 #if 1
-      int t = (t1+t2)/2;
-      t1 += (t-t1)/2;
-      t2 -= (t2-t)/2;
-      if (t2-t1 < 100 && t2-t1 > 10 ) {
-        float aver = 0.0;
-        for (int i=t1;i<=t2;i++)
-          aver +=actual_t[i];
-        aver /= (t2-t1+1);
-        float stdev=0.0;
-        for (int i=t1;i<=t2;i++)
-          stdev +=(actual_t[i] - aver) * (actual_t[i] - aver);
-        stdev /= (t2-t1+1);
+    int t = (t1+t2)/2;
+    t1 += (t-t1)/2;
+    t2 -= (t2-t)/2;
+    if (t2-t1 < 100 && t2-t1 > 10 ) {
+      float aver = 0.0;
+      for (int i=t1;i<=t2;i++)
+        aver +=actual_t[i];
+      aver /= (t2-t1+1);
+      float stdev=0.0;
+      for (int i=t1;i<=t2;i++)
+        stdev +=(actual_t[i] - aver) * (actual_t[i] - aver);
+      stdev /= (t2-t1+1);
       //      stdev = sqrtf(stdev);
-        flatness = stdev;
-      } else
-        flatness = -1;
+      flatness = stdev;
+    } else
+      flatness = -1;
 #endif
 
-    } else if (setting.measurement == M_AM) {      // ----------------AM measurement
-      if (S_IS_AUTO(setting.agc )) {
+  } else if (setting.measurement == M_AM) {      // ----------------AM measurement
+    if (S_IS_AUTO(setting.agc )) {
 #ifdef __SI4432__
-        int actual_level = actual_t[max_index[0]] - get_attenuation() + setting.external_gain;  // no need for float
-        if (actual_level > -20 ) {
-          setting.agc = S_AUTO_OFF;
-          setting.lna = S_AUTO_OFF;
-        } else if (actual_level < -45 ) {
-          setting.agc = S_AUTO_ON;
-          setting.lna = S_AUTO_ON;
-        } else {
-          setting.agc = S_AUTO_OFF;
-          setting.lna = S_AUTO_ON;
-        }
-        set_AGC_LNA();
-#endif
+      int actual_level = measured[peakTrace][peakIndex] - get_attenuation() + setting.external_gain;  // no need for float
+      if (actual_level > -20 ) {
+        setting.agc = S_AUTO_OFF;
+        setting.lna = S_AUTO_OFF;
+      } else if (actual_level < -45 ) {
+        setting.agc = S_AUTO_ON;
+        setting.lna = S_AUTO_ON;
+      } else {
+        setting.agc = S_AUTO_OFF;
+        setting.lna = S_AUTO_ON;
       }
-#ifdef __CHANNEL_POWER__
-      } else if (setting.measurement == M_CP || setting.measurement == M_SNR || setting.measurement == M_NF_TINYSA|| setting.measurement == M_NF_VALIDATE|| setting.measurement == M_NF_AMPLIFIER) {      // ----------------CHANNEL_POWER measurement
-        freq_t bw = get_sweep_frequency(ST_SPAN)/3;
-        int old_unit = setting.unit;
-        setting.unit = U_WATT;
-        for (int c = 0; c < 3 ;c++) {
-          channel_power_watt[c] = 0.0;
-          int sp_div3 = sweep_points/3;
-          for (int i =0; i < sp_div3; i++) {
-            channel_power_watt[c] += value(actual_t[i + c*sp_div3]);
-          }
-          float rbw_cor =  ((float)bw) / ((float)actual_rbw_x10 * 100.0);
-          channel_power_watt[c] = channel_power_watt[c] * rbw_cor /(float)sp_div3;
-          channel_power[c] = to_dBm(channel_power_watt[c]);
-        }
-        setting.unit = old_unit;
+      set_AGC_LNA();
 #endif
     }
+#ifdef __CHANNEL_POWER__
+  } else if (setting.measurement == M_CP || setting.measurement == M_SNR || setting.measurement == M_NF_TINYSA|| setting.measurement == M_NF_VALIDATE|| setting.measurement == M_NF_AMPLIFIER) {      // ----------------CHANNEL_POWER measurement
+    freq_t bw = get_sweep_frequency(ST_SPAN)/3;
+    int old_unit = setting.unit;
+    setting.unit = U_WATT;
+    for (int c = 0; c < 3 ;c++) {
+      channel_power_watt[c] = 0.0;
+      int sp_div3 = sweep_points/3;
+      for (int i =0; i < sp_div3; i++) {
+        channel_power_watt[c] += value(actual_t[i + c*sp_div3]);
+      }
+      float rbw_cor =  ((float)bw) / ((float)actual_rbw_x10 * 100.0);
+      channel_power_watt[c] = channel_power_watt[c] * rbw_cor /(float)sp_div3;
+      channel_power[c] = to_dBm(channel_power_watt[c]);
+    }
+    setting.unit = old_unit;
+#endif
+  }
 
 #endif
-    if (cur_max > 0) {
-      peakIndex = max_index[0];
-      cur_max = 1;
-    } else
-      peakIndex = peak_finding_index;
-    peakLevel = actual_t[peakIndex];
-    peakFreq = getFrequency(peakIndex);
-    min_level = temp_min_level;
   }
   //  } while (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE);      // Never exit sweep loop while in output mode with modulation
 #if 0       // Read ADC
@@ -6108,7 +6121,7 @@ int validate_below(int tc, int from, int to) {
   return(status);
 }
 
-int validate_flatness(int i) {
+int validate_flatness(int i) {          // This assumes only trace 1 is active
   volatile int j,k;
   test_fail_cause[i] = "Passband ";
   for (j = peakIndex; j < setting._sweep_points; j++) {

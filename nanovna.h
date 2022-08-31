@@ -823,7 +823,9 @@ enum {
 #define TRACE_ACTUAL_FLAG (1<<(TRACE_ACTUAL))
 #define TRACE_STORED_FLAG (1<<(TRACE_STORED))
 #define TRACE_TEMP_FLAG   (1<<(TRACE_TEMP))
-
+#ifdef TINYSA4
+#define TRACE_STORED2_FLAG (1<<(TRACE_STORED2))
+#endif
 #define TRACE_ENABLE(t_mask)  {setting._traces|= (t_mask);}
 #define TRACE_DISABLE(t_mask) {setting._traces&=~(t_mask);}
 
