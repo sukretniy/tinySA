@@ -461,6 +461,7 @@ const freq_t fh_high[] = { 480000000, 960000000, 1920000000, 2880000000, 3840000
 #endif
 
 uint8_t in_selftest = false;
+uint8_t ignore_stored = false;
 uint8_t in_step_test = false;
 uint8_t in_calibration = false;
 uint8_t calibration_stage;
@@ -3201,7 +3202,7 @@ void add_to_peak_finding(float *trace_data, int i) {
     peak_finding_index = 0;
     peak_finding_level = temppeakLevel;
   }
-  if (cur_max == 0 && peak_finding_level <  trace_data[i]) {
+  if (cur_max == 0 && peak_finding_level <=  trace_data[i]) {
     peak_finding_index = i;
     peak_finding_level = trace_data[i];
   }
@@ -5294,24 +5295,25 @@ static volatile int dummy;
 
   peakLevel = -170;
   temp_min_level = 100;
-  for (int t=TRACES_MAX-1; t >= 0; t--) {
-    if (IS_TRACE_ENABLE(t)) {
+  for (int t=(in_selftest? 0 : TRACES_MAX-1); t >= 0; t--) {        // During selftest only trace 0 is used.
+    if (IS_TRACE_ENABLE(t) && !(ignore_stored && (t == TRACE_STORED))) {
       float *trace_data = measured[t];
       for (int i=0;i<sweep_points; i++) {
         add_to_peak_finding(trace_data, i);
         if ( trace_data[i] > -174.0 && temp_min_level > trace_data[i])   // Remember minimum
           temp_min_level = trace_data[i];
       }
-      if (trace_data[peak_finding_index] > peakLevel) {
+      if (cur_max == 0) {                           // Always at least one maximum per trace
+        max_index[0] = peak_finding_index;
+        cur_max = 1;
+      } else
+        peak_finding_index = max_index[0];
+
+      if (peak_finding_index > 0 && trace_data[peak_finding_index] > peakLevel) {
         peakIndex = peak_finding_index;
         peakLevel = trace_data[peakIndex];
         peakFreq = getFrequency(peakIndex);
         peakTrace = t;
-      }
-
-      if (cur_max == 0) {                           // Always at least one maximum per trace
-        max_index[0] = peak_finding_index;
-        cur_max = 1;
       }
 
       if (MODE_INPUT(setting.mode)) {               // Assign maxima found to tracking markers
@@ -5922,8 +5924,8 @@ const test_case_t test_case [] =
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
  TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,990,    10,    -90,    0,      -90),         // 6 Direct path with harmonic
- TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    27,     -45),      // 7 BPF loss and stop band
- TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -18,    9,     -60),       // 8 BPF pass band flatness
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    26,     -45),      // 7 BPF loss and stop band
+ TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -28,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       880,    1,     -95,    0,      -100),       // 9 LPF cutoff
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      CAL_LEVEL,    10,     -50),      // 10 Switch isolation using high attenuation
  TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 11 test display
@@ -6566,6 +6568,7 @@ void self_test(int test)
       disable_waterfall();
     reset_settings(M_LOW);                      // Make sure we are in a defined state
     in_selftest = true;
+    ignore_stored = true;
     menu_autosettings_cb(0, 0);
     for (uint16_t i=0; i < TEST_COUNT; i++) {          // All test cases waiting
       if (test_case[i].kind == TC_END)
@@ -6633,6 +6636,7 @@ quit:
     config.cor_wfm = 0;
 #endif
     in_selftest = false;
+    ignore_stored = false;
     reset_settings(M_LOW);
     set_refer_output(-1);
 #ifdef TINYSA4
