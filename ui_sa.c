@@ -572,6 +572,26 @@ static const menuitem_t  menu_lowoutput_settings[];
 extern bool dirty;
 char range_text[20];
 
+#ifdef TINYSA4
+int input_is_calibrated(void)
+{
+  if (config.low_level_offset != 100)
+    return true;
+  drawMessageBox("Error", "First calibrate 100kHz to 5.34GHz input", 2000);
+  redraw_request|= REDRAW_AREA;
+  return false;
+}
+
+int output_is_calibrated(void)
+{
+  if (config.low_level_output_offset != 100)
+    return true;
+  drawMessageBox("Error", "First calibrate 30MHz output", 2000);
+  redraw_request|= REDRAW_AREA;
+  return false;
+}
+#endif
+
 static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
 {
   (void)data;
@@ -703,7 +723,7 @@ static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (!config.is_calibrated)
+  if (!input_is_calibrated())
     return;
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
@@ -719,7 +739,7 @@ static UI_FUNCTION_CALLBACK(menu_lna_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (!config.is_calibrated)
+  if (!input_is_calibrated())
     return;
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
@@ -735,7 +755,7 @@ static UI_FUNCTION_CALLBACK(menu_lna_u_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (!config.is_calibrated)
+  if (!input_is_calibrated())
     return;
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
@@ -751,7 +771,7 @@ static UI_FUNCTION_CALLBACK(menu_ultra_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (!config.is_calibrated)
+  if (!input_is_calibrated())
     return;
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
@@ -767,11 +787,8 @@ static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
 {
   (void)item;
   (void)data;
-  if (config.low_level_output_offset == 100) {
-    drawMessageBox("Error", "First set OUTPUT LEVEL", 2000);
-    redraw_request|= REDRAW_AREA;
+  if (!output_is_calibrated())
     return;
-  }
   current_curve = CORRECTION_LOW_OUT;
   menu_push_submenu(menu_curve);
 }
@@ -821,6 +838,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level2_acb)
   if (b){
     return;
   }
+  if (!output_is_calibrated())
+    return;
   int old_m = setting.mode;
   reset_settings(M_GENLOW);
   set_level(-30);
@@ -849,6 +868,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level3_acb)
   if (b){
     return;
   }
+  if (!output_is_calibrated())
+    return;
   int old_m = setting.mode;
   reset_settings(M_GENLOW);
 
@@ -1014,6 +1035,8 @@ static UI_FUNCTION_CALLBACK(menu_calibrate_cb)
     break;
 #ifdef TINYSA4
   case 3:
+    if (!input_is_calibrated())
+      return;
     sweep_mode = SWEEP_CALIBRATE_HARMONIC;
     menu_move_back(false);
     menu_move_back(true);
@@ -3117,7 +3140,7 @@ static const menuitem_t menu_settings[] =
 #ifdef TINYSA4
   { MT_ADV_CALLBACK,0,              "PROGRESS\nBAR",        menu_progress_bar_acb},
   { MT_KEYPAD,      KM_FREQ_CORR,   "FREQ CORR\n\b%s",      "Enter ppb correction"},
-  { MT_SUBMENU,     0,              "CALIBRATE\nHARMONIC",  menu_calibrate_harmonic},
+//  { MT_SUBMENU,     0,              "CALIBRATE\nHARMONIC",  menu_calibrate_harmonic},
 #endif
 #ifdef __NOISE_FIGURE__
   { MT_KEYPAD,      KM_NF,          "NF\n\b%s",             "Enter tinySA noise figure"},

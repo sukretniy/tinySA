@@ -5296,7 +5296,7 @@ static volatile int dummy;
   peakLevel = -170;
   temp_min_level = 100;
   for (int t=(in_selftest? 0 : TRACES_MAX-1); t >= 0; t--) {        // During selftest only trace 0 is used.
-    if (IS_TRACE_ENABLE(t) && !(ignore_stored && (t == TRACE_STORED))) {
+    if (IS_TRACE_ENABLE(t) && !(ignore_stored && (t == TRACE_STORED))) {  // Selftest 0 1 switches off in_selftest so ignore stored trace
       float *trace_data = measured[t];
       for (int i=0;i<sweep_points; i++) {
         add_to_peak_finding(trace_data, i);
@@ -7214,6 +7214,8 @@ abort:
 void reset_calibration(void)
 {
   config.is_calibrated = false;
+  config.low_level_offset = 100;
+  config.low_level_output_offset = 100;
 }
 
 void calibrate_modulation(int modulation, int8_t *correction)

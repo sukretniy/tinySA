@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -583,8 +583,11 @@ extern uint16_t graph_bottom;
 #define MENU_BUTTON_HEIGHT_N(n)   (LCD_HEIGHT/(n)-1)
 
 // Define message box width
+#ifdef TINYSA4
+#define MESSAGE_BOX_WIDTH     300
+#else
 #define MESSAGE_BOX_WIDTH     180
-
+#endif
 // Form button (at center screen better be less LCD_WIDTH - 2*OFFSETX)
 #define MENU_FORM_WIDTH    (LCD_WIDTH - 2*OFFSETX)
 
