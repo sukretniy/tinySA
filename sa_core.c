@@ -302,8 +302,8 @@ void set_output_path(freq_t f, float level)
   if (a > 0) {
     a = 0;
     if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
-  } else if (setting.modulation == MO_AM && a < -10) {          // Insufficient headroom for modulation
-    if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true); }
+//  } else if (setting.modulation == MO_AM && a < -10) {          // Insufficient headroom for modulation
+//    if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true); }
   } else {
     if (level_error)  { level_error = false; redraw_request |= REDRAW_CAL_STATUS; draw_all(true); }
   }
@@ -1193,26 +1193,11 @@ float level_range(void)
 #ifdef TINYSA4
 float low_out_offset(void)
 {
-  if (config.low_level_output_offset == 100)
-  {
-    if (config.low_level_offset == 100)
-      return 0;
-    else
-      return - config.low_level_offset;
-  } else
+  if (config.output_is_calibrated)
     return config.low_level_output_offset;
-}
-
-float high_out_offset(void)
-{
-  if (config.high_level_output_offset == 100)
-  {
-    if (config.high_level_offset == 100)
-      return 0;
-    else
-      return - config.high_level_offset;
-  } else
-    return config.high_level_output_offset;
+  if (config.input_is_calibrated)
+    return - config.low_level_offset;
+  return 0;
 }
 #endif
 
@@ -1547,6 +1532,8 @@ float get_level_offset(void)
     return(config.high_level_offset);
   }
   if (setting.mode == M_LOW) {
+//    if (!config.input_is_calibrated)
+//      return 0;
     float lev;
 #ifdef TINYSA4
     if (signal_path == PATH_DIRECT) {
@@ -1564,7 +1551,7 @@ float get_level_offset(void)
     else
 #endif
       lev = config.low_level_offset;
-    return(lev == 100? 0 : lev);
+    return(lev);
   }
   if (setting.mode == M_GENLOW) {
       return(LOW_OUT_OFFSET);
@@ -1580,7 +1567,7 @@ int level_is_calibrated(void)
   if (setting.mode == M_HIGH && config.high_level_offset != 100)
     return 1;
   if (setting.mode == M_LOW) {
-    if (!config.is_calibrated)
+    if (!config.input_is_calibrated)
       return 0;
 #ifdef TINYSA4
     if (setting.extra_lna) {
@@ -7213,9 +7200,11 @@ abort:
 
 void reset_calibration(void)
 {
-  config.is_calibrated = false;
-  config.low_level_offset = 100;
-  config.low_level_output_offset = 100;
+  config.input_is_calibrated = false;
+  config.output_is_calibrated = false;
+  config.low_level_offset = 0;
+  config.low_level_output_offset = 0;
+
 }
 
 void calibrate_modulation(int modulation, int8_t *correction)
@@ -7599,7 +7588,7 @@ void calibrate(void)
   }
 
 #endif
-  config.is_calibrated = true;
+  config.input_is_calibrated = true;
   config_save();
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 40, 200);

@@ -772,7 +772,8 @@ typedef struct config {
   freq_t direct_stop;
   int8_t    ultra;
 #endif
-  uint8_t   is_calibrated;
+  uint8_t   input_is_calibrated;
+  uint8_t   output_is_calibrated;
   uint8_t   _mode;
   int8_t    cor_wfm;
   int8_t    cor_nfm;
@@ -1352,7 +1353,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e5A /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e5B /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

@@ -958,7 +958,7 @@ config_t config = {
 #ifdef TINYSA3
   .vbat_offset = 500,
   .low_level_offset =       0,    // Uncalibrated
-  .high_level_offset =      100,    // Uncalibrated
+  .high_level_offset =      0,    // Uncalibrated
   .correction_frequency = { { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
                             { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 }},
 #ifdef __ULTRA__
@@ -987,7 +987,7 @@ config_t config = {
   .low_level_offset =       0,    // Uncalibrated
   .high_level_offset =      0,      // Uncalibrated
   .lna_level_offset = 0,
-  .low_level_output_offset =   100,    // Uncalibrated
+  .low_level_output_offset =   0,    // Uncalibrated
   .high_level_output_offset =  0,    // Uncalibrated, but checking code is not yet present
   .harmonic_level_offset = 10.5,
   .shift1_level_offset = 0.5,
@@ -1032,7 +1032,8 @@ config_t config = {
   .cor_wfm = 0,
   .cor_nfm = 0,
   .ultra = false,
-  .is_calibrated = false,
+  .input_is_calibrated = false,
+  .output_is_calibrated = false,
 #ifndef __NEW_SWITCHES__
   .high_out_adf4350 = true,
 #endif

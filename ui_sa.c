@@ -575,7 +575,7 @@ char range_text[20];
 #ifdef TINYSA4
 int input_is_calibrated(void)
 {
-  if (config.low_level_offset != 100)
+  if (!config.input_is_calibrated)
     return true;
   drawMessageBox("Error", "First calibrate 100kHz to 5.34GHz input", 2000);
   redraw_request|= REDRAW_AREA;
@@ -584,7 +584,7 @@ int input_is_calibrated(void)
 
 int output_is_calibrated(void)
 {
-  if (config.low_level_output_offset != 100)
+  if (!config.output_is_calibrated)
     return true;
   drawMessageBox("Error", "First calibrate 30MHz output", 2000);
   redraw_request|= REDRAW_AREA;
@@ -819,10 +819,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
   ui_mode_keypad(KM_LEVEL);
   if (kp_buf[0] != 0) {
     float old_offset = config.low_level_output_offset;
-    if (old_offset == 100) old_offset = 0;
+    if (!config.input_is_calibrated) old_offset = 0;
     float new_offset = uistat.value - (TEST_LEVEL) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
-    if (uistat.value == 100) new_offset = 100;
-    if ((new_offset > -10 && new_offset < 10) || new_offset == 100) {
+    if (uistat.value == 100) { new_offset = 0; config.input_is_calibrated = false; }
+    if (new_offset > -15 && new_offset < 15) {
       config.low_level_output_offset = new_offset;
       config_save();
     }
