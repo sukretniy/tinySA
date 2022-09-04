@@ -575,7 +575,7 @@ char range_text[20];
 #ifdef TINYSA4
 int input_is_calibrated(void)
 {
-  if (!config.input_is_calibrated)
+  if (config.input_is_calibrated)
     return true;
   drawMessageBox("Error", "First calibrate 100kHz to 5.34GHz input", 2000);
   redraw_request|= REDRAW_AREA;
@@ -584,7 +584,7 @@ int input_is_calibrated(void)
 
 int output_is_calibrated(void)
 {
-  if (!config.output_is_calibrated)
+  if (config.output_is_calibrated)
     return true;
   drawMessageBox("Error", "First calibrate 30MHz output", 2000);
   redraw_request|= REDRAW_AREA;

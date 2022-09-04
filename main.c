@@ -2057,6 +2057,7 @@ static const VNAShellCommand commands[] =
     { "agc", cmd_agc,    CMD_RUN_IN_LOAD },
 #endif
     { "actual_freq", cmd_actual_freq, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
+    { "freq_corr", cmd_freq_correction, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
     { "attenuate", cmd_attenuate,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
     { "level", cmd_level,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
     { "sweeptime", cmd_sweeptime,    CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },

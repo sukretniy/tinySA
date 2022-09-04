@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -457,7 +457,8 @@ void clear_frequency_cache(void);
 void toggle_high_out_adf4350(void);
 extern int high_out_adf4350;
 #endif
-int set_actual_freq(int);
+int set_actual_freq(freq_t);
+int set_freq_corr(int);
 void set_IF2(int f);
 void set_R(int f);
 extern void set_modulo(uint32_t f);

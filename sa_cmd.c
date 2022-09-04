@@ -605,12 +605,24 @@ VNA_SHELL_FUNCTION(cmd_if1)
 VNA_SHELL_FUNCTION(cmd_actual_freq)
 {
   if (argc != 1 || argv[0][0] == '?') {
-    shell_printf("%DHz\r\n", config.setting_frequency_30mhz);
+    shell_printf("%D\r\n", config.setting_frequency_30mhz);
     return;
   } else {
     set_actual_freq(my_atoui(argv[0]));
   }
 }
+
+
+VNA_SHELL_FUNCTION(cmd_freq_correction)
+{
+  if (argc != 1 || argv[0][0] == '?') {
+    shell_printf("%d ppb\r\n", (int)(((int64_t)config.setting_frequency_30mhz - (int64_t)3000000000ULL)/3));
+    return;
+  } else {
+    set_freq_corr(my_atoi(argv[0]));
+  }
+}
+
 #endif
 
 

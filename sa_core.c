@@ -819,11 +819,23 @@ void set_gridlines(int d)
 
 #ifdef TINYSA4
 
-int set_actual_freq(int f)
+int set_freq_corr(int f)
 {
   if (f < - 100000 || f > +100000)
     return -1;
   config.setting_frequency_30mhz = 3000000000 + f * 3 ;
+  ADF4351_recalculate_PFDRFout();
+  config_save();
+  dirty = true;
+  update_grid();
+  return 0;
+}
+
+int set_actual_freq(freq_t f)
+{
+  if (f < 3000000000 - 30000 || f > 3000000000 + 30000)
+    return -1;
+  config.setting_frequency_30mhz =f;
   ADF4351_recalculate_PFDRFout();
   config_save();
   dirty = true;
@@ -5326,7 +5338,7 @@ static volatile int dummy;
         }
       }
     }
-
+  }
 
 
 #define __MIRROR_MASKING__
@@ -5369,7 +5381,7 @@ static volatile int dummy;
 #ifdef TINYSA4_4
       && !setting.extra_lna
 #endif
-      ) {  // calculate and apply auto attenuate
+  ) {  // calculate and apply auto attenuate
     setting.atten_step = false;     // No step attenuate in low mode auto attenuate
     int changed = false;
     int delta = 0;
@@ -5414,7 +5426,7 @@ static volatile int dummy;
 #endif
 #endif
       calculate_static_correction();            // Update correction
-//      dirty = true;                               // Needed to recalculate the correction factor
+      //      dirty = true;                               // Needed to recalculate the correction factor
     }
   }
 
@@ -5629,7 +5641,7 @@ static volatile int dummy;
   }
 
 #endif
-  }
+
   //  } while (MODE_OUTPUT(setting.mode) && setting.modulation != MO_NONE);      // Never exit sweep loop while in output mode with modulation
 #if 0       // Read ADC
   extern   int fix_fft(short fr[], short fi[], short m, short inverse);
