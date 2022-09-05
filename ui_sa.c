@@ -823,6 +823,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
     float new_offset = uistat.value - (TEST_LEVEL) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
     if (uistat.value == 100) { new_offset = 0; config.input_is_calibrated = false; }
     if (new_offset > -15 && new_offset < 15) {
+      config.output_is_calibrated = true;
       config.low_level_output_offset = new_offset;
       config_save();
     }
@@ -3867,7 +3868,7 @@ set_numeric_value(void)
     break;
 #ifdef TINYSA4
   case KM_FREQ_CORR:
-    set_actual_freq(uistat.value);
+    set_freq_corr(uistat.value);
     break;
 #else
   case KM_10MHZ:

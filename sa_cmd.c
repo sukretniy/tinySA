@@ -423,7 +423,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
       case 3: config.receive_switch_offset = v; break;
 #endif
 #ifdef TINYSA4
-      case 0: config.low_level_offset = v; break;
+      case 0: config.low_level_offset = v; config.input_is_calibrated = true; break;
       case 1: config.switch_offset = v; break;
       case 2: config.receive_switch_offset = v; break;
       case 3: config.out_switch_offset = v; break;
@@ -449,7 +449,7 @@ VNA_SHELL_FUNCTION(cmd_leveloffset)
   if (argc == 3 && get_str_index(argv[1], "output") == 0){
     v = my_atof(argv[2]);
     switch (mode){
-      case 0: config.low_level_output_offset = v; break;
+      case 0: config.low_level_output_offset = v; config.output_is_calibrated = true; break;
       case 1: config.high_level_output_offset = v; break;
 #ifdef TINYSA4
       case 12: config.direct_level_output_offset = v; break;
