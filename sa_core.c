@@ -191,6 +191,7 @@ void set_output_step_atten(int s)
 
 void set_output_path(freq_t f, float level)
 {
+  if (depth_error) { depth_error = false; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
   if (force_signal_path) {
     signal_path = test_path;
     setting.mixer_output = (signal_path == PATH_ULTRA);
@@ -200,9 +201,6 @@ void set_output_path(freq_t f, float level)
       PE4302_Write_Byte(test_output_attenuate);
       goto set_path;
     }
-  } else if (setting.mute) {
-    signal_path = PATH_OFF;
-    goto set_path;
   } else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
   else if (setting.mixer_output && (f >= MAX_LOW_OUTPUT_FREQ || (config.ultra_start != ULTRA_AUTO && f > config.ultra_start)))
@@ -298,7 +296,6 @@ void set_output_path(freq_t f, float level)
   set_output_drive(d);
 //  if (signal_path != PATH_LEAKAGE)
   a -= ATTENUATION_RESERVE;
-  depth_error = false;
   if (a > 0) {
     a = 0;
     if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
@@ -318,6 +315,9 @@ void set_output_path(freq_t f, float level)
 #endif
 
   enable_extra_lna(false);
+  if (setting.mute)
+    signal_path = PATH_OFF;
+
   set_path:
   switch(signal_path) {
   case PATH_OFF:
@@ -1531,8 +1531,8 @@ float set_actual_power(float target_level)              // Set peak level to kno
       config.low_level_offset += offset_correction;
   }
   dirty = true;
+  config_save();
   return offset_correction;
-//  config_save();
   // dirty = true;             // No HW update required, only status panel refresh
 }
 
