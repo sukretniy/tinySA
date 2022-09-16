@@ -22,16 +22,26 @@ static int points = 101; // For 's' and 'm' commands
 
 VNA_SHELL_FUNCTION(cmd_mode)
 {
+#ifdef TINYSA3
   static const char cmd_low_high[] = "low|high";
+#endif
   static const char cmd_in_out[] = "input|output";
   if (argc != 2) {
   usage:
+#ifdef TINYSA4
+    shell_printf("usage: mode low %s\r\n", cmd_in_out);
+#else
     shell_printf("usage: mode %s %s\r\n", cmd_low_high,cmd_in_out);
+#endif
     return;
   }
+#ifdef TINYSA3
   int lh = get_str_index(argv[0], cmd_low_high);
+#else
+  int lh = 0;
+#endif
   int io = get_str_index(argv[1], cmd_in_out);
-  if (lh<0 || io<0)
+  if (lh < 0 || io<0)
     goto usage;
   menu_move_top();
   switch(lh+io*2)
@@ -40,18 +50,22 @@ VNA_SHELL_FUNCTION(cmd_mode)
     set_mode(M_LOW);
     ui_mode_normal();
     break;
+#ifdef TINYSA3
   case 1:
     set_mode(M_HIGH);
     ui_mode_normal();
     break;
+#endif
   case 2:
     set_mode(M_GENLOW);
     menu_push_lowoutput();
     break;
+#ifdef TINYSA3
   case 3:
     set_mode(M_GENHIGH);
     menu_push_highoutput();
     break;
+#endif
   }
 }
 
@@ -295,7 +309,11 @@ VNA_SHELL_FUNCTION(cmd_ext_gain)
 VNA_SHELL_FUNCTION(cmd_levelchange)
 {
   if (argc != 1) {
+#ifdef TINYSA4
+    shell_printf("usage: levelchange -90..+90\r\n");
+#else
     shell_printf("usage: levelchange -70..+70\r\n");
+#endif
     return;
   }
   float f = my_atof(argv[0]);
@@ -400,7 +418,7 @@ VNA_SHELL_FUNCTION(cmd_rbw)
   if (argc != 1) {
   usage:
 #ifdef TINYSA4
-	shell_printf("usage: rbw 0.3..850|auto\r\n");
+	shell_printf("usage: rbw 0.2..850|auto\r\n");
 #else
 	shell_printf("usage: rbw 2..600|auto\r\n");
 #endif
@@ -428,7 +446,11 @@ VNA_SHELL_FUNCTION(cmd_if)
 {
   if (argc != 1) {
   usage:
+#ifdef TINYSA4
+  shell_printf("usage: if {975M..979M}\r\n%QHz\r\n", setting.frequency_IF);
+#else
     shell_printf("usage: if {433M..435M}\r\n%QHz\r\n", setting.frequency_IF);
+#endif
     return;
   } else {
     freq_t a = (freq_t)my_atoi(argv[0]);
@@ -934,7 +956,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
 {
   (void)argc;
 #ifdef TINYSA4
-  static const char cmd[] = "low|lna|out|high";
+  static const char cmd[] = "low|lna|out";
   static const char range[] = "0-19";
 #else
   static const char cmd[] = "low|high";

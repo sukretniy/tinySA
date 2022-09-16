@@ -17,7 +17,7 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "ch.h"
-
+//#define TINYSA_F303
 #ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"

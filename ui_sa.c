@@ -1600,7 +1600,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     break;
 #ifdef TINYSA4
     case 6:
-      save_to_sd(1+2<<current_trace);      // frequencies + trace
+      save_to_sd(1+(2<<current_trace));      // frequencies + trace
       break;
 #endif
   }

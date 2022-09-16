@@ -86,7 +86,7 @@ uint8_t auto_capture = false;
 // Version text, displayed in Config->Version menu, also send by info command
 const char *info_about[]={
   BOARD_NAME,
-  "2019-2020 Copyright @Erik Kaashoek",
+  "2019-2022 Copyright @Erik Kaashoek",
   "2016-2020 Copyright @edy555",
   "SW licensed under GPL. See: https://github.com/erikkaashoek/tinySA",
   "Version: " VERSION,
