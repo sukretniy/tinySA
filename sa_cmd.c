@@ -32,6 +32,7 @@ VNA_SHELL_FUNCTION(cmd_mode)
     shell_printf("usage: mode low %s\r\n", cmd_in_out);
 #else
     shell_printf("usage: mode %s %s\r\n", cmd_low_high,cmd_in_out);
+#endif
     return;
   }
 #ifdef TINYSA3
