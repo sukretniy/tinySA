@@ -18,7 +18,8 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+//#define TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
