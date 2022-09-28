@@ -3046,6 +3046,45 @@ int binary_search(freq_t f)
 }
 
 #ifdef TINYSA4
+
+#define ADDITIONAL_SPUR_TABLE_SIZE 8
+static  const freq_t additional_spur_table[ADDITIONAL_SPUR_TABLE_SIZE] =
+{
+ 132000000,
+ 153000000,
+ 174600000,
+ 197000000,
+ 219000000,
+ 242000000,
+ 266000000,
+ 289600000,
+};
+
+//binary_search_table(f, additional_spur_table, ADDITIONAL_SPUR_TABLE_SIZE, ADDITIONAL_SPUR_TABE_GATE)
+
+#define ADDITIONAL_SPUR_TABE_GATE  1000000
+
+int binary_search_table(freq_t f, const freq_t *table, int table_size, int gate)
+{
+  int L = 0;
+  int R =  table_size - 1;
+  freq_t fmin =  f - gate;
+  freq_t fplus = f + gate;
+  while (L <= R) {
+    int m = (L + R) / 2;
+    if (table[m] < fmin)
+      L = m + 1;
+    else if (table[m] > fplus)
+      R = m - 1;
+    else
+       return true; // index is m
+  }
+  return false;
+}
+#endif
+
+
+#ifdef TINYSA4
 //static const uint8_t spur_div[] = {3, 3, 5, 2, 3, 4};        // 4/1 removed
 //static const uint8_t spur_mul[] = {1, 1, 2, 1, 2, 3};
 //#define IF_OFFSET   468750*4        //
@@ -3073,7 +3112,12 @@ void fill_spur_table(void)
     corr_IF = config.frequency_IF1;
   }
   dynamic_spur_table_size = 0;
+//  dynamic_spur_table[dynamic_spur_table_size++] = 132000000;
+//  dynamic_spur_table[dynamic_spur_table_size++] = 153000000;
+//  dynamic_spur_table[dynamic_spur_table_size++] = 174600000;
+//  dynamic_spur_table[dynamic_spur_table_size++] = 219000000;
   dynamic_spur_table[dynamic_spur_table_size++] = corr_IF/4 -SPUR_FACTOR/2;
+//  dynamic_spur_table[dynamic_spur_table_size++] = 266000000;
   dynamic_spur_table[dynamic_spur_table_size++] = corr_IF/2 -SPUR_FACTOR;
   dynamic_spur_table[dynamic_spur_table_size++] = corr_IF*2/3 -SPUR_FACTOR*2/3;
   spur_table = dynamic_spur_table;
@@ -3927,6 +3971,7 @@ again:                                                              // Spur redu
             }
           }
 #endif
+
 #ifdef __ULTRA__
           if (S_IS_AUTO(setting.below_IF)) {
             if ((freq_t)lf > MAX_ABOVE_IF_FREQ && lf <= ULTRA_MAX_FREQ )
@@ -4040,6 +4085,15 @@ again:                                                              // Spur redu
                 local_IF += DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);                  // Shift to avoid zero Hz peak
                 LO_shifting = true;
               }
+              if (config.hide_21MHz && S_IS_AUTO(setting.below_IF)) {
+                if (binary_search_table(lf, additional_spur_table, ADDITIONAL_SPUR_TABLE_SIZE, ADDITIONAL_SPUR_TABE_GATE))
+                {
+                  setting.below_IF= S_AUTO_ON;
+                } else {
+                  setting.below_IF= S_AUTO_OFF;
+                }
+              }
+
 #else
               local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
 #endif
@@ -4204,7 +4258,7 @@ again:                                                              // Spur redu
                 setting.increased_R = true;
                 freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
                 if (tf + actual_rbw_x10*1000 >= lf  && tf < lf + actual_rbw_x10*1000) // 10MHz
-                  ADF4351_R_counter(2);    // To avoid PLL Loop shoulders at multiple of 10MHz
+                  ADF4351_R_counter(-4);    // To avoid PLL Loop shoulders at multiple of 10MHz
                 else
                   ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
               } else

@@ -1051,6 +1051,7 @@ config_t config = {
 #ifdef TINYSA4
   .direct_start = 965000000UL,
   .direct_stop  = 985000000UL,
+  .hide_21MHz = false,
 #endif
 };
 

@@ -1345,6 +1345,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_spur_acb)
 #endif
 
 #ifdef TINYSA4
+static UI_FUNCTION_ADV_CALLBACK(menu_hide_21MHz_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = config.hide_21MHz == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  config.hide_21MHz = ! config.hide_21MHz;
+  //  menu_move_back();
+  ui_mode_normal();
+}
+
 static UI_FUNCTION_ADV_CALLBACK(menu_progress_bar_acb)
 {
   (void)data;
@@ -3056,6 +3069,7 @@ static const menuitem_t menu_settings4[] =
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
+ { MT_ADV_CALLBACK,     0,     "HIDE\n21MHz",        menu_hide_21MHz_acb},
 #if 0                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},

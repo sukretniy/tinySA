@@ -790,6 +790,9 @@ typedef struct config {
 #ifdef __ULTRA__
   uint8_t    direct;
 #endif
+#ifdef TINYSA4
+  uint8_t hide_21MHz;
+#endif
   float sweep_voltage;
   float switch_offset;
   int16_t   ext_zero_level;
