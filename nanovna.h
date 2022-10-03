@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -219,8 +219,7 @@ typedef uint32_t freq_t;
  #define CORRECTION_LOW_OUT_DIRECT 7
  #define CORRECTION_LOW_OUT_ADF    8
  #define CORRECTION_LOW_OUT_MIXER  9
- #define CORRECTION_HIGH           10
- #define CORRECTION_SIZE           11
+ #define CORRECTION_SIZE           10
 #endif
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;

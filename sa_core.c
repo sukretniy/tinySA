@@ -2156,10 +2156,12 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
 {
   pureRSSI_t cv = 0;
   int c=CORRECTION_LOW;
+#ifdef TINYSA3
   if (setting.mode == M_GENHIGH) {
     c = CORRECTION_HIGH;
     return float_TO_PURE_RSSI(0.0);
   }
+#endif
 #ifdef TINYSA4
   if (setting.mode == M_LOW) {
 
