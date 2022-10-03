@@ -547,6 +547,8 @@ void reset_settings(int m)
 //  strcpy((char *)spi_buffer, dummy);
   setting.mode = m;
   setting.sweep = false;
+  disable_waterfall();
+  setting.level_meter = false;
 #ifdef __ULTRA__
   ultra_start = (config.ultra_start == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_start);
   ultra = config.ultra;
