@@ -568,6 +568,7 @@ static const menuitem_t  menu_calibrate_harmonic[];
 #endif
 static const menuitem_t  menu_sweep[];
 static const menuitem_t  menu_settings[];
+static const menuitem_t  menu_settings2[];
 static const menuitem_t  menu_lowoutput_settings[];
 extern bool dirty;
 char range_text[20];
@@ -590,6 +591,29 @@ int output_is_calibrated(void)
   redraw_request|= REDRAW_AREA;
   return false;
 }
+
+static int unlock_internals = 0;
+
+static UI_FUNCTION_ADV_CALLBACK(menu_internals_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    return;
+  }
+  if (unlock_internals != 4321) {
+    kp_help_text = "Internals access code";
+    freq_t old_center = get_sweep_frequency(ST_CENTER);
+    ui_mode_keypad(KM_CENTER);
+    set_sweep_frequency(ST_CENTER, old_center);
+    if (uistat.value != 4321) {
+      return;
+    }
+    unlock_internals = 4321;
+  }
+  menu_push_submenu(menu_settings2);
+}
+
 #endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_sweep_acb)
@@ -3164,7 +3188,7 @@ static const menuitem_t menu_settings[] =
   { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
 //  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
-  { MT_SUBMENU,     0,              "INTERNALS",            menu_settings2},
+  { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
   { MT_NONE,        0, NULL, menu_back} // next-> menu_back
 };
 
