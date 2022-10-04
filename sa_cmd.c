@@ -24,23 +24,36 @@ VNA_SHELL_FUNCTION(cmd_mode)
 {
 #ifdef TINYSA3
   static const char cmd_low_high[] = "low|high";
+#else
+  static const char cmd_low_high[] = "low";
 #endif
   static const char cmd_in_out[] = "input|output";
+#ifdef TINYSA3
   if (argc != 2) {
-  usage:
+#else
+    if (argc != 1 && argc != 2) {
+#endif
+    usage:
 #ifdef TINYSA4
-    shell_printf("usage: mode low %s\r\n", cmd_in_out);
+    shell_printf("usage: mode [low] %s\r\n", cmd_in_out);
 #else
     shell_printf("usage: mode %s %s\r\n", cmd_low_high,cmd_in_out);
 #endif
     return;
   }
-#ifdef TINYSA3
-  int lh = get_str_index(argv[0], cmd_low_high);
-#else
+  int io = 0;
   int lh = 0;
-#endif
+#ifdef TINYSA4
+  lh = get_str_index(argv[0], cmd_low_high);
+  if (lh != 0) {
+    lh = 0;
+    io = get_str_index(argv[0], cmd_in_out);
+  } else
+    io = get_str_index(argv[1], cmd_in_out);
+#else
+  int lh = get_str_index(argv[0], cmd_low_high);
   int io = get_str_index(argv[1], cmd_in_out);
+#endif
   if (lh < 0 || io<0)
     goto usage;
   menu_move_top();
