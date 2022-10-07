@@ -446,6 +446,7 @@ enum {
   KM_RTC_DATE,
   KM_RTC_TIME,
 #endif
+  KM_CODE,
 #endif
   KM_NONE // always at enum end
 };
@@ -520,6 +521,7 @@ static const struct {
 [KM_RTC_DATE]     = {keypads_positive    , "SET DATE\n YYMMDD"}, // Date
 [KM_RTC_TIME]     = {keypads_positive    , "SET TIME\n HHMMSS"}, // Time
 #endif
+[KM_CODE]         = {keypads_positive    , "CODE"},              // KM_CODE
 #endif
 };
 
@@ -603,9 +605,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_internals_acb)
   }
   if (unlock_internals != 4321) {
     kp_help_text = "Internals access code";
-    freq_t old_center = get_sweep_frequency(ST_CENTER);
-    ui_mode_keypad(KM_CENTER);
-    set_sweep_frequency(ST_CENTER, old_center);
+    ui_mode_keypad(KM_CODE);
     if (uistat.value != 4321) {
       return;
     }
@@ -1490,8 +1490,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_ultra_acb)
     return;
   }
   if (!config.ultra) {
+    drawMessageBox("Info", "Visit tinysa.org/ultra for unlock code", 2000);
+
     kp_help_text = "Ultra unlock code";
-    ui_mode_keypad(KM_CENTER);
+    ui_mode_keypad(KM_CODE);
     if (uistat.value != 4321)
       return;
   }
@@ -1527,7 +1529,7 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
   (void)data;
   (void)item;
   kp_help_text = "Clear unlock code";
-  ui_mode_keypad(KM_CENTER);
+  ui_mode_keypad(KM_CODE);
   if (uistat.value != 1234)
     return;
   clear_all_config_prop_data();
@@ -1768,13 +1770,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       nf_gain = 0;
       goto noise_figure;
     case M_NF_STORE:
-      if (measured_noise_figure > 3 && measured_noise_figure < 15) {
+      if (measured_noise_figure > 2 && measured_noise_figure < 20) {
         config.noise_figure = measured_noise_figure;
         config_save();
         data = M_NF_VALIDATE;               // Continue to validate
         goto validate;
-      } else
+      } else {
+        drawMessageBox("Error", "NF out of range",1000);
         data = M_NF_TINYSA;               // Continue to measure
+      }
       break;
     case M_NF_VALIDATE:
 validate:
