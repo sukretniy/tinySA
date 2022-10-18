@@ -3104,7 +3104,6 @@ static const menuitem_t menu_settings4[] =
   { MT_KEYPAD,   KM_COR_NFM,     "COR\nNFM", "Enter NFM modulation correction"},
 #endif
 //  { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
-  { MT_ADV_CALLBACK,     0,     "LINEAR\nAVERAGING",          menu_linear_averaging_acb},
 //  { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings3},
   { MT_KEYPAD,   KM_DIRECT_START,     "DSTART\n\b%s", ""},
   { MT_KEYPAD,   KM_DIRECT_STOP,     "DSTOP\n\b%s", ""},
@@ -3120,7 +3119,6 @@ static const menuitem_t menu_settings3[] =
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
 #endif
   { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "10G=auto"},
-  { MT_ADV_CALLBACK,     0,     "ENABLE\nDIRECT",    menu_direct_acb},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R\n\b%s",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO\n\b%s",           "Set MODULO"},
@@ -3182,6 +3180,8 @@ static const menuitem_t menu_settings[] =
 {
 #ifdef TINYSA4
   { MT_ADV_CALLBACK,0,              "PROGRESS\nBAR",        menu_progress_bar_acb},
+  { MT_ADV_CALLBACK,     0,         "DIRECT\nMODE",         menu_direct_acb},
+  { MT_ADV_CALLBACK,     0,         "LINEAR\nAVERAGING",    menu_linear_averaging_acb},
   { MT_KEYPAD,      KM_FREQ_CORR,   "FREQ CORR\n\b%s",      "Enter ppb correction"},
 //  { MT_SUBMENU,     0,              "CALIBRATE\nHARMONIC",  menu_calibrate_harmonic},
 #endif

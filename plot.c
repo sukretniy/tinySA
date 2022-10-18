@@ -1545,18 +1545,18 @@ static void trace_print_value_string(     // Only used at one place
   }
   const char *format;
   if (UNIT_IS_LINEAR(setting.unit))
-    format = FONT_s"%s %.3F%s%s%s"; // 5 characters incl u, m, etc...
+    format = FONT_s"%s %.3F%s%s%s%s"; // 5 characters incl u, m, etc...
   else
-    format = FONT_s"%s %.1f%s%s%s";
+    format = FONT_s"%s %.1f%s%s%s%s";
 #ifdef TINYSA4
   format++; // Skip small prefix for bold output
 #else
   if (bold) format++; // Skip small prefix for bold output
 #endif
-  cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_NOISE?"c/Hz":""), (mtype & M_AVER?"/T":""));
+  cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_DELTA?"c":"") , (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
 #ifdef __LEVEL_METER__
   if (level_text[0] == 0)
-    plot_printf(level_text, sizeof(level_text), &format[3], v, unit_string[unit_index], (mtype & M_NOISE?"c/Hz":"") ,(mtype & M_AVER?"/T":""));
+    plot_printf(level_text, sizeof(level_text), &format[3], v, unit_string[unit_index], (mtype & M_DELTA?"c":"") , (mtype & M_NOISE?"/Hz":"") ,(mtype & M_AVER?"/T":""));
 #endif
 }
 
