@@ -1808,7 +1808,7 @@ validate:
 #else
         set_sweep_frequency(ST_SPAN, 100000);
 #endif
-        set_RBW(get_sweep_frequency(ST_SPAN)/100 / 100);
+        set_RBW(1000);  // 300kHz
       }
 
 //      set_sweep_frequency(ST_SPAN, 0);
