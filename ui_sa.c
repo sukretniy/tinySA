@@ -1785,9 +1785,10 @@ validate:
       nf_gain = 0.00001;                            // almost zero
       goto noise_figure;
     case M_NF_AMPLIFIER:                             // noise figure
-//      reset_settings(setting.mode);
+#if 0
       reset_settings(setting.mode);
       set_refer_output(-1);
+#endif
       kp_help_text = "Amplifier Gain ";
       float old_gain = setting.external_gain;
       ui_mode_keypad(KM_EXT_GAIN);
@@ -1798,7 +1799,7 @@ validate:
       markers[0].mtype = M_NOISE | M_AVER;          // Not tracking
       set_extra_lna(true);
       set_attenuation(0);
-      if (data != M_NF_VALIDATE) {
+      if (data == M_NF_TINYSA) {
         kp_help_text = "Noise center frequency";
         ui_mode_keypad(KM_CENTER);
         set_marker_frequency(0, uistat.value);
@@ -4347,40 +4348,38 @@ redraw_cal_status:
 //    lcd_printf(x, y, "%4f", value(setting.trigger_level)/setting.unit_scale);
     y = add_quick_menu(y,(menuitem_t *)menu_trigger);
   }
-
+#ifndef TINYSA4
   // Mode
   ili9341_set_foreground(level_is_calibrated() ? LCD_BRIGHT_COLOR_GREEN : LCD_BRIGHT_COLOR_RED);
   ili9341_drawstring_7x13(MODE_LOW(setting.mode) ? "LOW" : "HIGH", x, y);
-
+  y += YSTEP + YSTEP/2 ;
+#endif
   // Compact status string
 //  ili9341_set_background(LCD_FG_COLOR);
   ili9341_set_foreground(LCD_FG_COLOR);
-  y += YSTEP + YSTEP/2 ;
   strncpy(buf,"     ",BLEN-1);
-  if (setting.auto_attenuation)
-    buf[0] = 'a';
-  else
-    buf[0] = 'A';
   if (setting.auto_IF)
-    buf[1] = 'f';
+    buf[0] = 'f';
   else
-    buf[1] = 'F';
-  if (setting.auto_reflevel)
-    buf[2] = 'r';
-  else
-    buf[2] = 'R';
+    buf[0] = 'F';
   if (S_IS_AUTO(setting.agc))
-    buf[3] = 'g';
+    buf[1] = 'g';
   else if (S_STATE(setting.agc))
-    buf[3] = 'G';
+    buf[1] = 'G';
   if (S_IS_AUTO(setting.lna))
-    buf[4] = 'n';
+    buf[2] = 'n';
   else if (S_STATE(setting.lna))
-    buf[4] = 'N';
+    buf[2] = 'N';
   if (S_IS_AUTO(setting.below_IF))
-    buf[5] = 'b';
+    buf[3] = 'b';
   else if (S_STATE(setting.below_IF))
-    buf[5] = 'B';
+    buf[3] = 'B';
+#ifdef TINYSA4
+  if (S_IS_AUTO(setting.spur_removal))
+    buf[4] = 's';
+  else if (S_STATE(setting.spur_removal))
+    buf[4] = 'S';
+#endif
   ili9341_drawstring(buf, x, y);
 
   // Version

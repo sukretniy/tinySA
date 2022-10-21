@@ -327,7 +327,7 @@ marker_to_value(const int i)
   if (markers[i].mtype & M_NOISE){
     v = v - logf(actual_rbw_x10*100.0) * (10.0/logf(10.0))
 #ifdef TINYSA4
-    + SI4463_noise_correction_x10/10.0 + (linear_averaging ? 0.0 : log_averaging_correction);
+    + ((float)SI4463_noise_correction_x10)/10.0 + (linear_averaging ? 0.0 : log_averaging_correction);
 #endif
     ;
   }

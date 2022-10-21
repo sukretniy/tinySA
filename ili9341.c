@@ -1172,7 +1172,7 @@ static DSTATUS Stat = STA_NOINIT;  // Disk Status
 static uint8_t CardType  = 0;      // Type 0:MMC, 1:SDC, 2:Block addressing
 
 // Debug functions, 0 to disable
-#define DEBUG    0
+#define DEBUG    1
 int shell_printf(const char *fmt, ...);
 #define DEBUG_PRINT(...) do { if (DEBUG) shell_printf(__VA_ARGS__); } while (0)
 #if DEBUG == 1
