@@ -5980,7 +5980,7 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 30,    1,      CAL_LEVEL,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
- TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,990,    10,    -90,    0,      -90),         // 6 Direct path with harmonic
+ TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,990,   10,    -90,    0,      -90),         // 6 Direct path with harmonic
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    26,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -28,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       880,    1,     -95,    0,      -100),       // 9 LPF cutoff
@@ -6488,9 +6488,9 @@ common_silent:
     saved_direct = config.direct;
     config.direct = true;
     saved_direct_start = config.direct_start;
-    config.direct_start = 965000000;
+    config.direct_start = 900000000;
     saved_direct_stop = config.direct_stop;
-    config.direct_stop = 1000000000;
+    config.direct_stop = 1100000000;
     break;
   case TP_SILENT_LNA:
   case TP_30MHZ_LNA:
@@ -7343,7 +7343,7 @@ float get_jump_config(int i) {
 }
 
 enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
-#define DRIRECT_CAL_FREQ    990000000   // 990MHz
+#define DRIRECT_CAL_FREQ    990000000   // 960MHz
 #define ULTRA_HARMONIC_CAL_FREQ 5340000000
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
@@ -7412,6 +7412,7 @@ void calibrate(void)
 {
   int local_test_status;
   int old_sweep_points = setting._sweep_points;
+  reset_calibration();
 #ifdef TINYSA4
   int old_ultra = config.ultra;
 //  setting.auto_IF = true;                         // set in selftest
@@ -7426,6 +7427,8 @@ void calibrate(void)
     setting.frequency_IF = config.frequency_IF1;
     fill_spur_table();
   }
+  if (peakLevel < -40 || peakLevel > -30)
+    goto low_level;
 #if 1   // Jump calibration not yet enabled
   //for (int j = 0; j < CALIBRATE_RBWS; j++) {
   //  set_RBW(power_rbw[j]);
@@ -7473,7 +7476,6 @@ void calibrate(void)
 
 #endif
 #endif
-  reset_calibration();
   in_calibration = true;
   for (calibration_stage = CS_NORMAL; calibration_stage < CS_MAX ; calibration_stage++) {
     for (int k = 0; k<3; k++) {
@@ -7593,16 +7595,17 @@ void calibrate(void)
         local_test_status = test_validate(test_case);                       // Validate test also sets attenuation if zero span
 #endif
 #endif
-        if (calibration_stage == CS_NORMAL && peakLevel < -50) {
+        if (calibration_stage == CS_NORMAL && peakLevel < -40) {
+low_level:
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
-          ili9341_drawstring_7x13("Signal level too low", 30, 200);
-          ili9341_drawstring_7x13("Check cable between High and Low connectors", 30, 220);
+          ili9341_drawstring_7x13("Signal level incorrect", 30, 200);
+          ili9341_drawstring_7x13("Check cable between connectors", 30, 220);
           goto quit;
         }
         //    chThdSleepMilliseconds(1000);
         if (local_test_status != TS_PASS) {
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
-          ili9341_drawstring_7x13("Calibration failed", 30, 200);
+          ili9341_drawstring_7x13("Calibration failed", 30, 220);
           goto quit;
         }
 #ifdef TINYSA4
@@ -7661,9 +7664,9 @@ void calibrate(void)
   config.input_is_calibrated = true;
   config_save();
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Calibration complete", 40, 200);
+  ili9341_drawstring_7x13("Calibration complete", 40, 220);
 quit:
-  ili9341_drawstring_7x13("Touch screen to continue", 40, 220);
+  ili9341_drawstring_7x13("Touch screen to continue", 40, 240);
   wait_user();
   ili9341_clear_screen();
   set_sweep_points(old_sweep_points);
