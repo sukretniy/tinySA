@@ -6068,6 +6068,26 @@ static int show_test_info = FALSE;
 static volatile int test_wait = false;
 static float test_value;
 
+#ifdef TINYSA4
+static freq_t direct_test_freq = 0;
+void determine_direct_test_freq(void) {
+  int old_ultra = config.ultra;
+  config.ultra = true;
+  ultra = true;
+  float max_level = -150;
+  set_refer_output(0);
+  for (freq_t test_freq = 900000000UL; test_freq < 1000000000UL; test_freq += 30000000) {
+    dirty = true;
+    float v = PURE_TO_float(perform(false, 0, test_freq, false));
+    if (v > max_level) {
+      max_level = v;
+      direct_test_freq = test_freq;
+    }
+  }
+  config.ultra = old_ultra;
+}
+#endif
+
 static void test_acquire(int i)
 {
   (void)i;
@@ -6148,8 +6168,13 @@ int validate_signal_within(int i, float margin)
       return TS_FAIL;
     }
   }
+  freq_t c_freq = (freq_t)(test_case[i].center * 1000000);
+#ifdef TINYSA4
+  if (test_case[i].setup == TP_30MHZ_DIRECT)
+    c_freq = direct_test_freq;
+#endif
   test_fail_cause[i] = "Frequency ";
-  if (peakFreq < test_case[i].center * 1000000 - 500000 || test_case[i].center * 1000000 + 500000 < peakFreq )
+  if (peakFreq < c_freq - 500000 || c_freq + 500000 < peakFreq )
     return TS_FAIL;
   test_fail_cause[i] = "";
   return TS_PASS;
@@ -6491,6 +6516,7 @@ common_silent:
     config.direct_start = 900000000;
     saved_direct_stop = config.direct_stop;
     config.direct_stop = 1100000000;
+    determine_direct_test_freq();
     break;
   case TP_SILENT_LNA:
   case TP_30MHZ_LNA:
@@ -6517,7 +6543,14 @@ common_silent:
   }
   else
 #endif
-    set_sweep_frequency(ST_CENTER, (freq_t)(test_case[i].center * 1000000));
+  {
+    freq_t c_freq = (freq_t)(test_case[i].center * 1000000);
+#ifdef TINYSA4
+    if (test_case[i].setup == TP_30MHZ_DIRECT)
+      c_freq = direct_test_freq;
+#endif
+    set_sweep_frequency(ST_CENTER, c_freq);
+  }
   set_sweep_frequency(ST_SPAN, (freq_t)(test_case[i].span * 1000000));
   draw_cal_status();
 }
@@ -7351,7 +7384,7 @@ enum {CS_NORMAL, CS_SWITCH, CS_MAX };
 
 void calibration_busy(void) {
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
-  ili9341_drawstring_7x13("Calibration busy", 40, 200);
+  ili9341_drawstring_7x13("Calibration busy", 40, 220);
 }
 
 
@@ -7429,6 +7462,7 @@ void calibrate(void)
   }
   if (peakLevel < -40 || peakLevel > -30)
     goto low_level;
+  determine_direct_test_freq();
 #if 1   // Jump calibration not yet enabled
   //for (int j = 0; j < CALIBRATE_RBWS; j++) {
   //  set_RBW(power_rbw[j]);
