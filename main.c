@@ -1845,12 +1845,36 @@ VNA_SHELL_FUNCTION(cmd_test)
 
 const char TINYSA_VERSION[] = VERSION;
 
+#ifdef TINYSA4
+typedef struct version_t {
+  const uint16_t min_adc;
+  const uint16_t max_adc;
+  const char *text;
+} version_t;
+
+#define MAX_VERSION_TEXT    1
+const version_t hw_version_text[MAX_VERSION_TEXT] =
+{
+ { 160, 169,    "V0.4.5.1"}
+};
+
+const char *get_hw_version_text(void)
+{
+  int v = adc1_single_read(0);
+  for (int i=0; i<MAX_VERSION_TEXT;i++) {
+    if (hw_version_text[i].min_adc <= v && v <= hw_version_text[i].max_adc)
+      return hw_version_text[i].text;
+  }
+  return "Unknown";
+}
+#endif
+
 VNA_SHELL_FUNCTION(cmd_version)
 {
   (void)argc;
   (void)argv;
 #ifdef TINYSA4
-  shell_printf("%s\r\nHW Version:%d\r\n", TINYSA_VERSION, adc1_single_read(0));
+  shell_printf("%s\r\nHW Version:%s\r\n", TINYSA_VERSION, get_hw_version_text());
 #else
   shell_printf("%s\r\n", TINYSA_VERSION);
 #endif

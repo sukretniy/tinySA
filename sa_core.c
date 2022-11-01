@@ -7376,7 +7376,6 @@ float get_jump_config(int i) {
 }
 
 enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
-#define DRIRECT_CAL_FREQ    990000000   // 960MHz
 #define ULTRA_HARMONIC_CAL_FREQ 5340000000
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
@@ -7565,18 +7564,18 @@ void calibrate(void)
           force_signal_path = true;
           break;
         case CS_DIRECT_REF:
-          set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
+          set_sweep_frequency(ST_CENTER, direct_test_freq);
           test_path = 2;      // Ultra
           force_signal_path = true;
           break;
         case CS_DIRECT:
-          set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
+          set_sweep_frequency(ST_CENTER, direct_test_freq);
           test_path = 4;      // Direct path at 900MHz
           force_signal_path = true;
           config.direct_level_offset -= 1.0;
           break;
         case CS_DIRECT_LNA:
-          set_sweep_frequency(ST_CENTER, DRIRECT_CAL_FREQ);
+          set_sweep_frequency(ST_CENTER, direct_test_freq);
           test_path = 5;      // Direct lna path at 900MHz
           force_signal_path = true;
           config.direct_lna_level_offset += 1.0;
