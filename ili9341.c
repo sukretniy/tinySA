@@ -1377,7 +1377,7 @@ static bool SD_TxDataBlock(const uint8_t *buff, uint8_t token) {
   if (resp != SD_TOKEN_DATA_ACCEPTED){
     goto error_tx;
   }
-#if 0
+#if 1
   // Wait busy (recommended timeout is 250ms (500ms for SDXC) set 250ms
   resp = SD_WaitNotBusy(MS2ST(250));
   if (resp == 0xFF)
@@ -1396,12 +1396,15 @@ error_tx:
 // Transmit command to SD
 static uint8_t SD_SendCmd(uint8_t cmd, uint32_t arg) {
   uint8_t buf[6];
-  uint8_t r1;
+  volatile uint8_t r1;
   // wait SD ready after last Tx (recommended timeout is 250ms (500ms for SDXC) set 250ms
   if ((r1 = SD_WaitNotBusy(MS2ST(250))) != 0xFF) {
     DEBUG_PRINT(" SD_WaitNotBusy CMD%d err, %02x\r\n", cmd-0x40, (uint32_t)r1);
     return 0xFF;
   }
+  if (cmd != CMD24 && cmd != CMD17 )
+    DEBUG_PRINT(" SD_SendCmd CMD%d, 0x%08x", (uint32_t)cmd-0x40, arg);
+
   // Transmit command
   buf[0] = cmd;
   buf[1] = (arg >> 24)&0xFF;
@@ -1412,22 +1415,29 @@ static uint8_t SD_SendCmd(uint8_t cmd, uint32_t arg) {
   buf[5] = crc7(buf, 5)|0x01;
 #else
   uint8_t crc = 0x01;              // Dummy CRC + Stop
-       if (cmd == CMD0) crc = 0x95;// Valid CRC for CMD0(0)
-  else if (cmd == CMD8) crc = 0x87;// Valid CRC for CMD8(0x1AA)
+       if (cmd == CMD0) crc = 0x94;// Valid CRC for CMD0(0)
+  else if (cmd == CMD8) crc = 0x86;// Valid CRC for CMD8(0x1AA)
   buf[5] = crc;
 #endif
   spi_TxBuffer(buf, 6);
 // Skip a stuff byte when STOP_TRANSMISSION
 //if (cmd == CMD12) SPI_RxByte();
   // Receive response register r1
-  r1 = SD_ReadR1(100);
+   // 8th bit R1 always zero, check it
+  spi_DropRx();
+  int cnt = 100;
+  while(((r1=spi_RxByte())&0x80) && --cnt) {
+    if (cmd != CMD24 && cmd != CMD17 ) DEBUG_PRINT(" r1=0x%x", (uint32_t)r1);
+  }
+  if (cmd != CMD24 && cmd != CMD17 ) DEBUG_PRINT(" r1=0x%x\r\n", (uint32_t)r1);
+//  r1 = SD_ReadR1(100);
 #if 1
   if (r1&(SD_R1_NOT_R1|SD_R1_CRC_ERROR|SD_R1_ERASE_RESET|SD_R1_ERR_ERASE_CLR)){
     DEBUG_PRINT(" SD_SendCmd err CMD%d, 0x%x, 0x%08x\r\n", (uint32_t)cmd-0x40, (uint32_t)r1, arg);
     return r1;
   }
   if (r1&(~SD_R1_IDLE))
-    DEBUG_PRINT(" SD_SendCmd CMD%d, 0x%x, 0x%08x\r\n", (uint32_t)cmd-0x40, (uint32_t)r1, arg);
+    DEBUG_PRINT(" SD_SendCmd CMD%d, r1=0x%x\r\n", (uint32_t)cmd-0x40, (uint32_t)r1);
 #endif
   return r1;
 }
@@ -1436,7 +1446,6 @@ static uint8_t SD_SendCmd(uint8_t cmd, uint32_t arg) {
 static void SD_PowerOn(void) {
   uint16_t n;
   SD_Select_SPI_LOW();
-
   // Dummy TxRx 80 bits for power up SD
   for (n=0;n<10;n++)
     spi_RxByte();
@@ -1503,8 +1512,8 @@ DSTATUS disk_initialize(BYTE pdrv) {
       {
         // ACMD41 with HCS bit can be up to 200ms wait
         do {
-          if (SD_SendCmd(CMD55,                0) <= 1 && // APP_CMD Get Ok or idle state
-              SD_SendCmd(ACMD41, SD_OCR_CAPACITY) == 0)   // Check OCR
+          if ((SD_SendCmd(CMD55,                0) <= 1) && // APP_CMD Get Ok or idle state
+              (SD_SendCmd(ACMD41, SD_OCR_CAPACITY) == 0))   // Check OCR
             break;
           chThdSleepMilliseconds(10);
         } while (--cnt);

@@ -1568,6 +1568,7 @@ void rtc_set_time(uint32_t dr, uint32_t tr);
 #ifdef  __USE_SD_CARD__
 #include "../FatFs/ff.h"
 #include "../FatFs/diskio.h"
+extern uint16_t sd_card_inserted_at_boot;
 bool SD_Inserted(void);
 // Buffers for SD card use spi_buffer
 #if SPI_BUFFER_SIZE < 2048

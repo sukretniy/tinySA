@@ -2101,6 +2101,11 @@ static const uint8_t bmp_header_v4[14+56] = {
 
 FRESULT open_file(char *ext)
 {
+  if (!sd_card_inserted_at_boot) {
+    drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
+    return FR_NOT_READY;
+  }
+
   FRESULT res = f_mount(fs_volume, "", 1);
   // fs_volume, fs_file and fs_filename stored at end of spi_buffer!!!!!
 //  shell_printf("Mount = %d\r\n", res);
@@ -2136,6 +2141,10 @@ made_screenshot(int touch_x, int touch_y)
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_fill(4, SD_CARD_START, 16, 16);
   touch_wait_release();
+  if (!sd_card_inserted_at_boot) {
+    drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
+    return FALSE;
+  }
 //  uint32_t time = chVTGetSystemTimeX();
 //  shell_printf("Screenshot\r\n");
   FRESULT res = open_file("bmp");

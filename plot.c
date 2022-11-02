@@ -1884,6 +1884,7 @@ static const uint8_t sd_icon [] = {
   else{
     ili9341_set_background(LCD_BG_COLOR);
     ili9341_fill(4, SD_CARD_START, 16, 16);
+    sd_card_inserted_at_boot = false;
   }
 #endif
   int16_t vbat = adc_vbat_read();
