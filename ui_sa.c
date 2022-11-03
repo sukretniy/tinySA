@@ -446,8 +446,8 @@ enum {
   KM_RTC_DATE,
   KM_RTC_TIME,
 #endif
-  KM_CODE,
 #endif
+  KM_CODE,
   KM_NONE // always at enum end
 };
 
@@ -521,8 +521,8 @@ static const struct {
 [KM_RTC_DATE]     = {keypads_positive    , "SET DATE\n YYMMDD"}, // Date
 [KM_RTC_TIME]     = {keypads_positive    , "SET TIME\n HHMMSS"}, // Time
 #endif
-[KM_CODE]         = {keypads_positive    , "CODE"},              // KM_CODE
 #endif
+[KM_CODE]         = {keypads_positive    , "CODE"},              // KM_CODE
 };
 
 #if 0 // Not used
@@ -3193,7 +3193,9 @@ static const menuitem_t menu_settings[] =
   { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
 //  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
+#ifdef TINYSA4
   { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
+#endif
   { MT_NONE,        0, NULL, menu_back} // next-> menu_back
 };
 

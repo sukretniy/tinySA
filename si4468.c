@@ -899,7 +899,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 }
 #endif
 
-#include "SI446x_cmd.h"
+#include "si446x_cmd.h"
 
 #include "radio_config_Si4468_undef.h"
 #undef RADIO_CONFIGURATION_DATA_ARRAY

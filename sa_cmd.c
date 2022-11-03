@@ -51,8 +51,8 @@ VNA_SHELL_FUNCTION(cmd_mode)
   } else
     io = get_str_index(argv[1], cmd_in_out);
 #else
-  int lh = get_str_index(argv[0], cmd_low_high);
-  int io = get_str_index(argv[1], cmd_in_out);
+  lh = get_str_index(argv[0], cmd_low_high);
+  io = get_str_index(argv[1], cmd_in_out);
 #endif
   if (lh < 0 || io<0)
     goto usage;
