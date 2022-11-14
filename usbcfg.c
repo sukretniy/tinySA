@@ -157,13 +157,12 @@ static const uint8_t vcom_string1[] = {
 
 #ifdef TINYSA4
 /*
- * Device Description string, use "tinySA Ultra"
+ * Device Description string, use "tinySA4" as in "VERSION"
  */
 static const uint8_t vcom_string2[] = {
-  USB_DESC_BYTE(26),                    /* bLength.                         */
+  USB_DESC_BYTE(16),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
-  't', 0, 'i', 0, 'n', 0, 'y', 0, 'S', 0, 'A', 0,
-  ' ', 0, 'U', 0, 'l', 0, 't', 0, 'r', 0, 'a', 0
+  't', 0, 'i', 0, 'n', 0, 'y', 0, 'S', 0, 'A', 0, '4', 0
 };
 #else
 /*
@@ -176,16 +175,59 @@ static const uint8_t vcom_string2[] = {
 };
 #endif
 
+#ifdef TINYSA4
 /*
- * Serial Number string. TODO: use real product version.
+ * Serial Number string. VERSION = 'tinySA4_v1.3-nnn-gxxxxxxx'
+ *                                  0123456789012345678901234
  */
 static const uint8_t vcom_string3[] = {
-  USB_DESC_BYTE(8),                     /* bLength.                         */
+  USB_DESC_BYTE(36),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
-  '0' + CH_KERNEL_MAJOR, 0,
-  '0' + CH_KERNEL_MINOR, 0,
-  '0' + CH_KERNEL_PATCH, 0
+  VERSION[8], 0,  /* 'v' */
+  VERSION[9], 0,  /* '1' */
+  VERSION[10], 0, /* '.' */
+  VERSION[11], 0, /* '3' */
+  VERSION[12], 0, /* '-' */
+  VERSION[13], 0, /* 'n' */
+  VERSION[14], 0, /* 'n' */
+  VERSION[15], 0, /* 'n' */
+  VERSION[16], 0, /* '-' */
+  VERSION[17], 0, /* 'g' */
+  VERSION[18], 0, /* 'x' */
+  VERSION[19], 0, /* 'x' */
+  VERSION[20], 0, /* 'x' */
+  VERSION[21], 0, /* 'x' */
+  VERSION[22], 0, /* 'x' */
+  VERSION[23], 0, /* 'x' */
+  VERSION[24], 0  /* 'x' */
 };
+#else
+/*
+ * Serial Number string. VERSION = 'tinySA_v1.3-nnn-gxxxxxxx'
+ *                                  012345678901234567890123
+ */
+static const uint8_t vcom_string3[] = {
+  USB_DESC_BYTE(36),                    /* bLength.                         */
+  USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
+  VERSION[7], 0,  /* 'v' */
+  VERSION[8], 0,  /* '1' */
+  VERSION[9], 0,  /* '.' */
+  VERSION[10], 0, /* '3' */
+  VERSION[11], 0, /* '-' */
+  VERSION[12], 0, /* 'n' */
+  VERSION[13], 0, /* 'n' */
+  VERSION[14], 0, /* 'n' */
+  VERSION[15], 0, /* '-' */
+  VERSION[16], 0, /* 'g' */
+  VERSION[17], 0, /* 'x' */
+  VERSION[18], 0, /* 'x' */
+  VERSION[19], 0, /* 'x' */
+  VERSION[20], 0, /* 'x' */
+  VERSION[21], 0, /* 'x' */
+  VERSION[22], 0, /* 'x' */
+  VERSION[23], 0  /* 'x' */
+};
+#endif
 
 /*
  * Strings wrappers array.
