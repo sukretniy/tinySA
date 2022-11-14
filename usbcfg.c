@@ -150,21 +150,31 @@ static const uint8_t vcom_string0[] = {
  * Vendor string.
  */
 static const uint8_t vcom_string1[] = {
-  USB_DESC_BYTE(38),                    /* bLength.                         */
+  USB_DESC_BYTE(22),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
-  'S', 0, 'T', 0, 'M', 0, 'i', 0, 'c', 0, 'r', 0, 'o', 0, 'e', 0,
-  'l', 0, 'e', 0, 'c', 0, 't', 0, 'r', 0, 'o', 0, 'n', 0, 'i', 0,
-  'c', 0, 's', 0
+  't', 0, 'i', 0, 'n', 0, 'y', 0, 's', 0, 'a', 0, '.', 0, 'o', 0, 'r', 0, 'g', 0
 };
 
+#ifdef TINYSA4
 /*
- * Device Description string, use the real name of the device.
+ * Device Description string, use "tinySA Ultra"
+ */
+static const uint8_t vcom_string2[] = {
+  USB_DESC_BYTE(26),                    /* bLength.                         */
+  USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
+  't', 0, 'i', 0, 'n', 0, 'y', 0, 'S', 0, 'A', 0,
+  ' ', 0, 'U', 0, 'l', 0, 't', 0, 'r', 0, 'a', 0
+};
+#else
+/*
+ * Device Description string, use "tinySA"
  */
 static const uint8_t vcom_string2[] = {
   USB_DESC_BYTE(14),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
   't', 0, 'i', 0, 'n', 0, 'y', 0, 'S', 0, 'A', 0
 };
+#endif
 
 /*
  * Serial Number string. TODO: use real product version.
