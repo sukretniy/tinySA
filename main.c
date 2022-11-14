@@ -73,7 +73,9 @@ static volatile vna_shellcmd_t  shell_function = 0;
 #endif
 
 #ifdef __USE_SD_CARD__
+#ifdef __DISABLE_HOT_INSERT__
 uint16_t sd_card_inserted_at_boot = false;
+#endif
 // Enable SD card console command
 #define ENABLE_SD_CARD_CMD
 #endif
@@ -2620,8 +2622,9 @@ int main(void)
   PULSE
   ili9341_drawstring("Starting...", 0,0);
   PULSE
-
+#ifdef __DISABLE_HOT_INSERT__
   sd_card_inserted_at_boot = SD_Inserted();
+#endif
   disk_initialize(0);
   PULSE
 //  SD_PowerOn();

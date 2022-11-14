@@ -2101,11 +2101,12 @@ static const uint8_t bmp_header_v4[14+56] = {
 
 FRESULT open_file(char *ext)
 {
+#ifdef __DISABLE_HOT_INSERT__
   if (!sd_card_inserted_at_boot) {
     drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
     return FR_NOT_READY;
   }
-
+#endif
   FRESULT res = f_mount(fs_volume, "", 1);
   // fs_volume, fs_file and fs_filename stored at end of spi_buffer!!!!!
 //  shell_printf("Mount = %d\r\n", res);
@@ -2141,10 +2142,12 @@ made_screenshot(int touch_x, int touch_y)
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_fill(4, SD_CARD_START, 16, 16);
   touch_wait_release();
+#ifdef __DISABLE_HOT_INSERT__
   if (!sd_card_inserted_at_boot) {
     drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
     return FALSE;
   }
+#endif
 //  uint32_t time = chVTGetSystemTimeX();
 //  shell_printf("Screenshot\r\n");
   FRESULT res = open_file("bmp");
@@ -2339,7 +2342,11 @@ static void extcb1(EXTDriver *extp, expchannel_t channel)
 {
   (void)extp;
   (void)channel;
-  if (channel != 9)
+#ifdef  __USE_SD_CARD__
+  if (channel == 12)
+    SD_PowerOff();
+#endif
+  if (channel < 9)
     operation_requested|=OP_LEVER;
   // cur_button = READ_PORT() & BUTTON_MASK;
 }
@@ -2362,7 +2369,11 @@ static const EXTConfig extcfg = {
 #endif
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},
+#ifdef  __USE_SD_CARD__
+    {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOB, extcb1},
+#else
     {EXT_CH_MODE_DISABLED, NULL},
+#endif
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},
     {EXT_CH_MODE_DISABLED, NULL},

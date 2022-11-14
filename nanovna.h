@@ -47,6 +47,7 @@
 #define __SI4432__
 #endif
 #ifdef TINYSA4
+//#define __DISABLE_HOT_INSERT__
 #define __SI4463__
 #define __SI4468__
 #define __ADF4351__
@@ -1570,6 +1571,7 @@ void rtc_set_time(uint32_t dr, uint32_t tr);
 #include "../FatFs/diskio.h"
 extern uint16_t sd_card_inserted_at_boot;
 bool SD_Inserted(void);
+void SD_PowerOff(void);
 // Buffers for SD card use spi_buffer
 #if SPI_BUFFER_SIZE < 2048
 #error "SPI_BUFFER_SIZE for SD card support need size >= 2048"

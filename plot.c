@@ -1841,11 +1841,12 @@ draw_frequencies(void)
 //  }
   ili9341_drawstring(buf2, p2, FREQUENCIES_YPOS);
   ili9341_drawstring(buf1, FREQUENCIES_XPOS1, FREQUENCIES_YPOS);
+  ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
 #ifdef TINYSA4
   if (get_sweep_frequency(ST_STOP) > 2000000000ULL && setting.attenuate_x2 >= 16 ) {
-    ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
     ili9341_drawstring("REDUCED LINEARITY", p2 - 18*7, FREQUENCIES_YPOS);
-  }
+  } else
+    ili9341_drawstring("                 ", p2 - 18*7, FREQUENCIES_YPOS);
 #endif
 }
 
@@ -1884,7 +1885,10 @@ static const uint8_t sd_icon [] = {
   else{
     ili9341_set_background(LCD_BG_COLOR);
     ili9341_fill(4, SD_CARD_START, 16, 16);
+    SD_PowerOff();
+#ifdef __DISABLE_HOT_INSERT__
     sd_card_inserted_at_boot = false;
+#endif
   }
 #endif
   int16_t vbat = adc_vbat_read();

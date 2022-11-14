@@ -1456,7 +1456,7 @@ static void SD_PowerOn(void) {
 }
 
 // Power off SD
-static inline void SD_PowerOff(void) {
+void SD_PowerOff(void) {
   Stat &= ~STA_POWER_ON;
 }
 
@@ -1477,6 +1477,8 @@ DWORD get_fattime (void) {
 
 // diskio.c - Initialize SD
 DSTATUS disk_initialize(BYTE pdrv) {
+  if (CardType && (Stat & STA_POWER_ON))
+    return 0;
 // Debug counters
 #if DEBUG == 1
   w_cnt = 0;

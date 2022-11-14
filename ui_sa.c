@@ -603,13 +603,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_internals_acb)
   if (b){
     return;
   }
-  if (unlock_internals != 4321) {
+  if (unlock_internals != 5432) {
     kp_help_text = "Internals access code";
     ui_mode_keypad(KM_CODE);
-    if (uistat.value != 4321) {
+    if (uistat.value != 5432) {
       return;
     }
-    unlock_internals = 4321;
+    unlock_internals = 5432;
   }
   menu_push_submenu(menu_settings2);
 }
