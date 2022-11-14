@@ -7629,7 +7629,9 @@ void calibrate(void)
 #endif
 #endif
         if (calibration_stage == CS_NORMAL && peakLevel < -40) {
+#ifdef TINYSA4
 low_level:
+#endif
           ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
           ili9341_drawstring_7x13("Signal level incorrect", 30, 200);
           ili9341_drawstring_7x13("Check cable between connectors", 30, 220);
