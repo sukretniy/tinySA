@@ -70,7 +70,7 @@ static const uint8_t vcom_configuration_descriptor_data[67] = {
                                            4.2).                            */
                          0x02,          /* bInterfaceSubClass (Abstract
                                          Control Model, CDC section 4.3).   */
-                         0x01,          /* bInterfaceProtocol (AT commands,
+                         0x00,          /* bInterfaceProtocol (No protocol,
                                            CDC section 4.4).                */
                          0),            /* iInterface.                      */
   /* Header Functional Descriptor (CDC section 5.2.3).*/
@@ -158,19 +158,16 @@ static const uint8_t vcom_string1[] = {
 };
 
 /*
- * Device Description string.
+ * Device Description string, use the real name of the device.
  */
 static const uint8_t vcom_string2[] = {
-  USB_DESC_BYTE(56),                    /* bLength.                         */
+  USB_DESC_BYTE(14),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
-  'C', 0, 'h', 0, 'i', 0, 'b', 0, 'i', 0, 'O', 0, 'S', 0, '/', 0,
-  'R', 0, 'T', 0, ' ', 0, 'V', 0, 'i', 0, 'r', 0, 't', 0, 'u', 0,
-  'a', 0, 'l', 0, ' ', 0, 'C', 0, 'O', 0, 'M', 0, ' ', 0, 'P', 0,
-  'o', 0, 'r', 0, 't', 0
+  't', 0, 'i', 0, 'n', 0, 'y', 0, 'S', 0, 'A', 0
 };
 
 /*
- * Serial Number string.
+ * Serial Number string. TODO: use real product version.
  */
 static const uint8_t vcom_string3[] = {
   USB_DESC_BYTE(8),                     /* bLength.                         */
