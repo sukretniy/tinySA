@@ -2160,9 +2160,9 @@ VNA_SHELL_FUNCTION(cmd_help)
   (void)argc;
   (void)argv;
   const VNAShellCommand *scp = commands;
-#ifdef TINYSA4
-  shell_printf("config.ini commands:");
-#endif
+//#ifdef TINYSA4
+  shell_printf("commands:");
+//#endif
   while (scp->sc_name != NULL
 #ifdef __SINGLE_LETTER__
       && scp->sc_function != cmd_y
