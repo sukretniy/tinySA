@@ -178,10 +178,11 @@ static const uint8_t vcom_string2[] = {
 #ifdef TINYSA4
 /*
  * Serial Number string. VERSION = 'tinySA4_v1.3-nnn-gxxxxxxx'
- *                                  0123456789012345678901234
+ *                                  01234567890123456789012
+ * skip last two 'xx' char due to  'tinySA4_v1.3-n-gxxxxxxx'
  */
 static const uint8_t vcom_string3[] = {
-  USB_DESC_BYTE(36),                    /* bLength.                         */
+  USB_DESC_BYTE(32),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
   VERSION[8], 0,  /* 'v' */
   VERSION[9], 0,  /* '1' */
@@ -198,16 +199,15 @@ static const uint8_t vcom_string3[] = {
   VERSION[20], 0, /* 'x' */
   VERSION[21], 0, /* 'x' */
   VERSION[22], 0, /* 'x' */
-  VERSION[23], 0, /* 'x' */
-  VERSION[24], 0  /* 'x' */
 };
 #else
 /*
  * Serial Number string. VERSION = 'tinySA_v1.3-nnn-gxxxxxxx'
- *                                  012345678901234567890123
+ *                                  0123456789012345678901
+ * skip last two 'xx' char due to  'tinySA_v1.3-n-gxxxxxxx'
  */
 static const uint8_t vcom_string3[] = {
-  USB_DESC_BYTE(36),                    /* bLength.                         */
+  USB_DESC_BYTE(32),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
   VERSION[7], 0,  /* 'v' */
   VERSION[8], 0,  /* '1' */
@@ -224,8 +224,6 @@ static const uint8_t vcom_string3[] = {
   VERSION[19], 0, /* 'x' */
   VERSION[20], 0, /* 'x' */
   VERSION[21], 0, /* 'x' */
-  VERSION[22], 0, /* 'x' */
-  VERSION[23], 0  /* 'x' */
 };
 #endif
 
