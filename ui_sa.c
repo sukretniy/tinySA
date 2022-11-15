@@ -4386,13 +4386,23 @@ redraw_cal_status:
 
   // Version
   y += YSTEP + YSTEP/2 ;
-#ifdef TINYSA4
-  strncpy(buf,&TINYSA_VERSION[9], BLEN+1);
-#else
-  strncpy(buf,&TINYSA_VERSION[8], BLEN+1);
+#ifdef TINYSA4 // 'tinySA4_v1.2-[0-9]*-gxxxxxxx'
+  strncpy(buf,&TINYSA_VERSION[9], BLEN+1); // '1.2-...'
+#else // 'tinySA_v1.2-[0-9]*-gxxxxxxx'
+  strncpy(buf,&TINYSA_VERSION[8], BLEN+1); // '1.2-...'
 #endif
-  if (buf[7]=='-') {
-    buf[3] = buf[4];
+  if (buf[5]=='-' ) { // '1.2-n-g...'
+    if (buf[4]=='0')  // '1.2-0-g...'
+      buf[3] = 0;  // -> '1.2'
+    else {
+      buf[5] = buf[4]; // -> '1.200n'
+      buf[4] = '0';
+      buf[3] = '0';
+    }
+  } else if (buf[6]=='-' ) { // 1.2-nn-g...
+    buf[3] = '0'; // -> '1.20nn'
+  } else { // 1.2-345-g... (or 1.2-3456...)
+    buf[3] = buf[4]; // -> '1.2345'
     buf[4] = buf[5];
     buf[5] = buf[6];
   }

@@ -65,8 +65,13 @@ endif
 # Build global options
 ##############################################################################
 
+# format va.b-n-gxxxxxxx
+# or     va.b-nn-gxxxxxxx
+# or     va.b-nnn-gxxxxxxx
+# or     ...
+
 ifeq ($(VERSION),)
-  VERSION="$(PROJECT)_$(shell git describe --tags)"
+  VERSION="$(PROJECT)_$(shell git describe --tags --long)"
 endif
 
 ##############################################################################
@@ -297,15 +302,19 @@ clean:
 	rm -f -rf build/tinySA4.* build/lst/*.* build/obj/*.*
 else
 clean:
-	rm -f -rf build/tinySA.*
+	rm -f -rf build/$(PROJECT).*
 endif
 
-flash: build/ch.bin
-	dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/ch.bin
+flash: build/$(PROJECT).bin
+	-@printf "reset dfu\r" >/dev/cu.usbmodem401 # mac
+	-@printf "reset dfu\r" >/dev/ttyACM0 # linux
+	sleep 2
+	dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D $<
 
-dfu:
-	c:/work/dfu/HEX2DFU build/ch.hex build/ch.dfu
-	-@printf "reset dfu\r" >/dev/cu.usbmodem401
+dfu:	build/$(PROJECT).hex
+	-@#c:/work/dfu/HEX2DFU $< build/$(PROJECT).dfu # win
+	-@hex2dfu -i $< -o build/$(PROJECT).dfu # mac / linux
+
 
 TAGS: Makefile
 ifeq ($(TARGET),F303)
