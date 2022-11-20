@@ -1201,6 +1201,8 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
   ui_button_t button;
   const menuitem_t *m = menu;
   int sub_item = 0;
+//  while (menuDisabled(m->type))
+//    m = menu_next_item(m, &sub_item);       // Just in case the first item is disabled
   for (i = 0, y = 0; m; m = menu_next_item(m, &sub_item), i++, y += menu_button_height) {
     if ((mask&(1<<i)) == 0)
       continue;
@@ -1513,6 +1515,8 @@ menu_apply_touch(int touch_x, int touch_y)
 //  active_button_stop = LCD_WIDTH;
   }
   int sub_item = 0;
+//  while (menuDisabled(m->type))
+//    m = menu_next_item(m, &sub_item);       // Just in case the first item is disabled
   for (i = 0; m; m = menu_next_item(m,&sub_item), i++, y+= menu_button_height) {
     if (MT_MASK(m->type) == MT_TITLE) continue;
     if (y < touch_y && touch_y < y+menu_button_height && touch_x > active_button_start) {

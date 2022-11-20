@@ -1840,10 +1840,21 @@ static UI_FUNCTION_ADV_CALLBACK(menu_atten_acb)
   (void)item;
   (void)data;
   if(b){
-    b->icon = setting.auto_attenuation ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    if  (MODE_HIGH(setting.mode)) {
+      b->param_1.text = "0dB";
+      b->icon = (setting.atten_step*30 == data) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    }
+    else {
+      b->param_1.text = "AUTO";
+      b->icon = setting.auto_attenuation ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    }
     return;
   }
-  set_auto_attenuation();
+  if  (MODE_HIGH(setting.mode)) {
+    setting.auto_attenuation = false;
+    set_attenuation(0);
+  } else
+    set_auto_attenuation();
   menu_move_back(true);
 }
 
@@ -2866,9 +2877,9 @@ static const menuitem_t menu_reffer[] = {
 };
 
 static const menuitem_t menu_atten[] = {
-  { MT_ADV_CALLBACK | MT_LOW, 0,           "AUTO",    menu_atten_acb},
+  { MT_ADV_CALLBACK,          0,           "%s",    menu_atten_acb},
   { MT_KEYPAD | MT_LOW,   KM_ATTENUATION,  "MANUAL\n\b%s",  "0 - 30dB"},
-  { MT_ADV_CALLBACK | MT_HIGH,0,           "0dB",     menu_atten_high_acb},
+//  { MT_ADV_CALLBACK | MT_HIGH,0,           "0dB",     menu_atten_high_acb},
   { MT_ADV_CALLBACK | MT_HIGH,30,          "22.5 - 40dB",    menu_atten_high_acb},
   { MT_FORM | MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };

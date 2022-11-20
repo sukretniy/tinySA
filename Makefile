@@ -302,7 +302,7 @@ clean:
 	rm -f -rf build/tinySA4.* build/lst/*.* build/obj/*.*
 else
 clean:
-	rm -f -rf build/$(PROJECT).*
+	rm -f -rf build/$(PROJECT).* build/lst/*.* build/obj/*.*
 endif
 
 flash: build/$(PROJECT).bin
