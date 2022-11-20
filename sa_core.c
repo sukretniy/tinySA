@@ -1345,11 +1345,11 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
     setting.atten_step = 1;
     a = a - RECEIVE_SWITCH_ATTENUATION;
   } else
+#endif
   if (setting.mode == M_HIGH && a > 0) {
     setting.atten_step = 1;
     a = a - SWITCH_ATTENUATION;
   } else
-#endif
   {
     setting.atten_step = 0;
     setting.auto_attenuation = false;
