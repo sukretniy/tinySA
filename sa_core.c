@@ -1092,8 +1092,8 @@ void set_modulation_frequency(int f)
 {
   if (50 <= f && f <= 10000) {
 #ifdef TINYSA4
-      if (setting.modulation == MO_WFM && f > 1000)
-        f = 1000;
+      if (setting.modulation == MO_WFM && f > 2000)
+        f = 2000;
 #endif
     setting.modulation_frequency = f;
     dirty = true;

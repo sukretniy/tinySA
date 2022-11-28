@@ -3321,8 +3321,8 @@ const menuitem_t menu_date_time[] = {
 
 static const menuitem_t menu_config2[] =
 {
- { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
  { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
+ { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
 #ifdef __ULTRA__
  { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
 #endif
