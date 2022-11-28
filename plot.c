@@ -2010,6 +2010,14 @@ static void update_waterfall(void){
       break;
     }
   }
+  if (index == NULL) {
+    for (int t=0;t<TRACES_MAX;t++) {                      // Find trace with measurement
+      if (IS_TRACE_ENABLE(t)) {
+        index = trace_index_y[t];
+        break;
+      }
+    }
+  }
   if (index == NULL)
     return;
   int j = 0;
