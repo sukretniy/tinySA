@@ -4114,6 +4114,8 @@ int add_quick_menu(int y, menuitem_t *menu)
   return y;
 }
 
+const char *month[] = { "Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
+
 void draw_cal_status(void)
 {
 #define BLEN    7
@@ -4419,6 +4421,16 @@ redraw_cal_status:
   }
   buf[6] = 0;
   ili9341_drawstring(buf, x, y);
+
+#ifdef __USE_RTC__
+  y += YSTEP + YSTEP/2 ;
+  uint32_t dr = rtc_get_dr_bin(); // DR read second
+  lcd_printf(x, y,  "20%02d/\n%s/%02d", RTC_DR_YEAR(dr), month[RTC_DR_MONTH(dr)-1], RTC_DR_DAY(dr));
+  y += YSTEP*2;
+  uint32_t tr = rtc_get_tr_bin(); // TR read first
+  lcd_printf(x, y,  "%02d:%02d", RTC_TR_HOUR(dr), RTC_TR_MIN(dr));
+#endif
+
 
   if (y >= BATTERY_START && item_space > 0) {
     item_space--;                       // Reduce item spacing
