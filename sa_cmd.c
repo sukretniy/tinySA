@@ -1111,6 +1111,21 @@ VNA_SHELL_FUNCTION(cmd_r)
   set_R(r);
 }
 
+VNA_SHELL_FUNCTION(cmd_c)
+{
+  (void)argc;
+  int r = my_atoi(argv[0]);
+  ADF4351_CP(r);
+}
+
+VNA_SHELL_FUNCTION(cmd_h)
+{
+  (void)argc;
+  int r = my_atoi(argv[0]);
+  set_modulo(r);
+}
+
+
 
 
 #endif

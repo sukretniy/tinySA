@@ -956,8 +956,6 @@ config_t config = {
   ._mode     = _MODE_USB,
   ._serial_speed = SERIAL_DEFAULT_BITRATE,
   .lcd_palette = LCD_DEFAULT_PALETTE,
-#ifdef TINYSA4
-#endif
 #ifdef TINYSA3
   .vbat_offset = 500,
   .low_level_offset =       0,    // Uncalibrated
@@ -983,7 +981,7 @@ config_t config = {
 #endif
 #ifdef TINYSA4
   ._brightness  = DEFAULT_BRIGHTNESS,
-  .vbat_offset = 220,
+  .vbat_offset = 300,
   .frequency_IF1 = DEFAULT_IF,
   .frequency_IF2 = 0,
   .ultra_start = ULTRA_AUTO,
@@ -2148,6 +2146,8 @@ static const VNAShellCommand commands[] =
    { "n", cmd_n,    CMD_WAIT_MUTEX },
    { "z", cmd_z,    CMD_WAIT_MUTEX },
    { "r", cmd_r,    CMD_WAIT_MUTEX },
+   { "c", cmd_c,    CMD_WAIT_MUTEX },
+   { "h", cmd_h,    CMD_WAIT_MUTEX },
 #endif
 #ifdef __ADF4351__
     { "x", cmd_x,    CMD_WAIT_MUTEX },
