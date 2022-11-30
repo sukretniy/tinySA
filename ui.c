@@ -74,7 +74,11 @@ volatile uint8_t operation_requested = OP_NONE;
 int8_t previous_marker = MARKER_INVALID;
 
 enum {
-  UI_NORMAL, UI_MENU, UI_KEYPAD
+  UI_NORMAL, UI_MENU, UI_KEYPAD,
+#ifdef __SD_FILE_BROWSER__
+  UI_BROWSER,
+#endif
+  UI_END
 };
 
 #define NUMINPUT_LEN 12
@@ -111,7 +115,8 @@ static const uint8_t slider_bitmap[]=
 #define AUTO_ICON(S)  (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
 
 #define BUTTON_BORDER_NONE           0x00
-#define BUTTON_BORDER_WIDTH_MASK     0x0F
+#define BUTTON_BORDER_WIDTH_MASK     0x07
+#define BUTTON_BORDER_NO_FILL        0x08
 
 // Define mask for draw border (if 1 use light color, if 0 dark)
 #define BUTTON_BORDER_TYPE_MASK      0xF0
@@ -147,6 +152,7 @@ static void erase_menu_buttons(void);
 static void ui_process_keypad(void);
 static void choose_active_marker(void);
 static void menu_move_back(bool leave_ui);
+static void draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b);
 //static const menuitem_t menu_marker_type[];
 
 static int btn_check(void)
@@ -3503,6 +3509,60 @@ static UI_FUNCTION_ADV_CALLBACK(menu_connection_acb)
 #endif
 
 #ifdef __USE_SD_CARD__
+//*******************************************************************************************
+// Bitmap file header for LCD_WIDTH x LCD_HEIGHT image 16bpp (v4 format allow set RGB mask)
+//*******************************************************************************************
+#define BMP_UINT32(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF, ((val)>>16)&0xFF, ((val)>>24)&0xFF
+#define BMP_UINT16(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF
+#define BMP_H1_SIZE      (14)                        // BMP header 14 bytes
+#define BMP_V4_SIZE      (108)                       // v4  header 108 bytes
+#define BMP_HEAD_SIZE    (BMP_H1_SIZE + BMP_V4_SIZE) // Size of all headers
+#define BMP_SIZE         (2*LCD_WIDTH*LCD_HEIGHT)    // Bitmap size = 2*w*h
+#define BMP_FILE_SIZE    (BMP_SIZE + BMP_HEAD_SIZE)  // File size = headers + bitmap
+static const uint8_t bmp_header_v4[BMP_H1_SIZE + BMP_V4_SIZE] = {
+// BITMAPFILEHEADER (14 byte size)
+  0x42, 0x4D,                // BM signature
+  BMP_UINT32(BMP_FILE_SIZE), // File size (h + v4 + bitmap)
+  BMP_UINT16(0),             // reserved
+  BMP_UINT16(0),             // reserved
+  BMP_UINT32(BMP_HEAD_SIZE), // Size of all headers (h + v4)
+// BITMAPINFOv4 (108 byte size)
+  BMP_UINT32(BMP_V4_SIZE),   // Data offset after this point (v4 size)
+  BMP_UINT32(LCD_WIDTH),     // Width
+  BMP_UINT32(LCD_HEIGHT),    // Height
+  BMP_UINT16(1),             // Planes
+  BMP_UINT16(16),            // 16bpp
+  BMP_UINT32(3),             // Compression (BI_BITFIELDS)
+  BMP_UINT32(BMP_SIZE),      // Bitmap size (w*h*2)
+  BMP_UINT32(0x0EC4),        // x Resolution (96 DPI = 96 * 39.3701 inches per meter = 0x0EC4)
+  BMP_UINT32(0x0EC4),        // y Resolution (96 DPI = 96 * 39.3701 inches per meter = 0x0EC4)
+  BMP_UINT32(0),             // Palette size
+  BMP_UINT32(0),             // Palette used
+// Extend v4 header data (color mask for RGB565)
+  BMP_UINT32(0b1111100000000000),// R mask = 0b11111000 00000000
+  BMP_UINT32(0b0000011111100000),// G mask = 0b00000111 11100000
+  BMP_UINT32(0b0000000000011111),// B mask = 0b00000000 00011111
+  BMP_UINT32(0b0000000000000000),// A mask = 0b00000000 00000000
+  'B','G','R','s',           // CSType = 'sRGB'
+  BMP_UINT32(0),             // ciexyzRed.ciexyzX    Endpoints
+  BMP_UINT32(0),             // ciexyzRed.ciexyzY
+  BMP_UINT32(0),             // ciexyzRed.ciexyzZ
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzX
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzY
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzZ
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzX
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzY
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzZ
+  BMP_UINT32(0),             // GammaRed
+  BMP_UINT32(0),             // GammaGreen
+  BMP_UINT32(0),             // GammaBlue
+};
+
+static void swap_bytes(uint16_t *buf, int size) {
+  for (int i = 0; i < size; i++)
+    buf[i] = __REVSH(buf[i]); // swap byte order (example 0x10FF to 0xFF10)
+}
+
 static uint16_t file_mask;
 
 // Save format enum
@@ -3534,6 +3594,10 @@ static UI_FUNCTION_CALLBACK(menu_sdcard_cb) {
   (void)item;
   sa_save_file(0, data);
 }
+
+#ifdef __SD_FILE_BROWSER__
+#include "vna_browser.c"
+#endif
 #endif
 // ===[MENU DEFINITION]=========================================================
 // Back button submenu list
@@ -4024,6 +4088,9 @@ static const menuitem_t menu_settings[] =
 #endif
 #ifdef __SD_CARD_DUMP_FIRMWARE__
   { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",     menu_sdcard_cb},
+#endif
+#ifdef __SD_FILE_BROWSER__
+  { MT_CALLBACK, FMT_BMP_FILE, "LOAD BMP", menu_sdcard_browse_cb },
 #endif
 #ifdef TINYSA4
   { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
@@ -5469,7 +5536,7 @@ draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
 {
   uint16_t bw = b->border&BUTTON_BORDER_WIDTH_MASK;
   ili9341_set_foreground(b->fg);
-  ili9341_set_background(b->bg);ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2));
+  ili9341_set_background(b->bg);
   if (bw==0) return;
   uint16_t br = LCD_RISE_EDGE_COLOR;
   uint16_t bd = LCD_FALLEN_EDGE_COLOR;
@@ -5480,9 +5547,11 @@ draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
   ili9341_set_background(type&BUTTON_BORDER_BOTTOM ? br : bd);ili9341_fill(x,          y + h - bw,  w, bw); // bottom
   // Set colors for button text after
   ili9341_set_background(b->bg);
+  if (type & BUTTON_BORDER_NO_FILL) return;
+  ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2));
 }
 
-void drawMessageBox(char *header, char *text, uint32_t delay){
+void drawMessageBox(const char *header, char *text, uint32_t delay){
   ui_button_t b;
   b.bg = LCD_MENU_COLOR;
   b.fg = LCD_MENU_TEXT_COLOR;
@@ -6478,6 +6547,9 @@ ui_process_lever(void)
 //  case UI_KEYPAD:
 //    ui_process_keypad();
 //    break;
+  case UI_BROWSER:
+    ui_process_browser_lever();
+    break;
   }
 }
 
@@ -6555,60 +6627,6 @@ static int touch_quick_menu(int touch_x, int touch_y)
 }
 
 #ifdef __USE_SD_CARD__
-//*******************************************************************************************
-// Bitmap file header for LCD_WIDTH x LCD_HEIGHT image 16bpp (v4 format allow set RGB mask)
-//*******************************************************************************************
-#define BMP_UINT32(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF, ((val)>>16)&0xFF, ((val)>>24)&0xFF
-#define BMP_UINT16(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF
-#define BMP_H1_SIZE      (14)                        // BMP header 14 bytes
-#define BMP_V4_SIZE      (108)                       // v4  header 108 bytes
-#define BMP_HEAD_SIZE    (BMP_H1_SIZE + BMP_V4_SIZE) // Size of all headers
-#define BMP_SIZE         (2*LCD_WIDTH*LCD_HEIGHT)    // Bitmap size = 2*w*h
-#define BMP_FILE_SIZE    (BMP_SIZE + BMP_HEAD_SIZE)  // File size = headers + bitmap
-static const uint8_t bmp_header_v4[BMP_H1_SIZE + BMP_V4_SIZE] = {
-// BITMAPFILEHEADER (14 byte size)
-  0x42, 0x4D,                // BM signature
-  BMP_UINT32(BMP_FILE_SIZE), // File size (h + v4 + bitmap)
-  BMP_UINT16(0),             // reserved
-  BMP_UINT16(0),             // reserved
-  BMP_UINT32(BMP_HEAD_SIZE), // Size of all headers (h + v4)
-// BITMAPINFOv4 (108 byte size)
-  BMP_UINT32(BMP_V4_SIZE),   // Data offset after this point (v4 size)
-  BMP_UINT32(LCD_WIDTH),     // Width
-  BMP_UINT32(LCD_HEIGHT),    // Height
-  BMP_UINT16(1),             // Planes
-  BMP_UINT16(16),            // 16bpp
-  BMP_UINT32(3),             // Compression (BI_BITFIELDS)
-  BMP_UINT32(BMP_SIZE),      // Bitmap size (w*h*2)
-  BMP_UINT32(0x0EC4),        // x Resolution (96 DPI = 96 * 39.3701 inches per meter = 0x0EC4)
-  BMP_UINT32(0x0EC4),        // y Resolution (96 DPI = 96 * 39.3701 inches per meter = 0x0EC4)
-  BMP_UINT32(0),             // Palette size
-  BMP_UINT32(0),             // Palette used
-// Extend v4 header data (color mask for RGB565)
-  BMP_UINT32(0b1111100000000000),// R mask = 0b11111000 00000000
-  BMP_UINT32(0b0000011111100000),// G mask = 0b00000111 11100000
-  BMP_UINT32(0b0000000000011111),// B mask = 0b00000000 00011111
-  BMP_UINT32(0b0000000000000000),// A mask = 0b00000000 00000000
-  'B','G','R','s',           // CSType = 'sRGB'
-  BMP_UINT32(0),             // ciexyzRed.ciexyzX    Endpoints
-  BMP_UINT32(0),             // ciexyzRed.ciexyzY
-  BMP_UINT32(0),             // ciexyzRed.ciexyzZ
-  BMP_UINT32(0),             // ciexyzGreen.ciexyzX
-  BMP_UINT32(0),             // ciexyzGreen.ciexyzY
-  BMP_UINT32(0),             // ciexyzGreen.ciexyzZ
-  BMP_UINT32(0),             // ciexyzBlue.ciexyzX
-  BMP_UINT32(0),             // ciexyzBlue.ciexyzY
-  BMP_UINT32(0),             // ciexyzBlue.ciexyzZ
-  BMP_UINT32(0),             // GammaRed
-  BMP_UINT32(0),             // GammaGreen
-  BMP_UINT32(0),             // GammaBlue
-};
-
-static void swap_bytes(uint16_t *buf, int size) {
-  for (int i = 0; i < size; i++)
-    buf[i] = __REVSH(buf[i]); // swap byte order (example 0x10FF to 0xFF10)
-}
-
 // Create file name from current time
 static FRESULT sa_create_file(char *fs_filename)
 {
@@ -6848,6 +6866,9 @@ void ui_process_touch(void)
     case UI_MENU:
       menu_apply_touch(touch_x, touch_y);
       break;
+    case UI_BROWSER:
+      browser_apply_touch(touch_x, touch_y);
+      break;
     }
   }
 }
@@ -6868,7 +6889,7 @@ ui_process(void)
     operation_requested = OP_NONE;
   }
   if (operation_requested&OP_TOUCH) {
-   ui_process_touch();
+    ui_process_touch();
     operation_requested = OP_NONE;
   }
   touch_start_watchdog();

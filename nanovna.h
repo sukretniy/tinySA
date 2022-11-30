@@ -92,6 +92,7 @@
 #define __USE_SD_CARD__           // Enable SD card support
 #define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root)
 #define __SD_CARD_DUMP_FIRMWARE__ // Allow dump firmware to SD card
+#define __SD_FILE_BROWSER__
 #define __LCD_BRIGHTNESS__        // LCD or hardware allow change brightness, add menu item for this
 #define __HARMONIC__
 #define __NOISE_FIGURE__
@@ -583,6 +584,14 @@ extern uint16_t graph_bottom;
 #define FORM_BUTTON_BORDER      2
 
 #define MENU_BUTTON_HEIGHT_N(n)   (LCD_HEIGHT/(n)-1)
+
+#define BROWSER_BUTTON_BORDER         1
+// Browser window settings
+#define FILES_COLUMNS               (LCD_WIDTH/160)                                // columns in browser
+#define FILES_ROWS                   10                                            // rows in browser
+#define FILES_PER_PAGE              (FILES_COLUMNS*FILES_ROWS)                     // FILES_ROWS * FILES_COLUMNS
+#define FILE_BOTTOM_HEIGHT           20                                            // Height of bottom buttons (< > X)
+#define FILE_BUTTON_HEIGHT          ((LCD_HEIGHT - FILE_BOTTOM_HEIGHT)/FILES_ROWS) // Height of file buttons
 
 // Define message box width
 #ifdef TINYSA4
@@ -1448,7 +1457,7 @@ int invoke_quick_menu(int);
 bool ui_process_listen_lever(void);
 void refresh_sweep_menu(int i);
 void save_to_sd(int mask);
-void drawMessageBox(char *header, char *text, uint32_t delay);
+void drawMessageBox(const char *header, char *text, uint32_t delay);
 
 // Irq operation process set
 #define OP_NONE       0x00
