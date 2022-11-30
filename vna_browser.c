@@ -51,7 +51,7 @@ static void browser_draw_button(int idx, const char *txt) {
   b.border = (idx == selection) ? BROWSER_BUTTON_BORDER|BUTTON_BORDER_FALLING : BROWSER_BUTTON_BORDER|BUTTON_BORDER_RISE;
   if (txt == NULL) b.border|= BUTTON_BORDER_NO_FILL;
   draw_button(btn.x, btn.y, btn.w, btn.h, &b);
-  if (txt) lcd_printf(btn.x + btn.ofs, btn.y + (btn.h - FONT_STR_HEIGHT) / 2, txt);
+  if (txt) ili9341_drawstring_7x13(txt, btn.x + btn.ofs, btn.y + (btn.h - FONT_STR_HEIGHT) / 2);
 }
 
 static char to_lower(char c) {return (c >='A' && c <= 'Z') ? c - 'A' + 'a' : c;}
@@ -150,7 +150,7 @@ repeat:
       swap_bytes(buf_16, LCD_WIDTH);
       ili9341_bulk(0, y, LCD_WIDTH, 1);
     }
-    lcd_printf(0, LCD_HEIGHT - 3*FONT_STR_HEIGHT, fno.fname);
+    ili9341_drawstring_7x13(fno.fname, 0, LCD_HEIGHT - 3*FONT_STR_HEIGHT);
   }
   break;
   /*
