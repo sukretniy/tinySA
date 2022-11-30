@@ -3501,6 +3501,40 @@ static UI_FUNCTION_ADV_CALLBACK(menu_connection_acb)
   shell_reset_console();
 }
 #endif
+
+#ifdef __USE_SD_CARD__
+static uint16_t file_mask;
+
+// Save format enum
+enum {
+  FMT_BMP_FILE, FMT_CSV_FILE,
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+  FMT_BIN_FILE,
+#endif
+//#ifdef __SD_CARD_LOAD__
+//  FMT_CMD_FILE,
+//#endif
+};
+
+// Save file extension
+static const char *file_ext[] = {
+  [FMT_BMP_FILE] = "bmp",
+  [FMT_CSV_FILE] = "csv",
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+  [FMT_BIN_FILE] = "bin",
+#endif
+//#ifdef __SD_CARD_LOAD__
+//  [FMT_CMD_FILE] = "cmd",
+//#endif
+};
+
+static void sa_save_file(char *name, uint8_t format);
+
+static UI_FUNCTION_CALLBACK(menu_sdcard_cb) {
+  (void)item;
+  sa_save_file(0, data);
+}
+#endif
 // ===[MENU DEFINITION]=========================================================
 // Back button submenu list
 
@@ -3987,6 +4021,9 @@ static const menuitem_t menu_settings[] =
 #ifdef __SD_CARD_LOAD__
   { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
 //  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
+#endif
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+  { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",     menu_sdcard_cb},
 #endif
 #ifdef TINYSA4
   { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
@@ -6518,31 +6555,6 @@ static int touch_quick_menu(int touch_x, int touch_y)
 }
 
 #ifdef __USE_SD_CARD__
-static uint16_t file_mask;
-
-// Save format enum
-enum {
-  FMT_BMP_FILE, FMT_CSV_FILE,
-//#ifdef __SD_CARD_DUMP_FIRMWARE__
-//  FMT_BIN_FILE,
-//#endif
-//#ifdef __SD_CARD_LOAD__
-//  FMT_CMD_FILE,
-//#endif
-};
-
-// Save file extension
-static const char *file_ext[] = {
-  [FMT_BMP_FILE] = "bmp",
-  [FMT_CSV_FILE] = "csv",
-//#ifdef __SD_CARD_DUMP_FIRMWARE__
-//  [FMT_BIN_FILE] = "bin",
-//#endif
-//#ifdef __SD_CARD_LOAD__
-//  [FMT_CMD_FILE] = "cmd",
-//#endif
-};
-
 //*******************************************************************************************
 // Bitmap file header for LCD_WIDTH x LCD_HEIGHT image 16bpp (v4 format allow set RGB mask)
 //*******************************************************************************************
@@ -6674,18 +6686,18 @@ static void sa_save_file(char *name, uint8_t format) {
           res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
         }
       break;
-//#ifdef __SD_CARD_DUMP_FIRMWARE__
-//      /*
-//       * Dump firmware to SD card as bin file image
-//       */
-//      case FMT_BIN_FILE:
-//      {
-//        const char *src = (const char*)FLASH_START_ADDRESS;
-//        const uint32_t total = FLASH_TOTAL_SIZE;
-//        res = f_write(fs_file, src, total, &size);
-//      }
-//      break;
-//#endif
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+      /*
+       * Dump firmware to SD card as bin file image
+       */
+      case FMT_BIN_FILE:
+      {
+        const char *src = (const char*)FLASH_START_ADDRESS;
+        const uint32_t total = FLASH_TOTAL_SIZE;
+        res = f_write(fs_file, src, total, &size);
+      }
+      break;
+#endif
     }
     f_close(fs_file);
 //    shell_printf("Close = %d\r\n", res);
@@ -6697,11 +6709,6 @@ static void sa_save_file(char *name, uint8_t format) {
   drawMessageBox("SD CARD SAVE", res == FR_OK ? fs_filename : "  Fail write  ", 2000);
   redraw_request|= REDRAW_AREA|REDRAW_FREQUENCY;
   ui_mode_normal();
-}
-
-static UI_FUNCTION_CALLBACK(menu_sdcard_cb) {
-  (void)item;
-  sa_save_file(0, data);
 }
 
 static void save_csv(uint8_t mask) {

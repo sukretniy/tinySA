@@ -91,6 +91,7 @@
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
 #define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root)
+#define __SD_CARD_DUMP_FIRMWARE__ // Allow dump firmware to SD card
 #define __LCD_BRIGHTNESS__        // LCD or hardware allow change brightness, add menu item for this
 #define __HARMONIC__
 #define __NOISE_FIGURE__
@@ -1274,6 +1275,7 @@ extern int linear_averaging;
 #else
 #define SAVEAREA_MAX 5
 #endif
+
 // STM32 minimum page size for write
 #define FLASH_PAGESIZE          0x800
 // config save area (flash7 addr)
@@ -1281,12 +1283,16 @@ extern int linear_averaging;
 #define SAVE_CONFIG_ADDR        0x0801D000
 #define SAVE_CONFIG_SIZE        FLASH_PAGESIZE
 #define FLASH_END               0x08020000
+#define FLASH_START_ADDRESS     0x08000000
+#define FLASH_TOTAL_SIZE        (128*1024)
 #endif
 
 #ifdef TINYSA4
 #define SAVE_CONFIG_ADDR        0x0803C000
 #define SAVE_CONFIG_SIZE        FLASH_PAGESIZE*2
 #define FLASH_END               0x08040000
+#define FLASH_START_ADDRESS     0x08000000
+#define FLASH_TOTAL_SIZE        (256*1024)
 #endif
 
 typedef char assert_config[sizeof(config_t)> SAVE_CONFIG_SIZE ? -1 : 1];        // Check config size
