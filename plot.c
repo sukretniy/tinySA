@@ -1252,6 +1252,7 @@ draw_all_cells(bool flush_markmap)
 void
 draw_all(bool flush)
 {
+  if (isFullScreenMode()) return;
 #ifdef __LEVEL_METER__
   level_text[0] = 0;    // Clear level text
 #endif

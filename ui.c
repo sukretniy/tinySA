@@ -155,6 +155,14 @@ static void menu_move_back(bool leave_ui);
 static void draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b);
 //static const menuitem_t menu_marker_type[];
 
+bool isFullScreenMode(void) {
+#ifdef __SD_FILE_BROWSER__
+  return ui_mode == UI_BROWSER;
+#else
+  return false;
+#endif
+}
+
 static int btn_check(void)
 {
   systime_t ticks;

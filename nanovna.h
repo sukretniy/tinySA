@@ -1458,6 +1458,7 @@ bool ui_process_listen_lever(void);
 void refresh_sweep_menu(int i);
 void save_to_sd(int mask);
 void drawMessageBox(const char *header, char *text, uint32_t delay);
+bool isFullScreenMode(void);
 
 // Irq operation process set
 #define OP_NONE       0x00
