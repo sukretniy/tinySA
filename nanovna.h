@@ -1580,8 +1580,6 @@ void SD_PowerOff(void);
 #define fs_volume    (FATFS *)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS))
 // FatFS file object (at the end of spi_buffer)
 #define fs_file      (   FIL*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL))
-// Filename object (at the end of spi_buffer)
-#define fs_filename  (  char*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL) - FF_LFN_BUF - 4)
 #endif
 void testLog(void);        // debug log
 void sd_card_load_config(char *filename);

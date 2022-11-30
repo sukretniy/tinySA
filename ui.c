@@ -86,6 +86,8 @@ static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int  selection = 0;
 
+static void save_csv(uint8_t mask);
+
 static const uint8_t slider_bitmap[]=
 {
   _BMP8(0b11111110),
@@ -2825,7 +2827,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 
 #ifdef TINYSA4
     case 6:
-      save_to_sd(1+(2<<current_trace));      // frequencies + trace
+      save_csv(1+(2<<current_trace));      // frequencies + trace
       break;
 #endif
   }
@@ -2868,10 +2870,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
       break;
 #ifdef TINYSA4
     case 4:
-      save_to_sd(1+2);      // frequencies + actual
+      save_csv(1+2);      // frequencies + actual
       break;
     case 5:
-      save_to_sd(1+4);      // frequencies + stored
+      save_csv(1+4);      // frequencies + stored
       break;
 #endif
   }
@@ -6516,131 +6518,207 @@ static int touch_quick_menu(int touch_x, int touch_y)
 }
 
 #ifdef __USE_SD_CARD__
+static uint16_t file_mask;
+
+// Save format enum
+enum {
+  FMT_BMP_FILE, FMT_CSV_FILE,
+//#ifdef __SD_CARD_DUMP_FIRMWARE__
+//  FMT_BIN_FILE,
+//#endif
+//#ifdef __SD_CARD_LOAD__
+//  FMT_CMD_FILE,
+//#endif
+};
+
+// Save file extension
+static const char *file_ext[] = {
+  [FMT_BMP_FILE] = "bmp",
+  [FMT_CSV_FILE] = "csv",
+//#ifdef __SD_CARD_DUMP_FIRMWARE__
+//  [FMT_BIN_FILE] = "bin",
+//#endif
+//#ifdef __SD_CARD_LOAD__
+//  [FMT_CMD_FILE] = "cmd",
+//#endif
+};
+
 //*******************************************************************************************
 // Bitmap file header for LCD_WIDTH x LCD_HEIGHT image 16bpp (v4 format allow set RGB mask)
 //*******************************************************************************************
 #define BMP_UINT32(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF, ((val)>>16)&0xFF, ((val)>>24)&0xFF
+#define BMP_UINT16(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF
 #define BMP_H1_SIZE      (14)                        // BMP header 14 bytes
-#define BMP_V4_SIZE      (56)                        // v4  header 56 bytes
+#define BMP_V4_SIZE      (108)                       // v4  header 108 bytes
 #define BMP_HEAD_SIZE    (BMP_H1_SIZE + BMP_V4_SIZE) // Size of all headers
 #define BMP_SIZE         (2*LCD_WIDTH*LCD_HEIGHT)    // Bitmap size = 2*w*h
 #define BMP_FILE_SIZE    (BMP_SIZE + BMP_HEAD_SIZE)  // File size = headers + bitmap
-static const uint8_t bmp_header_v4[14+56] = {
+static const uint8_t bmp_header_v4[BMP_H1_SIZE + BMP_V4_SIZE] = {
 // BITMAPFILEHEADER (14 byte size)
   0x42, 0x4D,                // BM signature
   BMP_UINT32(BMP_FILE_SIZE), // File size (h + v4 + bitmap)
-  0x00, 0x00,                // reserved
-  0x00, 0x00,                // reserved
+  BMP_UINT16(0),             // reserved
+  BMP_UINT16(0),             // reserved
   BMP_UINT32(BMP_HEAD_SIZE), // Size of all headers (h + v4)
-// BITMAPINFOv4 (56 byte size)
+// BITMAPINFOv4 (108 byte size)
   BMP_UINT32(BMP_V4_SIZE),   // Data offset after this point (v4 size)
   BMP_UINT32(LCD_WIDTH),     // Width
   BMP_UINT32(LCD_HEIGHT),    // Height
-  0x01, 0x00,                // Planes
-  0x10, 0x00,                // 16bpp
-  0x03, 0x00, 0x00, 0x00,    // Compression (BI_BITFIELDS)
+  BMP_UINT16(1),             // Planes
+  BMP_UINT16(16),            // 16bpp
+  BMP_UINT32(3),             // Compression (BI_BITFIELDS)
   BMP_UINT32(BMP_SIZE),      // Bitmap size (w*h*2)
-  0xC4, 0x0E, 0x00, 0x00,    // x Resolution (96 DPI = 96 * 39.3701 inches per metre = 0x0EC4)
-  0xC4, 0x0E, 0x00, 0x00,    // y Resolution (96 DPI = 96 * 39.3701 inches per metre = 0x0EC4)
-  0x00, 0x00, 0x00, 0x00,    // Palette size
-  0x00, 0x00, 0x00, 0x00,    // Palette used
+  BMP_UINT32(0x0EC4),        // x Resolution (96 DPI = 96 * 39.3701 inches per meter = 0x0EC4)
+  BMP_UINT32(0x0EC4),        // y Resolution (96 DPI = 96 * 39.3701 inches per meter = 0x0EC4)
+  BMP_UINT32(0),             // Palette size
+  BMP_UINT32(0),             // Palette used
 // Extend v4 header data (color mask for RGB565)
-  0x00, 0xF8, 0x00, 0x00,    // R mask = 0b11111000 00000000
-  0xE0, 0x07, 0x00, 0x00,    // G mask = 0b00000111 11100000
-  0x1F, 0x00, 0x00, 0x00,    // B mask = 0b00000000 00011111
-  0x00, 0x00, 0x00, 0x00     // A mask = 0b00000000 00000000
+  BMP_UINT32(0b1111100000000000),// R mask = 0b11111000 00000000
+  BMP_UINT32(0b0000011111100000),// G mask = 0b00000111 11100000
+  BMP_UINT32(0b0000000000011111),// B mask = 0b00000000 00011111
+  BMP_UINT32(0b0000000000000000),// A mask = 0b00000000 00000000
+  'B','G','R','s',           // CSType = 'sRGB'
+  BMP_UINT32(0),             // ciexyzRed.ciexyzX    Endpoints
+  BMP_UINT32(0),             // ciexyzRed.ciexyzY
+  BMP_UINT32(0),             // ciexyzRed.ciexyzZ
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzX
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzY
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzZ
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzX
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzY
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzZ
+  BMP_UINT32(0),             // GammaRed
+  BMP_UINT32(0),             // GammaGreen
+  BMP_UINT32(0),             // GammaBlue
 };
 
-FRESULT open_file(char *ext)
+static void swap_bytes(uint16_t *buf, int size) {
+  for (int i = 0; i < size; i++)
+    buf[i] = __REVSH(buf[i]); // swap byte order (example 0x10FF to 0xFF10)
+}
+
+// Create file name from current time
+static FRESULT sa_create_file(char *fs_filename)
 {
-#ifdef __DISABLE_HOT_INSERT__
-  if (!sd_card_inserted_at_boot) {
-    drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
-    return FR_NOT_READY;
-  }
-#endif
+//  shell_printf("S file\r\n");
   FRESULT res = f_mount(fs_volume, "", 1);
-  // fs_volume, fs_file and fs_filename stored at end of spi_buffer!!!!!
 //  shell_printf("Mount = %d\r\n", res);
   if (res != FR_OK)
     return res;
-#if FF_USE_LFN >= 1
-  uint32_t tr = rtc_get_tr_bcd(); // TR read first
-  uint32_t dr = rtc_get_dr_bcd(); // DR read second
-  plot_printf(fs_filename, FF_LFN_BUF, "SA_%06x_%06x.%s", dr, tr, ext);
-#else
-  plot_printf(fs_filename, FF_LFN_BUF, "%08x.%s", rtc_get_FAT(), ext);
-#endif
   res = f_open(fs_file, fs_filename, FA_CREATE_ALWAYS | FA_READ | FA_WRITE);
- return res;
+//  shell_printf("Open %s, = %d\r\n", fs_filename, res);
+  return res;
 }
 
-void close_file(FRESULT res)
-{
-  if (res == FR_OK)
-    res = f_close(fs_file);
-//  time = chVTGetSystemTimeX() - time;
-//  shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, (LCD_WIDTH*LCD_HEIGHT*sizeof(uint16_t)+sizeof(bmp_header_v4))*10000/time);
-  drawMessageBox("Save:", res == FR_OK ? fs_filename : "  Write failed  ", 2000);
-  redraw_request|= REDRAW_AREA;
-}
-static bool
-made_screenshot(int touch_x, int touch_y)
-{
-  int y, i;
+static void sa_save_file(char *name, uint8_t format) {
+  uint16_t *buf_16;
+  int i, y;
   UINT size;
+  char fs_filename[FF_LFN_BUF];
+#ifdef __DISABLE_HOT_INSERT__
+  if (!sd_card_inserted_at_boot) {
+    drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
+    return;
+  }
+#endif
+  // For screenshot need back to normal mode and redraw screen before capture!!
+  // Redraw use spi_buffer so need do it before any file ops
+  if (format == FMT_BMP_FILE && ui_mode != UI_NORMAL){
+    ui_mode_normal();
+    draw_all(false);
+  }
+
+  // Prepare filename and open for write
+  if (name == NULL) {   // Auto name, use date / time
+#if FF_USE_LFN >= 1
+    uint32_t tr = rtc_get_tr_bcd(); // TR read first
+    uint32_t dr = rtc_get_dr_bcd(); // DR read second
+    plot_printf(fs_filename, FF_LFN_BUF, "SA_%06x_%06x.%s", dr, tr, file_ext[format]);
+#else
+    plot_printf(fs_filename, FF_LFN_BUF, "%08x.%s", rtc_get_FAT(), file_ext[format]);
+#endif
+  }
+  else
+    plot_printf(fs_filename, FF_LFN_BUF, "%s.%s", name, file_ext[format]);
+
+//  UINT total_size = 0;
+//  systime_t time = chVTGetSystemTimeX();
+  // Prepare filename = .bmp / .csv and open for write
+  FRESULT res = sa_create_file(fs_filename);
+  if (res == FR_OK) {
+    switch(format) {
+      /*
+       *  Save bitmap file (use v4 format allow set RGB mask)
+       */
+      case FMT_BMP_FILE:
+      buf_16 = spi_buffer;
+      res = f_write(fs_file, bmp_header_v4, BMP_HEAD_SIZE, &size); // Write header struct
+//      total_size+=size;
+      ili9341_set_background(LCD_SWEEP_LINE_COLOR);
+      for (y = LCD_HEIGHT-1; y >= 0 && res == FR_OK; y--) {
+        ili9341_read_memory(0, y, LCD_WIDTH, 1, buf_16);
+        swap_bytes(buf_16, LCD_WIDTH);
+        res = f_write(fs_file, buf_16, LCD_WIDTH*sizeof(uint16_t), &size);
+//        total_size+=size;
+        ili9341_fill(LCD_WIDTH-1, y, 1, 1);
+      }
+      break;
+      case FMT_CSV_FILE:
+        for (i = 0; i < sweep_points && res == FR_OK; i++) {
+          char *buf = (char *)spi_buffer;
+          if (file_mask & 1) buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
+          if (file_mask & 2) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
+          if (file_mask & 4) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
+          if (file_mask & 8) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
+          buf += plot_printf(buf, 100, "\r\n");
+          res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
+        }
+      break;
+//#ifdef __SD_CARD_DUMP_FIRMWARE__
+//      /*
+//       * Dump firmware to SD card as bin file image
+//       */
+//      case FMT_BIN_FILE:
+//      {
+//        const char *src = (const char*)FLASH_START_ADDRESS;
+//        const uint32_t total = FLASH_TOTAL_SIZE;
+//        res = f_write(fs_file, src, total, &size);
+//      }
+//      break;
+//#endif
+    }
+    f_close(fs_file);
+//    shell_printf("Close = %d\r\n", res);
+//    testLog();
+//    time = chVTGetSystemTimeX() - time;
+//    shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, total_size*10000/time);
+  }
+
+  drawMessageBox("SD CARD SAVE", res == FR_OK ? fs_filename : "  Fail write  ", 2000);
+  redraw_request|= REDRAW_AREA|REDRAW_FREQUENCY;
+  ui_mode_normal();
+}
+
+static UI_FUNCTION_CALLBACK(menu_sdcard_cb) {
+  (void)item;
+  sa_save_file(0, data);
+}
+
+static void save_csv(uint8_t mask) {
+  file_mask = mask;
+  menu_sdcard_cb(0, FMT_CSV_FILE);
+}
+
+static bool
+made_screenshot(int touch_x, int touch_y) {
   if (touch_y < SD_CARD_START || touch_y > SD_CARD_START + 20 || touch_x > OFFSETX)
     return FALSE;
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_fill(4, SD_CARD_START, 16, 16);
   touch_wait_release();
-#ifdef __DISABLE_HOT_INSERT__
-  if (!sd_card_inserted_at_boot) {
-    drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
-    return FALSE;
-  }
-#endif
-//  uint32_t time = chVTGetSystemTimeX();
-//  shell_printf("Screenshot\r\n");
-  FRESULT res = open_file("bmp");
-  uint16_t *buf = (uint16_t *)spi_buffer;
-//  shell_printf("Open %s, result = %d\r\n", fs_filename, res);
-  if (res == FR_OK){
-    res = f_write(fs_file, bmp_header_v4, sizeof(bmp_header_v4), &size);
-    for (y = LCD_HEIGHT-1; y >= 0 && res == FR_OK; y--) {
-      ili9341_read_memory(0, y, LCD_WIDTH, 1, buf);
-      for (i = 0; i < LCD_WIDTH; i++)
-        buf[i] = __REVSH(buf[i]); // swap byte order (example 0x10FF to 0xFF10)
-      res = f_write(fs_file, buf, LCD_WIDTH*sizeof(uint16_t), &size);
-    }
-//   res = f_close(fs_file);
-//    shell_printf("Close %d\r\n", res);
-//    testLog();
-  }
-  close_file(res);
+  menu_sdcard_cb(0, FMT_BMP_FILE);
   return TRUE;
 }
-
-void save_to_sd(int mask)
-{
-  FRESULT res = open_file("csv");
-  UINT size;
-  if (res == FR_OK) {
-    for (int i = 0; i < sweep_points; i++) {
-      char *buf = (char *)spi_buffer;
-      if (mask & 1) buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
-      if (mask & 2) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
-      if (mask & 4) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
-      if (mask & 8) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
-      buf += plot_printf(buf, 100, "\r\n");
-      res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
-      if (res != FR_OK)
-        break;
-    }
-  }
-  close_file(res);
-}
-
 #endif
 
 static int
