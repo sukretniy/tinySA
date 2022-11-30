@@ -1580,7 +1580,7 @@ DSTATUS disk_status(BYTE pdrv) {
 // diskio.c - Read sector
 DRESULT disk_read(BYTE pdrv, BYTE* buff, DWORD sector, UINT count) {
   // No disk or wrong block count
-  if (pdrv != 0 || count != 1 || (Stat & STA_NOINIT)) return RES_NOTRDY;
+  if (pdrv != 0 || (Stat & STA_NOINIT)) return RES_NOTRDY;
   // convert to byte address
   if (!(CardType & CT_BLOCK)) sector *= SD_SECTOR_SIZE;
 
@@ -1626,7 +1626,7 @@ DRESULT disk_read(BYTE pdrv, BYTE* buff, DWORD sector, UINT count) {
 // diskio.c - Write sector
 DRESULT disk_write(BYTE pdrv, const BYTE* buff, DWORD sector, UINT count) {
   // No disk or wrong count
-  if (pdrv != 0 || count != 1 || (Stat & STA_NOINIT)) return RES_NOTRDY;
+  if (pdrv != 0 || (Stat & STA_NOINIT)) return RES_NOTRDY;
   // Write protection
   if (Stat & STA_PROTECT) return RES_WRPRT;
   #if DEBUG == 1
