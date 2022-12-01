@@ -6163,7 +6163,12 @@ int validate_signal_within(int i, float margin)
     peakFreq = (markers[2].frequency + markers[1].frequency)/2;
     markers[0].frequency = peakFreq;
     markers[0].index = (markers[2].index + markers[1].index)/2;
-    if (flatness > 0.8) {
+#ifdef TINYSA4
+#define FLATNESS_CRITERIA 2
+#else
+#define FLATNESS_CRITERIA 0.8
+#endif
+    if (flatness > FLATNESS_CRITERIA) {
       test_fail_cause[i] = "Flatness ";
       return TS_FAIL;
     }
