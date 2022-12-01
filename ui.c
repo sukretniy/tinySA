@@ -3582,6 +3582,8 @@ enum {
 //#ifdef __SD_CARD_LOAD__
 //  FMT_CMD_FILE,
 //#endif
+  FMT_CFG_FILE,
+  FMT_PRS_FILE,
 };
 
 // Save file extension
@@ -3594,6 +3596,8 @@ static const char *file_ext[] = {
 //#ifdef __SD_CARD_LOAD__
 //  [FMT_CMD_FILE] = "cmd",
 //#endif
+  [FMT_CFG_FILE] = "cfg",
+  [FMT_PRS_FILE] = "prs",
 };
 
 static void sa_save_file(char *name, uint8_t format);
@@ -3619,6 +3623,9 @@ static const menuitem_t menu_store_preset[] =
 {
   { MT_ADV_CALLBACK, 0,  "STORE AS\nSTARTUP",menu_store_preset_acb},
   { MT_ADV_CALLBACK |MT_REPEATS,  DATA_STARTS_REPEATS(1,4),  "STORE %d",         menu_store_preset_acb},
+#ifdef TINYSA4
+  { MT_CALLBACK,    FMT_PRS_FILE,   "STORE\n"S_RARROW"SD",     menu_sdcard_cb},
+#endif
   { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
   { MT_NONE,     0,     NULL,menu_back} // next-> menu_back
 };
@@ -3627,6 +3634,10 @@ static const menuitem_t menu_load_preset[] =
 {
   { MT_ADV_CALLBACK,            0,                          "LOAD\nSTARTUP", menu_load_preset_acb},
   { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,4),   MT_CUSTOM_LABEL, menu_load_preset_acb},
+#ifdef __SD_FILE_BROWSER__
+  { MT_CALLBACK, FMT_PRS_FILE, "LOAD FROM\n SD",            menu_sdcard_browse_cb },
+#endif
+
   { MT_SUBMENU,                 0,                          "STORE"  ,       menu_store_preset},
   { MT_NONE,     0,     NULL, menu_back} // next-> menu_back
 };
@@ -6724,6 +6735,23 @@ static void sa_save_file(char *name, uint8_t format) {
       }
       break;
 #endif
+      /*
+       * Dump preset to SD card as prs file
+       */
+      case FMT_PRS_FILE:
+      {
+        uint16_t *src = (uint16_t*)&setting;
+        int total = sizeof(setting_t);
+        setting.magic = CONFIG_MAGIC;
+        setting.checksum = 0x12345678;
+        setting.checksum = checksum(
+            &setting,
+      //      (sizeof (setting)) - sizeof setting.checksum
+            (void *)&setting.checksum - (void *) &setting
+            );
+        res = f_write(fs_file, src, total, &size);
+      }
+      break;
     }
     f_close(fs_file);
 //    shell_printf("Close = %d\r\n", res);

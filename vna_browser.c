@@ -168,6 +168,29 @@ repeat:
 //    else error = "Format err";
 //  }
 //  break;
+  /*
+   *  Load preset
+   */
+  case FMT_PRS_FILE:
+  {
+    uint32_t magic;
+    char *src = (char*)&setting + sizeof(magic);
+    uint32_t total = sizeof(setting_t) - sizeof(magic);
+    // Compare file size and try read magic header, if all OK load it
+    if (fno.fsize == sizeof(setting) && f_read(fs_file, &magic, sizeof(magic), &size) == FR_OK &&
+        magic == CONFIG_MAGIC && f_read(fs_file, src, total, &size) == FR_OK) {
+
+     // TODO remove code duplication with flash.c
+      update_min_max_freq();
+      update_frequencies();
+      set_scale(setting.scale);
+      set_reflevel(setting.reflevel);
+      set_waterfall();
+      set_level_meter();
+    }
+    else error = "Format err";
+  }
+  break;
   default: break;
   }
   f_close(fs_file);

@@ -1419,6 +1419,7 @@ int caldata_save(uint16_t id);
 int config_save(void);
 int config_recall(void);
 setting_t * caldata_pointer(uint16_t id);
+uint32_t checksum(const void *start, size_t len);
 
 void clear_all_config_prop_data(void);
 
