@@ -653,19 +653,15 @@ extern const uint8_t numfont16x22[];
 #define NUM_FONT_GET_HEIGHT     22
 #define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*2*NUM_FONT_GET_HEIGHT])
 
-#if 1
-#define KP_WIDTH                  ((LCD_WIDTH) / 4)// numeric keypad button width
-#define KP_HEIGHT                 ((LCD_HEIGHT - NUM_INPUT_HEIGHT) / 4) // numeric keypad button height
-// Key x, y position (0 - 15) on screen
-#define KP_GET_X(posx)            ((posx) * KP_WIDTH)                   // numeric keypad left
-#define KP_GET_Y(posy)            ((posy) * KP_HEIGHT)                  // numeric keypad top
-#else
-#define KP_WIDTH     (LCD_HEIGHT/5)
-#define KP_HEIGHT    (LCD_HEIGHT/5)
-// Key x, y position (0 - 15) on screen
-#define KP_GET_X(posx) ((posx)*KP_WIDTH + (LCD_WIDTH-MENU_BUTTON_WIDTH-5-KP_WIDTH*4))
-#define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
-#endif
+#define KP_WIDTH                  (LCD_WIDTH / 4)                                  // numeric keypad button width
+#define KP_HEIGHT                 ((LCD_HEIGHT - NUM_INPUT_HEIGHT) / 4)            // numeric keypad button height
+#define KP_X_OFFSET               0                                                // numeric keypad X offset
+#define KP_Y_OFFSET               0                                                // numeric keypad Y offset
+#define KPF_WIDTH                 (LCD_WIDTH / 10)                                 // text keypad button width
+#define KPF_HEIGHT                KPF_WIDTH                                        // text keypad button height
+#define KPF_X_OFFSET              0                                                // text keypad X offset
+#define KPF_Y_OFFSET              (LCD_HEIGHT - NUM_INPUT_HEIGHT - 4 * KPF_HEIGHT) // text keypad Y offset
+
 
 #define S_DELTA    "\027"  // 0x17
 #define S_SARROW   "\030"  // 0x18
