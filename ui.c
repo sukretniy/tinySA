@@ -82,6 +82,11 @@ enum {
 };
 
 #define NUMINPUT_LEN 12
+#if FF_USE_LFN
+#define TXTINPUT_LEN (FF_MAX_LFN - 4)
+#else
+#define TXTINPUT_LEN (8)
+#endif
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
 static char    kp_buf[NUMINPUT_LEN+1];
@@ -1011,22 +1016,21 @@ const uint8_t right_icons [] =
 #define KP_X(x) (48*(x) + 2 + (LCD_WIDTH-BUTTON_WIDTH-192))
 #define KP_Y(y) (48*(y) + 2)
 
-
-#define KP_PERIOD 10
-#define KP_MINUS 11
-#define KP_X1 12
-#define KP_K 13
-#define KP_M 14
-#define KP_G 15
-#define KP_BS 16
-#define KP_INF 17
-#define KP_DB 18
+#define KP_PERIOD    10
+#define KP_MINUS     11
+#define KP_X1        12
+#define KP_K         13
+#define KP_M         14
+#define KP_G         15
+#define KP_BS        16
+#define KP_INF       17
+#define KP_DB        18
 #define KP_PLUSMINUS 19
-#define KP_KEYPAD 20
-#define KP_m 21
-#define KP_u 22
-#define KP_n 23
-#define KP_p 24
+#define KP_KEYPAD    20
+#define KP_m         21
+#define KP_u         22
+#define KP_n         23
+#define KP_p         24
 
 #define KP_0    31
 #define KP_1    32
@@ -1039,10 +1043,23 @@ const uint8_t right_icons [] =
 #define KP_200  39
 #define KP_500  40
 
+enum {NUM_KEYBOARD, TXT_KEYBOARD};
 
 typedef struct {
-  uint8_t x:4;
-  uint8_t y:4;
+  uint16_t x_offs;
+  uint16_t y_offs;
+  uint16_t width;
+  uint16_t height;
+} keypad_pos_t;
+
+// Keyboard size and position data
+static const keypad_pos_t key_pos[] = {
+  [NUM_KEYBOARD] = {KP_X_OFFSET, KP_Y_OFFSET, KP_WIDTH, KP_HEIGHT},
+  [TXT_KEYBOARD] = {KPF_X_OFFSET, KPF_Y_OFFSET, KPF_WIDTH, KPF_HEIGHT}
+};
+
+typedef struct {
+  uint8_t pos;
   int8_t  c;
 } keypads_t;
 
@@ -1054,45 +1071,44 @@ static const keypads_t *keypads;
 // 0 . < x
 
 static const keypads_t keypads_freq[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-  { 3, 0, KP_G },
-  { 3, 1, KP_M },
-  { 3, 2, KP_K },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 16 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x30, KP_G },
+  { 0x31, KP_M },
+  { 0x32, KP_K },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
 };
 
 // 7 8 9
 // 4 5 6
 // 1 2 3
 // 0 . < x
-
 static const keypads_t keypads_positive[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 13 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
 };
 
 // 100 200 500 n
@@ -1101,72 +1117,71 @@ static const keypads_t keypads_positive[] = {
 // 0   .   <   x
 
 static const keypads_t keypads_pos_unit[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 5 },
-  { 0, 1, KP_10 },
-  { 1, 1, KP_20 },
-  { 2, 1, KP_50 },
-  { 0, 0, KP_100 },
-  { 1, 0, KP_200 },
-  { 2, 0, KP_500 },
-  { 3, 0, KP_n },
-  { 3, 1, KP_u },
-  { 3, 2, KP_m },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 16 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 5 },
+  { 0x01, KP_10 },
+  { 0x11, KP_20 },
+  { 0x21, KP_50 },
+  { 0x00, KP_100 },
+  { 0x10, KP_200 },
+  { 0x20, KP_500 },
+  { 0x30, KP_n },
+  { 0x31, KP_u },
+  { 0x32, KP_m },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS },
 };
 
 // 7 8 9 m
 // 4 5 6 u
 // 1 2 3 -
 // 0 . < x
-
 static const keypads_t keypads_plusmin_unit[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-  { 3, 0, KP_u},
-  { 3, 1, KP_m},
-  { 3, 2, KP_MINUS },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 16 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x30, KP_u},
+  { 0x31, KP_m},
+  { 0x32, KP_MINUS },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
 };
+
 // 7 8 9
 // 4 5 6
 // 1 2 3 -
 // 0 . < x
-
 static const keypads_t keypads_plusmin[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-  { 3, 0, KP_u},
-  { 3, 1, KP_m},
-  { 3, 2, KP_MINUS },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 14 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x30, KP_u},
+  { 0x31, KP_m},
+  { 0x32, KP_MINUS },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
 };
 
 // 7 8 9
@@ -1174,23 +1189,31 @@ static const keypads_t keypads_plusmin[] = {
 // 1 2 3 m
 // 0 . < x
 static const keypads_t keypads_time[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-//  { 3, 0, KP_n},
-//  { 3, 1, KP_u},
-  { 3, 2, KP_m },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 14 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+//  { 0x30, KP_n},
+//  { 0x31, KP_u},
+  { 0x32, KP_m },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
+};
+
+static const keypads_t keypads_text[] = {
+  {40, TXT_KEYBOARD },   // size and position
+  {0x00, '1'}, {0x10, '2'}, {0x20, '3'}, {0x30, '4'}, {0x40, '5'}, {0x50, '6'}, {0x60, '7'}, {0x70, '8'}, {0x80, '9'}, {0x90, '0'},
+  {0x01, 'Q'}, {0x11, 'W'}, {0x21, 'E'}, {0x31, 'R'}, {0x41, 'T'}, {0x51, 'Y'}, {0x61, 'U'}, {0x71, 'I'}, {0x81, 'O'}, {0x91, 'P'},
+  {0x02, 'A'}, {0x12, 'S'}, {0x22, 'D'}, {0x32, 'F'}, {0x42, 'G'}, {0x52, 'H'}, {0x62, 'J'}, {0x72, 'K'}, {0x82, 'L'}, {0x92, '_'},
+  {0x03, '-'}, {0x13, 'Z'}, {0x23, 'X'}, {0x33, 'C'}, {0x43, 'V'}, {0x53, 'B'}, {0x63, 'N'}, {0x73, 'M'}, {0x83, S_LARROW[0]}, {0x93, S_SARROW[0]},
 };
 
 enum {
@@ -1244,6 +1267,9 @@ enum {
 #endif
 #endif
   KM_CODE,
+#ifdef __USE_SD_CARD__
+  KM_FILENAME,
+#endif
   KM_NONE // always at enum end
 };
 
@@ -1319,6 +1345,9 @@ static const struct {
 #endif
 #endif
 [KM_CODE]         = {keypads_positive    , "CODE"},              // KM_CODE
+#ifdef __USE_SD_CARD__
+[KM_FILENAME]     = {keypads_text        , "NAME"},  // filename
+#endif
 };
 
 #if 0 // Not used
@@ -5586,34 +5615,49 @@ void drawMessageBox(const char *header, char *text, uint32_t delay){
 }
 
 static void
-draw_keypad(uint32_t mask)
-{
-  int i;
+draw_keypad_button(int id) {
+  if (id < 0) return;
   ui_button_t button;
   button.fg = LCD_MENU_TEXT_COLOR;
-  for(i = 0; keypads[i].c >= 0; i++) {
-    if ((mask&(1<<i)) == 0) continue;
+
+  if (id == selection) {
+    button.bg = LCD_MENU_ACTIVE_COLOR;
+    button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_FALLING;
+  } else{
     button.bg = LCD_MENU_COLOR;
-    if (i == selection){
-      button.bg = LCD_MENU_ACTIVE_COLOR;
-      button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_FALLING;
-    }
-    else
-      button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_RISE;
-    int x = KP_GET_X(keypads[i].x);
-    int y = KP_GET_Y(keypads[i].y);
-    draw_button(x, y, KP_WIDTH, KP_HEIGHT, &button);
-    if (keypads[i].c < KP_0) { // KP_0
-      ili9341_drawfont(keypads[i].c,
+    button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_RISE;
+  }
+
+  const keypad_pos_t *p = &key_pos[keypads[0].c];
+  char  txt[2] = {0,0};
+  int x = p->x_offs + (keypads[id+1].pos>> 4) * p->width;
+  int y = p->y_offs + (keypads[id+1].pos&0xF) * p->height;
+  draw_button(x, y, p->width, p->height, &button);
+  if (keypads[0].c == NUM_KEYBOARD) {
+    if (keypads[id+1].c < KP_0) { // KP_0
+      ili9341_drawfont(keypads[id+1].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
                      y + (KP_HEIGHT - NUM_FONT_GET_HEIGHT) / 2);
     } else {
-      const char *t = keypad_scale_text[keypads[i].c - KP_0];
+      const char *t = keypad_scale_text[keypads[id+1].c - KP_0];
       ili9341_drawstring_10x14(t,
                      x + (KP_WIDTH  - wFONT_MAX_WIDTH*strlen(t)) / 2,
                      y + (KP_HEIGHT - wFONT_GET_HEIGHT) / 2);
     }
+  } else {
+    txt[0] = keypads[id+1].c;
+    ili9341_drawstring_10x14(txt,
+                     x + KPF_WIDTH/2 - FONT_WIDTH + 1,
+                     y + KPF_HEIGHT/2 - FONT_GET_HEIGHT);
   }
+}
+
+static void
+draw_keypad(void)
+{
+  int i;
+  for(i = 0; i < keypads[0].pos; i++)
+    draw_keypad_button(i);
 }
 
 static int
@@ -5668,6 +5712,17 @@ draw_numeric_input(const char *buf)
     ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
     ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(lines*bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   }
+}
+
+static void
+draw_text_input(const char *buf)
+{
+  ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
+  ili9341_set_background(LCD_INPUT_BG_COLOR);
+  uint16_t x = 14 + 5 * FONT_WIDTH;
+  uint16_t y = LCD_HEIGHT-(wFONT_GET_HEIGHT + NUM_INPUT_HEIGHT)/2;
+  ili9341_fill(x, y, wFONT_MAX_WIDTH * 20, wFONT_GET_HEIGHT);
+  ili9341_drawstring_10x14(buf, x, y);
 }
 
 static void
@@ -6204,7 +6259,7 @@ ui_mode_keypad(int _keypad_mode)
   ui_mode = UI_KEYPAD;
   if (!current_menu_is_form())
     draw_menu();
-  draw_keypad(-1);
+  draw_keypad();
   draw_numeric_area_frame();
   ui_process_keypad();
 }
@@ -6394,9 +6449,8 @@ ui_process_menu_lever(void)
 }
 
 static int
-keypad_click(int key)
+num_keypad_click(int c)
 {
-  int c = keypads[key].c;
   if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u || c == KP_n) {
 #if 0
     float scale = 1.0;
@@ -6478,28 +6532,50 @@ keypad_click(int key)
 }
 
 static int
+full_keypad_click(int c)
+{
+  if (c == S_SARROW[0]) { // Enter
+    return kp_index == 0 ? KP_CANCEL : KP_DONE;
+  }
+  if (c == S_LARROW[0]) { // Backspace
+    if (kp_index == 0)
+      return KP_CANCEL;
+    --kp_index;
+  } else if (kp_index < TXTINPUT_LEN) { // any other text input
+    kp_buf[kp_index++] = c;
+  }
+  kp_buf[kp_index] = '\0';
+  draw_text_input(kp_buf);
+  return KP_CONTINUE;
+}
+
+static int
+keypad_click(int key) {
+  int c = keypads[key+1].c;  // !!! Use key + 1 (zero key index used or size define)
+  int result = keypads[0].c == NUM_KEYBOARD ? num_keypad_click(c) : full_keypad_click(c);
+  return result;
+}
+
+static int
 keypad_apply_touch(void)
 {
   int touch_x, touch_y;
-  int i = 0;
-
   touch_position(&touch_x, &touch_y);
-
-  while (keypads[i].c >= 0) {
-    int x = KP_GET_X(keypads[i].x);
-    int y = KP_GET_Y(keypads[i].y);
-    if (x < touch_x && touch_x < x+KP_WIDTH && y < touch_y && touch_y < y+KP_HEIGHT) {
-      uint32_t mask = (1<<i)|(1<<selection);
-      // draw focus
-      selection = i;
-      draw_keypad(mask);
-      touch_wait_release();
-      // erase focus
-      selection = -1;
-      draw_keypad((1<<i));
-      return i;
-    }
-    i++;
+  const keypad_pos_t *p = &key_pos[keypads[0].c];
+  if (touch_x < p->x_offs || touch_y < p->y_offs) return -1;
+  // Calculate key position from touch x and y
+  touch_x-= p->x_offs; touch_x/= p->width;
+  touch_y-= p->y_offs; touch_y/= p->height;
+  uint8_t pos = (touch_y & 0x0F) | (touch_x<<4);
+  for (int i = 0; i < keypads[0].pos; i++) {
+    if (keypads[i+1].pos != pos) continue;
+    int old = selection;
+    draw_keypad_button(selection = i);  // draw new focus
+    draw_keypad_button(old);            // Erase old focus
+    touch_wait_release();
+    selection = -1;
+    draw_keypad_button(i);              // erase new focus
+    return i;                           // Process input;
   }
   return -1;
 }
@@ -6509,28 +6585,24 @@ ui_process_keypad(void)
 {
   int status;
   kp_index = 0;
-  int keypads_last_index;
-  for (keypads_last_index = 0; keypads[keypads_last_index+1].c >= 0; keypads_last_index++)
-    ;
+  int keypads_last_index = keypads[0].pos - 1;
   while (TRUE) {
     status = btn_check();
     if (status & (EVT_UP|EVT_DOWN)) {
-      int s = status;
       do {
-        uint32_t mask = (1<<selection);
-        if (s & EVT_UP)
-          if (--selection < 0)
-            selection = keypads_last_index;
-        if (s & EVT_DOWN)
-          if (++selection > keypads_last_index)
-            selection = 0;
-        draw_keypad(mask|(1<<selection));
+        int old = selection;
+        if ((status & EVT_DOWN) && --selection < 0)
+          selection = keypads_last_index;
+        if ((status & EVT_UP)   && ++selection > keypads_last_index)
+          selection = 0;
+        draw_keypad_button(old);
+        draw_keypad_button(selection);
         chThdSleepMilliseconds(100);
-      } while ((s = btn_wait_release()) != 0);
+      } while ((status = btn_wait_release()) != 0);
     }
 
     if (status == EVT_BUTTON_SINGLE_CLICK) {
-      if (keypad_click(selection))
+      if (selection >= 0 && keypad_click(selection))
         /* exit loop on done or cancel */
         break;
     }
