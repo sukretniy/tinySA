@@ -87,9 +87,14 @@ enum {
 #else
 #define TXTINPUT_LEN (8)
 #endif
+
+#if NUMINPUT_LEN + 2 > TXTINPUT_LEN + 1
+static char    kp_buf[NUMINPUT_LEN+2];  // !!!!!! WARNING size must be + 2 from NUMINPUT_LEN or TXTINPUT_LEN + 1
+#else
+static char    kp_buf[TXTINPUT_LEN+1];  // !!!!!! WARNING size must be + 2 from NUMINPUT_LEN or TXTINPUT_LEN + 1
+#endif
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
-static char    kp_buf[NUMINPUT_LEN+1];
 static int8_t  kp_index = 0;
 static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
@@ -1213,7 +1218,7 @@ static const keypads_t keypads_text[] = {
   {0x00, '1'}, {0x10, '2'}, {0x20, '3'}, {0x30, '4'}, {0x40, '5'}, {0x50, '6'}, {0x60, '7'}, {0x70, '8'}, {0x80, '9'}, {0x90, '0'},
   {0x01, 'Q'}, {0x11, 'W'}, {0x21, 'E'}, {0x31, 'R'}, {0x41, 'T'}, {0x51, 'Y'}, {0x61, 'U'}, {0x71, 'I'}, {0x81, 'O'}, {0x91, 'P'},
   {0x02, 'A'}, {0x12, 'S'}, {0x22, 'D'}, {0x32, 'F'}, {0x42, 'G'}, {0x52, 'H'}, {0x62, 'J'}, {0x72, 'K'}, {0x82, 'L'}, {0x92, '_'},
-  {0x03, '-'}, {0x13, 'Z'}, {0x23, 'X'}, {0x33, 'C'}, {0x43, 'V'}, {0x53, 'B'}, {0x63, 'N'}, {0x73, 'M'}, {0x83, S_LARROW[0]}, {0x93, S_SARROW[0]},
+  {0x03, '-'}, {0x13, 'Z'}, {0x23, 'X'}, {0x33, 'C'}, {0x43, 'V'}, {0x53, 'B'}, {0x63, 'N'}, {0x73, 'M'}, {0x83, S_LARROW[0]}, {0x93, S_ENTER[0]},
 };
 
 enum {
@@ -3629,11 +3634,22 @@ static const char *file_ext[] = {
   [FMT_PRS_FILE] = "prs",
 };
 
-static void sa_save_file(char *name, uint8_t format);
+static void sa_save_file(uint8_t format);
 
 static UI_FUNCTION_CALLBACK(menu_sdcard_cb) {
   (void)item;
-  sa_save_file(0, data);
+  sa_save_file(data);
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_autoname_acb)
+{
+  (void)item;
+  (void)data;
+  if (b){
+    b->icon = config._mode & _MODE_AUTO_FILENAME ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  config._mode^= _MODE_AUTO_FILENAME;
 }
 
 #ifdef __SD_FILE_BROWSER__
@@ -4134,11 +4150,15 @@ static const menuitem_t menu_settings[] =
   { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
 //  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
+#ifdef __USE_SD_CARD__
 #ifdef __SD_CARD_DUMP_FIRMWARE__
   { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",     menu_sdcard_cb},
 #endif
 #ifdef __SD_FILE_BROWSER__
   { MT_CALLBACK, FMT_BMP_FILE, "LOAD BMP", menu_sdcard_browse_cb },
+#endif
+
+  { MT_ADV_CALLBACK, 0, "AUTO NAME", menu_autoname_acb },
 #endif
 #ifdef TINYSA4
   { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
@@ -5719,7 +5739,7 @@ draw_text_input(const char *buf)
 {
   ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
   ili9341_set_background(LCD_INPUT_BG_COLOR);
-  uint16_t x = 14 + 5 * FONT_WIDTH;
+  uint16_t x = 14 + 10 * FONT_WIDTH;
   uint16_t y = LCD_HEIGHT-(wFONT_GET_HEIGHT + NUM_INPUT_HEIGHT)/2;
   ili9341_fill(x, y, wFONT_MAX_WIDTH * 20, wFONT_GET_HEIGHT);
   ili9341_drawstring_10x14(buf, x, y);
@@ -6534,7 +6554,7 @@ num_keypad_click(int c)
 static int
 full_keypad_click(int c)
 {
-  if (c == S_SARROW[0]) { // Enter
+  if (c == S_ENTER[0]) { // Enter
     return kp_index == 0 ? KP_CANCEL : KP_DONE;
   }
   if (c == S_LARROW[0]) { // Backspace
@@ -6731,7 +6751,7 @@ static FRESULT sa_create_file(char *fs_filename)
   return res;
 }
 
-static void sa_save_file(char *name, uint8_t format) {
+static void sa_save_file(uint8_t format) {
   uint16_t *buf_16;
   int i, y;
   UINT size;
@@ -6742,15 +6762,9 @@ static void sa_save_file(char *name, uint8_t format) {
     return;
   }
 #endif
-  // For screenshot need back to normal mode and redraw screen before capture!!
-  // Redraw use spi_buffer so need do it before any file ops
-  if (format == FMT_BMP_FILE && ui_mode != UI_NORMAL){
-    ui_mode_normal();
-    draw_all(false);
-  }
 
   // Prepare filename and open for write
-  if (name == NULL) {   // Auto name, use date / time
+  if (config._mode & _MODE_AUTO_FILENAME) {   // Auto name, use date / time
 #if FF_USE_LFN >= 1
     uint32_t tr = rtc_get_tr_bcd(); // TR read first
     uint32_t dr = rtc_get_dr_bcd(); // DR read second
@@ -6759,9 +6773,18 @@ static void sa_save_file(char *name, uint8_t format) {
     plot_printf(fs_filename, FF_LFN_BUF, "%08x.%s", rtc_get_FAT(), file_ext[format]);
 #endif
   }
-  else
-    plot_printf(fs_filename, FF_LFN_BUF, "%s.%s", name, file_ext[format]);
+  else {
+    ui_mode_keypad(KM_FILENAME);
+    if (kp_index == 0) return;
+    plot_printf(fs_filename, FF_LFN_BUF, "%s.%s", kp_buf, file_ext[format]);
+  }
 
+  // For screenshot need back to normal mode and redraw screen before capture!!
+  // Redraw use spi_buffer so need do it before any file ops
+  if (format == FMT_BMP_FILE && (ui_mode != UI_NORMAL || !(config._mode & _MODE_AUTO_FILENAME))){
+    ui_mode_normal();
+    draw_all(false);
+  }
 //  UINT total_size = 0;
 //  systime_t time = chVTGetSystemTimeX();
   // Prepare filename = .bmp / .csv and open for write
