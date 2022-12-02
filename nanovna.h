@@ -621,7 +621,7 @@ extern const uint8_t x7x11b_bits [];
 extern const uint8_t x10x14_bits[];
 extern const uint8_t numfont16x22[];
 
-#define FONT_START_CHAR    0x17
+#define FONT_START_CHAR    0x16
 #define FONT_MAX_WIDTH        7
 #define FONT_WIDTH            5
 #define FONT_GET_HEIGHT       7
@@ -629,7 +629,7 @@ extern const uint8_t numfont16x22[];
 #define FONT_GET_DATA(ch)    (  &x5x7_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT])
 #define FONT_GET_WIDTH(ch)   (8-(x5x7_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT]&7))
 
-#define bFONT_START_CHAR   0x17
+#define bFONT_START_CHAR   0x16
 #define bFONT_MAX_WIDTH       8
 #define bFONT_WIDTH           7
 #define bFONT_GET_HEIGHT     11
@@ -638,7 +638,7 @@ extern const uint8_t numfont16x22[];
 #define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT]&7))
 
 #ifdef __NICE_BIG_FONT__
-#define wFONT_START_CHAR   0x17
+#define wFONT_START_CHAR   0x16
 #define wFONT_MAX_WIDTH      12
 #define wFONT_GET_HEIGHT     14
 #define wFONT_STR_HEIGHT     16
@@ -662,7 +662,7 @@ extern const uint8_t numfont16x22[];
 #define KPF_X_OFFSET              0                                                // text keypad X offset
 #define KPF_Y_OFFSET              (LCD_HEIGHT - NUM_INPUT_HEIGHT - 4 * KPF_HEIGHT) // text keypad Y offset
 
-
+#define S_ENTER    "\026"  // 0x16
 #define S_DELTA    "\027"  // 0x17
 #define S_SARROW   "\030"  // 0x18
 #define S_INFINITY "\031"  // 0x19
@@ -717,12 +717,15 @@ float marker_to_value(const int i);
 
 #define FREQ_MODE_START_STOP    0x0
 #define FREQ_MODE_CENTER_SPAN   0x1
-#define FREQ_MODE_DOTTED_GRID   0x2
+//#define FREQ_MODE_DOTTED_GRID   0x2
 
 // Connection flag
 #define _MODE_CONNECTION_MASK  0x04
 #define _MODE_SERIAL           0x04
 #define _MODE_USB              0x00
+
+// auto name
+#define _MODE_AUTO_FILENAME    0x08
 
 #pragma pack(push, 4)
 typedef struct config {
