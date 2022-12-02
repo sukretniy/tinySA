@@ -673,6 +673,10 @@ extern const uint8_t numfont16x22[];
 #define S_OHM      "\036"  // 0x1E
 #define S_DEGREE   "\037"  // 0x1F
 
+#define C_ENTER     0x16   // 0x16
+#define C_LARROW    0x1A   // 0x1A
+#define C_RARROW    0x1B   // 0x1B
+
 // String prefix for select font size (use not printable chars)
 #define  FONT_s     "\001"
 #define _FONT_s     1
