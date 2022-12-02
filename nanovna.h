@@ -668,6 +668,8 @@ extern const uint8_t numfont16x22[];
 #define S_INFINITY "\031"  // 0x19
 #define S_LARROW   "\032"  // 0x1A
 #define S_RARROW   "\033"  // 0x1B
+#define C_LARROW   0x1A  // 0x1A
+#define C_RARROW   0x1B  // 0x1B
 #define S_PI       "\034"  // 0x1C
 #define S_MICRO    "\035"  // 0x1D
 #define S_OHM      "\036"  // 0x1E
