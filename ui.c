@@ -2882,53 +2882,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
 //  ui_mode_normal();
 //  draw_cal_status();
 }
-#if 0
-static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
-{
-  (void)item;
-  if(b){
-    if (data == 0 && setting.show_stored)
-      b->icon = BUTTON_ICON_CHECK;
-    if (setting.subtract[0]){
-      if (data == 2 && setting.show_stored)
-        b->icon = BUTTON_ICON_CHECK;
-      if (data == 3 && !setting.show_stored)
-        b->icon = BUTTON_ICON_CHECK;
-    }
-    return;
-  }
-  switch(data) {
-    case 0:
-      store_trace(0,2);
-      break;
-    case 1:
-      set_clear_storage();
-      break;
-    case 2:
-      set_subtract_storage();
-      break;
-    case 3:
-      toggle_normalize();
-      if (setting.subtract[0]) {
-        kp_help_text = "Ref level";
-        ui_mode_keypad(KM_REFLEVEL);
-//        setting.normalize_level = uistat.value;
-      } else
-        set_auto_reflevel(true);
-      break;
-#ifdef TINYSA4
-    case 4:
-      save_csv(1+2);      // frequencies + actual
-      break;
-    case 5:
-      save_csv(1+4);      // frequencies + stored
-      break;
-#endif
-  }
-  ui_mode_normal();
-//  draw_cal_status();
-}
-#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   (void)item;
@@ -4146,20 +4099,6 @@ static const menuitem_t menu_settings[] =
 #ifdef __NOISE_FIGURE__
   { MT_KEYPAD,      KM_NF,          "NF\n\b%s",             "Enter tinySA noise figure"},
 #endif
-#ifdef __SD_CARD_LOAD__
-  { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
-//  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
-#endif
-#ifdef __USE_SD_CARD__
-#ifdef __SD_CARD_DUMP_FIRMWARE__
-  { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",     menu_sdcard_cb},
-#endif
-#ifdef __SD_FILE_BROWSER__
-  { MT_CALLBACK, FMT_BMP_FILE, "LOAD BMP", menu_sdcard_browse_cb },
-#endif
-
-  { MT_ADV_CALLBACK, 0, "AUTO NAME", menu_autoname_acb },
-#endif
 #ifdef TINYSA4
   { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
 #endif
@@ -4320,19 +4259,7 @@ static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0, S_RARROW"MORE", menu_config2},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
-#if 0
-static const menuitem_t menu_storage[] =
-{
- { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_storage_acb},
- { MT_ADV_CALLBACK,1,          "%s",              menu_storage_acb},
- { MT_ADV_CALLBACK,1,          "DISPLAY",         menu_storage_acb},
- { MT_ADV_CALLBACK,2,          "COPY\nFROM",      menu_storage_acb},
- { MT_ADV_CALLBACK,3,          "SUBTRACT",        menu_storage_acb},
- { MT_ADV_CALLBACK,4,          "NORMALIZE",       menu_storage_acb},
- { MT_ADV_CALLBACK,5,          "WRITE\n"S_RARROW"SD",menu_storage_acb},
-  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
-};
-#endif
+
 static const menuitem_t menu_trace[] =
 {
  { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          "TRACE %d",        menu_trace_acb},
@@ -4451,6 +4378,26 @@ static const menuitem_t menu_stimulus[] = {
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 
+#ifdef __USE_SD_CARD__
+static const menuitem_t menu_storage[] = {
+#ifdef __SD_CARD_LOAD__
+  { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
+//  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
+#endif
+#ifdef __USE_SD_CARD__
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+  { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",       menu_sdcard_cb},
+#endif
+#ifdef __SD_FILE_BROWSER__
+  { MT_CALLBACK, FMT_BMP_FILE,      "LOAD BMP",             menu_sdcard_browse_cb },
+#endif
+
+  { MT_ADV_CALLBACK, 0,             "AUTO NAME",            menu_autoname_acb },
+#endif
+  { MT_NONE,    0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
 #ifdef TINYSA4
 const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
@@ -4482,6 +4429,9 @@ static const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "MEASURE",      menu_measure},
+#ifdef __USE_SD_CARD__
+  { MT_SUBMENU,  0, "STORAGE",      menu_storage},
+#endif
   { MT_SUBMENU,  0, "CONFIG",       menu_config},
   { MT_SUBMENU,  0, "MODE",         menu_mode},
   { MT_NONE,     0, NULL, NULL } // sentinel,
@@ -6810,10 +6760,11 @@ static void sa_save_file(uint8_t format) {
       case FMT_CSV_FILE:
         for (i = 0; i < sweep_points && res == FR_OK; i++) {
           char *buf = (char *)spi_buffer;
-          if (file_mask & 1) buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
-          if (file_mask & 2) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
-          if (file_mask & 4) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
-          if (file_mask & 8) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
+          if (file_mask & 1)  buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
+          if (file_mask & 2)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
+          if (file_mask & 4)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
+          if (file_mask & 8)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED2][i]));
+          if (file_mask & 16) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
           buf += plot_printf(buf, 100, "\r\n");
           res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
         }
