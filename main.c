@@ -2658,6 +2658,11 @@ int main(void)
   if (caldata_recall(0) == -1) {
     load_LCD_properties();
   }
+#ifdef __ULTRA__
+  else
+    ultra_start = (config.ultra_start == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_start);
+#endif
+
 
 /*
  * Init Shell console connection data (after load config for settings)
