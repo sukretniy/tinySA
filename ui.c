@@ -462,17 +462,16 @@ touch_draw_test(void)
   ili9341_drawstring("TOUCH TEST: DRAG PANEL, PRESS BUTTON TO FINISH", OFFSETX, LCD_HEIGHT - FONT_GET_HEIGHT);
 
   int old_button_state = 0;
+  lcd_set_font(FONT_NORMAL);
   while (touch_check() != EVT_TOUCH_PRESSED) {
     int button_state = READ_PORT() & BUTTON_MASK;
     if (button_state != old_button_state) {
-      char buf[20];
-      plot_printf(buf, sizeof buf, "STATE: %4d       ", button_state);
-      ili9341_drawstring_7x13(buf, 120, 120);
+      lcd_printf(120, 120, "STATE: % 4d ", button_state);
       old_button_state = button_state;
     }
 
   }
-
+  lcd_set_font(FONT_SMALL);
   do {
     if (touch_check() == EVT_TOUCH_PRESSED){
       touch_position(&x0, &y0);
