@@ -82,7 +82,7 @@ enum {
 };
 
 #define NUMINPUT_LEN 12
-#if FF_USE_LFN
+#ifdef FF_USE_LFN
 #define TXTINPUT_LEN (FF_MAX_LFN - 4)
 #else
 #define TXTINPUT_LEN (8)
@@ -6602,9 +6602,11 @@ ui_process_lever(void)
 //  case UI_KEYPAD:
 //    ui_process_keypad();
 //    break;
+#ifdef __SD_FILE_BROWSER__
   case UI_BROWSER:
     ui_process_browser_lever();
     break;
+#endif
   }
 }
 
@@ -6942,9 +6944,11 @@ void ui_process_touch(void)
     case UI_MENU:
       menu_apply_touch(touch_x, touch_y);
       break;
+#ifdef __SD_FILE_BROWSER__
     case UI_BROWSER:
       browser_apply_touch(touch_x, touch_y);
       break;
+#endif
     }
   }
 }
