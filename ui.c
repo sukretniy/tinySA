@@ -4019,7 +4019,6 @@ static const menuitem_t menu_settings4[] =
   { MT_KEYPAD,   KM_DIRECT_STOP,     "DSTOP\n\b%s", ""},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
-#endif
 
 static const menuitem_t menu_settings3[] =
 {
@@ -4060,6 +4059,7 @@ static const menuitem_t menu_settings3[] =
 #endif  // TINYSA4
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
+#endif
 
 static const menuitem_t menu_settings2[] =
 {
@@ -4085,16 +4085,14 @@ static const menuitem_t menu_settings2[] =
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
-
+#ifdef TINYSA4
 static const menuitem_t menu_settings[] =
 {
-#ifdef TINYSA4
   { MT_ADV_CALLBACK,0,              "PROGRESS\nBAR",        menu_progress_bar_acb},
   { MT_ADV_CALLBACK,     0,         "DIRECT\nMODE",         menu_direct_acb},
   { MT_ADV_CALLBACK,     0,         "LINEAR\nAVERAGING",    menu_linear_averaging_acb},
   { MT_KEYPAD,      KM_FREQ_CORR,   "FREQ CORR\n\b%s",      "Enter ppb correction"},
 //  { MT_SUBMENU,     0,              "CALIBRATE\nHARMONIC",  menu_calibrate_harmonic},
-#endif
 #ifdef __NOISE_FIGURE__
   { MT_KEYPAD,      KM_NF,          "NF\n\b%s",             "Enter tinySA noise figure"},
 #endif
@@ -4105,11 +4103,10 @@ static const menuitem_t menu_settings[] =
   { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
 //  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
-#ifdef TINYSA4
   { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
-#endif
   { MT_NONE,        0, NULL, menu_back} // next-> menu_back
 };
+#endif
 
 #ifdef __NOISE_FIGURE__
 static const menuitem_t menu_measure_noise_figure[] =
