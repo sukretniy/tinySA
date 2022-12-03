@@ -345,7 +345,7 @@ extern const char * const unit_string[];
 extern uint16_t vbwSteps;
 #ifdef __ULTRA__
 extern freq_t ultra_start;
-extern bool ultra;
+//extern bool ultra;
 #endif
 #ifdef TINYSA4
 extern float measured_noise_figure;

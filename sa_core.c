@@ -68,7 +68,7 @@ int spur_gate = 100;
 
 #ifdef __ULTRA__
 freq_t ultra_start;
-bool ultra;
+//bool ultra;
 static int LO_harmonic;
 #endif
 #ifdef TINYSA4
@@ -384,7 +384,7 @@ void set_input_path(freq_t f)
       signal_path = PATH_HIGH;
   else if (config.direct && f >= config.direct_start && f < config.direct_stop)
     signal_path = PATH_DIRECT;
-  else if(ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
+  else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
       signal_path = PATH_ULTRA;
   else
     signal_path = PATH_LOW;
@@ -472,7 +472,7 @@ void update_min_max_freq(void)
   case M_LOW:
     minFreq = 0;
 #ifdef __ULTRA__
-    if (ultra)
+    if (config.ultra)
 #ifdef TINYSA4
       if (setting.harmonic)
         maxFreq = setting.harmonic * MAX_LO_FREQ - DEFAULT_IF; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
@@ -551,7 +551,6 @@ void reset_settings(int m)
   setting.level_meter = false;
 #ifdef __ULTRA__
   ultra_start = (config.ultra_start == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_start);
-  ultra = config.ultra;
 #endif
 #ifdef TINYSA4
   drive_dBm = (float *) (setting.mode == M_GENHIGH ? adf_drive_dBm : si_drive_dBm);
@@ -1052,21 +1051,6 @@ void toggle_below_IF(void)
     setting.below_IF = true;
   dirty = true;
 }
-
-#if 0
-#ifdef __ULTRA__
-void toggle_ultra(void)
-{
-  if (S_IS_AUTO(setting.ultra ))
-    setting.ultra = false;
-  else if (setting.ultra)
-    setting.ultra = S_AUTO_OFF;
-  else
-    setting.ultra = true;
-  dirty = true;
-}
-#endif
-#endif
 
 void set_modulation(int m)
 {
@@ -3867,7 +3851,7 @@ modulation_again:
 #ifdef TINYSA4
   local_IF = config.frequency_IF1;
 #if 0
-  if (setting.mode == M_LOW && setting.frequency_step > 0 && ultra &&
+  if (setting.mode == M_LOW && setting.frequency_step > 0 && config.ultra &&
       ((f < ULTRA_MAX_FREQ &&  f > MAX_LO_FREQ - local_IF) ||
        ( f > ultra_start && f < MIN_BELOW_LO + local_IF))
       ) {
@@ -3968,7 +3952,7 @@ again:                                                              // Spur redu
         } else {
 #ifdef __ULTRA__
           if (S_IS_AUTO(setting.spur_removal)) {
-            if (ultra && lf >= ultra_start) {
+            if (config.ultra && lf >= ultra_start) {
               setting.spur_removal= S_AUTO_ON;
             } else {
               setting.spur_removal= S_AUTO_OFF;
@@ -6073,7 +6057,6 @@ static freq_t direct_test_freq = 0;
 void determine_direct_test_freq(void) {
   int old_ultra = config.ultra;
   config.ultra = true;
-  ultra = true;
   float max_level = -150;
   set_refer_output(0);
   for (freq_t test_freq = 900000000UL; test_freq < 1000000000UL; test_freq += 30000000) {
@@ -6410,7 +6393,7 @@ void test_prepare(int i)
   setting.frequency_IF = DEFAULT_IF;                // Default frequency
 #endif
 #ifdef __ULTRA__
-  ultra = true;
+  config.ultra = true;
   ultra_start = 2000000000;
 #endif
   setting.auto_IF = true;
@@ -6650,6 +6633,10 @@ static int test_step = 0;
 void self_test(int test)
 {
   bool no_wait = false;
+#ifdef TINYSA4
+  bool old_ultra = config.ultra;
+  config.ultra = true;
+#endif
 //  set_sweep_points(POINTS_COUNT);
   if (test == 0) {
     if (test_wait ) {
@@ -6721,6 +6708,9 @@ void self_test(int test)
     if (!check_touched())
       return;
 quit:
+#ifdef TINYSA4
+  config.ultra = old_ultra;
+#endif
     sweep_mode = SWEEP_ENABLE;
     test_wait = false;
     if (setting.test_argument == 0) ili9341_clear_screen();
@@ -7434,6 +7424,7 @@ void calibrate_harmonic(void)
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 40, 200);
   quit:
+  config.ultra = old_ultra;
   ili9341_drawstring_7x13("Touch screen to continue", 40, 220);
   wait_user();
   ili9341_clear_screen();
@@ -7452,6 +7443,7 @@ void calibrate(void)
   reset_calibration();
 #ifdef TINYSA4
   int old_ultra = config.ultra;
+  config.ultra = true;
 //  setting.auto_IF = true;                         // set in selftest
 //  setting.frequency_IF = config.frequency_IF1;    // set in selftest
   float direct_level=0.0;
@@ -7525,7 +7517,6 @@ void calibrate(void)
 #ifdef TINYSA4
         config.ultra = true;          // Enable ultra
         maxFreq = 12000000000;
-        ultra = true;
         set_attenuation(0);
 #else
         set_attenuation(10);
@@ -7671,7 +7662,6 @@ low_level:
   setting.below_IF = S_AUTO_OFF;
   in_calibration = false;
 #ifdef TINYSA4
-  ultra = old_ultra;
   config.ultra = old_ultra;
 #endif
 
@@ -7702,10 +7692,16 @@ low_level:
 
 #endif
   config.input_is_calibrated = true;
+#ifdef TINYSA4
+  config.ultra = old_ultra;
+#endif
   config_save();
   ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
   ili9341_drawstring_7x13("Calibration complete", 40, 220);
 quit:
+#ifdef TINYSA4
+  config.ultra = old_ultra;
+#endif
   ili9341_drawstring_7x13("Touch screen to continue", 40, 240);
   wait_user();
   ili9341_clear_screen();
