@@ -323,6 +323,7 @@ enum {
 #define SWEEP_CALIBRATE_HARMONIC 0x40
 //#define SWEEP_FACTORY    0x20
 #endif
+#define SWEEP_UI_MODE   0x80
 
 extern uint8_t sweep_mode;
 extern uint8_t completed;

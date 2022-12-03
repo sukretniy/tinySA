@@ -218,8 +218,11 @@ static THD_FUNCTION(Thread1, arg)
     }
 //    START_PROFILE
     // Process UI inputs
-    if (!(sweep_mode & SWEEP_SELFTEST))
+    if (!(sweep_mode & SWEEP_SELFTEST)) {
+      sweep_mode|= SWEEP_UI_MODE;
       ui_process();
+      sweep_mode&=~SWEEP_UI_MODE;
+    }
     // Process collected data, calculate trace coordinates and plot only if scan
     // completed
     if (completed) {
@@ -2011,6 +2014,7 @@ typedef struct {
 // Some commands can executed only in sweep thread, not in main cycle
 #define CMD_WAIT_MUTEX  1
 #define CMD_RUN_IN_LOAD 2
+#define CMD_RUN_IN_UI   4
 static const VNAShellCommand commands[] =
 {
     {"version"     , cmd_version     , 0},
@@ -2059,7 +2063,7 @@ static const VNAShellCommand commands[] =
     {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
     {"usart_cfg"   , cmd_usart_cfg   , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
 #endif
-    {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
+    {"capture"     , cmd_capture     , CMD_WAIT_MUTEX | CMD_RUN_IN_UI},
 #ifdef __REMOTE_DESKTOP__
     {"refresh"     , cmd_refresh     , 0},
     {"touch"       , cmd_touch       , 0},
@@ -2404,7 +2408,10 @@ static void VNAShell_executeLine(char *line)
   // Execute line
   const VNAShellCommand *scp = VNAShell_parceLine(line);
   if (scp) {
-    if (scp->flags & CMD_WAIT_MUTEX) {
+    uint16_t cmd_flag = scp->flags;
+    // Skip wait mutex if process UI
+    if ((cmd_flag & CMD_RUN_IN_UI) && (sweep_mode&SWEEP_UI_MODE)) cmd_flag&=~CMD_WAIT_MUTEX;
+    if (cmd_flag & CMD_WAIT_MUTEX) {
       shell_function = scp->sc_function;
       operation_requested|=OP_CONSOLE;      // this will abort current sweep to give priority to the new request
       // Wait execute command in sweep thread
