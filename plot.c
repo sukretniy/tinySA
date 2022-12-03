@@ -1846,8 +1846,8 @@ draw_frequencies(void)
 #ifdef TINYSA4
   if (get_sweep_frequency(ST_STOP) > 2000000000ULL && setting.attenuate_x2 >= 16 ) {
     ili9341_drawstring("REDUCED LINEARITY", p2 - 18*7, FREQUENCIES_YPOS);
-  } else
-    ili9341_drawstring("                 ", p2 - 18*7, FREQUENCIES_YPOS);
+  }// else
+   // ili9341_drawstring("                 ", p2 - 18*7, FREQUENCIES_YPOS);
 #endif
 }
 
