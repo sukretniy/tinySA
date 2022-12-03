@@ -622,6 +622,9 @@ extern const uint8_t x7x11b_bits [];
 extern const uint8_t x10x14_bits[];
 extern const uint8_t numfont16x22[];
 
+#define FONT_SMALL            0
+#define FONT_NORMAL           1
+
 #define FONT_START_CHAR    0x16
 #define FONT_MAX_WIDTH        7
 #define FONT_WIDTH            5
@@ -1110,6 +1113,7 @@ void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
 void ili9341_drawstring_7x13(const char *str, int x, int y);
 void ili9341_drawstring_10x14(const char *str, int x, int y);
+void lcd_set_font(int type);
 int  lcd_printf(int16_t x, int16_t y, const char *fmt, ...);
 void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size, int x_max);

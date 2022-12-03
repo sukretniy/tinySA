@@ -543,9 +543,8 @@ show_version(void)
     do {shift>>=1; y+=5;} while (shift&1);
     ili9341_drawstring_7x13(info_about[i++], x, y+=bFONT_STR_HEIGHT+2-5);
   }
-  char buf[96];
-  plot_printf(buf, sizeof(buf), "HW Version:%s", get_hw_version_text());
-  ili9341_drawstring_7x13(buf, x, y+=bFONT_STR_HEIGHT);
+  lcd_set_font(FONT_NORMAL);
+  lcd_printf(x, y+=bFONT_STR_HEIGHT, "HW Version:%s", get_hw_version_text());
 
 extern const char *states[];
 #define ENABLE_THREADS_COMMAND
@@ -563,12 +562,10 @@ extern const char *states[];
 #else
     uint32_t stklimit = 0U;
 #endif
-    char buf[96];
-    plot_printf(buf, sizeof(buf), "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
+    lcd_printf(x, y+=bFONT_STR_HEIGHT, "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
              stklimit, (uint32_t)tp->ctx.sp, max_stack_use, (uint32_t)tp,
              (uint32_t)tp->refs - 1, (uint32_t)tp->prio, states[tp->state],
              tp->name == NULL ? "" : tp->name);
-    ili9341_drawstring_7x13(buf, x, y+=bFONT_STR_HEIGHT);
     tp = chRegNextThread(tp);
   } while (tp != NULL);
 #endif
@@ -587,8 +584,7 @@ extern const char *states[];
 #ifdef __USE_RTC__
     uint32_t tr = rtc_get_tr_bin(); // TR read first
     uint32_t dr = rtc_get_dr_bin(); // DR read second
-    char buf[96];
-    plot_printf(buf, sizeof(buf), "Time: 20%02d/%02d/%02d %02d:%02d:%02d" " (LS%c)",
+    lcd_printf(x, y, "Time: 20%02d/%02d/%02d %02d:%02d:%02d" " (LS%c)",
       RTC_DR_YEAR(dr),
       RTC_DR_MONTH(dr),
       RTC_DR_DAY(dr),
@@ -596,15 +592,14 @@ extern const char *states[];
       RTC_TR_MIN(dr),
       RTC_TR_SEC(dr),
       (RCC->BDCR & STM32_RTCSEL_MASK) == STM32_RTCSEL_LSE ? 'E' : 'I');
-    ili9341_drawstring_7x13(buf, x, y);
 #endif
 #if 0
     uint32_t vbat=adc_vbat_read();
-    plot_printf(buf, sizeof(buf), "Batt: %d.%03dV", vbat/1000, vbat%1000);
-    ili9341_drawstring_7x13(buf, x, y + bFONT_STR_HEIGHT + 1);
+    lcd_printf(x, y + bFONT_STR_HEIGHT + 1, "Batt: %d.%03dV", vbat/1000, vbat%1000);
 #endif
 #endif // TINYSA4
   }
+  lcd_set_font(FONT_SMALL);
 }
 
 #ifndef TINYSA4

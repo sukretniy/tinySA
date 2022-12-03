@@ -2649,7 +2649,7 @@ int main(void)
 #ifdef TINYSA4
   ili9341_set_foreground(LCD_FG_COLOR);
   PULSE
-  ili9341_drawstring("Starting...", 0,0);
+  ili9341_drawstring_7x13(0, 0, "Starting...");
   PULSE
 #ifdef __DISABLE_HOT_INSERT__
   sd_card_inserted_at_boot = SD_Inserted();

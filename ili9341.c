@@ -827,7 +827,7 @@ typedef struct {
   int16_t y;
 } lcdPrintStream;
 
-static msg_t lcd_put(void *ip, uint8_t ch) {
+static msg_t lcd_put5x7(void *ip, uint8_t ch) {
   lcdPrintStream *ps = ip;
   if (ch == '\n') {ps->x = ps->start_x; ps->y+=FONT_STR_HEIGHT; return MSG_OK;}
   uint16_t w = FONT_GET_WIDTH(ch);
@@ -836,23 +836,25 @@ static msg_t lcd_put(void *ip, uint8_t ch) {
   return MSG_OK;
 }
 
-#if 0
-static msg_t lcd_put_7x13(void *ip, uint8_t ch) {
+static msg_t lcd_put_7x11b(void *ip, uint8_t ch) {
   lcdPrintStream *ps = ip;
-  if (ch == '\n') {ps->x = ps->start_x; ps->y+=FONT_STR_HEIGHT; return MSG_OK;}
-  uint16_t w = FONT_GET_WIDTH(ch);
-  ili9341_blitBitmap(ps->x, ps->y, w, FONT_GET_HEIGHT, FONT_GET_DATA(ch));
+  if (ch == '\n') {ps->x = ps->start_x; ps->y+=bFONT_STR_HEIGHT; return MSG_OK;}
+  uint16_t w = bFONT_GET_WIDTH(ch);
+  ili9341_blitBitmap(ps->x, ps->y, w, bFONT_GET_HEIGHT, bFONT_GET_DATA(ch));
   ps->x+= w;
   return MSG_OK;
 }
-#endif
+
+typedef msg_t (*font_put_t)(void *ps, uint8_t ch);
+static font_put_t put_char = lcd_put5x7;
+void lcd_set_font(int type) {put_char = type == FONT_SMALL ? lcd_put5x7 : lcd_put_7x11b;}
 
 // Simple print in buffer function
 int lcd_printf(int16_t x, int16_t y, const char *fmt, ...) {
   // Init small lcd print stream
   struct lcd_printStreamVMT {
     _base_sequential_stream_methods
-  } lcd_vmt = {NULL, NULL, lcd_put, NULL};
+  } lcd_vmt = {NULL, NULL, put_char, NULL};
   lcdPrintStream ps = {&lcd_vmt, x, y, x, y};
   // Performing the print operation using the common code.
   va_list ap;

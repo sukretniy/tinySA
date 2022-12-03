@@ -51,7 +51,7 @@ static void browser_draw_button(int idx, const char *txt) {
   b.border = (idx == selection) ? BROWSER_BUTTON_BORDER|BUTTON_BORDER_FALLING : BROWSER_BUTTON_BORDER|BUTTON_BORDER_RISE;
   if (txt == NULL) b.border|= BUTTON_BORDER_NO_FILL;
   draw_button(btn.x, btn.y, btn.w, btn.h, &b);
-  if (txt) ili9341_drawstring_7x13(txt, btn.x + btn.ofs, btn.y + (btn.h - FONT_STR_HEIGHT) / 2);
+  if (txt) ili9341_drawstring_7x13(txt, btn.x + btn.ofs, btn.y + (btn.h - bFONT_STR_HEIGHT) / 2);
 }
 
 static char to_lower(char c) {return (c >='A' && c <= 'Z') ? c - 'A' + 'a' : c;}
@@ -148,7 +148,7 @@ repeat:
       swap_bytes(buf_16, LCD_WIDTH);
       ili9341_bulk(0, y, LCD_WIDTH, 1);
     }
-    ili9341_drawstring_7x13(fno.fname, 0, LCD_HEIGHT - 3*FONT_STR_HEIGHT);
+    ili9341_drawstring_7x13(fno.fname, 0, LCD_HEIGHT - 3*bFONT_STR_HEIGHT);
   }
   break;
   /*
@@ -245,6 +245,7 @@ static void browser_draw_page(int page) {
   uint16_t start_file = (page - 1) * FILES_PER_PAGE;
   ili9341_set_background(LCD_MENU_COLOR);
   ili9341_clear_screen();
+  lcd_set_font(FONT_NORMAL);
   while (sd_findnext(&dj, &fno) == FR_OK) {
     if (cnt >= start_file && cnt < (start_file + FILES_PER_PAGE)) {
       //uint16_t sec = ((fno.ftime<<1)  & 0x3F);
@@ -266,7 +267,8 @@ static void browser_draw_page(int page) {
     page_count = cnt == 0 ? 1 : (file_count + FILES_PER_PAGE - 1) / FILES_PER_PAGE;
   }
   browser_draw_buttons();
-  lcd_printf(LCD_WIDTH / 2 - 3 * FONT_WIDTH, LCD_HEIGHT - (FILE_BOTTOM_HEIGHT + FONT_STR_HEIGHT) / 2, "- %u | %u -", page, page_count);
+  lcd_printf(LCD_WIDTH / 2 - 3 * bFONT_WIDTH, LCD_HEIGHT - (FILE_BOTTOM_HEIGHT + bFONT_STR_HEIGHT) / 2, "- %u | %u -", page, page_count);
+  lcd_set_font(FONT_SMALL);
   return;
 }
 
