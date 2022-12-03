@@ -99,9 +99,6 @@ static int8_t  kp_index = 0;
 static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int  selection = 0;
-
-static void save_csv(uint8_t mask);
-
 static const uint8_t slider_bitmap[]=
 {
   _BMP8(0b11111110),
@@ -164,6 +161,10 @@ static void choose_active_marker(void);
 static void menu_move_back(bool leave_ui);
 static void draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b);
 //static const menuitem_t menu_marker_type[];
+
+#ifdef __USE_SD_CARD__
+static void save_csv(uint8_t mask);
+#endif
 
 bool isFullScreenMode(void) {
 #ifdef __SD_FILE_BROWSER__
@@ -1213,6 +1214,7 @@ static const keypads_t keypads_time[] = {
   { 0x23, KP_BS }
 };
 
+#ifdef __USE_SD_CARD__
 static const keypads_t keypads_text[] = {
   {40, TXT_KEYBOARD },   // size and position
   {0x00, '1'}, {0x10, '2'}, {0x20, '3'}, {0x30, '4'}, {0x40, '5'}, {0x50, '6'}, {0x60, '7'}, {0x70, '8'}, {0x80, '9'}, {0x90, '0'},
@@ -1220,6 +1222,7 @@ static const keypads_t keypads_text[] = {
   {0x02, 'A'}, {0x12, 'S'}, {0x22, 'D'}, {0x32, 'F'}, {0x42, 'G'}, {0x52, 'H'}, {0x62, 'J'}, {0x72, 'K'}, {0x82, 'L'}, {0x92, '_'},
   {0x03, '-'}, {0x13, 'Z'}, {0x23, 'X'}, {0x33, 'C'}, {0x43, 'V'}, {0x53, 'B'}, {0x63, 'N'}, {0x73, 'M'}, {0x83, C_LARROW}, {0x93, C_ENTER},
 };
+#endif
 
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, // These must be first to share common help text
@@ -2873,7 +2876,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     return;
     break;
 
-#ifdef TINYSA4
+#ifdef __USE_SD_CARD__
     case 6:
       save_csv(1+(2<<current_trace));      // frequencies + trace
       break;
