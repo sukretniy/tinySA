@@ -1831,7 +1831,7 @@ draw_frequencies(void)
   }
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
-  ili9341_fill(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, LCD_WIDTH - FREQUENCIES_XPOS1, LCD_HEIGHT - FREQUENCIES_YPOS);
+  ili9341_fill(FREQUENCIES_XPOS1, CHART_BOTTOM + 1, LCD_WIDTH - FREQUENCIES_XPOS1, LCD_HEIGHT - CHART_BOTTOM - 1);
   if (uistat.lever_mode == LM_CENTER)
     buf1[0] = S_SARROW[0];
   if (uistat.lever_mode == LM_SPAN)
