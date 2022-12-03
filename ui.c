@@ -1031,6 +1031,7 @@ const uint8_t right_icons [] =
 #define KP_u         22
 #define KP_n         23
 #define KP_p         24
+#define KP_ENTER     25
 
 #define KP_0    31
 #define KP_1    32
@@ -1107,7 +1108,7 @@ static const keypads_t keypads_positive[] = {
   { 0x00, 7 },
   { 0x10, 8 },
   { 0x20, 9 },
-  { 0x33, KP_X1 },
+  { 0x33, KP_ENTER },
   { 0x23, KP_BS }
 };
 
@@ -6409,6 +6410,7 @@ ui_process_menu_lever(void)
 static int
 num_keypad_click(int c)
 {
+  if (c == KP_ENTER) c = KP_X1;
   if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u || c == KP_n) {
 #if 0
     float scale = 1.0;
