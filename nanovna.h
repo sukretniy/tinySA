@@ -90,7 +90,7 @@
 #define __ULTRA__
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
-#define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root)
+//#define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root), if enabled __SD_FILE_BROWSER__ scripts run from *.cmd in it
 #define __SD_CARD_DUMP_FIRMWARE__ // Allow dump firmware to SD card
 #define __SD_FILE_BROWSER__
 #define __LCD_BRIGHTNESS__        // LCD or hardware allow change brightness, add menu item for this
@@ -829,6 +829,7 @@ extern void clear_marker_cache(void);
 void shell_update_speed(void);
 void shell_reset_console(void);
 int  shell_serial_printf(const char *fmt, ...);
+void shell_executeCMDLine(char *line);
 
 // marker
 enum {
@@ -1646,6 +1647,7 @@ typedef struct {
 /*
  * misclinous
  */
+int parse_line(char *line, char* args[], int max_cnt);
 int plot_printf(char *str, int, const char *fmt, ...);
 #define PULSE do { palClearPad(GPIOC, GPIOC_LED); palSetPad(GPIOC, GPIOC_LED);} while(0)
 //extern int setting_attenuate;

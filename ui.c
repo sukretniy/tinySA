@@ -3566,9 +3566,7 @@ enum {
 #ifdef __SD_CARD_DUMP_FIRMWARE__
   FMT_BIN_FILE,
 #endif
-//#ifdef __SD_CARD_LOAD__
-//  FMT_CMD_FILE,
-//#endif
+  FMT_CMD_FILE,
   FMT_CFG_FILE,
   FMT_PRS_FILE,
 };
@@ -3580,9 +3578,7 @@ static const char *file_ext[] = {
 #ifdef __SD_CARD_DUMP_FIRMWARE__
   [FMT_BIN_FILE] = "bin",
 #endif
-//#ifdef __SD_CARD_LOAD__
-//  [FMT_CMD_FILE] = "cmd",
-//#endif
+  [FMT_CMD_FILE] = "cmd",
   [FMT_CFG_FILE] = "cfg",
   [FMT_PRS_FILE] = "prs",
 };
@@ -4099,6 +4095,13 @@ static const menuitem_t menu_settings[] =
 #ifdef __NOISE_FIGURE__
   { MT_KEYPAD,      KM_NF,          "NF\n\b%s",             "Enter tinySA noise figure"},
 #endif
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+  { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",       menu_sdcard_cb},
+#endif
+#ifdef __SD_CARD_LOAD__
+  { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
+//  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
+#endif
 #ifdef TINYSA4
   { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
 #endif
@@ -4380,20 +4383,11 @@ static const menuitem_t menu_stimulus[] = {
 
 #ifdef __USE_SD_CARD__
 static const menuitem_t menu_storage[] = {
-#ifdef __SD_CARD_LOAD__
-  { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
-//  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
-#endif
-#ifdef __USE_SD_CARD__
-#ifdef __SD_CARD_DUMP_FIRMWARE__
-  { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",       menu_sdcard_cb},
-#endif
 #ifdef __SD_FILE_BROWSER__
   { MT_CALLBACK, FMT_BMP_FILE,      "LOAD BMP",             menu_sdcard_browse_cb },
+  { MT_CALLBACK, FMT_CMD_FILE,      "LOAD CMD",             menu_sdcard_browse_cb },
 #endif
-
   { MT_ADV_CALLBACK, 0,             "AUTO NAME",            menu_autoname_acb },
-#endif
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 #endif
