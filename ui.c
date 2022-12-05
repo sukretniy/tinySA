@@ -1166,7 +1166,7 @@ static const keypads_t keypads_plusmin_unit[] = {
 // 1 2 3 -
 // 0 . < x
 static const keypads_t keypads_plusmin[] = {
-  { 14 ,  NUM_KEYBOARD },   // size and position
+  { 16 ,  NUM_KEYBOARD },   // size and position
   { 0x13, KP_PERIOD },
   { 0x03, 0 },
   { 0x02, 1 },
