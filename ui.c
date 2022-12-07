@@ -95,7 +95,6 @@ static char    kp_buf[TXTINPUT_LEN+1];  // !!!!!! WARNING size must be + 2 from 
 #endif
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
-static int8_t  kp_index = 0;
 static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int  selection = 0;
@@ -1161,12 +1160,12 @@ static const keypads_t keypads_plusmin_unit[] = {
   { 0x23, KP_BS }
 };
 
-// 7 8 9
-// 4 5 6
+// 7 8 9 u
+// 4 5 6 m
 // 1 2 3 -
 // 0 . < x
 static const keypads_t keypads_plusmin[] = {
-  { 16 ,  NUM_KEYBOARD },   // size and position
+  { 16,  NUM_KEYBOARD },   // size and position
   { 0x13, KP_PERIOD },
   { 0x03, 0 },
   { 0x02, 1 },
@@ -5630,7 +5629,7 @@ menu_is_multiline(const char *label)
   return n;
 }
 
-static int period_pos(void) {int j; for (j = 0; j < kp_index && kp_buf[j] != '.'; j++); return j;}
+static int period_pos(void) {int j; for (j = 0; kp_buf[j] && kp_buf[j] != '.'; j++); return j;}
 
 static void
 draw_numeric_input(const char *buf)
@@ -6408,7 +6407,7 @@ ui_process_menu_lever(void)
 }
 
 static int
-num_keypad_click(int c)
+num_keypad_click(int c, int kp_index)
 {
   if (c == KP_ENTER) c = KP_X1;
   if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u || c == KP_n) {
@@ -6492,7 +6491,7 @@ num_keypad_click(int c)
 }
 
 static int
-full_keypad_click(int c)
+full_keypad_click(int c, int kp_index)
 {
   if (c == S_ENTER[0]) { // Enter
     return kp_index == 0 ? KP_CANCEL : KP_DONE;
@@ -6512,7 +6511,8 @@ full_keypad_click(int c)
 static int
 keypad_click(int key) {
   int c = keypads[key+1].c;  // !!! Use key + 1 (zero key index used or size define)
-  int result = keypads[0].c == NUM_KEYBOARD ? num_keypad_click(c) : full_keypad_click(c);
+  int index = strlen(kp_buf);
+  int result = keypads[0].c == NUM_KEYBOARD ? num_keypad_click(c, index) : full_keypad_click(c, index);
   return result;
 }
 
@@ -6544,8 +6544,8 @@ static void
 ui_process_keypad(void)
 {
   int status;
-  kp_index = 0;
   int keypads_last_index = keypads[0].pos - 1;
+  kp_buf[0] = 0;
   while (TRUE) {
     status = btn_check();
     if (status & (EVT_UP|EVT_DOWN)) {
@@ -6717,7 +6717,7 @@ static void sa_save_file(uint8_t format) {
   }
   else {
     ui_mode_keypad(KM_FILENAME);
-    if (kp_index == 0) return;
+    if (kp_buf[0] == 0) return;
     plot_printf(fs_filename, FF_LFN_BUF, "%s.%s", kp_buf, file_ext[format]);
   }
 
