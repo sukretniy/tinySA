@@ -2004,10 +2004,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
   case 0:
     setting.mixer_output = false;
     dirty = true;
+    update_min_max_freq();
+    set_sweep_frequency(ST_CENTER,get_sweep_frequency(ST_CENTER)); // Just to update center if above 4.4GHz
     break;
   case 1:
     setting.mixer_output = true;
     dirty = true;
+    update_min_max_freq();
     break;
   }
   menu_move_back(false);
