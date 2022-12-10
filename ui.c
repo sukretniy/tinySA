@@ -1773,10 +1773,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
     b->param_1.u = data;
     return;
   }
-  if (data == 100) {
+  if (data >= 100) {
     reset_settings(M_LOW);  // Restore all defaults in Low mode
     set_refer_output(-1);
  //   setting.mode = -1;
+    if (data == 101) clear_backup();
     data = 0;
   }
   caldata_save(data);
@@ -3287,6 +3288,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_pulse_acb){
   toggle_pulse();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_save_state_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = (config._mode & _MODE_DONT_SAVE_STATE) ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  config._mode ^= _MODE_DONT_SAVE_STATE;
+  config_save();
+}
+
 #ifdef __DRAW_LINE__
 static UI_FUNCTION_ADV_CALLBACK(menu_settings_draw_line_acb){
   (void)item;
@@ -3511,7 +3523,6 @@ static const menuitem_t menu_store_preset[] =
 {
   { MT_ADV_CALLBACK, 0,  "STORE AS\nSTARTUP",menu_store_preset_acb},
   { MT_ADV_CALLBACK |MT_REPEATS,  DATA_STARTS_REPEATS(1,4),  "STORE %d",         menu_store_preset_acb},
-  { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
   { MT_NONE,     0,     NULL,menu_back} // next-> menu_back
 };
 
@@ -3519,6 +3530,8 @@ static const menuitem_t menu_load_preset[] =
 {
   { MT_ADV_CALLBACK,            0,                          "LOAD\nSTARTUP", menu_load_preset_acb},
   { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,4),   MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_ADV_CALLBACK,            101,                        "LOAD\nDEFAULTS",menu_store_preset_acb},
+  { MT_ADV_CALLBACK,            _MODE_DONT_SAVE_STATE,      "SAVE\nSTATE",   menu_save_state_acb},
   { MT_SUBMENU,                 0,                          "STORE"  ,       menu_store_preset},
   { MT_NONE,     0,     NULL, menu_back} // next-> menu_back
 };

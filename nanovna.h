@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -248,6 +248,7 @@ float my_atof(const char *p);
 freq_t my_atoui(const char *p);
 int shell_printf(const char *fmt, ...);
 int usage_printf(const char *fmt, ...);
+void clear_backup(void);
 
 #ifdef __REMOTE_DESKTOP__
 extern uint8_t remote_mouse_down;
@@ -717,6 +718,8 @@ float marker_to_value(const int i);
 #define _MODE_CONNECTION_MASK  0x04
 #define _MODE_SERIAL           0x04
 #define _MODE_USB              0x00
+
+#define _MODE_DONT_SAVE_STATE   0x08
 
 #pragma pack(push, 4)
 typedef struct config {
