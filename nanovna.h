@@ -732,7 +732,6 @@ float marker_to_value(const int i);
 #define _MODE_CONNECTION_MASK  0x04
 #define _MODE_SERIAL           0x04
 #define _MODE_USB              0x00
-
 // don't save state
 #define _MODE_DONT_SAVE_STATE   0x08
 // auto name
