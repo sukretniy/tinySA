@@ -3211,6 +3211,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
     return;
   }
   set_harmonic(data);
+  config_save();
 }
 #endif
 
@@ -4101,6 +4102,9 @@ static const menuitem_t menu_settings[] =
   { MT_ADV_CALLBACK,0,              "PROGRESS\nBAR",        menu_progress_bar_acb},
   { MT_ADV_CALLBACK,     0,         "DIRECT\nMODE",         menu_direct_acb},
   { MT_ADV_CALLBACK,     0,         "LINEAR\nAVERAGING",    menu_linear_averaging_acb},
+#ifdef __HARMONIC__
+  { MT_SUBMENU          ,0,         "HARMONIC",             menu_harmonic},
+#endif
   { MT_KEYPAD,      KM_FREQ_CORR,   "FREQ CORR\n\b%s",      "Enter ppb correction"},
 //  { MT_SUBMENU,     0,              "CALIBRATE\nHARMONIC",  menu_calibrate_harmonic},
 #ifdef __NOISE_FIGURE__
