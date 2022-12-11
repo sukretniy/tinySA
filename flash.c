@@ -64,7 +64,7 @@ void flash_unlock(void)
   FLASH->KEYR = 0xCDEF89AB;
 }
 
-static uint32_t
+uint32_t
 checksum(const void *start, size_t len)
 {
   uint32_t *p = (uint32_t*)start;

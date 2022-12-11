@@ -226,8 +226,11 @@ static THD_FUNCTION(Thread1, arg)
     }
 //    START_PROFILE
     // Process UI inputs
-    if (!(sweep_mode & SWEEP_SELFTEST))
+    if (!(sweep_mode & SWEEP_SELFTEST)) {
+      sweep_mode|= SWEEP_UI_MODE;
       ui_process();
+      sweep_mode&=~SWEEP_UI_MODE;
+    }
     // Process collected data, calculate trace coordinates and plot only if scan
     // completed
     if (completed) {
@@ -961,7 +964,7 @@ config_t config = {
 #ifdef TINYSA4
   .touch_cal =          { 278, 513, 115, 154 }, // 4 inch panel
 #endif
-  ._mode     = _MODE_USB,
+  ._mode     = _MODE_USB | _MODE_AUTO_FILENAME,
   ._serial_speed = SERIAL_DEFAULT_BITRATE,
   .lcd_palette = LCD_DEFAULT_PALETTE,
 #ifdef TINYSA3
@@ -2019,6 +2022,7 @@ typedef struct {
 // Some commands can executed only in sweep thread, not in main cycle
 #define CMD_WAIT_MUTEX  1
 #define CMD_RUN_IN_LOAD 2
+#define CMD_RUN_IN_UI   4
 static const VNAShellCommand commands[] =
 {
     {"version"     , cmd_version     , 0},
@@ -2067,13 +2071,13 @@ static const VNAShellCommand commands[] =
     {"usart"       , cmd_usart       , CMD_WAIT_MUTEX},
     {"usart_cfg"   , cmd_usart_cfg   , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
 #endif
-    {"capture"     , cmd_capture     , CMD_WAIT_MUTEX},
+    {"capture"     , cmd_capture     , CMD_WAIT_MUTEX | CMD_RUN_IN_UI},
 #ifdef __REMOTE_DESKTOP__
     {"refresh"     , cmd_refresh     , 0},
     {"touch"       , cmd_touch       , 0},
     {"release"     , cmd_release     , 0},
 #endif
-    {"vbat"        , cmd_vbat        , 0},     // Uses same adc as touch!!!!!
+    {"vbat"        , cmd_vbat        , CMD_WAIT_MUTEX},     // Uses same adc as touch!!!!!
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
     {"vbat_offset" , cmd_vbat_offset , CMD_RUN_IN_LOAD},
 #endif
@@ -2322,37 +2326,48 @@ static void shell_init_connection(void){
 
 bool global_abort = false;
 
+static inline char* vna_strpbrk(char *s1, const char *s2) {
+  do {
+    const char *s = s2;
+    do {
+      if (*s == *s1) return s1;
+      s++;
+    } while (*s);
+    s1++;
+  } while(*s1);
+  return s1;
+}
+
+/*
+ * Split line by arguments, return arguments count
+ */
+int parse_line(char *line, char* args[], int max_cnt) {
+  char *lp = line, c;
+  const char *brk;
+  uint16_t nargs = 0;
+  while ((c = *lp) != 0) {                   // While not end
+    if (c != ' ' && c != '\t') {             // Skipping white space and tabs.
+      if (c == '"') {lp++; brk = "\""; }     // string end is next quote or end
+      else          {      brk = " \t";}     // string end is tab or space or end
+      if (nargs < max_cnt) args[nargs] = lp; // Put pointer in args buffer (if possible)
+      nargs++;                               // Substring count
+      lp = vna_strpbrk(lp, brk);             // search end
+      if (*lp == 0) break;                   // Stop, end of input string
+      *lp = 0;                               // Set zero at the end of substring
+    }
+    lp++;
+  }
+  return nargs;
+}
+
 static const VNAShellCommand *VNAShell_parceLine(char *line){
   // Parse and execute line
-  char *lp = line, *ep;
-  shell_nargs = 0;
-  shell_args[0] = line;     // shell_args[0] is used in error message, must be initialized
-//  DEBUG_LOG(0, lp); // debug console log
-  while (*lp != 0) {
-    // Skipping white space and tabs at string begin.
-    while (*lp == ' ' || *lp == '\t') lp++;
-    // If an argument starts with a double quote then its delimiter is another quote, else
-    // delimiter is white space.
-    ep = (*lp == '"') ? strpbrk(++lp, "\"") : strpbrk(lp, " \t");
-    // Store in args string
-    shell_args[shell_nargs++] = lp;
-    // Stop, end of input string
-    if ((lp = ep) == NULL) break;
-    // Argument limits check
-    if (shell_nargs > VNA_SHELL_MAX_ARGUMENTS) {
-      shell_printf("too many arguments, max " define_to_STR(VNA_SHELL_MAX_ARGUMENTS) "" VNA_SHELL_NEWLINE_STR);
-      return NULL;
-    }
-    // Set zero at the end of string and continue check
-    *lp++ = 0;
+  shell_nargs = parse_line(line, shell_args, ARRAY_COUNT(shell_args));
+  if (shell_nargs > ARRAY_COUNT(shell_args)) {
+    shell_printf("too many arguments, max " define_to_STR(VNA_SHELL_MAX_ARGUMENTS) "" VNA_SHELL_NEWLINE_STR);
+    return NULL;
   }
-  if (shell_nargs){
-    if (shell_args[0][0] == '.') {
-      global_abort = true;
-      return NULL;
-    }
-    global_abort = false;
-
+  if (shell_nargs > 0) {
     const VNAShellCommand *scp;
     for (scp = commands; scp->sc_name != NULL; scp++)
       if (get_str_index(scp->sc_name, shell_args[0]) == 0)
@@ -2401,14 +2416,16 @@ static void VNAShell_executeLine(char *line)
   // Execute line
   const VNAShellCommand *scp = VNAShell_parceLine(line);
   if (scp) {
-    if (scp->flags & CMD_WAIT_MUTEX) {
+    uint16_t cmd_flag = scp->flags;
+    // Skip wait mutex if process UI
+    if ((cmd_flag & CMD_RUN_IN_UI) && (sweep_mode&SWEEP_UI_MODE)) cmd_flag&=~CMD_WAIT_MUTEX;
+    if (cmd_flag & CMD_WAIT_MUTEX) {
       shell_function = scp->sc_function;
       operation_requested|=OP_CONSOLE;      // this will abort current sweep to give priority to the new request
       // Wait execute command in sweep thread
-      osalThreadEnqueueTimeoutS(&shell_thread, TIME_INFINITE);
-//      do {
-//        osalThreadSleepMilliseconds(10);
-//      } while (shell_function);
+      do {
+        osalThreadEnqueueTimeoutS(&shell_thread, TIME_INFINITE);
+      } while (shell_function);
     } else {
       operation_requested = false; // otherwise commands  will be aborted
       scp->sc_function(shell_nargs - 1, &shell_args[1]);
@@ -2423,6 +2440,15 @@ static void VNAShell_executeLine(char *line)
     return;
   }
   shell_printf("%s?" VNA_SHELL_NEWLINE_STR, shell_args[0]);
+}
+
+void shell_executeCMDLine(char *line) {
+  // Disable shell output (not allow shell_printf write, but not block other output!!)
+  shell_stream = NULL;
+  const VNAShellCommand *scp = VNAShell_parceLine(line);
+  if (scp && (scp->flags & CMD_RUN_IN_LOAD))
+    scp->sc_function(shell_nargs - 1, &shell_args[1]);
+  PREPARE_STREAM;
 }
 
 #ifdef __SD_CARD_LOAD__
@@ -2630,7 +2656,7 @@ int main(void)
 #ifdef TINYSA4
   ili9341_set_foreground(LCD_FG_COLOR);
   PULSE
-  ili9341_drawstring("Starting...", 0,0);
+  ili9341_drawstring_7x13("Starting...", 0, 0);
   PULSE
 #ifdef __DISABLE_HOT_INSERT__
   sd_card_inserted_at_boot = SD_Inserted();

@@ -492,7 +492,10 @@ void update_min_max_freq(void)
     minFreq = 0;
 #ifdef TINYSA4
 #ifdef __ULTRA_OUT__
-    maxFreq = ULTRA_MAX_FREQ+60000000; // Add 60MHz to go to 5.40GHz
+    if (setting.mixer_output)
+      maxFreq = ULTRA_MAX_FREQ+60000000; // Add 60MHz to go to 5.40GHz
+    else
+      maxFreq = 4400000000ULL; // 4.4GHz
 #else
     maxFreq = MAX_LOW_OUTPUT_FREQ;
 #endif
@@ -4413,6 +4416,25 @@ again:                                                              // Spur redu
       my_microsecond_delay(200);                 // To prevent lockup of SI4432
 #endif
     }
+
+
+    // Calculate the RSSI correction for later use
+    if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
+      if (setting.frequency_step != 0 || (i==0 && scandirty)) {
+        correct_RSSI_freq = get_frequency_correction(lf);
+      }
+    }
+  // #define DEBUG_CORRECTION
+  #ifdef DEBUG_CORRECTION
+    if (SDU1.config->usbp->state == USB_ACTIVE) {
+      shell_printf ("%d:%Q %f\r\n", i, lf, PURE_TO_float(correct_RSSI_freq));
+      osalThreadSleepMilliseconds(2);
+    }
+  #endif
+
+
+
+
 #ifdef TINYSA4
     if (debug_frequencies ) {
 
@@ -4437,45 +4459,32 @@ again:                                                              // Spur redu
      }
      char spur = ' ';
      int delta=0;
-     freq_t f = (LO_mirrored ? f_high : f_low);
-     if ( f * 4 < real_old_freq[SI4463_RX] + real_offset) {
-       delta = real_old_freq[SI4463_RX] + real_offset - 4*f;
+     freq_t tf = (LO_mirrored ? f_high : f_low);
+     if ( tf * 4 < real_old_freq[SI4463_RX] + real_offset) {
+       delta = real_old_freq[SI4463_RX] + real_offset - 4*tf;
        if (delta < actual_rbw_x10*100)
          spur = '!';
      } else {
-       delta = 4*f - real_old_freq[SI4463_RX] + real_offset;
+       delta = 4*tf - real_old_freq[SI4463_RX] + real_offset;
        if (delta < actual_rbw_x10*100)
          spur = '!';
      }
      char shifted = ( LO_spur_shifted ? '>' : ' ');
      if (SDU1.config->usbp->state == USB_ACTIVE)
-       shell_printf ("%d:%c%c%c%cLO=%11.6Lq:%11.6Lq\tIF=%11.6Lq:%11.6Lq\tOF=%11.6d\tF=%11.6Lq:%11.6Lq\tD=%.2f:%.2f %c%c%c\r\n",
+       shell_printf ("%d:%c%c%c%cLO=%11.6Lq:%11.6Lq\tIF=%11.6Lq:%11.6Lq\tOF=%11.6d\tF=%11.6Lq:%11.6Lq\tD=%.2f:%.2f %c%c%c %d\r\n",
                      i,   spur, shifted,(LO_mirrored ? 'm' : ' '), (LO_harmonic ? 'h':' ' ),
                      old_freq[ADF4351_LO],real_old_freq[ADF4351_LO],
                      old_freq[SI4463_RX], real_old_freq[SI4463_RX], (int32_t)real_offset, f_low, f_high , f_error_low, f_error_high,
                      (ADF4351_frequency_changed? 'A' : ' '),
                      (SI4463_frequency_changed? 'S' : ' '),
-                     (SI4463_offset_changed? 'O' : ' ')
-                                          );
+                     (SI4463_offset_changed? 'O' : ' '),
+                     correct_RSSI_freq
+                    );
      osalThreadSleepMilliseconds(100);
     }
 #endif
     // ------------------------- end of processing when in output mode ------------------------------------------------
 
-
-    // Calculate the RSSI correction for later use
-    if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
-      if (setting.frequency_step != 0 || (i==0 && scandirty)) {
-        correct_RSSI_freq = get_frequency_correction(f);
-      }
-    }
-  // #define DEBUG_CORRECTION
-  #ifdef DEBUG_CORRECTION
-    if (SDU1.config->usbp->state == USB_ACTIVE) {
-      shell_printf ("%d:%Q %f\r\n", i, f, PURE_TO_float(correct_RSSI_freq));
-      osalThreadSleepMilliseconds(2);
-    }
-  #endif
 
 
     skip_LO_setting:
@@ -4613,7 +4622,7 @@ again:                                                              // Spur redu
 #ifdef TINYSA4
     if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
       int my_step_delay = SI4432_step_delay;
-      if (f < LOW_SHIFT_FREQ && actual_rbw_x10 == 3 && !in_step_test)
+      if (lf < LOW_SHIFT_FREQ && actual_rbw_x10 == 3 && !in_step_test)
         my_step_delay = my_step_delay * 2;
 //      if (LO_spur_shifted) // || SI4463_offset_changed)
 //        my_step_delay = my_step_delay * 2;
@@ -4676,6 +4685,11 @@ again:                                                              // Spur redu
         if (LO_shifting)
           pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : (lf < LOW_SHIFT_FREQ ? config.shift1_level_offset: 0.0));
       }
+      if (setting.unit == U_RAW)
+        pureRSSI += - float_TO_PURE_RSSI(120); // don't add correction;
+      else
+        pureRSSI += correct_RSSI + correct_RSSI_freq; // add correction
+
 //#define __DEBUG_FREQUENCY_SETTING__
 #ifdef __DEBUG_FREQUENCY_SETTING__                 // For debugging the frequency calculation
   stored_t[i] = -60.0 + (real_old_freq[ADF4351_LO] - f - old_freq[2])/10;
@@ -4687,7 +4701,7 @@ again:                                                              // Spur redu
 //      i = i + 1;
 //   }
 #ifdef __ULTRA__
-    float debug_rssi = PURE_TO_float(pureRSSI+ correct_RSSI + correct_RSSI_freq);
+    float debug_rssi = PURE_TO_float(pureRSSI);
 #endif
 #ifdef __SPUR__
     static pureRSSI_t spur_RSSI = -1;                               // Initialization only to avoid warning.
@@ -4733,11 +4747,7 @@ again:                                                              // Spur redu
  // }
 #define IGNORE_RSSI 30000
 //  pureRSSI_t rssi = (RSSI>0 ? RSSI + correct_RSSI + correct_RSSI_freq : IGNORE_RSSI); // add correction
-  pureRSSI_t rssi;
-  if (setting.unit == U_RAW)
-    rssi = RSSI - float_TO_PURE_RSSI(120); // don't add correction;
-  else
-    rssi = RSSI + correct_RSSI + correct_RSSI_freq; // add correction
+  pureRSSI_t rssi = RSSI;
   if (false) {
   abort:
     rssi = 0;
@@ -7405,7 +7415,7 @@ void calibrate_harmonic(void)
     test_acquire(TEST_JUMP_HARMONIC);                        // Acquire test
     if (peakLevel < -50) {
       ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
-      ili9341_drawstring_7x13("Signal level too low", 30, 200);
+      ili9341_drawstring_7x13("Signal level too low or not on frequency", 30, 200);
       goto quit;
     }
     set_jump_config(i, get_jump_config(i) + measure_jump(i));

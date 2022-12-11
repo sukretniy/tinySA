@@ -90,7 +90,9 @@
 #define __ULTRA__
 #define __USE_RTC__               // Enable RTC clock
 #define __USE_SD_CARD__           // Enable SD card support
-#define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root)
+//#define __SD_CARD_LOAD__          // Allow run commands from SD card (config.ini in root), if enabled __SD_FILE_BROWSER__ scripts run from *.cmd in it
+#define __SD_CARD_DUMP_FIRMWARE__ // Allow dump firmware to SD card
+#define __SD_FILE_BROWSER__
 #define __LCD_BRIGHTNESS__        // LCD or hardware allow change brightness, add menu item for this
 #define __HARMONIC__
 #define __NOISE_FIGURE__
@@ -322,6 +324,7 @@ enum {
 #define SWEEP_CALIBRATE_HARMONIC 0x40
 //#define SWEEP_FACTORY    0x20
 #endif
+#define SWEEP_UI_MODE   0x80
 
 extern uint8_t sweep_mode;
 extern uint8_t completed;
@@ -584,6 +587,14 @@ extern uint16_t graph_bottom;
 
 #define MENU_BUTTON_HEIGHT_N(n)   (LCD_HEIGHT/(n)-1)
 
+#define BROWSER_BUTTON_BORDER         1
+// Browser window settings
+#define FILES_COLUMNS               (LCD_WIDTH/160)                                // columns in browser
+#define FILES_ROWS                   10                                            // rows in browser
+#define FILES_PER_PAGE              (FILES_COLUMNS*FILES_ROWS)                     // FILES_ROWS * FILES_COLUMNS
+#define FILE_BOTTOM_HEIGHT           20                                            // Height of bottom buttons (< > X)
+#define FILE_BUTTON_HEIGHT          ((LCD_HEIGHT - FILE_BOTTOM_HEIGHT)/FILES_ROWS) // Height of file buttons
+
 // Define message box width
 #ifdef TINYSA4
 #define MESSAGE_BOX_WIDTH     300
@@ -612,7 +623,10 @@ extern const uint8_t x7x11b_bits [];
 extern const uint8_t x10x14_bits[];
 extern const uint8_t numfont16x22[];
 
-#define FONT_START_CHAR    0x17
+#define FONT_SMALL            0
+#define FONT_NORMAL           1
+
+#define FONT_START_CHAR    0x16
 #define FONT_MAX_WIDTH        7
 #define FONT_WIDTH            5
 #define FONT_GET_HEIGHT       7
@@ -620,7 +634,7 @@ extern const uint8_t numfont16x22[];
 #define FONT_GET_DATA(ch)    (  &x5x7_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT])
 #define FONT_GET_WIDTH(ch)   (8-(x5x7_bits[(ch-FONT_START_CHAR)*FONT_GET_HEIGHT]&7))
 
-#define bFONT_START_CHAR   0x17
+#define bFONT_START_CHAR   0x16
 #define bFONT_MAX_WIDTH       8
 #define bFONT_WIDTH           7
 #define bFONT_GET_HEIGHT     11
@@ -629,7 +643,7 @@ extern const uint8_t numfont16x22[];
 #define bFONT_GET_WIDTH(ch)  (8-(x7x11b_bits[(ch-bFONT_START_CHAR)*bFONT_GET_HEIGHT]&7))
 
 #ifdef __NICE_BIG_FONT__
-#define wFONT_START_CHAR   0x17
+#define wFONT_START_CHAR   0x16
 #define wFONT_MAX_WIDTH      12
 #define wFONT_GET_HEIGHT     14
 #define wFONT_STR_HEIGHT     16
@@ -644,20 +658,16 @@ extern const uint8_t numfont16x22[];
 #define NUM_FONT_GET_HEIGHT     22
 #define NUM_FONT_GET_DATA(ch)   (&numfont16x22[ch*2*NUM_FONT_GET_HEIGHT])
 
-#if 1
-#define KP_WIDTH                  ((LCD_WIDTH) / 4)// numeric keypad button width
-#define KP_HEIGHT                 ((LCD_HEIGHT - NUM_INPUT_HEIGHT) / 4) // numeric keypad button height
-// Key x, y position (0 - 15) on screen
-#define KP_GET_X(posx)            ((posx) * KP_WIDTH)                   // numeric keypad left
-#define KP_GET_Y(posy)            ((posy) * KP_HEIGHT)                  // numeric keypad top
-#else
-#define KP_WIDTH     (LCD_HEIGHT/5)
-#define KP_HEIGHT    (LCD_HEIGHT/5)
-// Key x, y position (0 - 15) on screen
-#define KP_GET_X(posx) ((posx)*KP_WIDTH + (LCD_WIDTH-MENU_BUTTON_WIDTH-5-KP_WIDTH*4))
-#define KP_GET_Y(posy) ((posy)*KP_HEIGHT + 12 )
-#endif
+#define KP_WIDTH                  (LCD_WIDTH / 4)                                  // numeric keypad button width
+#define KP_HEIGHT                 ((LCD_HEIGHT - NUM_INPUT_HEIGHT) / 4)            // numeric keypad button height
+#define KP_X_OFFSET               0                                                // numeric keypad X offset
+#define KP_Y_OFFSET               0                                                // numeric keypad Y offset
+#define KPF_WIDTH                 (LCD_WIDTH / 10)                                 // text keypad button width
+#define KPF_HEIGHT                KPF_WIDTH                                        // text keypad button height
+#define KPF_X_OFFSET              0                                                // text keypad X offset
+#define KPF_Y_OFFSET              (LCD_HEIGHT - NUM_INPUT_HEIGHT - 4 * KPF_HEIGHT) // text keypad Y offset
 
+#define S_ENTER    "\026"  // 0x16
 #define S_DELTA    "\027"  // 0x17
 #define S_SARROW   "\030"  // 0x18
 #define S_INFINITY "\031"  // 0x19
@@ -667,6 +677,10 @@ extern const uint8_t numfont16x22[];
 #define S_MICRO    "\035"  // 0x1D
 #define S_OHM      "\036"  // 0x1E
 #define S_DEGREE   "\037"  // 0x1F
+
+#define C_ENTER     0x16   // 0x16
+#define C_LARROW    0x1A   // 0x1A
+#define C_RARROW    0x1B   // 0x1B
 
 // String prefix for select font size (use not printable chars)
 #define  FONT_s     "\001"
@@ -712,14 +726,17 @@ float marker_to_value(const int i);
 
 #define FREQ_MODE_START_STOP    0x0
 #define FREQ_MODE_CENTER_SPAN   0x1
-#define FREQ_MODE_DOTTED_GRID   0x2
+//#define FREQ_MODE_DOTTED_GRID   0x2
 
 // Connection flag
 #define _MODE_CONNECTION_MASK  0x04
 #define _MODE_SERIAL           0x04
 #define _MODE_USB              0x00
 
+// don't save state
 #define _MODE_DONT_SAVE_STATE   0x08
+// auto name
+#define _MODE_AUTO_FILENAME    0x10
 
 #pragma pack(push, 4)
 typedef struct config {
@@ -819,6 +836,7 @@ extern void clear_marker_cache(void);
 void shell_update_speed(void);
 void shell_reset_console(void);
 int  shell_serial_printf(const char *fmt, ...);
+void shell_executeCMDLine(char *line);
 
 // marker
 enum {
@@ -1098,6 +1116,7 @@ void ili9341_drawchar(uint8_t ch, int x, int y);
 void ili9341_drawstring(const char *str, int x, int y);
 void ili9341_drawstring_7x13(const char *str, int x, int y);
 void ili9341_drawstring_10x14(const char *str, int x, int y);
+void lcd_set_font(int type);
 int  lcd_printf(int16_t x, int16_t y, const char *fmt, ...);
 void ili9341_drawstringV(const char *str, int x, int y);
 int  ili9341_drawchar_size(uint8_t ch, int x, int y, uint8_t size, int x_max);
@@ -1277,6 +1296,7 @@ extern int linear_averaging;
 #else
 #define SAVEAREA_MAX 5
 #endif
+
 // STM32 minimum page size for write
 #define FLASH_PAGESIZE          0x800
 // config save area (flash7 addr)
@@ -1284,12 +1304,16 @@ extern int linear_averaging;
 #define SAVE_CONFIG_ADDR        0x0801D000
 #define SAVE_CONFIG_SIZE        FLASH_PAGESIZE
 #define FLASH_END               0x08020000
+#define FLASH_START_ADDRESS     0x08000000
+#define FLASH_TOTAL_SIZE        (128*1024)
 #endif
 
 #ifdef TINYSA4
 #define SAVE_CONFIG_ADDR        0x0803C000
 #define SAVE_CONFIG_SIZE        FLASH_PAGESIZE*2
 #define FLASH_END               0x08040000
+#define FLASH_START_ADDRESS     0x08000000
+#define FLASH_TOTAL_SIZE        (256*1024)
 #endif
 
 typedef char assert_config[sizeof(config_t)> SAVE_CONFIG_SIZE ? -1 : 1];        // Check config size
@@ -1407,6 +1431,7 @@ int caldata_save(uint16_t id);
 int config_save(void);
 int config_recall(void);
 setting_t * caldata_pointer(uint16_t id);
+uint32_t checksum(const void *start, size_t len);
 
 void clear_all_config_prop_data(void);
 
@@ -1445,7 +1470,8 @@ int invoke_quick_menu(int);
 bool ui_process_listen_lever(void);
 void refresh_sweep_menu(int i);
 void save_to_sd(int mask);
-void drawMessageBox(char *header, char *text, uint32_t delay);
+void drawMessageBox(const char *header, char *text, uint32_t delay);
+bool isFullScreenMode(void);
 
 // Irq operation process set
 #define OP_NONE       0x00
@@ -1583,8 +1609,6 @@ void SD_PowerOff(void);
 #define fs_volume    (FATFS *)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS))
 // FatFS file object (at the end of spi_buffer)
 #define fs_file      (   FIL*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL))
-// Filename object (at the end of spi_buffer)
-#define fs_filename  (  char*)(((uint8_t*)(&spi_buffer[SPI_BUFFER_SIZE])) - sizeof(FATFS) - sizeof(FIL) - FF_LFN_BUF - 4)
 #endif
 void testLog(void);        // debug log
 void sd_card_load_config(char *filename);
@@ -1631,6 +1655,7 @@ typedef struct {
 /*
  * misclinous
  */
+int parse_line(char *line, char* args[], int max_cnt);
 int plot_printf(char *str, int, const char *fmt, ...);
 #define PULSE do { palClearPad(GPIOC, GPIOC_LED); palSetPad(GPIOC, GPIOC_LED);} while(0)
 //extern int setting_attenuate;

@@ -1252,6 +1252,7 @@ draw_all_cells(bool flush_markmap)
 void
 draw_all(bool flush)
 {
+  if (isFullScreenMode()) return;
 #ifdef __LEVEL_METER__
   level_text[0] = 0;    // Clear level text
 #endif
@@ -1830,7 +1831,7 @@ draw_frequencies(void)
   }
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
-  ili9341_fill(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, LCD_WIDTH - FREQUENCIES_XPOS1, LCD_HEIGHT - FREQUENCIES_YPOS);
+  ili9341_fill(FREQUENCIES_XPOS1, CHART_BOTTOM + 1, LCD_WIDTH - FREQUENCIES_XPOS1, LCD_HEIGHT - CHART_BOTTOM - 1);
   if (uistat.lever_mode == LM_CENTER)
     buf1[0] = S_SARROW[0];
   if (uistat.lever_mode == LM_SPAN)
@@ -1845,8 +1846,8 @@ draw_frequencies(void)
 #ifdef TINYSA4
   if (get_sweep_frequency(ST_STOP) > 2000000000ULL && setting.attenuate_x2 >= 16 ) {
     ili9341_drawstring("REDUCED LINEARITY", p2 - 18*7, FREQUENCIES_YPOS);
-  } else
-    ili9341_drawstring("                 ", p2 - 18*7, FREQUENCIES_YPOS);
+  }// else
+   // ili9341_drawstring("                 ", p2 - 18*7, FREQUENCIES_YPOS);
 #endif
 }
 

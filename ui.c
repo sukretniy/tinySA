@@ -74,18 +74,30 @@ volatile uint8_t operation_requested = OP_NONE;
 int8_t previous_marker = MARKER_INVALID;
 
 enum {
-  UI_NORMAL, UI_MENU, UI_KEYPAD
+  UI_NORMAL, UI_MENU, UI_KEYPAD,
+#ifdef __SD_FILE_BROWSER__
+  UI_BROWSER,
+#endif
+  UI_END
 };
 
 #define NUMINPUT_LEN 12
+#ifdef FF_USE_LFN
+#define TXTINPUT_LEN (FF_MAX_LFN - 4)
+#else
+#define TXTINPUT_LEN (8)
+#endif
+
+#if NUMINPUT_LEN + 2 > TXTINPUT_LEN + 1
+static char    kp_buf[NUMINPUT_LEN+2];  // !!!!!! WARNING size must be + 2 from NUMINPUT_LEN or TXTINPUT_LEN + 1
+#else
+static char    kp_buf[TXTINPUT_LEN+1];  // !!!!!! WARNING size must be + 2 from NUMINPUT_LEN or TXTINPUT_LEN + 1
+#endif
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
-static char    kp_buf[NUMINPUT_LEN+1];
-static int8_t  kp_index = 0;
 static char   *kp_help_text = NULL;
 static uint8_t menu_current_level = 0;
 static int  selection = 0;
-
 static const uint8_t slider_bitmap[]=
 {
   _BMP8(0b11111110),
@@ -109,7 +121,8 @@ static const uint8_t slider_bitmap[]=
 #define AUTO_ICON(S)  (S>=2?BUTTON_ICON_CHECK_AUTO:S)            // Depends on order of ICONs!!!!!
 
 #define BUTTON_BORDER_NONE           0x00
-#define BUTTON_BORDER_WIDTH_MASK     0x0F
+#define BUTTON_BORDER_WIDTH_MASK     0x07
+#define BUTTON_BORDER_NO_FILL        0x08
 
 // Define mask for draw border (if 1 use light color, if 0 dark)
 #define BUTTON_BORDER_TYPE_MASK      0xF0
@@ -145,7 +158,20 @@ static void erase_menu_buttons(void);
 static void ui_process_keypad(void);
 static void choose_active_marker(void);
 static void menu_move_back(bool leave_ui);
+static void draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b);
 //static const menuitem_t menu_marker_type[];
+
+#ifdef __USE_SD_CARD__
+static void save_csv(uint8_t mask);
+#endif
+
+bool isFullScreenMode(void) {
+#ifdef __SD_FILE_BROWSER__
+  return ui_mode == UI_BROWSER;
+#else
+  return false;
+#endif
+}
 
 static int btn_check(void)
 {
@@ -435,17 +461,16 @@ touch_draw_test(void)
   ili9341_drawstring("TOUCH TEST: DRAG PANEL, PRESS BUTTON TO FINISH", OFFSETX, LCD_HEIGHT - FONT_GET_HEIGHT);
 
   int old_button_state = 0;
+  lcd_set_font(FONT_NORMAL);
   while (touch_check() != EVT_TOUCH_PRESSED) {
     int button_state = READ_PORT() & BUTTON_MASK;
     if (button_state != old_button_state) {
-      char buf[20];
-      plot_printf(buf, sizeof buf, "STATE: %4d       ", button_state);
-      ili9341_drawstring_7x13(buf, 120, 120);
+      lcd_printf(120, 120, "STATE: % 4d ", button_state);
       old_button_state = button_state;
     }
 
   }
-
+  lcd_set_font(FONT_SMALL);
   do {
     if (touch_check() == EVT_TOUCH_PRESSED){
       touch_position(&x0, &y0);
@@ -516,9 +541,8 @@ show_version(void)
     do {shift>>=1; y+=5;} while (shift&1);
     ili9341_drawstring_7x13(info_about[i++], x, y+=bFONT_STR_HEIGHT+2-5);
   }
-  char buf[96];
-  plot_printf(buf, sizeof(buf), "HW Version:%s (%d)", get_hw_version_text(), adc1_single_read(0));
-  ili9341_drawstring_7x13(buf, x, y+=bFONT_STR_HEIGHT);
+  lcd_set_font(FONT_NORMAL);
+  lcd_printf(x, y+=bFONT_STR_HEIGHT, "HW Version:%s (%d)", get_hw_version_text(), adc1_single_read(0));
 
 extern const char *states[];
 #define ENABLE_THREADS_COMMAND
@@ -536,12 +560,10 @@ extern const char *states[];
 #else
     uint32_t stklimit = 0U;
 #endif
-    char buf[96];
-    plot_printf(buf, sizeof(buf), "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
+    lcd_printf(x, y+=bFONT_STR_HEIGHT, "%08x|%08x|%08x|%08x|%4u|%4u|%9s|%12s",
              stklimit, (uint32_t)tp->ctx.sp, max_stack_use, (uint32_t)tp,
              (uint32_t)tp->refs - 1, (uint32_t)tp->prio, states[tp->state],
              tp->name == NULL ? "" : tp->name);
-    ili9341_drawstring_7x13(buf, x, y+=bFONT_STR_HEIGHT);
     tp = chRegNextThread(tp);
   } while (tp != NULL);
 #endif
@@ -560,8 +582,7 @@ extern const char *states[];
 #ifdef __USE_RTC__
     uint32_t tr = rtc_get_tr_bin(); // TR read first
     uint32_t dr = rtc_get_dr_bin(); // DR read second
-    char buf[96];
-    plot_printf(buf, sizeof(buf), "Time: 20%02d/%02d/%02d %02d:%02d:%02d" " (LS%c)",
+    lcd_printf(x, y, "Time: 20%02d/%02d/%02d %02d:%02d:%02d" " (LS%c)",
       RTC_DR_YEAR(dr),
       RTC_DR_MONTH(dr),
       RTC_DR_DAY(dr),
@@ -569,15 +590,14 @@ extern const char *states[];
       RTC_TR_MIN(dr),
       RTC_TR_SEC(dr),
       (RCC->BDCR & STM32_RTCSEL_MASK) == STM32_RTCSEL_LSE ? 'E' : 'I');
-    ili9341_drawstring_7x13(buf, x, y);
 #endif
 #if 0
     uint32_t vbat=adc_vbat_read();
-    plot_printf(buf, sizeof(buf), "Batt: %d.%03dV", vbat/1000, vbat%1000);
-    ili9341_drawstring_7x13(buf, x, y + bFONT_STR_HEIGHT + 1);
+    lcd_printf(x, y + bFONT_STR_HEIGHT + 1, "Batt: %d.%03dV", vbat/1000, vbat%1000);
 #endif
 #endif // TINYSA4
   }
+  lcd_set_font(FONT_SMALL);
 }
 
 #ifndef TINYSA4
@@ -995,22 +1015,22 @@ const uint8_t right_icons [] =
 #define KP_X(x) (48*(x) + 2 + (LCD_WIDTH-BUTTON_WIDTH-192))
 #define KP_Y(y) (48*(y) + 2)
 
-
-#define KP_PERIOD 10
-#define KP_MINUS 11
-#define KP_X1 12
-#define KP_K 13
-#define KP_M 14
-#define KP_G 15
-#define KP_BS 16
-#define KP_INF 17
-#define KP_DB 18
+#define KP_PERIOD    10
+#define KP_MINUS     11
+#define KP_X1        12
+#define KP_K         13
+#define KP_M         14
+#define KP_G         15
+#define KP_BS        16
+#define KP_INF       17
+#define KP_DB        18
 #define KP_PLUSMINUS 19
-#define KP_KEYPAD 20
-#define KP_m 21
-#define KP_u 22
-#define KP_n 23
-#define KP_p 24
+#define KP_KEYPAD    20
+#define KP_m         21
+#define KP_u         22
+#define KP_n         23
+#define KP_p         24
+#define KP_ENTER     25
 
 #define KP_0    31
 #define KP_1    32
@@ -1023,10 +1043,23 @@ const uint8_t right_icons [] =
 #define KP_200  39
 #define KP_500  40
 
+enum {NUM_KEYBOARD, TXT_KEYBOARD};
 
 typedef struct {
-  uint8_t x:4;
-  uint8_t y:4;
+  uint16_t x_offs;
+  uint16_t y_offs;
+  uint16_t width;
+  uint16_t height;
+} keypad_pos_t;
+
+// Keyboard size and position data
+static const keypad_pos_t key_pos[] = {
+  [NUM_KEYBOARD] = {KP_X_OFFSET, KP_Y_OFFSET, KP_WIDTH, KP_HEIGHT},
+  [TXT_KEYBOARD] = {KPF_X_OFFSET, KPF_Y_OFFSET, KPF_WIDTH, KPF_HEIGHT}
+};
+
+typedef struct {
+  uint8_t pos;
   int8_t  c;
 } keypads_t;
 
@@ -1038,45 +1071,44 @@ static const keypads_t *keypads;
 // 0 . < x
 
 static const keypads_t keypads_freq[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-  { 3, 0, KP_G },
-  { 3, 1, KP_M },
-  { 3, 2, KP_K },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 16 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x30, KP_G },
+  { 0x31, KP_M },
+  { 0x32, KP_K },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
 };
 
 // 7 8 9
 // 4 5 6
 // 1 2 3
 // 0 . < x
-
 static const keypads_t keypads_positive[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 13 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x33, KP_ENTER },
+  { 0x23, KP_BS }
 };
 
 // 100 200 500 n
@@ -1085,72 +1117,71 @@ static const keypads_t keypads_positive[] = {
 // 0   .   <   x
 
 static const keypads_t keypads_pos_unit[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 5 },
-  { 0, 1, KP_10 },
-  { 1, 1, KP_20 },
-  { 2, 1, KP_50 },
-  { 0, 0, KP_100 },
-  { 1, 0, KP_200 },
-  { 2, 0, KP_500 },
-  { 3, 0, KP_n },
-  { 3, 1, KP_u },
-  { 3, 2, KP_m },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 16 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 5 },
+  { 0x01, KP_10 },
+  { 0x11, KP_20 },
+  { 0x21, KP_50 },
+  { 0x00, KP_100 },
+  { 0x10, KP_200 },
+  { 0x20, KP_500 },
+  { 0x30, KP_n },
+  { 0x31, KP_u },
+  { 0x32, KP_m },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS },
 };
 
 // 7 8 9 m
 // 4 5 6 u
 // 1 2 3 -
 // 0 . < x
-
 static const keypads_t keypads_plusmin_unit[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-  { 3, 0, KP_u},
-  { 3, 1, KP_m},
-  { 3, 2, KP_MINUS },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 16 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x30, KP_u},
+  { 0x31, KP_m},
+  { 0x32, KP_MINUS },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
 };
-// 7 8 9
-// 4 5 6
+
+// 7 8 9 u
+// 4 5 6 m
 // 1 2 3 -
 // 0 . < x
-
 static const keypads_t keypads_plusmin[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-  { 3, 0, KP_u},
-  { 3, 1, KP_m},
-  { 3, 2, KP_MINUS },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 16,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x30, KP_u},
+  { 0x31, KP_m},
+  { 0x32, KP_MINUS },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
 };
 
 // 7 8 9
@@ -1158,24 +1189,34 @@ static const keypads_t keypads_plusmin[] = {
 // 1 2 3 m
 // 0 . < x
 static const keypads_t keypads_time[] = {
-  { 1, 3, KP_PERIOD },
-  { 0, 3, 0 },
-  { 0, 2, 1 },
-  { 1, 2, 2 },
-  { 2, 2, 3 },
-  { 0, 1, 4 },
-  { 1, 1, 5 },
-  { 2, 1, 6 },
-  { 0, 0, 7 },
-  { 1, 0, 8 },
-  { 2, 0, 9 },
-//  { 3, 0, KP_n},
-//  { 3, 1, KP_u},
-  { 3, 2, KP_m },
-  { 3, 3, KP_X1 },
-  { 2, 3, KP_BS },
-  { 0, 0, -1 }
+  { 14 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+//  { 0x30, KP_n},
+//  { 0x31, KP_u},
+  { 0x32, KP_m },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
 };
+
+#ifdef __USE_SD_CARD__
+static const keypads_t keypads_text[] = {
+  {40, TXT_KEYBOARD },   // size and position
+  {0x00, '1'}, {0x10, '2'}, {0x20, '3'}, {0x30, '4'}, {0x40, '5'}, {0x50, '6'}, {0x60, '7'}, {0x70, '8'}, {0x80, '9'}, {0x90, '0'},
+  {0x01, 'Q'}, {0x11, 'W'}, {0x21, 'E'}, {0x31, 'R'}, {0x41, 'T'}, {0x51, 'Y'}, {0x61, 'U'}, {0x71, 'I'}, {0x81, 'O'}, {0x91, 'P'},
+  {0x02, 'A'}, {0x12, 'S'}, {0x22, 'D'}, {0x32, 'F'}, {0x42, 'G'}, {0x52, 'H'}, {0x62, 'J'}, {0x72, 'K'}, {0x82, 'L'}, {0x92, '_'},
+  {0x03, '-'}, {0x13, 'Z'}, {0x23, 'X'}, {0x33, 'C'}, {0x43, 'V'}, {0x53, 'B'}, {0x63, 'N'}, {0x73, 'M'}, {0x83, C_LARROW}, {0x93, C_ENTER},
+};
+#endif
 
 enum {
   KM_START, KM_STOP, KM_CENTER, KM_SPAN, KM_CW, // These must be first to share common help text
@@ -1228,6 +1269,9 @@ enum {
 #endif
 #endif
   KM_CODE,
+#ifdef __USE_SD_CARD__
+  KM_FILENAME,
+#endif
   KM_NONE // always at enum end
 };
 
@@ -1303,6 +1347,9 @@ static const struct {
 #endif
 #endif
 [KM_CODE]         = {keypads_positive    , "CODE"},              // KM_CODE
+#ifdef __USE_SD_CARD__
+[KM_FILENAME]     = {keypads_text        , "NAME"},  // filename
+#endif
 };
 
 #if 0 // Not used
@@ -1958,10 +2005,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
   case 0:
     setting.mixer_output = false;
     dirty = true;
+    update_min_max_freq();
+    set_sweep_frequency(ST_CENTER,get_sweep_frequency(ST_CENTER)); // Just to update center if above 4.4GHz
     break;
   case 1:
     setting.mixer_output = true;
     dirty = true;
+    update_min_max_freq();
     break;
   }
   menu_move_back(false);
@@ -2824,62 +2874,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_traces_acb)
     return;
     break;
 
-#ifdef TINYSA4
+#ifdef __USE_SD_CARD__
     case 6:
-      save_to_sd(1+(2<<current_trace));      // frequencies + trace
+      save_csv(1+(2<<current_trace));      // frequencies + trace
       break;
 #endif
   }
 //  ui_mode_normal();
 //  draw_cal_status();
 }
-#if 0
-static UI_FUNCTION_ADV_CALLBACK(menu_storage_acb)
-{
-  (void)item;
-  if(b){
-    if (data == 0 && setting.show_stored)
-      b->icon = BUTTON_ICON_CHECK;
-    if (setting.subtract[0]){
-      if (data == 2 && setting.show_stored)
-        b->icon = BUTTON_ICON_CHECK;
-      if (data == 3 && !setting.show_stored)
-        b->icon = BUTTON_ICON_CHECK;
-    }
-    return;
-  }
-  switch(data) {
-    case 0:
-      store_trace(0,2);
-      break;
-    case 1:
-      set_clear_storage();
-      break;
-    case 2:
-      set_subtract_storage();
-      break;
-    case 3:
-      toggle_normalize();
-      if (setting.subtract[0]) {
-        kp_help_text = "Ref level";
-        ui_mode_keypad(KM_REFLEVEL);
-//        setting.normalize_level = uistat.value;
-      } else
-        set_auto_reflevel(true);
-      break;
-#ifdef TINYSA4
-    case 4:
-      save_to_sd(1+2);      // frequencies + actual
-      break;
-    case 5:
-      save_to_sd(1+4);      // frequencies + stored
-      break;
-#endif
-  }
-  ui_mode_normal();
-//  draw_cal_status();
-}
-#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   (void)item;
@@ -3511,6 +3514,109 @@ static UI_FUNCTION_ADV_CALLBACK(menu_connection_acb)
   shell_reset_console();
 }
 #endif
+
+#ifdef __USE_SD_CARD__
+//*******************************************************************************************
+// Bitmap file header for LCD_WIDTH x LCD_HEIGHT image 16bpp (v4 format allow set RGB mask)
+//*******************************************************************************************
+#define BMP_UINT32(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF, ((val)>>16)&0xFF, ((val)>>24)&0xFF
+#define BMP_UINT16(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF
+#define BMP_H1_SIZE      (14)                        // BMP header 14 bytes
+#define BMP_V4_SIZE      (108)                       // v4  header 108 bytes
+#define BMP_HEAD_SIZE    (BMP_H1_SIZE + BMP_V4_SIZE) // Size of all headers
+#define BMP_SIZE         (2*LCD_WIDTH*LCD_HEIGHT)    // Bitmap size = 2*w*h
+#define BMP_FILE_SIZE    (BMP_SIZE + BMP_HEAD_SIZE)  // File size = headers + bitmap
+static const uint8_t bmp_header_v4[BMP_H1_SIZE + BMP_V4_SIZE] = {
+// BITMAPFILEHEADER (14 byte size)
+  0x42, 0x4D,                // BM signature
+  BMP_UINT32(BMP_FILE_SIZE), // File size (h + v4 + bitmap)
+  BMP_UINT16(0),             // reserved
+  BMP_UINT16(0),             // reserved
+  BMP_UINT32(BMP_HEAD_SIZE), // Size of all headers (h + v4)
+// BITMAPINFOv4 (108 byte size)
+  BMP_UINT32(BMP_V4_SIZE),   // Data offset after this point (v4 size)
+  BMP_UINT32(LCD_WIDTH),     // Width
+  BMP_UINT32(LCD_HEIGHT),    // Height
+  BMP_UINT16(1),             // Planes
+  BMP_UINT16(16),            // 16bpp
+  BMP_UINT32(3),             // Compression (BI_BITFIELDS)
+  BMP_UINT32(BMP_SIZE),      // Bitmap size (w*h*2)
+  BMP_UINT32(0x0EC4),        // x Resolution (96 DPI = 96 * 39.3701 inches per meter = 0x0EC4)
+  BMP_UINT32(0x0EC4),        // y Resolution (96 DPI = 96 * 39.3701 inches per meter = 0x0EC4)
+  BMP_UINT32(0),             // Palette size
+  BMP_UINT32(0),             // Palette used
+// Extend v4 header data (color mask for RGB565)
+  BMP_UINT32(0b1111100000000000),// R mask = 0b11111000 00000000
+  BMP_UINT32(0b0000011111100000),// G mask = 0b00000111 11100000
+  BMP_UINT32(0b0000000000011111),// B mask = 0b00000000 00011111
+  BMP_UINT32(0b0000000000000000),// A mask = 0b00000000 00000000
+  'B','G','R','s',           // CSType = 'sRGB'
+  BMP_UINT32(0),             // ciexyzRed.ciexyzX    Endpoints
+  BMP_UINT32(0),             // ciexyzRed.ciexyzY
+  BMP_UINT32(0),             // ciexyzRed.ciexyzZ
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzX
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzY
+  BMP_UINT32(0),             // ciexyzGreen.ciexyzZ
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzX
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzY
+  BMP_UINT32(0),             // ciexyzBlue.ciexyzZ
+  BMP_UINT32(0),             // GammaRed
+  BMP_UINT32(0),             // GammaGreen
+  BMP_UINT32(0),             // GammaBlue
+};
+
+static void swap_bytes(uint16_t *buf, int size) {
+  for (int i = 0; i < size; i++)
+    buf[i] = __REVSH(buf[i]); // swap byte order (example 0x10FF to 0xFF10)
+}
+
+static uint16_t file_mask;
+
+// Save format enum
+enum {
+  FMT_BMP_FILE, FMT_CSV_FILE,
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+  FMT_BIN_FILE,
+#endif
+  FMT_CMD_FILE,
+  FMT_CFG_FILE,
+  FMT_PRS_FILE,
+};
+
+// Save file extension
+static const char *file_ext[] = {
+  [FMT_BMP_FILE] = "bmp",
+  [FMT_CSV_FILE] = "csv",
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+  [FMT_BIN_FILE] = "bin",
+#endif
+  [FMT_CMD_FILE] = "cmd",
+  [FMT_CFG_FILE] = "cfg",
+  [FMT_PRS_FILE] = "prs",
+};
+
+static void sa_save_file(uint8_t format);
+
+static UI_FUNCTION_CALLBACK(menu_sdcard_cb) {
+  (void)item;
+  sa_save_file(data);
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_autoname_acb)
+{
+  (void)item;
+  (void)data;
+  if (b){
+    b->icon = config._mode & _MODE_AUTO_FILENAME ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  config._mode^= _MODE_AUTO_FILENAME;
+}
+
+#ifdef __SD_FILE_BROWSER__
+#include "vna_browser.c"
+#endif
+#endif
 // ===[MENU DEFINITION]=========================================================
 // Back button submenu list
 
@@ -3523,6 +3629,10 @@ static const menuitem_t menu_store_preset[] =
 {
   { MT_ADV_CALLBACK, 0,  "STORE AS\nSTARTUP",menu_store_preset_acb},
   { MT_ADV_CALLBACK |MT_REPEATS,  DATA_STARTS_REPEATS(1,4),  "STORE %d",         menu_store_preset_acb},
+#ifdef TINYSA4
+  { MT_CALLBACK,    FMT_PRS_FILE,   "STORE\n"S_RARROW"SD",     menu_sdcard_cb},
+#endif
+  { MT_ADV_CALLBACK, 100,"FACTORY\nDEFAULTS",menu_store_preset_acb},
   { MT_NONE,     0,     NULL,menu_back} // next-> menu_back
 };
 
@@ -3532,6 +3642,9 @@ static const menuitem_t menu_load_preset[] =
   { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,4),   MT_CUSTOM_LABEL, menu_load_preset_acb},
   { MT_ADV_CALLBACK,            101,                        "LOAD\nDEFAULTS",menu_store_preset_acb},
   { MT_ADV_CALLBACK,            _MODE_DONT_SAVE_STATE,      "SAVE\nSTATE",   menu_save_state_acb},
+#ifdef __SD_FILE_BROWSER__
+  { MT_CALLBACK, FMT_PRS_FILE, "LOAD FROM\n SD",            menu_sdcard_browse_cb },
+#endif
   { MT_SUBMENU,                 0,                          "STORE"  ,       menu_store_preset},
   { MT_NONE,     0,     NULL, menu_back} // next-> menu_back
 };
@@ -3916,7 +4029,6 @@ static const menuitem_t menu_settings4[] =
   { MT_KEYPAD,   KM_DIRECT_STOP,     "DSTOP\n\b%s", ""},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
-#endif
 
 static const menuitem_t menu_settings3[] =
 {
@@ -3957,6 +4069,7 @@ static const menuitem_t menu_settings3[] =
 #endif  // TINYSA4
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
+#endif
 
 static const menuitem_t menu_settings2[] =
 {
@@ -3982,28 +4095,28 @@ static const menuitem_t menu_settings2[] =
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
-
+#ifdef TINYSA4
 static const menuitem_t menu_settings[] =
 {
-#ifdef TINYSA4
   { MT_ADV_CALLBACK,0,              "PROGRESS\nBAR",        menu_progress_bar_acb},
   { MT_ADV_CALLBACK,     0,         "DIRECT\nMODE",         menu_direct_acb},
   { MT_ADV_CALLBACK,     0,         "LINEAR\nAVERAGING",    menu_linear_averaging_acb},
   { MT_KEYPAD,      KM_FREQ_CORR,   "FREQ CORR\n\b%s",      "Enter ppb correction"},
 //  { MT_SUBMENU,     0,              "CALIBRATE\nHARMONIC",  menu_calibrate_harmonic},
-#endif
 #ifdef __NOISE_FIGURE__
   { MT_KEYPAD,      KM_NF,          "NF\n\b%s",             "Enter tinySA noise figure"},
+#endif
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+  { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",       menu_sdcard_cb},
 #endif
 #ifdef __SD_CARD_LOAD__
   { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
 //  { MT_CALLBACK,        1 ,       "LOAD\nSETTING.INI",    menu_load_config_cb},
 #endif
-#ifdef TINYSA4
   { MT_ADV_CALLBACK,     0,              "INTERNALS",            menu_internals_acb},
-#endif
   { MT_NONE,        0, NULL, menu_back} // next-> menu_back
 };
+#endif
 
 #ifdef __NOISE_FIGURE__
 static const menuitem_t menu_measure_noise_figure[] =
@@ -4159,19 +4272,7 @@ static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0, S_RARROW"MORE", menu_config2},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
-#if 0
-static const menuitem_t menu_storage[] =
-{
- { MT_ADV_CALLBACK,0,          "TRACE %d",        menu_storage_acb},
- { MT_ADV_CALLBACK,1,          "%s",              menu_storage_acb},
- { MT_ADV_CALLBACK,1,          "DISPLAY",         menu_storage_acb},
- { MT_ADV_CALLBACK,2,          "COPY\nFROM",      menu_storage_acb},
- { MT_ADV_CALLBACK,3,          "SUBTRACT",        menu_storage_acb},
- { MT_ADV_CALLBACK,4,          "NORMALIZE",       menu_storage_acb},
- { MT_ADV_CALLBACK,5,          "WRITE\n"S_RARROW"SD",menu_storage_acb},
-  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
-};
-#endif
+
 static const menuitem_t menu_trace[] =
 {
  { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),          "TRACE %d",        menu_trace_acb},
@@ -4290,6 +4391,17 @@ static const menuitem_t menu_stimulus[] = {
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 
+#ifdef __USE_SD_CARD__
+static const menuitem_t menu_storage[] = {
+#ifdef __SD_FILE_BROWSER__
+  { MT_CALLBACK, FMT_BMP_FILE,      "LOAD BMP",             menu_sdcard_browse_cb },
+  { MT_CALLBACK, FMT_CMD_FILE,      "LOAD CMD",             menu_sdcard_browse_cb },
+#endif
+  { MT_ADV_CALLBACK, 0,             "AUTO NAME",            menu_autoname_acb },
+  { MT_NONE,    0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
 #ifdef TINYSA4
 const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
@@ -4321,6 +4433,9 @@ static const menuitem_t menu_top[] = {
   { MT_SUBMENU,  0, "DISPLAY",      menu_display},
   { MT_SUBMENU,  0, "MARKER",       menu_marker},
   { MT_SUBMENU,  0, "MEASURE",      menu_measure},
+#ifdef __USE_SD_CARD__
+  { MT_SUBMENU,  0, "STORAGE",      menu_storage},
+#endif
   { MT_SUBMENU,  0, "CONFIG",       menu_config},
   { MT_SUBMENU,  0, "MODE",         menu_mode},
   { MT_NONE,     0, NULL, NULL } // sentinel,
@@ -5443,7 +5558,7 @@ draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
 {
   uint16_t bw = b->border&BUTTON_BORDER_WIDTH_MASK;
   ili9341_set_foreground(b->fg);
-  ili9341_set_background(b->bg);ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2));
+  ili9341_set_background(b->bg);
   if (bw==0) return;
   uint16_t br = LCD_RISE_EDGE_COLOR;
   uint16_t bd = LCD_FALLEN_EDGE_COLOR;
@@ -5454,9 +5569,11 @@ draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b)
   ili9341_set_background(type&BUTTON_BORDER_BOTTOM ? br : bd);ili9341_fill(x,          y + h - bw,  w, bw); // bottom
   // Set colors for button text after
   ili9341_set_background(b->bg);
+  if (type & BUTTON_BORDER_NO_FILL) return;
+  ili9341_fill(x + bw, y + bw, w - (bw * 2), h - (bw * 2));
 }
 
-void drawMessageBox(char *header, char *text, uint32_t delay){
+void drawMessageBox(const char *header, char *text, uint32_t delay){
   ui_button_t b;
   b.bg = LCD_MENU_COLOR;
   b.fg = LCD_MENU_TEXT_COLOR;
@@ -5472,34 +5589,49 @@ void drawMessageBox(char *header, char *text, uint32_t delay){
 }
 
 static void
-draw_keypad(uint32_t mask)
-{
-  int i;
+draw_keypad_button(int id) {
+  if (id < 0) return;
   ui_button_t button;
   button.fg = LCD_MENU_TEXT_COLOR;
-  for(i = 0; keypads[i].c >= 0; i++) {
-    if ((mask&(1<<i)) == 0) continue;
+
+  if (id == selection) {
+    button.bg = LCD_MENU_ACTIVE_COLOR;
+    button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_FALLING;
+  } else{
     button.bg = LCD_MENU_COLOR;
-    if (i == selection){
-      button.bg = LCD_MENU_ACTIVE_COLOR;
-      button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_FALLING;
-    }
-    else
-      button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_RISE;
-    int x = KP_GET_X(keypads[i].x);
-    int y = KP_GET_Y(keypads[i].y);
-    draw_button(x, y, KP_WIDTH, KP_HEIGHT, &button);
-    if (keypads[i].c < KP_0) { // KP_0
-      ili9341_drawfont(keypads[i].c,
+    button.border = KEYBOARD_BUTTON_BORDER|BUTTON_BORDER_RISE;
+  }
+
+  const keypad_pos_t *p = &key_pos[keypads[0].c];
+  char  txt[2] = {0,0};
+  int x = p->x_offs + (keypads[id+1].pos>> 4) * p->width;
+  int y = p->y_offs + (keypads[id+1].pos&0xF) * p->height;
+  draw_button(x, y, p->width, p->height, &button);
+  if (keypads[0].c == NUM_KEYBOARD) {
+    if (keypads[id+1].c < KP_0) { // KP_0
+      ili9341_drawfont(keypads[id+1].c,
                      x + (KP_WIDTH - NUM_FONT_GET_WIDTH) / 2,
                      y + (KP_HEIGHT - NUM_FONT_GET_HEIGHT) / 2);
     } else {
-      const char *t = keypad_scale_text[keypads[i].c - KP_0];
+      const char *t = keypad_scale_text[keypads[id+1].c - KP_0];
       ili9341_drawstring_10x14(t,
                      x + (KP_WIDTH  - wFONT_MAX_WIDTH*strlen(t)) / 2,
                      y + (KP_HEIGHT - wFONT_GET_HEIGHT) / 2);
     }
+  } else {
+    txt[0] = keypads[id+1].c;
+    ili9341_drawstring_10x14(txt,
+                     x + KPF_WIDTH/2 - FONT_WIDTH + 1,
+                     y + KPF_HEIGHT/2 - FONT_GET_HEIGHT);
   }
+}
+
+static void
+draw_keypad(void)
+{
+  int i;
+  for(i = 0; i < keypads[0].pos; i++)
+    draw_keypad_button(i);
 }
 
 static int
@@ -5513,7 +5645,7 @@ menu_is_multiline(const char *label)
   return n;
 }
 
-static int period_pos(void) {int j; for (j = 0; j < kp_index && kp_buf[j] != '.'; j++); return j;}
+static int period_pos(void) {int j; for (j = 0; kp_buf[j] && kp_buf[j] != '.'; j++); return j;}
 
 static void
 draw_numeric_input(const char *buf)
@@ -5554,6 +5686,17 @@ draw_numeric_input(const char *buf)
     ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
     ili9341_drawstring_7x13(kp_help_text, 64+NUM_FONT_GET_WIDTH+2, LCD_HEIGHT-(lines*bFONT_GET_HEIGHT+NUM_INPUT_HEIGHT)/2);
   }
+}
+
+static void
+draw_text_input(const char *buf)
+{
+  ili9341_set_foreground(LCD_INPUT_TEXT_COLOR);
+  ili9341_set_background(LCD_INPUT_BG_COLOR);
+  uint16_t x = 14 + 10 * FONT_WIDTH;
+  uint16_t y = LCD_HEIGHT-(wFONT_GET_HEIGHT + NUM_INPUT_HEIGHT)/2;
+  ili9341_fill(x, y, wFONT_MAX_WIDTH * 20, wFONT_GET_HEIGHT);
+  ili9341_drawstring_10x14(buf, x, y);
 }
 
 static void
@@ -6090,7 +6233,7 @@ ui_mode_keypad(int _keypad_mode)
   ui_mode = UI_KEYPAD;
   if (!current_menu_is_form())
     draw_menu();
-  draw_keypad(-1);
+  draw_keypad();
   draw_numeric_area_frame();
   ui_process_keypad();
 }
@@ -6280,9 +6423,9 @@ ui_process_menu_lever(void)
 }
 
 static int
-keypad_click(int key)
+num_keypad_click(int c, int kp_index)
 {
-  int c = keypads[key].c;
+  if (c == KP_ENTER) c = KP_X1;
   if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u || c == KP_n) {
 #if 0
     float scale = 1.0;
@@ -6364,28 +6507,51 @@ keypad_click(int key)
 }
 
 static int
+full_keypad_click(int c, int kp_index)
+{
+  if (c == S_ENTER[0]) { // Enter
+    return kp_index == 0 ? KP_CANCEL : KP_DONE;
+  }
+  if (c == S_LARROW[0]) { // Backspace
+    if (kp_index == 0)
+      return KP_CANCEL;
+    --kp_index;
+  } else if (kp_index < TXTINPUT_LEN) { // any other text input
+    kp_buf[kp_index++] = c;
+  }
+  kp_buf[kp_index] = '\0';
+  draw_text_input(kp_buf);
+  return KP_CONTINUE;
+}
+
+static int
+keypad_click(int key) {
+  int c = keypads[key+1].c;  // !!! Use key + 1 (zero key index used or size define)
+  int index = strlen(kp_buf);
+  int result = keypads[0].c == NUM_KEYBOARD ? num_keypad_click(c, index) : full_keypad_click(c, index);
+  return result;
+}
+
+static int
 keypad_apply_touch(void)
 {
   int touch_x, touch_y;
-  int i = 0;
-
   touch_position(&touch_x, &touch_y);
-
-  while (keypads[i].c >= 0) {
-    int x = KP_GET_X(keypads[i].x);
-    int y = KP_GET_Y(keypads[i].y);
-    if (x < touch_x && touch_x < x+KP_WIDTH && y < touch_y && touch_y < y+KP_HEIGHT) {
-      uint32_t mask = (1<<i)|(1<<selection);
-      // draw focus
-      selection = i;
-      draw_keypad(mask);
-      touch_wait_release();
-      // erase focus
-      selection = -1;
-      draw_keypad((1<<i));
-      return i;
-    }
-    i++;
+  const keypad_pos_t *p = &key_pos[keypads[0].c];
+  if (touch_x < p->x_offs || touch_y < p->y_offs) return -1;
+  // Calculate key position from touch x and y
+  touch_x-= p->x_offs; touch_x/= p->width;
+  touch_y-= p->y_offs; touch_y/= p->height;
+  uint8_t pos = (touch_y & 0x0F) | (touch_x<<4);
+  for (int i = 0; i < keypads[0].pos; i++) {
+    if (keypads[i+1].pos != pos) continue;
+    int old = selection;
+    draw_keypad_button(selection = i);  // draw new focus
+    draw_keypad_button(old);            // Erase old focus
+    touch_wait_release();
+    selection = -1;
+    draw_keypad_button(i);              // erase new focus
+    return i;                           // Process input;
   }
   return -1;
 }
@@ -6394,29 +6560,25 @@ static void
 ui_process_keypad(void)
 {
   int status;
-  kp_index = 0;
-  int keypads_last_index;
-  for (keypads_last_index = 0; keypads[keypads_last_index+1].c >= 0; keypads_last_index++)
-    ;
+  int keypads_last_index = keypads[0].pos - 1;
+  kp_buf[0] = 0;
   while (TRUE) {
     status = btn_check();
     if (status & (EVT_UP|EVT_DOWN)) {
-      int s = status;
       do {
-        uint32_t mask = (1<<selection);
-        if (s & EVT_UP)
-          if (--selection < 0)
-            selection = keypads_last_index;
-        if (s & EVT_DOWN)
-          if (++selection > keypads_last_index)
-            selection = 0;
-        draw_keypad(mask|(1<<selection));
+        int old = selection;
+        if ((status & EVT_DOWN) && --selection < 0)
+          selection = keypads_last_index;
+        if ((status & EVT_UP)   && ++selection > keypads_last_index)
+          selection = 0;
+        draw_keypad_button(old);
+        draw_keypad_button(selection);
         chThdSleepMilliseconds(100);
-      } while ((s = btn_wait_release()) != 0);
+      } while ((status = btn_wait_release()) != 0);
     }
 
     if (status == EVT_BUTTON_SINGLE_CLICK) {
-      if (keypad_click(selection))
+      if (selection >= 0 && keypad_click(selection))
         /* exit loop on done or cancel */
         break;
     }
@@ -6452,6 +6614,11 @@ ui_process_lever(void)
 //  case UI_KEYPAD:
 //    ui_process_keypad();
 //    break;
+#ifdef __SD_FILE_BROWSER__
+  case UI_BROWSER:
+    ui_process_browser_lever();
+    break;
+#endif
   }
 }
 
@@ -6529,131 +6696,144 @@ static int touch_quick_menu(int touch_x, int touch_y)
 }
 
 #ifdef __USE_SD_CARD__
-//*******************************************************************************************
-// Bitmap file header for LCD_WIDTH x LCD_HEIGHT image 16bpp (v4 format allow set RGB mask)
-//*******************************************************************************************
-#define BMP_UINT32(val)  ((val)>>0)&0xFF, ((val)>>8)&0xFF, ((val)>>16)&0xFF, ((val)>>24)&0xFF
-#define BMP_H1_SIZE      (14)                        // BMP header 14 bytes
-#define BMP_V4_SIZE      (56)                        // v4  header 56 bytes
-#define BMP_HEAD_SIZE    (BMP_H1_SIZE + BMP_V4_SIZE) // Size of all headers
-#define BMP_SIZE         (2*LCD_WIDTH*LCD_HEIGHT)    // Bitmap size = 2*w*h
-#define BMP_FILE_SIZE    (BMP_SIZE + BMP_HEAD_SIZE)  // File size = headers + bitmap
-static const uint8_t bmp_header_v4[14+56] = {
-// BITMAPFILEHEADER (14 byte size)
-  0x42, 0x4D,                // BM signature
-  BMP_UINT32(BMP_FILE_SIZE), // File size (h + v4 + bitmap)
-  0x00, 0x00,                // reserved
-  0x00, 0x00,                // reserved
-  BMP_UINT32(BMP_HEAD_SIZE), // Size of all headers (h + v4)
-// BITMAPINFOv4 (56 byte size)
-  BMP_UINT32(BMP_V4_SIZE),   // Data offset after this point (v4 size)
-  BMP_UINT32(LCD_WIDTH),     // Width
-  BMP_UINT32(LCD_HEIGHT),    // Height
-  0x01, 0x00,                // Planes
-  0x10, 0x00,                // 16bpp
-  0x03, 0x00, 0x00, 0x00,    // Compression (BI_BITFIELDS)
-  BMP_UINT32(BMP_SIZE),      // Bitmap size (w*h*2)
-  0xC4, 0x0E, 0x00, 0x00,    // x Resolution (96 DPI = 96 * 39.3701 inches per metre = 0x0EC4)
-  0xC4, 0x0E, 0x00, 0x00,    // y Resolution (96 DPI = 96 * 39.3701 inches per metre = 0x0EC4)
-  0x00, 0x00, 0x00, 0x00,    // Palette size
-  0x00, 0x00, 0x00, 0x00,    // Palette used
-// Extend v4 header data (color mask for RGB565)
-  0x00, 0xF8, 0x00, 0x00,    // R mask = 0b11111000 00000000
-  0xE0, 0x07, 0x00, 0x00,    // G mask = 0b00000111 11100000
-  0x1F, 0x00, 0x00, 0x00,    // B mask = 0b00000000 00011111
-  0x00, 0x00, 0x00, 0x00     // A mask = 0b00000000 00000000
-};
-
-FRESULT open_file(char *ext)
+// Create file name from current time
+static FRESULT sa_create_file(char *fs_filename)
 {
-#ifdef __DISABLE_HOT_INSERT__
-  if (!sd_card_inserted_at_boot) {
-    drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
-    return FR_NOT_READY;
-  }
-#endif
+//  shell_printf("S file\r\n");
   FRESULT res = f_mount(fs_volume, "", 1);
-  // fs_volume, fs_file and fs_filename stored at end of spi_buffer!!!!!
 //  shell_printf("Mount = %d\r\n", res);
   if (res != FR_OK)
     return res;
-#if FF_USE_LFN >= 1
-  uint32_t tr = rtc_get_tr_bcd(); // TR read first
-  uint32_t dr = rtc_get_dr_bcd(); // DR read second
-  plot_printf(fs_filename, FF_LFN_BUF, "SA_%06x_%06x.%s", dr, tr, ext);
-#else
-  plot_printf(fs_filename, FF_LFN_BUF, "%08x.%s", rtc_get_FAT(), ext);
-#endif
   res = f_open(fs_file, fs_filename, FA_CREATE_ALWAYS | FA_READ | FA_WRITE);
- return res;
+//  shell_printf("Open %s, = %d\r\n", fs_filename, res);
+  return res;
 }
 
-void close_file(FRESULT res)
-{
-  if (res == FR_OK)
-    res = f_close(fs_file);
-//  time = chVTGetSystemTimeX() - time;
-//  shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, (LCD_WIDTH*LCD_HEIGHT*sizeof(uint16_t)+sizeof(bmp_header_v4))*10000/time);
-  drawMessageBox("Save:", res == FR_OK ? fs_filename : "  Write failed  ", 2000);
-  redraw_request|= REDRAW_AREA;
-}
-static bool
-made_screenshot(int touch_x, int touch_y)
-{
-  int y, i;
+static void sa_save_file(uint8_t format) {
+  uint16_t *buf_16;
+  int i, y;
   UINT size;
+  char fs_filename[FF_LFN_BUF];
+#ifdef __DISABLE_HOT_INSERT__
+  if (!sd_card_inserted_at_boot) {
+    drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
+    return;
+  }
+#endif
+
+  // Prepare filename and open for write
+  if (config._mode & _MODE_AUTO_FILENAME) {   // Auto name, use date / time
+#if FF_USE_LFN >= 1
+    uint32_t tr = rtc_get_tr_bcd(); // TR read first
+    uint32_t dr = rtc_get_dr_bcd(); // DR read second
+    plot_printf(fs_filename, FF_LFN_BUF, "SA_%06x_%06x.%s", dr, tr, file_ext[format]);
+#else
+    plot_printf(fs_filename, FF_LFN_BUF, "%08x.%s", rtc_get_FAT(), file_ext[format]);
+#endif
+  }
+  else {
+    ui_mode_keypad(KM_FILENAME);
+    if (kp_buf[0] == 0) return;
+    plot_printf(fs_filename, FF_LFN_BUF, "%s.%s", kp_buf, file_ext[format]);
+  }
+
+  // For screenshot need back to normal mode and redraw screen before capture!!
+  // Redraw use spi_buffer so need do it before any file ops
+  if (format == FMT_BMP_FILE && (ui_mode != UI_NORMAL || !(config._mode & _MODE_AUTO_FILENAME))){
+    ui_mode_normal();
+    draw_all(false);
+  }
+//  UINT total_size = 0;
+//  systime_t time = chVTGetSystemTimeX();
+  // Prepare filename = .bmp / .csv and open for write
+  FRESULT res = sa_create_file(fs_filename);
+  if (res == FR_OK) {
+    switch(format) {
+      /*
+       *  Save bitmap file (use v4 format allow set RGB mask)
+       */
+      case FMT_BMP_FILE:
+      buf_16 = spi_buffer;
+      res = f_write(fs_file, bmp_header_v4, BMP_HEAD_SIZE, &size); // Write header struct
+//      total_size+=size;
+      ili9341_set_background(LCD_SWEEP_LINE_COLOR);
+      for (y = LCD_HEIGHT-1; y >= 0 && res == FR_OK; y--) {
+        ili9341_read_memory(0, y, LCD_WIDTH, 1, buf_16);
+        swap_bytes(buf_16, LCD_WIDTH);
+        res = f_write(fs_file, buf_16, LCD_WIDTH*sizeof(uint16_t), &size);
+//        total_size+=size;
+        ili9341_fill(LCD_WIDTH-1, y, 1, 1);
+      }
+      break;
+      case FMT_CSV_FILE:
+        for (i = 0; i < sweep_points && res == FR_OK; i++) {
+          char *buf = (char *)spi_buffer;
+          if (file_mask & 1)  buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
+          if (file_mask & 2)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
+          if (file_mask & 4)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
+          if (file_mask & 8)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED2][i]));
+          if (file_mask & 16) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
+          buf += plot_printf(buf, 100, "\r\n");
+          res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
+        }
+      break;
+#ifdef __SD_CARD_DUMP_FIRMWARE__
+      /*
+       * Dump firmware to SD card as bin file image
+       */
+      case FMT_BIN_FILE:
+      {
+        const char *src = (const char*)FLASH_START_ADDRESS;
+        const uint32_t total = FLASH_TOTAL_SIZE;
+        res = f_write(fs_file, src, total, &size);
+      }
+      break;
+#endif
+      /*
+       * Dump preset to SD card as prs file
+       */
+      case FMT_PRS_FILE:
+      {
+        uint16_t *src = (uint16_t*)&setting;
+        int total = sizeof(setting_t);
+        setting.magic = CONFIG_MAGIC;
+        setting.checksum = 0x12345678;
+        setting.checksum = checksum(
+            &setting,
+      //      (sizeof (setting)) - sizeof setting.checksum
+            (void *)&setting.checksum - (void *) &setting
+            );
+        res = f_write(fs_file, src, total, &size);
+      }
+      break;
+    }
+    f_close(fs_file);
+//    shell_printf("Close = %d\r\n", res);
+//    testLog();
+//    time = chVTGetSystemTimeX() - time;
+//    shell_printf("Total time: %dms (write %d byte/sec)\r\n", time/10, total_size*10000/time);
+  }
+
+  drawMessageBox("SD CARD SAVE", res == FR_OK ? fs_filename : "  Fail write  ", 2000);
+  redraw_request|= REDRAW_AREA|REDRAW_FREQUENCY;
+  ui_mode_normal();
+}
+
+static void save_csv(uint8_t mask) {
+  file_mask = mask;
+  menu_sdcard_cb(0, FMT_CSV_FILE);
+}
+
+static bool
+made_screenshot(int touch_x, int touch_y) {
   if (touch_y < SD_CARD_START || touch_y > SD_CARD_START + 20 || touch_x > OFFSETX)
     return FALSE;
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_fill(4, SD_CARD_START, 16, 16);
   touch_wait_release();
-#ifdef __DISABLE_HOT_INSERT__
-  if (!sd_card_inserted_at_boot) {
-    drawMessageBox("Warning:", "Restart tinySA to use SD card", 2000);
-    return FALSE;
-  }
-#endif
-//  uint32_t time = chVTGetSystemTimeX();
-//  shell_printf("Screenshot\r\n");
-  FRESULT res = open_file("bmp");
-  uint16_t *buf = (uint16_t *)spi_buffer;
-//  shell_printf("Open %s, result = %d\r\n", fs_filename, res);
-  if (res == FR_OK){
-    res = f_write(fs_file, bmp_header_v4, sizeof(bmp_header_v4), &size);
-    for (y = LCD_HEIGHT-1; y >= 0 && res == FR_OK; y--) {
-      ili9341_read_memory(0, y, LCD_WIDTH, 1, buf);
-      for (i = 0; i < LCD_WIDTH; i++)
-        buf[i] = __REVSH(buf[i]); // swap byte order (example 0x10FF to 0xFF10)
-      res = f_write(fs_file, buf, LCD_WIDTH*sizeof(uint16_t), &size);
-    }
-//   res = f_close(fs_file);
-//    shell_printf("Close %d\r\n", res);
-//    testLog();
-  }
-  close_file(res);
+  menu_sdcard_cb(0, FMT_BMP_FILE);
   return TRUE;
 }
-
-void save_to_sd(int mask)
-{
-  FRESULT res = open_file("csv");
-  UINT size;
-  if (res == FR_OK) {
-    for (int i = 0; i < sweep_points; i++) {
-      char *buf = (char *)spi_buffer;
-      if (mask & 1) buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
-      if (mask & 2) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
-      if (mask & 4) buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
-      if (mask & 8) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
-      buf += plot_printf(buf, 100, "\r\n");
-      res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
-      if (res != FR_OK)
-        break;
-    }
-  }
-  close_file(res);
-}
-
 #endif
 
 static int
@@ -6776,6 +6956,11 @@ void ui_process_touch(void)
     case UI_MENU:
       menu_apply_touch(touch_x, touch_y);
       break;
+#ifdef __SD_FILE_BROWSER__
+    case UI_BROWSER:
+      browser_apply_touch(touch_x, touch_y);
+      break;
+#endif
     }
   }
 }
@@ -6796,7 +6981,7 @@ ui_process(void)
     operation_requested = OP_NONE;
   }
   if (operation_requested&OP_TOUCH) {
-   ui_process_touch();
+    ui_process_touch();
     operation_requested = OP_NONE;
   }
   touch_start_watchdog();
