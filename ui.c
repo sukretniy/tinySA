@@ -1523,10 +1523,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     reset_settings(old_m);
     break;
   case CORRECTION_LNA:
+  case CORRECTION_LNA_ULTRA:
     reset_settings(M_LOW);
     setting.extra_lna = true;
     goto common;
   case CORRECTION_LOW:
+  case CORRECTION_LOW_ULTRA:
     reset_settings(M_LOW);
     common:
     set_sweep_frequency(ST_SPAN,   1000000);
