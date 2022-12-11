@@ -517,7 +517,7 @@ show_version(void)
     ili9341_drawstring_7x13(info_about[i++], x, y+=bFONT_STR_HEIGHT+2-5);
   }
   char buf[96];
-  plot_printf(buf, sizeof(buf), "HW Version:%s", get_hw_version_text());
+  plot_printf(buf, sizeof(buf), "HW Version:%s (%d)", get_hw_version_text(), adc1_single_read(0));
   ili9341_drawstring_7x13(buf, x, y+=bFONT_STR_HEIGHT);
 
 extern const char *states[];
