@@ -2069,7 +2069,7 @@ static const VNAShellCommand commands[] =
     {"touch"       , cmd_touch       , 0},
     {"release"     , cmd_release     , 0},
 #endif
-    {"vbat"        , cmd_vbat        , 0},     // Uses same adc as touch!!!!!
+    {"vbat"        , cmd_vbat        , CMD_WAIT_MUTEX},     // Uses same adc as touch!!!!!
 #ifdef ENABLE_VBAT_OFFSET_COMMAND
     {"vbat_offset" , cmd_vbat_offset , CMD_RUN_IN_LOAD},
 #endif
@@ -2415,10 +2415,9 @@ static void VNAShell_executeLine(char *line)
       shell_function = scp->sc_function;
       operation_requested|=OP_CONSOLE;      // this will abort current sweep to give priority to the new request
       // Wait execute command in sweep thread
-      osalThreadEnqueueTimeoutS(&shell_thread, TIME_INFINITE);
-//      do {
-//        osalThreadSleepMilliseconds(10);
-//      } while (shell_function);
+      do {
+        osalThreadEnqueueTimeoutS(&shell_thread, TIME_INFINITE);
+      } while (shell_function);
     } else {
       operation_requested = false; // otherwise commands  will be aborted
       scp->sc_function(shell_nargs - 1, &shell_args[1]);
