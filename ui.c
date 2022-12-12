@@ -1959,26 +1959,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
   (void)data;
   (void)item;
   if (b){
-    b->icon = (sweep_mode & SWEEP_LISTEN) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->icon = (setting.listen) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     return;
   }
-  if (sweep_mode & SWEEP_LISTEN) {
-    sweep_mode = SWEEP_ENABLE;
-  } else {
-    sweep_mode = SWEEP_LISTEN;
-  }
+  setting.listen = !setting.listen;
   ui_mode_normal();
   redraw_frame();
   request_to_redraw_grid();
-
-#if 0
-  if (markers[active_marker].enabled == M_ENABLED) {
-    do {
-      perform(false,0,frequencies[markers[active_marker].index], false);
-      SI4432_Listen(MODE_SELECT(setting.mode));
-    } while (ui_process_listen_lever());
-  }
-#endif
 }
 #endif
 #ifdef TINYSA4

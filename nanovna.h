@@ -320,10 +320,10 @@ enum {
 #define SWEEP_SELFTEST  0x08
 #define SWEEP_REMOTE    0x10
 #ifdef __LISTEN__
-#define SWEEP_LISTEN    0x20
-#define SWEEP_CALIBRATE_HARMONIC 0x40
+//#define SWEEP_LISTEN    0x20
 //#define SWEEP_FACTORY    0x20
 #endif
+#define SWEEP_CALIBRATE_HARMONIC 0x40
 #define SWEEP_UI_MODE   0x80
 
 extern uint8_t sweep_mode;
@@ -1166,6 +1166,7 @@ typedef struct setting
   uint8_t spur_removal;        // enum
   uint8_t disable_correction;
   int8_t normalized_trace;
+  uint8_t listen;
 
   int8_t  tracking;            // -1...1 Can NOT convert to bool!!!!!!
   uint8_t atten_step;          //  0...1 !!! need convert to bool
@@ -1383,7 +1384,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e5B /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e5C /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
