@@ -2111,15 +2111,13 @@ static void update_level_meter(void){
   ili9341_set_foreground(LCD_FG_COLOR);
   int x_max = area_width+OFFSETX;
 #ifdef TINYSA4
-#define BIG_SIZE 5
-#else
 #define BIG_SIZE 3
+#else
+#define BIG_SIZE 2
 #endif
-  int w = ili9341_drawstring_size(level_text,OFFSETX, graph_bottom+1,BIG_SIZE, x_max);         // TODO Size 4 does not transfer to remote desktop??????
-  ili9341_fill(OFFSETX, graph_bottom+BIG_SIZE*11+1, x_max - OFFSETX, CHART_BOTTOM - (graph_bottom+BIG_SIZE*11+1) + 1);
-
+  int w = ili9341_drawstring_size(level_text, OFFSETX + 3, graph_bottom + 3,BIG_SIZE, x_max);         // TODO Size 4 does not transfer to remote desktop??????
   if (w < x_max)
-    ili9341_fill(w, graph_bottom+1, x_max - w, CHART_BOTTOM - graph_bottom+1);
+    ili9341_fill(w, graph_bottom+3, x_max - w, BIG_SIZE * wFONT_GET_HEIGHT);
 }
 
 void
@@ -2132,7 +2130,7 @@ set_level_meter(void)
   area_height = AREA_HEIGHT_NORMAL;
   if (setting.level_meter){
     ili9341_set_background(LCD_BG_COLOR);
-    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom + 1);
   }
   request_to_redraw_grid();
 }

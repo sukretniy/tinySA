@@ -6185,6 +6185,10 @@ leave_ui_mode()
 //    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, menu_button_height*MENU_BUTTON_MAX - area_height);
   if (setting.waterfall)
     set_waterfall();
+#ifdef __LEVEL_METER__
+  if (setting.level_meter)
+    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, menu_button_height*MENU_BUTTON_MAX - area_height);
+#endif
   redraw_request|=REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS | REDRAW_BATTERY;
 }
 
