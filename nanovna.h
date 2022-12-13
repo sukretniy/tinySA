@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -250,6 +250,7 @@ float my_atof(const char *p);
 freq_t my_atoui(const char *p);
 int shell_printf(const char *fmt, ...);
 int usage_printf(const char *fmt, ...);
+void clear_backup(void);
 
 #ifdef __REMOTE_DESKTOP__
 extern uint8_t remote_mouse_down;
@@ -319,10 +320,10 @@ enum {
 #define SWEEP_SELFTEST  0x08
 #define SWEEP_REMOTE    0x10
 #ifdef __LISTEN__
-#define SWEEP_LISTEN    0x20
-#define SWEEP_CALIBRATE_HARMONIC 0x40
+//#define SWEEP_LISTEN    0x20
 //#define SWEEP_FACTORY    0x20
 #endif
+#define SWEEP_CALIBRATE_HARMONIC 0x40
 #define SWEEP_UI_MODE   0x80
 
 extern uint8_t sweep_mode;
@@ -731,9 +732,10 @@ float marker_to_value(const int i);
 #define _MODE_CONNECTION_MASK  0x04
 #define _MODE_SERIAL           0x04
 #define _MODE_USB              0x00
-
+// don't save state
+#define _MODE_DONT_SAVE_STATE   0x08
 // auto name
-#define _MODE_AUTO_FILENAME    0x08
+#define _MODE_AUTO_FILENAME    0x10
 
 #pragma pack(push, 4)
 typedef struct config {
@@ -1164,6 +1166,7 @@ typedef struct setting
   uint8_t spur_removal;        // enum
   uint8_t disable_correction;
   int8_t normalized_trace;
+  uint8_t listen;
 
   int8_t  tracking;            // -1...1 Can NOT convert to bool!!!!!!
   uint8_t atten_step;          //  0...1 !!! need convert to bool
@@ -1381,7 +1384,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e5B /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e5C /* 'CONF' */
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

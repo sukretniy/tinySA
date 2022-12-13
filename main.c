@@ -109,6 +109,14 @@ int32_t scan_after_dirty = 0;
 uint8_t completed = false;
 uint8_t enable_after_complete = 0;
 
+void clear_backup(void) {
+  uint32_t *f = &backup;     // Clear backup when no valid config data
+  int i = USED_BACKUP_SIZE;
+  while (i--)
+    *f++ = 0;
+}
+
+
 #ifdef TINYSA4
 static THD_WORKING_AREA(waThread1, 1224);
 #else
@@ -162,11 +170,19 @@ static THD_FUNCTION(Thread1, arg)
       while (i--)
         *t++ = *f++;
 
-      completed = sweep(true);
-      if (sweep_once_count>1) {
-        sweep_once_count--;
+#ifdef __LISTEN__
+      if (setting.listen && markers[active_marker].enabled == M_ENABLED) {
+        perform(false, 0, getFrequency(markers[active_marker].index), false);
+        SI4432_Listen(MODE_SELECT(setting.mode));
       } else
-        sweep_mode&=~SWEEP_ONCE;
+#endif
+      {
+        completed = sweep(true);
+        if (sweep_once_count>1) {
+          sweep_once_count--;
+        } else
+          sweep_mode&=~SWEEP_ONCE;
+      }
     } else if (sweep_mode & SWEEP_SELFTEST) {
       // call from lowest level to save stack space
       self_test(setting.test);
@@ -175,13 +191,6 @@ static THD_FUNCTION(Thread1, arg)
 #ifdef __SINGLE_LETTER__
       } else if (sweep_mode & SWEEP_REMOTE) {
       sweep_remote();
-#endif
-#ifdef __LISTEN__
-      } else if (sweep_mode & SWEEP_LISTEN) {
-      if (markers[active_marker].enabled == M_ENABLED) {
-          perform(false, 0, getFrequency(markers[active_marker].index), false);
-          SI4432_Listen(MODE_SELECT(setting.mode));
-      }
 #endif
 #ifdef __CALIBRATE__
       } else if (sweep_mode & SWEEP_CALIBRATE) {
@@ -2671,10 +2680,7 @@ int main(void)
     config.switch_offset = -5.0;
 #endif
   if(config_recall()) {
-    uint32_t *f = &backup;     // Clear backup when no valid config data
-    int i = USED_BACKUP_SIZE;
-    while (i--)
-      *f++ = 0;
+    clear_backup();
   }
   config.cor_am = 0;        // Should be removed from config
   config.cor_nfm = 0;
@@ -2729,7 +2735,7 @@ int main(void)
     load_LCD_properties();
   }
   ui_mode_normal();
-  {
+  if (!(config._mode & _MODE_DONT_SAVE_STATE)) {
     backup_t b;
     uint32_t *f = &backup;
     uint32_t *t = (uint32_t *)&b;

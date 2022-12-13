@@ -237,6 +237,7 @@ caldata_recall(uint16_t id)
   set_reflevel(setting.reflevel);
   set_waterfall();
   set_level_meter();
+  sweep_mode = SWEEP_ENABLE;
 #ifdef __ULTRA__
   ultra_start = (config.ultra_start == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_start);
 #endif

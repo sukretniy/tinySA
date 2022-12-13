@@ -542,7 +542,7 @@ show_version(void)
     ili9341_drawstring_7x13(info_about[i++], x, y+=bFONT_STR_HEIGHT+2-5);
   }
   lcd_set_font(FONT_NORMAL);
-  lcd_printf(x, y+=bFONT_STR_HEIGHT, "HW Version:%s", get_hw_version_text());
+  lcd_printf(x, y+=bFONT_STR_HEIGHT, "HW Version:%s (%d)", get_hw_version_text(), adc1_single_read(0));
 
 extern const char *states[];
 #define ENABLE_THREADS_COMMAND
@@ -1523,10 +1523,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     reset_settings(old_m);
     break;
   case CORRECTION_LNA:
+  case CORRECTION_LNA_ULTRA:
     reset_settings(M_LOW);
     setting.extra_lna = true;
     goto common;
   case CORRECTION_LOW:
+  case CORRECTION_LOW_ULTRA:
     reset_settings(M_LOW);
     common:
     set_sweep_frequency(ST_SPAN,   1000000);
@@ -1820,10 +1822,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
     b->param_1.u = data;
     return;
   }
-  if (data == 100) {
+  if (data >= 100) {
     reset_settings(M_LOW);  // Restore all defaults in Low mode
     set_refer_output(-1);
  //   setting.mode = -1;
+    if (data == 101) clear_backup();
     data = 0;
   }
   caldata_save(data);
@@ -1956,26 +1959,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
   (void)data;
   (void)item;
   if (b){
-    b->icon = (sweep_mode & SWEEP_LISTEN) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    b->icon = (setting.listen) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
     return;
   }
-  if (sweep_mode & SWEEP_LISTEN) {
-    sweep_mode = SWEEP_ENABLE;
-  } else {
-    sweep_mode = SWEEP_LISTEN;
-  }
+  setting.listen = !setting.listen;
   ui_mode_normal();
   redraw_frame();
   request_to_redraw_grid();
-
-#if 0
-  if (markers[active_marker].enabled == M_ENABLED) {
-    do {
-      perform(false,0,frequencies[markers[active_marker].index], false);
-      SI4432_Listen(MODE_SELECT(setting.mode));
-    } while (ui_process_listen_lever());
-  }
-#endif
 }
 #endif
 #ifdef TINYSA4
@@ -3210,6 +3200,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_harmonic_acb)
     return;
   }
   set_harmonic(data);
+  config_save();
 }
 #endif
 
@@ -3288,6 +3279,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_pulse_acb){
     return;
   }
   toggle_pulse();
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_save_state_acb){
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = (config._mode & _MODE_DONT_SAVE_STATE) ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  config._mode ^= _MODE_DONT_SAVE_STATE;
+  config_save();
 }
 
 #ifdef __DRAW_LINE__
@@ -3628,10 +3630,11 @@ static const menuitem_t menu_load_preset[] =
 {
   { MT_ADV_CALLBACK,            0,                          "LOAD\nSTARTUP", menu_load_preset_acb},
   { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,4),   MT_CUSTOM_LABEL, menu_load_preset_acb},
+  { MT_ADV_CALLBACK,            101,                        "LOAD\nDEFAULTS",menu_store_preset_acb},
+  { MT_ADV_CALLBACK,            _MODE_DONT_SAVE_STATE,      "SAVE\nSTATE",   menu_save_state_acb},
 #ifdef __SD_FILE_BROWSER__
   { MT_CALLBACK, FMT_PRS_FILE, "LOAD FROM\n SD",            menu_sdcard_browse_cb },
 #endif
-
   { MT_SUBMENU,                 0,                          "STORE"  ,       menu_store_preset},
   { MT_NONE,     0,     NULL, menu_back} // next-> menu_back
 };
@@ -4088,6 +4091,9 @@ static const menuitem_t menu_settings[] =
   { MT_ADV_CALLBACK,0,              "PROGRESS\nBAR",        menu_progress_bar_acb},
   { MT_ADV_CALLBACK,     0,         "DIRECT\nMODE",         menu_direct_acb},
   { MT_ADV_CALLBACK,     0,         "LINEAR\nAVERAGING",    menu_linear_averaging_acb},
+#ifdef __HARMONIC__
+  { MT_SUBMENU          ,0,         "HARMONIC",             menu_harmonic},
+#endif
   { MT_KEYPAD,      KM_FREQ_CORR,   "FREQ CORR\n\b%s",      "Enter ppb correction"},
 //  { MT_SUBMENU,     0,              "CALIBRATE\nHARMONIC",  menu_calibrate_harmonic},
 #ifdef __NOISE_FIGURE__
