@@ -978,7 +978,7 @@ VNA_SHELL_FUNCTION(cmd_z)
     return;
   }
   if (argc == 1) {
-    setting.step_delay = atoi(argv[0]);
+    setting.step_delay = my_atoi(argv[0]);
     dirty = true;
   }
 }
@@ -990,7 +990,7 @@ VNA_SHELL_FUNCTION(cmd_n)
     return;
   }
   if (argc == 1) {
-    setting.offset_delay = atoi(argv[0]);
+    setting.offset_delay = my_atoi(argv[0]);
     dirty = true;
   }
 }
@@ -1321,8 +1321,8 @@ again:
   switch (m) {
   default: goto usage;
   case 's':  test_output_switch = *a - '0'; break;
-  case 'd': test_output_drive = atoi(a); break;
-  case 'a': test_output_attenuate = atoi(a); break;
+  case 'd': test_output_drive = my_atoi(a); break;
+  case 'a': test_output_attenuate = my_atoi(a); break;
 #ifdef TINYSA4
   case 'p': test_path = *a - '0'; break;
 #endif

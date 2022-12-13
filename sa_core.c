@@ -18,6 +18,7 @@
 #include "si4432.h"		// comment out for simulation
 //#endif
 #include "stdlib.h"
+//#define TINYSA4
 
 #pragma GCC push_options
 #ifdef TINYSA4
@@ -2795,7 +2796,7 @@ void interpolate_maximum(int m)
     const INTER_TYPE y1         = ref_marker_levels[idx - 1];
     const INTER_TYPE y2         = ref_marker_levels[idx + 0];
     const INTER_TYPE y3         = ref_marker_levels[idx + 1];
-    const INTER_TYPE d          = abs(delta_Hz) * 0.5 * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12);
+    const INTER_TYPE d          = fabs(delta_Hz) * 0.5 * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12);
     //const float bin      = (float)idx + d;
     markers[m].frequency   += d;
   }
@@ -7450,7 +7451,6 @@ void calibrate(void)
 {
   int local_test_status;
   int old_sweep_points = setting._sweep_points;
-  reset_calibration();
 #ifdef TINYSA4
   int old_ultra = config.ultra;
   config.ultra = true;
@@ -7516,6 +7516,7 @@ void calibrate(void)
 
 #endif
 #endif
+  reset_calibration();
   in_calibration = true;
   for (calibration_stage = CS_NORMAL; calibration_stage < CS_MAX ; calibration_stage++) {
     for (int k = 0; k<3; k++) {
@@ -7594,7 +7595,7 @@ void calibrate(void)
           local_test_status = test_validate(test_case);
           calibration_busy();
         }
-        local_test_status = TS_PASS;
+        local_test_status = TS_PASS;            // Must be forced because test_validate calculates pass band wrong
 #else
         //    set_RBW(power_rbw[j]);
         //    set_sweep_points(21);
@@ -7634,7 +7635,13 @@ void calibrate(void)
         local_test_status = test_validate(test_case);                       // Validate test also sets attenuation if zero span
 #endif
 #endif
-        if (calibration_stage == CS_NORMAL && peakLevel < -40) {
+        if ((calibration_stage == CS_NORMAL && peakLevel < -40)
+#ifdef TINYSA4
+            || (calibration_stage == CS_LNA && peakLevel < -40)
+            || (calibration_stage == CS_ULTRA && peakLevel < -40)
+            || (calibration_stage == CS_DIRECT && peakLevel < direct_level - 10)
+#endif
+        ) {
 #ifdef TINYSA4
 low_level:
 #endif
