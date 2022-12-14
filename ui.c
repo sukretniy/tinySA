@@ -764,8 +764,12 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
   case 4: // marker -> ref level
     {
     float l = actual_t[markers[active_marker].index];
+#if 1
+    user_set_reflevel(l);
+#else
     float s_max = value(l)/setting.scale;
     user_set_reflevel(setting.scale*(floorf(s_max)+2));
+#endif
     }
     break;
 #ifdef __VNA__
