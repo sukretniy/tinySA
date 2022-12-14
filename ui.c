@@ -446,7 +446,6 @@ touch_cal_exec(void)
 
   config.flip = old_flip;
 
-  config_save();            // Auto save touch calibration
 
   //redraw_all();
 }
@@ -494,6 +493,7 @@ touch_cal_exec(void)
   if (config.flip) {p1 = 2, p2 = 0;}
   getTouchPoint(x1, y1, "UPPER LEFT", &config.touch_cal[p1]);
   getTouchPoint(x2, y2, "LOWER RIGHT", &config.touch_cal[p2]);
+  config_save();            // Auto save touch calibration
 }
 
 
@@ -507,7 +507,7 @@ touch_draw_test(void)
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_clear_screen();
-  ili9341_drawstring("TOUCH TEST: DRAG PANEL, PRESS BUTTON TO FINISH", OFFSETX, LCD_HEIGHT - FONT_GET_HEIGHT);
+  ili9341_drawstring("TOUCH PANEL, DRAW LINES, PRESS BUTTON TO FINISH", OFFSETX, LCD_HEIGHT - FONT_GET_HEIGHT);
 
   int old_button_state = 0;
   lcd_set_font(FONT_NORMAL);
