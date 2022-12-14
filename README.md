@@ -60,6 +60,10 @@ Just make in the directory.
 
     $ make
 
+For tinySA Ultra use this command
+
+    $ make TARGET="F303"
+
 ### Build firmware using docker
 
 Using [this docker image](https://hub.docker.com/r/edy555/arm-embedded) and without installing arm toolchain, you can build the firmware.
