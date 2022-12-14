@@ -529,7 +529,7 @@ my_atof(const char *p)
     p++;
   if (*p == 'k' || *p == 'M' || *p == 'G')
     p++;
-  if (*p == '.') {
+  if (*p == '.' || *p == ',') {
     float d = 1.0;
     p++;
     while (_isdigit((int)*p)) {
