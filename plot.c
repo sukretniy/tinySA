@@ -38,6 +38,7 @@ static void update_waterfall(void);
 #ifdef __LEVEL_METER__
 static void update_level_meter(void);
 char level_text[20];
+char freq_text[20];
 #endif
 void cell_draw_test_info(int x0, int y0);
 int cell_printf(int16_t x, int16_t y, const char *fmt, ...);
@@ -1255,6 +1256,9 @@ draw_all(bool flush)
   if (isFullScreenMode()) return;
 #ifdef __LEVEL_METER__
   level_text[0] = 0;    // Clear level text
+#ifdef TINYSA4
+  freq_text[0] = 0;    // Clear level text
+#endif
 #endif
   if (redraw_request & REDRAW_AREA)       // this set all area for update
     force_set_markmap();
@@ -1544,6 +1548,11 @@ static void trace_print_value_string(     // Only used at one place
 #endif
     plot_printf(ptr2, sizeof(buf2) - 9, "%9.*QHz", digits, freq);
   }
+#ifdef __LEVEL_METER__
+#ifdef TINYSA4
+  if (freq_text[0] == 0) strcpy(freq_text, &ptr2[3]);
+#endif
+#endif
   const char *format;
   if (UNIT_IS_LINEAR(setting.unit))
     format = FONT_s"%s %.3F%s%s%s%s"; // 5 characters incl u, m, etc...
@@ -1556,8 +1565,9 @@ static void trace_print_value_string(     // Only used at one place
 #endif
   cell_printf(xpos, ypos, format, buf2, v, unit_string[unit_index], (mtype & M_DELTA?"c":"") , (mtype & M_NOISE?"/Hz":""), (mtype & M_AVER?"/T":""));
 #ifdef __LEVEL_METER__
-  if (level_text[0] == 0)
+  if (level_text[0] == 0){
     plot_printf(level_text, sizeof(level_text), &format[3], v, unit_string[unit_index], (mtype & M_DELTA?"c":"") , (mtype & M_NOISE?"/Hz":"") ,(mtype & M_AVER?"/T":""));
+  }
 #endif
 }
 
@@ -2118,6 +2128,11 @@ static void update_level_meter(void){
   int w = ili9341_drawstring_size(level_text, OFFSETX + 3, graph_bottom + 3,BIG_SIZE, x_max);         // TODO Size 4 does not transfer to remote desktop??????
   if (w < x_max)
     ili9341_fill(w, graph_bottom+3, x_max - w, BIG_SIZE * wFONT_GET_HEIGHT);
+#ifdef TINYSA4
+  w = ili9341_drawstring_size(freq_text, OFFSETX + 3, graph_bottom + 3 + BIG_SIZE * wFONT_STR_HEIGHT ,BIG_SIZE, x_max);         // TODO Size 4 does not transfer to remote desktop??????
+  if (w < x_max)
+    ili9341_fill(w, graph_bottom+3+ BIG_SIZE * wFONT_STR_HEIGHT, x_max - w, BIG_SIZE * wFONT_GET_HEIGHT);
+#endif
 }
 
 void

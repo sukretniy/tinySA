@@ -408,6 +408,8 @@ touch_wait_released(void)
     ;
 }
 
+
+#if 0
 void
 touch_cal_exec(void)
 {
@@ -444,11 +446,58 @@ touch_cal_exec(void)
 
   config.flip = old_flip;
 
-  config_save();            // Auto save touch calibration
 
   //redraw_all();
 }
 
+#else
+
+#define CALIBRATION_OFFSET 16
+#define TOUCH_MARK_W        9
+#define TOUCH_MARK_H        9
+#define TOUCH_MARK_X        4
+#define TOUCH_MARK_Y        4
+static const uint8_t touch_bitmap[]={
+  _BMP16(0b0000100000000000),
+  _BMP16(0b0100100100000000),
+  _BMP16(0b0010101000000000),
+  _BMP16(0b0000100000000000),
+  _BMP16(0b1111011110000000),
+  _BMP16(0b0000100000000000),
+  _BMP16(0b0010101000000000),
+  _BMP16(0b0100100100000000),
+  _BMP16(0b0000100000000000),
+};
+
+static void getTouchPoint(uint16_t x, uint16_t y, const char *name, int16_t *data) {
+  // Clear screen and ask for press
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
+  ili9341_clear_screen();
+  ili9341_blitBitmap(x, y, TOUCH_MARK_W, TOUCH_MARK_H, touch_bitmap);
+  lcd_printf((LCD_WIDTH-18*FONT_WIDTH)/2, (LCD_HEIGHT-FONT_GET_HEIGHT)/2, "TOUCH %s *", name);
+  // Wait release, and fill data
+  touch_wait_released();
+  data[0] = last_touch_x;
+  data[1] = last_touch_y;
+}
+
+void
+touch_cal_exec(void)
+{
+  const uint16_t x1 = CALIBRATION_OFFSET - TOUCH_MARK_X;
+  const uint16_t y1 = CALIBRATION_OFFSET - TOUCH_MARK_Y;
+  const uint16_t x2 = LCD_WIDTH  - 1 - CALIBRATION_OFFSET - TOUCH_MARK_X;
+  const uint16_t y2 = LCD_HEIGHT - 1 - CALIBRATION_OFFSET - TOUCH_MARK_Y;
+  uint16_t p1 = 0, p2 = 2;
+  if (config.flip) {p1 = 2, p2 = 0;}
+  getTouchPoint(x1, y1, "UPPER LEFT", &config.touch_cal[p1]);
+  getTouchPoint(x2, y2, "LOWER RIGHT", &config.touch_cal[p2]);
+  config_save();            // Auto save touch calibration
+}
+
+
+#endif
 void
 touch_draw_test(void)
 {
@@ -458,7 +507,7 @@ touch_draw_test(void)
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
   ili9341_clear_screen();
-  ili9341_drawstring("TOUCH TEST: DRAG PANEL, PRESS BUTTON TO FINISH", OFFSETX, LCD_HEIGHT - FONT_GET_HEIGHT);
+  ili9341_drawstring("TOUCH PANEL, DRAW LINES, PRESS BUTTON TO FINISH", OFFSETX, LCD_HEIGHT - FONT_GET_HEIGHT);
 
   int old_button_state = 0;
   lcd_set_font(FONT_NORMAL);
@@ -496,9 +545,17 @@ touch_position(int *x, int *y)
     return;
   }
 #endif
+#if 0
+
   int tx = (last_touch_x - config.touch_cal[0]) * 16 / config.touch_cal[2];
   int ty = (last_touch_y - config.touch_cal[1]) * 16 / config.touch_cal[3];
+#else
+  int tx = ((LCD_WIDTH-1-CALIBRATION_OFFSET)*(last_touch_x - config.touch_cal[0]) + CALIBRATION_OFFSET * (config.touch_cal[2] - last_touch_x)) / (config.touch_cal[2] - config.touch_cal[0]);
+  if (tx<0) tx = 0; else if (tx>=LCD_WIDTH ) tx = LCD_WIDTH -1;
+  int ty = ((LCD_HEIGHT-1-CALIBRATION_OFFSET)*(last_touch_y - config.touch_cal[1]) + CALIBRATION_OFFSET * (config.touch_cal[3] - last_touch_y)) / (config.touch_cal[3] - config.touch_cal[1]);
+  if (ty<0) ty = 0; else if (ty>=LCD_HEIGHT) ty = LCD_HEIGHT-1;
 
+#endif
   if (config.flip) {
     tx = LCD_WIDTH - 1 - tx;
     ty = LCD_HEIGHT - 1 - ty;
@@ -707,8 +764,12 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
   case 4: // marker -> ref level
     {
     float l = actual_t[markers[active_marker].index];
+#if 1
+    user_set_reflevel(l);
+#else
     float s_max = value(l)/setting.scale;
     user_set_reflevel(setting.scale*(floorf(s_max)+2));
+#endif
     }
     break;
 #ifdef __VNA__
