@@ -3300,34 +3300,40 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_bpf_acb){
 }
 
 #ifdef __LCD_BRIGHTNESS__
-static UI_FUNCTION_CALLBACK(menu_brightness_cb)
+static UI_FUNCTION_ADV_CALLBACK(menu_brightness_acb)
 {
   (void)item;
   (void)data;
+  if (b){
+    b->param_1.u = config._brightness;
+    return;
+  }
   int16_t value = config._brightness;
   ili9341_set_foreground(LCD_MENU_TEXT_COLOR);
   ili9341_set_background(LCD_MENU_COLOR);
-  ili9341_fill(LCD_WIDTH/2-80, LCD_HEIGHT/2-20, 160, 40);
-  ili9341_drawstring_7x13("BRIGHTNESS", LCD_WIDTH/2-35, LCD_HEIGHT/2-13);
-  ili9341_drawstring_7x13(S_LARROW" USE LEVELER BUTTON "S_RARROW, LCD_WIDTH/2-72, LCD_HEIGHT/2+2);
+  lcd_set_font(FONT_NORMAL);
+  ili9341_fill(LCD_WIDTH/2-12*bFONT_WIDTH, LCD_HEIGHT/2-20, 23*bFONT_WIDTH, 40);
+  lcd_printf(LCD_WIDTH/2-8*bFONT_WIDTH, LCD_HEIGHT/2-13, "BRIGHTNESS %3d%% ", value);
+  lcd_printf(LCD_WIDTH/2-11*bFONT_WIDTH, LCD_HEIGHT/2+2, S_LARROW " USE LEVELER BUTTON " S_RARROW);
   while (TRUE) {
-    int status = btn_check();
+    uint16_t status = btn_check();
     if (status & (EVT_UP|EVT_DOWN)) {
       do {
         if (status & EVT_UP  ) value+=5;
         if (status & EVT_DOWN) value-=5;
         if (value <   0) value =   0;
         if (value > 100) value = 100;
+        lcd_printf(LCD_WIDTH/2-8*bFONT_WIDTH, LCD_HEIGHT/2-13, "BRIGHTNESS %3d%% ", value);
         lcd_setBrightness(value);
-        status = btn_wait_release();
-      } while (status != 0);
+        chThdSleepMilliseconds(100);
+      } while ((status = btn_wait_release()) != 0);
     }
     if (status == EVT_BUTTON_SINGLE_CLICK)
       break;
   }
   config._brightness = (uint8_t)value;
-  lcd_setBrightness(value);
   redraw_request|= REDRAW_AREA;
+  lcd_set_font(FONT_SMALL);
   ui_mode_normal();
 }
 #endif
@@ -4315,7 +4321,7 @@ static const menuitem_t menu_config[] = {
 #endif
   { MT_KEYPAD, KM_REPEAT,       "SAMPLE REP\n\b%s",    "1..100"},
 #ifdef __LCD_BRIGHTNESS__
-  { MT_CALLBACK, 0, "BRIGHTNESS", menu_brightness_cb},
+  { MT_ADV_CALLBACK, 0, "BRIGHTNESS\n \b%d%%", menu_brightness_acb},
 #endif
 #ifdef __USE_RTC__
   { MT_SUBMENU,  0, "DATE\nTIME", menu_date_time},
