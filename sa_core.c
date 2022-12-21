@@ -18,7 +18,7 @@
 #include "si4432.h"		// comment out for simulation
 //#endif
 #include "stdlib.h"
-#define TINYSA4
+//#define TINYSA4
 
 #pragma GCC push_options
 #ifdef TINYSA4
@@ -219,7 +219,7 @@ void set_output_path(freq_t f, float level)
   switch (signal_path) {
   case PATH_LEAKAGE:
     drive_dBm = (float *)adf_drive_dBm;
-    max_drive = 1;
+    max_drive = 0;
     break;
   default:
     drive_dBm = (float *)si_drive_dBm;
