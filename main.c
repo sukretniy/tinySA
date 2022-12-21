@@ -877,7 +877,7 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
     case 1: search = argv[0];break;
     default: usage_printf("sd_list {pattern}\r\n"); return;
   }
-  shell_printf("sd_list:\r\n");
+//  shell_printf("sd_list:\r\n");
   res = f_findfirst(&dj, &fno, "", search);
   while (res == FR_OK && fno.fname[0])
   {
