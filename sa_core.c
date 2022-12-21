@@ -114,7 +114,8 @@ int actual_drive = -1;
 #ifdef TINYSA4
 const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , -2.1,  -1.5,  -1, -0.47, 0};
 //const float adf_drive_dBm[]     = {-13,-7.5,-4.2, 0};
-const float adf_drive_dBm[]     = {-9, -4, 0, 0};
+//const float adf_drive_dBm[]     = {-9, -4, 0, 0};
+const float adf_drive_dBm[]     = {0, 5, 0, 0};     // Only use drive 0 and 1
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) si_drive_dBm;
 const int min_drive = 0;
@@ -218,7 +219,7 @@ void set_output_path(freq_t f, float level)
   switch (signal_path) {
   case PATH_LEAKAGE:
     drive_dBm = (float *)adf_drive_dBm;
-    max_drive = 2;
+    max_drive = 0;
     break;
   default:
     drive_dBm = (float *)si_drive_dBm;
@@ -248,14 +249,10 @@ void set_output_path(freq_t f, float level)
   level += ATTENUATION_RESERVE;
   float switch_atten = SWITCH_ATTENUATION;
   if (signal_path == PATH_LEAKAGE)
-#if 0
-    switch_atten = 44.0;
-#else
 #ifdef TINYSA4
-  switch_atten = 32.0;
+    switch_atten = 32.0;
 #else
-  switch_atten = 31.0;
-#endif
+    switch_atten = 31.0;
 #endif
   float a = level - level_max();                 // convert to all settings maximum power output equals a = zero
   if (a < -switch_atten + BELOW_MAX_DRIVE(0)) {           // Switch needed
@@ -274,7 +271,7 @@ void set_output_path(freq_t f, float level)
   int d;
 #ifdef TINYSA4
   if (signal_path == PATH_LEAKAGE)
-    d = 1;
+    d = 0;
   else
     d = MAX_DRIVE-8;        // Start in the middle
 #else
