@@ -1550,7 +1550,7 @@ static void trace_print_value_string(     // Only used at one place
   }
 #ifdef __LEVEL_METER__
 #ifdef TINYSA4
-  if (freq_text[0] == 0) strcpy(freq_text, &ptr2[3]);
+  if (freq_text[0] == 0) strcpy(freq_text, &ptr2[0]);
 #endif
 #endif
   const char *format;
