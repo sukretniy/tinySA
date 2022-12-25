@@ -960,7 +960,7 @@ config_t config = {
   .dac_value =         1922,
 //  .touch_cal =         { 693, 605, 124, 171 },  // 2.4 inch LCD panel
 #ifdef TINYSA3
-  .touch_cal =         { 347, 495, 160, 205 },  // 2.8 inch LCD panel
+  .touch_cal =          { 534, 741, 3458, 3434 }, // 2.8 inch LCD panel
 #endif
 #ifdef TINYSA4
   .touch_cal =          { 444, 715, 3552, 3499 }, // 4 inch panel
