@@ -295,8 +295,11 @@ void set_output_path(freq_t f, float level)
 //  if (signal_path != PATH_LEAKAGE)
   a -= ATTENUATION_RESERVE;
   if (a > 0) {
-    a = 0;
     if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
+    a += 0.49;
+    a = (float)((int)(a*2))/2.0;
+    setting.level -= a;
+    a = 0;
 //  } else if (setting.modulation == MO_AM && a < -10) {          // Insufficient headroom for modulation
 //    if (!level_error) { level_error = true; redraw_request |= REDRAW_CAL_STATUS; draw_all(true); }
   } else {
@@ -5148,6 +5151,17 @@ static volatile int dummy;
         RSSI = temp_t[i];
 
 #else
+#ifdef TINYSA4
+      if (MODE_OUTPUT(setting.mode)) {
+        if (level_error) {
+          drawMessageBox("WARNING", "Output level reduced", 2000);
+          level_error = false;
+          ui_mode_menu();   // Refresh menu
+        }
+      }
+#endif
+
+
       if (MODE_INPUT(setting.mode)) {
       for (int t=0; t<TRACES_MAX;t++) {
         if (setting.stored[t])

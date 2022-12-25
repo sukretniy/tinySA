@@ -3638,6 +3638,7 @@ enum {
   FMT_CMD_FILE,
   FMT_CFG_FILE,
   FMT_PRS_FILE,
+  FMT_TBL_FILE,
 };
 
 // Save file extension
@@ -3650,6 +3651,7 @@ static const char *file_ext[] = {
   [FMT_CMD_FILE] = "cmd",
   [FMT_CFG_FILE] = "cfg",
   [FMT_PRS_FILE] = "prs",
+  [FMT_TBL_FILE] = "tbl",
 };
 
 static void sa_save_file(uint8_t format);
@@ -3893,6 +3895,10 @@ static const menuitem_t menu_limit_modify[] =
 
 static const menuitem_t menu_limit_select[] = {
   { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,LIMITS_MAX), MT_CUSTOM_LABEL, menu_limit_select_acb },
+  { MT_CALLBACK,    FMT_TBL_FILE,  "TABLE"S_RARROW"\nSD",     menu_sdcard_cb},
+#ifdef __SD_FILE_BROWSER__
+  { MT_CALLBACK, FMT_TBL_FILE, "SD"S_RARROW"\nTABLE",            menu_sdcard_browse_cb },
+#endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -4365,9 +4371,10 @@ static const menuitem_t menu_traces[] =
  { MT_ADV_CALLBACK,3,          MT_CUSTOM_LABEL,             menu_traces_acb},       // Calc
  { MT_ADV_CALLBACK,4,          "NORMALIZE",                 menu_traces_acb},
  { MT_ADV_CALLBACK,5,          MT_CUSTOM_LABEL,             menu_traces_acb},       // Trace Math
- { MT_SUBMENU,     0,          "COPY\n"S_RARROW"TRACE",     menu_store_trace},
+ { MT_SUBMENU,     0,          "TRACE\n"S_RARROW"TRACE",    menu_store_trace},
 #ifdef TINYSA4
- { MT_ADV_CALLBACK,6,          "WRITE\n"S_RARROW"SD",       menu_traces_acb},
+ { MT_ADV_CALLBACK,6,          "TRACE\n"S_RARROW"SD",       menu_traces_acb},
+ { MT_CALLBACK, FMT_CSV_FILE,  "SD"S_RARROW"\nTRACE",       menu_sdcard_browse_cb },
 #endif
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
@@ -6839,6 +6846,17 @@ static void sa_save_file(uint8_t format) {
           if (file_mask & 16) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
           buf += plot_printf(buf, 100, "\r\n");
           res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
+        }
+      break;
+      case FMT_TBL_FILE:
+        for (i = 0; i < LIMITS_MAX && res == FR_OK; i++) {
+          if (setting.limits[current_trace][i].enabled) {
+            char *buf = (char *)spi_buffer;
+            buf += plot_printf(buf, 100, "%U, ", setting.limits[current_trace][i].frequency);
+            buf += plot_printf(buf, 100, "%f ", setting.limits[current_trace][i].level);
+            buf += plot_printf(buf, 100, "\r\n");
+            res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
+          }
         }
       break;
 #ifdef __SD_CARD_DUMP_FIRMWARE__
