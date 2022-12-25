@@ -113,6 +113,82 @@ repeat:
   ili9341_set_foreground(LCD_FG_COLOR);
   ili9341_set_background(LCD_BG_COLOR);
   switch (keypad_mode) {
+  case FMT_TBL_FILE:
+  {
+    const int buffer_size = 256;
+    const int line_size = 128;
+    char *buf_8 = (char *)spi_buffer; // must be greater then buffer_size + line_size
+    char *line  = buf_8 + buffer_size;
+    uint16_t j = 0, i, count = 0;
+    while (f_read(fs_file, buf_8, buffer_size, &size) == FR_OK && size > 0) {
+      for (i = 0; i < size; i++) {
+        uint8_t c = buf_8[i];
+        if (c == '\r') {                                                     // New line (Enter)
+          line[j] = 0; j = 0;
+          char *args[16];
+          int nargs = parse_line(line, args, 16);                            // Parse line to 16 args
+          if (nargs < 2 || args[0][0] == '#' || args[0][0] == '!') continue; // No data or comment or settings
+          if (count >= LIMITS_MAX) {error = "Format err"; goto finish2;}
+          setting.limits[current_trace][count].frequency = my_atoui(args[0]);// Get frequency
+          setting.limits[current_trace][count].level = my_atof(args[1]);     // Get frequency
+          setting.limits[current_trace][count].enabled = true;               // Get frequency
+          count++;
+        }
+        else if (c < 0x20) continue;                 // Others (skip)
+        else if (j < line_size) line[j++] = (char)c; // Store
+      }
+    }
+finish2:
+    for (; count < LIMITS_MAX; i++) {
+      setting.limits[current_trace][count].frequency = 0;
+      setting.limits[current_trace][count].level = 0;
+      setting.limits[current_trace][count].enabled = false;
+      count++;
+    }
+    break;
+  }
+  case FMT_CSV_FILE:
+  {
+    const int buffer_size = 256;
+    const int line_size = 128;
+    char *buf_8 = (char *)spi_buffer; // must be greater then buffer_size + line_size
+    char *line  = buf_8 + buffer_size;
+    uint16_t j = 0, i, count = 0;
+    freq_t start = 0, stop = 0, f;
+    while (f_read(fs_file, buf_8, buffer_size, &size) == FR_OK && size > 0) {
+      for (i = 0; i < size; i++) {
+        uint8_t c = buf_8[i];
+        if (c == '\r') {                                                     // New line (Enter)
+          line[j] = 0; j = 0;
+          char *args[16];
+          int nargs = parse_line(line, args, 16);                            // Parse line to 16 args
+          if (nargs < 2 || args[0][0] == '#' || args[0][0] == '!') continue; // No data or comment or settings
+          f = my_atoui(args[0]);                                             // Get frequency
+          if (count >= POINTS_COUNT || f > maxFreq) {error = "Format err"; goto finish;}
+          if (count == 0)  {
+            start = f;                                                      // For index 0 set as start
+            setting.stored[current_trace] = true;
+            TRACE_ENABLE(1<<current_trace);
+          }
+          stop  = f;                                                         // last set as stop
+          measured[current_trace][count] = my_atof(args[1]);
+         count++;
+        }
+        else if (c < 0x20) continue;                 // Others (skip)
+        else if (j < line_size) line[j++] = (char)c; // Store
+      }
+    }
+finish:
+    if (count != 0) { // Points count not zero, so apply data to traces
+//      pause_sweep();
+      setting._sweep_points = count;
+      set_sweep_frequency(ST_START, start);
+      set_sweep_frequency(ST_STOP, stop);
+//      request_to_redraw(REDRAW_AREA);
+    }
+    break;
+  }
+
   case FMT_CMD_FILE:
   {
     const int buffer_size = 256;
