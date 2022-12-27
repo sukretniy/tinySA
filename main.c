@@ -857,7 +857,7 @@ VNA_SHELL_FUNCTION(cmd_capture)
 static FRESULT cmd_sd_card_mount(void){
   const FRESULT res = f_mount(fs_volume, "", 1);
   if (res != FR_OK)
-    shell_printf("err %d: no card\r\n",res);
+    shell_printf("err: (%d) no card\r\n",res);
   return res;
 }
 
@@ -885,49 +885,43 @@ VNA_SHELL_FUNCTION(cmd_sd_list)
     res = f_findnext(&dj, &fno);
   }
   if (res != FR_OK)
-    shell_printf("err %d\r\n",res);
+    shell_printf("err: (%d)\r\n",res);
   f_closedir(&dj);
 }
 
 VNA_SHELL_FUNCTION(cmd_sd_read)
 {
-  DIR dj;
-  FILINFO fno;
+//  DIR dj;
+//  FILINFO fno;
   FRESULT res;
   char *buf = (char *)spi_buffer;
   if (argc != 1 || argv[0][0] == '?')
   {
-     usage_printf("sd_read {filename}\r\n");
+     usage_printf("usage: sd_read {filename}\r\n");
      return;
   }
   const char *filename = argv[0];
   if (cmd_sd_card_mount() != FR_OK)
     return;
 
-  res = f_findfirst(&dj, &fno, "", filename);
-  if (res != FR_OK || fno.fname[0] == 0)
-    goto error;
+ // res = f_findfirst(&dj, &fno, "", filename);
+ // if (res != FR_OK || fno.fname[0] == 0)
+ //   goto error;
 
-
-  if (f_open(fs_file, fno.fname, FA_OPEN_EXISTING | FA_READ) != FR_OK){
-error:
-    shell_printf("err %d: no file\r\n",res);
+  if ((res = f_open(fs_file, filename, FA_OPEN_EXISTING | FA_READ)) != FR_OK){
+//error:
+    shell_printf("err: (%d) no file\r\n", res);
     return;
   }
-  // shell_printf("sd_read: %s\r\n", filename);
   // number of bytes to follow (file size)
   uint32_t filesize = f_size(fs_file);
-#if 1
-  shell_printf("%u\r\n", filesize);
-#else
   streamWrite(shell_stream, (void *)&filesize, 4);
-#endif
   UINT size = 0;
   // file data (send all data from file)
   while ((res=f_read(fs_file, buf, 512, &size)) == FR_OK && size > 0)
     streamWrite(shell_stream, (void *)buf, size);
-  if (res != FR_OK)
-    goto error;
+//  if (res != FR_OK)
+//    goto error;
   f_close(fs_file);
   return;
 }
