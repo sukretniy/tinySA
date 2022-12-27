@@ -3895,9 +3895,11 @@ static const menuitem_t menu_limit_modify[] =
 
 static const menuitem_t menu_limit_select[] = {
   { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,LIMITS_MAX), MT_CUSTOM_LABEL, menu_limit_select_acb },
+#ifdef __USE_SD_CARD__
   { MT_CALLBACK,    FMT_TBL_FILE,  "TABLE"S_RARROW"\nSD",     menu_sdcard_cb},
 #ifdef __SD_FILE_BROWSER__
   { MT_CALLBACK, FMT_TBL_FILE, "SD"S_RARROW"\nTABLE",            menu_sdcard_browse_cb },
+#endif
 #endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
