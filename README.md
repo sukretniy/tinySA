@@ -19,6 +19,12 @@ enthusiast.
 
 This repository contains source of tinySA firmware.
 
+# Support
+
+General tinySA support questions should be posted here: https://groups.io/g/tinysa/messages
+
+Use github issue list only for firmware bugs and preferrably cross post to: https://groups.io/g/tinysa/messages
+
 ## Prepare ARM Cross Tools
 
 **UPDATE**: Recent gcc version works to build tinySA, no need old version.
@@ -53,6 +59,10 @@ Fetch source and submodule.
 Just make in the directory.
 
     $ make
+
+For tinySA Ultra use this command
+
+    $ make TARGET="F303"
 
 ### Build firmware using docker
 
