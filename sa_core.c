@@ -1275,6 +1275,9 @@ void set_level(float v)     // Set the output level in dB  in high/low output
   }
 #endif
   setting.level = v;
+#ifdef TINYSA4
+  set_output_path(get_sweep_frequency(ST_CENTER), v);
+#endif
   if (setting.mode == M_GENHIGH) correct_high_output_level();
   dirty = true;
 }
