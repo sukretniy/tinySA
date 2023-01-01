@@ -4546,12 +4546,16 @@ static void fetch_numeric_target(uint8_t mode)
     break;
   case KM_CENTER:
     uistat.freq_value = get_sweep_frequency(ST_CENTER) + (setting.frequency_offset - FREQUENCY_SHIFT);
+    char *out_format = "%.3QHz";
 #ifdef TINYSA4
-    if (uistat.freq_value > 990000000UL)
-      plot_printf(uistat.text, sizeof uistat.text, "%.9QHz", uistat.freq_value);
-    else
+    if (MODE_OUTPUT(setting.mode)) {
+      if (uistat.freq_value > 990000000UL)
+        out_format = "%.9QHz";
+      else if (uistat.freq_value > 990000UL)
+        out_format = "%.6QHz";
+    }
 #endif
-      plot_printf(uistat.text, sizeof uistat.text, "%.6QHz", uistat.freq_value);
+    plot_printf(uistat.text, sizeof uistat.text, out_format, uistat.freq_value);
     break;
   case KM_SPAN:
     uistat.freq_value = get_sweep_frequency(ST_SPAN);
