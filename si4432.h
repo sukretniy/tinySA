@@ -193,6 +193,7 @@ extern si446x_info_t SI4463_info;
 pureRSSI_t getSI4463_RSSI_correction(void);
 void Si446x_getInfo(si446x_info_t* info);
 void SI446x_Fill(int s, int start);
+void SI446x_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigger_mode);
 void SI4463_init(void);
 void set_calibration_freq(int freq);
 #define ADF4351_LO 3

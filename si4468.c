@@ -1338,6 +1338,7 @@ void si_fm_offset(int16_t offset) {
 #ifdef __FAST_SWEEP__
 extern deviceRSSI_t age[POINTS_COUNT];
 static int buf_index = 0;
+static uint16_t buf_end = 0;
 static bool  buf_read = false;
 
 static char Si446x_readRSSI(void){
@@ -1394,6 +1395,104 @@ static char Si446x_readRSSI(void){
 #endif
   return rssi;
 }
+
+//--------------------------- Trigger -------------------
+// ************** trigger mode if need
+#if 0
+// trigger on measure 4 point
+#define T_POINTS            4
+#define T_LEVEL_UNDEF       (1<<(16-T_POINTS)) // should drop after 4 shifts left
+#define T_LEVEL_BELOW       1
+#define T_LEVEL_ABOVE       0
+// Trigger mask, should have width T_POINTS bit
+#define T_DOWN_MASK         (0b0011)           // 2 from up 2 to bottom
+#define T_UP_MASK           (0b1100)           // 2 from bottom 2 to up
+#define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
+#else
+    // trigger on measure 2 point
+#define T_POINTS            2
+#define T_LEVEL_UNDEF       (1<<(16-T_POINTS)) // should drop after 2 shifts left
+#define T_LEVEL_BELOW       1
+#define T_LEVEL_ABOVE       0
+    // Trigger mask, should have width T_POINTS bit
+#define T_DOWN_MASK         (0b0001)           // 1 from up 1 to bottom
+#define T_UP_MASK           (0b0010)           // 1 from bottom 1 to up
+#define T_LEVEL_CLEAN       ~(1<<T_POINTS)     // cleanup old trigger data
+#endif
+
+
+enum { ST_ARMING, ST_WAITING, ST_FILLING };
+
+void SI446x_trigger_fill(int s, uint8_t trigger_lvl, int up_direction, int trigger_mode)
+{
+  (void)s;
+  uint8_t rssi;
+  uint32_t t = setting.additional_step_delay_us;
+  systime_t measure = chVTGetSystemTimeX();
+  int waiting = ST_ARMING;
+//  __disable_irq();
+  int i = 0;
+  uint16_t t_mode = up_direction ? T_UP_MASK : T_DOWN_MASK;
+  uint16_t data_level = T_LEVEL_UNDEF;
+  do {
+    if (operation_requested)                        // allow aborting a wait for trigger
+      return;                                       // abort
+
+    age[i++] = rssi = Si446x_readRSSI();
+    if (i >= sweep_points)
+      i = 0;
+    switch (waiting) {
+    case ST_ARMING:
+      if (i == sweep_points-1) {
+        waiting = ST_WAITING;
+        setting.measure_sweep_time_us = sa_ST2US(chVTGetSystemTimeX() - measure);
+      }
+      break;
+    case ST_WAITING:
+      // Store data level bitfield (remember only last 2 states)
+      // T_LEVEL_UNDEF mode bit drop after 2 shifts
+#if 0
+      if (rssi < trigger_lvl) {
+        data_level = ((data_level<<1) | (T_LEVEL_BELOW))&(T_LEVEL_CLEAN);
+      } else {
+        data_level = ((data_level<<1) | (T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
+      }
+#else
+      data_level = ((data_level<<1) | (rssi < trigger_lvl ? T_LEVEL_BELOW : T_LEVEL_ABOVE))&(T_LEVEL_CLEAN);
+#endif
+      if (data_level == t_mode) {  // wait trigger
+ //     if (i == 128) {  // wait trigger
+        waiting = ST_FILLING;
+        switch (trigger_mode) {
+        case T_PRE:                // Trigger at the begin of the scan
+          buf_index = i;
+          goto fill_rest;
+          break;
+        case T_POST:               // Trigger at the end of the scan
+          buf_index = i;
+          goto done;
+          break;
+        case T_MID:                // Trigger in the middle of the scan
+          buf_index = i + sweep_points/2;
+          if (buf_index >= sweep_points)
+            buf_index -= sweep_points;
+          break;
+        }
+      }
+      break;
+    case ST_FILLING:
+      if (i == buf_index)
+        goto done;
+    }
+fill_rest:
+    if (t)
+      my_microsecond_delay(t);
+  }while(1);
+done:
+  buf_end = buf_index;
+  buf_read = true;
+}
+
 
 void SI446x_Fill(int s, int start)
 {
@@ -1465,6 +1564,7 @@ void SI446x_Fill(int s, int start)
   __enable_irq();
   setting.measure_sweep_time_us = sa_ST2US(chVTGetSystemTimeX() - measure);
   buf_index = (start<=0 ? 0 : start); // Is used to skip 1st entry during level triggering
+  buf_end = sweep_points - 1;
   buf_read = true;
 }
 #endif
@@ -1537,9 +1637,12 @@ int16_t Si446x_RSSI(void)
 {
 #ifdef __FAST_SWEEP__
   if (buf_read) {
-    if (buf_index == sweep_points-1)
+    pureRSSI_t val = DEVICE_TO_PURE_RSSI(age[buf_index++]);
+    if (buf_index >= sweep_points)
+      buf_index = 0;
+    if (buf_index == buf_end)
       buf_read = false;
-    return DEVICE_TO_PURE_RSSI(age[buf_index++]);
+    return val;
   }
 #endif
 

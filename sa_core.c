@@ -4562,9 +4562,13 @@ again:                                                              // Spur redu
 
     if (i == 0 && setting.frequency_step == 0 && setting.trigger != T_AUTO) { // if in zero span mode and wait for trigger to happen and NOT in trigger mode
 
-#ifdef TINYSA3
+#if 1
       volatile uint8_t trigger_lvl = PURE_TO_DEVICE_RSSI((int16_t)((float_TO_PURE_RSSI(setting.trigger_level) - correct_RSSI - correct_RSSI_freq)));
+#ifdef TINYSA4
+      SI446x_trigger_fill(MODE_SELECT(setting.mode), trigger_lvl, (setting.trigger_direction == T_UP), setting.trigger_mode);
+#else
       SI4432_trigger_fill(MODE_SELECT(setting.mode), trigger_lvl, (setting.trigger_direction == T_UP), setting.trigger_mode);
+#endif
 #else
       register uint16_t t_mode;
       pureRSSI_t trigger_lvl;
