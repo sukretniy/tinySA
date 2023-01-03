@@ -26,7 +26,7 @@
 #pragma GCC push_options
 #pragma GCC optimize ("O2")
 
-//#define __USE_FFR_FOR_RSSI__
+//#define __USE_FRR_FOR_RSSI__
 
 
 // Define for use hardware SPI mode
@@ -910,7 +910,7 @@ static void SI4463_set_properties(uint16_t prop, void* values, uint8_t len)
 #define GLOBAL_GPIO_PIN_CFG 0x13, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 #define GLOBAL_CLK_CFG 0x11, 0x00, 0x01, 0x01, 0x00
 // ---------------------------------------------------------------------------------------------------- v ------------  RSSI control byte
-#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x07, 0x10, 0x40
+#define GLOBAL_RF_MODEM_RAW_CONTROL 0x11, 0x20, 0x0A, 0x45, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x13, 0x10, 0x40
 //0x11 SI446X_CMD_SET_PROPERTY
 //0x20  SI446X_PROP_GROUP_MODEM
 //0x0A  10 Count
@@ -1117,7 +1117,7 @@ int SI4463_start_rx(uint8_t CHANNEL)
     0,
     0,
     0,
-#ifdef __USE_FFR_FOR_RSSI__
+#ifdef __USE_FRR_FOR_RSSI__
     SI446X_CMD_START_RX_ARG_NEXT_STATE1_RXTIMEOUT_STATE_ENUM_RX,
 #else
     SI446X_CMD_START_RX_ARG_NEXT_STATE1_RXTIMEOUT_STATE_ENUM_NOCHANGE,
@@ -1343,7 +1343,7 @@ static bool  buf_read = false;
 
 static char Si446x_readRSSI(void){
   char rssi;
-#ifdef __USE_FFR_FOR_RSSI__
+#ifdef __USE_FRR_FOR_RSSI__
 #if 0               // Restart RX, not needed as modem stays in RX mode
   SI4463_WAIT_CTS;                       // Wait for CTS
   SPI_WRITE_8BIT(SI4432_SPI, SI446X_CMD_ID_START_RX);
@@ -1521,8 +1521,7 @@ void SI446x_Fill(int s, int start)
   systime_t measure = chVTGetSystemTimeX();
   int i = start;
 // For SI446X_CMD_READ_FRR_A need drop Rx buffer
-#ifdef __USE_FFR_FOR_RSSI__
-  SI4463_WAIT_CTS;                       // Wait for CTS
+#ifdef __USE_FRR_FOR_RSSI__
   while(SPI_RX_IS_NOT_EMPTY(SI4432_SPI)) (void)SPI_READ_8BIT(SI4432_SPI);      // Remove lingering bytes
   // Get first point data
   pureRSSI_t last;
@@ -1535,10 +1534,11 @@ void SI446x_Fill(int s, int start)
     last = SPI_READ_8BIT(SI4432_SPI);      // Get FRR A
     SI_CS_HIGH;
   } while (last == 0);
+
 #endif
   __disable_irq();
   do {
-#ifndef  __USE_FFR_FOR_RSSI__
+#ifndef  __USE_FRR_FOR_RSSI__
     if (t)
       my_microsecond_delay(t);
     age[i] = Si446x_readRSSI();
