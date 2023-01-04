@@ -3661,6 +3661,15 @@ static UI_FUNCTION_CALLBACK(menu_sdcard_cb) {
   sa_save_file(data);
 }
 
+static UI_FUNCTION_CALLBACK(menu_save_traces_cb) {
+  (void)item;
+  (void) data;
+  file_mask = 1 | (IS_TRACE_ENABLE(0) ? 2 : 0) | (IS_TRACE_ENABLE(1) ? 4 : 0) | (IS_TRACE_ENABLE(2) ? 8 : 0) | (IS_TRACE_ENABLE(3) ? 16 : 0)  ;
+  sa_save_file(FMT_CSV_FILE);
+}
+
+
+
 static UI_FUNCTION_ADV_CALLBACK(menu_autoname_acb)
 {
   (void)item;
@@ -3700,7 +3709,7 @@ static const menuitem_t menu_load_preset[] =
   { MT_ADV_CALLBACK,            0,                          "LOAD\nSTARTUP", menu_load_preset_acb},
   { MT_ADV_CALLBACK|MT_REPEATS, DATA_STARTS_REPEATS(1,4),   MT_CUSTOM_LABEL, menu_load_preset_acb},
   { MT_ADV_CALLBACK,            101,                        "LOAD\nDEFAULTS",menu_store_preset_acb},
-  { MT_ADV_CALLBACK,            _MODE_DONT_SAVE_STATE,      "SAVE\nSTATE",   menu_save_state_acb},
+  { MT_ADV_CALLBACK,            _MODE_DONT_SAVE_STATE,      "SAVE\nSETTINGS",   menu_save_state_acb},
 #ifdef __SD_FILE_BROWSER__
   { MT_CALLBACK, FMT_PRS_FILE, "LOAD FROM\n SD",            menu_sdcard_browse_cb },
 #endif
@@ -4463,10 +4472,14 @@ static const menuitem_t menu_stimulus[] = {
 #ifdef __USE_SD_CARD__
 static const menuitem_t menu_storage[] = {
 #ifdef __SD_FILE_BROWSER__
-  { MT_CALLBACK, FMT_BMP_FILE,      "LOAD BMP",             menu_sdcard_browse_cb },
+  { MT_CALLBACK, FMT_BMP_FILE,      "LOAD\nCAPTURE",        menu_sdcard_browse_cb },
+  { MT_CALLBACK, FMT_PRS_FILE,      "LOAD\nSETTINGS",       menu_sdcard_browse_cb },
   { MT_CALLBACK, FMT_CMD_FILE,      "LOAD CMD",             menu_sdcard_browse_cb },
 #endif
   { MT_ADV_CALLBACK, 0,             "AUTO NAME",            menu_autoname_acb },
+  { MT_CALLBACK,    FMT_BMP_FILE,   "SAVE\nCAPTURE",        menu_sdcard_cb},
+  { MT_CALLBACK,    FMT_PRS_FILE,   "SAVE\nSETTINGS",       menu_sdcard_cb},
+  { MT_CALLBACK,    FMT_CSV_FILE,   "SAVE\nTRACES",         menu_save_traces_cb},
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 #endif
