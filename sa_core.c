@@ -553,6 +553,7 @@ void reset_settings(int m)
   setting.sweep = false;
   disable_waterfall();
   setting.level_meter = false;
+  setting.pulse = false;
 #ifdef __ULTRA__
   ultra_start = (config.ultra_start == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_start);
 #endif
