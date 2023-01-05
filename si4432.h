@@ -129,7 +129,7 @@ void SI4432_Reset(void);
 void SI4432_Init(void);
 void SI4432_Drive(int);
 pureRSSI_t getSI4432_RSSI_correction(void);
-pureRSSI_t SI4432_RSSI(uint32_t i, int s);
+pureRSSI_t SI4432_RSSI(uint32_t i, int s, bool break_on_operation);
 #ifdef __SIMULATION__
 float Simulated_SI4432_RSSI(uint32_t i, int s);
 #endif
@@ -184,7 +184,7 @@ extern int si5351_available;
 #ifdef __SI4463__
 #include "si446x_defs.h"
 #include "si446x.h"
-int16_t Si446x_RSSI(void);
+int16_t Si446x_RSSI(bool break_on_operation);
 uint8_t getFRR(uint8_t reg);
 si446x_state_t getState(void);
 void setState(si446x_state_t newState);

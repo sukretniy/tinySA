@@ -1633,7 +1633,7 @@ void SI4432_Listen(int s)
 #endif
 
 
-int16_t Si446x_RSSI(void)
+int16_t Si446x_RSSI(bool break_on_operation)
 {
 #ifdef __FAST_SWEEP__
   if (buf_read) {
@@ -1696,6 +1696,8 @@ int16_t Si446x_RSSI(void)
     if (--i <= 0) break;
     if (setting.repeat > 1)
       my_microsecond_delay(SI4432_step_delay);
+    if (break_on_operation && operation_requested)
+      break;
   }while(1);
 
   if (setting.repeat > 1 && setting.exp_aver == 1)

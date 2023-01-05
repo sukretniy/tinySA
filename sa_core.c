@@ -3329,7 +3329,7 @@ static int fm_modulation[MAX_MODULATION_STEPS+1];
 //
 //  Offset is 156.25Hz when below 600MHz and 312.5 when above.
 //
-#define LND  12   // Total NFM deviation is LND * 4 * 156.25 = 5kHz when below 600MHz or 600MHz - 434MHz
+#define LND  10   // Total NFM deviation is LND * 4 * 156.25 = 5kHz when below 600MHz or 600MHz - 434MHz
 #define HND  6
 #define LWD  240 // Total WFM deviation is LWD * 4 * 156.25 = 75kHz when below 600MHz
 #define HWD  120
@@ -4591,7 +4591,7 @@ again:                                                              // Spur redu
         pureRSSI = DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
 #endif
 #ifdef __SI4463__
-        pureRSSI = Si446x_RSSI();
+        pureRSSI = Si446x_RSSI(break_on_operation);
         if (LO_shifting)
           pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : (lf < LOW_SHIFT_FREQ ? config.shift1_level_offset: 0.0));
 
@@ -4684,13 +4684,13 @@ again:                                                              // Spur redu
     //else
     {
 #ifdef __SI4432__
-      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode));            // Get RSSI, either from pre-filled buffer
+      pureRSSI = SI4432_RSSI(lf, MODE_SELECT(setting.mode), break_on_operation);            // Get RSSI, either from pre-filled buffer
 #endif
 #ifdef __SI4463__
       if (real_old_freq[SI4463_RX] == 0)
         pureRSSI = 0;
       else {
-        pureRSSI = Si446x_RSSI();
+        pureRSSI = Si446x_RSSI(break_on_operation);
         if (LO_shifting)
           pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : (lf < LOW_SHIFT_FREQ ? config.shift1_level_offset: 0.0));
       }

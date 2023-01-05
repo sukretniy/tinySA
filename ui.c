@@ -2076,7 +2076,7 @@ const char *menu_modulation_text[MO_MAX]=
    "FM 3kHz",
    "FM 5kHz",
 #else
-   "FM 4kHz",
+   "FM 3kHz",
 #endif
    "FM 75kHz", "External"};
 

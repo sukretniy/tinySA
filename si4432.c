@@ -784,7 +784,7 @@ pureRSSI_t getSI4432_RSSI_correction(void){
   return SI4432_RSSI_correction;
 };
 
-pureRSSI_t SI4432_RSSI(uint32_t i, int s)
+pureRSSI_t SI4432_RSSI(uint32_t i, int s, bool break_on_operation)
 {
   (void) i;
   int32_t RSSI_RAW;
@@ -826,6 +826,8 @@ pureRSSI_t SI4432_RSSI(uint32_t i, int s)
     RSSI_RAW += DEVICE_TO_PURE_RSSI((deviceRSSI_t)SI4432_Read_Byte(SI4432_REG_RSSI));
     if (--i == 0) break;
     my_microsecond_delay(100);
+    if (break_on_operation && operation_requested)
+      break;
   }while(1);
 
   if (setting.repeat > 1){
