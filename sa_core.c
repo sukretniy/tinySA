@@ -1079,14 +1079,16 @@ void set_depth(int d)
 
 void set_modulation_frequency(int f)
 {
-  if (50 <= f && f <= 10000) {
+  if (f < 50)
+    f = 50;
+  if (f > 10000)
+    f = 10000;
 #ifdef TINYSA4
-      if (setting.modulation == MO_WFM && f > 2000)
-        f = 2000;
+  if (setting.modulation == MO_WFM && f > 2000)
+    f = 2000;
 #endif
-    setting.modulation_frequency = f;
-    dirty = true;
-  }
+  setting.modulation_frequency = f;
+  dirty = true;
 }
 
 void set_repeat(int r)
@@ -4851,6 +4853,11 @@ static bool sweep(bool break_on_operation)
   //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
 
   sweep_again:                                // stay in sweep loop when output mode and modulation on.
+
+  if (setting.trigger_grid) {               // for start of sweep in time grid
+    while ((chVTGetSystemTimeX() % (setting.trigger_grid+2)) == 0);
+    while ((chVTGetSystemTimeX() % (setting.trigger_grid+2)) != 0);
+  }
 
 #ifdef __ULTRA__
   if (config.ultra_start == ULTRA_AUTO) {

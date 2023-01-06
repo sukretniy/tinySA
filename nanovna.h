@@ -1235,6 +1235,8 @@ typedef struct setting
   systime_t actual_sweep_time_us;
   systime_t additional_step_delay_us;
 
+  uint32_t trigger_grid;
+
 //  freq_t  *correction_frequency;
 //  float   *correction_value;
 

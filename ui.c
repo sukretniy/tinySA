@@ -1333,6 +1333,7 @@ enum {
 #ifdef __USE_SD_CARD__
   KM_FILENAME,
 #endif
+  KM_TRIGGER_GRID,
   KM_NONE // always at enum end
 };
 
@@ -1411,6 +1412,7 @@ static const struct {
 #ifdef __USE_SD_CARD__
 [KM_FILENAME]     = {keypads_text        , "NAME"},  // filename
 #endif
+[KM_TRIGGER_GRID] = {keypads_time        , "INTERVAL"},              // KM_CODE
 };
 
 #if 0 // Not used
@@ -4434,6 +4436,7 @@ static const menuitem_t menu_trigger[] = {
   { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
   { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
   { MT_ADV_CALLBACK, T_MODE,     "%s\nTRIGGER",     menu_trigger_acb},
+  { MT_KEYPAD,       KM_TRIGGER_GRID, "INTERVAL\n\b%ss", NULL},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
@@ -4744,6 +4747,11 @@ static void fetch_numeric_target(uint8_t mode)
       format = "%.1f%s";
     plot_printf(uistat.text, sizeof uistat.text, format, uistat.value,unit_string[setting.unit]);
     break;
+  case KM_TRIGGER_GRID:
+    uistat.value = ((float)ST2US(setting.trigger_grid))/1000000.0;
+    plot_printf(uistat.text, sizeof uistat.text, "%.3F", uistat.value);
+    break;
+
   case KM_MARKER:
     if (active_marker >=0) {
       uistat.freq_value = markers[active_marker].frequency;
@@ -4947,6 +4955,10 @@ set_numeric_value(void)
     if (setting.trigger == T_AUTO )
       set_trigger(T_NORMAL);
     set_trigger_level(to_dBm(uistat.value));
+    completed = true;
+    break;
+  case KM_TRIGGER_GRID:
+    setting.trigger_grid = US2ST(uistat.value*1000000.0) ;
     completed = true;
     break;
   case KM_GRIDLINES:
