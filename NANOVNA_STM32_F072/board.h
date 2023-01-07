@@ -49,8 +49,8 @@
 
 //#define GPIO_PE_SEL			0
 #define GPIOA_LEVER1			1
-#define GPIOA_LEVER2			2
-#define GPIOA_PUSH				3
+#define GPIOA_PUSH				2
+#define GPIOA_LEVER2			3
 //#define GPIO_RX_SEL            4
 //#define GPIO_LO_SEL			5
 #define GPIOA_XP				6

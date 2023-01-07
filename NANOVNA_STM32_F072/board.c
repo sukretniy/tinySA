@@ -62,6 +62,25 @@ const PALConfig pal_default_config = {
 };
 #endif
 
+static bool needDFU(void) {
+  // Magick data in memory before reset
+  if (*((unsigned long *)BOOT_FROM_SYTEM_MEMORY_MAGIC_ADDRESS) == BOOT_FROM_SYTEM_MEMORY_MAGIC)
+    return true;
+  // init PortA (leveler port) and check press
+  rccEnableAHB(STM32_GPIO_EN_MASK, FALSE);
+  GPIOA->OTYPER  = VAL_GPIOA_OTYPER;
+  GPIOA->OSPEEDR = VAL_GPIOA_OSPEEDR;
+  GPIOA->PUPDR   = VAL_GPIOA_PUPDR;
+  GPIOA->ODR     = VAL_GPIOA_ODR;
+  GPIOA->AFRL    = VAL_GPIOA_AFRL;
+  GPIOA->AFRH    = VAL_GPIOA_AFRH;
+  GPIOA->MODER   = VAL_GPIOA_MODER;
+  if (palReadPort(GPIOA) & (1<<GPIOA_PUSH)) {
+    while(palReadPort(GPIOA) & (1<<GPIOA_PUSH)) {}; // Wait press
+    return true;
+  }
+  return false;
+}
 //extern void si5351_setup(void);
 
 /*
@@ -70,7 +89,7 @@ const PALConfig pal_default_config = {
  * any other initialization.
  */
 void __early_init(void) {
-  if ( *((unsigned long *)BOOT_FROM_SYTEM_MEMORY_MAGIC_ADDRESS) == BOOT_FROM_SYTEM_MEMORY_MAGIC ) {
+  if (needDFU()) {
     // require irq
     __enable_irq();
     // reset magic bytes
