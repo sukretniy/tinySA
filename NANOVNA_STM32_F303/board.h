@@ -61,8 +61,8 @@
 #define GPIO_LED                0
 #define LINE_LED                PAL_LINE(GPIOA,GPIO_LED)
 #define GPIOA_LEVER1            1
-#define GPIOA_LEVER2            2
-#define GPIOA_PUSH              3
+#define GPIOA_PUSH              2
+#define GPIOA_LEVER2            3
 #define GPIO_SD_DAT2            4
 #define LINE_SD_DAT2            PAL_LINE(GPIOA,GPIO_SD_DAT2)
 #define GPIOA_DAC2              5
