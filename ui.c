@@ -1092,6 +1092,7 @@ const uint8_t right_icons [] =
 #define KP_n         23
 #define KP_p         24
 #define KP_ENTER     25
+#define KP_EMPTY     26
 
 #define KP_0    31
 #define KP_1    32
@@ -1156,7 +1157,7 @@ static const keypads_t keypads_freq[] = {
 // 1 2 3
 // 0 . < x
 static const keypads_t keypads_positive[] = {
-  { 13 ,  NUM_KEYBOARD },   // size and position
+  { 16 ,  NUM_KEYBOARD },   // size and position
   { 0x13, KP_PERIOD },
   { 0x03, 0 },
   { 0x02, 1 },
@@ -1169,7 +1170,10 @@ static const keypads_t keypads_positive[] = {
   { 0x10, 8 },
   { 0x20, 9 },
   { 0x33, KP_ENTER },
-  { 0x23, KP_BS }
+  { 0x23, KP_BS },
+  { 0x30, KP_EMPTY },
+  { 0x31, KP_EMPTY },
+  { 0x32, KP_EMPTY },
 };
 
 // 100 200 500 n
@@ -1250,7 +1254,7 @@ static const keypads_t keypads_plusmin[] = {
 // 1 2 3 m
 // 0 . < x
 static const keypads_t keypads_time[] = {
-  { 14 ,  NUM_KEYBOARD },   // size and position
+  { 16 ,  NUM_KEYBOARD },   // size and position
   { 0x13, KP_PERIOD },
   { 0x03, 0 },
   { 0x02, 1 },
@@ -1264,9 +1268,11 @@ static const keypads_t keypads_time[] = {
   { 0x20, 9 },
 //  { 0x30, KP_n},
 //  { 0x31, KP_u},
+  { 0x23, KP_BS },
   { 0x32, KP_m },
   { 0x33, KP_X1 },
-  { 0x23, KP_BS }
+  { 0x30, KP_EMPTY },
+  { 0x31, KP_EMPTY },
 };
 
 #ifdef __USE_SD_CARD__
@@ -5442,6 +5448,7 @@ redraw_cal_status:
   y += YSTEP*2;
   uint32_t tr = rtc_get_tr_bin(); // TR read first
   lcd_printf(x, y,  "%02d:%02d", RTC_TR_HOUR(dr), RTC_TR_MIN(dr));
+  y = add_quick_menu(y, (menuitem_t *)menu_date_time);
 #endif
 
 
@@ -5710,6 +5717,8 @@ draw_keypad_button(int id) {
   int x = p->x_offs + (keypads[id+1].pos>> 4) * p->width;
   int y = p->y_offs + (keypads[id+1].pos&0xF) * p->height;
   draw_button(x, y, p->width, p->height, &button);
+  if (keypads[id+1].c == KP_EMPTY)
+    return;
   if (keypads[0].c == NUM_KEYBOARD) {
     if (keypads[id+1].c < KP_0) { // KP_0
       ili9341_drawfont(keypads[id+1].c,
