@@ -389,8 +389,9 @@ void touch_set(int16_t x, int16_t y) {
 void
 touch_wait_release(void)
 {
-  while (touch_check() != EVT_TOUCH_NONE)
+  while (touch_check() != EVT_TOUCH_NONE) {
     chThdSleepMilliseconds(20);
+  }
 }
 #if 0
 static inline void
@@ -2421,8 +2422,11 @@ static UI_FUNCTION_CALLBACK(menu_clearconfig_cb)
   (void)item;
   kp_help_text = "Clear unlock code";
   ui_mode_keypad(KM_CODE);
-  if (uistat.value != 1234)
+  if (uistat.value != 1234) {
+    drawMessageBox("Error", "Incorrect code, use 1234", 2000);
+    redraw_request|= REDRAW_AREA;
     return;
+  }
   clear_all_config_prop_data();
 #ifndef TINYSA4
 #define SCB_AIRCR_VECTKEYSTAT_LSB 16
@@ -6966,7 +6970,12 @@ made_screenshot(int touch_x, int touch_y) {
 static int
 touch_lever_mode_select(int touch_x, int touch_y)
 {
-  if (touch_y > HEIGHT) {
+#ifdef TINYSA4
+#define BOTTOM_EXTRA_MARGIN 10
+#else
+#define BOTTOM_EXTRA_MARGIN 0
+#endif
+  if (touch_y > HEIGHT-BOTTOM_EXTRA_MARGIN) {
     touch_wait_release();
     // Touch on left frequency field side
     if (touch_x < FREQUENCIES_XPOS2 - 50) {
