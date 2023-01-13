@@ -6455,11 +6455,11 @@ lever_move(int status, int mode)
   freq_t freq = get_sweep_frequency(mode);
   if (mode == ST_SPAN){
     if (uistat.auto_center_marker) {
-      freq = get_marker_frequency(active_marker);
-      search_maximum(active_marker, freq, 10 );
-      if (freq == 0) return;
-      set_sweep_frequency(ST_CENTER, freq);
-      return;
+      freq_t new_freq = get_marker_frequency(active_marker);
+      search_maximum(active_marker, new_freq, 10 );
+      if (new_freq == 0) return;
+      set_sweep_frequency(ST_CENTER, new_freq);
+//      return;
     }
     if (status & EVT_UP  ) freq = setting.frequency_var ? (freq + setting.frequency_var) : step_round(freq*4 + 1);
     if (status & EVT_DOWN) freq = setting.frequency_var ? (freq - setting.frequency_var) : step_round(freq   - 1);
