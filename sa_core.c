@@ -4760,7 +4760,7 @@ again:                                                              // Spur redu
 //  pureRSSI_t rssi = (RSSI>0 ? RSSI + correct_RSSI + correct_RSSI_freq : IGNORE_RSSI); // add correction
   pureRSSI_t rssi = RSSI;
   if (false) {
-  abort:
+//  abort:
     rssi = 0;
   }
   return rssi;

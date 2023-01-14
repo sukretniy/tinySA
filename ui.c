@@ -1889,7 +1889,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
 {
   (void)item;
   if(b){
+#if 1
+    setting_t *p = caldata_pointer(data);
+    if (p)
+      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)p->frequency0, (float)p->frequency1);
+    else
+      plot_printf(b->text, sizeof(b->text), "STORE %d", (int)data);
+#else
     b->param_1.u = data;
+#endif
     return;
   }
   if (data >= 100) {
@@ -3708,7 +3716,7 @@ static const menuitem_t menu_back[] = {
 static const menuitem_t menu_store_preset[] =
 {
   { MT_ADV_CALLBACK, 0,  "STORE AS\nSTARTUP",menu_store_preset_acb},
-  { MT_ADV_CALLBACK |MT_REPEATS,  DATA_STARTS_REPEATS(1,4),  "STORE %d",         menu_store_preset_acb},
+  { MT_ADV_CALLBACK |MT_REPEATS,  DATA_STARTS_REPEATS(1,4),  MT_CUSTOM_LABEL,         menu_store_preset_acb},
 #ifdef TINYSA4
   { MT_CALLBACK,    FMT_PRS_FILE,   "STORE\n"S_RARROW"SD",     menu_sdcard_cb},
 #endif
@@ -6927,7 +6935,7 @@ static void sa_save_file(uint8_t format) {
       {
         uint16_t *src = (uint16_t*)&setting;
         int total = sizeof(setting_t);
-        setting.magic = CONFIG_MAGIC;
+        setting.magic = SETTING_MAGIC;
         setting.checksum = 0x12345678;
         setting.checksum = checksum(
             &setting,

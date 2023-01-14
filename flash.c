@@ -138,7 +138,7 @@ caldata_save(uint16_t id)
 
   dst = (uint16_t*)(SAVE_PROP_CONFIG_ADDR + id * SAVE_PROP_CONFIG_SIZE);
 
-  setting.magic = CONFIG_MAGIC;
+  setting.magic = SETTING_MAGIC;
   setting.checksum = 0x12345678;
   setting.checksum = checksum(
       &setting,
@@ -188,7 +188,7 @@ caldata_pointer(uint16_t id)
   // point to saved area on the flash memory
   src = (setting_t*)(SAVE_PROP_CONFIG_ADDR + id * SAVE_PROP_CONFIG_SIZE);
 
-  if (src->magic != CONFIG_MAGIC)
+  if (src->magic != SETTING_MAGIC)
     return NULL;
 //  if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("Checksum %x\r\n", src->checksum);
   if (checksum(src,
@@ -211,7 +211,7 @@ caldata_recall(uint16_t id)
   // point to saved area on the flash memory
   src = (setting_t*)(SAVE_PROP_CONFIG_ADDR + id * SAVE_PROP_CONFIG_SIZE);
 
-  if (src->magic != CONFIG_MAGIC)
+  if (src->magic != SETTING_MAGIC)
     return -1;
 //  if (SDU1.config->usbp->state == USB_ACTIVE) shell_printf("Checksum %x\r\n", src->checksum);
   if (checksum(src,
@@ -255,7 +255,7 @@ caldata_ref(int id)
     return NULL;
   src = (const setting_t*)saveareas[id];
 
-  if (src->magic != CONFIG_MAGIC)
+  if (src->magic != SETTING_MAGIC)
     return NULL;
   if (checksum(src, sizeof *src - sizeof src->checksum) != src->checksum)
     return NULL;

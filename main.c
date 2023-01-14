@@ -1078,7 +1078,7 @@ static const marker_t def_markers[MARKERS_MAX] = {
 void load_LCD_properties(void)
 {
 //Magic add on caldata_save
-//setting.magic = CONFIG_MAGIC;
+//setting.magic = SETTING_MAGIC;
   setting._sweep_points = POINTS_COUNT;
   setting.trace_scale = 10.0;
   setting.trace_refpos = 0;

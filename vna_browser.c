@@ -252,7 +252,7 @@ finish:
     uint32_t total = sizeof(setting_t) - sizeof(magic);
     // Compare file size and try read magic header, if all OK load it
     if (fno.fsize == sizeof(setting) && f_read(fs_file, &magic, sizeof(magic), &size) == FR_OK &&
-        magic == CONFIG_MAGIC && f_read(fs_file, src, total, &size) == FR_OK) {
+        magic == SETTING_MAGIC && f_read(fs_file, src, total, &size) == FR_OK) {
 
      // TODO remove code duplication with flash.c
       update_min_max_freq();
