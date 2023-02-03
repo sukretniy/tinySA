@@ -218,7 +218,7 @@ typedef uint32_t freq_t;
  #define CORRECTION_LNA_ULTRA 3
  #define CORRECTION_DIRECT         4
  #define CORRECTION_LNA_DIRECT     5
- #define CORRECTION_LOW_OUT        6
+ #define CORRECTION_LOW_OUT        6    // Must be same order as output path options!!!!!
  #define CORRECTION_LOW_OUT_DIRECT 7
  #define CORRECTION_LOW_OUT_ADF    8
  #define CORRECTION_LOW_OUT_MIXER  9
@@ -1736,7 +1736,7 @@ extern void SI4432_Listen(int s);
 // si4432.c
 
 
-enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};
+enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};  // must be same order as correction tables!!!!
 #define PATH_TEXT {"OFF", "LOW", "DIRECT", "ADF", "ULTRA", "High"}
 extern const char *path_text[];
 extern int signal_path;

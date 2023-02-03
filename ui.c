@@ -1570,8 +1570,15 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
   }
   switch(current_curve) {
   case CORRECTION_LOW_OUT:
+  case CORRECTION_LOW_OUT_DIRECT:
+  case CORRECTION_LOW_OUT_ADF:
+  case CORRECTION_LOW_OUT_MIXER:
     old_m = setting.mode;
     reset_settings(M_GENLOW);
+    force_signal_path=true;
+    dirty = true;
+    test_output_drive = -1;
+    test_path = PATH_LOW + current_curve - CORRECTION_LOW_OUT;  // This assumes the order is the SAME!!!!!
     set_level(-35);
     set_sweep_frequency(ST_CW, config.correction_frequency[current_curve][data]);
     setting.mute = false;
@@ -1718,6 +1725,36 @@ static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
   menu_push_submenu(menu_curve);
 }
 
+static UI_FUNCTION_CALLBACK(menu_output_ultra_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (!output_is_calibrated())
+    return;
+  current_curve = CORRECTION_LOW_OUT_MIXER;
+  menu_push_submenu(menu_curve);
+}
+
+static UI_FUNCTION_CALLBACK(menu_output_direct_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (!output_is_calibrated())
+    return;
+  current_curve = CORRECTION_LOW_OUT_DIRECT;
+  menu_push_submenu(menu_curve);
+}
+
+static UI_FUNCTION_CALLBACK(menu_output_adf_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (!output_is_calibrated())
+    return;
+  current_curve = CORRECTION_LOW_OUT_ADF;
+  menu_push_submenu(menu_curve);
+}
+
 #endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
@@ -1744,8 +1781,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
   ui_mode_keypad(KM_LEVEL);
   if (kp_buf[0] != 0) {
     float old_offset = config.low_level_output_offset;
-    if (!config.input_is_calibrated) old_offset = 0;
-    float new_offset = uistat.value - (TEST_LEVEL) + old_offset;        // calculate offset based on difference between measured peak level and known peak level
+//    if (!config.input_is_calibrated) old_offset = 0;
+    volatile float new_offset = old_offset + (uistat.value - (TEST_LEVEL));        // calculate offset based on difference between measured peak level and known peak level
     if (uistat.value == 100) { new_offset = 0; config.input_is_calibrated = false; }
     if (new_offset > -15 && new_offset < 15) {
       config.output_is_calibrated = true;
@@ -4090,11 +4127,14 @@ static const menuitem_t menu_actual_power[] =
  { MT_KEYPAD,           KM_ACTUALPOWER, "INPUT\nLEVEL",  "Enter actual level under marker"},
 #ifdef TINYSA4
  { MT_SUBMENU,      0,                  "OUTPUT\nLEVEL", menu_actual_power2},
- { MT_CALLBACK,     0,                  "INPUT\nCURVE",  menu_input_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "LNA\nCURVE",    menu_lna_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "ULTRA\nCURVE",  menu_ultra_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "LNA_U\nCURVE",    menu_lna_u_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "OUTPUT\nCURVE", menu_output_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "IN\nCURVE",  menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "IN LNA\nCURVE",    menu_lna_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "IN ULTRA\nCURVE",  menu_ultra_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "IN ULTRA\nLNA CURVE",    menu_lna_u_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "OUT\nCURVE", menu_output_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "OUT DIR\nCURVE", menu_output_direct_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "OUT ADF\nCURVE", menu_output_adf_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "OUT MIXER\nCURVE", menu_output_ultra_curve_prepare_cb},
 #else
  { MT_ADV_CALLBACK,     0,              "OUTPUT\nLEVEL", menu_output_level_acb},
 #endif
