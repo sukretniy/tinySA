@@ -1458,10 +1458,12 @@ static const menuitem_t  menu_connection[];
 #endif
 //static const menuitem_t  menu_drive_wide[];
 static const menuitem_t  menu_config[];
-#ifdef TINYSA4
-static const menuitem_t  menu_settings3[];
+#ifdef __CURVE_EDIT__
 static const menuitem_t  menu_curve[];
 static const menuitem_t  menu_curve_confirm[];
+#endif
+#ifdef TINYSA4
+static const menuitem_t  menu_settings3[];
 static const menuitem_t  menu_measure_noise_figure[];
 static const menuitem_t  menu_calibrate_harmonic[];
 #endif
@@ -1552,7 +1554,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_restart_acb){
 }
 #endif
 
-#ifdef TINYSA4
+#ifdef __CURVE_EDIT__
 
 float local_actual_level;
 int current_curve;
@@ -1561,7 +1563,6 @@ int current_curve_index;
 static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
         {
   (void)item;
-  int old_m;
   if (b){
     plot_printf(b->text, sizeof b->text, "%8.3QHz %+4.1fdB",
                 config.correction_frequency[current_curve][data],
@@ -1569,10 +1570,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     return;
   }
   switch(current_curve) {
+#ifdef TINYSA4
   case CORRECTION_LOW_OUT:
   case CORRECTION_LOW_OUT_DIRECT:
   case CORRECTION_LOW_OUT_ADF:
   case CORRECTION_LOW_OUT_MIXER:
+    { int old_m;
     old_m = setting.mode;
     reset_settings(M_GENLOW);
     force_signal_path=true;
@@ -1598,14 +1601,24 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
       }
     }
     reset_settings(old_m);
+    }
     break;
   case CORRECTION_LNA:
   case CORRECTION_LNA_ULTRA:
     reset_settings(M_LOW);
     setting.extra_lna = true;
     goto common;
-  case CORRECTION_LOW:
+#endif
+
+#ifdef TINYSA4
   case CORRECTION_LOW_ULTRA:
+    goto common;
+#else
+  case CORRECTION_HIGH:
+    reset_settings(M_HIGH);
+    goto common;
+#endif
+  case CORRECTION_LOW:
     reset_settings(M_LOW);
     common:
     set_sweep_frequency(ST_SPAN,   1000000);
@@ -1655,8 +1668,10 @@ static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
 {
   (void)item;
   (void)data;
+#ifdef TINYSA4
   if (!input_is_calibrated())
     return;
+#endif
   kp_help_text = "Enter actual input level";
   kp_buf[0]=0;
   ui_mode_keypad(KM_LEVEL);
@@ -1666,7 +1681,27 @@ static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
     menu_push_submenu(menu_curve);
   }
 }
+#ifdef TINYSA3
+static UI_FUNCTION_CALLBACK(menu_high_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+#ifdef TINYSA4
+  if (!input_is_calibrated())
+    return;
+#endif
+  kp_help_text = "Enter actual input level";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    local_actual_level = uistat.value;
+    current_curve = CORRECTION_HIGH;
+    menu_push_submenu(menu_curve);
+  }
+}
 
+#endif
+#ifdef TINYSA4
 static UI_FUNCTION_CALLBACK(menu_lna_curve_prepare_cb)
 {
   (void)item;
@@ -1754,7 +1789,7 @@ static UI_FUNCTION_CALLBACK(menu_output_adf_curve_prepare_cb)
   current_curve = CORRECTION_LOW_OUT_ADF;
   menu_push_submenu(menu_curve);
 }
-
+#endif
 #endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_output_level_acb)
@@ -4081,28 +4116,6 @@ static const menuitem_t menu_sweep_speed[] =
 };
 
 #ifdef TINYSA4
-static const menuitem_t menu_curve3[] = {
-  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(14,6), MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_curve2[] = {
-  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(7,7), MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve3},
-  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_curve[] = {
-  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(0,7), MT_CUSTOM_LABEL, menu_curve_acb },
-  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve2},
-  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
-};
-
-static const menuitem_t menu_curve_confirm[] = {
-  { MT_CALLBACK, 1,               "OK",       menu_curve_confirm_cb },
-  { MT_CALLBACK, 0,               "CANCEL",   menu_curve_confirm_cb },
-  { MT_NONE, 0, NULL, NULL } // sentinel
-};
 #if 0
 static const menuitem_t menu_noise_figure_confirm[] = {
   { MT_CALLBACK, 1,               "STORE\nTINYSA NF",       menu_noise_figure_confirm_cb },
@@ -4118,15 +4131,55 @@ static const menuitem_t menu_actual_power2[] =
  { MT_ADV_CALLBACK,     0,              "30MHz\nLEVEL", menu_output_level_acb},
  { MT_ADV_CALLBACK,     0,              "1GHz\nLEVEL", menu_output_level2_acb},
  { MT_ADV_CALLBACK,     0,              "1.2GHz\nLEVEL", menu_output_level3_acb},
+// { MT_ADV_CALLBACK,     1,              "1.2GHz MIXER\nLEVEL", menu_output_level3_acb},       // Uses normal output level offset
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 #endif
 
+#ifdef __CURVE_EDIT__
+#ifdef TINYSA4
+static const menuitem_t menu_curve3[] = {
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(14,6), MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
+static const menuitem_t menu_curve2[] = {
+#ifdef TINYSA4
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(7,7), MT_CUSTOM_LABEL, menu_curve_acb },
+  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve3},
+#else
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(5,5), MT_CUSTOM_LABEL, menu_curve_acb },
+#endif
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_curve[] = {
+#ifdef TINYSA4
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(0,7), MT_CUSTOM_LABEL, menu_curve_acb },
+#else
+  { MT_FORM | MT_ADV_CALLBACK | MT_REPEATS, DATA_STARTS_REPEATS(0,5), MT_CUSTOM_LABEL, menu_curve_acb },
+#endif
+  { MT_FORM | MT_SUBMENU,      0,  S_RARROW" MORE",     menu_curve2},
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_curve_confirm[] = {
+  { MT_CALLBACK, 1,               "OK",       menu_curve_confirm_cb },
+  { MT_CALLBACK, 0,               "CANCEL",   menu_curve_confirm_cb },
+  { MT_NONE, 0, NULL, NULL } // sentinel
+};
+#endif
 static const menuitem_t menu_actual_power[] =
 {
  { MT_KEYPAD,           KM_ACTUALPOWER, "INPUT\nLEVEL",  "Enter actual level under marker"},
 #ifdef TINYSA4
  { MT_SUBMENU,      0,                  "OUTPUT\nLEVEL", menu_actual_power2},
+#else
+ { MT_ADV_CALLBACK,     0,              "OUTPUT\nLEVEL", menu_output_level_acb},
+#endif
+#ifdef __CURVE_EDIT__
+#ifdef TINYSA4
  { MT_CALLBACK,     0,                  "IN\nCURVE",  menu_input_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "IN LNA\nCURVE",    menu_lna_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "IN ULTRA\nCURVE",  menu_ultra_curve_prepare_cb},
@@ -4136,7 +4189,9 @@ static const menuitem_t menu_actual_power[] =
  { MT_CALLBACK,     0,                  "OUT ADF\nCURVE", menu_output_adf_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "OUT MIXER\nCURVE", menu_output_ultra_curve_prepare_cb},
 #else
- { MT_ADV_CALLBACK,     0,              "OUTPUT\nLEVEL", menu_output_level_acb},
+ { MT_CALLBACK,     0,                  "IN LOW\nCURVE",  menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     0,                  "IN HIGH\nCURVE",  menu_high_curve_prepare_cb},
+#endif
 #endif
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };

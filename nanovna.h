@@ -82,6 +82,7 @@
 #define __LISTEN__
 #define __CHANNEL_POWER__
 #define __LIMITS__
+#define __CURVE_EDIT__
 #ifdef TINYSA3
 #define __MCU_CLOCK_SHIFT__
 #endif
@@ -206,6 +207,7 @@ typedef uint32_t freq_t;
  #define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
  #define CORRECTION_LOW  0
  #define CORRECTION_HIGH 1
+// #define CORRECTION_LOW_OUT        2    // Must be same order as output path options!!!!!
  #define CORRECTION_SIZE 2
 #endif
 #ifdef TINYSA4
