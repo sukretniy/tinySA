@@ -1656,6 +1656,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     set_sweep_frequency(ST_SPAN,   1000000);
     set_sweep_frequency(ST_CENTER, config.correction_frequency[current_curve][data]);
     setting.step_delay_mode = SD_PRECISE;
+    setting.repeat = 10;
     current_curve_index = data;
     menu_push_submenu(menu_curve_confirm);
     break;
