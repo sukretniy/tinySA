@@ -1742,7 +1742,7 @@ extern void SI4432_Listen(int s);
 
 enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};  // must be same order as correction tables!!!!
 #define PATH_TEXT {"OFF", "LOW", "DIRECT", "ADF", "ULTRA", "High"}
-extern const char *path_text[];
+extern const char * const path_text[];
 extern int signal_path;
 extern int test_path;
 extern int force_signal_path;

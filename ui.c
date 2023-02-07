@@ -1277,7 +1277,7 @@ static const keypads_t keypads_time[] = {
 };
 
 #ifdef __USE_SD_CARD__
-static const keypads_t const keypads_text[] = {
+static const keypads_t keypads_text[] = {
   {40, TXT_KEYBOARD },   // size and position
   {0x00, '1'}, {0x10, '2'}, {0x20, '3'}, {0x30, '4'}, {0x40, '5'}, {0x50, '6'}, {0x60, '7'}, {0x70, '8'}, {0x80, '9'}, {0x90, '0'},
   {0x01, 'Q'}, {0x11, 'W'}, {0x21, 'E'}, {0x31, 'R'}, {0x41, 'T'}, {0x51, 'Y'}, {0x61, 'U'}, {0x71, 'I'}, {0x81, 'O'}, {0x91, 'P'},
