@@ -1173,7 +1173,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
   static const char cmd[] = "low|lna|ultra|ultra_lna|direct|direct_lna|out|out_direct|out_adf|out_ultra|off|on";
   static const char range[] = "0-19";
 #else
-  static const char cmd[] = "low|high";
+  static const char cmd[] = "low|high|out";
   static const char range[] = "0-9";
 #endif
   int m = get_str_index(argv[0], cmd);
