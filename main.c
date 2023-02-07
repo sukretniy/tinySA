@@ -89,7 +89,7 @@ uint8_t sweep_mode = SWEEP_ENABLE;
 uint16_t sweep_once_count = 1;
 uint16_t redraw_request = 0; // contains REDRAW_XXX flags
 // Version text, displayed in Config->Version menu, also send by info command
-const char *info_about[]={
+const char * const info_about[]={
   BOARD_NAME,
   "2019-2022 Copyright @Erik Kaashoek",
   "2016-2020 Copyright @edy555",
@@ -966,14 +966,27 @@ config_t config = {
   .vbat_offset = 500,
   .low_level_offset =       0,    // Uncalibrated
   .high_level_offset =      0,    // Uncalibrated
-  .correction_frequency = { { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 350000000 },
-                            { 240000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 960000000 }},
+  .correction_frequency =
+  {
+   { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 349000000 },
+   { 241000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 958000000 },
+   { 10000, 100000, 200000, 500000, 30000000, 140000000, 200000000, 300000000, 330000000, 349000000 },
+//   { 241000000, 280000000, 300000000, 400000000, 500000000, 600000000, 700000000, 800000000, 900000000, 958000000 }
+  },
 #ifdef __ULTRA__
-  .correction_value = { { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +0.4, +0.4, +0.4 },
-                        { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 } },
+  .correction_value =
+  {
+   { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +0.4, +0.4, +0.4 },
+   { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
+   { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +0.4, +0.4, +0.4 }},
+//   { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 } },
 #else
-  .correction_value = { { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
-                        { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 } },
+  .correction_value =
+  {
+   { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 },
+   { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 },
+   { +6.0, +2.8, +1.6, -0.4, 0.0, -0.4, +0.4, +3.0, +4.0, +8.1 }},
+//   { 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0 } },
 #endif
   .setting_frequency_10mhz = 10000000,
   .cor_am = 0,// -10,
@@ -1949,7 +1962,7 @@ VNA_SHELL_FUNCTION(cmd_color)
 #if CH_CFG_USE_REGISTRY == FALSE
 #error "Threads Requite enabled CH_CFG_USE_REGISTRY in chconf.h"
 #endif
-const char *states[] = {CH_STATE_NAMES};
+const char *const states[] = {CH_STATE_NAMES};
 VNA_SHELL_FUNCTION(cmd_threads) 
 {
   thread_t *tp;

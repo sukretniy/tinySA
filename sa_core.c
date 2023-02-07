@@ -154,7 +154,7 @@ int signal_path = PATH_OFF;
 
 #ifdef TINYSA4
 
-const char *path_text[]=PATH_TEXT;
+const char *const path_text[]=PATH_TEXT;
 
 void set_output_drive(int d)
 {
@@ -689,8 +689,8 @@ void reset_settings(int m)
     setting.lo_drive=5;
     setting.extra_lna = false;
 #endif
-//    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
-//    setting.correction_value = config.correction_value[CORRECTION_LOW];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_IN];
+//    setting.correction_value = config.correction_value[CORRECTION_LOW_IN];
     break;
   case M_GENLOW:
 #ifdef TINYSA4
@@ -709,8 +709,8 @@ void reset_settings(int m)
 //    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_OUT];
 //    setting.correction_value = config.correction_value[CORRECTION_LOW_OUT];
 #else
-//    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
-//    setting.correction_value = config.correction_value[CORRECTION_LOW];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_IN];
+//    setting.correction_value = config.correction_value[CORRECTION_LOW_IN];
 #endif
 //    level_min = SL_GENLOW_LEVEL_MIN + LOW_OUT_OFFSET;
 //    level_max = SL_GENLOW_LEVEL_MAX + LOW_OUT_OFFSET;
@@ -723,8 +723,8 @@ void reset_settings(int m)
 #ifdef TINYSA4
     setting.extra_lna = false;
 #endif
-//    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
-//    setting.correction_value = config.correction_value[CORRECTION_HIGH];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH_IN];
+//    setting.correction_value = config.correction_value[CORRECTION_HIGH_IN];
     break;
   case M_GENHIGH:
 #ifdef TINYSA4
@@ -739,8 +739,8 @@ void reset_settings(int m)
     set_sweep_frequency(ST_SPAN, 0);
     setting.sweep_time_us = 2*ONE_SECOND_TIME;
     setting.step_delay_mode = SD_FAST;
-//    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH];
-//    setting.correction_value = config.correction_value[CORRECTION_HIGH];
+//    setting.correction_frequency = config.correction_frequency[CORRECTION_HIGH_IN];
+//    setting.correction_value = config.correction_value[CORRECTION_HIGH_IN];
 //    level_min = SL_GENHIGH_LEVEL_MIN + config.high_level_output_offset;
 //    level_max = SL_GENHIGH_LEVEL_MAX + config.high_level_output_offset;
 //    level_range = level_max - level_min;
@@ -1011,8 +1011,8 @@ void set_extra_lna(int t)
     setting.correction_frequency = config.correction_frequency[CORRECTION_LNA];
     setting.correction_value = config.correction_value[CORRECTION_LNA];
   } else {
-    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW];
-    setting.correction_value = config.correction_value[CORRECTION_LOW];
+    setting.correction_frequency = config.correction_frequency[CORRECTION_LOW_IN];
+    setting.correction_value = config.correction_value[CORRECTION_LOW_IN];
   }
 #endif
   dirty = true;
@@ -2149,13 +2149,7 @@ static void calculate_correction(void)
 pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI correction to subtract for imperfect LPF
 {
   pureRSSI_t cv = 0;
-  int c=CORRECTION_LOW;
-#ifdef TINYSA3
-  if (setting.mode == M_GENHIGH) {
-    c = CORRECTION_HIGH;
-    return float_TO_PURE_RSSI(0.0);
-  }
-#endif
+  int c=CORRECTION_LOW_IN;
 #ifdef TINYSA4
   if (setting.mode == M_LOW) {
 
@@ -2189,7 +2183,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
 
     switch (signal_path) {
     case PATH_LOW:
-      c = CORRECTION_LOW;
+      c = CORRECTION_LOW_IN;
       break;
     case PATH_ULTRA:
       c = CORRECTION_LOW_ULTRA;
@@ -2232,8 +2226,14 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
     }
   }
 #else
-  if (MODE_HIGH(setting.mode))
-    c = CORRECTION_HIGH;
+  if (setting.mode == M_HIGH)
+    c = CORRECTION_HIGH_IN;
+  else if (setting.mode == M_GENLOW)
+    c = CORRECTION_LOW_OUT;
+  else if (setting.mode == M_GENHIGH) {
+    cv = 0;
+    goto done;
+  }
 #endif
 
 
@@ -6078,7 +6078,7 @@ const test_case_t test_case [] =
 enum {
   TS_WAITING, TS_PASS, TS_FAIL, TS_CRITICAL
 };
-static const  char *(test_text [4]) =
+static const  char *const test_text [4] =
 {
  "Waiting", "Pass", "Fail", "Critical"
 };

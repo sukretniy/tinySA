@@ -114,7 +114,7 @@
 #else
 //#define __ULTRA__
 //#define __HARMONIC__
-#define __USE_FREQ_TABLE__      // Enable use table for frequency list
+//#define __USE_FREQ_TABLE__      // Enable use table for frequency list
 #endif
 
 #ifdef TINYSA3
@@ -205,16 +205,18 @@ typedef uint32_t freq_t;
  typedef int32_t long_t;
  extern bool has_esd;
  #define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
- #define CORRECTION_LOW  0
- #define CORRECTION_HIGH 1
+#define CORRECTION_LOW_IN   0
+#define CORRECTION_HIGH_IN  1
+#define CORRECTION_LOW_OUT  2
+#define CORRECTION_HIGH_OUT 3
 // #define CORRECTION_LOW_OUT        2    // Must be same order as output path options!!!!!
- #define CORRECTION_SIZE 2
+ #define CORRECTION_SIZE    3
 #endif
 #ifdef TINYSA4
  typedef uint64_t freq_t;
  typedef int64_t long_t;
  #define CORRECTION_POINTS  20       // Frequency dependent level correction table entries
- #define CORRECTION_LOW      0
+ #define CORRECTION_LOW_IN   0
  #define CORRECTION_LNA      1
  #define CORRECTION_LOW_ULTRA 2
  #define CORRECTION_LNA_ULTRA 3
@@ -330,7 +332,7 @@ enum {
 
 extern uint8_t sweep_mode;
 extern uint8_t completed;
-extern const char *info_about[];
+extern const char * const info_about[];
 
 #ifdef TINYSA4
 void toggle_extra_lna(void);

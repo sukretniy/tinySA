@@ -1277,7 +1277,7 @@ static const keypads_t keypads_time[] = {
 };
 
 #ifdef __USE_SD_CARD__
-static const keypads_t keypads_text[] = {
+static const keypads_t const keypads_text[] = {
   {40, TXT_KEYBOARD },   // size and position
   {0x00, '1'}, {0x10, '2'}, {0x20, '3'}, {0x30, '4'}, {0x40, '5'}, {0x50, '6'}, {0x60, '7'}, {0x70, '8'}, {0x80, '9'}, {0x90, '0'},
   {0x01, 'Q'}, {0x11, 'W'}, {0x21, 'E'}, {0x31, 'R'}, {0x41, 'T'}, {0x51, 'Y'}, {0x61, 'U'}, {0x71, 'I'}, {0x81, 'O'}, {0x91, 'P'},
@@ -1569,6 +1569,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
                 config.correction_value[current_curve][data]);
     return;
   }
+  int old_m = 0;
+  (void)old_m;
   switch(current_curve) {
 #ifdef TINYSA4
   case CORRECTION_LOW_OUT:
@@ -1608,17 +1610,47 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     reset_settings(M_LOW);
     setting.extra_lna = true;
     goto common;
+#else
+  case CORRECTION_LOW_OUT:
+    old_m = setting.mode;
+    reset_settings(M_GENLOW);
+    goto common_out;
+//  case CORRECTION_HIGH_OUT:
+//    old_m = setting.mode;
+//    reset_settings(M_GENHIGH);
+    common_out:
+    dirty = true;
+    set_level(-25);
+    set_sweep_frequency(ST_CW, config.correction_frequency[current_curve][data]);
+    setting.mute = false;
+    perform(false, 0, config.correction_frequency[current_curve][data], false);
+    perform(false, 1, config.correction_frequency[current_curve][data], false);
+    plot_printf(uistat.text, sizeof uistat.text, "Level of %.3QHz output",
+                config.correction_frequency[current_curve][data]);
+    kp_help_text = uistat.text;
+    kp_buf[0]=0;
+    ui_mode_keypad(KM_LEVEL);
+
+    if (kp_buf[0] != 0) {
+      float new_offset = (-25.0) - uistat.value + config.correction_value[current_curve][data];        // calculate offset based on difference between measured peak level and known peak level
+      if (new_offset > -25 && new_offset < 25) {
+        config.correction_value[current_curve][data] = new_offset;
+        config_save();
+      }
+    }
+    reset_settings(old_m);
+    break;
 #endif
 
 #ifdef TINYSA4
   case CORRECTION_LOW_ULTRA:
     goto common;
 #else
-  case CORRECTION_HIGH:
+  case CORRECTION_HIGH_IN:
     reset_settings(M_HIGH);
     goto common;
 #endif
-  case CORRECTION_LOW:
+  case CORRECTION_LOW_IN:
     reset_settings(M_LOW);
     common:
     set_sweep_frequency(ST_SPAN,   1000000);
@@ -1677,7 +1709,7 @@ static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
   ui_mode_keypad(KM_LEVEL);
   if (kp_buf[0] != 0) {
     local_actual_level = uistat.value;
-    current_curve = CORRECTION_LOW;
+    current_curve = CORRECTION_LOW_IN;
     menu_push_submenu(menu_curve);
   }
 }
@@ -1695,7 +1727,7 @@ static UI_FUNCTION_CALLBACK(menu_high_curve_prepare_cb)
   ui_mode_keypad(KM_LEVEL);
   if (kp_buf[0] != 0) {
     local_actual_level = uistat.value;
-    current_curve = CORRECTION_HIGH;
+    current_curve = CORRECTION_HIGH_IN;
     menu_push_submenu(menu_curve);
   }
 }
@@ -1789,6 +1821,14 @@ static UI_FUNCTION_CALLBACK(menu_output_adf_curve_prepare_cb)
   current_curve = CORRECTION_LOW_OUT_ADF;
   menu_push_submenu(menu_curve);
 }
+#else
+static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
+{
+  (void)item;
+  current_curve = data;
+  menu_push_submenu(menu_curve);
+}
+
 #endif
 #endif
 
@@ -2158,7 +2198,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
 
 #endif
 // const int menu_modulation_value[]={MO_NONE,MO_AM, MO_NFM, MO_WFM, MO_EXTERNAL};
-const char *menu_modulation_text[MO_MAX]=
+const char * const menu_modulation_text[MO_MAX]=
 {  "None", "AM 30%",
 #ifdef TINYSA4
    "FM 2.5kHz",
@@ -2208,7 +2248,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
 }
 
 //                               0      1       2       3      4      5      6      7
-const char *menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
+const char *const menu_reffer_text[]={"OFF","30MHz","15MHz","10MHz","4MHz","3MHz","2MHz","1MHz"};
 static UI_FUNCTION_ADV_CALLBACK(menu_reffer_acb)
 {
   (void)item;
@@ -4191,6 +4231,8 @@ static const menuitem_t menu_actual_power[] =
 #else
  { MT_CALLBACK,     0,                  "IN LOW\nCURVE",  menu_input_curve_prepare_cb},
  { MT_CALLBACK,     0,                  "IN HIGH\nCURVE",  menu_high_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LOW_OUT, "OUT LOW\nCURVE", menu_output_curve_prepare_cb},
+// { MT_CALLBACK,     CORRECTION_HIGH_OUT,"OUT HIGH\nCURVE", menu_output_curve_prepare_cb},
 #endif
 #endif
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
