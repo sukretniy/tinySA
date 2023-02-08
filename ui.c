@@ -173,6 +173,14 @@ bool isFullScreenMode(void) {
 #endif
 }
 
+int btn_side(void)
+{
+  uint16_t cur_button = READ_PORT() & BUTTON_MASK;
+  if (cur_button & (1<<BIT_UP1) || cur_button & (1<<BIT_DOWN1))
+    return true;
+  return false;
+}
+
 static int btn_check(void)
 {
   systime_t ticks;

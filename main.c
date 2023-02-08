@@ -2686,15 +2686,19 @@ int main(void)
   if (has_new_switch)
     config.switch_offset = -5.0;
 #endif
-  if(config_recall()) {
-    clear_backup();
+  int reset_state = btn_side();
+
+  if (!reset_state) {
+    if(config_recall()) {
+      clear_backup();
+    }
   }
   config.cor_am = 0;        // Should be removed from config
   config.cor_nfm = 0;
   config.cor_wfm = 0;
   ili9341_flip(config.flip);
 
-  if (caldata_recall(0) == -1) {
+  if (reset_state || caldata_recall(0) == -1) {
     load_LCD_properties();
   }
 #ifdef __ULTRA__
@@ -2738,11 +2742,11 @@ int main(void)
   sweep(false);
 #endif
 
-  if (caldata_recall(0) == -1) {
+  if (reset_state|| (caldata_recall(0) == -1)) {
     load_LCD_properties();
   }
   ui_mode_normal();
-  if (!(config._mode & _MODE_DONT_SAVE_STATE)) {
+  if ((!reset_state) && !(config._mode & _MODE_DONT_SAVE_STATE) ) {
     backup_t b;
     uint32_t *f = &backup;
     uint32_t *t = (uint32_t *)&b;
