@@ -1083,10 +1083,10 @@ void set_modulation_frequency(int f)
     f = 50;
   if (f > 10000)
     f = 10000;
-#ifdef TINYSA4
-  if (setting.modulation == MO_WFM && f > 2000)
-    f = 2000;
-#endif
+//#ifdef TINYSA4
+//  if (setting.modulation == MO_WFM && f > 2000)
+//    f = 2000;
+//#endif
   setting.modulation_frequency = f;
   dirty = true;
 }
@@ -3555,11 +3555,17 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           sinus_index <<= 1;
           modulation_steps >>= 1;
         }
-        for (int i = 0; i < modulation_steps/4+1; i++) {
-          fm_modulation[i] = setting.modulation_deviation_div100 * sinus[i*sinus_index]/100;
-          fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
-          fm_modulation[modulation_steps/2 + i] = -fm_modulation[i];
-          fm_modulation[modulation_steps - i] = -fm_modulation[i];
+        if (modulation_steps > 8) {
+          for (int i = 0; i < modulation_steps/4+1; i++) {
+            fm_modulation[i] = setting.modulation_deviation_div100 * sinus[i*sinus_index]/100;
+            fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
+            fm_modulation[modulation_steps/2 + i] = -fm_modulation[i];
+            fm_modulation[modulation_steps - i] = -fm_modulation[i];
+          }
+        } else {
+          modulation_steps = 2;
+          fm_modulation[0] = (setting.modulation_deviation_div100*347)/100;
+          fm_modulation[1] = -fm_modulation[0];
         }
       }
 #else
