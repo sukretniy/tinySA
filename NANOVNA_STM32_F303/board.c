@@ -78,7 +78,7 @@ void __early_init(void) {
     // __enable_irq();
     // reset magic bytes
     *((unsigned long *)BOOT_FROM_SYTEM_MEMORY_MAGIC_ADDRESS) = 0;
-   #if 1
+   #if 0
     // https://stm32f4-discovery.net/2017/04/tutorial-jump-system-memory-software-stm32/
     // Step: Disable systick timer and reset it to default values
     #if 0
@@ -109,12 +109,22 @@ void __early_init(void) {
     //msp = *(uint32_t *) 0;
     msp = 0x20002250;
     #endif
+//    bootloader = (pFunction) 0x1FFFF796;
     __set_MSP(msp);
     bootloader();
     while(1);
    #else
-    __set_MSP(SYSTEM_BOOT_MSP); 
-    ( (void (*)(void)) (*((uint32_t *)(STM32F303xC_SYSTEM_MEMORY+4))) )();
+    __disable_irq();
+    uint32_t foo = SYSCFG->CFGR1;
+    foo = (foo & ~SYSCFG_CFGR1_MEM_MODE) || SYSCFG_CFGR1_MEM_MODE_0;
+    SYSCFG->CFGR1 = foo;
+    __DSB();
+    __ISB();
+
+      __set_MSP(*((uint32_t *)(STM32F303xC_SYSTEM_MEMORY)));
+      ((void (*)(void))(*((uint32_t *)(STM32F303xC_SYSTEM_MEMORY + 4))))(); // jump to DFU
+      //    __set_MSP(SYSTEM_BOOT_MSP);
+      //    ( (void (*)(void)) (*((uint32_t *)(STM32F303xC_SYSTEM_MEMORY+4))) )();
     while(1);
    #endif
   }

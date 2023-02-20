@@ -1083,17 +1083,17 @@ void set_modulation_frequency(int f)
     f = 50;
   if (f > 10000)
     f = 10000;
-//#ifdef TINYSA4
-//  if (setting.modulation == MO_WFM && f > 2000)
-//    f = 2000;
-//#endif
+#ifdef TINYSA4
+  if (setting.modulation == MO_WFM && f > 3500)
+    f = 3500;
+#endif
   setting.modulation_frequency = f;
   dirty = true;
 }
 
 void set_repeat(int r)
 {
-  if (r > 0 && r <= 500) {
+  if (r > 0 && r <= 10000) {
     setting.repeat = r;
 //    dirty = true;             // No HW update required, only status panel refresh
   }

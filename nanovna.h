@@ -84,6 +84,7 @@
 #define __LIMITS__
 #define __CURVE_EDIT__
 #ifdef TINYSA3
+#define __HAS_DFU__
 #define __MCU_CLOCK_SHIFT__
 #endif
 #ifdef TINYSA4
@@ -1176,7 +1177,6 @@ typedef struct setting
   uint8_t atten_step;          //  0...1 !!! need convert to bool
   int8_t _active_marker;       // -1...MARKER_MAX
   uint8_t unit_scale_index;    // table index
-  uint8_t repeat;              // 1...100
   uint8_t noise;               // 2...50
   uint8_t lo_drive;            // 0-3 , 3dB steps
   uint8_t rx_drive;            // 0-15 , 7=+20dBm, 3dB steps
@@ -1186,6 +1186,7 @@ typedef struct setting
   uint8_t  _traces;            // enabled traces flags
   uint8_t   draw_line;          // uses the trigger level setting
 
+  uint16_t repeat;              // 1...100
   uint16_t linearity_step;     // range equal POINTS_COUNT
   uint16_t _sweep_points;
   int16_t attenuate_x2;        // 0...60 !!! in calculation can be < 0
@@ -1391,7 +1392,7 @@ typedef struct properties {
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC 0x434f4e60 /* 'CONF' */
-#define SETTING_MAGIC 0x434f4e60
+#define SETTING_MAGIC 0x434f4e61
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

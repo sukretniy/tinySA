@@ -666,7 +666,7 @@ extern const char *states[];
   lcd_set_font(FONT_SMALL);
 }
 
-#ifndef TINYSA4
+#ifdef __HAS_DFU__
 void
 enter_dfu(void)
 {
@@ -2143,7 +2143,7 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
   redraw_frame();
   request_to_redraw_grid();
 }
-#ifndef TINYSA4
+#ifdef __HAS_DFU__
 static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 {
   (void)data;
@@ -3882,7 +3882,7 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,      "AM",    menu_modulation_acb},
 #ifdef TINYSA4
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              "FM",               menu_modulation_acb},
-  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..5kHz"},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..3.5kHz"},
   { MT_FORM | MT_KEYPAD,   KM_DEPTH,               "AM DEPTH: %s%%",         "0..100"},
   { MT_FORM | MT_KEYPAD,   KM_DEVIATION,            "FM DEVIATION: %s",         "1kHz..300kHz"},
 //  { MT_FORM | MT_ADV_CALLBACK, MO_NFM2,              MT_CUSTOM_LABEL,    menu_modulation_acb},
@@ -4097,7 +4097,7 @@ static const menuitem_t menu_marker[] = {
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
-#ifndef TINYSA4
+#ifdef __HAS_DFU__
 static const menuitem_t menu_dfu[] = {
   { MT_FORM | MT_CALLBACK, 0, "ENTER DFU",      menu_dfu_cb},
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
@@ -4502,14 +4502,14 @@ static const menuitem_t menu_config[] = {
 #ifdef __SPUR__
   { MT_ADV_CALLBACK,0,          "%s",          menu_spur_acb},
 #endif
-  { MT_KEYPAD, KM_REPEAT,       "SAMPLE REP\n\b%s",    "1..100"},
+  { MT_KEYPAD, KM_REPEAT,       "SAMPLE REP\n\b%s",    "1..10000"},
 #ifdef __LCD_BRIGHTNESS__
   { MT_ADV_CALLBACK, 0, "BRIGHTNESS\n \b%d%%", menu_brightness_acb},
 #endif
 #ifdef __USE_RTC__
   { MT_SUBMENU,  0, "DATE\nTIME", menu_date_time},
 #endif
-#ifndef TINYSA4
+#ifdef __HAS_DFU__
   { MT_SUBMENU,  0, S_RARROW" DFU",  menu_dfu},
 #endif
   { MT_SUBMENU,  0, S_RARROW"MORE", menu_config2},
