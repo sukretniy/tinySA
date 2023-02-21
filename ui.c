@@ -360,6 +360,10 @@ static void touch_init(void){
 static int
 touch_check(void)
 {
+#ifdef TINYSA4
+  if (setting.lock_display)
+    return EVT_TOUCH_NONE;
+#endif
   touch_stop_watchdog();
 
   int stat = touch_status();
@@ -2155,6 +2159,17 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
   redraw_frame();
   request_to_redraw_grid();
 }
+
+#ifdef TINYSA4
+static UI_FUNCTION_CALLBACK(menu_lock_display_cb)
+{
+  (void)item;
+  (void)data;
+  setting.lock_display = data;
+  ui_mode_normal();
+}
+#endif
+
 #ifdef __HAS_DFU__
 static UI_FUNCTION_CALLBACK(menu_dfu_cb)
 {
@@ -3180,7 +3195,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_guard_select_acb)
   active_guard = data;
   setting.guards[active_guard].enabled = true;
   dirty = true;
-  guards_update();
+//  guards_update();
   menu_push_submenu(menu_guard_modify);
 }
 
@@ -3324,7 +3339,7 @@ static UI_FUNCTION_CALLBACK(menu_guard_disable_cb)
   if (active_guard<GUARDS_MAX){
     setting.guards[active_guard].enabled = false;
     dirty = true;
-    guards_update();
+//    guards_update();
     menu_move_back(false);
   }
 }
@@ -4561,6 +4576,14 @@ const menuitem_t menu_date_time[] = {
 };
 #endif
 
+#ifdef TINYSA4
+static const menuitem_t menu_lock_display[] = {
+  { MT_CALLBACK, 1, "LOCK\nDISPLAY", menu_lock_display_cb },
+  { MT_CALLBACK, 0, "UNLOCK\nDISPLAY", menu_lock_display_cb },
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
 static const menuitem_t menu_config2[] =
 {
  { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
@@ -4660,6 +4683,9 @@ static const menuitem_t menu_display[] = {
   { MT_SUBMENU,     0,             "SWEEP\nPOINTS",   menu_sweep_points},
   { MT_SUBMENU,     0,             "SWEEP\nACCURACY",  menu_sweep_speed},
   { MT_ADV_CALLBACK,0,             "ROTATE\nDISPLAY",    menu_flip_acb},
+#ifdef TINYSA4
+  { MT_SUBMENU,0,             "LOCK\nDISPLAY",    menu_lock_display},
+#endif
 //#ifdef __REMOTE_DESKTOP__
 //  { MT_ADV_CALLBACK,0,          "SEND\nDISPLAY",    menu_send_display_acb},
 //#endif
@@ -4964,7 +4990,7 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_GUARD_END:
-    uistat.freq_value = setting.guards[active_guard].start;
+    uistat.freq_value = setting.guards[active_guard].end;
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_GUARD_LEVEL:

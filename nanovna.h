@@ -1200,7 +1200,9 @@ typedef struct setting
   uint8_t fast_speedup;        // 0 - 20
   uint8_t  _traces;            // enabled traces flags
   uint8_t   draw_line;          // uses the trigger level setting
-
+#ifdef TINYSA4
+  uint8_t   lock_display;
+#endif
   uint16_t repeat;              // 1...100
   uint16_t linearity_step;     // range equal POINTS_COUNT
   uint16_t _sweep_points;

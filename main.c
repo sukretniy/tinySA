@@ -187,12 +187,13 @@ static THD_FUNCTION(Thread1, arg)
             if (current_guard > GUARDS_MAX)
               current_guard = 0;
           }
-          if (setting.guards[current_guard].start - setting.guards[current_guard].end > 10000000) {
+          if (setting.guards[current_guard].end > setting.guards[current_guard].start) {
             set_sweep_frequency(ST_START, setting.guards[current_guard].start);
             set_sweep_frequency(ST_STOP, setting.guards[current_guard].end);
             set_rbw(8000);
             set_sweep_points((setting.guards[current_guard].end - setting.guards[current_guard].start) / 800000);
           }
+          DAC->DHR12R1 = 0;
         }
 #endif
         completed = sweep(true);
@@ -1140,8 +1141,12 @@ void load_LCD_properties(void)
 #endif
 
 void set_sweep_points(uint16_t points){
-  if (points == sweep_points || points > POINTS_COUNT)
+  if (points == sweep_points)
     return;
+  if (points > POINTS_COUNT)
+    points = POINTS_COUNT;
+  if (points < 10)
+    points = 10;
 
   sweep_points = points;
   update_frequencies();

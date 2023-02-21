@@ -5190,7 +5190,7 @@ static volatile int dummy;
       if (MODE_INPUT(setting.mode)) {
 #ifdef __GUARD__
         if (setting.measurement == M_GUARD && RSSI > setting.guards[current_guard].level) {
- //         guard_exceeded();
+          DAC->DHR12R1 = 4095;
         }
 #endif
       for (int t=0; t<TRACES_MAX;t++) {                 // Calculate all traces
