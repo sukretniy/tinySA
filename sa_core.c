@@ -1405,6 +1405,11 @@ void limits_update(void)
 }
 #endif
 
+#ifdef __GUARD__
+void guards_update(void) {
+}
+#endif
+
 void copy_trace(int f, int t)
 {
   if (f == t)
@@ -5182,9 +5187,13 @@ static volatile int dummy;
       }
 #endif
 
-
       if (MODE_INPUT(setting.mode)) {
-      for (int t=0; t<TRACES_MAX;t++) {
+#ifdef __GUARD__
+        if (setting.measurement == M_GUARD && RSSI > setting.guards[current_guard].level) {
+ //         guard_exceeded();
+        }
+#endif
+      for (int t=0; t<TRACES_MAX;t++) {                 // Calculate all traces
         if (setting.stored[t])
           continue;
 #ifdef __ULTRA__

@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -88,6 +88,7 @@
 #define __MCU_CLOCK_SHIFT__
 #endif
 #ifdef TINYSA4
+#define __GUARD__
 #define __MCU_CLOCK_SHIFT__
 #define __ULTRA__
 #define __USE_RTC__               // Enable RTC clock
@@ -1136,6 +1137,17 @@ void spi_init(void);
  * flash.c
  */
 
+#ifdef __GUARD__
+#define GUARDS_MAX   8
+typedef struct {
+  bool enabled;
+  freq_t start;
+  freq_t end;
+  float  level;
+} guard_t;
+#endif
+
+
 typedef struct setting
 {
   uint32_t magic;
@@ -1150,6 +1162,9 @@ typedef struct setting
   bool pulse;                  // bool
   bool stored[TRACES_MAX];     // enum
   bool normalized[TRACES_MAX];     // enum
+#ifdef __GUARD__
+  guard_t guards[GUARDS_MAX];
+#endif
 
   uint8_t mode;                // enum
   uint8_t below_IF;            // enum
@@ -1725,7 +1740,7 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_DECONV
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_GUARD, M_DECONV
 };
 
 enum {

@@ -1329,6 +1329,9 @@ enum {
 #ifdef __LIMITS__
   KM_LIMIT_FREQ, KM_LIMIT_LEVEL,
 #endif
+#ifdef __GUARD__
+  KM_GUARD_START, KM_GUARD_END, KM_GUARD_LEVEL,
+#endif
   KM_MARKER_TIME,
   // #35
   KM_VAR,
@@ -1409,6 +1412,11 @@ static const struct {
 [KM_LIMIT_FREQ]   = {keypads_freq         , "FREQ"},  // KM_LIMIT_FREQ
 [KM_LIMIT_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_LIMIT_LEVEL
 #endif
+#ifdef __GUARD__
+[KM_GUARD_START]  = {keypads_freq         , "START\nFREQ"},  // KM_GUARD_START
+[KM_GUARD_END]    = {keypads_freq         , "END\nFREQ"},  // KM_GUARD_END
+[KM_GUARD_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_GUARD_LEVEL
+#endif
 [KM_MARKER_TIME]  = {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
 [KM_VAR]          = {keypads_freq        , "JOG\nSTEP"}, // jog step
 #ifdef __NOISE_FIGURE__
@@ -1454,6 +1462,10 @@ static const menuitem_t  menu_subtract_trace[];
 #ifdef __LIMITS__
 static const menuitem_t  menu_limit_modify[];
 static const menuitem_t  menu_limit_select[];
+#endif
+#ifdef __GUARD__
+static const menuitem_t  menu_guard_modify[];
+static const menuitem_t  menu_guard_select[];
 #endif
 static const menuitem_t  menu_average[];
 static const menuitem_t  menu_reffer[];
@@ -2844,6 +2856,12 @@ validate:
       }
       break;
 #endif
+#ifdef __GUARD__
+    case M_GUARD:
+      menu_push_submenu(menu_guard_select);
+      goto leave;
+      break;
+#endif
 #ifdef __FFT_DECONV__
     case M_DECONV:
       set_average(0,AV_DECONV);
@@ -3146,6 +3164,28 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
 
 #endif
 
+#ifdef __GUARD__
+uint8_t active_guard = 0;
+static UI_FUNCTION_ADV_CALLBACK(menu_guard_select_acb)
+{
+  (void)item;
+  if(b){
+    int count = 0;
+    for (int i=0;i<GUARDS_MAX;i++) {if (setting.guards[i].enabled) count++; }
+    if (count == 0) setting.guards[0].enabled = true;
+    b->icon = (setting.guards[data].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
+    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)setting.guards[data].start, (float)setting.guards[data].end);
+    return;
+  }
+  active_guard = data;
+  setting.guards[active_guard].enabled = true;
+  dirty = true;
+  guards_update();
+  menu_push_submenu(menu_guard_modify);
+}
+
+#endif
+
 extern const menuitem_t menu_marker_select[];
 
 static UI_FUNCTION_ADV_CALLBACK(menu_marker_modify_acb)
@@ -3263,6 +3303,28 @@ static UI_FUNCTION_CALLBACK(menu_limit_disable_cb)
     setting.limits[current_trace][active_limit].enabled = false;
     dirty = true;
     limits_update();
+    menu_move_back(false);
+  }
+}
+#endif
+
+
+#ifdef __GUARD__
+static UI_FUNCTION_CALLBACK(menu_guard_disable_cb)
+{
+  (void)item;
+  (void)data;
+  int count = 0;
+  for (int i=0;i<GUARDS_MAX;i++) {if (setting.guards[i].enabled) count++; }
+  if (count == 1 && setting.guards[active_guard].enabled) {
+    drawMessageBox("Error", "At least one entry",1000);
+    return;
+  }
+
+  if (active_guard<GUARDS_MAX){
+    setting.guards[active_guard].enabled = false;
+    dirty = true;
+    guards_update();
     menu_move_back(false);
   }
 }
@@ -3780,6 +3842,9 @@ enum {
   FMT_CFG_FILE,
   FMT_PRS_FILE,
   FMT_TBL_FILE,
+#ifdef __GUARD__
+  FMT_GRD_FILE,
+#endif
 };
 
 // Save file extension
@@ -3793,6 +3858,7 @@ static const char *file_ext[] = {
   [FMT_CFG_FILE] = "cfg",
   [FMT_PRS_FILE] = "prs",
   [FMT_TBL_FILE] = "tbl",
+  [FMT_GRD_FILE] = "grd",
 };
 
 static void sa_save_file(uint8_t format);
@@ -4049,6 +4115,28 @@ static const menuitem_t menu_limit_select[] = {
   { MT_CALLBACK,    FMT_TBL_FILE,  "TABLE"S_RARROW"\nSD",     menu_sdcard_cb},
 #ifdef __SD_FILE_BROWSER__
   { MT_CALLBACK, FMT_TBL_FILE, "SD"S_RARROW"\nTABLE",            menu_sdcard_browse_cb },
+#endif
+#endif
+  { MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
+#endif
+
+#ifdef __GUARD__
+static const menuitem_t menu_guard_modify[] =
+{
+  { MT_KEYPAD,  KM_GUARD_START,     "START\n\b%s",          "Start"},
+  { MT_KEYPAD,  KM_GUARD_END,       "END\n\b%s",            "End"},
+  { MT_KEYPAD,  KM_GUARD_LEVEL,    "LEVEL\n\b%s",          "Level"},
+  { MT_CALLBACK,0,                  "DISABLE",              menu_guard_disable_cb},
+  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_guard_select[] = {
+  { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,GUARDS_MAX), MT_CUSTOM_LABEL, menu_guard_select_acb },
+#ifdef __USE_SD_CARD__
+  { MT_CALLBACK,    FMT_GRD_FILE,  "GUARD"S_RARROW"\nSD",     menu_sdcard_cb},
+#ifdef __SD_FILE_BROWSER__
+  { MT_CALLBACK, FMT_GRD_FILE, "SD"S_RARROW"\nGUARD",            menu_sdcard_browse_cb },
 #endif
 #endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
@@ -4384,6 +4472,9 @@ static const menuitem_t menu_measure2[] = {
 #endif
 #ifdef __NOISE_FIGURE__
 { MT_SUBMENU | MT_LOW,          0,            "NOISE\nFIGURE",    menu_measure_noise_figure},
+#endif
+#ifdef __GUARD__
+{ MT_ADV_CALLBACK,            M_GUARD,          "GUARD",           menu_measure_acb},
 #endif
 #ifdef __FFT_DECONV__
   { MT_ADV_CALLBACK,            M_DECONV,  "DECONV",         menu_measure_acb},
@@ -4867,6 +4958,20 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%.1f", uistat.value);
     break;
 #endif
+#ifdef __GUARD__
+  case KM_GUARD_START:
+    uistat.freq_value = setting.guards[active_guard].start;
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
+    break;
+  case KM_GUARD_END:
+    uistat.freq_value = setting.guards[active_guard].start;
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
+    break;
+  case KM_GUARD_LEVEL:
+    uistat.value = value(setting.guards[active_guard].level);
+    plot_printf(uistat.text, sizeof uistat.text, "%.1f", uistat.value);
+    break;
+#endif
   case KM_NOISE:
     uistat.value = setting.noise;
     plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
@@ -5090,6 +5195,23 @@ set_numeric_value(void)
     setting.limits[current_trace][active_limit].level = to_dBm(uistat.value);
     dirty = true;
     limits_update();
+    break;
+#endif
+#ifdef __GUARD__
+  case KM_GUARD_START:
+    setting.guards[active_guard].start = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    dirty = true;
+    guards_update();
+    break;
+  case KM_GUARD_END:
+    setting.guards[active_guard].end = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    dirty = true;
+    guards_update();
+    break;
+  case KM_GUARD_LEVEL:
+    setting.guards[active_guard].level = to_dBm(uistat.value);
+    dirty = true;
+    guards_update();
     break;
 #endif
   case KM_NOISE:
@@ -7062,6 +7184,20 @@ static void sa_save_file(uint8_t format) {
           }
         }
       break;
+#ifdef __GUARD__
+      case FMT_GRD_FILE:
+        for (i = 0; i < GUARDS_MAX && res == FR_OK; i++) {
+          if (setting.guards[i].enabled) {
+            char *buf = (char *)spi_buffer;
+            buf += plot_printf(buf, 100, "%U, ", setting.guards[i].start);
+            buf += plot_printf(buf, 100, "%U, ", setting.guards[i].end);
+            buf += plot_printf(buf, 100, "%f ", setting.guards[i].level);
+            buf += plot_printf(buf, 100, "\r\n");
+            res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
+          }
+        }
+      break;
+#endif
 #ifdef __SD_CARD_DUMP_FIRMWARE__
       /*
        * Dump firmware to SD card as bin file image

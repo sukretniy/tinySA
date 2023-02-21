@@ -87,6 +87,9 @@ static long_t my_atoi(const char *p);
 
 uint8_t sweep_mode = SWEEP_ENABLE;
 uint16_t sweep_once_count = 1;
+#ifdef __GUARD__
+uint16_t current_guard = 0;
+#endif
 uint16_t redraw_request = 0; // contains REDRAW_XXX flags
 // Version text, displayed in Config->Version menu, also send by info command
 const char * const info_about[]={
@@ -177,7 +180,29 @@ static THD_FUNCTION(Thread1, arg)
       } else
 #endif
       {
+#ifdef __GUARD__
+        if (setting.measurement == M_GUARD) {
+          while(!setting.guards[current_guard].enabled) {
+            current_guard++;
+            if (current_guard > GUARDS_MAX)
+              current_guard = 0;
+          }
+          if (setting.guards[current_guard].start - setting.guards[current_guard].end > 10000000) {
+            set_sweep_frequency(ST_START, setting.guards[current_guard].start);
+            set_sweep_frequency(ST_STOP, setting.guards[current_guard].end);
+            set_rbw(8000);
+            set_sweep_points((setting.guards[current_guard].end - setting.guards[current_guard].start) / 800000);
+          }
+        }
+#endif
         completed = sweep(true);
+#ifdef __GUARD__
+        if (setting.measurement == M_GUARD) {
+          current_guard++;
+          if (current_guard>=GUARDS_MAX)
+            current_guard = 0;
+        }
+#endif
         if (sweep_once_count>1) {
           sweep_once_count--;
         } else
