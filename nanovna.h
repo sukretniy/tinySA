@@ -119,6 +119,11 @@
 //#define __USE_FREQ_TABLE__      // Enable use table for frequency list
 #endif
 
+#ifdef __GUARD__
+#define __PWM__
+#endif
+
+
 #ifdef TINYSA3
 #define VARIANT(X,Y) (X)
 #define DEFAULT_IF  433800000

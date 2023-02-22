@@ -349,8 +349,8 @@ static void touch_init(void){
   // Prepare pin for measure touch event
   touch_prepare_sense();
   // Start touch interrupt, used timer_3 ADC check threshold:
-  gptStart(&GPTD3, &gpt3cfg);         // Init timer 3
-  gptStartContinuous(&GPTD3, 10);     // Start timer 3 vs timer 10 interval
+  gptStart(&GPTD1, &gpt3cfg);         // Init timer 3
+  gptStartContinuous(&GPTD1, 10);     // Start timer 3 vs timer 10 interval
   touch_start_watchdog();             // Start ADC watchdog (measure by timer 3 interval and trigger interrupt if touch pressed)
 }
 

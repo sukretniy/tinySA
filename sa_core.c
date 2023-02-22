@@ -4872,14 +4872,14 @@ static bool sweep(bool break_on_operation)
       if (current_guard > GUARDS_MAX)
         current_guard = 0;
     }
-    while(!setting.guards[current_guard].enabled);
+    while(!(setting.guards[current_guard].enabled));
     if (setting.guards[current_guard].end > setting.guards[current_guard].start) {
       set_sweep_frequency(ST_START, setting.guards[current_guard].start);
       set_sweep_frequency(ST_STOP, setting.guards[current_guard].end);
       set_rbw(8000);
       set_sweep_points((setting.guards[current_guard].end - setting.guards[current_guard].start) / 800000);
     }
-    DAC->DHR12R1 = 0;
+    pwm_stop();
   }
 #endif
 
@@ -5213,7 +5213,7 @@ static volatile int dummy;
       if (MODE_INPUT(setting.mode)) {
 #ifdef __GUARD__
         if (setting.measurement == M_GUARD && RSSI > setting.guards[current_guard].level) {
-          DAC->DHR12R1 = 4095;
+          pwm_start(4000);
         }
 #endif
       for (int t=0; t<TRACES_MAX;t++) {                 // Calculate all traces
@@ -5333,7 +5333,7 @@ static volatile int dummy;
       goto sweep_again;                                             // Keep repeating sweep loop till user aborts by input
   }
   // --------------- check if maximum is above trigger level -----------------
-#ifdef __GUARD__
+#ifdef __GUARD__XX
   if (setting.measurement == M_GUARD) {
     if (measured[peakTrace][peakIndex] < setting.guards[current_guard].level)
       goto again;
