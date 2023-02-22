@@ -5227,17 +5227,17 @@ set_numeric_value(void)
   case KM_GUARD_START:
     setting.guards[active_guard].start = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     dirty = true;
-    guards_update();
+//    guards_update();
     break;
   case KM_GUARD_END:
     setting.guards[active_guard].end = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     dirty = true;
-    guards_update();
+//    guards_update();
     break;
   case KM_GUARD_LEVEL:
     setting.guards[active_guard].level = to_dBm(uistat.value);
     dirty = true;
-    guards_update();
+//    guards_update();
     break;
 #endif
   case KM_NOISE:

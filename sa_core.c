@@ -67,6 +67,10 @@ freq_t maxFreq = 520000000;
 static float old_a = -150;          // cached value to reduce writes to level registers
 int spur_gate = 100;
 
+#ifdef __GUARD__
+uint16_t current_guard = 0;
+#endif
+
 #ifdef __ULTRA__
 freq_t ultra_start;
 //bool ultra;
@@ -4860,6 +4864,25 @@ static bool sweep(bool break_on_operation)
   clear_marker_cache();
 #endif
   again:                          // Waiting for a trigger jumps back to here
+
+#ifdef __GUARD__
+  if (setting.measurement == M_GUARD) {
+    do {
+      current_guard++;
+      if (current_guard > GUARDS_MAX)
+        current_guard = 0;
+    }
+    while(!setting.guards[current_guard].enabled);
+    if (setting.guards[current_guard].end > setting.guards[current_guard].start) {
+      set_sweep_frequency(ST_START, setting.guards[current_guard].start);
+      set_sweep_frequency(ST_STOP, setting.guards[current_guard].end);
+      set_rbw(8000);
+      set_sweep_points((setting.guards[current_guard].end - setting.guards[current_guard].start) / 800000);
+    }
+    DAC->DHR12R1 = 0;
+  }
+#endif
+
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
   //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
 
@@ -5310,7 +5333,12 @@ static volatile int dummy;
       goto sweep_again;                                             // Keep repeating sweep loop till user aborts by input
   }
   // --------------- check if maximum is above trigger level -----------------
-
+#ifdef __GUARD__
+  if (setting.measurement == M_GUARD) {
+    if (measured[peakTrace][peakIndex] < setting.guards[current_guard].level)
+      goto again;
+  }
+#endif
   if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
     if (measured[peakTrace][peakIndex] < setting.trigger_level) {
       goto again;                                                   // not yet, sweep again
