@@ -596,6 +596,27 @@ void ili9341_flip(bool flip) {
   send_command(ILI9341_MEMORY_ACCESS_CONTROL, 1, &memAcc);
 }
 
+void ili9341_define_scroll(uint16_t tfa, uint16_t bfa) {
+  uint8_t temp[6];
+  temp[0] = tfa>>8;
+  temp[1] = tfa;
+  temp[2] = 0;              // One line
+  temp[3] = 1;
+  temp[4] = bfa>>8;
+  temp[5] = bfa;
+  send_command(ILI9341_VERTICAL_SCROLLING_DEF,6,temp);
+}
+
+void ili9341_scroll(uint16_t start) {
+  uint8_t temp[6];
+  temp[0] = start>>8;
+  temp[1] = start;
+
+  send_command(ILI9341_VERTICAL_SCROLLING,2, temp);
+}
+
+
+
 static void ili9341_DMA_bulk(uint16_t x, uint16_t y, uint16_t w, uint16_t h, pixel_t *buffer){
   ili9341_setWindow(ILI9341_MEMORY_WRITE, x, y, w, h);
   dmaChannelSetMemory(LCD_DMA_TX, buffer);

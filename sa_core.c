@@ -18,7 +18,7 @@
 #include "si4432.h"		// comment out for simulation
 //#endif
 #include "stdlib.h"
-//#define TINYSA4
+#define TINYSA4
 
 #pragma GCC push_options
 #ifdef TINYSA4
@@ -2675,7 +2675,7 @@ void update_rbw(void)           // calculate the actual_rbw and the vbwSteps (# 
   if (temp_actual_rbw_x10 == 0) {        // if auto rbw
 
     if (setting.step_delay_mode==SD_FAST) {    // if in fast scanning
-      temp_actual_rbw_x10 = 2*frequency_step_x10;
+      temp_actual_rbw_x10 = frequency_step_x10;
 //    } else if (setting.step_delay_mode==SD_PRECISE) {
 //      temp_actual_rbw_x10 = 4*frequency_step_x10;
     } else {
@@ -3450,6 +3450,9 @@ bool depth_error = false;
 static float old_temp = 0.0;
 #endif
 
+#define TRACE(X) // {     DAC->DHR12R1 = (X*400); }
+
+
 
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
 {
@@ -3469,6 +3472,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     calculate_static_correction();                                          // In case temperature changed.
   }
 #endif
+  TRACE(10);
   if (i == 0 && dirty ) {                                                        // if first point in scan and dirty
 #ifdef __ADF4351__
     clear_frequency_cache();
@@ -3597,6 +3601,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     for (int t=0;t<TRACES_MAX;t++)
       setting.scan_after_dirty[t] += 1;
   }
+  TRACE(0);
   // ---------------------------------  Pulse at start of low output sweep --------------------------
 
   if ((setting.mode == M_GENLOW || (setting.pulse && setting.mode == M_LOW)) && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// pulse high out
@@ -3884,7 +3889,7 @@ modulation_again:
   }
 #endif
 #endif
-
+  TRACE(1);
   // -----------------------------------START vbwsteps loop ------------------------------------
   int t = 0;
   do {
@@ -4126,7 +4131,7 @@ again:                                                              // Spur redu
           local_IF += lf;
       }
     } // --------------- END IF calculation ------------------------
-
+  TRACE(2);
     // ------------- Set LO ---------------------------
 
     {                                           // Else set LO ('s)
@@ -4299,6 +4304,7 @@ again:                                                              // Spur redu
         }
         }
 #endif          // __ADF4351__
+        TRACE(8);
         if (setting.harmonic && lf > ( setting.mode == M_GENLOW ? ULTRA_MAX_FREQ + 60000000:ULTRA_MAX_FREQ) ) {
           target_f /= setting.harmonic;
           LO_harmonic = true;
@@ -4348,8 +4354,9 @@ again:                                                              // Spur redu
         correct_plus:
          if (LO_harmonic)
             error_f *= setting.harmonic;
-          if (error_f > actual_rbw_x10 * 5 || LO_harmonic)        //RBW / 4
+          if (error_f > actual_rbw_x10 * 5 || LO_harmonic) {        //RBW / 4
             local_IF += error_f;
+          }
         } else if ( real_old_freq[ADF4351_LO] < target_f) {
           error_f = real_old_freq[ADF4351_LO] - target_f;
           if (inverted_f) {
@@ -4360,8 +4367,9 @@ again:                                                              // Spur redu
           if (LO_harmonic) {
             error_f *= setting.harmonic;
           }
-          if ( error_f < - actual_rbw_x10 * 5 || LO_harmonic)     //RBW / 4
+          if ( error_f < - actual_rbw_x10 * 5 || LO_harmonic) {    //RBW / 4
             local_IF += error_f;
+          }
         }
         }
 #endif
@@ -4388,7 +4396,7 @@ again:                                                              // Spur redu
 #endif
     }       // ----------------- LO's set --------------------------
 
-
+    TRACE(8)
 #ifdef __MCU_CLOCK_SHIFT__
         if (setting.mode == M_LOW && !in_selftest) {         // Avoid 48MHz spur
           int set_below = false;
@@ -4420,7 +4428,7 @@ again:                                                              // Spur redu
           }
         }
 #endif
-
+   TRACE(3);
 // ----------- Set IF ------------------
 
     if (local_IF != 0)                  // When not in one of the high modes and not in direct mode
@@ -4439,7 +4447,7 @@ again:                                                              // Spur redu
 #endif
     }
 
-
+    TRACE(4);
     // Calculate the RSSI correction for later use
     if (MODE_INPUT(setting.mode)){ // only cases where the value can change on 0 point of sweep
       if (setting.frequency_step != 0 || (i==0 && scandirty)) {
@@ -4645,6 +4653,7 @@ again:                                                              // Spur redu
       }
       start_of_sweep_timestamp = chVTGetSystemTimeX();
     }
+    TRACE(5);
 #ifdef TINYSA4
     if (SI4432_step_delay && (ADF4351_frequency_changed || SI4463_frequency_changed)) {
       int my_step_delay = SI4432_step_delay;
@@ -4688,6 +4697,7 @@ again:                                                              // Spur redu
             my_step_delay += my_step_delay >> 1 ;
         }
       }
+      TRACE(8);
       my_microsecond_delay(my_step_delay);
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
@@ -4697,7 +4707,7 @@ again:                                                              // Spur redu
       SI4463_offset_changed = false;
     }
 #endif
-
+    TRACE(6);
     //else
     {
 #ifdef __SI4432__
@@ -4766,6 +4776,7 @@ again:                                                              // Spur redu
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
   } while (t < local_vbw_steps);  // till all sub steps done
+  TRACE(7);
 #ifdef TINYSA4
 //  if (old_CFGR != orig_CFGR) {    // Never happens ???
 //    old_CFGR = orig_CFGR;
@@ -4876,6 +4887,7 @@ static bool sweep(bool break_on_operation)
     if (setting.guards[current_guard].end > setting.guards[current_guard].start) {
       set_sweep_frequency(ST_START, setting.guards[current_guard].start);
       set_sweep_frequency(ST_STOP, setting.guards[current_guard].end);
+      set_step_delay(SD_FAST);
       set_rbw(8000);
       set_sweep_points((setting.guards[current_guard].end - setting.guards[current_guard].start) / 800000);
     }

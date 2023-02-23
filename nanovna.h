@@ -542,8 +542,13 @@ extern void tlv320aic3204_select(int channel);
 extern  uint16_t _grid_y;
 #define GRIDY  _grid_y
 extern uint16_t graph_bottom;
+#ifdef TINYSA4
+#define BIG_WATERFALL   180
+#define SMALL_WATERFALL 240
+#else
 #define BIG_WATERFALL   90
 #define SMALL_WATERFALL 180
+#endif
 #define NO_WATERFALL    CHART_BOTTOM
 #define CHART_BOTTOM   (LCD_HEIGHT-10)
 #define SCROLL_GRIDY      (HEIGHT_SCROLL / NGRIDY)
@@ -1129,6 +1134,8 @@ int  ili9341_drawstring_size(const char *str, int x, int y, uint8_t size, int x_
 void ili9341_drawfont(uint8_t ch, int x, int y);
 void ili9341_read_memory(int x, int y, int w, int h, uint16_t* out);
 void ili9341_line(int x0, int y0, int x1, int y1);
+void ili9341_define_scroll(uint16_t tfa, uint16_t bfa);
+void ili9341_scroll(uint16_t start);
 void show_version(void);
 void lcd_setBrightness(uint16_t b);
 void spi_init(void);
