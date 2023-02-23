@@ -2550,7 +2550,7 @@ static PWMConfig pwmcfg = {
   NULL,
   {
    {PWM_OUTPUT_DISABLED, NULL},
-   {PWM_OUTPUT_ACTIVE_HIGH, audio_toggle},
+   {PWM_OUTPUT_ACTIVE_HIGH, NULL},
    {PWM_OUTPUT_DISABLED, NULL},
    {PWM_OUTPUT_DISABLED, NULL}
   },
@@ -2561,11 +2561,10 @@ static PWMConfig pwmcfg = {
 #define PWM_TIMER   PWMD3
 #define PWM_CHANNEL 1           // Channel 2
 void pwm_init(void) {
-  palSetPadMode(GPIOA, 9, PAL_MODE_ALTERNATE(6)); // PA9
   palSetPadMode(GPIOA, 4, PAL_MODE_ALTERNATE(2)); // PA4 Time 3 channel 2
-  pwmStart(&PWM_TIMER, &pwmcfg);
-  pwmEnableChannel(&PWM_TIMER, PWM_CHANNEL, PWM_PERCENTAGE_TO_WIDTH(&PWM_TIMER, 5000));
-  pwmEnableChannelNotification(&PWM_TIMER, PWM_CHANNEL);
+//  pwmStart(&PWM_TIMER, &pwmcfg);
+//  pwmEnableChannel(&PWM_TIMER, PWM_CHANNEL, PWM_PERCENTAGE_TO_WIDTH(&PWM_TIMER, 5000));
+//  pwmEnableChannelNotification(&PWM_TIMER, PWM_CHANNEL);
 }
 
 void pwm_start(int f)

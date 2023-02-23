@@ -162,7 +162,7 @@
                                      PIN_MODE_INPUT(1U) |           \
                                      PIN_MODE_INPUT(2U) |           \
                                      PIN_MODE_INPUT(3U) |           \
-                                     PIN_MODE_ALTERNATE(GPIO_SD_DAT2) |           \
+                                     PIN_MODE_ANALOG(GPIO_SD_DAT2) |           \
                                      PIN_MODE_ANALOG(GPIOA_DAC2) |  \
                                      PIN_MODE_ANALOG(GPIOA_XP) |    \
                                      PIN_MODE_ANALOG(GPIOA_YP) |    \
@@ -242,7 +242,7 @@
                                      PIN_AFIO_AF(1, 0) |           \
                                      PIN_AFIO_AF(2, 0) |       \
                                      PIN_AFIO_AF(3, 0) |       \
-                                     PIN_AFIO_AF(GPIO_SD_DAT2, 2) |           \
+                                     PIN_AFIO_AF(GPIO_SD_DAT2, 0) |           \
                                      PIN_AFIO_AF(5, 0) |           \
                                      PIN_AFIO_AF(6, 0) |           \
                                      PIN_AFIO_AF(7, 0))

@@ -4879,8 +4879,11 @@ static bool sweep(bool break_on_operation)
       set_rbw(8000);
       set_sweep_points((setting.guards[current_guard].end - setting.guards[current_guard].start) / 800000);
     }
+    pwm_init();
     pwm_stop();
   }
+  else
+    palSetPadMode(GPIOA, 4, PAL_MODE_INPUT);        // Back to DAC mode
 #endif
 
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
