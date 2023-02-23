@@ -4787,6 +4787,13 @@ again:                                                              // Spur redu
 
 static uint8_t low_count = 0;
 static uint8_t sweep_counter = 0;           // Only used for HW refresh
+#ifdef __GUARD__
+static int last_guard = -1;
+
+void reset_guard(void) {
+  last_guard = -1;
+}
+#endif
 
 // main loop for measurement
 static bool sweep(bool break_on_operation)
@@ -4873,17 +4880,19 @@ static bool sweep(bool break_on_operation)
         current_guard = 0;
     }
     while(!(setting.guards[current_guard].enabled));
-    if (setting.guards[current_guard].end > setting.guards[current_guard].start) {
+    if (setting.guards[current_guard].end > setting.guards[current_guard].start && last_guard != current_guard) {
+      last_guard = current_guard;
       set_sweep_frequency(ST_START, setting.guards[current_guard].start);
       set_sweep_frequency(ST_STOP, setting.guards[current_guard].end);
       set_rbw(8000);
       set_sweep_points((setting.guards[current_guard].end - setting.guards[current_guard].start) / 800000);
     }
-    pwm_init();
+    set_audio_mode(A_PWM);
     pwm_stop();
+  } else {
+    last_guard = -1;
+    set_audio_mode(A_DAC);
   }
-  else
-    palSetPadMode(GPIOA, 4, PAL_MODE_INPUT);        // Back to DAC mode
 #endif
 
   setting.measure_sweep_time_us = 0;                   // start measure sweep time

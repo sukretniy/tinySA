@@ -2582,6 +2582,22 @@ void pwm_stop(void)
 #endif
 
 
+static uint16_t audio_mode = A_DAC;
+
+void set_audio_mode(uint16_t new_mode)
+{
+  if (new_mode == audio_mode)
+    return;
+  if (new_mode == A_PWM) {
+    DAC->CR&= ~DAC_CR_EN1; // Disable DAC CH1
+    pwm_init();
+  } else {
+    palSetPadMode(GPIOA, 4, PAL_MODE_INPUT);        // Back to DAC mode
+    DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
+  }
+  audio_mode = new_mode;
+}
+
 static const GPTConfig gpt4cfg = {
   8000000, // 8 MHz timer clock.
   NULL, // No callback
@@ -2699,19 +2715,18 @@ int main(void)
   spi_init();
   PULSE
 
-#ifdef __PWM__
-  pwm_init();
-  pwm_start(2000);
-  pwm_stop();
-#endif
+//#ifdef __PWM__
+//  pwm_init();
+//  pwm_start(2000);
+//  pwm_stop();
+//#endif
   /*
    * Set LCD display brightness (use DAC2 for control)
    * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
    */
   dac_init();
   PULSE
-//  DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
-  DAC->CR|= DAC_CR_EN2; // Use DAC: CH1 and CH2
+  DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
   #ifdef  __LCD_BRIGHTNESS__
     lcd_setBrightness(DEFAULT_BRIGHTNESS);
   #endif

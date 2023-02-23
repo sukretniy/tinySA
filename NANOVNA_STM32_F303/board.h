@@ -226,7 +226,7 @@
                                      PIN_ODR_HIGH(1) |             \
                                      PIN_ODR_HIGH(2) |         \
                                      PIN_ODR_HIGH(3) |         \
-                                     PIN_ODR_HIGH(GPIO_SD_DAT2) |             \
+                                     PIN_ODR_LOW(GPIO_SD_DAT2) |             \
                                      PIN_ODR_LOW(5) |              \
                                      PIN_ODR_HIGH(6) |             \
                                      PIN_ODR_HIGH(7) |             \

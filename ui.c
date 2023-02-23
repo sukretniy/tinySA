@@ -1497,6 +1497,9 @@ static const menuitem_t  menu_settings2[];
 static const menuitem_t  menu_lowoutput_settings[];
 extern bool dirty;
 char range_text[20];
+#ifdef TINYSA4
+const char * const measurement_text[] = {MEASUREMENT_TEXT};
+#endif
 
 #ifdef TINYSA4
 int input_is_calibrated(void)
@@ -3190,6 +3193,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_guard_select_acb)
     if (count == 0) setting.guards[0].enabled = true;
     b->icon = (setting.guards[data].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
     plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)setting.guards[data].start, (float)setting.guards[data].end);
+    reset_guard();
     return;
   }
   active_guard = data;
@@ -5540,6 +5544,14 @@ redraw_cal_status:
   quick_menu_y[max_quick_menu] = y;
   quick_menu[max_quick_menu++] = (menuitem_t *)NULL;
 
+#ifdef TINYSA4
+  if (setting.measurement != M_OFF){
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    lcd_printf(x, y, measurement_text[setting.measurement]);
+    y += 2*YSTEP + YSTEP/2;
+  }
+
+#endif
 //  if (setting.mode == M_LOW) {
     // Attenuation
     ili9341_set_foreground(setting.auto_attenuation ? LCD_FG_COLOR : LCD_BRIGHT_COLOR_GREEN);
