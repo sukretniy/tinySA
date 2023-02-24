@@ -162,7 +162,7 @@
                                      PIN_MODE_INPUT(1U) |           \
                                      PIN_MODE_INPUT(2U) |           \
                                      PIN_MODE_INPUT(3U) |           \
-                                     PIN_MODE_INPUT(GPIO_SD_DAT2) |           \
+                                     PIN_MODE_ANALOG(GPIO_SD_DAT2) |           \
                                      PIN_MODE_ANALOG(GPIOA_DAC2) |  \
                                      PIN_MODE_ANALOG(GPIOA_XP) |    \
                                      PIN_MODE_ANALOG(GPIOA_YP) |    \
@@ -226,7 +226,7 @@
                                      PIN_ODR_HIGH(1) |             \
                                      PIN_ODR_HIGH(2) |         \
                                      PIN_ODR_HIGH(3) |         \
-                                     PIN_ODR_HIGH(GPIO_SD_DAT2) |             \
+                                     PIN_ODR_LOW(GPIO_SD_DAT2) |             \
                                      PIN_ODR_LOW(5) |              \
                                      PIN_ODR_HIGH(6) |             \
                                      PIN_ODR_HIGH(7) |             \

@@ -147,6 +147,44 @@ finish2:
     }
     break;
   }
+#ifdef __BANDS__
+  case FMT_BND_FILE:
+  {
+    const int buffer_size = 256;
+    const int line_size = 128;
+    char *buf_8 = (char *)spi_buffer; // must be greater then buffer_size + line_size
+    char *line  = buf_8 + buffer_size;
+    uint16_t j = 0, i, count = 0;
+    while (f_read(fs_file, buf_8, buffer_size, &size) == FR_OK && size > 0) {
+      for (i = 0; i < size; i++) {
+        uint8_t c = buf_8[i];
+        if (c == '\r') {                                                     // New line (Enter)
+          line[j] = 0; j = 0;
+          char *args[16];
+          int nargs = parse_line(line, args, 16);                            // Parse line to 16 args
+          if (nargs < 2 || args[0][0] == '#' || args[0][0] == '!') continue; // No data or comment or settings
+          if (count >= BANDS_MAX) {error = "Format err"; goto finish3;}
+          setting.bands[count].start = my_atoui(args[0]);// Get frequency
+          setting.bands[count].end = my_atoui(args[1]);// Get frequency
+          setting.bands[count].level = my_atof(args[2]);     // Get frequency
+          setting.bands[count].enabled = true;               // Get frequency
+          count++;
+        }
+        else if (c < 0x20) continue;                 // Others (skip)
+        else if (j < line_size) line[j++] = (char)c; // Store
+      }
+    }
+finish3:
+    for (; count < BANDS_MAX; i++) {
+      setting.bands[count].start = 0;
+      setting.bands[count].end = 0;
+      setting.bands[count].level = 0;
+      setting.bands[count].enabled = false;
+      count++;
+    }
+    break;
+  }
+#endif
   case FMT_CSV_FILE:
   {
     const int buffer_size = 256;

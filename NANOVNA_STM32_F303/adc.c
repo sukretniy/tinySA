@@ -64,7 +64,11 @@ static const ADCConversionGroup adcgrpcfgTouch = {
   NULL,                // adcerrorcallback_touch
                        // CFGR
   ADC_CFGR_EXTEN_0     // rising edge of external trigger
-  | ADC_CFGR_EXTSEL_2  // EXT4 0x1000 event (TIM3_TRGO)
+
+  | ADC_CFGR_EXTSEL_3 | ADC_CFGR_EXTSEL_0  // EXT4 0x1001 event (TIM1_TRGO)
+//  | ADC_CFGR_EXTSEL_2  // EXT4 0x100 event (TIM3_TRGO)
+
+
   | ADC_CFGR_AWD1EN,   // Enable Analog watchdog check interrupt
   ADC_TR(0, TOUCH_THRESHOLD),                 // Analog watchdog threshold TR1, interrupt on touch press
   {ADC_SMPR1_SMP_AN4(ADC_TOUCH_SMP_TIME), 0}, // SMPR[2]

@@ -2529,6 +2529,75 @@ THD_FUNCTION(myshellThread, p)
 
 #pragma GCC pop_options
 
+#ifdef __PWM__
+
+
+static void audio_toggle(void)
+{
+  static volatile int h = 0;
+  if (h) {
+    DAC->DHR12R1 = 0;
+    h = 0;
+  } else {
+    DAC->DHR12R1 = 4095;
+    h = 1;
+  }
+}
+
+static PWMConfig pwmcfg = {
+  400000,                                    /* 400kHz PWM clock frequency.   */
+  100,                                      /* Initial PWM frequency is 4kHz  */
+  NULL,
+  {
+   {PWM_OUTPUT_DISABLED, NULL},
+   {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+   {PWM_OUTPUT_DISABLED, NULL},
+   {PWM_OUTPUT_DISABLED, NULL}
+  },
+  0,
+  0
+};
+
+#define PWM_TIMER   PWMD3
+#define PWM_CHANNEL 1           // Channel 2
+void pwm_init(void) {
+  palSetPadMode(GPIOA, 4, PAL_MODE_ALTERNATE(2)); // PA4 Time 3 channel 2
+//  pwmStart(&PWM_TIMER, &pwmcfg);
+//  pwmEnableChannel(&PWM_TIMER, PWM_CHANNEL, PWM_PERCENTAGE_TO_WIDTH(&PWM_TIMER, 5000));
+//  pwmEnableChannelNotification(&PWM_TIMER, PWM_CHANNEL);
+}
+
+void pwm_start(int f)
+{
+  pwmcfg.frequency = f*100;
+  pwmStart(&PWM_TIMER, &pwmcfg);
+//  pwmChangePeriod(&PWM_TIMER, f);
+  pwmEnableChannel(&PWM_TIMER, PWM_CHANNEL, PWM_PERCENTAGE_TO_WIDTH(&PWM_TIMER, 5000));
+}
+
+void pwm_stop(void)
+{
+  pwmDisableChannel(&PWM_TIMER, PWM_CHANNEL);
+}
+
+
+static uint16_t audio_mode = A_DAC;
+
+void set_audio_mode(uint16_t new_mode)
+{
+  if (new_mode == audio_mode)
+    return;
+  if (new_mode == A_PWM) {
+    DAC->CR&= ~DAC_CR_EN1; // Disable DAC CH1
+    pwm_init();
+  } else {
+    palSetPadMode(GPIOA, 4, PAL_MODE_INPUT);        // Back to DAC mode
+    DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
+  }
+  audio_mode = new_mode;
+}
+#endif
+
 static const GPTConfig gpt4cfg = {
   8000000, // 8 MHz timer clock.
   NULL, // No callback
@@ -2646,7 +2715,11 @@ int main(void)
   spi_init();
   PULSE
 
-
+//#ifdef __PWM__
+//  pwm_init();
+//  pwm_start(2000);
+//  pwm_stop();
+//#endif
   /*
    * Set LCD display brightness (use DAC2 for control)
    * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.

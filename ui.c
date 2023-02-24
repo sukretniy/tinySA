@@ -349,8 +349,8 @@ static void touch_init(void){
   // Prepare pin for measure touch event
   touch_prepare_sense();
   // Start touch interrupt, used timer_3 ADC check threshold:
-  gptStart(&GPTD3, &gpt3cfg);         // Init timer 3
-  gptStartContinuous(&GPTD3, 10);     // Start timer 3 vs timer 10 interval
+  gptStart(&GPTD1, &gpt3cfg);         // Init timer 3
+  gptStartContinuous(&GPTD1, 10);     // Start timer 3 vs timer 10 interval
   touch_start_watchdog();             // Start ADC watchdog (measure by timer 3 interval and trigger interrupt if touch pressed)
 }
 
@@ -1333,8 +1333,8 @@ enum {
 #ifdef __LIMITS__
   KM_LIMIT_FREQ, KM_LIMIT_LEVEL,
 #endif
-#ifdef __GUARD__
-  KM_GUARD_START, KM_GUARD_END, KM_GUARD_LEVEL,
+#ifdef __BANDS__
+  KM_BAND_START, KM_BAND_END, KM_BAND_LEVEL,
 #endif
   KM_MARKER_TIME,
   // #35
@@ -1416,10 +1416,10 @@ static const struct {
 [KM_LIMIT_FREQ]   = {keypads_freq         , "FREQ"},  // KM_LIMIT_FREQ
 [KM_LIMIT_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_LIMIT_LEVEL
 #endif
-#ifdef __GUARD__
-[KM_GUARD_START]  = {keypads_freq         , "START\nFREQ"},  // KM_GUARD_START
-[KM_GUARD_END]    = {keypads_freq         , "END\nFREQ"},  // KM_GUARD_END
-[KM_GUARD_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_GUARD_LEVEL
+#ifdef __BANDS__
+[KM_BAND_START]  = {keypads_freq         , "START\nFREQ"},  // KM_BAND_START
+[KM_BAND_END]    = {keypads_freq         , "END\nFREQ"},  // KM_BAND_END
+[KM_BAND_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_BAND_LEVEL
 #endif
 [KM_MARKER_TIME]  = {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
 [KM_VAR]          = {keypads_freq        , "JOG\nSTEP"}, // jog step
@@ -1467,9 +1467,9 @@ static const menuitem_t  menu_subtract_trace[];
 static const menuitem_t  menu_limit_modify[];
 static const menuitem_t  menu_limit_select[];
 #endif
-#ifdef __GUARD__
-static const menuitem_t  menu_guard_modify[];
-static const menuitem_t  menu_guard_select[];
+#ifdef __BANDS__
+static const menuitem_t  menu_BAND_modify[];
+static const menuitem_t  menu_BAND_select[];
 #endif
 static const menuitem_t  menu_average[];
 static const menuitem_t  menu_reffer[];
@@ -1497,6 +1497,9 @@ static const menuitem_t  menu_settings2[];
 static const menuitem_t  menu_lowoutput_settings[];
 extern bool dirty;
 char range_text[20];
+#ifdef TINYSA4
+const char * const measurement_text[] = {MEASUREMENT_TEXT};
+#endif
 
 #ifdef TINYSA4
 int input_is_calibrated(void)
@@ -2871,9 +2874,9 @@ validate:
       }
       break;
 #endif
-#ifdef __GUARD__
-    case M_GUARD:
-      menu_push_submenu(menu_guard_select);
+#ifdef __BANDS__
+    case M_BANDS:
+      menu_push_submenu(menu_BAND_select);
       goto leave;
       break;
 #endif
@@ -3179,24 +3182,25 @@ static UI_FUNCTION_ADV_CALLBACK(menu_limit_select_acb)
 
 #endif
 
-#ifdef __GUARD__
-uint8_t active_guard = 0;
-static UI_FUNCTION_ADV_CALLBACK(menu_guard_select_acb)
+#ifdef __BANDS__
+uint8_t active_band = 0;
+static UI_FUNCTION_ADV_CALLBACK(menu_band_select_acb)
 {
   (void)item;
   if(b){
     int count = 0;
-    for (int i=0;i<GUARDS_MAX;i++) {if (setting.guards[i].enabled) count++; }
-    if (count == 0) setting.guards[0].enabled = true;
-    b->icon = (setting.guards[data].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
-    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)setting.guards[data].start, (float)setting.guards[data].end);
+    for (int i=0;i<BANDS_MAX;i++) {if (setting.bands[i].enabled) count++; }
+    if (count == 0) setting.bands[0].enabled = true;
+    b->icon = (setting.bands[data].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
+    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)setting.bands[data].start, (float)setting.bands[data].end);
+    reset_band();
     return;
   }
-  active_guard = data;
-  setting.guards[active_guard].enabled = true;
+  active_band = data;
+  setting.bands[active_band].enabled = true;
   dirty = true;
-//  guards_update();
-  menu_push_submenu(menu_guard_modify);
+//  BANDs_update();
+  menu_push_submenu(menu_BAND_modify);
 }
 
 #endif
@@ -3324,22 +3328,22 @@ static UI_FUNCTION_CALLBACK(menu_limit_disable_cb)
 #endif
 
 
-#ifdef __GUARD__
-static UI_FUNCTION_CALLBACK(menu_guard_disable_cb)
+#ifdef __BANDS__
+static UI_FUNCTION_CALLBACK(menu_BAND_disable_cb)
 {
   (void)item;
   (void)data;
   int count = 0;
-  for (int i=0;i<GUARDS_MAX;i++) {if (setting.guards[i].enabled) count++; }
-  if (count == 1 && setting.guards[active_guard].enabled) {
+  for (int i=0;i<BANDS_MAX;i++) {if (setting.bands[i].enabled) count++; }
+  if (count == 1 && setting.bands[active_band].enabled) {
     drawMessageBox("Error", "At least one entry",1000);
     return;
   }
 
-  if (active_guard<GUARDS_MAX){
-    setting.guards[active_guard].enabled = false;
+  if (active_band<BANDS_MAX){
+    setting.bands[active_band].enabled = false;
     dirty = true;
-//    guards_update();
+//    BANDs_update();
     menu_move_back(false);
   }
 }
@@ -3421,10 +3425,18 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
 {
   (void)item;
   if(b){
-    if (data == T_MODE) {
+    if (data == T_MODE)
       b->param_1.text = mode_text[setting.trigger_mode - T_PRE];
-    } else if (data == T_UP || data == T_DOWN)
+    else if (data == T_UP || data == T_DOWN)
+#if 0
       b->icon = setting.trigger_direction == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+#else
+      b->param_1.text = setting.trigger_direction == T_UP ? "UP" : "DOWN";
+#endif
+#ifdef __BEEP__
+    else if (data == T_BEEP)
+      b->icon = setting.trigger_beep ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+#endif
     else
       b->icon = setting.trigger == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
@@ -3434,10 +3446,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
     if (setting.trigger_mode > T_MID)
       setting.trigger_mode = T_PRE;
     set_trigger(setting.trigger_mode);
+#ifdef __BEEP__
+  } else if (data == T_BEEP) {
+    setting.trigger_beep = !setting.trigger_beep;
+#endif
+  } else if (data == T_UP || data == T_DOWN) {
+    if (setting.trigger_direction == T_UP)
+      setting.trigger_direction = T_DOWN;
+    else
+      setting.trigger_direction = T_UP;
   } else if (data != T_DONE) {
-    set_trigger(data);
+  set_trigger(data);
 //  menu_move_back(false);
-    ui_mode_normal();
+  ui_mode_normal();
   }
   completed = true;
 }
@@ -3857,8 +3878,8 @@ enum {
   FMT_CFG_FILE,
   FMT_PRS_FILE,
   FMT_TBL_FILE,
-#ifdef __GUARD__
-  FMT_GRD_FILE,
+#ifdef __BANDS__
+  FMT_BND_FILE,
 #endif
 };
 
@@ -3873,7 +3894,7 @@ static const char *file_ext[] = {
   [FMT_CFG_FILE] = "cfg",
   [FMT_PRS_FILE] = "prs",
   [FMT_TBL_FILE] = "tbl",
-  [FMT_GRD_FILE] = "grd",
+  [FMT_BND_FILE] = "bnd",
 };
 
 static void sa_save_file(uint8_t format);
@@ -4136,22 +4157,22 @@ static const menuitem_t menu_limit_select[] = {
 };
 #endif
 
-#ifdef __GUARD__
-static const menuitem_t menu_guard_modify[] =
+#ifdef __BANDS__
+static const menuitem_t menu_BAND_modify[] =
 {
-  { MT_KEYPAD,  KM_GUARD_START,     "START\n\b%s",          "Start"},
-  { MT_KEYPAD,  KM_GUARD_END,       "END\n\b%s",            "End"},
-  { MT_KEYPAD,  KM_GUARD_LEVEL,    "LEVEL\n\b%s",          "Level"},
-  { MT_CALLBACK,0,                  "DISABLE",              menu_guard_disable_cb},
+  { MT_KEYPAD,  KM_BAND_START,     "START\n\b%s",          "Start"},
+  { MT_KEYPAD,  KM_BAND_END,       "END\n\b%s",            "End"},
+  { MT_KEYPAD,  KM_BAND_LEVEL,    "LEVEL\n\b%s",          "Level"},
+  { MT_CALLBACK,0,                  "DISABLE",              menu_BAND_disable_cb},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
-static const menuitem_t menu_guard_select[] = {
-  { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,GUARDS_MAX), MT_CUSTOM_LABEL, menu_guard_select_acb },
+static const menuitem_t menu_BAND_select[] = {
+  { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,BANDS_MAX), MT_CUSTOM_LABEL, menu_band_select_acb },
 #ifdef __USE_SD_CARD__
-  { MT_CALLBACK,    FMT_GRD_FILE,  "GUARD"S_RARROW"\nSD",     menu_sdcard_cb},
+  { MT_CALLBACK,    FMT_BND_FILE,  "BANDS"S_RARROW"\nSD",     menu_sdcard_cb},
 #ifdef __SD_FILE_BROWSER__
-  { MT_CALLBACK, FMT_GRD_FILE, "SD"S_RARROW"\nGUARD",            menu_sdcard_browse_cb },
+  { MT_CALLBACK, FMT_BND_FILE, "SD"S_RARROW"\nBANDS",            menu_sdcard_browse_cb },
 #endif
 #endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
@@ -4488,8 +4509,8 @@ static const menuitem_t menu_measure2[] = {
 #ifdef __NOISE_FIGURE__
 { MT_SUBMENU | MT_LOW,          0,            "NOISE\nFIGURE",    menu_measure_noise_figure},
 #endif
-#ifdef __GUARD__
-{ MT_ADV_CALLBACK,            M_GUARD,          "GUARD",           menu_measure_acb},
+#ifdef __BANDS__
+{ MT_ADV_CALLBACK,            M_BANDS,          "MULTI\nBAND",    menu_measure_acb},
 #endif
 #ifdef __FFT_DECONV__
   { MT_ADV_CALLBACK,            M_DECONV,  "DECONV",         menu_measure_acb},
@@ -4713,11 +4734,18 @@ static const menuitem_t menu_trigger[] = {
   { MT_ADV_CALLBACK, T_NORMAL,   "NORMAL",         menu_trigger_acb},
   { MT_ADV_CALLBACK, T_SINGLE,   "SINGLE",         menu_trigger_acb},
 //  { MT_ADV_CALLBACK, T_DONE,     "READY",          menu_trigger_acb},
-  { MT_KEYPAD,       KM_TRIGGER, "TRIGGER LEV\n\b%s", NULL},
-  { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
-  { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
-  { MT_ADV_CALLBACK, T_MODE,     "%s\nTRIGGER",     menu_trigger_acb},
+  { MT_KEYPAD,       KM_TRIGGER, "LEVEL\n\b%s", NULL},
+#if 0
+  { MT_ADV_CALLBACK, T_UP,       "EDGE\nUP",       menu_trigger_acb},
+  { MT_ADV_CALLBACK, T_DOWN,     "EDGE\nDOWN",     menu_trigger_acb},
+#else
+  { MT_ADV_CALLBACK, T_UP,     "EDGE\n\b%s",     menu_trigger_acb},
+#endif
+  { MT_ADV_CALLBACK, T_MODE,     "TRIGGER\n\b%s",  menu_trigger_acb},
   { MT_KEYPAD,       KM_TRIGGER_GRID, "INTERVAL\n\b%ss", NULL},
+#ifdef __BEEP__
+  { MT_ADV_CALLBACK, T_BEEP,     "BEEP",       menu_trigger_acb},
+#endif
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
@@ -4984,17 +5012,17 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%.1f", uistat.value);
     break;
 #endif
-#ifdef __GUARD__
-  case KM_GUARD_START:
-    uistat.freq_value = setting.guards[active_guard].start;
+#ifdef __BANDS__
+  case KM_BAND_START:
+    uistat.freq_value = setting.bands[active_band].start;
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
-  case KM_GUARD_END:
-    uistat.freq_value = setting.guards[active_guard].end;
+  case KM_BAND_END:
+    uistat.freq_value = setting.bands[active_band].end;
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
-  case KM_GUARD_LEVEL:
-    uistat.value = value(setting.guards[active_guard].level);
+  case KM_BAND_LEVEL:
+    uistat.value = value(setting.bands[active_band].level);
     plot_printf(uistat.text, sizeof uistat.text, "%.1f", uistat.value);
     break;
 #endif
@@ -5223,21 +5251,21 @@ set_numeric_value(void)
     limits_update();
     break;
 #endif
-#ifdef __GUARD__
-  case KM_GUARD_START:
-    setting.guards[active_guard].start = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+#ifdef __BANDS__
+  case KM_BAND_START:
+    setting.bands[active_band].start = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     dirty = true;
-//    guards_update();
+//    BANDs_update();
     break;
-  case KM_GUARD_END:
-    setting.guards[active_guard].end = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+  case KM_BAND_END:
+    setting.bands[active_band].end = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     dirty = true;
-//    guards_update();
+//    BANDs_update();
     break;
-  case KM_GUARD_LEVEL:
-    setting.guards[active_guard].level = to_dBm(uistat.value);
+  case KM_BAND_LEVEL:
+    setting.bands[active_band].level = to_dBm(uistat.value);
     dirty = true;
-//    guards_update();
+//    BANDs_update();
     break;
 #endif
   case KM_NOISE:
@@ -5540,6 +5568,14 @@ redraw_cal_status:
   quick_menu_y[max_quick_menu] = y;
   quick_menu[max_quick_menu++] = (menuitem_t *)NULL;
 
+#ifdef TINYSA4
+  if (setting.measurement != M_OFF){
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    lcd_printf(x, y, measurement_text[setting.measurement]);
+    y += 2*YSTEP + YSTEP/2;
+  }
+
+#endif
 //  if (setting.mode == M_LOW) {
     // Attenuation
     ili9341_set_foreground(setting.auto_attenuation ? LCD_FG_COLOR : LCD_BRIGHT_COLOR_GREEN);
@@ -5682,7 +5718,7 @@ redraw_cal_status:
 
     y += YSTEP;
     if (rounding)
-      lcd_printf(x, y, "%6.3f", value(setting.trigger_level));
+      lcd_printf(x, y, "%6.1f", value(setting.trigger_level));
     else
       lcd_printf(x, y, "%6.4F", value(setting.trigger_level));
 //    lcd_printf(x, y, "%4f", value(setting.trigger_level)/setting.unit_scale);
@@ -7210,14 +7246,14 @@ static void sa_save_file(uint8_t format) {
           }
         }
       break;
-#ifdef __GUARD__
-      case FMT_GRD_FILE:
-        for (i = 0; i < GUARDS_MAX && res == FR_OK; i++) {
-          if (setting.guards[i].enabled) {
+#ifdef __BANDS__
+      case FMT_BND_FILE:
+        for (i = 0; i < BANDS_MAX && res == FR_OK; i++) {
+          if (setting.bands[i].enabled) {
             char *buf = (char *)spi_buffer;
-            buf += plot_printf(buf, 100, "%U, ", setting.guards[i].start);
-            buf += plot_printf(buf, 100, "%U, ", setting.guards[i].end);
-            buf += plot_printf(buf, 100, "%f ", setting.guards[i].level);
+            buf += plot_printf(buf, 100, "%U, ", setting.bands[i].start);
+            buf += plot_printf(buf, 100, "%U, ", setting.bands[i].end);
+            buf += plot_printf(buf, 100, "%f ", setting.bands[i].level);
             buf += plot_printf(buf, 100, "\r\n");
             res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
           }

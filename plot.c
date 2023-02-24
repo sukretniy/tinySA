@@ -1116,16 +1116,6 @@ draw_cell(int m, int n)
         if ((uint32_t)(x + x0 - CELLOFFSETX) <= WIDTH + CELLOFFSETX)
           cell_buffer[tp * CELLWIDTH + x] = c;
   }
-#ifdef __GUARD__XX
-  if (setting.measurement == M_GUARD) {
-    int tp = get_guard_level() - y0;
-    if (tp>=0 && tp < h)
-      for (x = 0; x < w; x++)
-        if ((uint32_t)(x + x0 - CELLOFFSETX) <= WIDTH + CELLOFFSETX)
-          cell_buffer[tp * CELLWIDTH + x] = c;
-
-  }
-#endif
 #if 1
   // Only right cells
   if (m >= (GRID_X_TEXT)/CELLWIDTH)

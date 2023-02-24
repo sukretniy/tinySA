@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -88,7 +88,9 @@
 #define __MCU_CLOCK_SHIFT__
 #endif
 #ifdef TINYSA4
-#define __GUARD__
+#define __BANDS__
+#define __BEEP__
+#define __MULTI_BAND__
 #define __MCU_CLOCK_SHIFT__
 #define __ULTRA__
 #define __USE_RTC__               // Enable RTC clock
@@ -118,6 +120,11 @@
 //#define __HARMONIC__
 //#define __USE_FREQ_TABLE__      // Enable use table for frequency list
 #endif
+
+#ifdef __BANDS__
+#define __PWM__
+#endif
+
 
 #ifdef TINYSA3
 #define VARIANT(X,Y) (X)
@@ -339,6 +346,14 @@ extern const char * const info_about[];
 #ifdef TINYSA4
 void toggle_extra_lna(void);
 void set_extra_lna(int t);
+
+enum { A_DAC, A_PWM };
+void set_audio_mode(uint16_t new_mode);
+void pwm_start(int f);
+void pwm_stop(void);
+#ifdef __BANDS__
+void reset_band(void);
+#endif
 #endif
 
 // ------------------------------- sa_core.c ----------------------------------
@@ -1144,14 +1159,14 @@ void spi_init(void);
  * flash.c
  */
 
-#ifdef __GUARD__
-#define GUARDS_MAX   8
+#ifdef __BANDS__
+#define BANDS_MAX   8
 typedef struct {
   bool enabled;
   freq_t start;
   freq_t end;
   float  level;
-} guard_t;
+} band_t;
 #endif
 
 
@@ -1169,8 +1184,8 @@ typedef struct setting
   bool pulse;                  // bool
   bool stored[TRACES_MAX];     // enum
   bool normalized[TRACES_MAX];     // enum
-#ifdef __GUARD__
-  guard_t guards[GUARDS_MAX];
+#ifdef __BANDS__
+  band_t bands[BANDS_MAX];
 #endif
 
   uint8_t mode;                // enum
@@ -1182,6 +1197,9 @@ typedef struct setting
   uint8_t trigger;             // enum
   uint8_t trigger_mode;        // enum
   uint8_t trigger_direction;   // enum
+#ifdef __BEEP__
+  uint8_t trigger_beep;
+#endif
   uint8_t step_delay_mode;     // enum
   uint8_t waterfall;           // enum
 #ifdef __LEVEL_METER__
@@ -1749,11 +1767,12 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_GUARD, M_DECONV
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_BANDS, M_DECONV,M_MAX
 };
+#define MEASUREMENT_TEXT "OFF","IMD","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A","MULTI","DECONF"
 
 enum {
-  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID
+  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID, T_BEEP,
 };
 
 //!!! Warning can show not correct results on CH_CFG_ST_FREQUENCY not round by 1000 or > 1000000UL
