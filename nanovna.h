@@ -89,6 +89,7 @@
 #endif
 #ifdef TINYSA4
 #define __GUARD__
+#define __BEEP__
 #define __MCU_CLOCK_SHIFT__
 #define __ULTRA__
 #define __USE_RTC__               // Enable RTC clock
@@ -1195,6 +1196,9 @@ typedef struct setting
   uint8_t trigger;             // enum
   uint8_t trigger_mode;        // enum
   uint8_t trigger_direction;   // enum
+#ifdef __BEEP__
+  uint8_t trigger_beep;
+#endif
   uint8_t step_delay_mode;     // enum
   uint8_t waterfall;           // enum
 #ifdef __LEVEL_METER__
@@ -1767,7 +1771,7 @@ enum {
 #define MEASUREMENT_TEXT "OFF","IMD","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A","GUARD","DECONF"
 
 enum {
-  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID
+  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID, T_BEEP,
 };
 
 //!!! Warning can show not correct results on CH_CFG_ST_FREQUENCY not round by 1000 or > 1000000UL

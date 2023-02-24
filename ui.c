@@ -3429,6 +3429,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
       b->param_1.text = mode_text[setting.trigger_mode - T_PRE];
     } else if (data == T_UP || data == T_DOWN)
       b->icon = setting.trigger_direction == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+#ifdef __BEEP__
+    else if (data == T_BEEP)
+      b->icon = setting.trigger_beep ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+#endif
     else
       b->icon = setting.trigger == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
@@ -3438,7 +3442,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
     if (setting.trigger_mode > T_MID)
       setting.trigger_mode = T_PRE;
     set_trigger(setting.trigger_mode);
-  } else if (data != T_DONE) {
+#ifdef __BEEP__
+  } else if (data == T_BEEP) {
+    setting.trigger_beep = !setting.trigger_beep;
+#endif
+    } else if (data != T_DONE) {
     set_trigger(data);
 //  menu_move_back(false);
     ui_mode_normal();
@@ -4720,8 +4728,11 @@ static const menuitem_t menu_trigger[] = {
   { MT_KEYPAD,       KM_TRIGGER, "TRIGGER LEV\n\b%s", NULL},
   { MT_ADV_CALLBACK, T_UP,       "UP\nEDGE",       menu_trigger_acb},
   { MT_ADV_CALLBACK, T_DOWN,     "DOWN\nEDGE",     menu_trigger_acb},
-  { MT_ADV_CALLBACK, T_MODE,     "%s\nTRIGGER",     menu_trigger_acb},
+  { MT_ADV_CALLBACK, T_MODE,     "TRIGGER\n\b%s",  menu_trigger_acb},
   { MT_KEYPAD,       KM_TRIGGER_GRID, "INTERVAL\n\b%ss", NULL},
+#ifdef __BEEP__
+  { MT_ADV_CALLBACK, T_BEEP,     "BEEP",       menu_trigger_acb},
+#endif
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 

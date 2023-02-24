@@ -4906,7 +4906,13 @@ static bool sweep(bool break_on_operation)
     set_audio_mode(A_DAC);
   }
 #endif
-
+#ifdef __BEEP__
+  if (setting.trigger_beep && setting.trigger != T_AUTO) {
+    set_audio_mode(A_PWM);    pwm_stop();
+  }
+  else
+    set_audio_mode(A_DAC);
+#endif
   setting.measure_sweep_time_us = 0;                   // start measure sweep time
   //  start_of_sweep_timestamp = chVTGetSystemTimeX();    // Will be set in perform
 
@@ -5239,6 +5245,13 @@ static volatile int dummy;
         if (setting.measurement == M_GUARD && RSSI > setting.guards[current_guard].level) {
           pwm_start(4000);
         }
+#endif
+#ifdef __BEEP__
+        if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
+        if (setting.trigger_beep && RSSI >= setting.trigger_level) {
+          pwm_start(4000);
+        }
+      }
 #endif
       for (int t=0; t<TRACES_MAX;t++) {                 // Calculate all traces
         if (setting.stored[t])
