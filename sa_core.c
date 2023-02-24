@@ -1918,8 +1918,8 @@ void set_scale(float t) {
   } else {
     if (t > 20.0)
       t = 20.0;
-    else if (t < 1)
-      t = 1.0;
+    else if (t < 0.1)
+      t = 0.1;
   }
 
   float m = 1;
