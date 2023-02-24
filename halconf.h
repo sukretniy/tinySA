@@ -115,7 +115,11 @@
  * @brief   Enables the PWM subsystem.
  */
 #if !defined(HAL_USE_PWM) || defined(__DOXYGEN__)
+#ifdef TINYSA_F303
 #define HAL_USE_PWM                 TRUE
+#else
+#define HAL_USE_PWM                 FALSE
+#endif
 #endif
 
 /**

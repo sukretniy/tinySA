@@ -2579,7 +2579,6 @@ void pwm_stop(void)
 {
   pwmDisableChannel(&PWM_TIMER, PWM_CHANNEL);
 }
-#endif
 
 
 static uint16_t audio_mode = A_DAC;
@@ -2597,6 +2596,7 @@ void set_audio_mode(uint16_t new_mode)
   }
   audio_mode = new_mode;
 }
+#endif
 
 static const GPTConfig gpt4cfg = {
   8000000, // 8 MHz timer clock.

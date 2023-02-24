@@ -18,7 +18,7 @@
 #include "si4432.h"		// comment out for simulation
 //#endif
 #include "stdlib.h"
-#define TINYSA4
+//#define TINYSA4
 
 #pragma GCC push_options
 #ifdef TINYSA4
@@ -67,8 +67,8 @@ freq_t maxFreq = 520000000;
 static float old_a = -150;          // cached value to reduce writes to level registers
 int spur_gate = 100;
 
-#ifdef __GUARD__
-uint16_t current_guard = 0;
+#ifdef __BANDS__
+uint16_t current_band = 0;
 #endif
 
 #ifdef __ULTRA__
@@ -1406,11 +1406,6 @@ void limits_update(void)
     }
     redraw_request|= REDRAW_AREA;
   }
-}
-#endif
-
-#ifdef __GUARD__
-void guards_update(void) {
 }
 #endif
 
@@ -4798,11 +4793,11 @@ again:                                                              // Spur redu
 
 static uint8_t low_count = 0;
 static uint8_t sweep_counter = 0;           // Only used for HW refresh
-#ifdef __GUARD__
-static int last_guard = -1;
+#ifdef __BANDS__
+static int last_band = -1;
 
-void reset_guard(void) {
-  last_guard = -1;
+void reset_band(void) {
+  last_band = -1;
 }
 #endif
 
@@ -4881,34 +4876,38 @@ static bool sweep(bool break_on_operation)
 #ifdef __MARKER_CACHE__
   clear_marker_cache();
 #endif
+  uint16_t triggered = false;
   again:                          // Waiting for a trigger jumps back to here
 
-#ifdef __GUARD__
-  if (setting.measurement == M_GUARD) {
+#ifdef __BANDS__
+  if (setting.measurement == M_BANDS) {
     do {
-      current_guard++;
-      if (current_guard > GUARDS_MAX)
-        current_guard = 0;
+      current_band++;
+      if (current_band > BANDS_MAX)
+        current_band = 0;
     }
-    while(!(setting.guards[current_guard].enabled));
-    if (setting.guards[current_guard].end > setting.guards[current_guard].start && last_guard != current_guard) {
-      last_guard = current_guard;
-      set_sweep_frequency(ST_START, setting.guards[current_guard].start);
-      set_sweep_frequency(ST_STOP, setting.guards[current_guard].end);
+    while(!(setting.bands[current_band].enabled));
+    if (setting.bands[current_band].end > setting.bands[current_band].start && last_band != current_band) {
+      last_band = current_band;
+      set_sweep_frequency(ST_START, setting.bands[current_band].start);
+      set_sweep_frequency(ST_STOP, setting.bands[current_band].end);
       set_step_delay(SD_FAST);
       set_rbw(8000);
-      set_sweep_points((setting.guards[current_guard].end - setting.guards[current_guard].start) / 800000);
+      set_sweep_points((setting.bands[current_band].end - setting.bands[current_band].start) / 800000);
+      setting.trigger_level = setting.bands[current_band].level;
+      setting.auto_attenuation = false;
     }
     set_audio_mode(A_PWM);
     pwm_stop();
   } else {
-    last_guard = -1;
+    last_band = -1;
     set_audio_mode(A_DAC);
   }
 #endif
 #ifdef __BEEP__
-  if (setting.trigger_beep && setting.trigger != T_AUTO) {
-    set_audio_mode(A_PWM);    pwm_stop();
+  if (setting.trigger_beep) {
+    set_audio_mode(A_PWM);
+    pwm_stop();
   }
   else
     set_audio_mode(A_DAC);
@@ -5241,18 +5240,13 @@ static volatile int dummy;
 #endif
 
       if (MODE_INPUT(setting.mode)) {
-#ifdef __GUARD__
-        if (setting.measurement == M_GUARD && RSSI > setting.guards[current_guard].level) {
-          pwm_start(4000);
-        }
-#endif
+        if (RSSI >= setting.trigger_level) {
+          triggered = true;
 #ifdef __BEEP__
-        if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
-        if (setting.trigger_beep && RSSI >= setting.trigger_level) {
-          pwm_start(4000);
-        }
-      }
+          if (setting.trigger_beep) pwm_start(4000);
 #endif
+        }
+
       for (int t=0; t<TRACES_MAX;t++) {                 // Calculate all traces
         if (setting.stored[t])
           continue;
@@ -5370,14 +5364,9 @@ static volatile int dummy;
       goto sweep_again;                                             // Keep repeating sweep loop till user aborts by input
   }
   // --------------- check if maximum is above trigger level -----------------
-#ifdef __GUARD__XX
-  if (setting.measurement == M_GUARD) {
-    if (measured[peakTrace][peakIndex] < setting.guards[current_guard].level)
-      goto again;
-  }
-#endif
   if (setting.trigger != T_AUTO && setting.frequency_step > 0) {    // Trigger active
-    if (measured[peakTrace][peakIndex] < setting.trigger_level) {
+//    if (measured[peakTrace][peakIndex] < setting.trigger_level) {
+    if (!triggered) {
       goto again;                                                   // not yet, sweep again
     } else {
       if (setting.trigger == T_SINGLE) {
@@ -5558,7 +5547,8 @@ static volatile int dummy;
     } else if (actual_max_level > target_level && setting.attenuate_x2 < 60) {
       delta = actual_max_level - target_level;
     }
-    if ((chVTGetSystemTimeX() - sweep_elapsed > MS2ST(1000) && ( delta < -5 || delta > +5)) || delta > 10 ) {
+    if (chVTGetSystemTimeX() - sweep_elapsed > MS2ST(1000)){
+      if (( delta < -5 || delta > +5) || delta > 10 ) {
       setting.attenuate_x2 += delta + delta;
       if (setting.attenuate_x2 < 0)
         setting.attenuate_x2 = 0;
@@ -5566,6 +5556,7 @@ static volatile int dummy;
         setting.attenuate_x2 = 60;
       changed = true;
       sweep_elapsed = chVTGetSystemTimeX();
+      }
     }
 
     // Try update settings
