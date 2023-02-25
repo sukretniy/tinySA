@@ -2137,7 +2137,7 @@ static void update_level_meter(void){
 void
 set_level_meter(void)
 {
-  if (setting.level_meter)       graph_bottom = SMALL_WATERFALL;
+  if (setting.level_meter)       graph_bottom = BIG_WATERFALL;
 //  else if (setting.level_meter == W_BIG)    graph_bottom = BIG_WATERFALL;
   else /*if (setting.level_meter == W_OFF)*/graph_bottom = NO_WATERFALL;
   _grid_y = graph_bottom / NGRIDY;

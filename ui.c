@@ -1418,7 +1418,7 @@ static const struct {
 #endif
 #ifdef __BANDS__
 [KM_BAND_START]  = {keypads_freq         , "START\nFREQ"},  // KM_BAND_START
-[KM_BAND_END]    = {keypads_freq         , "END\nFREQ"},  // KM_BAND_END
+[KM_BAND_END]    = {keypads_freq         , "STOP\nFREQ"},  // KM_BAND_END
 [KM_BAND_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_BAND_LEVEL
 #endif
 [KM_MARKER_TIME]  = {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
@@ -4161,7 +4161,7 @@ static const menuitem_t menu_limit_select[] = {
 static const menuitem_t menu_BAND_modify[] =
 {
   { MT_KEYPAD,  KM_BAND_START,     "START\n\b%s",          "Start"},
-  { MT_KEYPAD,  KM_BAND_END,       "END\n\b%s",            "End"},
+  { MT_KEYPAD,  KM_BAND_END,       "STOP\n\b%s",            "Stop"},
   { MT_KEYPAD,  KM_BAND_LEVEL,    "LEVEL\n\b%s",          "Level"},
   { MT_CALLBACK,0,                  "DISABLE",              menu_BAND_disable_cb},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back

@@ -1119,8 +1119,8 @@ void set_sweep_points(uint16_t points){
     return;
   if (points > POINTS_COUNT)
     points = POINTS_COUNT;
-  if (points < 10)
-    points = 10;
+  if (points < 20)
+    points = 20;
 
   sweep_points = points;
   update_frequencies();
@@ -2530,20 +2530,6 @@ THD_FUNCTION(myshellThread, p)
 #pragma GCC pop_options
 
 #ifdef __PWM__
-
-
-static void audio_toggle(void)
-{
-  static volatile int h = 0;
-  if (h) {
-    DAC->DHR12R1 = 0;
-    h = 0;
-  } else {
-    DAC->DHR12R1 = 4095;
-    h = 1;
-  }
-}
-
 static PWMConfig pwmcfg = {
   400000,                                    /* 400kHz PWM clock frequency.   */
   100,                                      /* Initial PWM frequency is 4kHz  */
