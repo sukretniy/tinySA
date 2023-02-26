@@ -1345,7 +1345,7 @@ static void
 set_frequencies(freq_t start, freq_t stop, uint16_t points)
 {
 #ifdef __BANDS__
-  if (setting.measurement == M_BANDS) {
+  if (setting.multi_band) {
 
     freq_t span = 0;
     for (int i=0; i<BANDS_MAX; i++) {
@@ -1388,7 +1388,7 @@ set_frequencies(freq_t start, freq_t stop, uint16_t points)
 }
 freq_t getFrequency(uint16_t idx) {
 #ifdef __BANDS__
-  if (setting.measurement == M_BANDS) {
+  if (setting.multi_band) {
     if (idx >= POINTS_COUNT)
       idx = POINTS_COUNT-1;
     int b = _f_band_index[idx];
@@ -1402,7 +1402,7 @@ freq_t getFrequency(uint16_t idx) {
 
 #ifdef __BANDS__
 int getBand(uint16_t idx) {
-  if (setting.measurement == M_BANDS)
+  if (setting.multi_band)
     return _f_band_index[idx];
   return 0;
 }
@@ -1495,7 +1495,7 @@ freq_t
 get_sweep_frequency(int type)
 {
 #ifdef __BANDS__
-  if (setting.measurement == M_BANDS) {
+  if (setting.multi_band) {
     switch (type) {
       case ST_START:  return getFrequency(0);
       case ST_STOP:   return getFrequency(sweep_points);

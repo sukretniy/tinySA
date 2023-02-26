@@ -1102,7 +1102,7 @@ draw_cell(int m, int n)
   }
 #endif
 #ifdef __CHANNEL_POWER__
-  if (setting.measurement == M_BANDS) {
+  if (setting.multi_band) {
     c = GET_PALTETTE_COLOR(LCD_TRIGGER_COLOR);
     for (x = 0; x < w; x++) {
       int idx1 = ((x+x0) * sweep_points) / WIDTH;

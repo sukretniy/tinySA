@@ -1468,8 +1468,8 @@ static const menuitem_t  menu_limit_modify[];
 static const menuitem_t  menu_limit_select[];
 #endif
 #ifdef __BANDS__
-static const menuitem_t  menu_BAND_modify[];
-static const menuitem_t  menu_BAND_select[];
+static const menuitem_t  menu_band_modify[];
+static const menuitem_t  menu_band_select[];
 #endif
 static const menuitem_t  menu_average[];
 static const menuitem_t  menu_reffer[];
@@ -2874,9 +2874,9 @@ validate:
       }
       break;
 #endif
-#ifdef __BANDS__
+#ifdef __BANDS__xx
     case M_BANDS:
-      menu_push_submenu(menu_BAND_select);
+      menu_push_submenu(menu_band_select);
       goto leave;
       break;
 #endif
@@ -3200,9 +3200,24 @@ static UI_FUNCTION_ADV_CALLBACK(menu_band_select_acb)
   setting.bands[active_band].enabled = true;
   dirty = true;
 //  BANDs_update();
-  menu_push_submenu(menu_BAND_modify);
+  menu_push_submenu(menu_band_modify);
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_multi_band_acb)
+{
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = (setting.multi_band?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
+    return;
+  }
+  dirty = true;
+  setting.multi_band = ! setting.multi_band;
+  redraw_request|= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS;
+  if (setting.multi_band) menu_push_submenu(menu_band_select);
+}
+
+#
 #endif
 
 extern const menuitem_t menu_marker_select[];
@@ -4158,16 +4173,16 @@ static const menuitem_t menu_limit_select[] = {
 #endif
 
 #ifdef __BANDS__
-static const menuitem_t menu_BAND_modify[] =
+static const menuitem_t menu_band_modify[] =
 {
   { MT_KEYPAD,  KM_BAND_START,     "START\n\b%s",          "Start"},
   { MT_KEYPAD,  KM_BAND_END,       "STOP\n\b%s",            "Stop"},
-  { MT_KEYPAD,  KM_BAND_LEVEL,    "LEVEL\n\b%s",          "Level"},
-  { MT_CALLBACK,0,                  "DISABLE",              menu_BAND_disable_cb},
+  { MT_KEYPAD,  KM_BAND_LEVEL,     "LEVEL\n\b%s",          "Level"},
+  { MT_CALLBACK,0,                 "DISABLE",              menu_BAND_disable_cb},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
-static const menuitem_t menu_BAND_select[] = {
+static const menuitem_t menu_band_select[] = {
   { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,BANDS_MAX), MT_CUSTOM_LABEL, menu_band_select_acb },
 #ifdef __USE_SD_CARD__
   { MT_CALLBACK,    FMT_BND_FILE,  "BANDS"S_RARROW"\nSD",     menu_sdcard_cb},
@@ -4509,9 +4524,9 @@ static const menuitem_t menu_measure2[] = {
 #ifdef __NOISE_FIGURE__
 { MT_SUBMENU | MT_LOW,          0,            "NOISE\nFIGURE",    menu_measure_noise_figure},
 #endif
-#ifdef __BANDS__
-{ MT_ADV_CALLBACK,            M_BANDS,          "MULTI\nBAND",    menu_measure_acb},
-#endif
+//#ifdef __BANDS__
+//{ MT_ADV_CALLBACK,            M_BANDS,          "MULTI\nBAND",    menu_measure_acb},
+//#endif
 #ifdef __FFT_DECONV__
   { MT_ADV_CALLBACK,            M_DECONV,  "DECONV",         menu_measure_acb},
 #endif
@@ -4773,6 +4788,9 @@ static const menuitem_t menu_stimulus[] = {
   { MT_KEYPAD,  KM_CENTER,      "CENTER\n\b%s",      NULL},
   { MT_KEYPAD,  KM_SPAN,        "SPAN\n\b%s",        NULL},
   { MT_KEYPAD,  KM_CW,          "ZERO SPAN",   NULL},
+#ifdef __BANDS__
+  { MT_ADV_CALLBACK, 0,         "MULTI\nBAND",       menu_multi_band_acb},
+#endif
   { MT_SUBMENU,0,               "RBW",         menu_rbw},
 #ifdef __VBW__
   { MT_SUBMENU,     0,             "VBW",             menu_vbw},
@@ -5567,7 +5585,13 @@ redraw_cal_status:
   }
   quick_menu_y[max_quick_menu] = y;
   quick_menu[max_quick_menu++] = (menuitem_t *)NULL;
-
+#ifdef __BANDS__
+  if (setting.multi_band){
+    ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);
+    lcd_printf(x, y, "MULTI");
+    y += 2*YSTEP + YSTEP/2;
+  }
+#endif
 #ifdef TINYSA4
   if (setting.measurement != M_OFF){
     ili9341_set_foreground(LCD_BRIGHT_COLOR_GREEN);

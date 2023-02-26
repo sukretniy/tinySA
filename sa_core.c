@@ -4848,7 +4848,7 @@ static bool sweep(bool break_on_operation)
 
   if (dirty) {                    // Calculate new scanning solution
 #ifdef __BANDS__
-    if (setting.measurement == M_BANDS) {
+    if (setting.multi_band) {
       set_frequencies(0,0,sweep_points);
       update_rbw();
     }
@@ -4886,7 +4886,7 @@ static bool sweep(bool break_on_operation)
   again:                          // Waiting for a trigger jumps back to here
 
 #ifdef __BANDS__xx
-  if (setting.measurement == M_BANDS) {
+  if (setting.multi_band) {
     do {
       current_band++;
       if (current_band > BANDS_MAX)

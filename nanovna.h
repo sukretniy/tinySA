@@ -1230,6 +1230,9 @@ typedef struct setting
 #ifdef TINYSA4
   uint8_t   lock_display;
 #endif
+#ifdef __BANDS__
+  uint8_t multi_band;
+#endif
   uint16_t repeat;              // 1...100
   uint16_t linearity_step;     // range equal POINTS_COUNT
   uint16_t _sweep_points;
@@ -1773,9 +1776,9 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_BANDS, M_DECONV,M_MAX
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_DECONV,M_MAX
 };
-#define MEASUREMENT_TEXT "OFF","IMD","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A","MULTI","DECONF"
+#define MEASUREMENT_TEXT "OFF","IMD","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A", "DECONF"
 
 enum {
   T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID, T_BEEP,
