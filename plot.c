@@ -1101,6 +1101,18 @@ draw_cell(int m, int n)
     }
   }
 #endif
+#ifdef __CHANNEL_POWER__
+  if (setting.measurement == M_BANDS) {
+    c = GET_PALTETTE_COLOR(LCD_TRIGGER_COLOR);
+    for (x = 0; x < w; x++) {
+      int idx1 = ((x+x0) * sweep_points) / WIDTH;
+      int idx2 = ((x+x0+1) * sweep_points) / WIDTH;
+      if (getBand(idx1) != getBand(idx2) && idx2 < WIDTH-2) {
+        for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = c;
+      }
+    }
+  }
+#endif
 //  PULSE;
 #endif
 // Draw trigger line

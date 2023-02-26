@@ -4847,6 +4847,12 @@ static bool sweep(bool break_on_operation)
 #endif
 
   if (dirty) {                    // Calculate new scanning solution
+#ifdef __BANDS__
+    if (setting.measurement == M_BANDS) {
+      set_frequencies(0,0,sweep_points);
+      update_rbw();
+    }
+#endif
     sweep_counter = 0;
     if (get_sweep_frequency(ST_SPAN) < 300000)  // Check if AM signal
       check_for_AM = true;
@@ -4879,7 +4885,7 @@ static bool sweep(bool break_on_operation)
   uint16_t triggered = false;
   again:                          // Waiting for a trigger jumps back to here
 
-#ifdef __BANDS__
+#ifdef __BANDS__xx
   if (setting.measurement == M_BANDS) {
     do {
       current_band++;
@@ -4897,11 +4903,8 @@ static bool sweep(bool break_on_operation)
       setting.trigger_level = setting.bands[current_band].level;
       setting.auto_attenuation = false;
     }
-    set_audio_mode(A_PWM);
-    pwm_stop();
   } else {
     last_band = -1;
-    set_audio_mode(A_DAC);
   }
 #endif
 #ifdef __BEEP__

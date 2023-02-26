@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -1162,10 +1162,12 @@ void spi_init(void);
 #ifdef __BANDS__
 #define BANDS_MAX   8
 typedef struct {
-  bool enabled;
-  freq_t start;
-  freq_t end;
-  float  level;
+  bool      enabled;
+  freq_t    start;
+  freq_t    end;
+  float     level;
+  int       start_index;
+  int       stop_index;
 } band_t;
 #endif
 
@@ -1449,6 +1451,10 @@ freq_t getFrequency(uint16_t idx);
 #else
 freq_t getFrequency(uint16_t idx);
 #endif
+#ifdef __BANDS__
+int getBand(uint16_t idx);
+#endif
+
 //#define frequency0 current_props._frequency0
 //#define frequency1 current_props._frequency1
 #define sweep_points setting._sweep_points
