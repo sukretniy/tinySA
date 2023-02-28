@@ -4848,7 +4848,7 @@ static bool sweep(bool break_on_operation)
 
   if (dirty) {                    // Calculate new scanning solution
 #ifdef __BANDS__
-    if (setting.multi_band) {
+    if (setting.multi_band && ! setting.multi_trace) {
       set_frequencies(0,0,sweep_points);
       update_rbw();
     }
@@ -4885,8 +4885,8 @@ static bool sweep(bool break_on_operation)
   uint16_t triggered = false;
   again:                          // Waiting for a trigger jumps back to here
 
-#ifdef __BANDS__xx
-  if (setting.multi_band) {
+#ifdef __BANDS__
+  if (setting.multi_band && setting.multi_trace) {
     do {
       current_band++;
       if (current_band > BANDS_MAX)
@@ -4897,9 +4897,9 @@ static bool sweep(bool break_on_operation)
       last_band = current_band;
       set_sweep_frequency(ST_START, setting.bands[current_band].start);
       set_sweep_frequency(ST_STOP, setting.bands[current_band].end);
-      set_step_delay(SD_FAST);
-      set_rbw(8000);
-      set_sweep_points((setting.bands[current_band].end - setting.bands[current_band].start) / 800000);
+//      set_step_delay(SD_FAST);
+//      set_rbw(8000);
+//      set_sweep_points((setting.bands[current_band].end - setting.bands[current_band].start) / 800000);
       setting.trigger_level = setting.bands[current_band].level;
       setting.auto_attenuation = false;
     }

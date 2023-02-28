@@ -1232,6 +1232,7 @@ typedef struct setting
 #endif
 #ifdef __BANDS__
   uint8_t multi_band;
+  uint8_t multi_trace;
 #endif
   uint16_t repeat;              // 1...100
   uint16_t linearity_step;     // range equal POINTS_COUNT
@@ -1439,7 +1440,7 @@ typedef struct properties {
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC 0x434f4e60 /* 'CONF' */
-#define SETTING_MAGIC 0x434f4e61
+#define SETTING_MAGIC 0x434f4e62
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

@@ -3199,6 +3199,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_band_select_acb)
   active_band = data;
   setting.bands[active_band].enabled = true;
   dirty = true;
+  update_grid();
 //  BANDs_update();
   menu_push_submenu(menu_band_modify);
 }
@@ -3215,6 +3216,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_multi_band_acb)
   setting.multi_band = ! setting.multi_band;
   redraw_request|= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS;
   if (setting.multi_band) menu_push_submenu(menu_band_select);
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_multi_trace_acb)
+{
+  (void)item;
+  (void)data;
+  if(b){
+    b->icon = (setting.multi_trace?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
+    return;
+  }
+  dirty = true;
+  setting.multi_trace = ! setting.multi_trace;
+  redraw_request|= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS;
 }
 
 #
@@ -3358,6 +3372,7 @@ static UI_FUNCTION_CALLBACK(menu_BAND_disable_cb)
   if (active_band<BANDS_MAX){
     setting.bands[active_band].enabled = false;
     dirty = true;
+    update_grid();
 //    BANDs_update();
     menu_move_back(false);
   }
@@ -3783,7 +3798,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_enter_marker_acb)
 }
 
 #ifdef TINYSA4
-static const uint16_t points_setting[] = {51, 101, 201, 256, 290, 450};
+static const uint16_t points_setting[] = {25, 50, 100, 200, 290, 450};
 #else
 static const uint16_t points_setting[] = {51, 101, 145, 290};
 #endif
@@ -4183,7 +4198,8 @@ static const menuitem_t menu_band_modify[] =
 };
 
 static const menuitem_t menu_band_select[] = {
-  { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,BANDS_MAX), MT_CUSTOM_LABEL, menu_band_select_acb },
+  { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,BANDS_MAX), MT_CUSTOM_LABEL,  menu_band_select_acb },
+  { MT_ADV_CALLBACK,                0                               , "MULTI\nTRACE",  menu_multi_trace_acb },
 #ifdef __USE_SD_CARD__
   { MT_CALLBACK,    FMT_BND_FILE,  "BANDS"S_RARROW"\nSD",     menu_sdcard_cb},
 #ifdef __SD_FILE_BROWSER__
@@ -5273,16 +5289,19 @@ set_numeric_value(void)
   case KM_BAND_START:
     setting.bands[active_band].start = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     dirty = true;
+    update_grid();
 //    BANDs_update();
     break;
   case KM_BAND_END:
     setting.bands[active_band].end = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     dirty = true;
+    update_grid();
 //    BANDs_update();
     break;
   case KM_BAND_LEVEL:
     setting.bands[active_band].level = to_dBm(uistat.value);
     dirty = true;
+    update_grid();
 //    BANDs_update();
     break;
 #endif
