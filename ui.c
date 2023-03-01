@@ -3199,6 +3199,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_band_select_acb)
   active_band = data;
   setting.bands[active_band].enabled = true;
   dirty = true;
+  update_frequencies();
 //  BANDs_update();
   menu_push_submenu(menu_BAND_modify);
 }
@@ -3343,6 +3344,7 @@ static UI_FUNCTION_CALLBACK(menu_BAND_disable_cb)
   if (active_band<BANDS_MAX){
     setting.bands[active_band].enabled = false;
     dirty = true;
+    update_frequencies();
 //    BANDs_update();
     menu_move_back(false);
   }
@@ -5254,16 +5256,19 @@ set_numeric_value(void)
 #ifdef __BANDS__
   case KM_BAND_START:
     setting.bands[active_band].start = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    update_frequencies();
     dirty = true;
 //    BANDs_update();
     break;
   case KM_BAND_END:
     setting.bands[active_band].end = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    update_frequencies();
     dirty = true;
 //    BANDs_update();
     break;
   case KM_BAND_LEVEL:
     setting.bands[active_band].level = to_dBm(uistat.value);
+    update_frequencies();
     dirty = true;
 //    BANDs_update();
     break;

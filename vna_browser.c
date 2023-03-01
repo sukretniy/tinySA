@@ -182,6 +182,8 @@ finish3:
       setting.bands[count].enabled = false;
       count++;
     }
+    dirty = true;
+    update_frequencies();
     break;
   }
 #endif
