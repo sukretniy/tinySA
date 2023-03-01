@@ -1101,6 +1101,18 @@ draw_cell(int m, int n)
     }
   }
 #endif
+#ifdef __BANDS__
+  if (setting.multi_band && !setting.multi_trace) {
+    c = GET_PALTETTE_COLOR(LCD_TRIGGER_COLOR);
+    for (x = 0; x < w; x++) {
+      int idx1 = ((x+x0) * sweep_points) / WIDTH;
+      int idx2 = ((x+x0+1) * sweep_points) / WIDTH;
+      if (getBand(idx1) != getBand(idx2) && idx2 < WIDTH-2) {
+        for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = c;
+      }
+    }
+  }
+#endif
 //  PULSE;
 #endif
 // Draw trigger line
@@ -1823,7 +1835,22 @@ draw_frequencies(void)
     return;
   if (current_menu_is_form() && !in_selftest)
     return;
-
+#ifdef __BANDS__
+  if (setting.multi_band && !setting.multi_trace) {
+    ili9341_set_foreground(LCD_FG_COLOR);
+    ili9341_set_background(LCD_BG_COLOR);
+    ili9341_fill(FREQUENCIES_XPOS1, CHART_BOTTOM + 1, LCD_WIDTH - FREQUENCIES_XPOS1, LCD_HEIGHT - CHART_BOTTOM - 1);
+    int idx=0;
+    do {
+      int b = getBand(idx);
+//      plot_printf(buf1, sizeof(buf1), "%.3QHz-%.3QHz %5.1QHz/", setting.bands[b].start + (setting.frequency_offset - FREQUENCY_SHIFT),  setting.bands[b].end + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
+      plot_printf(buf1, sizeof(buf1), "%.3QHz %5.1QHz/", setting.bands[b].start + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
+      ili9341_drawstring(buf1, FREQUENCIES_XPOS1+idx, FREQUENCIES_YPOS);
+      while (b == getBand(++idx));
+    } while (idx < sweep_points - 10);
+    return;
+  }
+#endif
   char *shift = (setting.frequency_offset == FREQUENCY_SHIFT ? "" : "shifted");
   if (FREQ_IS_CW()) {
     plot_printf(buf1, sizeof(buf1), " CW %QHz", get_sweep_frequency(ST_CW) + (setting.frequency_offset - FREQUENCY_SHIFT));

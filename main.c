@@ -1333,6 +1333,9 @@ set_frequencies(freq_t start, freq_t stop, uint16_t points)
 freq_t getFrequency(uint16_t idx) {return frequencies[idx];}
 #endif
 #else
+#ifdef __BANDS__
+static uint8_t  _f_band_index[POINTS_COUNT];
+#endif
 static freq_t   _f_start;
 static freq_t   _f_delta;
 static freq_t   _f_error;
@@ -1341,6 +1344,40 @@ static uint16_t _f_count;
 static void
 set_frequencies(freq_t start, freq_t stop, uint16_t points)
 {
+#ifdef __BANDS__
+  if (setting.multi_band && !setting.multi_trace) {
+
+    freq_t span = 0;
+    for (int i=0; i<BANDS_MAX; i++) {
+      if (setting.bands[i].enabled) {
+        span += setting.bands[i].end - setting.bands[i].start;
+      }
+    }
+    float _f_delta_float = span/(float)points;
+    setting.frequency_step = (freq_t)_f_delta_float;
+    int b=0;
+    int idx = 0;
+    do {
+      if (!setting.bands[b].enabled) { b++; continue; }
+      setting.bands[b].start_index = idx;
+      while (idx < points) {
+        freq_t f = (idx - setting.bands[b].start_index)* _f_delta_float + setting.bands[b].start;
+        if (f <= setting.bands[b].end) {
+          _f_band_index[idx] = b;
+          setting.bands[b].stop_index = idx;
+          idx++;
+          if (idx >= points)
+            return;
+        }
+        else {
+          b++;
+          break;
+        }
+      }
+    } while (b < BANDS_MAX);
+    return;
+  }
+#endif
   freq_t span = stop - start;
   _f_start = start;
   _f_count = (points - 1);
@@ -1349,7 +1386,26 @@ set_frequencies(freq_t start, freq_t stop, uint16_t points)
   setting.frequency_step = _f_delta;
   dirty = true;
 }
-freq_t getFrequency(uint16_t idx) {return _f_start + _f_delta * idx + (_f_count / 2 + _f_error * idx) / _f_count;}
+freq_t getFrequency(uint16_t idx) {
+#ifdef __BANDS__
+  if (setting.multi_band && !setting.multi_trace) {
+    if (idx >= POINTS_COUNT)
+      idx = POINTS_COUNT-1;
+    int b = _f_band_index[idx];
+    band_t *bp = &setting.bands[b];
+    freq_t f = bp->start + ((bp->end- bp->start) * (idx - bp->start_index)) / (bp->stop_index - bp->start_index) ;
+    return f;
+  } else
+#endif
+    return _f_start + _f_delta * idx + (_f_count / 2 + _f_error * idx) / _f_count;}
+#endif
+
+#ifdef __BANDS__
+int getBand(uint16_t idx) {
+  if (setting.multi_band && !setting.multi_trace)
+    return _f_band_index[idx];
+  return 0;
+}
 #endif
 
 
@@ -1438,6 +1494,26 @@ set_sweep_frequency(int type, freq_t freq)
 freq_t
 get_sweep_frequency(int type)
 {
+#ifdef __BANDS__
+  if (setting.multi_band && !setting.multi_trace) {
+    switch (type) {
+      case ST_START:  return getFrequency(0);
+      case ST_STOP:   return getFrequency(sweep_points);
+      case ST_CENTER: return (getFrequency(sweep_points) + getFrequency(0))/2;
+      case ST_SPAN:
+        {
+          freq_t span = 0;
+          for (int i=0; i<BANDS_MAX; i++) {
+            if (setting.bands[i].enabled) {
+              span += setting.bands[i].end - setting.bands[i].start;
+            }
+          }
+          return span;
+        }
+      case ST_CW:     return getFrequency(0);    // Should never happen
+    }
+  }
+#endif
   // Obsolete, ensure correct start/stop, start always must be < stop
   if (setting.frequency0 > setting.frequency1) {
     freq_t t = setting.frequency0;

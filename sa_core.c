@@ -4847,6 +4847,12 @@ static bool sweep(bool break_on_operation)
 #endif
 
   if (dirty) {                    // Calculate new scanning solution
+#ifdef __BANDS__
+    if (setting.multi_band && ! setting.multi_trace) {
+      set_frequencies(0,0,sweep_points);
+      update_rbw();
+    }
+#endif
     sweep_counter = 0;
     if (get_sweep_frequency(ST_SPAN) < 300000)  // Check if AM signal
       check_for_AM = true;
@@ -4880,7 +4886,7 @@ static bool sweep(bool break_on_operation)
   again:                          // Waiting for a trigger jumps back to here
 
 #ifdef __BANDS__
-  if (setting.measurement == M_BANDS) {
+  if (setting.multi_band && setting.multi_trace) {
     do {
       current_band++;
       if (current_band > BANDS_MAX)
@@ -4891,17 +4897,14 @@ static bool sweep(bool break_on_operation)
       last_band = current_band;
       set_sweep_frequency(ST_START, setting.bands[current_band].start);
       set_sweep_frequency(ST_STOP, setting.bands[current_band].end);
-      set_step_delay(SD_FAST);
-      set_rbw(8000);
-      set_sweep_points((setting.bands[current_band].end - setting.bands[current_band].start) / 800000);
+//      set_step_delay(SD_FAST);
+//      set_rbw(8000);
+//      set_sweep_points((setting.bands[current_band].end - setting.bands[current_band].start) / 800000);
       setting.trigger_level = setting.bands[current_band].level;
       setting.auto_attenuation = false;
     }
-    set_audio_mode(A_PWM);
-    pwm_stop();
   } else {
     last_band = -1;
-    set_audio_mode(A_DAC);
   }
 #endif
 #ifdef __BEEP__

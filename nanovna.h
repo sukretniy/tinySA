@@ -1162,10 +1162,12 @@ void spi_init(void);
 #ifdef __BANDS__
 #define BANDS_MAX   8
 typedef struct {
-  bool enabled;
-  freq_t start;
-  freq_t end;
-  float  level;
+  bool      enabled;
+  freq_t    start;
+  freq_t    end;
+  float     level;
+  int       start_index;
+  int       stop_index;
 } band_t;
 #endif
 
@@ -1227,6 +1229,10 @@ typedef struct setting
   uint8_t   draw_line;          // uses the trigger level setting
 #ifdef TINYSA4
   uint8_t   lock_display;
+#endif
+#ifdef __BANDS__
+  uint8_t multi_band;
+  uint8_t multi_trace;
 #endif
   uint16_t repeat;              // 1...100
   uint16_t linearity_step;     // range equal POINTS_COUNT
@@ -1434,7 +1440,7 @@ typedef struct properties {
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC 0x434f4e60 /* 'CONF' */
-#define SETTING_MAGIC 0x434f4e61
+#define SETTING_MAGIC 0x434f4e62
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
@@ -1449,6 +1455,10 @@ freq_t getFrequency(uint16_t idx);
 #else
 freq_t getFrequency(uint16_t idx);
 #endif
+#ifdef __BANDS__
+int getBand(uint16_t idx);
+#endif
+
 //#define frequency0 current_props._frequency0
 //#define frequency1 current_props._frequency1
 #define sweep_points setting._sweep_points
@@ -1767,9 +1777,9 @@ void interpolate_maximum(int m);
 void calibrate_modulation(int modulation, int8_t *correction);
 
 enum {
-  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_BANDS, M_DECONV,M_MAX
+  M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_DECONV,M_MAX
 };
-#define MEASUREMENT_TEXT "OFF","IMD","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A","MULTI","DECONF"
+#define MEASUREMENT_TEXT "OFF","IMD","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A", "DECONF"
 
 enum {
   T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID, T_BEEP,
