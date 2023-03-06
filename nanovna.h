@@ -255,6 +255,7 @@ enum stimulus_type {
 
 void set_sweep_points(uint16_t points);
 void update_frequencies(void);
+void update_bands(void);
 void set_sweep_frequency(int type, freq_t frequency);
 freq_t get_sweep_frequency(int type);
 void my_microsecond_delay(int t);

@@ -558,6 +558,16 @@ void reset_settings(int m)
   disable_waterfall();
   setting.level_meter = false;
   setting.pulse = false;
+#ifdef __BANDS__
+  setting.multi_band = false;
+  setting.multi_trace = false;
+  for (int i = 0; i<BANDS_MAX;i++) {
+    setting.bands[i].start = 0;
+    setting.bands[i].end = 0;
+    setting.bands[i].enabled = false;
+    setting.bands[i].level = 0;
+  }
+#endif
 #ifdef __ULTRA__
   ultra_start = (config.ultra_start == ULTRA_AUTO ? DEFAULT_ULTRA_THRESHOLD : config.ultra_start);
 #endif
@@ -2760,6 +2770,19 @@ int binary_search_frequency(freq_t f)      // Search which index in the frequenc
 
 int index_of_frequency(freq_t f)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
+#ifdef __BANDS__
+  if (setting.multi_band && !setting.multi_trace) {
+    for (int i=0;i<BANDS_MAX; i++) {
+      band_t *b = &setting.bands[i];
+      if (b->enabled && b->start <= f && f <b->end) {
+        freq_t f_step = (b->end - b->start)/(b->stop_index - b->start_index);
+        int i = ((f - b->start ) + (f_step >> 1)) / f_step + b->start_index;
+        return i;
+      }
+    }
+    return 0;
+  }
+#endif
   freq_t f_step = getFrequency(1) - getFrequency(0);
   if (f_step == 0)
     return 0;
@@ -3308,7 +3331,7 @@ static int modulation_steps = 8;
 #define MAX_MODULATION_STEPS    128
 
 // Max = 10000 / 28.8
-static const int sinus[MAX_MODULATION_STEPS/4+1] = {0,    17,     34,     51,     68,     84,     101,    117,    133,    148,    164,    179,    193,    207,    220,    233,    246,    257,    268,    279,    289,    298,    306,    314,    321,    327,    332,    337,    341,    343,    346,    347,    347 };
+static const int sine_wave[MAX_MODULATION_STEPS/4+1] = {0,    17,     34,     51,     68,     84,     101,    117,    133,    148,    164,    179,    193,    207,    220,    233,    246,    257,    268,    279,    289,    298,    306,    314,    321,    327,    332,    337,    341,    343,    346,    347,    347 };
 //
 //  Offset is 14.4Hz when below 600MHz and 28.8 when above.
 //
@@ -3532,18 +3555,18 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 
 #ifdef TINYSA4                      // Calculate AM/FM modulation
       if (setting.modulation == MO_AM) {
-        int sinus_index = 1;
+        int sine_wave_index = 1;
         config.cor_am = INITIAL_MODULATION_CORRECTION;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
         while ( (modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
-          sinus_index <<= 1;
+          sine_wave_index <<= 1;
           modulation_steps >>= 1;
         }
         int offset347 = (setting.modulation_depth_x100 < 100 ? setting.modulation_depth_x100 - 6: setting.modulation_depth_x100) * 347 / 100;
         for (int i = 0; i < modulation_steps/4+1; i++) {
-          fm_modulation[i] = offset347 * sinus[i*sinus_index]/347;
+          fm_modulation[i] = offset347 * sine_wave[i*sine_wave_index]/347;
           fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
-          fm_modulation[modulation_steps/2 + i] = - offset347 * sinus[i*sinus_index]/347;
+          fm_modulation[modulation_steps/2 + i] = - offset347 * sine_wave[i*sine_wave_index]/347;
           fm_modulation[modulation_steps - i] = fm_modulation[modulation_steps/2 + i];
         }
         for (int i=0; i < modulation_steps; i++) {
@@ -3555,17 +3578,17 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         }
       }
       if (setting.modulation == MO_WFM) {
-        int sinus_index = 1;
+        int sine_wave_index = 1;
         config.cor_am = INITIAL_MODULATION_CORRECTION;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
         //modulation_steps = 8;  // <-----------------TEMP!!!!!
         while ( ((modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am)) < 100 && modulation_steps > 4) {
-          sinus_index <<= 1;
+          sine_wave_index <<= 1;
           modulation_steps >>= 1;
         }
         if (modulation_steps > 8) {
           for (int i = 0; i < modulation_steps/4+1; i++) {
-            fm_modulation[i] = setting.modulation_deviation_div100 * sinus[i*sinus_index]/100;
+            fm_modulation[i] = setting.modulation_deviation_div100 * sine_wave[i*sine_wave_index]/100;
             fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
             fm_modulation[modulation_steps/2 + i] = -fm_modulation[i];
             fm_modulation[modulation_steps - i] = -fm_modulation[i];

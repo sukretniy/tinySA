@@ -1341,42 +1341,60 @@ static freq_t   _f_delta;
 static freq_t   _f_error;
 static uint16_t _f_count;
 
+
+#ifdef __BANDS__
+int getBand(uint16_t idx) {
+  if (setting.multi_band && !setting.multi_trace)
+    return _f_band_index[idx];
+  return 0;
+}
+
+void update_bands(void)
+{
+  if (!setting.multi_band)
+    return;
+  freq_t span = 0;
+  for (int i=0; i<BANDS_MAX; i++) {
+    if (setting.bands[i].enabled) {
+      span += setting.bands[i].end - setting.bands[i].start;
+    }
+  }
+  float _f_delta_float = span/(float)sweep_points;
+  setting.frequency_step = (freq_t)_f_delta_float;
+  int b=0;
+  int idx = 0;
+  do {
+    if (!setting.bands[b].enabled) { b++; continue; }
+    setting.bands[b].start_index = idx;
+    while (idx < sweep_points) {
+      freq_t f = (idx - setting.bands[b].start_index)* _f_delta_float + setting.bands[b].start;
+      if (f < setting.bands[b].end) {
+        _f_band_index[idx] = b;
+        setting.bands[b].stop_index = idx;
+        idx++;
+        if (idx >= sweep_points)
+          return;
+      }
+      else {
+        b++;
+        break;
+      }
+    }
+  } while (b < BANDS_MAX);
+  update_rbw();
+  dirty = true;
+}
+#endif
+
+
 static void
 set_frequencies(freq_t start, freq_t stop, uint16_t points)
 {
 #ifdef __BANDS__
   if (setting.multi_band && !setting.multi_trace) {
-
-    freq_t span = 0;
-    for (int i=0; i<BANDS_MAX; i++) {
-      if (setting.bands[i].enabled) {
-        span += setting.bands[i].end - setting.bands[i].start;
-      }
-    }
-    float _f_delta_float = span/(float)points;
-    setting.frequency_step = (freq_t)_f_delta_float;
-    int b=0;
-    int idx = 0;
-    do {
-      if (!setting.bands[b].enabled) { b++; continue; }
-      setting.bands[b].start_index = idx;
-      while (idx < points) {
-        freq_t f = (idx - setting.bands[b].start_index)* _f_delta_float + setting.bands[b].start;
-        if (f <= setting.bands[b].end) {
-          _f_band_index[idx] = b;
-          setting.bands[b].stop_index = idx;
-          idx++;
-          if (idx >= points)
-            return;
-        }
-        else {
-          b++;
-          break;
-        }
-      }
-    } while (b < BANDS_MAX);
+    update_bands();
     return;
-  }
+   }
 #endif
   freq_t span = stop - start;
   _f_start = start;
@@ -1393,21 +1411,12 @@ freq_t getFrequency(uint16_t idx) {
       idx = POINTS_COUNT-1;
     int b = _f_band_index[idx];
     band_t *bp = &setting.bands[b];
-    freq_t f = bp->start + ((bp->end- bp->start) * (idx - bp->start_index)) / (bp->stop_index - bp->start_index) ;
+    volatile freq_t f = bp->start + ((bp->end- bp->start) * (idx - bp->start_index)) / (bp->stop_index - bp->start_index) ;
     return f;
   } else
 #endif
     return _f_start + _f_delta * idx + (_f_count / 2 + _f_error * idx) / _f_count;}
 #endif
-
-#ifdef __BANDS__
-int getBand(uint16_t idx) {
-  if (setting.multi_band && !setting.multi_trace)
-    return _f_band_index[idx];
-  return 0;
-}
-#endif
-
 
 void
 update_frequencies(void)

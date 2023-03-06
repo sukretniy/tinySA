@@ -1067,7 +1067,7 @@ const uint8_t right_icons [] =
   _BMP16(0b0111111111111111),
   _BMP16(0b0000000000000000),
 
-#define I_SINUS 3
+#define I_SINE 3
   _BMP16(0b0000000000000000),
   _BMP16(0b0111111111111111),  // 1
   _BMP16(0b0100000000000001),  // 2
@@ -2208,7 +2208,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
     if (data == 255) {
       plot_printf(mode_string, sizeof mode_string, "%s %s %s %s",
                   (!force_signal_path ? "" : path_text[test_path]),
-                  (get_sweep_frequency(ST_START) < MINIMUM_DIRECT_FREQ ? "SINUS" : "" ),
+                  (get_sweep_frequency(ST_START) < MINIMUM_DIRECT_FREQ ? "SINE" : "" ),
                   (get_sweep_frequency(ST_STOP) >= MINIMUM_DIRECT_FREQ ? "SQUARE WAVE" : ""),
                   (get_sweep_frequency(ST_STOP) > MAX_LOW_OUTPUT_FREQ && setting.mixer_output ? "MIXER" : ""));
       b->param_1.text = mode_string;
@@ -2647,8 +2647,29 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       }
       kp_help_text = "Frequency of fundamental";
       ui_mode_keypad(KM_CENTER);
-      set_sweep_frequency(ST_START, 0);
-      set_sweep_frequency(ST_STOP, uistat.value*(MARKERS_MAX+1));
+      freq_t fundamental = uistat.value;
+#ifdef __BANDS__
+      kp_help_text = "Span (0=full span)";
+      ui_mode_keypad(KM_CENTER);
+      freq_t half_span = uistat.value/2;
+      if (half_span > fundamental/2)
+        half_span = fundamental/2;
+      if (half_span != 0) {
+        for (int i = 0; i< BANDS_MAX; i++) {
+          setting.bands[i].start = fundamental*(i+1) - half_span;
+          setting.bands[i].end = fundamental*(i+1) + half_span;
+          setting.bands[i].enabled = true;
+        }
+        setting.multi_band = true;
+        setting.multi_trace = false;
+        update_bands();
+      }
+      else
+#endif
+      {
+        set_sweep_frequency(ST_START, 0);
+        set_sweep_frequency(ST_STOP, fundamental*(MARKERS_MAX+1));
+      }
       set_average(0,AV_4);
 //      set_measurement(M_IMD);
       break;
@@ -4201,7 +4222,7 @@ static const menuitem_t menu_band_modify[] =
 
 static const menuitem_t menu_band_select[] = {
   { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,BANDS_MAX), MT_CUSTOM_LABEL,  menu_band_select_acb },
-  { MT_ADV_CALLBACK,                0                               , "MULTI\nTRACE",  menu_multi_trace_acb },
+  { MT_ADV_CALLBACK,                0                               , "ALTERNATE",  menu_multi_trace_acb },
 #ifdef __USE_SD_CARD__
   { MT_CALLBACK,    FMT_BND_FILE,  "BANDS"S_RARROW"\nSD",     menu_sdcard_cb},
 #ifdef __SD_FILE_BROWSER__
@@ -4836,7 +4857,7 @@ static const menuitem_t menu_storage[] = {
 const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "Spectrum Analyzer",      menu_mode_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "Signal Generator",     menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINE,   "Signal Generator",     menu_mode_acb},
 //  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Calibration Output: %s",   menu_sreffer_acb},
   { MT_FORM | MT_NONE,     0, NULL, NULL } // sentinel
@@ -4846,7 +4867,7 @@ const menuitem_t menu_mode[] = {
 //  { MT_FORM | MT_TITLE,                 0,                      "tinySA MODE",           NULL},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_INPUT+I_SA,       "%s to LOW in",      menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_INPUT+I_SA,      "%s to HIGH in",     menu_mode_acb},
-  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINUS,   "%s to LOW out",     menu_mode_acb},
+  { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_LOW_OUTPUT+I_SINE,   "%s to LOW out",     menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_HIGH_OUTPUT+I_GEN,    "%s to HIGH out",    menu_mode_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_ICON,    I_CONNECT+I_GEN,        "Cal. output: %s",   menu_sreffer_acb},
 //  { MT_SUBMENU,  0, "EXPERT\nCONFIG", menu_settings3},
