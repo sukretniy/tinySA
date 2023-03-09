@@ -195,14 +195,26 @@ const ham_bands_t ham_bands[] =
   {28000000, 29700000},
   {50000000, 52000000},
   {70000000, 70500000},
-  {144000000, 146000000}
+  {144000000, 148000000},
+  {222000000, 225000000},
+  {420000000, 450000000},
+  {902000000, 928000000},
+  {1240000000,1300000000},
+  {2300000000, 2310000000},
+  {2390000000, 2450000000},
+  {3300000000, 3500000000},
+  {5650000000, 5925000000},
+  {10000000000, 10500000000}
+
 };
+
+const int ham_band_max = 24;
 
 int ham_band(int x)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {
-  freq_t f = frequencies[x]  + (setting.frequency_offset - FREQUENCY_SHIFT);
+  freq_t f = getFrequency(x)  + (setting.frequency_offset - FREQUENCY_SHIFT);
   int L = 0;
-  int R =  (sizeof ham_bands)/sizeof(freq_t) - 1;
+  int R =  ham_band_max - 1;
   while (L <= R) {
     int m = (L + R) / 2;
     if (ham_bands[m].stop < f)
@@ -1062,13 +1074,22 @@ draw_cell(int m, int n)
 
 // Draw grid
 #if 1
-  c = GET_PALTETTE_COLOR(LCD_GRID_COLOR);
   // Generate grid type list
   uint32_t trace_type = 0;
 
   if (IS_TRACES_ENABLED(TRACE_ACTUAL_FLAG|TRACE_STORED_FLAG|TRACE_TEMP_FLAG))
     trace_type |= RECTANGULAR_GRID_MASK;
 
+#ifdef __HAM_BAND__
+  if (config.hambands){
+    c = GET_PALTETTE_COLOR(LCD_HAM_COLOR);
+    for (x = 0; x < w; x++)
+      if (ham_band(x+x0))
+        for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = c;
+  }
+#endif
+
+  c = GET_PALTETTE_COLOR(LCD_GRID_COLOR);
   // Draw rectangular plot (40 system ticks for all screen calls)
   if (trace_type & RECTANGULAR_GRID_MASK) {
     for (x = 0; x < w; x++) {
@@ -1084,14 +1105,6 @@ draw_cell(int m, int n)
       }
     }
   }
-#ifdef __HAM_BAND__
-  if (config.hambands){
-    c = GET_PALTETTE_COLOR(LCD_HAM_COLOR);
-    for (x = 0; x < w; x++)
-      if (ham_band(x+x0))
-        for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = c;
-  }
-#endif
 #ifdef __CHANNEL_POWER__
   if (setting.measurement == M_CP||setting.measurement == M_SNR) {
     c = GET_PALTETTE_COLOR(LCD_TRIGGER_COLOR);
@@ -1116,7 +1129,11 @@ draw_cell(int m, int n)
 //  PULSE;
 #endif
 // Draw trigger line
-  if (setting.trigger != T_AUTO
+  if ((setting.trigger != T_AUTO
+#ifdef __TRIGGER_TRACE__
+       && setting.trigger_trace == 255
+#endif
+      )
 #ifdef __DRAW_LINE__
       || setting.draw_line
 #endif

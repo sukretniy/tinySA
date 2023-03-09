@@ -1098,6 +1098,9 @@ void load_LCD_properties(void)
   setting.waterfall = W_OFF;
   setting.level_meter = false;
   setting._traces = TRACE_ACTUAL_FLAG;
+#ifdef __TRIGGER_TRACE__
+  setting.trigger_trace = 255;
+#endif
   memcpy(setting._markers, def_markers, sizeof(def_markers));
 #ifdef __LIMITS__
   memset(setting.limits, 0, sizeof(setting.limits));

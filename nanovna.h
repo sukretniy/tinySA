@@ -67,7 +67,6 @@
 #define __CALIBRATE__             // Add calibration menu and functions
 #define __FAST_SWEEP__            // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
 // #define __AUDIO__
-//#define __HAM_BAND__
 #define __SPUR__                  // Does spur reduction by shifting IF
 #define __USE_SERIAL_CONSOLE__  // Enable serial I/O connection (need enable HAL_USE_SERIAL as TRUE in halconf.h)
 #ifdef __USE_SERIAL_CONSOLE__
@@ -91,6 +90,8 @@
 #define __BANDS__
 #define __BEEP__
 #define __MULTI_BAND__
+#define __HAM_BAND__
+#define __TRIGGER_TRACE__
 #define __MCU_CLOCK_SHIFT__
 #define __ULTRA__
 #define __USE_RTC__               // Enable RTC clock
@@ -1094,7 +1095,7 @@ typedef uint16_t pixel_t;
 [LCD_BRIGHT_COLOR_GREEN]= RGB565(  0,255,  0), \
 [LCD_DARK_GREY        ] = RGB565(140,140,140), \
 [LCD_LIGHT_GREY       ] = RGB565(220,220,220), \
-[LCD_HAM_COLOR        ] = RGB565( 80, 80, 80), \
+[LCD_HAM_COLOR        ] = RGB565( 40, 40, 40), \
 [LCD_GRID_VALUE_COLOR ] = RGB565(196,196,196), \
 [LCD_M_REFERENCE      ] = RGB565(255,255,255), \
 [LCD_M_DELTA          ] = RGB565(  0,255,  0), \
@@ -1234,6 +1235,9 @@ typedef struct setting
 #ifdef __BANDS__
   uint8_t multi_band;
   uint8_t multi_trace;
+#endif
+#ifdef __TRIGGER_TRACE__
+  uint8_t trigger_trace;
 #endif
   uint16_t repeat;              // 1...100
   uint16_t linearity_step;     // range equal POINTS_COUNT
@@ -1441,7 +1445,7 @@ typedef struct properties {
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC 0x434f4e60 /* 'CONF' */
-#define SETTING_MAGIC 0x434f4e62
+#define SETTING_MAGIC 0x434f4e63
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
@@ -1780,7 +1784,7 @@ void calibrate_modulation(int modulation, int8_t *correction);
 enum {
   M_OFF, M_IMD, M_OIP3, M_PHASE_NOISE, M_SNR, M_PASS_BAND, M_LINEARITY, M_AM, M_FM, M_THD, M_CP, M_NF_TINYSA, M_NF_STORE, M_NF_VALIDATE, M_NF_AMPLIFIER, M_DECONV,M_MAX
 };
-#define MEASUREMENT_TEXT "OFF","IMD","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A", "DECONF"
+#define MEASUREMENT_TEXT "OFF","HARM","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A", "DECONF"
 
 enum {
   T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID, T_BEEP,

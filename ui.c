@@ -1460,6 +1460,9 @@ const menuitem_t  menu_highoutputmode[];
 const menuitem_t  menu_mode[];
 static const menuitem_t  menu_modulation[];
 static const menuitem_t  menu_top[];
+#ifdef __TRIGGER_TRACE__
+static const menuitem_t  menu_trigger_level[];
+#endif
 static const menuitem_t  menu_trace[];
 static const menuitem_t  menu_marker_trace[];
 static const menuitem_t  menu_subtract_trace[];
@@ -2981,6 +2984,47 @@ static UI_FUNCTION_ADV_CALLBACK(menu_average_acb)
 //  menu_move_back(true);
 }
 
+#ifdef __TRIGGER_TRACE__
+static UI_FUNCTION_ADV_CALLBACK(menu_trigger_level_acb)
+{
+  (void)item;
+  if(b){
+    if (data == 254) {
+      if (setting.trigger_trace == 255) {
+        char *format;
+        if (UNIT_IS_LINEAR(setting.unit))
+          format = "LEVEL\n\b%.3F%s"; // 5 characters incl u, m, etc...
+        else
+          format = "LEVEL\n\b%.1f%s";
+        plot_printf(b->text, sizeof(b->text), format, setting.trigger_level,unit_string[setting.unit]);
+      } else
+        plot_printf(b->text, sizeof(b->text), "LEVEL\n\bTRACE %d", setting.trigger_trace);
+      return;
+    }
+    b->param_1.i = data;
+    b->icon = (data == setting.trigger_trace) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    return;
+  }
+  if (data == 254) {
+    menu_push_submenu(menu_trigger_level);
+    return;
+  }
+  setting.trigger_trace = data;
+  if (data == 255) {
+    ui_mode_keypad(KM_TRIGGER);
+    return;
+  } else {
+    current_trace = data;
+    setting.stored[current_trace] = true;
+    TRACE_ENABLE(1<<current_trace);
+    set_average(current_trace,AV_TABLE);
+    menu_push_submenu(menu_limit_select);
+    return;
+  }
+  menu_move_back(false);
+}
+#endif
+
 static UI_FUNCTION_ADV_CALLBACK(menu_trace_acb)
 {
   (void)item;
@@ -3676,6 +3720,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_ham_bands){
     return;
   }
   toggle_hambands();
+  redraw_request|= REDRAW_AREA;
 }
 #endif
 
@@ -4189,6 +4234,16 @@ const menuitem_t menu_marker_modify[] = {
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
+#ifdef __TRIGGER_TRACE__
+static const menuitem_t menu_trigger_level[] =
+{
+ { MT_ADV_CALLBACK, 255,                            "TRIGGER\nLEVEL",       menu_trigger_level_acb},
+ { MT_ADV_CALLBACK|MT_REPEATS,DATA_STARTS_REPEATS(0,TRACES_MAX),"TRIGGER\nTRACE %d",  menu_trigger_level_acb},
+  { MT_NONE,   0, NULL, menu_back} // next-> menu_back
+};
+
+#endif
+
 #ifdef __LIMITS__
 static const menuitem_t menu_limit_modify[] =
 {
@@ -4222,7 +4277,7 @@ static const menuitem_t menu_band_modify[] =
 
 static const menuitem_t menu_band_select[] = {
   { MT_ADV_CALLBACK | MT_REPEATS,   DATA_STARTS_REPEATS(0,BANDS_MAX), MT_CUSTOM_LABEL,  menu_band_select_acb },
-  { MT_ADV_CALLBACK,                0                               , "ALTERNATE",  menu_multi_trace_acb },
+  { MT_ADV_CALLBACK,                0                               , "ALTERN",  menu_multi_trace_acb },
 #ifdef __USE_SD_CARD__
   { MT_CALLBACK,    FMT_BND_FILE,  "BANDS"S_RARROW"\nSD",     menu_sdcard_cb},
 #ifdef __SD_FILE_BROWSER__
@@ -4467,9 +4522,6 @@ static const menuitem_t menu_settings3[] =
   { MT_SUBMENU          ,0,               "HARMONIC",         menu_harmonic},
 #endif
 //  { MT_ADV_CALLBACK | MT_LOW, 0,    "ULTRA\nMODE",      menu_settings_ultra_acb},
-#ifdef __HAM_BAND__
-  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
-#endif
   { MT_SUBMENU,  0,             S_RARROW" MORE",     menu_settings4},
 #else
 #ifdef __ULTRA__
@@ -4480,9 +4532,6 @@ static const menuitem_t menu_settings3[] =
 #ifdef __HARMONIC__
   { MT_SUBMENU | MT_HIGH,0,               "HARMONIC",         menu_harmonic},
 //  { MT_ADV_CALLBACK,0,          "SPUR\nREMOVAL",          menu_harmonic_spur_acb},
-#endif
-#ifdef __HAM_BAND__
-  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
 #endif  // TINYSA4
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
@@ -4529,6 +4578,9 @@ static const menuitem_t menu_settings[] =
 #endif
 #ifdef __SD_CARD_DUMP_FIRMWARE__
   { MT_CALLBACK,    FMT_BIN_FILE,   "DUMP\nFIRMWARE",       menu_sdcard_cb},
+#endif
+#ifdef __HAM_BAND__
+  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
 #endif
 #ifdef __SD_CARD_LOAD__
   { MT_CALLBACK,    0 ,             "LOAD\nCONFIG.INI",     menu_load_config_cb},
@@ -4788,7 +4840,11 @@ static const menuitem_t menu_trigger[] = {
   { MT_ADV_CALLBACK, T_NORMAL,   "NORMAL",         menu_trigger_acb},
   { MT_ADV_CALLBACK, T_SINGLE,   "SINGLE",         menu_trigger_acb},
 //  { MT_ADV_CALLBACK, T_DONE,     "READY",          menu_trigger_acb},
+#ifdef __TRIGGER_TRACE__
+  { MT_ADV_CALLBACK, 254,        MT_CUSTOM_LABEL,    menu_trigger_level_acb},
+#else
   { MT_KEYPAD,       KM_TRIGGER, "LEVEL\n\b%s", NULL},
+#endif
 #if 0
   { MT_ADV_CALLBACK, T_UP,       "EDGE\nUP",       menu_trigger_acb},
   { MT_ADV_CALLBACK, T_DOWN,     "EDGE\nDOWN",     menu_trigger_acb},

@@ -671,6 +671,7 @@ void reset_settings(int m)
   setting.trigger_mode = T_MID;
   setting.fast_speedup = 0;
   setting.trigger_level = -150.0;
+  setting.trigger_trace = 255;
   setting.linearity_step = 0;
 //  setting.refer = -1;             // do not reset reffer when switching modes
   setting.mute = true;
@@ -1965,6 +1966,7 @@ void set_external_gain(float external_gain)
 void set_trigger_level(float trigger_level)
 {
   setting.trigger_level = trigger_level;
+  setting.trigger_trace = 255;
   redraw_request |= REDRAW_TRIGGER | REDRAW_CAL_STATUS | REDRAW_AREA;
   //dirty = true;             // No HW update required, only status panel refresh
 }
@@ -5266,7 +5268,9 @@ static volatile int dummy;
 #endif
 
       if (MODE_INPUT(setting.mode)) {
-        if (RSSI >= setting.trigger_level) {
+        if ((setting.trigger_trace == 255 && RSSI >= setting.trigger_level) ||
+            ( setting.trigger_trace != 255 && RSSI >= measured[setting.trigger_trace][i]))
+        {
           triggered = true;
 #ifdef __BEEP__
           if (setting.trigger_beep) pwm_start(4000);
