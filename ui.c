@@ -2997,23 +2997,34 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_level_acb)
         else
           format = "LEVEL\n\b%.1f%s";
         plot_printf(b->text, sizeof(b->text), format, setting.trigger_level,unit_string[setting.unit]);
-      } else
-        plot_printf(b->text, sizeof(b->text), "LEVEL\n\bTRACE %d", setting.trigger_trace);
+      } else {
+        plot_printf(b->text, sizeof(b->text), "LEVEL\n\bTRACE %d", setting.trigger_trace+1);
+      }
       return;
     }
-    b->param_1.i = data;
+    b->param_1.i = data+1;
     b->icon = (data == setting.trigger_trace) ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
+    if (data != setting.trigger_trace && data <255 && IS_TRACE_ENABLE(data))
+      b->fg = LCD_DARK_GREY;
     return;
   }
   if (data == 254) {
     menu_push_submenu(menu_trigger_level);
     return;
   }
-  setting.trigger_trace = data;
+  if (setting.trigger_trace < 255 && setting.trigger_trace != data && setting.average[setting.trigger_trace] == AV_TABLE) {
+    setting.stored[setting.trigger_trace] = false;
+    TRACE_DISABLE(1<<setting.trigger_trace);
+    set_average(setting.trigger_trace,AV_OFF);
+  }
   if (data == 255) {
+    setting.trigger_trace = data;
     ui_mode_keypad(KM_TRIGGER);
     return;
   } else {
+    if (IS_TRACE_ENABLE(data) && data != setting.trigger_trace)
+      return;
+    setting.trigger_trace = data;
     current_trace = data;
     setting.stored[current_trace] = true;
     TRACE_ENABLE(1<<current_trace);
