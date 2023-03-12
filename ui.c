@@ -349,8 +349,13 @@ static void touch_init(void){
   // Prepare pin for measure touch event
   touch_prepare_sense();
   // Start touch interrupt, used timer_3 ADC check threshold:
-  gptStart(&GPTD1, &gpt3cfg);         // Init timer 3
-  gptStartContinuous(&GPTD1, 10);     // Start timer 3 vs timer 10 interval
+#ifdef TINYSA4
+  gptStart(&GPTD1, &gpt3cfg);         // Init timer 1
+  gptStartContinuous(&GPTD1, 10);     // Start timer 1 vs timer 10 interval
+#else
+  gptStart(&GPTD3, &gpt3cfg);         // Init timer 3
+  gptStartContinuous(&GPTD3, 10);     // Start timer 3 vs timer 10 interval
+#endif
   touch_start_watchdog();             // Start ADC watchdog (measure by timer 3 interval and trigger interrupt if touch pressed)
 }
 
@@ -4739,6 +4744,9 @@ static const menuitem_t menu_config2[] =
 #ifdef TINYSA4
  { MT_SUBMENU,          0, "EXPERT\nCONFIG", menu_settings},
 #else
+#ifdef __HAM_BAND__
+  { MT_ADV_CALLBACK, 0,         "HAM\nBANDS",         menu_settings_ham_bands},
+#endif
  { MT_SUBMENU,          0, "EXPERT\nCONFIG", menu_settings2},
 #endif
  { MT_NONE,             0, NULL, menu_back} // next-> menu_back

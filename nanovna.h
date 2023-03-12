@@ -85,7 +85,7 @@
 #ifdef TINYSA3
 #define __HAS_DFU__
 #define __MCU_CLOCK_SHIFT__
-//#define __HAM_BAND__
+#define __HAM_BAND__
 #endif
 #ifdef TINYSA4
 #define __BANDS__
