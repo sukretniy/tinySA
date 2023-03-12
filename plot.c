@@ -199,16 +199,20 @@ const ham_bands_t ham_bands[] =
   {222000000, 225000000},
   {420000000, 450000000},
   {902000000, 928000000},
+#ifdef TINYSA4
   {1240000000,1300000000},
   {2300000000, 2310000000},
   {2390000000, 2450000000},
   {3300000000, 3500000000},
   {5650000000, 5925000000},
   {10000000000, 10500000000}
-
+#endif
 };
-
+#ifdef TINYSA4
 const int ham_band_max = 24;
+#else
+const int ham_band_max = 18;
+#endif
 
 int ham_band(int x)      // Search which index in the frequency tabled matches with frequency  f using actual_rbw
 {

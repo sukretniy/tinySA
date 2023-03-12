@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -85,6 +85,7 @@
 #ifdef TINYSA3
 #define __HAS_DFU__
 #define __MCU_CLOCK_SHIFT__
+//#define __HAM_BAND__
 #endif
 #ifdef TINYSA4
 #define __BANDS__
