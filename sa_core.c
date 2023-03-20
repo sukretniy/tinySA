@@ -4880,6 +4880,8 @@ static bool sweep(bool break_on_operation)
     if (setting.multi_band && ! setting.multi_trace) {
       set_frequencies(0,0,sweep_points);
       update_rbw();
+      current_band = getBand(0);
+      setting.trigger_level = setting.bands[current_band].level;
     }
 #endif
     sweep_counter = 0;
@@ -4975,6 +4977,15 @@ static bool sweep(bool break_on_operation)
     debug_avoid_label:
     debug_avoid_second = debug_avoid_second;
     freq_t current_freq = getFrequency(i);
+#ifdef __BANDS__
+    if (setting.multi_band && !setting.multi_trace) {
+      int new_band = getBand(i);
+      if (current_band != new_band) {
+        current_band = new_band;
+        setting.trigger_level = setting.bands[current_band].level;
+      }
+    }
+#endif
     // --------------------- measure -------------------------
     pureRSSI_t rssi = perform(break_on_operation, i, current_freq, setting.tracking);   // Measure RSSI for one of the frequencies
 #ifdef TINYSA4

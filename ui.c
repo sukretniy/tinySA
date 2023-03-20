@@ -2997,7 +2997,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_level_acb)
     if (data == 254) {
       if (setting.trigger_trace == 255) {
         char *format;
-        if (UNIT_IS_LINEAR(setting.unit))
+        if (setting.multi_band)
+          format = "LEVEL\n\bMULTI";
+        else if (UNIT_IS_LINEAR(setting.unit))
           format = "LEVEL\n\b%.3F%s"; // 5 characters incl u, m, etc...
         else
           format = "LEVEL\n\b%.1f%s";
@@ -3024,7 +3026,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_level_acb)
   }
   if (data == 255) {
     setting.trigger_trace = data;
-    ui_mode_keypad(KM_TRIGGER);
+    if (!setting.multi_band)
+      ui_mode_keypad(KM_TRIGGER);
     return;
   } else {
     if (IS_TRACE_ENABLE(data) && data != setting.trigger_trace)

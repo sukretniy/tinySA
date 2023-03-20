@@ -575,15 +575,31 @@ markmap_upperarea(void)
 #endif
 }
 
-static uint16_t get_trigger_level(void){
+static uint16_t get_trigger_level(
+#ifdef __BANDS__
+    int x
+#else
+    void
+#endif
+    ){
   index_y_t trigger;
+#ifdef __BANDS__
+  if (setting.multi_band && !setting.multi_trace) {
+    int b = getBand(x);
+    setting.trigger_level = setting.bands[b].level;
+  }
+#endif
   trace_into_index_y_array(&trigger, &setting.trigger_level, 1);
   return trigger;
 }
 
 static inline void
 markmap_trigger_area(void){
+#ifdef __BANDS__
+  uint16_t tp = get_trigger_level(0);
+#else
   uint16_t tp = get_trigger_level();
+#endif
   markmap[current_mappage][tp/CELLWIDTH] = (map_t)0xFFFFFFFF;
 }
 
@@ -1142,12 +1158,19 @@ draw_cell(int m, int n)
       || setting.draw_line
 #endif
       ) {
-	c = GET_PALTETTE_COLOR(LCD_TRIGGER_COLOR);
+    c = GET_PALTETTE_COLOR(LCD_TRIGGER_COLOR);
+#ifndef __BANDS__
     int tp = get_trigger_level() - y0;
     if (tp>=0 && tp < h)
-      for (x = 0; x < w; x++)
-        if ((uint32_t)(x + x0 - CELLOFFSETX) <= WIDTH + CELLOFFSETX)
-          cell_buffer[tp * CELLWIDTH + x] = c;
+#endif
+      for (x = 0; x < w; x++) {
+#ifdef __BANDS__
+        int tp = get_trigger_level(x + x0 - CELLOFFSETX) - y0;
+        if (tp>=0 && tp < h)
+#endif
+          if ((uint32_t)(x + x0 - CELLOFFSETX) <= WIDTH + CELLOFFSETX)
+            cell_buffer[tp * CELLWIDTH + x] = c;
+      }
   }
 #if 1
   // Only right cells
