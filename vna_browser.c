@@ -305,6 +305,23 @@ finish:
     else error = "Format err";
   }
   break;
+  /*
+   *  Load preset
+   */
+  case FMT_CFG_FILE:
+  {
+    uint32_t magic;
+    char *src = (char*)&config + sizeof(magic);
+    uint32_t total = sizeof(config_t) - sizeof(magic);
+    // Compare file size and try read magic header, if all OK load it
+    if (fno.fsize == sizeof(config) && f_read(fs_file, &magic, sizeof(magic), &size) == FR_OK &&
+        magic == CONFIG_MAGIC && f_read(fs_file, src, total, &size) == FR_OK) {
+      config_save();
+      drawMessageBox("Info", "Restart tinySA to load new config", 2000);
+    }
+    else error = "Format err";
+  }
+  break;
   default: break;
   }
   f_close(fs_file);

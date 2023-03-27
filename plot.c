@@ -121,6 +121,9 @@ void update_grid(void)
     fspan = setting.actual_sweep_time_us; // Time in uS
     fstart = 0;
   }
+  if (config.gridlines == 0) {
+    grid = fspan/10;
+  } else {
   if (config.gridlines < 3)
     config.gridlines = 6;
   while (gdigit > 1) {
@@ -135,7 +138,7 @@ void update_grid(void)
       break;
     gdigit /= 10;
   }
-
+  }
   grid_span = grid;
   if (grid > 1000) {
     grid_offset = (WIDTH) * ((fstart % grid) / 100) / (fspan / 100);
@@ -144,6 +147,8 @@ void update_grid(void)
     grid_offset = (WIDTH) * ((fstart % grid)) / (fspan);
     grid_width = (WIDTH) * (grid) / (fspan/10);
   }
+  if (config.gridlines == 0)
+    grid_offset = 0;
   if (setting.waterfall)
     set_waterfall();
 #ifdef __LEVEL_METER__

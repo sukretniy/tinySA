@@ -4525,7 +4525,7 @@ static const menuitem_t menu_settings4[] =
 static const menuitem_t menu_settings3[] =
 {
 #ifdef TINYSA4
-//  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+//  { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions, 0 is always 10"},
 #ifndef __NEW_SWITCHES__
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
 #endif
@@ -4737,7 +4737,7 @@ static const menuitem_t menu_config2[] =
 #ifdef __ULTRA__
  { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
 #endif
- { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions"},
+ { MT_KEYPAD,   KM_GRIDLINES,  "MINIMUM\nGRIDLINES", "Enter minimum horizontal grid divisions, 0 is always 10"},
  { MT_KEYPAD,  KM_VAR,         "JOG STEP\n\b%s","0 = AUTO"},
  { MT_CALLBACK,        0 ,     "CLEAR\nCONFIG",    menu_clearconfig_cb},
 #ifdef __USE_SERIAL_CONSOLE__
@@ -4921,11 +4921,13 @@ static const menuitem_t menu_storage[] = {
 #ifdef __SD_FILE_BROWSER__
   { MT_CALLBACK, FMT_BMP_FILE,      "LOAD\nCAPTURE",        menu_sdcard_browse_cb },
   { MT_CALLBACK, FMT_PRS_FILE,      "LOAD\nSETTINGS",       menu_sdcard_browse_cb },
-  { MT_CALLBACK, FMT_CMD_FILE,      "LOAD CMD",             menu_sdcard_browse_cb },
+  { MT_CALLBACK, FMT_CMD_FILE,      "LOAD\nCMD",             menu_sdcard_browse_cb },
+  { MT_CALLBACK, FMT_CFG_FILE,      "LOAD\nCONFIG",          menu_sdcard_browse_cb },
 #endif
   { MT_ADV_CALLBACK, 0,             "AUTO NAME",            menu_autoname_acb },
   { MT_CALLBACK,    FMT_BMP_FILE,   "SAVE\nCAPTURE",        menu_sdcard_cb},
   { MT_CALLBACK,    FMT_PRS_FILE,   "SAVE\nSETTINGS",       menu_sdcard_cb},
+  { MT_CALLBACK,    FMT_CFG_FILE,   "SAVE\nCONFIG",         menu_sdcard_cb},
   { MT_CALLBACK,    FMT_CSV_FILE,   "SAVE\nTRACES",         menu_save_traces_cb},
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
@@ -5206,7 +5208,7 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, format, uistat.value,unit_string[setting.unit]);
     break;
   case KM_TRIGGER_GRID:
-    uistat.value = ((float)ST2US(setting.trigger_grid))/1000000.0;
+    uistat.value =  setting.trigger_grid / CH_CFG_ST_FREQUENCY; // ((float)ST2US(setting.trigger_grid))/1000000.0;
     plot_printf(uistat.text, sizeof uistat.text, "%.3F", uistat.value);
     break;
 
@@ -5439,7 +5441,7 @@ set_numeric_value(void)
     completed = true;
     break;
   case KM_TRIGGER_GRID:
-    setting.trigger_grid = US2ST(uistat.value*1000000.0) ;
+    setting.trigger_grid = (uistat.value + 0.5/(float)CH_CFG_ST_FREQUENCY)* CH_CFG_ST_FREQUENCY; // US2ST(uistat.value*1000000.0) ;
     completed = true;
     break;
   case KM_GRIDLINES:
@@ -7436,6 +7438,23 @@ static void sa_save_file(uint8_t format) {
         res = f_write(fs_file, src, total, &size);
       }
       break;
+      /*
+       * Dump preset to SD card as prs file
+       */
+      case FMT_CFG_FILE:
+      {
+        uint16_t *src = (uint16_t*)&config;
+        int total = sizeof(config_t);
+        config.magic = CONFIG_MAGIC;
+        config.checksum = 0x12345678;
+        config.checksum = checksum(
+            &config,
+      //      (sizeof (config)) - sizeof setting.config
+            (void *)&config.checksum - (void *) &config
+            );
+        res = f_write(fs_file, src, total, &size);
+      }
+      break;
     }
     f_close(fs_file);
 //    shell_printf("Close = %d\r\n", res);
@@ -7681,7 +7700,6 @@ handle_touch_interrupt(void)
 void
 ui_init()
 {
-  adc_init();
   // Activates the EXT driver 1.
   extStart(&EXTD1, &extcfg);
   // Init touch subsystem

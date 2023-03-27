@@ -336,7 +336,7 @@ void ADF4351_Setup(void)
 
   ADF4351_set_frequency(0,200000000);
 
-  ADF4351_mux(2);   // No led
+  ADF4351_mux(0);   // Tristate
 //    ADF4351_mux(6);   // Show lock on led
 
 }
@@ -541,11 +541,56 @@ static uint32_t gcd(uint32_t x, uint32_t y)
 #endif
 
 
+
+
 uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
 {
   uint32_t output_divider;
   target_freq = freq;
-  if (freq >= 2200000000) {
+  if (max2871) {
+    if (freq >= 3000000000) {
+      output_divider = 1 * FREQ_MULTIPLIER;
+      bitWrite (registers[4], 22, 0);   // 0
+      bitWrite (registers[4], 21, 0);
+      bitWrite (registers[4], 20, 0);
+    } else if (freq >= 1500000000) {
+      output_divider = 2 * FREQ_MULTIPLIER;
+      bitWrite (registers[4], 22, 0);   // 1
+      bitWrite (registers[4], 21, 0);
+      bitWrite (registers[4], 20, 1);
+    } else if (freq >= 750000000) {
+      output_divider = 4 * FREQ_MULTIPLIER;
+      bitWrite (registers[4], 22, 0);   // 2
+      bitWrite (registers[4], 21, 1);
+      bitWrite (registers[4], 20, 0);
+    } else if (freq >= 375000000)  {
+      output_divider = 8 * FREQ_MULTIPLIER;
+      bitWrite (registers[4], 22, 0);   // 3
+      bitWrite (registers[4], 21, 1);
+      bitWrite (registers[4], 20, 1);
+    } else if (freq >= 187500000)  {
+      output_divider = 16 * FREQ_MULTIPLIER;
+      bitWrite (registers[4], 22, 1);   // 4
+      bitWrite (registers[4], 21, 0);
+      bitWrite (registers[4], 20, 0);
+    } else if (freq >= 137500000)  {
+      output_divider = 32 * FREQ_MULTIPLIER;
+      bitWrite (registers[4], 22, 1);   // 5
+      bitWrite (registers[4], 21, 0);
+      bitWrite (registers[4], 20, 1);
+    } else if (freq >= 68750000)  {
+      output_divider = 64 * FREQ_MULTIPLIER;
+      bitWrite (registers[4], 22, 1);   // 6
+      bitWrite (registers[4], 21, 1);
+      bitWrite (registers[4], 20, 0);
+    } else {                        // > 34375000
+      output_divider = 128 * FREQ_MULTIPLIER;
+      bitWrite (registers[4], 22, 1);   // 7
+      bitWrite (registers[4], 21, 1);
+      bitWrite (registers[4], 20, 1);
+    }
+  } else {
+    if (freq >= 2200000000) {
       output_divider = 1 * FREQ_MULTIPLIER;
       bitWrite (registers[4], 22, 0);
       bitWrite (registers[4], 21, 0);
@@ -571,7 +616,7 @@ uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq)  // freq / 10Hz
       bitWrite (registers[4], 21, 0);
       bitWrite (registers[4], 20, 0);
     }
-
+  }
      uint32_t PFDR = (uint32_t)PFDRFout[channel];
     uint32_t MOD = ADF4350_modulo;
     if (MOD == 0)
@@ -690,7 +735,7 @@ static si446x_state_t SI4463_get_state(void);
 static int SI4463_set_state(si446x_state_t);
 
 #define SI4463_READ_CTS       (palReadLine(LINE_RX_CTS))
-#define SI4463_CTS_TIMEOUT  10000000
+#define SI4463_CTS_TIMEOUT  1000000
 #ifdef __WAIT_CTS_WHILE_SLEEPING__
 extern volatile int sleep;
 #if 0

@@ -397,7 +397,6 @@ void set_input_path(freq_t f)
   if (signal_path == PATH_HIGH) {
     return;                 // TODO setup high input path
   }
-  enable_extra_lna(setting.extra_lna);
   enable_rx_output(setting.atten_step);
 
   switch(signal_path) {
@@ -405,12 +404,14 @@ void set_input_path(freq_t f)
     enable_ultra(false);
     enable_direct(false);
     enable_high(false);
+    enable_extra_lna(setting.extra_lna);
     goto common;
 
   case PATH_DIRECT:
     enable_ultra(true);
     enable_direct(true);
     enable_high(true);
+    enable_extra_lna(setting.extra_lna);
     if (setting.tracking_output)
       enable_ADF_output(true, true);
     else
@@ -418,8 +419,14 @@ void set_input_path(freq_t f)
     goto common2;
   case PATH_ULTRA:
     enable_ultra(true);
-    enable_direct(false);
     enable_high(false);
+    if (max2871) {
+      enable_direct(setting.extra_lna);     // Acts as LNA switch in Ultra mode.
+      enable_extra_lna(false);
+    } else {
+      enable_direct(false);
+      enable_extra_lna(setting.extra_lna);
+    }
     common:
     enable_ADF_output(true, setting.tracking_output);
     common2:
@@ -832,7 +839,7 @@ void set_noise(int d)
 
 void set_gridlines(int d)
 {
-  if (d < 3 || d > 20)
+  if (d != 0 && (d < 3 || d > 20))
     return;
   config.gridlines = d;
   config_save();
@@ -4951,7 +4958,7 @@ static bool sweep(bool break_on_operation)
 
   sweep_again:                                // stay in sweep loop when output mode and modulation on.
 
-  if (setting.trigger_grid) {               // for start of sweep in time grid
+  if (setting.trigger_grid) {               // for start of sweep in time grid // return (systime_t)STM32_ST_TIM->CNT; does CH_CFG_ST_FREQUENCY ticks per second
     while ((chVTGetSystemTimeX() % (setting.trigger_grid+2)) == 0);
     while ((chVTGetSystemTimeX() % (setting.trigger_grid+2)) != 0);
   }
@@ -7486,8 +7493,12 @@ const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 #ifdef TINYSA4
 
 #define JUMP_FREQS 6
-const freq_t jump_freqs[JUMP_FREQS] = {LOW_SHIFT_FREQ, LOW_SHIFT_FREQ, DRIVE1_MAX_FREQ, DRIVE2_MAX_FREQ, MAX_ABOVE_IF_FREQ, ULTRA_MAX_FREQ };
+freq_t jump_freqs[JUMP_FREQS] = {LOW_SHIFT_FREQ, LOW_SHIFT_FREQ, DRIVE1_MAX_FREQ, DRIVE2_MAX_FREQ, 0, 0};
 
+void set_jump_freq(freq_t a, freq_t b) {
+  jump_freqs[4] = a;
+  jump_freqs[5] = b;
+}
 
 void set_jump_config(int i, float v) {
   switch (i) {

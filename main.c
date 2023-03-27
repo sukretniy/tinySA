@@ -109,6 +109,14 @@ int32_t scan_after_dirty = 0;
 uint8_t completed = false;
 uint8_t enable_after_complete = 0;
 
+#ifdef TINYSA4
+freq_t ULTRA_MAX_FREQ;           // Start of harmonic mode
+freq_t MAX_LO_FREQ;
+freq_t MAX_ABOVE_IF_FREQ;           // Range to use for below IF
+freq_t MIN_BELOW_IF_FREQ;          // Range to use for below IF
+int max2871;
+#endif
+
 void clear_backup(void) {
   uint32_t *f = &backup;     // Clear backup when no valid config data
   int i = USED_BACKUP_SIZE;
@@ -1967,7 +1975,7 @@ typedef struct version_t {
 #define MAX_VERSION_TEXT    1
 const version_t hw_version_text[MAX_VERSION_TEXT] =
 {
- { 160, 169,    "V0.4.5.1"}
+ { 165, 170,    "V0.4.5.1"}
 };
 
 const char *get_hw_version_text(void)
@@ -2799,6 +2807,7 @@ int main(void)
    * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
    */
   dac_init();
+  adc_init();
   PULSE
   DAC->CR|= DAC_CR_EN1 | DAC_CR_EN2; // Use DAC: CH1 and CH2
   #ifdef  __LCD_BRIGHTNESS__
@@ -2821,6 +2830,7 @@ int main(void)
   sd_card_inserted_at_boot = SD_Inserted();
 #endif
   disk_initialize(0);
+  SI4463_init_rx();             // Needed bacause calldata recall may change SI4463 parameters
   PULSE
 //  SD_PowerOn();
 #endif
@@ -2838,7 +2848,23 @@ int main(void)
     config.switch_offset = -5.0;
 #endif
   int reset_state = btn_side();
+#ifdef TINYSA4
+  if (adc1_single_read(0)> 1000)
+    max2871 = true;
+  if (max2871) {
+    MAX_LO_FREQ         = 6000000000ULL;
+    ULTRA_MAX_FREQ      = 6950000000ULL;        // Start of harmonic mode
+    MAX_ABOVE_IF_FREQ   = 5021000000ULL;         // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 4041000000ULL;         // Range to use for below IF
 
+  } else {
+    ULTRA_MAX_FREQ      = 5340000000ULL;           // Start of harmonic mode
+    MAX_LO_FREQ         = 4350000000ULL;
+    MAX_ABOVE_IF_FREQ   = 3360000000ULL;           // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 2310000000ULL;           // Range to use for below IF
+  }
+  set_jump_freq( MAX_ABOVE_IF_FREQ, ULTRA_MAX_FREQ);
+#endif
   if (!reset_state) {
     if(config_recall()) {
       clear_backup();

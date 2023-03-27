@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-//#ifdef TINYSA_F303
+#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-//#endif
+#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -152,16 +152,11 @@
 #define HIGH_MIN_FREQ_MHZ   136// 825
 #define HIGH_MAX_FREQ_MHZ   1130
 #define MINIMUM_DIRECT_FREQ  823000000ULL
-#define ULTRA_MAX_FREQ      5340000000ULL           // Start of harmonic mode
 #define DEFAULT_ULTRA_THRESHOLD 700000000ULL
-
 #define ULTRA_AUTO         10000000000ULL // 10GHz
-//#define ULTRA_MAX_FREQ      2900000000ULL
-#define MAX_LO_FREQ         4350000000ULL
-#define MAX_ABOVE_IF_FREQ   3360000000ULL           // Range to use for below IF
-#define MIN_BELOW_IF_FREQ   2310000000ULL           // Range to use for below IF
+
 //#define LOW_MAX_FREQ         800000000ULL
-#define MIN_BELOW_LO         550000000ULL   // not used????
+//#define MIN_BELOW_LO         550000000ULL   // not used????
 #define DRIVE0_MAX_FREQ      600000000ULL            // LO drive 0
 #define DRIVE1_MAX_FREQ     1200000000ULL           // LO drive 1
 #define DRIVE2_MAX_FREQ     2100000000ULL           // LO drive 2
@@ -238,6 +233,13 @@ typedef uint32_t freq_t;
  #define CORRECTION_LOW_OUT_ADF    8
  #define CORRECTION_LOW_OUT_MIXER  9
  #define CORRECTION_SIZE           10
+
+ extern freq_t ULTRA_MAX_FREQ;           // Start of harmonic mode
+ extern freq_t MAX_LO_FREQ;
+ extern freq_t MAX_ABOVE_IF_FREQ;           // Range to use for below IF
+ extern freq_t MIN_BELOW_IF_FREQ;          // Range to use for below IF
+ extern int max2871;
+
 #endif
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
@@ -486,6 +488,7 @@ void toggle_high_out_adf4350(void);
 extern int high_out_adf4350;
 #endif
 int set_actual_freq(freq_t);
+void set_jump_freq(freq_t a, freq_t b);
 int set_freq_corr(int);
 void set_IF2(int f);
 void set_R(int f);
