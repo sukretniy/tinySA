@@ -967,7 +967,7 @@ config_t config = {
 #ifdef TINYSA4
   .touch_cal =          { 444, 715, 3552, 3499 }, // 4 inch panel
 #endif
-  ._mode     = _MODE_USB | _MODE_AUTO_FILENAME,
+  ._mode     = _MODE_USB,
   ._serial_speed = SERIAL_DEFAULT_BITRATE,
   .lcd_palette = LCD_DEFAULT_PALETTE,
 #ifdef TINYSA3
@@ -1079,6 +1079,7 @@ config_t config = {
 #ifdef TINYSA4
   .direct_start = 965000000UL,
   .direct_stop  = 985000000UL,
+  .overclock = 0,
   .hide_21MHz = false,
 #endif
 };
@@ -2852,16 +2853,16 @@ int main(void)
   if (adc1_single_read(0)> 1000)
     max2871 = true;
   if (max2871) {
-    MAX_LO_FREQ         = 6000000000ULL;
-    ULTRA_MAX_FREQ      = 6950000000ULL;        // Start of harmonic mode
-    MAX_ABOVE_IF_FREQ   = 5021000000ULL;         // Range to use for below IF
-    MIN_BELOW_IF_FREQ   = 4041000000ULL;         // Range to use for below IF
+    MAX_LO_FREQ         = 6000000000ULL + config.overclock;
+    ULTRA_MAX_FREQ      = 6950000000ULL + config.overclock;        // Start of harmonic mode
+    MAX_ABOVE_IF_FREQ   = 5021000000ULL + config.overclock;         // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 4041000000ULL + config.overclock;         // Range to use for below IF
 
   } else {
-    ULTRA_MAX_FREQ      = 5340000000ULL;           // Start of harmonic mode
-    MAX_LO_FREQ         = 4350000000ULL;
-    MAX_ABOVE_IF_FREQ   = 3360000000ULL;           // Range to use for below IF
-    MIN_BELOW_IF_FREQ   = 2310000000ULL;           // Range to use for below IF
+    ULTRA_MAX_FREQ      = 5340000000ULL + config.overclock;           // Start of harmonic mode
+    MAX_LO_FREQ         = 4350000000ULL + config.overclock;
+    MAX_ABOVE_IF_FREQ   = 3360000000ULL + config.overclock;           // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;           // Range to use for below IF
   }
   set_jump_freq( MAX_ABOVE_IF_FREQ, ULTRA_MAX_FREQ);
 #endif

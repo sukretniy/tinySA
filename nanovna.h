@@ -824,6 +824,7 @@ typedef struct config {
   freq_t ultra_start;
   freq_t direct_start;
   freq_t direct_stop;
+  freq_t overclock;
   int8_t    ultra;
 #endif
   uint8_t   input_is_calibrated;

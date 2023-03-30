@@ -1339,7 +1339,7 @@ enum {
   KM_LIMIT_FREQ, KM_LIMIT_LEVEL,
 #endif
 #ifdef __BANDS__
-  KM_BAND_START, KM_BAND_END, KM_BAND_LEVEL,
+  KM_BAND_START, KM_BAND_END, KM_BAND_CENTER, KM_BAND_SPAN, KM_BAND_LEVEL,
 #endif
   KM_MARKER_TIME,
   // #35
@@ -1351,6 +1351,7 @@ enum {
 #ifdef TINYSA4
   KM_DIRECT_START,
   KM_DIRECT_STOP,
+  KM_OVERCLOCK,
 #ifdef __USE_RTC__
   KM_RTC_DATE,
   KM_RTC_TIME,
@@ -1383,7 +1384,7 @@ static const struct {
 [KM_DECAY]        = {keypads_positive    , "DECAY"},    // KM_DECAY
 [KM_NOISE]        = {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
 #ifdef TINYSA4
-[KM_FREQ_CORR]    = {keypads_plusmin     , "PPB"},    // KM_FREQ_CORR
+[KM_FREQ_CORR]    = {keypads_freq        , "PPB"},    // KM_FREQ_CORR
 #else
 [KM_10MHZ]        = {keypads_freq        , "FREQ"},    // KM_10MHz
 #endif
@@ -1424,6 +1425,8 @@ static const struct {
 #ifdef __BANDS__
 [KM_BAND_START]  = {keypads_freq         , "START\nFREQ"},  // KM_BAND_START
 [KM_BAND_END]    = {keypads_freq         , "STOP\nFREQ"},  // KM_BAND_END
+[KM_BAND_CENTER]  = {keypads_freq         , "CENTER\nFREQ"},  // KM_BAND_CENTER
+[KM_BAND_SPAN]   = {keypads_freq         , "SPAN\nFREQ"},  // KM_BAND_SPAN
 [KM_BAND_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_BAND_LEVEL
 #endif
 [KM_MARKER_TIME]  = {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
@@ -1435,6 +1438,7 @@ static const struct {
 #ifdef TINYSA4
 [KM_DIRECT_START] = {keypads_freq        , "DIRECT\nSTART"}, // KM_DIRECT_START
 [KM_DIRECT_STOP]  = {keypads_freq        , "DIRECT\nSTOP"}, // KM_DIRECT_STOP
+[KM_OVERCLOCK]       = {keypads_freq        , "OVERCLOCK"},       // KM_OVERCLOCK
 #ifdef __USE_RTC__
 [KM_RTC_DATE]     = {keypads_positive    , "SET DATE\n YYMMDD"}, // Date
 [KM_RTC_TIME]     = {keypads_positive    , "SET TIME\n HHMMSS"}, // Time
@@ -4039,6 +4043,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_autoname_acb)
     return;
   }
   config._mode^= _MODE_AUTO_FILENAME;
+  config_save();
 }
 
 #ifdef __SD_FILE_BROWSER__
@@ -4287,8 +4292,10 @@ static const menuitem_t menu_limit_select[] = {
 #ifdef __BANDS__
 static const menuitem_t menu_band_modify[] =
 {
-  { MT_KEYPAD,  KM_BAND_START,     "START\n\b%s",          "Start"},
-  { MT_KEYPAD,  KM_BAND_END,       "STOP\n\b%s",            "Stop"},
+ { MT_KEYPAD,  KM_BAND_START,     "START\n\b%s",          "Start"},
+ { MT_KEYPAD,  KM_BAND_END,       "STOP\n\b%s",            "Stop"},
+ { MT_KEYPAD,  KM_BAND_CENTER,    "CENTER\n\b%s",          "Center"},
+ { MT_KEYPAD,  KM_BAND_SPAN,      "SPAN\n\b%s",            "Span"},
   { MT_KEYPAD,  KM_BAND_LEVEL,     "LEVEL\n\b%s",          "Level"},
   { MT_CALLBACK,0,                 "DISABLE",              menu_BAND_disable_cb},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
@@ -4510,6 +4517,8 @@ static const menuitem_t menu_settings4[] =
  { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
  { MT_ADV_CALLBACK,     0,     "HIDE\n21MHz",        menu_hide_21MHz_acb},
+ { MT_KEYPAD,           KM_OVERCLOCK,  "OVERCLOCK\n\b%s", "Enter overclock amount"},
+
 #if 0                                                                           // only used during development
   { MT_KEYPAD,   KM_COR_AM,     "COR\nAM", "Enter AM modulation correction"},
   { MT_KEYPAD,   KM_COR_WFM,     "COR\nWFM", "Enter WFM modulation correction"},
@@ -5138,6 +5147,10 @@ static void fetch_numeric_target(uint8_t mode)
     uistat.freq_value = config.direct_stop;
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
+  case KM_OVERCLOCK:
+    uistat.freq_value = config.overclock;
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
+    break;
 #endif
 #ifdef __LIMITS__
   case KM_LIMIT_FREQ:
@@ -5151,11 +5164,19 @@ static void fetch_numeric_target(uint8_t mode)
 #endif
 #ifdef __BANDS__
   case KM_BAND_START:
-    uistat.freq_value = setting.bands[active_band].start;
+    uistat.freq_value = setting.bands[active_band].start + (setting.frequency_offset - FREQUENCY_SHIFT);;
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_BAND_END:
-    uistat.freq_value = setting.bands[active_band].end;
+    uistat.freq_value = setting.bands[active_band].end + (setting.frequency_offset - FREQUENCY_SHIFT);;
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
+    break;
+  case KM_BAND_CENTER:
+    uistat.freq_value = (setting.bands[active_band].start + setting.bands[active_band].start)/2 + (setting.frequency_offset - FREQUENCY_SHIFT);
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
+    break;
+  case KM_BAND_SPAN:
+    uistat.freq_value = setting.bands[active_band].end-setting.bands[active_band].start;
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_BAND_LEVEL:
@@ -5368,6 +5389,10 @@ set_numeric_value(void)
     config.direct_stop = uistat.freq_value;
     config_save();
     break;
+  case KM_OVERCLOCK:
+    config.overclock = uistat.freq_value;
+    config_save();
+    break;
 #endif
 #ifdef TINYSA4
   case KM_EXP_AVER:
@@ -5402,6 +5427,30 @@ set_numeric_value(void)
     dirty = true;
     update_grid();
 //    BANDs_update();
+    break;
+  case KM_BAND_CENTER:
+  {
+    freq_t span = (setting.bands[active_band].end - setting.bands[active_band].start);
+    freq_t center =  (setting.bands[active_band].end - setting.bands[active_band].start) + uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    setting.bands[active_band].start = center - span/2;
+    setting.bands[active_band].end = center + span/2;
+    update_frequencies();
+    dirty = true;
+    update_grid();
+  }
+//    BANDs_update();
+    break;
+  case KM_BAND_SPAN:
+    {
+    freq_t span = uistat.freq_value;
+    freq_t center =  (setting.bands[active_band].end + setting.bands[active_band].start)/2;
+    setting.bands[active_band].start = center - span/2;
+    setting.bands[active_band].end = center + span/2;
+    update_frequencies();
+    dirty = true;
+    update_grid();
+//    BANDs_update();
+    }
     break;
   case KM_BAND_LEVEL:
     setting.bands[active_band].level = to_dBm(uistat.value);

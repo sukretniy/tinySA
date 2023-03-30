@@ -507,7 +507,7 @@ void update_min_max_freq(void)
     if (setting.mixer_output)
       maxFreq = ULTRA_MAX_FREQ+60000000; // Add 60MHz to go to 5.40GHz
     else
-      maxFreq = 4400000000ULL; // 4.4GHz
+      maxFreq = 4400000000ULL+config.overclock; // 4.4GHz
 #else
     maxFreq = MAX_LOW_OUTPUT_FREQ;
 #endif
