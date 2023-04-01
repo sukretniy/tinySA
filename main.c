@@ -172,9 +172,17 @@ static THD_FUNCTION(Thread1, arg)
         b.RBW = SI4432_rbw_selected+1;
 #endif
       b.mode = setting.mode;
+      b.checksum = 0;
+      uint8_t *c = (uint8_t *)&b;
+      int ci = USED_BACKUP_SIZE*4;
+      uint8_t checksum = 0x55;
+      while (ci--) {
+        checksum ^= *c++;
+      }
+      b.checksum = checksum;
       uint32_t *f = (uint32_t *)&b;
       uint32_t *t = &backup;
-      int i = USED_BACKUP_SIZE;
+      int i = USED_BACKUP_SIZE+1;
       while (i--)
         *t++ = *f++;
 
@@ -2928,60 +2936,68 @@ int main(void)
     backup_t b;
     uint32_t *f = &backup;
     uint32_t *t = (uint32_t *)&b;
-    int i = USED_BACKUP_SIZE;
+    int i = USED_BACKUP_SIZE+1;
     while (i--)
       *t++ = *f++;
+    uint8_t *c = (uint8_t *)&b;
+    int ci = USED_BACKUP_SIZE*3;
+    uint8_t checksum = 0x55;
+    while (ci--) {
+      checksum ^= *c++;
+    }
+    if (b.checksum == checksum) {
 #ifdef TINYSA4       // Set mode not working reliably
-    set_mode(b.mode);
-    switch (b.mode) {
-    case M_LOW:
-    case M_HIGH:
-      break;
-    case M_GENLOW:
-      menu_push_submenu(menu_mode);
-      menu_push_submenu(menu_lowoutputmode);
-      break;
-    case M_GENHIGH:
-      menu_push_submenu(menu_mode);
-      menu_push_submenu(menu_highoutputmode);
-      break;
-    }
+      set_mode(b.mode);
+      switch (b.mode) {
+      case M_LOW:
+      case M_HIGH:
+        break;
+      case M_GENLOW:
+        menu_push_submenu(menu_mode);
+        menu_push_submenu(menu_lowoutputmode);
+        break;
+      case M_GENHIGH:
+        menu_push_submenu(menu_mode);
+        menu_push_submenu(menu_highoutputmode);
+        break;
+      }
 #endif
-    if (b.frequency0 != 0 || b.frequency1 != 0) {
-    if (b.mode <= M_HIGH){
-      set_sweep_frequency(ST_START, b.frequency0);
-      set_sweep_frequency(ST_STOP, b.frequency1);
-    } else {
-      set_sweep_frequency(ST_CW, (b.frequency0 + b.frequency1)/2);
-      set_sweep_frequency(ST_SPAN, (b.frequency1 - b.frequency0));
-      ui_mode_menu();
+      if (b.frequency0 != 0 || b.frequency1 != 0) {
+        if (b.mode <= M_HIGH){
+          set_sweep_frequency(ST_START, b.frequency0);
+          set_sweep_frequency(ST_STOP, b.frequency1);
+        } else {
+          set_sweep_frequency(ST_CW, (b.frequency0 + b.frequency1)/2);
+          set_sweep_frequency(ST_SPAN, (b.frequency1 - b.frequency0));
+          ui_mode_menu();
+        }
+        if (b.attenuation == 0)
+          set_auto_attenuation();
+        else {
+          set_attenuation((b.attenuation - 1)/2.0);
+        }
+        if (b.reflevel == 0)
+          set_auto_reflevel(true);
+        else {
+          set_auto_reflevel(false);
+          user_set_reflevel((float)(b.reflevel-140));
+        }
+        if (b.RBW == 0)
+          setting.rbw_x10 = 0;
+        else {
+          set_RBW(force_rbw(b.RBW-1));
+        }
+      }
     }
-    if (b.attenuation == 0)
-      set_auto_attenuation();
-    else {
-      set_attenuation((b.attenuation - 1)/2.0);
-    }
-    if (b.reflevel == 0)
-      set_auto_reflevel(true);
-    else {
-      set_auto_reflevel(false);
-      user_set_reflevel((float)(b.reflevel-140));
-    }
-    if (b.RBW == 0)
-      setting.rbw_x10 = 0;
-    else {
-      set_RBW(force_rbw(b.RBW-1));
-    }
-  }
   }
   set_refer_output(-1);
-//  ui_mode_menu();       // Show menu when autostarting mode
+  //  ui_mode_menu();       // Show menu when autostarting mode
 
   /*
    * Set LCD display brightness (use DAC2 for control)
    * Starting DAC1 driver, setting up the output pin as analog as suggested by the Reference Manual.
    */
-   #ifdef  __LCD_BRIGHTNESS__
+#ifdef  __LCD_BRIGHTNESS__
     lcd_setBrightness(config._brightness);
   #else
     DAC->DHR12R2 = config.dac_value; // Setup DAC: CH2 value

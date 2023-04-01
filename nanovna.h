@@ -1709,6 +1709,7 @@ typedef struct {
   uint8_t reflevel;
   uint8_t RBW;
   uint8_t mode;
+  uint8_t checksum;
 } backup_t;
 #pragma pack(pop)
 
