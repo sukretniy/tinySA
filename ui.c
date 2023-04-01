@@ -201,9 +201,9 @@ static int btn_check(void)
   if (button_set & (1<<BIT_PUSH))
     status |= EVT_BUTTON_SINGLE_CLICK;
   if (button_set & (1<<BIT_UP1))
-    status |= EVT_UP;
+    status |= (config.flip ? EVT_DOWN : EVT_UP);
   if (button_set & (1<<BIT_DOWN1))
-    status |= EVT_DOWN;
+    status |= (config.flip ? EVT_UP : EVT_DOWN);
   return status;
 }
 
@@ -238,9 +238,9 @@ static int btn_wait_release(void)
       ticks > last_button_repeat_ticks) {
       int status = 0;
       if (cur_button & (1<<BIT_DOWN1))
-        status |= EVT_DOWN | EVT_REPEAT;
+        status |= (config.flip ? EVT_UP: EVT_DOWN) | EVT_REPEAT;
       if (cur_button & (1<<BIT_UP1))
-        status |= EVT_UP | EVT_REPEAT;
+        status |= (config.flip ? EVT_DOWN:EVT_UP) | EVT_REPEAT;
       last_button_repeat_ticks = ticks + BUTTON_REPEAT_TICKS;
       return status;
     }
@@ -1384,7 +1384,7 @@ static const struct {
 [KM_DECAY]        = {keypads_positive    , "DECAY"},    // KM_DECAY
 [KM_NOISE]        = {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
 #ifdef TINYSA4
-[KM_FREQ_CORR]    = {keypads_freq        , "PPB"},    // KM_FREQ_CORR
+[KM_FREQ_CORR]    = {keypads_plusmin     , "PPB"},    // KM_FREQ_CORR
 #else
 [KM_10MHZ]        = {keypads_freq        , "FREQ"},    // KM_10MHz
 #endif

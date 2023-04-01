@@ -354,7 +354,10 @@ void set_output_path(freq_t f, float level)
     goto common;
 
   case PATH_DIRECT:
-    enable_ultra(true);
+    if (max2871)
+      enable_ultra(false);
+    else
+      enable_ultra(true);
     enable_direct(true);
     enable_high(true);
     enable_ADF_output(false, false);
