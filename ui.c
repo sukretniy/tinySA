@@ -4046,6 +4046,20 @@ static UI_FUNCTION_ADV_CALLBACK(menu_autoname_acb)
   config_save();
 }
 
+enum {SAVE_RBW=0x01, SAVE_ATTENUATE=0x02, SAVE_LNA= 0x04, SAVE_LEVEL=0x08, SAVE_TRIGGER=0x10 };
+uint32_t save_options = 0;
+
+static UI_FUNCTION_ADV_CALLBACK(menu_save_options_acb)
+{
+  (void)item;
+  (void)data;
+  if (b){
+    b->icon = save_options & data ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  save_options ^= data;
+}
+
 #ifdef __SD_FILE_BROWSER__
 #include "vna_browser.c"
 #endif
@@ -4296,6 +4310,7 @@ static const menuitem_t menu_band_modify[] =
  { MT_KEYPAD,  KM_BAND_END,       "STOP\n\b%s",            "Stop"},
  { MT_KEYPAD,  KM_BAND_CENTER,    "CENTER\n\b%s",          "Center"},
  { MT_KEYPAD,  KM_BAND_SPAN,      "SPAN\n\b%s",            "Span"},
+ { MT_CALLBACK, FMT_CMD_FILE,      "LOAD\nCMD",             menu_sdcard_browse_cb },
   { MT_KEYPAD,  KM_BAND_LEVEL,     "LEVEL\n\b%s",          "Level"},
   { MT_CALLBACK,0,                 "DISABLE",              menu_BAND_disable_cb},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
@@ -4924,8 +4939,18 @@ static const menuitem_t menu_stimulus[] = {
   { MT_ADV_CALLBACK,0,          "SHIFT\nFREQ", menu_shift_acb},
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
-
 #ifdef __USE_SD_CARD__
+static const menuitem_t menu_save_options[] =
+{
+  { MT_ADV_CALLBACK,    SAVE_RBW,        "RBW",             menu_save_options_acb},
+  { MT_ADV_CALLBACK,    SAVE_ATTENUATE,  "ATTEN",           menu_save_options_acb},
+  { MT_ADV_CALLBACK,    SAVE_LNA,        "LNA",             menu_save_options_acb},
+  { MT_ADV_CALLBACK,    SAVE_TRIGGER,    "TRIGGER\nMODE",   menu_save_options_acb},
+  { MT_ADV_CALLBACK,    SAVE_LEVEL,      "TRIGGER\nLEVEL",  menu_save_options_acb},
+  { MT_CALLBACK,        FMT_CMD_FILE,    "SAVE",            menu_sdcard_cb},
+  { MT_NONE,    0, NULL, menu_back} // next-> menu_back
+};
+
 static const menuitem_t menu_storage[] = {
 #ifdef __SD_FILE_BROWSER__
   { MT_CALLBACK, FMT_BMP_FILE,      "LOAD\nCAPTURE",        menu_sdcard_browse_cb },
@@ -4938,6 +4963,7 @@ static const menuitem_t menu_storage[] = {
   { MT_CALLBACK,    FMT_PRS_FILE,   "SAVE\nSETTINGS",       menu_sdcard_cb},
   { MT_CALLBACK,    FMT_CFG_FILE,   "SAVE\nCONFIG",         menu_sdcard_cb},
   { MT_CALLBACK,    FMT_CSV_FILE,   "SAVE\nTRACES",         menu_save_traces_cb},
+  { MT_SUBMENU,     0,              "SAVE\nSCAN",             menu_save_options},
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -7432,6 +7458,43 @@ static void sa_save_file(uint8_t format) {
           buf += plot_printf(buf, 100, "\r\n");
           res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
         }
+      break;
+      case FMT_CMD_FILE:
+      {
+        char *buf = (char *)spi_buffer;
+        if (setting.freq_mode & FREQ_MODE_CENTER_SPAN) {
+          freq_t center = setting.frequency0/2 + setting.frequency1/2;
+          freq_t span   = (setting.frequency1 - setting.frequency0)/2;
+          buf += plot_printf(buf, 100, "sweep center %U\r\n", center);
+          buf += plot_printf(buf, 100, "sweep span %U\r\n", span);
+        } else {
+          buf += plot_printf(buf, 100, "sweep start %U\r\n", setting.frequency0);
+          buf += plot_printf(buf, 100, "sweep stop %U\r\n",  setting.frequency1);
+        }
+        if (save_options & SAVE_RBW) {
+          if (setting.rbw_x10 == 0)
+            buf += plot_printf(buf, 100, "rbw auto\r\n");
+          else
+            buf += plot_printf(buf, 100, "rbw %f\r\n", setting.rbw_x10);
+        }
+        if (save_options & SAVE_ATTENUATE) {
+          if (setting.auto_attenuation)
+            buf += plot_printf(buf, 100, "attenuate auto\r\n");
+          else
+            buf += plot_printf(buf, 100, "attenuate %f\r\n", get_attenuation());
+        }
+        if (save_options & SAVE_TRIGGER) {
+          static const char *trigger_list[] = {"auto","normal","single"};
+          buf += plot_printf(buf, 100, "trigger %s\r\n", trigger_list[setting.trigger]);
+        }
+        if (save_options & SAVE_LEVEL) {
+          buf += plot_printf(buf, 100, "trigger %.1f\r\n", setting.trigger_level);
+        }
+        if (save_options & SAVE_LNA) {
+          buf += plot_printf(buf, 100, "lna %s\r\n", (setting.extra_lna?"on":"off"));
+        }
+        res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
+      }
       break;
       case FMT_TBL_FILE:
         for (i = 0; i < LIMITS_MAX && res == FR_OK; i++) {

@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -1527,6 +1527,7 @@ extern void ui_process(void);
 int current_menu_is_form(void);
 extern float nf_gain;
 extern const char * const averageText[];
+extern uint32_t save_options;
 
 void ui_mode_normal(void);
 void ui_mode_menu(void);
