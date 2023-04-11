@@ -208,7 +208,7 @@ extern const char * const trc_channel_name[];
 
 #ifdef TINYSA3
 typedef uint32_t freq_t;
-#define HALF_FREQ 0x8000000UL
+#define HALF_FREQ 0x80000000UL
  typedef int32_t long_t;
  extern bool has_esd;
  #define CORRECTION_POINTS  10       // Frequency dependent level correction table entries
