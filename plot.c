@@ -1602,11 +1602,17 @@ static void trace_print_value_string(     // Only used at one place
         step = step*10;
       }
     }
+    int negative = (freq > HALF_FREQ);
+    if (negative)
+      freq = - freq;
 #ifdef TINYSA4
     if (freq >= 1000000000)
       digits += 3;
 #endif
-    plot_printf(ptr2, sizeof(buf2) - 9, "%9.*QHz", digits, freq);
+    if (negative)
+      plot_printf(ptr2, sizeof(buf2) - 9, "-%9.*QHz", digits, freq);
+    else
+      plot_printf(ptr2, sizeof(buf2) - 9, "%9.*QHz", digits, freq);
   }
 #ifdef __LEVEL_METER__
 #ifdef TINYSA4

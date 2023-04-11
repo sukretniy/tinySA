@@ -7057,11 +7057,14 @@ ui_process_menu_lever(void)
   const menuitem_t *menu = menu_stack[menu_current_level];
   int status = btn_check();
   if (status == 0) return;
-  if (selection >=0 && status & EVT_BUTTON_SINGLE_CLICK) {
-    menu_invoke(selection);
+  uint16_t count = current_menu_get_count();
+  if (status & EVT_BUTTON_SINGLE_CLICK) {
+    if ((uint16_t)selection >= count)
+      ui_mode_normal();
+    else
+      menu_invoke(selection);
     return;
   }
-  uint16_t count = current_menu_get_count();
   do {
     uint32_t mask = 1<<selection;
     if (status & EVT_UP  ) selection++;
