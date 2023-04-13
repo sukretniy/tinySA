@@ -1590,6 +1590,12 @@ static void trace_print_value_string(     // Only used at one place
   } else
     freq += (setting.frequency_offset - FREQUENCY_SHIFT);
 
+  int negative = (freq > HALF_FREQ);
+  if (negative) {
+    freq = - freq;
+    *ptr2++ = '-';
+  }
+
   // For CW mode output time
   if (FREQ_IS_CW()) {
     plot_printf(ptr2, sizeof(buf2) - 9, "%.3Fs", idx*setting.actual_sweep_time_us/(float)((sweep_points - 1)*ONE_SECOND_TIME));
@@ -1602,17 +1608,11 @@ static void trace_print_value_string(     // Only used at one place
         step = step*10;
       }
     }
-    int negative = (freq > HALF_FREQ);
-    if (negative)
-      freq = - freq;
 #ifdef TINYSA4
     if (freq >= 1000000000)
       digits += 3;
 #endif
-    if (negative)
-      plot_printf(ptr2, sizeof(buf2) - 9, "-%9.*QHz", digits, freq);
-    else
-      plot_printf(ptr2, sizeof(buf2) - 9, "%9.*QHz", digits, freq);
+    plot_printf(ptr2, sizeof(buf2) - 9, "%9.*QHz", digits, freq);
   }
 #ifdef __LEVEL_METER__
 #ifdef TINYSA4

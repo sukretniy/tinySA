@@ -3302,9 +3302,30 @@ static UI_FUNCTION_ADV_CALLBACK(menu_multi_band_acb)
     return;
   }
   dirty = true;
+  freq_t old_start = get_sweep_frequency(ST_START);
+  freq_t old_stop = get_sweep_frequency(ST_STOP);
   setting.multi_band = ! setting.multi_band;
   redraw_request|= REDRAW_AREA | REDRAW_FREQUENCY | REDRAW_CAL_STATUS;
-  if (setting.multi_band) menu_push_submenu(menu_band_select);
+  if (setting.multi_band) {
+    if (setting.bands[0].end == 0) {
+      setting.bands[0].start = old_start;
+      setting.bands[0].end = old_stop;
+    }
+    menu_push_submenu(menu_band_select);
+  } else {
+    for (int i=0;i< BANDS_MAX;i++) {
+      if (setting.bands[i].enabled) {
+        set_sweep_frequency(ST_START,setting.bands[i].start);
+        break;
+      }
+    }
+    for (int i=BANDS_MAX-1;i>=0;i--) {
+      if (setting.bands[i].enabled) {
+        set_sweep_frequency(ST_STOP,setting.bands[i].end);
+        break;
+      }
+    }
+  }
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_multi_trace_acb)
