@@ -411,8 +411,13 @@ void set_input_path(freq_t f)
     goto common;
 
   case PATH_DIRECT:
-    enable_ultra(true);
-    enable_direct(true);
+    if (max2871) {
+      enable_ultra(false);
+      enable_direct(true);
+    } else {
+      enable_ultra(true);
+      enable_direct(true);
+    }
     enable_high(true);
     enable_extra_lna(setting.extra_lna);
     if (setting.tracking_output)

@@ -2003,7 +2003,7 @@ VNA_SHELL_FUNCTION(cmd_version)
   (void)argc;
   (void)argv;
 #ifdef TINYSA4
-  shell_printf("%s\r\nHW Version:%s\r\n", TINYSA_VERSION, get_hw_version_text());
+  shell_printf("%s\r\nHW Version:%s %s\r\n", TINYSA_VERSION, get_hw_version_text(), (max2871?"max2871":""));
 #else
   shell_printf("%s\r\n", TINYSA_VERSION);
 #endif
