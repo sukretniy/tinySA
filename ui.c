@@ -4943,6 +4943,7 @@ static const menuitem_t menu_stimulus[] = {
   { MT_SUBMENU,     0,             "VBW",             menu_vbw},
 #endif
   { MT_ADV_CALLBACK,0,          "SHIFT\nFREQ", menu_shift_acb},
+  { MT_CALLBACK, ST_CENTER, "MARKER\n"S_RARROW" CENTER",   menu_marker_op_cb },
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 
@@ -5100,8 +5101,8 @@ static void fetch_numeric_target(uint8_t mode)
       plot_printf(uistat.text, sizeof uistat.text, "AUTO");
    break;
   case KM_CP:
-    uistat.value = ADF4350_modulo;
-    plot_printf(uistat.text, sizeof uistat.text, "%d", ADF4350_modulo);
+    uistat.value = ADF4351_get_CP();
+    plot_printf(uistat.text, sizeof uistat.text, "%d",  ((int32_t)uistat.value));
     break;
 #endif
   case KM_SAMPLETIME:

@@ -53,7 +53,7 @@
 #define __ADF4351__
 #define __NEW_SWITCHES__
 #define __ULTRA_OUT__        // Use ADF output over LOW out
-#define __SI5351__
+//#define __SI5351__
 #endif
 #define __PE4302__
 //#define __SIMULATION__
@@ -113,7 +113,7 @@
 #define __MARKER_CACHE__
 #define TINYSA4_4
 #ifdef TINYSA4_4
-#define __SI5351__
+//#define __SI5351__
 #endif
 //#define __FFT_VBW__
 //#define __FFT_DECONV__
@@ -1821,7 +1821,9 @@ extern int force_signal_path;
 extern void ADF4351_mux(int R);
 extern void ADF4351_force_refresh(void);
 extern void ADF4351_CP(int p);
+extern uint16_t ADF4351_get_CP(void);
 extern void ADF4351_modulo(int m);
+extern uint16_t ADF4351_get_modulo(void);
 extern void ADF4351_csr(int c);
 extern void ADF4351_fastlock(int c);
 extern void ADF4351_recalculate_PFDRFout(void);

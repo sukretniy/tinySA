@@ -24,7 +24,7 @@
 #include "spi.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("O2")
+#pragma GCC optimize ("O0")
 
 //#define __USE_FRR_FOR_RSSI__
 
@@ -251,6 +251,403 @@ bool PE4302_Write_Byte(unsigned char DATA )
 
 //------------------------------- ADF4351 -------------------------------------
 
+#define __NEW_ADF4351__
+#ifdef __NEW_ADF4351__
+
+bool ADF4351_frequency_changed = false;
+
+uint16_t R = 1;
+int old_R = 0;
+uint16_t N = 1;
+uint16_t frac = 0;
+uint16_t modulus = 32;
+uint16_t out_div = 0;
+uint16_t mux = 0;
+uint16_t csr = 1;  // cycle slip reduction
+uint16_t bscm = 1; // Band select clock mode
+
+//  uint32_t reg_0 = 0;
+uint32_t reg_1 = 0;
+uint32_t reg_2 = 0;
+uint32_t reg_3 = 0;
+uint32_t reg_4 = 0;
+uint32_t reg_5 = 0;
+
+uint16_t id = 0;
+uint8_t rfPower = 0b00;
+static freq_t prev_actual_freq = 0;
+bool pdwn = false;
+uint16_t powerDown = 0;
+
+
+static const uint8_t auxPower = 0b00;
+
+// band select divider. 1 to 255.
+static const uint8_t  bsDivider = 255; // For set internal logic clock (24M / 192 = 125k) max 125k
+
+// charge pump current, 0 to 15.
+static uint8_t cpCurrent = 0;
+
+// CLKDIV divider (for fastlock and phase resync). 0 to 4095.
+static const uint16_t clkDivDivider = 6;
+
+static const uint16_t phase = 1;
+
+static enum {
+    CLKDIVMODE_OFF = 0b00,
+    CLKDIVMODE_FASTLOCK = 0b01,
+    CLKDIVMODE_RESYNC = 0b10
+} clkDivMode = CLKDIVMODE_OFF;
+
+static const enum {
+    LD_LOW = 0b00,
+    LD_LOCK_DETECT = 0b01,
+    LD_HIGH = 0b11
+} ld_pin = LD_LOCK_DETECT; // Used for led output
+
+bool refDouble = false;
+static const bool refDiv2 = false;
+static const bool rfEnable = true;
+static const bool auxEnable = false;
+static const bool feedbackFromDivided = true;
+
+static const bool LDF = false;
+static const bool LDP = true;
+
+static enum {
+    LD_LOW_NOISE = 0b00,
+    LD_LOW_SPUR1 = 0b10,
+    LD_LOW_SPUR2 = 0b11
+} noiseMode = LD_LOW_NOISE;
+
+/*
+static const enum {
+    p_4_div_5 = 0,   // min integer 23, max freq = 3.0GHz
+    p_8_div_9 = 1    // min integer 75, max freq = 4.4GHz
+} prescaler = p_8_div_9;
+*/
+static const enum {
+    CPt_NORMAL       = 0b00, // Work, use default
+    CPt_LONG_RESET   = 0b01, // Work
+    CPt_FORCE_SOURCE = 0b10,
+    CPt_FORCE_SINK   = 0b11,
+} CP_Test = CPt_NORMAL;
+
+static const enum {
+    CPm_DISABLE = 0b00, // Default
+    CPm_10pct   = 0b01,
+    CPm_20pct   = 0b10,
+    CPm_30pct   = 0b11, // ! Show best linearity result
+} CP_Mode = CPm_30pct;
+
+//static const bool LDS = false;
+
+#define CS_ADF0_HIGH     {palSetLine(LINE_LO_SEL);ADF_CS_DELAY;}
+#define CS_ADF0_LOW      {palClearLine(LINE_LO_SEL);ADF_CS_DELAY;}
+
+
+void ADF4351_WriteRegister32(int channel, const uint32_t value)
+{
+  (void) channel;
+    // Select chip
+    CS_ADF0_LOW;
+    // Send 32 bit register
+  #if 1
+    SPI_WRITE_8BIT(SI4432_SPI, (value >> 24));
+    SPI_WRITE_8BIT(SI4432_SPI, (value >> 16));
+    SPI_WRITE_8BIT(SI4432_SPI, (value >>  8));
+    SPI_WRITE_8BIT(SI4432_SPI, (value >>  0));
+    while (SPI_IS_BUSY(SI4432_SPI)); // drop rx and wait tx
+  #else
+    shiftOut((value >> 24) & 0xFF);
+    shiftOut((value >> 16) & 0xFF);
+    shiftOut((value >>  8) & 0xFF);
+    shiftOut((value >>  0) & 0xFF);
+  #endif
+    // unselect
+    CS_ADF0_HIGH;
+}
+
+void sendConfig(void) {
+  if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
+    SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
+  if (max2871) {
+    pdwn = false; //Power down is no longer active.
+    uint32_t reg;
+    const bool fractional = false;
+    const bool LDS = true;
+    const uint32_t phase = 1; // Recommended
+
+    // reg 5
+    //        LD pin      register 5
+    reg = (ld_pin<<22) | 0b101;
+    if (reg!=reg_5) {ADF4351_WriteRegister32(id, reg); reg_5 = reg;}
+
+    // reg 4
+    //     fb                          rf divider    bs divider       VCO down  mtld      aux sel    aux en           aux pwr         rf en           rf pwr        register 4
+    reg = (feedbackFromDivided<<23) | (out_div<<20)     | (bsDivider<<12) | (powerDown<<11) | (0<<10) | (0<<9)  | (auxEnable<<8) | (auxPower<<6) | (rfEnable<<5) | (rfPower<<3) | 0b100;
+    if (reg!=reg_4) {ADF4351_WriteRegister32(id, reg); reg_4 = reg;}
+
+    // reg 3
+    //     bscm      |  csr        mutedel   clkdiv mode        clkdiv           register 3
+    reg = (bscm<<23) | (csr<<18) | (0<<17) | (clkDivMode<<15) | (clkDivDivider<<3) | 0b011;
+    if (reg!=reg_3) {ADF4351_WriteRegister32(id, reg); reg_3 = reg;}
+
+    // reg 2                                                                                                                                                 cp three     reset
+    //     LD speed   noise mode         muxout         ref dbr            ref div2        R         DB        CP current        LDF       LDP      PD pol   powerdown    state    counter   register 2
+    reg = (LDS<<31) | (noiseMode<<29) | (mux<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (0<<13) | (cpCurrent<<9) | (LDF<<8) | (LDP<<7) | (1<<6) | (pdwn<<5)  | (0<<4) |  (0<<3) |   0b010;
+    if (reg!=reg_2) {ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
+
+    // reg 1
+    //      CP mode        CP test          phase       frac modulus
+    reg = (CP_Mode<<29) | (CP_Test<<27) | (phase<<15) | (modulus<<3) | 0b001;
+    if (reg!=reg_1) {ADF4351_WriteRegister32(id, reg); reg_1 = reg;}
+
+    // reg 0 (need always send for apply some reg 1 - 5 settings
+    reg = (fractional<<31) | (N<<15) | (frac<<3) | 0b000;
+    /*if (reg!=reg_0)*/ {ADF4351_WriteRegister32(id, reg);/* reg_0 = reg;*/}
+  } else {
+    pdwn = false; //Power down is no longer active.
+    uint32_t reg;
+#ifdef BOARD_DOUBLE_REF_MODE
+    uint32_t prescaler = (N > 75) ? 1 : 0;
+#else
+    uint32_t prescaler = 1;
+#endif
+    // reg 5
+    //        LD pin      register 5
+    reg = (ld_pin<<22) | (0b11<<19)| 0b101;
+    if (reg!=reg_5) {ADF4351_WriteRegister32(id, reg); reg_5 = reg;}
+
+    // reg 4
+    //     fb                          rf divider    bs divider       VCO down  mtld      aux sel    aux en           aux pwr         rf en           rf pwr        register 4
+    reg = (feedbackFromDivided<<23) | (out_div<<20)     | (bsDivider<<12) | (0<<11) | (0<<10) | (0<<9)  | (auxEnable<<8) | (auxPower<<6) | (rfEnable<<5) | (rfPower<<3) | 0b100;
+    if (reg!=reg_4) {ADF4351_WriteRegister32(id, reg); reg_4 = reg;}
+
+    // reg 3
+    //     csr       clkdiv mode             clkdiv         register 3
+    reg = (csr<<18) | (clkDivMode<<15) | (clkDivDivider<<3) | 0b011;
+    if (reg!=reg_3) {ADF4351_WriteRegister32(id, reg); reg_3 = reg;}
+
+    // reg 2                                                                                                                                                 cp three    reset
+    //     noise mode        muxout         ref dbr            ref div2        R         DB        CP current        LDF       LDP       PD pol   powerdown    state    counter   register 2
+    reg = (noiseMode<<29) | (mux<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (0<<13) | (cpCurrent<<9) | (LDF<<8) | (LDP<<7) | (1<<6) | (pdwn<<5)  | (0<<4) |  (0<<3) |   0b010;
+    if (reg!=reg_2) {ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
+
+    // reg 1
+    //     prescaler         phase        frac modulus
+    reg = (prescaler<<27) | (phase<<15) | (modulus<<3) | 0b001;
+    if (reg!=reg_1) {ADF4351_WriteRegister32(id, reg); reg_1 = reg;}
+
+    // reg 0 (need always send for apply some reg 1 - 5 settings
+    reg = (N<<15) | (frac<<3) | 0b000;
+    /*if (reg!=reg_0)*/ {ADF4351_WriteRegister32(id, reg);/* reg_0 = reg;*/}
+  }
+  if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
+    SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
+}
+
+
+void sendPowerdown(bool p) {
+    if(pdwn == p)
+        return;
+    pdwn = p;
+    uint32_t reg = (noiseMode<<29) | (0b001<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (cpCurrent<<9) | (0<<8) | (0<<7) | (1<<6) | (pdwn<<5) | 0b010;
+    if (reg!=reg_2) {ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
+}
+
+
+static uint32_t adf4350_get_O(uint64_t freqHz) {
+  if(max2871) {
+    if(freqHz > 3000000000)  return 0; //  1
+    else  if(freqHz > 1500000000)  return 1; //  2
+    else  if(freqHz >  750000000)  return 2; //  4
+    else  if(freqHz >  375000000)  return 3; //  8
+    else  if(freqHz >  187500000)  return 4; // 16
+    else  if(freqHz >  137500000)  return 5; // 32
+    else  if(freqHz >   68750000)  return 6; // 64
+    else/*if(freqHz >   34375000)*/return 7; //128
+  }else{
+    if(freqHz > 2200000000)  return 0; //  1
+    else  if(freqHz > 1100000000)  return 1; //  2
+    else  if(freqHz >  550000000)  return 2; //  4
+    else  if(freqHz >  275000000)  return 3; //  8
+    else/*if(freqHz >  137500000)*/return 4; // 16
+  }
+}
+
+uint64_t ADF4351_set_frequency(int channel, uint64_t freqHz) {
+  if (prev_actual_freq == freqHz)
+    return prev_actual_freq;
+  (void) channel;
+  // RFout = xtalFreqHz × (N + FRAC/MOD) = xtalFreqHz × (N * MOD + FRAC) / MOD
+  // step = xtalFreqHz / MOD; !!!! should get integer result, also this result should divided by 16
+  // for 24M step = 24M / 4000 = 6k and 6k/16 = 375
+  // Nx = RFout / step
+  // N * 4000 + frac = Nx
+  // N    = Nx / 4000
+  // frac = Nx % 4000
+
+  uint32_t xtal = (uint32_t)(config.setting_frequency_30mhz / 100ULL);
+  if (refDouble) {
+    xtal<<=1;
+  }
+  if (R > 1)
+    xtal /= R;
+
+  out_div = adf4350_get_O(freqHz);
+
+  uint32_t step = (xtal) / modulus;
+  uint32_t _N = (freqHz<<out_div)/step;
+
+  N    = _N / modulus;
+  frac = _N % modulus;
+
+  freq_t actual_freq = ((uint64_t)xtal *(N * modulus +frac))/ (1<<out_div) / modulus;
+
+  ADF4351_frequency_changed = true;
+  sendConfig();
+  return actual_freq;
+}
+
+void ADF4351_force_refresh(void) {
+  prev_actual_freq = 0;
+//  reg_0 = 0;
+  reg_1 = 0;
+  reg_2 = 0;
+  reg_3 = 0;
+  reg_4 = 0;
+}
+
+void ADF4351_modulo(int m)
+{
+  modulus = m;
+}
+
+uint16_t ADF4351_get_modulo(void)
+{
+  return modulus;
+}
+
+void ADF4351_spur_mode(int S)
+{
+  noiseMode = S;
+}
+
+void ADF4351_R_counter(int new_R)
+{
+  return;
+  if (new_R == old_R)
+    return;
+  old_R = new_R;
+  refDouble = false;
+  if (new_R < 0) {
+    refDouble = true;
+    new_R = -new_R;
+  }
+  if (new_R<1)
+    return;
+  R = new_R;
+  clear_frequency_cache();                              // When R changes the possible frequencies will change
+}
+
+
+void ADF4351_mux(int m)
+{
+  mux = m;
+  sendConfig();
+}
+
+void ADF4351_csr(int c)
+{
+  csr = (c & 0x1);
+  sendConfig();
+}
+
+void ADF4351_fastlock(int c)
+{
+  clkDivMode = (c & 0x3);
+  sendConfig();
+}
+
+void ADF4351_CP(int p)
+{
+  if (cpCurrent == p)
+    return;
+  cpCurrent = p;
+  sendConfig();
+}
+
+uint16_t ADF4351_get_CP(void)
+{
+  return cpCurrent;
+}
+
+void ADF4351_drive(int p)
+{
+  if (rfPower == p)
+    return;
+  rfPower = p;
+  sendConfig();
+  my_microsecond_delay(1000);
+}
+#if 0
+void ADF4351_aux_drive(int p)
+{
+  if ( auxPower == p)
+    return;
+  auxPower = p;
+  sendConfig();
+}
+void ADF4351_enable_aux_out(int s)
+{
+  if ( auxEnable == s)
+    return;
+  auxEnable = s;
+  sendConfig();
+}
+
+#endif
+
+
+void ADF4351_enable(int s)
+{
+  if ( powerDown == !s)
+    return;
+  powerDown = !s;
+  sendConfig();
+  osalThreadSleepMilliseconds(10);
+
+}
+
+void ADF4351_enable_out(int s)
+{
+  if ( pdwn == !s)
+     return;
+  powerDown = !s;
+  pdwn = !s;
+  sendConfig();
+  osalThreadSleepMilliseconds(10);
+}
+
+void ADF4351_recalculate_PFDRFout(void) {
+  sendConfig();
+}
+
+void ADF4351_Setup(void)
+{
+  CS_ADF0_HIGH;
+//  ADF4351_fastlock(1);      // Fastlock enabled
+//  ADF4351_csr(1);           //Cycle slip enabled
+//  cpCurrent = 0;
+//  if (max2871)
+//    refDouble = true;
+//  R = 1;
+  ADF4351_set_frequency(0,200000000);
+  ADF4351_mux(0);   // Tristate
+}
+
+#else
 
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 #define bitSet(value, bit) ((value) |= (1UL << (bit)))
@@ -714,6 +1111,7 @@ void ADF4351_enable_out(int s)
   osalThreadSleepMilliseconds(1);
 }
 
+#endif
 
 // ------------------------------ SI4468 -------------------------------------
 
@@ -748,7 +1146,7 @@ extern volatile int sleep;
   };
 #else
 
-inline int SI4463_wait_CTS(void) {
+int SI4463_wait_CTS(void) {
   int t=0;
   while (!SI4463_READ_CTS) {
     t++;
@@ -2236,9 +2634,10 @@ static int old_high = 2;
 
 void enable_ADF_output(int f, int t)
 {
+  (void) t;
   ADF4351_enable(true);
   ADF4351_enable_out(f);
-  ADF4351_enable_aux_out(t);
+//  ADF4351_enable_aux_out(t);
 }
 
 #ifdef __NEW_SWITCHES__

@@ -2861,10 +2861,10 @@ int main(void)
   if (adc1_single_read(0)> 1000)
     max2871 = true;
   if (max2871) {
-    MAX_LO_FREQ         = 6000000000ULL + config.overclock;
     ULTRA_MAX_FREQ      = 6950000000ULL + config.overclock;        // Start of harmonic mode
-    MAX_ABOVE_IF_FREQ   = 5021000000ULL + config.overclock;         // Range to use for below IF
-    MIN_BELOW_IF_FREQ   = 4041000000ULL + config.overclock;         // Range to use for below IF
+    MAX_LO_FREQ         = 6000000000ULL + config.overclock;
+    MAX_ABOVE_IF_FREQ   = 4021000000ULL + config.overclock;         // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 4021000000ULL + config.overclock;         // Range to use for below IF
 
   } else {
     ULTRA_MAX_FREQ      = 5340000000ULL + config.overclock;           // Start of harmonic mode

@@ -22,7 +22,7 @@
 
 #pragma GCC push_options
 #ifdef TINYSA4
-#pragma GCC optimize ("Og")
+#pragma GCC optimize ("O0")
 #else
 #pragma GCC optimize ("Os")
 #endif
@@ -515,7 +515,7 @@ void update_min_max_freq(void)
     if (setting.mixer_output)
       maxFreq = ULTRA_MAX_FREQ+60000000; // Add 60MHz to go to 5.40GHz
     else
-      maxFreq = 4400000000ULL+config.overclock; // 4.4GHz
+      maxFreq = MAX_LO_FREQ+config.overclock; // 4.4GHz
 #else
     maxFreq = MAX_LOW_OUTPUT_FREQ;
 #endif
@@ -2661,7 +2661,7 @@ case M_GENHIGH: // Direct output from 1
     SI4463_init_rx();
     enable_rx_output(true);       // to protect the SI
     enable_ADF_output(true, true);
-    ADF4351_aux_drive(setting.lo_drive);
+//    ADF4351_aux_drive(setting.lo_drive);
     enable_extra_lna(false);
     enable_ultra(true);                   // Open low output
 #else
@@ -3813,7 +3813,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
           SI4463_set_output_level(d);
         else
 #endif
-          ADF4351_aux_drive(d);
+ //         ADF4351_aux_drive(d);
 #endif
       }
     }
@@ -4285,11 +4285,21 @@ again:                                                              // Spur redu
         if (setting.R == 0) {
           setting.increased_R = false;
           if (setting.mode == M_GENLOW) {
-            if (local_modulo == 0) ADF4351_modulo(1000);
-            ADF4351_R_counter(3);
+            if (max2871) {
+              if (local_modulo == 0) ADF4351_modulo(100);
+              ADF4351_R_counter(-1);
+            } else {
+              if (local_modulo == 0) ADF4351_modulo(1000);
+              ADF4351_R_counter(3);
+            }
           } else if (lf > 8000000 && lf < 3000000000 && MODE_INPUT(setting.mode)) {
-            if (local_modulo == 0) ADF4351_modulo(4000);
-
+            if (max2871)
+            if (local_modulo == 0) {
+              if (max2871)
+                ADF4351_modulo(100);
+              else
+                ADF4351_modulo(4000);
+            }
             freq_t tf = ((lf + actual_rbw_x10*200) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 /* && tf != 180000000 */ ) {   // 30MHz
               setting.increased_R = true;
@@ -4326,7 +4336,10 @@ again:                                                              // Spur redu
           } else {                          // Input above 800 MHz
             if (local_modulo == 0) {
 //              if (actual_rbw_x10 >= 3000)
-                ADF4351_modulo(4000);
+                if (max2871)
+                  ADF4351_modulo(100);
+                else
+                  ADF4351_modulo(4000);
 //              else
 //                ADF4351_modulo(60);
             }
