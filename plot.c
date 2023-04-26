@@ -1116,15 +1116,16 @@ draw_cell(int m, int n)
 
   c = GET_PALTETTE_COLOR(LCD_GRID_COLOR);
   // Draw rectangular plot (40 system ticks for all screen calls)
+  const int step = 2;
   if (trace_type & RECTANGULAR_GRID_MASK) {
     for (x = 0; x < w; x++) {
       if (rectangular_grid_x(x + x0)) {
-        for (y = 0; y < h; y++) cell_buffer[y * CELLWIDTH + x] = c;
+        for (y = 0; y < h; y+=step) cell_buffer[y * CELLWIDTH + x] = c;
       }
     }
     for (y = 0; y < h; y++) {
       if (rectangular_grid_y(y + y0)) {
-        for (x = 0; x < w; x++)
+        for (x = 0; x < w; x+=step)
           if ((uint32_t)(x + x0 - CELLOFFSETX) <= WIDTH)
             cell_buffer[y * CELLWIDTH + x] = c;
       }

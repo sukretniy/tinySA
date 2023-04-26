@@ -1064,6 +1064,7 @@ config_t config = {
    /* ultra */ {   -3.49,  -1.82,  0.74,   0.69,   -2.16,  -2.23,  0.81,   0.06,   -0.1,   0.82,   0.65,   1.89,   1.64,   2.24,   1.32,   1.62,   0.76,   1.77,   7.57,   7.35,   },
   },
   .setting_frequency_30mhz = 30000000ULL * FREQ_MULTIPLIER,
+  .gridlines = 6,
   .cor_am = 0,
   .cor_wfm = 0,
   .cor_nfm = 0,

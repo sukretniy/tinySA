@@ -536,7 +536,6 @@ void ADF4351_spur_mode(int S)
 
 void ADF4351_R_counter(int new_R)
 {
-  return;
   if (new_R == old_R)
     return;
   old_R = new_R;
