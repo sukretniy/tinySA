@@ -4988,6 +4988,7 @@ const menuitem_t menu_mode[] = {
 #endif
 
 static const menuitem_t menu_top[] = {
+  { MT_ADV_CALLBACK,0,             "PAUSE",    menu_pause_acb},
   { MT_SUBMENU,  0, "PRESET",       menu_load_preset},
   { MT_SUBMENU,  0, "FREQUENCY",    menu_stimulus},
   { MT_SUBMENU,  0, "LEVEL",        menu_level},

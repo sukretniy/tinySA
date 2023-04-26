@@ -22,7 +22,7 @@
 
 #pragma GCC push_options
 #ifdef TINYSA4
-#pragma GCC optimize ("O0")
+#pragma GCC optimize ("Os")
 #else
 #pragma GCC optimize ("Os")
 #endif
@@ -4286,7 +4286,7 @@ again:                                                              // Spur redu
           setting.increased_R = false;
           if (setting.mode == M_GENLOW) {
             if (max2871) {
-              if (local_modulo == 0) ADF4351_modulo(100);
+              if (local_modulo == 0) ADF4351_modulo(1000);
               ADF4351_R_counter(-1);
             } else {
               if (local_modulo == 0) ADF4351_modulo(1000);
@@ -4296,7 +4296,7 @@ again:                                                              // Spur redu
             if (max2871)
             if (local_modulo == 0) {
               if (max2871)
-                ADF4351_modulo(100);
+                ADF4351_modulo(4000);
               else
                 ADF4351_modulo(4000);
             }
@@ -4337,7 +4337,7 @@ again:                                                              // Spur redu
             if (local_modulo == 0) {
 //              if (actual_rbw_x10 >= 3000)
                 if (max2871)
-                  ADF4351_modulo(100);
+                  ADF4351_modulo(4000);
                 else
                   ADF4351_modulo(4000);
 //              else

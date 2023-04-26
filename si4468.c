@@ -24,7 +24,7 @@
 #include "spi.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("O0")
+#pragma GCC optimize ("O2")
 
 //#define __USE_FRR_FOR_RSSI__
 
@@ -345,6 +345,7 @@ static const enum {
 #define CS_ADF0_HIGH     {palSetLine(LINE_LO_SEL);ADF_CS_DELAY;}
 #define CS_ADF0_LOW      {palClearLine(LINE_LO_SEL);ADF_CS_DELAY;}
 
+bool ADF4351_dirty = false;
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value)
 {
@@ -357,7 +358,8 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
     SPI_WRITE_8BIT(SI4432_SPI, (value >> 16));
     SPI_WRITE_8BIT(SI4432_SPI, (value >>  8));
     SPI_WRITE_8BIT(SI4432_SPI, (value >>  0));
-    while (SPI_IS_BUSY(SI4432_SPI)); // drop rx and wait tx
+    ADF4351_dirty = true;
+//    while (SPI_IS_BUSY(SI4432_SPI)); // drop rx and wait tx
   #else
     shiftOut((value >> 24) & 0xFF);
     shiftOut((value >> 16) & 0xFF);
@@ -365,7 +367,15 @@ void ADF4351_WriteRegister32(int channel, const uint32_t value)
     shiftOut((value >>  0) & 0xFF);
   #endif
     // unselect
-    CS_ADF0_HIGH;
+//    CS_ADF0_HIGH;
+}
+
+void ADF4351_Latch(void)
+{
+  if (ADF4351_dirty == false)
+    return;
+  while (SPI_IS_BUSY(SI4432_SPI)); // drop rx and wait tx
+  CS_ADF0_HIGH;
 }
 
 void sendConfig(void) {
@@ -384,28 +394,29 @@ void sendConfig(void) {
     if (reg!=reg_5) {ADF4351_WriteRegister32(id, reg); reg_5 = reg;}
 
     // reg 4
-    //     fb                          rf divider    bs divider       VCO down  mtld      aux sel    aux en           aux pwr         rf en           rf pwr        register 4
+    //     fb                          rf divider          bs divider       VCO down  mtld      aux sel    aux en           aux pwr         rf en           rf pwr        register 4
     reg = (feedbackFromDivided<<23) | (out_div<<20)     | (bsDivider<<12) | (powerDown<<11) | (0<<10) | (0<<9)  | (auxEnable<<8) | (auxPower<<6) | (rfEnable<<5) | (rfPower<<3) | 0b100;
-    if (reg!=reg_4) {ADF4351_WriteRegister32(id, reg); reg_4 = reg;}
+    if (reg!=reg_4) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_4 = reg;}
 
     // reg 3
     //     bscm      |  csr        mutedel   clkdiv mode        clkdiv           register 3
     reg = (bscm<<23) | (csr<<18) | (0<<17) | (clkDivMode<<15) | (clkDivDivider<<3) | 0b011;
-    if (reg!=reg_3) {ADF4351_WriteRegister32(id, reg); reg_3 = reg;}
+    if (reg!=reg_3) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_3 = reg;}
 
     // reg 2                                                                                                                                                 cp three     reset
     //     LD speed   noise mode         muxout         ref dbr            ref div2        R         DB        CP current        LDF       LDP      PD pol   powerdown    state    counter   register 2
     reg = (LDS<<31) | (noiseMode<<29) | (mux<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (0<<13) | (cpCurrent<<9) | (LDF<<8) | (LDP<<7) | (1<<6) | (pdwn<<5)  | (0<<4) |  (0<<3) |   0b010;
-    if (reg!=reg_2) {ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
+    if (reg!=reg_2) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
 
     // reg 1
     //      CP mode        CP test          phase       frac modulus
     reg = (CP_Mode<<29) | (CP_Test<<27) | (phase<<15) | (modulus<<3) | 0b001;
-    if (reg!=reg_1) {ADF4351_WriteRegister32(id, reg); reg_1 = reg;}
+    if (reg!=reg_1) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_1 = reg;}
 
     // reg 0 (need always send for apply some reg 1 - 5 settings
     reg = (fractional<<31) | (N<<15) | (frac<<3) | 0b000;
-    /*if (reg!=reg_0)*/ {ADF4351_WriteRegister32(id, reg);/* reg_0 = reg;*/}
+    /*if (reg!=reg_0)*/ {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg);/* reg_0 = reg;*/}
+    ADF4351_Latch();
   } else {
     pdwn = false; //Power down is no longer active.
     uint32_t reg;
@@ -420,28 +431,29 @@ void sendConfig(void) {
     if (reg!=reg_5) {ADF4351_WriteRegister32(id, reg); reg_5 = reg;}
 
     // reg 4
-    //     fb                          rf divider    bs divider       VCO down  mtld      aux sel    aux en           aux pwr         rf en           rf pwr        register 4
+    //     fb                          rf divider          bs divider       VCO down  mtld      aux sel    aux en           aux pwr         rf en           rf pwr        register 4
     reg = (feedbackFromDivided<<23) | (out_div<<20)     | (bsDivider<<12) | (0<<11) | (0<<10) | (0<<9)  | (auxEnable<<8) | (auxPower<<6) | (rfEnable<<5) | (rfPower<<3) | 0b100;
-    if (reg!=reg_4) {ADF4351_WriteRegister32(id, reg); reg_4 = reg;}
+    if (reg!=reg_4) { ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_4 = reg;}
 
     // reg 3
     //     csr       clkdiv mode             clkdiv         register 3
     reg = (csr<<18) | (clkDivMode<<15) | (clkDivDivider<<3) | 0b011;
-    if (reg!=reg_3) {ADF4351_WriteRegister32(id, reg); reg_3 = reg;}
+    if (reg!=reg_3) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_3 = reg;}
 
     // reg 2                                                                                                                                                 cp three    reset
     //     noise mode        muxout         ref dbr            ref div2        R         DB        CP current        LDF       LDP       PD pol   powerdown    state    counter   register 2
     reg = (noiseMode<<29) | (mux<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (0<<13) | (cpCurrent<<9) | (LDF<<8) | (LDP<<7) | (1<<6) | (pdwn<<5)  | (0<<4) |  (0<<3) |   0b010;
-    if (reg!=reg_2) {ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
+    if (reg!=reg_2) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
 
     // reg 1
     //     prescaler         phase        frac modulus
     reg = (prescaler<<27) | (phase<<15) | (modulus<<3) | 0b001;
-    if (reg!=reg_1) {ADF4351_WriteRegister32(id, reg); reg_1 = reg;}
+    if (reg!=reg_1) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_1 = reg;}
 
     // reg 0 (need always send for apply some reg 1 - 5 settings
     reg = (N<<15) | (frac<<3) | 0b000;
-    /*if (reg!=reg_0)*/ {ADF4351_WriteRegister32(id, reg);/* reg_0 = reg;*/}
+    /*if (reg!=reg_0)*/ {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg);/* reg_0 = reg;*/}
+    ADF4351_Latch();
   }
   if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, SI4432_SPI_SPEED);
@@ -453,7 +465,7 @@ void sendPowerdown(bool p) {
         return;
     pdwn = p;
     uint32_t reg = (noiseMode<<29) | (0b001<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (cpCurrent<<9) | (0<<8) | (0<<7) | (1<<6) | (pdwn<<5) | 0b010;
-    if (reg!=reg_2) {ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
+    if (reg!=reg_2) {ADF4351_WriteRegister32(id, reg); reg_2 = reg;ADF4351_Latch(); }
 }
 
 
