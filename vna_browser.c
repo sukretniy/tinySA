@@ -328,7 +328,8 @@ finish:
   if (error) {
     ili9341_clear_screen();
     drawMessageBox(error, fno.fname, leave_show ? 2000 : 0);
-  }
+  } else
+    if (leave_show) drawMessageBox("Loaded", fno.fname, leave_show ? 1000 : 0);
   if (leave_show) return;
   // Process input
   while (1) {
