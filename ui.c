@@ -5252,7 +5252,7 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, format, uistat.value,unit_string[setting.unit]);
     break;
   case KM_TRIGGER_GRID:
-    uistat.value =  setting.trigger_grid / CH_CFG_ST_FREQUENCY; // ((float)ST2US(setting.trigger_grid))/1000000.0;
+    uistat.value =  ((float)setting.trigger_grid) / CH_CFG_ST_FREQUENCY; // ((float)ST2US(setting.trigger_grid))/1000000.0;
     plot_printf(uistat.text, sizeof uistat.text, "%.3F", uistat.value);
     break;
 
