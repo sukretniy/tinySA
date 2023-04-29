@@ -24,7 +24,7 @@
 #include "spi.h"
 
 #pragma GCC push_options
-#pragma GCC optimize ("O2")
+#pragma GCC optimize ("Os")
 
 //#define __USE_FRR_FOR_RSSI__
 
@@ -382,7 +382,7 @@ void sendConfig(void) {
   if (SI4432_SPI_SPEED != ADF_SPI_SPEED)
     SPI_BR_SET(SI4432_SPI, ADF_SPI_SPEED);
   if (max2871) {
-    pdwn = false; //Power down is no longer active.
+//    pdwn = false; //Power down is no longer active.
     uint32_t reg;
     const bool fractional = false;
     const bool LDS = true;
@@ -418,7 +418,7 @@ void sendConfig(void) {
     /*if (reg!=reg_0)*/ {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg);/* reg_0 = reg;*/}
     ADF4351_Latch();
   } else {
-    pdwn = false; //Power down is no longer active.
+//    pdwn = false; //Power down is no longer active.
     uint32_t reg;
 #ifdef BOARD_DOUBLE_REF_MODE
     uint32_t prescaler = (N > 75) ? 1 : 0;
@@ -489,8 +489,6 @@ static uint32_t adf4350_get_O(uint64_t freqHz) {
 }
 
 uint64_t ADF4351_set_frequency(int channel, uint64_t freqHz) {
-  if (prev_actual_freq == freqHz)
-    return prev_actual_freq;
   (void) channel;
   // RFout = xtalFreqHz × (N + FRAC/MOD) = xtalFreqHz × (N * MOD + FRAC) / MOD
   // step = xtalFreqHz / MOD; !!!! should get integer result, also this result should divided by 16
@@ -499,23 +497,55 @@ uint64_t ADF4351_set_frequency(int channel, uint64_t freqHz) {
   // N * 4000 + frac = Nx
   // N    = Nx / 4000
   // frac = Nx % 4000
+#if 1
+  out_div = adf4350_get_O(freqHz);
 
-  uint32_t xtal = (uint32_t)(config.setting_frequency_30mhz / 100ULL);
+  uint64_t xtal = (uint32_t)(config.setting_frequency_30mhz);
   if (refDouble) {
     xtal<<=1;
   }
   if (R > 1)
     xtal /= R;
 
-  out_div = adf4350_get_O(freqHz);
+#if 1
+  uint32_t modulus_x2 = modulus<<1;
+  uint32_t INTA_F = (((freqHz << out_div) * (uint64_t)(modulus_x2*FREQ_MULTIPLIER))/ xtal) + 1;
+  N = INTA_F / modulus_x2;
+  frac = (INTA_F - N * modulus_x2)>>1;
+  if (frac >= modulus) {
+    frac -= modulus;
+    N++;
+  }
 
-  uint32_t step = (xtal) / modulus;
-  uint32_t _N = (freqHz<<out_div)/step;
+  freq_t actual_freq = (((uint64_t)xtal *(uint64_t)(N * modulus +frac)) >> out_div) / (modulus*FREQ_MULTIPLIER);
+#else
+
+  uint32_t _N = ((freqHz<<out_div) * (uint64_t)modulus) / xtal;
 
   N    = _N / modulus;
   frac = _N % modulus;
+#endif
+
+#else
+  uint32_t MOD = ADF4350_modulo;
+  if (MOD == 0)
+    MOD = 60;
+  uint32_t MOD_X2 = MOD<<1;
+  uint32_t INTA_F = ((freq * (uint64_t)output_divider) * (uint64_t)MOD_X2/ PFDR) + 1;
+  uint32_t INTA = INTA_F / MOD_X2;
+  uint32_t FRAC = (INTA_F - INTA * MOD_X2)>>1;
+  if (FRAC >= MOD) {
+    FRAC -= MOD;
+    INTA++;
+  }
 
   freq_t actual_freq = ((uint64_t)xtal *(N * modulus +frac))/ (1<<out_div) / modulus;
+#endif
+
+
+  if (prev_actual_freq == actual_freq)
+    return prev_actual_freq;
+  prev_actual_freq = actual_freq;
 
   ADF4351_frequency_changed = true;
   sendConfig();
@@ -648,13 +678,15 @@ void ADF4351_recalculate_PFDRFout(void) {
 void ADF4351_Setup(void)
 {
   CS_ADF0_HIGH;
-//  ADF4351_fastlock(1);      // Fastlock enabled
-//  ADF4351_csr(1);           //Cycle slip enabled
-//  cpCurrent = 0;
-//  if (max2871)
+ if (max2871) {
 //    refDouble = true;
+ } else {
+    ADF4351_fastlock(1);      // Fastlock enabled
+    ADF4351_csr(1);           //Cycle slip enabled
+    cpCurrent = 0;
+  }
 //  R = 1;
-  ADF4351_set_frequency(0,200000000);
+  ADF4351_set_frequency(0,3000000000);
   ADF4351_mux(0);   // Tristate
 }
 
@@ -2646,7 +2678,7 @@ static int old_high = 2;
 void enable_ADF_output(int f, int t)
 {
   (void) t;
-  ADF4351_enable(true);
+  ADF4351_enable(f);
   ADF4351_enable_out(f);
 //  ADF4351_enable_aux_out(t);
 }

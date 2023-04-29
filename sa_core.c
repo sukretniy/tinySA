@@ -27,6 +27,12 @@
 #pragma GCC optimize ("Os")
 #endif
 
+#if 0
+#define TRACE(X)  {     DAC->DHR12R1 = (X*400); }       // Enable for realtime tracing
+#else
+#define TRACE(X)  // {     DAC->DHR12R1 = (X*400); }       // Enable for realtime tracing
+#endif
+
 #ifdef __FFT_DECONV__
 void FFT(float *real, float *imag, int length, bool inverse);
 float *real = (float *) &spi_buffer[0];
@@ -89,7 +95,7 @@ static freq_t old_freq[5] = { 0, 0, 0, 0,0};
 static freq_t real_old_freq[5] = { 0, 0, 0, 0,0};
 static long real_offset = 0;
 
-
+static float old_temp = 0.0;
 static int LO_spur_shifted;
 static int LO_mirrored;
 static volatile int LO_shifting;
@@ -424,6 +430,8 @@ void set_input_path(freq_t f)
       enable_ADF_output(true, true);
     else
       enable_ADF_output(false, false);
+    TRACE(1);
+
     goto common2;
   case PATH_ULTRA:
     enable_ultra(true);
@@ -444,7 +452,6 @@ void set_input_path(freq_t f)
   }
   if (force_signal_path)
     calculate_static_correction();
-
 }
 #endif
 
@@ -3436,7 +3443,7 @@ static void calculate_static_correction(void)                   // Calculate the
           - (S_STATE(setting.agc)? 0 : 33)
           - (S_STATE(setting.lna)? 12 : 0)
           + (setting.extra_lna ? -26.5 : 0)                // checked
-          + (setting.mode == M_GENLOW ? (Si446x_get_temp() - 35.0) / 13.0 : (Si446x_get_temp() - 35.0) / 20.0)      // About 7.7dB per 10 degrees C in output mode, 1 dB per 20 degrees in input mode
+          + (setting.mode == M_GENLOW ? (old_temp - 35.0) / 13.0 : (old_temp - 35.0) / 20.0)      // About 7.7dB per 10 degrees C in output mode, 1 dB per 20 degrees in input mode
 #endif		  
           - setting.external_gain);
 }
@@ -3486,11 +3493,8 @@ int test_output_attenuate = 0;
 #ifdef TINYSA4
 bool level_error = false;
 bool depth_error = false;
-static float old_temp = 0.0;
+
 #endif
-
-#define TRACE(X) // {     DAC->DHR12R1 = (X*400); }
-
 
 
 pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     // Measure the RSSI for one frequency, used from sweep and other measurement routines. Must do all HW setup
@@ -3698,8 +3702,9 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
 
   if (( setting.frequency_step != 0 || setting.level_sweep != 0.0 || (i == 0 && scandirty))) {     // Initialize or adapt output levels
 #ifdef TINYSA4
-    if (setting.mode == M_LOW)
+    if (setting.mode == M_LOW) {
       set_input_path(f);
+    }
     else
 #endif
     if (setting.mode == M_GENLOW) {// if in low output mode and level sweep or frequency weep is active or at start of sweep
