@@ -159,6 +159,7 @@ void   ADF4351_Setup(void);
 
 
 void ADF4351_WriteRegister32(int channel, const uint32_t value);
+void ADF4351_Latch(void);
 uint64_t ADF4351_set_frequency(int channel, uint64_t freq);
 uint64_t ADF4351_prepare_frequency(int channel, uint64_t freq);
 //int ADF4351_set_frequency_with_offset(uint32_t freq, int offset, uint8_t drive_strength);

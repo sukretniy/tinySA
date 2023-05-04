@@ -786,11 +786,12 @@ VNA_SHELL_FUNCTION(cmd_x)
       VFO = 1;
     else
       VFO = 0;
-   reg &= ~0xc00000;    // Force led to show lock
-   reg |=  0x400000;
+ //  reg &= ~0xc00000;    // Force led to show lock
+ //  reg |=  0x400000;
   }
 
   ADF4351_WriteRegister32(VFO, reg);
+  ADF4351_Latch();
   shell_printf("x=%x\r\n", reg);
 }
 #endif
