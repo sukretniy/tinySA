@@ -617,7 +617,7 @@ show_version(void)
     ili9341_drawstring_7x13(info_about[i++], x, y+=bFONT_STR_HEIGHT+2-5);
   }
   lcd_set_font(FONT_NORMAL);
-  lcd_printf(x, y+=bFONT_STR_HEIGHT, "HW Version:%s (%d)", get_hw_version_text(), adc1_single_read(0));
+  lcd_printf(x, y+=bFONT_STR_HEIGHT, "HW Version:%s (%d) %s", get_hw_version_text(), adc1_single_read(0), (si5351_available?"SI5351":""));
 
 extern const char *states[];
 #define ENABLE_THREADS_COMMAND

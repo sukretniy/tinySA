@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -53,7 +53,7 @@
 #define __ADF4351__
 #define __NEW_SWITCHES__
 #define __ULTRA_OUT__        // Use ADF output over LOW out
-//#define __SI5351__
+#define __SI5351__
 #endif
 #define __PE4302__
 //#define __SIMULATION__
@@ -1547,6 +1547,7 @@ void save_to_sd(int mask);
 void drawMessageBox(const char *header, char *text, uint32_t delay);
 bool isFullScreenMode(void);
 int btn_side(void);
+extern int si5351_available;
 
 // Irq operation process set
 #define OP_NONE       0x00

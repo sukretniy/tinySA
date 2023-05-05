@@ -251,6 +251,40 @@ bool PE4302_Write_Byte(unsigned char DATA )
 
 //------------------------------- ADF4351 -------------------------------------
 
+//#define SI5351_INITIAL_FREQ 3206896551
+//#define SI5351_INITIAL_FREQ 15000000000ULL
+#define SI5351_INITIAL_FREQ 3000000000ULL
+freq_t local_setting_frequency_30mhz_x100 = SI5351_INITIAL_FREQ;
+
+
+
+
+#ifdef __SI5351__
+#include "si5351.h"
+static int shifted = -2;
+
+#define SHIFT_MUL   31
+#define SHIFT_DIV   29
+
+#define SHIFT_FACTOR    100000
+void ADF4350_shift_ref(int f) {
+  if (f == shifted)
+    return;
+  shifted = true;
+  if (shifted) {
+    local_setting_frequency_30mhz_x100 = (local_setting_frequency_30mhz_x100 * SHIFT_MUL) / SHIFT_DIV;
+  } else
+    local_setting_frequency_30mhz_x100 = SI5351_INITIAL_FREQ; //config.setting_frequency_30mhz;
+  if (si5351_available && shifted)
+    si5351_set_int_mul_div(0, SHIFT_MUL, SHIFT_DIV, 0);
+  else
+    si5351_set_int_mul_div(0, 30, 30, 0);
+  ADF4351_recalculate_PFDRFout();
+}
+#else
+int si5351_available = false;
+#endif
+
 #define __NEW_ADF4351__
 #ifdef __NEW_ADF4351__
 
@@ -263,7 +297,7 @@ uint16_t frac = 0;
 uint16_t modulus = 32;
 uint16_t out_div = 0;
 uint16_t mux = 0;
-uint16_t csr = 1;  // cycle slip reduction
+uint16_t csr = 1;  // cycle slip reduction, if enabled cp must be lowest value
 uint16_t bscm = 1; // Band select clock mode
 
 //  uint32_t reg_0 = 0;
@@ -311,8 +345,9 @@ static const bool rfEnable = true;
 static const bool auxEnable = false;
 static const bool feedbackFromDivided = true;
 
-static const bool LDF = false;
-static const bool LDP = true;
+static const bool LDF = false;      // for fractional mode
+static const bool LDP = true;       // 6 ns
+static const bool LDS = true;
 
 static enum {
     LD_LOW_NOISE = 0b00,
@@ -339,8 +374,6 @@ static const enum {
     CPm_20pct   = 0b10,
     CPm_30pct   = 0b11, // ! Show best linearity result
 } CP_Mode = CPm_30pct;
-
-//static const bool LDS = false;
 
 #define CS_ADF0_HIGH     {palSetLine(LINE_LO_SEL);ADF_CS_DELAY;}
 #define CS_ADF0_LOW      {palClearLine(LINE_LO_SEL);ADF_CS_DELAY;}
@@ -385,8 +418,9 @@ void sendConfig(void) {
 //    pdwn = false; //Power down is no longer active.
     uint32_t reg;
     const bool fractional = false;
-    const bool LDS = true;
     const uint32_t phase = 1; // Recommended
+
+//    const bool LDS = (SI5351_INITIAL_FREQ > 3200000000ULL ? true: false);
 
     // reg 5
     //        LD pin      register 5
@@ -500,7 +534,7 @@ uint64_t ADF4351_set_frequency(int channel, uint64_t freqHz) {
 #if 1
   out_div = adf4350_get_O(freqHz);
 
-  uint64_t xtal = (uint32_t)(config.setting_frequency_30mhz);
+  uint64_t xtal = local_setting_frequency_30mhz_x100;
   if (refDouble) {
     xtal<<=1;
   }
@@ -672,17 +706,31 @@ void ADF4351_enable_out(int s)
 }
 
 void ADF4351_recalculate_PFDRFout(void) {
+  int local_r = old_R;
+  old_R = -1;
+  local_setting_frequency_30mhz_x100 = SI5351_INITIAL_FREQ; //config.setting_frequency_30mhz;
+  ADF4351_R_counter(local_r);
   sendConfig();
 }
 
 void ADF4351_Setup(void)
 {
   CS_ADF0_HIGH;
+
+  local_setting_frequency_30mhz_x100 = SI5351_INITIAL_FREQ; // config.setting_frequency_30mhz;
+#ifdef __SI5351__
+  si5351_available = si5351_init();
+  if (si5351_available)
+    si5351_set_frequency(0, local_setting_frequency_30mhz_x100/100, 0);
+//  si5351_available = false; // Don't use shifting
+#endif
+
+  cpCurrent = 0;
  if (max2871) {
 //    refDouble = true;
  } else {
-    ADF4351_fastlock(1);      // Fastlock enabled
     ADF4351_csr(1);           //Cycle slip enabled
+    ADF4351_fastlock(1);      // Fastlock enabled
     cpCurrent = 0;
   }
 //  R = 1;
@@ -698,8 +746,6 @@ void ADF4351_Setup(void)
 #define bitWrite(value, bit, bitvalue) ((bitvalue) ? bitSet(value, bit) : bitClear(value, bit))
 
 #define maskedWrite(reg, bit, mask, value)   (reg) &= ~(((uint32_t)mask) << (bit)); (reg) |=  ((((uint32_t) (value)) & ((uint32_t)mask)) << (bit));
-
-freq_t local_setting_frequency_30mhz_x100 = 3000000000;
 
 #define CS_ADF0_HIGH     {palSetLine(LINE_LO_SEL);ADF_CS_DELAY;}
 #define CS_ADF1_HIGH     {ADF_CS_DELAY;palSetLine(LINE_LO_SEL);}
@@ -734,12 +780,6 @@ int64_t
   target_freq;
 
 int old_R = 0;
-
-#ifdef __SI5351__
-#include "si5351.h"
-#else
-int si5351_available = false;
-#endif
 
 
 void ADF4351_Setup(void)
@@ -887,30 +927,6 @@ void ADF4351_recalculate_PFDRFout(void){
   local_setting_frequency_30mhz_x100 = config.setting_frequency_30mhz;
   ADF4351_R_counter(local_r);
 }
-
-#ifdef __SI5351__
-static int shifted = -2;
-
-#define SHIFT_MUL   31
-#define SHIFT_DIV   29
-
-#define SHIFT_FACTOR    100000
-void ADF4350_shift_ref(int f) {
-  if (f == shifted)
-    return;
-  shifted = false;
-  local_setting_frequency_30mhz_x100 = config.setting_frequency_30mhz;
-  if (shifted) {
-    local_setting_frequency_30mhz_x100 = (local_setting_frequency_30mhz_x100 * SHIFT_MUL) / SHIFT_DIV;
-  }
-  if (si5351_available && shifted)
-    si5351_set_int_mul_div(0, SHIFT_MUL, SHIFT_DIV, 0);
-  else
-    si5351_set_int_mul_div(0, 30, 30, 0);
-  ADF4351_recalculate_PFDRFout();
-  shifted = f;
-}
-#endif
 
 void ADF4351_mux(int R)
 {
