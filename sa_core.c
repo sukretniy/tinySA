@@ -4246,6 +4246,8 @@ again:                                                              // Spur redu
 #define TCXO    30000000
 #define TXCO_DIV3   10000000
 
+#define AVOID_MULTI 100
+
 #ifdef __SI5351__
         if (si5351_available) {
         if (setting.R == 0) {
@@ -4256,9 +4258,10 @@ again:                                                              // Spur redu
             ADF4351_R_counter(3);
           } else if (lf > 8000000 && MODE_INPUT(setting.mode)) {
             if (local_modulo == 0) ADF4351_modulo(4000);
+            ADF4351_R_counter(1);
 
-            freq_t tf = ((lf + actual_rbw_x10*200) / TXCO_DIV3) * TXCO_DIV3;
-            if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 && actual_rbw_x10 < 300) {   // 10MHz
+            freq_t tf = ((lf + actual_rbw_x10*AVOID_MULTI) / TCXO) * TCXO;
+            if (tf + actual_rbw_x10*AVOID_MULTI >= lf  && tf < lf + actual_rbw_x10*AVOID_MULTI /* && actual_rbw_x10 < 300 */) {   // 30MHz
               ADF4350_shift_ref(true);
             } else {
               ADF4350_shift_ref(false);
@@ -4278,8 +4281,8 @@ again:                                                              // Spur redu
             ADF4351_R_counter(1);
 
         } else {
-          freq_t tf = ((lf + actual_rbw_x10*200) / TXCO_DIV3) * TXCO_DIV3;
-          if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200  && actual_rbw_x10 < 300) {   // 30MHz
+          freq_t tf = ((lf + actual_rbw_x10*AVOID_MULTI) / TXCO_DIV3) * TXCO_DIV3;
+          if (tf + actual_rbw_x10*AVOID_MULTI >= lf  && tf < lf + actual_rbw_x10*AVOID_MULTI  && actual_rbw_x10 < 300) {   // 30MHz
             ADF4350_shift_ref(true);
           } else {
             ADF4350_shift_ref(false);
@@ -4307,14 +4310,23 @@ again:                                                              // Spur redu
               else
                 ADF4351_modulo(4000);
             }
-            freq_t tf = ((lf + actual_rbw_x10*200) / TCXO) * TCXO;
-            if (tf + actual_rbw_x10*200 >= lf  && tf < lf + actual_rbw_x10*200 /* && tf != 180000000 */ ) {   // 30MHz
+            freq_t tf = ((lf + actual_rbw_x10*AVOID_MULTI) / TCXO) * TCXO;
+            if (tf + actual_rbw_x10*AVOID_MULTI >= lf  && tf < lf + actual_rbw_x10*AVOID_MULTI /* && tf != 180000000 */ ) {   // 30MHz
               setting.increased_R = true;
-              if ( (tf / TCXO) & 1 ) {    // Odd harmonic of 30MHz
-                ADF4351_R_counter(-3);
+              if (max2871) {
+                if (lf > 59000000 && lf <390000000) {
+//                  if (tf == 180000000) {
+//                    ADF4351_R_counter(7);
+//                  } else
+                    ADF4351_R_counter(8);
+                }
+              } else {
+                if ( (tf / TCXO) & 1 ) {    // Odd harmonic of 30MHz
+                  ADF4351_R_counter(-3);
+                }
+                else
+                  ADF4351_R_counter(4);
               }
-              else
-                ADF4351_R_counter(4);
             }
 #if 0
             else if (actual_rbw_x10 < 1000) {
@@ -4728,6 +4740,16 @@ again:                                                              // Spur redu
       }
 #endif
       if (!in_step_test) {
+        if (max2871) {
+          if (old_R > 2) {
+            if (my_step_delay <500)
+              my_step_delay *= 3;
+            else if (my_step_delay <1000)
+                  my_step_delay *= 2;
+            else
+              my_step_delay *= 1;
+          }
+        } else {
         if (my_step_delay < 300 && old_R == 1) {
           if ((100000000 < lf && lf <250000000))
             my_step_delay = 300;
@@ -4754,6 +4776,7 @@ again:                                                              // Spur redu
         } else if (old_R <= -3) {
           if (my_step_delay <1000)
             my_step_delay += my_step_delay >> 1 ;
+        }
         }
       }
       TRACE(8);

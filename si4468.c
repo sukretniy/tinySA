@@ -253,32 +253,28 @@ bool PE4302_Write_Byte(unsigned char DATA )
 
 //#define SI5351_INITIAL_FREQ 3206896551
 //#define SI5351_INITIAL_FREQ 15000000000ULL
-#define SI5351_INITIAL_FREQ 3000000000ULL
-freq_t local_setting_frequency_30mhz_x100 = SI5351_INITIAL_FREQ;
 
-
-
+#define NO_SHIFT_MUL 30
+#define NO_SHIFT_DIV 30
 
 #ifdef __SI5351__
 #include "si5351.h"
-static int shifted = -2;
-
+static int shifted = 0;
+static int old_shifted = -1;
 #define SHIFT_MUL   31
 #define SHIFT_DIV   29
 
-#define SHIFT_FACTOR    100000
+//#define SI5351_INITIAL_FREQ 3000000000ULL
+
+
 void ADF4350_shift_ref(int f) {
   if (f == shifted)
     return;
-  shifted = true;
-  if (shifted) {
-    local_setting_frequency_30mhz_x100 = (local_setting_frequency_30mhz_x100 * SHIFT_MUL) / SHIFT_DIV;
-  } else
-    local_setting_frequency_30mhz_x100 = SI5351_INITIAL_FREQ; //config.setting_frequency_30mhz;
+  shifted = f;
   if (si5351_available && shifted)
     si5351_set_int_mul_div(0, SHIFT_MUL, SHIFT_DIV, 0);
   else
-    si5351_set_int_mul_div(0, 30, 30, 0);
+    si5351_set_int_mul_div(0, NO_SHIFT_MUL, NO_SHIFT_DIV, 0);
   ADF4351_recalculate_PFDRFout();
 }
 #else
@@ -317,21 +313,21 @@ uint16_t powerDown = 0;
 static const uint8_t auxPower = 0b00;
 
 // band select divider. 1 to 255.
-static const uint8_t  bsDivider = 255; // For set internal logic clock (24M / 192 = 125k) max 125k
+volatile uint16_t  bsDivider = 100; // For set internal logic clock (24M / 192 = 125k) max 125k
 
 // charge pump current, 0 to 15.
-static uint8_t cpCurrent = 0;
+static uint8_t cpCurrent = 0;       // Must be zero when using either CSR or Fast Lock
 
 // CLKDIV divider (for fastlock and phase resync). 0 to 4095.
-static const uint16_t clkDivDivider = 6;
+volatile uint16_t fastlockDivider = 6;      // Not used when in CSR mode
 
 static const uint16_t phase = 1;
 
-static enum {
+enum {
     CLKDIVMODE_OFF = 0b00,
     CLKDIVMODE_FASTLOCK = 0b01,
     CLKDIVMODE_RESYNC = 0b10
-} clkDivMode = CLKDIVMODE_OFF;
+} clkDivMode = CLKDIVMODE_FASTLOCK;
 
 static const enum {
     LD_LOW = 0b00,
@@ -353,7 +349,7 @@ static enum {
     LD_LOW_NOISE = 0b00,
     LD_LOW_SPUR1 = 0b10,
     LD_LOW_SPUR2 = 0b11
-} noiseMode = LD_LOW_NOISE;
+} noiseMode = LD_LOW_SPUR2;
 
 /*
 static const enum {
@@ -368,12 +364,12 @@ static const enum {
     CPt_FORCE_SINK   = 0b11,
 } CP_Test = CPt_NORMAL;
 
-static const enum {
+const enum {
     CPm_DISABLE = 0b00, // Default
     CPm_10pct   = 0b01,
     CPm_20pct   = 0b10,
     CPm_30pct   = 0b11, // ! Show best linearity result
-} CP_Mode = CPm_30pct;
+} CP_Mode = CPm_DISABLE;
 
 #define CS_ADF0_HIGH     {palSetLine(LINE_LO_SEL);ADF_CS_DELAY;}
 #define CS_ADF0_LOW      {palClearLine(LINE_LO_SEL);ADF_CS_DELAY;}
@@ -428,13 +424,13 @@ void sendConfig(void) {
     if (reg!=reg_5) {ADF4351_WriteRegister32(id, reg); reg_5 = reg;}
 
     // reg 4
-    //     fb                          rf divider          bs divider       VCO down  mtld      aux sel    aux en           aux pwr         rf en           rf pwr        register 4
-    reg = (feedbackFromDivided<<23) | (out_div<<20)     | (bsDivider<<12) | (powerDown<<11) | (0<<10) | (0<<9)  | (auxEnable<<8) | (auxPower<<6) | (rfEnable<<5) | (rfPower<<3) | 0b100;
+    //     bs devider             fb                          rf divider          bs divider               VCO down         mtld      aux sel    aux en           aux pwr         rf en           rf pwr        register 4
+    reg = (bsDivider>>7) << 24 | (feedbackFromDivided<<23) | (out_div<<20)     | ((bsDivider&0x7f)<<12) | (powerDown<<11) | (0<<10) | (0<<9)  | (auxEnable<<8) | (auxPower<<6) | (rfEnable<<5) | (rfPower<<3) | 0b100;
     if (reg!=reg_4) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_4 = reg;}
 
     // reg 3
     //     bscm      |  csr        mutedel   clkdiv mode        clkdiv           register 3
-    reg = (bscm<<23) | (csr<<18) | (0<<17) | (clkDivMode<<15) | (clkDivDivider<<3) | 0b011;
+    reg = (bscm<<23) | (csr<<18) | (0<<17) | (clkDivMode<<15) | (fastlockDivider<<3) | 0b011;
     if (reg!=reg_3) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_3 = reg;}
 
     // reg 2                                                                                                                                                 cp three     reset
@@ -471,7 +467,7 @@ void sendConfig(void) {
 
     // reg 3
     //     csr       clkdiv mode             clkdiv         register 3
-    reg = (csr<<18) | (clkDivMode<<15) | (clkDivDivider<<3) | 0b011;
+    reg = (csr<<18) | (clkDivMode<<15) | (fastlockDivider<<3) | 0b011;
     if (reg!=reg_3) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_3 = reg;}
 
     // reg 2                                                                                                                                                 cp three    reset
@@ -522,6 +518,8 @@ static uint32_t adf4350_get_O(uint64_t freqHz) {
   }
 }
 
+freq_t xtal;
+
 uint64_t ADF4351_set_frequency(int channel, uint64_t freqHz) {
   (void) channel;
   // RFout = xtalFreqHz × (N + FRAC/MOD) = xtalFreqHz × (N * MOD + FRAC) / MOD
@@ -533,8 +531,20 @@ uint64_t ADF4351_set_frequency(int channel, uint64_t freqHz) {
   // frac = Nx % 4000
 #if 1
   out_div = adf4350_get_O(freqHz);
-
-  uint64_t xtal = local_setting_frequency_30mhz_x100;
+#ifdef __SI5351__
+//  if (shifted != old_shifted || xtal == 0)
+  {
+//    old_shifted = shifted;
+    if (shifted)
+      xtal = (config.setting_frequency_30mhz * SHIFT_MUL) / SHIFT_DIV;
+    else
+    {
+#endif
+     xtal = config.setting_frequency_30mhz; // * NO_SHIFT_MUL)/ NO_SHIFT_DIV;
+#ifdef __SI5351__
+    }
+  }
+#endif
   if (refDouble) {
     xtal<<=1;
   }
@@ -708,7 +718,6 @@ void ADF4351_enable_out(int s)
 void ADF4351_recalculate_PFDRFout(void) {
   int local_r = old_R;
   old_R = -1;
-  local_setting_frequency_30mhz_x100 = SI5351_INITIAL_FREQ; //config.setting_frequency_30mhz;
   ADF4351_R_counter(local_r);
   sendConfig();
 }
@@ -717,12 +726,13 @@ void ADF4351_Setup(void)
 {
   CS_ADF0_HIGH;
 
-  local_setting_frequency_30mhz_x100 = SI5351_INITIAL_FREQ; // config.setting_frequency_30mhz;
 #ifdef __SI5351__
   si5351_available = si5351_init();
-  if (si5351_available)
-    si5351_set_frequency(0, local_setting_frequency_30mhz_x100/100, 0);
-//  si5351_available = false; // Don't use shifting
+  if (si5351_available) {
+    si5351_set_frequency(0, (config.setting_frequency_30mhz * NO_SHIFT_MUL)/ NO_SHIFT_DIV /100, 0);
+    si5351_set_int_mul_div(0, NO_SHIFT_MUL, NO_SHIFT_DIV, 0);
+  }
+  si5351_available = false; // Don't use shifting
 #endif
 
   cpCurrent = 0;
