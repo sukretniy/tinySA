@@ -2864,8 +2864,8 @@ int main(void)
   if (max2871) {
     ULTRA_MAX_FREQ      = 6950000000ULL + config.overclock;        // Start of harmonic mode
     MAX_LO_FREQ         = 6000000000ULL + config.overclock;
-    MAX_ABOVE_IF_FREQ   = 4021000000ULL + config.overclock;         // Range to use for below IF
-    MIN_BELOW_IF_FREQ   = 4021000000ULL + config.overclock;         // Range to use for below IF
+    MAX_ABOVE_IF_FREQ   = 4500000000ULL + config.overclock;         // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;         // Range to use for below IF
 
   } else {
     ULTRA_MAX_FREQ      = 5340000000ULL + config.overclock;           // Start of harmonic mode

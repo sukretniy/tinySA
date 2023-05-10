@@ -349,7 +349,7 @@ static enum {
     LD_LOW_NOISE = 0b00,
     LD_LOW_SPUR1 = 0b10,
     LD_LOW_SPUR2 = 0b11
-} noiseMode = LD_LOW_SPUR2;
+} noiseMode = LD_LOW_NOISE;
 
 /*
 static const enum {
