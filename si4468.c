@@ -338,7 +338,7 @@ static const enum {
 bool refDouble = false;
 static const bool refDiv2 = false;
 static const bool rfEnable = true;
-static const bool auxEnable = false;
+static bool auxEnable = false;
 static const bool feedbackFromDivided = true;
 
 static const bool LDF = false;      // for fractional mode
@@ -684,6 +684,8 @@ void ADF4351_aux_drive(int p)
   auxPower = p;
   sendConfig();
 }
+#endif
+
 void ADF4351_enable_aux_out(int s)
 {
   if ( auxEnable == s)
@@ -691,8 +693,6 @@ void ADF4351_enable_aux_out(int s)
   auxEnable = s;
   sendConfig();
 }
-
-#endif
 
 
 void ADF4351_enable(int s)
@@ -2703,10 +2703,10 @@ static int old_high = 2;
 
 void enable_ADF_output(int f, int t)
 {
-  (void) t;
+//  (void) t;
   ADF4351_enable(f);
   ADF4351_enable_out(f);
-//  ADF4351_enable_aux_out(t);
+  ADF4351_enable_aux_out(t);
 }
 
 #ifdef __NEW_SWITCHES__

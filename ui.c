@@ -3796,7 +3796,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_ultra_acb){
 }
 #endif
 
-#ifndef TINYSA4
+//#ifdef TINYSA4
 static UI_FUNCTION_ADV_CALLBACK(menu_lo_output_acb){
   (void)item;
   (void)data;
@@ -3806,7 +3806,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lo_output_acb){
   }
   toggle_tracking_output();
 }
-#endif
+//#endif
 
 static UI_FUNCTION_ADV_CALLBACK(menu_pause_acb)
 {
@@ -4765,9 +4765,7 @@ static const menuitem_t menu_lock_display[] = {
 static const menuitem_t menu_config2[] =
 {
  { MT_ADV_CALLBACK,     0,     "PULSE\nHIGH",            menu_settings_pulse_acb},
-#ifndef TINYSA4
  { MT_ADV_CALLBACK | MT_LOW, 0,"LO OUTPUT", menu_lo_output_acb},
-#endif
 #ifdef __ULTRA__
  { MT_ADV_CALLBACK,     0,     "ENABLE\nULTRA",    menu_ultra_acb},
 #endif

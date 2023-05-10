@@ -970,13 +970,13 @@ void set_tracking_output(int t)
   dirty = true;
 }
 
-#ifndef TINYSA4
+//#ifndef TINYSA4
 void toggle_tracking_output(void)
 {
   setting.tracking_output = !setting.tracking_output;
   dirty = true;
 }
-#endif
+//#endif
 
 void toggle_pulse(void)
 {
