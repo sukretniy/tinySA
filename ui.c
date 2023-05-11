@@ -807,11 +807,18 @@ static UI_FUNCTION_CALLBACK(menu_marker_op_cb)
   //redraw_all();
 }
 
-static UI_FUNCTION_CALLBACK(menu_markers_reset_cb)
+static UI_FUNCTION_ADV_CALLBACK(menu_markers_reset_acb)
 {
   (void)item;
-  (void)data;
+  if(b){
+    b->param_1.i = data;
+    return;
+  }
   markers_reset();
+  for (uint8_t i = 0; i< data; i++) {
+    markers[i].mtype = M_TRACKING;
+    markers[i].enabled = M_ENABLED;
+  }
 }
 
 static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
@@ -4372,10 +4379,16 @@ const menuitem_t menu_marker_ops[] = {
 
 static const menuitem_t menu_marker[] = {
 //  { MT_SUBMENU,  0, "SELECT\nMARKER",     menu_marker_sel},
-  { MT_SUBMENU,  0, "MODIFY\nMARKERS",    menu_marker_modify},
-  { MT_SUBMENU,  0, "MARKER\nOPS", menu_marker_ops},
-  { MT_SUBMENU,  0, "SEARCH\nMARKER",     menu_marker_search},
-  { MT_CALLBACK, 0, "RESET\nMARKERS",     menu_markers_reset_cb},
+  { MT_SUBMENU,         0, "MODIFY\nMARKERS",       menu_marker_modify},
+  { MT_SUBMENU,         0, "MARKER\nOPS",           menu_marker_ops},
+  { MT_SUBMENU,         0, "SEARCH\nMARKER",        menu_marker_search},
+  { MT_ADV_CALLBACK,    1, "RESET\nMARKERS",        menu_markers_reset_acb},
+  { MT_ADV_CALLBACK,    2, "%d MARKERS",            menu_markers_reset_acb},
+  { MT_ADV_CALLBACK,    4, "%d MARKERS",            menu_markers_reset_acb},
+#ifdef TINYSA4
+  { MT_ADV_CALLBACK,    6, "%d MARKERS",            menu_markers_reset_acb},
+  { MT_ADV_CALLBACK,    8, "%d MARKERS",            menu_markers_reset_acb},
+#endif
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 

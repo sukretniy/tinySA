@@ -588,8 +588,10 @@ static uint16_t get_trigger_level(
 #endif
     ){
   index_y_t trigger;
+#ifdef TINYSA4
   if (setting.trigger_trace != 255)
     setting.trigger_level = measured[setting.trigger_trace][x];
+#endif
 #ifdef __BANDS__
   else if (setting.multi_band && !setting.multi_trace) {
     int b = getBand(x);
