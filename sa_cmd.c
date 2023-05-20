@@ -510,6 +510,7 @@ VNA_SHELL_FUNCTION(cmd_deviceid)
   }
 }
 
+#ifdef __SWEEP_OUTPUT__
 VNA_SHELL_FUNCTION(cmd_sweep_voltage)
 {
   float value;
@@ -521,6 +522,7 @@ VNA_SHELL_FUNCTION(cmd_sweep_voltage)
   value = my_atof(argv[0]);
   config.sweep_voltage = value;
 }
+#endif
 
 #ifdef __NOISE_FIGURE__
 VNA_SHELL_FUNCTION(cmd_nf)

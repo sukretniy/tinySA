@@ -2150,7 +2150,9 @@ static const VNAShellCommand commands[] =
     {"time"        , cmd_time        , CMD_RUN_IN_LOAD},
 #endif
     {"dac"         , cmd_dac         , CMD_RUN_IN_LOAD},
+#ifdef __SWEEP_OUTPUT__
     {"sweep_voltage",cmd_sweep_voltage,CMD_RUN_IN_LOAD},
+#endif
 #ifdef __NOISE_FIGURE__
     {"nf",          cmd_nf,            CMD_RUN_IN_LOAD},
 #endif
