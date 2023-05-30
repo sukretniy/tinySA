@@ -5210,7 +5210,7 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_BAND_CENTER:
-    uistat.freq_value = (setting.bands[active_band].start + setting.bands[active_band].start)/2 + (setting.frequency_offset - FREQUENCY_SHIFT);
+    uistat.freq_value = (setting.bands[active_band].end + setting.bands[active_band].start)/2 + (setting.frequency_offset - FREQUENCY_SHIFT);
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_BAND_SPAN:
@@ -5469,7 +5469,7 @@ set_numeric_value(void)
   case KM_BAND_CENTER:
   {
     freq_t span = (setting.bands[active_band].end - setting.bands[active_band].start);
-    freq_t center =  (setting.bands[active_band].end - setting.bands[active_band].start) + uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    freq_t center = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     setting.bands[active_band].start = center - span/2;
     setting.bands[active_band].end = center + span/2;
     update_frequencies();

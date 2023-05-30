@@ -1906,7 +1906,7 @@ draw_frequencies(void)
       int b = getBand(idx);
       while (b == getBand(++next_idx));
 //      plot_printf(buf1, sizeof(buf1), "%.3QHz-%.3QHz %5.1QHz/", setting.bands[b].start + (setting.frequency_offset - FREQUENCY_SHIFT),  setting.bands[b].end + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
-      if (next_idx - idx < sweep_points/4)
+      if (next_idx - idx < sweep_points/4-20)
         plot_printf(buf1, sizeof(buf1), "%.3QHz", (setting.bands[b].start+setting.bands[b].end)/2 + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
       else
         plot_printf(buf1, sizeof(buf1), "%.3QHz %5.1QHz/", setting.bands[b].start + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);

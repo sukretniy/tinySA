@@ -145,6 +145,11 @@ finish2:
       setting.limits[current_trace][count].enabled = false;
       count++;
     }
+    setting.stored[current_trace] = true;
+    TRACE_ENABLE(1<<current_trace);
+    set_average(current_trace,AV_TABLE);
+    dirty = true;
+    limits_update();
     break;
   }
 #ifdef __BANDS__
