@@ -1152,6 +1152,31 @@ typedef struct {
 
 static const keypads_t *keypads;
 
+// 7 8 9 M
+// 4 5 6 k
+// 1 2 3 -
+// 0 . < x
+
+static const keypads_t keypads_plusmin_freq[] = {
+  { 16 ,  NUM_KEYBOARD },   // size and position
+  { 0x13, KP_PERIOD },
+  { 0x03, 0 },
+  { 0x02, 1 },
+  { 0x12, 2 },
+  { 0x22, 3 },
+  { 0x01, 4 },
+  { 0x11, 5 },
+  { 0x21, 6 },
+  { 0x00, 7 },
+  { 0x10, 8 },
+  { 0x20, 9 },
+  { 0x30, KP_M },
+  { 0x31, KP_K },
+  { 0x32, KP_MINUS },
+  { 0x33, KP_X1 },
+  { 0x23, KP_BS }
+};
+
 // 7 8 9 G
 // 4 5 6 M
 // 1 2 3 k
@@ -1391,7 +1416,7 @@ static const struct {
 [KM_DECAY]        = {keypads_positive    , "DECAY"},    // KM_DECAY
 [KM_NOISE]        = {keypads_positive    , "NOISE\nLEVEL"},    // KM_NOISE
 #ifdef TINYSA4
-[KM_FREQ_CORR]    = {keypads_plusmin     , "PPB"},    // KM_FREQ_CORR
+[KM_FREQ_CORR]    = {keypads_plusmin_freq, "PPB"},    // KM_FREQ_CORR
 #else
 [KM_10MHZ]        = {keypads_freq        , "FREQ"},    // KM_10MHz
 #endif

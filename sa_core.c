@@ -1409,6 +1409,7 @@ void set_attenuation(float a)       // Is used both only in  high/low input mode
 #ifdef __LIMITS__
 void limits_update(void)
 {
+  bool redraw = false;
   for (int t=0;t<TRACES_MAX;t++) {
     int j =0;
     int prev = -1;
@@ -1442,6 +1443,11 @@ void limits_update(void)
       TRACE_DISABLE(1<<t);
     }
     redraw_request|= REDRAW_AREA;
+    redraw = true;
+  }
+  if (redraw) {
+    plot_into_index(measured);
+    draw_all(true);
   }
 }
 #endif
