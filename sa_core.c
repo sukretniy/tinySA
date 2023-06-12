@@ -360,10 +360,7 @@ void set_output_path(freq_t f, float level)
     goto common;
 
   case PATH_DIRECT:
-    if (max2871)
-      enable_ultra(false);
-    else
-      enable_ultra(true);
+    enable_ultra(true);
     enable_direct(true);
     enable_high(true);
     enable_ADF_output(false, false);
@@ -417,13 +414,8 @@ void set_input_path(freq_t f)
     goto common;
 
   case PATH_DIRECT:
-    if (max2871) {
-      enable_ultra(false);
-      enable_direct(true);
-    } else {
-      enable_ultra(true);
-      enable_direct(true);
-    }
+    enable_ultra(true);
+    enable_direct(true);
     enable_high(true);
     enable_extra_lna(setting.extra_lna);
     if (setting.tracking_output)
@@ -436,13 +428,8 @@ void set_input_path(freq_t f)
   case PATH_ULTRA:
     enable_ultra(true);
     enable_high(false);
-    if (max2871) {
-      enable_direct(setting.extra_lna);     // Acts as LNA switch in Ultra mode.
-      enable_extra_lna(false);
-    } else {
-      enable_direct(false);
-      enable_extra_lna(setting.extra_lna);
-    }
+    enable_direct(false);
+    enable_extra_lna(setting.extra_lna);
     common:
     enable_ADF_output(true, setting.tracking_output);
     common2:

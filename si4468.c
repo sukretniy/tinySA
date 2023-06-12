@@ -2659,8 +2659,6 @@ static int old_ultra = 2;
   if (s != old_ultra) {
     old_ultra = s;
 #ifdef TINYSA4
-    if (max2871)
-      s = !s;
     if (s)
       palClearLine(LINE_ULTRA);
     else
@@ -2716,8 +2714,6 @@ void enable_direct(int s)
   if (s == old_direct)
     return;
   old_direct = s;
-  if (max2871)
-    s = !s;
   if (s)
     SI4463_set_gpio(4,SI446X_GPIO_MODE_DRIVE0);
   else
