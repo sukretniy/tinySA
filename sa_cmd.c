@@ -1226,8 +1226,9 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
 {
   freq_t start, stop;
   uint32_t points = sweep_points;
-  if (argc < 2 || argc > 3) {
-    usage_printf("scanraw {start(Hz)} {stop(Hz)} [points]\r\n");
+  uint8_t unbuffered = 0;
+  if (argc < 2 || argc > 4) {
+    usage_printf("scanraw {start(Hz)} {stop(Hz)} [points] [unbuffered]\r\n");
     return;
   }
 
@@ -1237,8 +1238,12 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
       shell_printf("frequency range is invalid\r\n");
       return;
   }
-  if (argc == 3) {
+  if (argc > 2) {
     points = my_atoi(argv[2]);
+  }
+
+  if (argc > 3) {
+    unbuffered = my_atoi(argv[3]); // arg != 0 -> ubuffered
   }
 
   if (setting.waterfall)
@@ -1266,7 +1271,7 @@ VNA_SHELL_FUNCTION(cmd_scanraw)
     buf[idx++] = 'x';
     buf[idx++] = (uint8_t)(val & 0xFF);
     buf[idx++] = (uint8_t)((val>>8) & 0xFF);
-    if (idx >= BUFFER_SIZE - 4) {
+    if (unbuffered || idx >= BUFFER_SIZE - 4) {
       streamWrite(shell_stream, buf, idx);
       idx = 0;
     }
