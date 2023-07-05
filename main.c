@@ -1980,21 +1980,28 @@ typedef struct version_t {
   const uint16_t min_adc;
   const uint16_t max_adc;
   const char *text;
+  const uint16_t hwid;
 } version_t;
 
-#define MAX_VERSION_TEXT    1
+#define MAX_VERSION_TEXT    2
 const version_t hw_version_text[MAX_VERSION_TEXT] =
 {
- { 165, 170,    "V0.4.5.1"}
+ { 165, 175,    "V0.4.5.1",     1},
+ { 180, 190,    "V0.4.5.1.1",   2}
 };
+
+uint16_t hwid = 0;
 
 const char *get_hw_version_text(void)
 {
   int v = adc1_single_read(0);
   for (int i=0; i<MAX_VERSION_TEXT;i++) {
-    if (hw_version_text[i].min_adc <= v && v <= hw_version_text[i].max_adc)
+    if (hw_version_text[i].min_adc <= v && v <= hw_version_text[i].max_adc) {
+      hwid = hw_version_text[i].hwid;
       return hw_version_text[i].text;
+    }
   }
+  hwid = 0;
   return "Unknown";
 }
 #endif
@@ -2830,6 +2837,9 @@ int main(void)
   /*
  * SPI LCD Initialize
  */
+#ifdef TINYSA4
+  (void) get_hw_version_text();     // This sets the hwid, must be before ili9341_init;
+#endif
   ili9341_init();
   PULSE
 

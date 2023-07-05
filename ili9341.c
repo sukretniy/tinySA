@@ -516,6 +516,12 @@ void ili9341_init(void)
     p += 2 + p[1];
     chThdSleepMilliseconds(2);
   }
+#ifdef TINYSA4
+  if (hwid >= 2) {
+    uint8_t data[] = {0};
+    send_command(0x21, 1, data);
+  }
+#endif
   ili9341_clear_screen();
   LCD_CS_HIGH;
 }

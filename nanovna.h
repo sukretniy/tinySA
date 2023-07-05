@@ -253,7 +253,9 @@ extern freq_t maxFreq;
 #define STOP_MAX maxFreq
 
 extern const char TINYSA_VERSION[];
-
+#ifdef TINYSA4
+extern uint16_t hwid;
+#endif
 #define MAX_FREQ_TYPE 5
 enum stimulus_type {
   ST_START=0, ST_STOP, ST_CENTER, ST_SPAN, ST_CW, ST_DUMMY      // Last is used in marker ops
