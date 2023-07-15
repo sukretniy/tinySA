@@ -1986,8 +1986,8 @@ typedef struct version_t {
 #define MAX_VERSION_TEXT    2
 const version_t hw_version_text[MAX_VERSION_TEXT] =
 {
- { 165, 175,    "V0.4.5.1",     1},
- { 180, 190,    "V0.4.5.1.1",   2}
+ { 165, 179,    "V0.4.5.1",     1},
+ { 180, 195,    "V0.4.5.1.1",   2}
 };
 
 uint16_t hwid = 0;
