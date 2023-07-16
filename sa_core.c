@@ -3602,11 +3602,11 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         config.cor_am = INITIAL_MODULATION_CORRECTION;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
         //modulation_steps = 8;  // <-----------------TEMP!!!!!
-        while ( ((modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am)) < 120 && modulation_steps > 4) {
+        while ( ((modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am)) < 900 && modulation_steps >= 4) {
           sine_wave_index <<= 1;
           modulation_steps >>= 1;
         }
-        if (modulation_steps >= 16) {
+        if (modulation_steps >= 4) {
           for (int i = 0; i < modulation_steps/4+1; i++) {
             fm_modulation[i] = setting.modulation_deviation_div100 * sine_wave[i*sine_wave_index]/100;
             fm_modulation[modulation_steps/2 - i] = fm_modulation[i];
