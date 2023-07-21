@@ -1531,6 +1531,10 @@ extern void ui_process(void);
 int current_menu_is_form(void);
 extern float nf_gain;
 extern const char * const averageText[];
+extern uint8_t menu_current_level;
+void menu_invoke(int item);
+extern char    kp_buf[];
+void set_numeric_value(void);
 
 void ui_mode_normal(void);
 void ui_mode_menu(void);

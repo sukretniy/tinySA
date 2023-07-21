@@ -800,6 +800,48 @@ VNA_SHELL_FUNCTION(cmd_dump)
 }
 #endif
 
+uint8_t in_menu_command;
+
+VNA_SHELL_FUNCTION(cmd_menu)
+{
+  menu_current_level = 0;
+  if (argc == 0) {
+    return;
+  }
+  in_menu_command = true;
+  if (argc >= 1)
+    menu_invoke(my_atoi(argv[0]));
+  if (argc >= 2)
+    menu_invoke(my_atoi(argv[1]));
+  if (argc >= 3)
+    menu_invoke(my_atoi(argv[2]));
+  if (argc >= 4)
+    menu_invoke(my_atoi(argv[3]));
+  in_menu_command = false;
+}
+
+VNA_SHELL_FUNCTION(cmd_text)
+{
+  if (argc!= 1)
+    return;
+  char *p = argv[0];
+  char *t = kp_buf;
+  while (*p) {
+    *t++ = *p++;
+  }
+  *t = 0;
+  uistat.value = my_atof(kp_buf);
+  uistat.freq_value = my_atoui(kp_buf);
+  set_numeric_value();
+  ui_mode_normal();
+}
+
+VNA_SHELL_FUNCTION(cmd_remark)
+{
+  (void) argc;
+  (void) argv;
+}
+
 #ifdef __REMOTE_DESKTOP__
 uint8_t remote_mouse_down = false;
 uint8_t auto_capture = false;
@@ -2251,6 +2293,9 @@ static const VNAShellCommand commands[] =
     { "selftest", cmd_selftest,    0 },
     { "correction", cmd_correction,   CMD_RUN_IN_LOAD },
     { "calc", cmd_calc, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    { "menu", cmd_menu, CMD_WAIT_MUTEX },
+    { "text", cmd_text, CMD_WAIT_MUTEX },
+    { "remark", cmd_remark, CMD_WAIT_MUTEX },
 #ifdef ENABLE_SD_CARD_CMD
     { "sd_list",   cmd_sd_list,   CMD_WAIT_MUTEX },
     { "sd_read",   cmd_sd_read,   CMD_WAIT_MUTEX },

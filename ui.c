@@ -89,14 +89,14 @@ enum {
 #endif
 
 #if NUMINPUT_LEN + 2 > TXTINPUT_LEN + 1
-static char    kp_buf[NUMINPUT_LEN+2];  // !!!!!! WARNING size must be + 2 from NUMINPUT_LEN or TXTINPUT_LEN + 1
+char    kp_buf[NUMINPUT_LEN+2];  // !!!!!! WARNING size must be + 2 from NUMINPUT_LEN or TXTINPUT_LEN + 1
 #else
-static char    kp_buf[TXTINPUT_LEN+1];  // !!!!!! WARNING size must be + 2 from NUMINPUT_LEN or TXTINPUT_LEN + 1
+char    kp_buf[TXTINPUT_LEN+1];  // !!!!!! WARNING size must be + 2 from NUMINPUT_LEN or TXTINPUT_LEN + 1
 #endif
 static uint8_t ui_mode = UI_NORMAL;
 static uint8_t keypad_mode;
 static char   *kp_help_text = NULL;
-static uint8_t menu_current_level = 0;
+uint8_t menu_current_level = 0;
 static int  selection = 0;
 static const uint8_t slider_bitmap[]=
 {
@@ -5355,7 +5355,7 @@ static void fetch_numeric_target(uint8_t mode)
   }
 }
 
-static void
+void
 set_numeric_value(void)
 {
   switch (keypad_mode) {
@@ -6204,7 +6204,7 @@ menu_move_top(void)
 }
 */
 
-static void
+void
 menu_invoke(int item)
 {
   int sub_item;
@@ -7278,12 +7278,14 @@ keypad_apply_touch(void)
   return -1;
 }
 
+extern uint8_t in_menu_command;
 static void
 ui_process_keypad(void)
 {
   int status;
   int keypads_last_index = keypads[0].pos - 1;
   kp_buf[0] = 0;
+  if (in_menu_command) return;
   while (TRUE) {
     status = btn_check();
     if (status & (EVT_UP|EVT_DOWN)) {
@@ -7842,7 +7844,5 @@ int check_touched(void)
     touched = true;
   return touched;
 }
-
-
 
 #pragma GCC pop_options
