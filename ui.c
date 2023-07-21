@@ -1152,6 +1152,7 @@ typedef struct {
 
 static const keypads_t *keypads;
 
+#ifdef TINYSA4
 // 7 8 9 M
 // 4 5 6 k
 // 1 2 3 -
@@ -1176,6 +1177,7 @@ static const keypads_t keypads_plusmin_freq[] = {
   { 0x33, KP_X1 },
   { 0x23, KP_BS }
 };
+#endif
 
 // 7 8 9 G
 // 4 5 6 M
