@@ -83,6 +83,7 @@ freq_t ultra_start;
 static int LO_harmonic;
 #endif
 #ifdef TINYSA4
+bool direct_test;
 int noise_level;
 float log_averaging_correction;
 //uint32_t old_CFGR; // Not used??
@@ -393,6 +394,8 @@ void set_input_path(freq_t f)
   }
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
+  else if (direct_test && f >= 900000000 && f < 1100000000)
+    signal_path = PATH_DIRECT;
   else if (config.direct && f >= config.direct_start && f < config.direct_stop)
     signal_path = PATH_DIRECT;
   else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
@@ -6524,11 +6527,7 @@ int test_validate(int i)
 {
 //  draw_all(TRUE);
 #ifdef TINYSA4
-  if (saved_direct_start && test_case[i].setup ==TP_30MHZ_ULTRA) {
-    config.direct = saved_direct;
-    config.direct_start = saved_direct_start;
-    config.direct_stop = saved_direct_stop;
-  }
+  direct_test = false;
 #endif
   int current_test_status = TS_PASS;
   switch (test_case[i].kind) {
@@ -6708,12 +6707,7 @@ common_silent:
     break;
   case TP_30MHZ_DIRECT:
     ultra_start = 800000000;
-    saved_direct = config.direct;
-    config.direct = true;
-    saved_direct_start = config.direct_start;
-    config.direct_start = 900000000;
-    saved_direct_stop = config.direct_stop;
-    config.direct_stop = 1100000000;
+    direct_test = true;
     determine_direct_test_freq();
     break;
   case TP_SILENT_LNA:

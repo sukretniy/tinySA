@@ -810,13 +810,13 @@ VNA_SHELL_FUNCTION(cmd_menu)
   }
   in_menu_command = true;
   if (argc >= 1)
-    menu_invoke(my_atoi(argv[0]));
+    menu_invoke(my_atoi(argv[0])-1);
   if (argc >= 2)
-    menu_invoke(my_atoi(argv[1]));
+    menu_invoke(my_atoi(argv[1])-1);
   if (argc >= 3)
-    menu_invoke(my_atoi(argv[2]));
+    menu_invoke(my_atoi(argv[2])-1);
   if (argc >= 4)
-    menu_invoke(my_atoi(argv[3]));
+    menu_invoke(my_atoi(argv[3])-1);
   in_menu_command = false;
 }
 
