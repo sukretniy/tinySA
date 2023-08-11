@@ -2221,7 +2221,7 @@ static const VNAShellCommand commands[] =
 #endif
     {"scanraw"     , cmd_scanraw     , CMD_WAIT_MUTEX},
     {"zero"        , cmd_zero        , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},   // Will set the scanraw measured value offset (128 or 174)
-    {"sweep"       , cmd_sweep       , 0},
+    {"sweep"       , cmd_sweep       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"test"        , cmd_test        , 0},
     {"touchcal"    , cmd_touchcal    , CMD_WAIT_MUTEX},
     {"touchtest"   , cmd_touchtest   , CMD_WAIT_MUTEX},
