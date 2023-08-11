@@ -7279,6 +7279,8 @@ keypad_apply_touch(void)
 }
 
 extern uint8_t in_menu_command;
+extern uint8_t remote_text;
+
 static void
 ui_process_keypad(void)
 {
@@ -7312,6 +7314,10 @@ ui_process_keypad(void)
       if (key >= 0 && keypad_click(key))
         /* exit loop on done or cancel */
         break;
+    }
+    if (remote_text) {
+      remote_text = false;
+      break;
     }
   }
   kp_help_text = NULL;

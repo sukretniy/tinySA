@@ -820,6 +820,7 @@ VNA_SHELL_FUNCTION(cmd_menu)
   in_menu_command = false;
 }
 
+uint8_t remote_text = false;
 VNA_SHELL_FUNCTION(cmd_text)
 {
   if (argc!= 1)
@@ -833,6 +834,7 @@ VNA_SHELL_FUNCTION(cmd_text)
   uistat.value = my_atof(kp_buf);
   uistat.freq_value = my_atoui(kp_buf);
   set_numeric_value();
+  remote_text = true;
   ui_mode_normal();
 }
 
@@ -2294,7 +2296,7 @@ static const VNAShellCommand commands[] =
     { "correction", cmd_correction,   CMD_RUN_IN_LOAD },
     { "calc", cmd_calc, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     { "menu", cmd_menu, CMD_WAIT_MUTEX },
-    { "text", cmd_text, CMD_WAIT_MUTEX },
+    { "text", cmd_text, 0},
     { "remark", cmd_remark, CMD_WAIT_MUTEX },
 #ifdef ENABLE_SD_CARD_CMD
     { "sd_list",   cmd_sd_list,   CMD_WAIT_MUTEX },

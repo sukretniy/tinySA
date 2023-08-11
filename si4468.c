@@ -260,7 +260,7 @@ bool PE4302_Write_Byte(unsigned char DATA )
 #ifdef __SI5351__
 #include "si5351.h"
 static int shifted = 0;
-static int old_shifted = -1;
+//static int old_shifted = -1;
 #define SHIFT_MUL   31
 #define SHIFT_DIV   29
 
