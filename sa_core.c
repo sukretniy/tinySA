@@ -2855,7 +2855,7 @@ void interpolate_maximum(int m)
     const INTER_TYPE y1         = ref_marker_levels[idx - 1];
     const INTER_TYPE y2         = ref_marker_levels[idx + 0];
     const INTER_TYPE y3         = ref_marker_levels[idx + 1];
-    const INTER_TYPE d          = fabs(delta_Hz) * 0.5 * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12);
+    const INTER_TYPE d          = (INTER_TYPE)abs(delta_Hz) * 0.5 * (y1 - y3) / ((y1 - (2 * y2) + y3) + 1e-12);
     //const float bin      = (float)idx + d;
     markers[m].frequency   += d;
   }
