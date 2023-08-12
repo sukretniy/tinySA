@@ -236,9 +236,10 @@ finish:
 
   case FMT_CMD_FILE:
   {
+    static char cmd_buffer[256+128];
     const int buffer_size = 256;
     const int line_size = 128;
-    char *buf_8 = (char *)spi_buffer; // must be greater then buffer_size + line_size
+    char *buf_8 = cmd_buffer; // (char *)spi_buffer; // must be greater then buffer_size + line_size
     char *line  = buf_8 + buffer_size;
     uint16_t j = 0, i;
     while (f_read(fs_file, buf_8, buffer_size, &size) == FR_OK && size > 0) {

@@ -804,6 +804,7 @@ uint8_t in_menu_command;
 
 VNA_SHELL_FUNCTION(cmd_menu)
 {
+  ui_mode_normal();
   menu_current_level = 0;
   if (argc == 0) {
     return;
@@ -2295,9 +2296,9 @@ static const VNAShellCommand commands[] =
     { "selftest", cmd_selftest,    0 },
     { "correction", cmd_correction,   CMD_RUN_IN_LOAD },
     { "calc", cmd_calc, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
-    { "menu", cmd_menu, CMD_WAIT_MUTEX },
-    { "text", cmd_text, 0},
-    { "remark", cmd_remark, CMD_WAIT_MUTEX },
+    { "menu", cmd_menu, CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD },
+    { "text", cmd_text, CMD_RUN_IN_LOAD},
+    { "remark", cmd_remark, CMD_RUN_IN_LOAD },
 #ifdef ENABLE_SD_CARD_CMD
     { "sd_list",   cmd_sd_list,   CMD_WAIT_MUTEX },
     { "sd_read",   cmd_sd_read,   CMD_WAIT_MUTEX },
