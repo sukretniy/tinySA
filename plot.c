@@ -991,17 +991,26 @@ static const uint8_t marker_bitmap[]={
 static void
 markmap_marker(int marker)
 {
+  static index_x_t prev_index_x[MARKERS_MAX];
+  static index_y_t prev_index_y[MARKERS_MAX];
+
   if (!markers[marker].enabled)
     return;
-  if (IS_TRACE_DISABLE(TRACE_ACTUAL))
+  if (IS_TRACE_DISABLE(markers[marker].trace))
     return;
 #ifdef __MARKER_CACHE__
-  marker_cache_valid[marker] = false;   // force recalculation
+  marker_cache_valid[marker] = false;  // force recalculation
 #endif
   int idx = markers[marker].index;
   int x = trace_index_x[idx] - X_MARKER_OFFSET;
-  int y = trace_index_y[TRACE_ACTUAL][idx] - Y_MARKER_OFFSET;
+  int y = trace_index_y[markers[marker].trace][idx] - Y_MARKER_OFFSET;
   invalidate_rect(x, y, x+MARKER_WIDTH-1, y+MARKER_HEIGHT-1);
+  invalidate_rect(prev_index_x[marker],
+                  prev_index_y[marker],
+                  prev_index_x[marker]+MARKER_WIDTH-1,
+                  prev_index_y[marker]+MARKER_HEIGHT-1);
+  prev_index_x[marker] = x;
+  prev_index_y[marker] = y;
 }
 
 void
