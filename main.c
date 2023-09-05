@@ -1079,7 +1079,7 @@ config_t config = {
   .drive3_level_offset = -0.5,
   .direct_level_offset =       30.0,    // Uncalibrated
   .ultra_level_offset =        0.0,    // Uncalibrated
-  .direct_lna_level_offset = 0,
+  .direct_lna_level_offset = 30,
   .ultra_lna_level_offset = 0,
   .adf_level_offset = 0,
   .correction_frequency =
@@ -1140,6 +1140,37 @@ config_t config = {
 
 //properties_t current_props;
 //properties_t *active_props = &current_props;
+
+const freq_t v5_2_correction_frequency[CORRECTION_SIZE][CORRECTION_POINTS]=
+{
+ /* low */   {   10000,  50000,  200000,     400000,     900000,     20000000,   30000000,   100000000,  160000000,  230000000,  290000000,  400000000,  520000000,  600000000,  660000000,  740000000,  790000000,  810000000,  820000000,  830000000},
+ /* low lna */   {   10000,  30000,  80000,  300000,     400000,     800000,     1000000,    10000000,   60000000,   120000000,  270000000,  420000000,  550000000,  600000000,  680000000,  750000000,  770000000,  800000000,  820000000,  830000000},
+ /* ultra */ {   30000000,   700000000,  980000000,  1440000000,     1590000000,     1900000000,     2810000000,     3340000000,     3390000000,     3930000000,     4230000000,     4300000000,     4340000000,     4810000000,     5070000000,     5110000000,     5300000000,     5510000000,     5850000000,     6000000000},
+ /* ultra lna */ {   30000000,   700000000,  770000000,  990000000,  1230000000,     2390000000,     2800000000,     2810000000,     3150000000,     3210000000,     3810000000,     4060000000,     4180000000,     4230000000,     4300000000,     4400000000,     4490000000,     4960000000,     5070000000,     6000000000},
+ /* direct */    {   140000000,  150000000,  160000000,  180000000,  280000000,  300000000,  380000000,  390000000,  410000000,  430000000,  490000000,  520000000,  560000000,  830000000,  840000000,  860000000,  870000000,  960000000,  1040000000,     1130000000},
+ /* direct lna */    {   140000000,  150000000,  170000000,  180000000,  280000000,  300000000,  340000000,  360000000,  500000000,  560000000,  830000000,  840000000,  860000000,  870000000,  950000000,  1010000000,     1030000000,     1040000000,     1050000000,     1130000000,     },
+ /* out */   {   30000,  100000,     200000,     600000,     5000000,    10000000,   110000000,  120000000,  240000000,  300000000,  400000000,  490000000,  650000000,  690000000,  750000000,  780000000,  800000000,  810000000,  823000000,  830000000,  },
+ /* direct */    {   500000000,  823000000,  830000000,  850000000,  860000000,  870000000,  880000000,  890000000,  900000000,  910000000,  920000000,  930000000,  1030000000,     1040000000,     1050000000,     1060000000,     1080000000,     1100000000,     1120000000,     1130000000,     },
+ /* adf */   {   500000000,  1130000000,     1240000000,     1400000000,     1500000000,     1560000000,     1610000000,     1850000000,     1970000000,     2210000000,     2350000000,     2600000000,     2800000000,     2810000000,     2940000000,     3000000000,     3250000000,     3480000000,     3830000000,     4400000000,     },
+ /* ultra */ {   823000000,  1130000000,     1390000000,     1580000000,     1950000000,     2210000000,     2800000000,     2810000000,     2980000000,     3100000000,     3200000000,     3360000000,     3380000000,     3600000000,     3720000000,     3820000000,     3990000000,     4220000000,     5010000000,     5400000000,     },
+};
+
+const float  v5_2_correction_value[CORRECTION_SIZE][CORRECTION_POINTS]=
+{
+ /* low */   {   12.2,   7.57,   4.46,   2.17,   0.36,   -0.36,  0,  -0.84,  -0.39,  0.5,    0.25,   1,  0.08,   0.48,   0.37,   1.53,   2.98,   4.74,   6.25,   8.73,   },
+ /* low lna */   {   11,     8.54,   6.32,   4.46,   3.18,   1.02,   0.69,   0.2,    -0.43,  -0.41,  0.58,   0.66,   -0.08,  0.58,   0.77,   1.7,    1.77,   3.55,   5.51,   7.99,   },
+ /* ultra */ {   0,  0.58,   1.7,    4.53,   4.46,   3.23,   4.64,   6.29,   5.67,   7.03,   8.78,   7.04,   8.25,   11.42,  11.63,  13.29,  12.38,  12.58,  15.75,  15.9,  },
+ /* ultra lna */ {   0,  0.49,   0.52,   1.26,   3.13,   2.68,   2.68,   3.45,   4.7,    6.2,    8.49,   11.54,  13.51,  15.82,  15.82,  18.66,  19.41,  22.6,   22.8,   28.1,   },
+ /* direct */    {   5.12,   4.22,   2.41,   0,  -8.3,   -9.59,  -13.55,     -14.09,     -15.14,     -15.66,     -18.37,     -19.29,     -21.12,     -28.75,     -29.37,     -28.55,     -29.41,     -27.8,  -26.21,     -23.72,     },
+ /* direct lna */    {   4.3,    3.31,   1.69,   0,  -10.15,     -11.7,  -13.87,     -14.84,     -20.95,     -23.28,     -30.7,  -30.97,     -30.8,  -31.32,     -30.35,     -29.25,     -28.19,     -28.39,     -28.02,     -25.85,     },
+ /* out */   {   4.67,   1.06,   -0.8,   -2.53,  -4.01,  -4.16,  -4.57,  -4.67,  -3.57,  -3.42,  -2.95,  -3.52,  -3.4,   -2.96,  -2.11,  -1.1,   0.02,   0.96,   2.86,   4.87,   },
+ /* direct */    {   -7.4,   -3.63,  -3.52,  -3.35,  -3.22,  -3.1,   -2.99,  -2.9,   -2.79,  -2.62,  -2.51,  -2.47,  -1.14,  -1.02,  -0.87,  -0.77,  -0.38,  -0.22,  0.04,   0.22,   },
+ /* adf */   {   -1.05,  -0.3,   2.28,   6.72,   8.44,   8.97,   8.96,   8.5,    8.02,   7.74,   8.48,   7.73,   6.22,   5.33,   3.38,   3.11,   3.12,   5.15,   9.5,    11.12,  },
+ /* ultra */ {   -3.49,  -1.82,  0.74,   0.69,   -2.16,  -2.23,  0.81,   0.06,   -0.1,   0.82,   0.65,   1.89,   1.64,   2.24,   1.32,   1.62,   0.76,   1.77,   7.57,   7.35,   },
+};
+
+const float v5_2_harmonic_level_offset = 10;
+const float v5_2_lna_level_offset = 7;
 
 
 
@@ -2028,11 +2059,12 @@ typedef struct version_t {
   const uint16_t hwid;
 } version_t;
 
-#define MAX_VERSION_TEXT    2
+#define MAX_VERSION_TEXT    3
 const version_t hw_version_text[MAX_VERSION_TEXT] =
 {
  { 165, 179,    "V0.4.5.1",     1},
- { 180, 195,    "V0.4.5.1.1",   2}
+ { 180, 195,    "V0.4.5.1.1",   2},
+ { 2030, 2050,  "V0.5.2",       102},
 };
 
 uint16_t hwid = 0;
@@ -2922,11 +2954,13 @@ int main(void)
   if (adc1_single_read(0)> 1000)
     max2871 = true;
   if (max2871) {
-    ULTRA_MAX_FREQ      = 6950000000ULL + config.overclock;        // Start of harmonic mode
-    MAX_LO_FREQ         = 6000000000ULL + config.overclock;
-    MAX_ABOVE_IF_FREQ   = 5050000000ULL + config.overclock;         // Range to use for below IF
+    ULTRA_MAX_FREQ      = 7250000000ULL + config.overclock;        // Start of harmonic mode
+    MAX_LO_FREQ         = 6300000000ULL + config.overclock;
+    MAX_ABOVE_IF_FREQ   = 4500000000ULL + config.overclock;         // Range to use for below IF
     MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;         // Range to use for below IF
-
+    memcpy(config.correction_frequency, v5_2_correction_frequency, sizeof(config.correction_frequency));
+    memcpy(config.correction_value, v5_2_correction_value, sizeof(config.correction_value));
+    config.harmonic_level_offset = v5_2_harmonic_level_offset;
   } else {
     ULTRA_MAX_FREQ      = 5340000000ULL + config.overclock;           // Start of harmonic mode
     MAX_LO_FREQ         = 4350000000ULL + config.overclock;
@@ -2940,6 +2974,18 @@ int main(void)
       clear_backup();
     }
   }
+  if (max2871) {
+    ULTRA_MAX_FREQ      = 7250000000ULL + config.overclock;        // Start of harmonic mode
+    MAX_LO_FREQ         = 6300000000ULL + config.overclock;
+    MAX_ABOVE_IF_FREQ   = 4500000000ULL + config.overclock;         // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;         // Range to use for below IF
+  } else {
+    ULTRA_MAX_FREQ      = 5340000000ULL + config.overclock;           // Start of harmonic mode
+    MAX_LO_FREQ         = 4350000000ULL + config.overclock;
+    MAX_ABOVE_IF_FREQ   = 3360000000ULL + config.overclock;           // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;           // Range to use for below IF
+  }
+  set_jump_freq( MAX_ABOVE_IF_FREQ, ULTRA_MAX_FREQ);
   config.cor_am = 0;        // Should be removed from config
   config.cor_nfm = 0;
   config.cor_wfm = 0;

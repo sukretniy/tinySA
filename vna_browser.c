@@ -236,7 +236,7 @@ finish:
 
   case FMT_CMD_FILE:
   {
-    static char cmd_buffer[256+128];
+static char cmd_buffer[256+128];
     const int buffer_size = 256;
     const int line_size = 128;
     char *buf_8 = cmd_buffer; // (char *)spi_buffer; // must be greater then buffer_size + line_size

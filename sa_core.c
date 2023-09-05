@@ -342,7 +342,7 @@ void set_output_path(freq_t f, float level)
     if (SI4463_is_in_tx_mode())
       SI4463_init_rx();
 
-    enable_ADF_output(true, false);
+    enable_ADF_output(true, setting.tracking_output);
 
 #if 0
     enable_direct(false);
@@ -371,7 +371,7 @@ void set_output_path(freq_t f, float level)
     enable_direct(false);
     enable_high(false);
   common:
-    enable_ADF_output(true, false);
+    enable_ADF_output(true, setting.tracking_output);
   common2:
     enable_rx_output(!setting.atten_step);
     if (!SI4463_is_in_tx_mode())
@@ -3440,7 +3440,7 @@ static void calculate_static_correction(void)                   // Calculate the
 #ifdef TINYSA4
           - (S_STATE(setting.agc)? 0 : 33)
           - (S_STATE(setting.lna)? 12 : 0)
-          + (setting.extra_lna ? -26.5 : 0)                // checked
+          + (setting.extra_lna ? (max2871?-18: -26.5) : 0)                // checked
           + (setting.mode == M_GENLOW ? (old_temp - 35.0) / 13.0 : (old_temp - 35.0) / 20.0)      // About 7.7dB per 10 degrees C in output mode, 1 dB per 20 degrees in input mode
 #endif		  
           - setting.external_gain);
@@ -4298,6 +4298,8 @@ again:                                                              // Spur redu
               if (local_modulo == 0) ADF4351_modulo(1000);
               ADF4351_R_counter(3);
             }
+          } else if (lf < 25000000 && max2871) {
+            ADF4351_R_counter(-1);
           } else if (lf > 8000000 && lf < 3000000000 && MODE_INPUT(setting.mode)) {
             if (max2871)
             if (local_modulo == 0) {
@@ -7611,7 +7613,7 @@ void calibrate_harmonic(void)
     set_reflevel(-20);
     setting.repeat = 10;
     test_acquire(TEST_JUMP_HARMONIC);                        // Acquire test
-    if (peakLevel < -50) {
+    if (peakLevel < -60) {
       ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
       ili9341_drawstring_7x13("Signal level too low or not on frequency", 30, 200);
       goto quit;

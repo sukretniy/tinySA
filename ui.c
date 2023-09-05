@@ -1536,11 +1536,14 @@ static const menuitem_t  menu_curve_confirm[];
 static const menuitem_t  menu_settings3[];
 static const menuitem_t  menu_measure_noise_figure[];
 static const menuitem_t  menu_calibrate_harmonic[];
+static const menuitem_t  menu_calibrate_max[];
+static const menuitem_t  menu_calibrate[];
 #endif
 static const menuitem_t  menu_sweep[];
 static const menuitem_t  menu_settings[];
 static const menuitem_t  menu_settings2[];
 static const menuitem_t  menu_lowoutput_settings[];
+static const menuitem_t  menu_lowoutput_settings_max[];
 extern bool dirty;
 char range_text[20];
 #ifdef TINYSA4
@@ -1552,7 +1555,7 @@ int input_is_calibrated(void)
 {
   if (config.input_is_calibrated)
     return true;
-  drawMessageBox("Error", "First calibrate 100kHz to 5.34GHz input", 2000);
+  drawMessageBox("Error", (max2871?"First calibrate 100kHz to 7.25GHz input":"First calibrate 100kHz to 5.34GHz input"), 2000);
   redraw_request|= REDRAW_AREA;
   return false;
 }
@@ -2183,6 +2186,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_scanning_speed_acb)
 #define CONFIG_MENUITEM_TOUCH_TEST  1
 #define CONFIG_MENUITEM_SELFTEST    2
 #define CONFIG_MENUITEM_VERSION     3
+#define CONFIG_MENUITEM_CALIBRATE   4
 static UI_FUNCTION_CALLBACK(menu_config_cb)
 {
   (void)item;
@@ -2203,6 +2207,9 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
   case CONFIG_MENUITEM_VERSION:
     show_version();
     break;
+  case CONFIG_MENUITEM_CALIBRATE:
+    menu_push_submenu(max2871?menu_calibrate_max:menu_calibrate);
+    return;
   }
   ui_mode_normal();
   redraw_frame();
@@ -2264,7 +2271,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
   }
   switch(data) {
   case 255:
-    menu_push_submenu(menu_lowoutput_settings);
+    menu_push_submenu(max2871?menu_lowoutput_settings_max:menu_lowoutput_settings);
     return;
   case 0:
     setting.mixer_output = false;
@@ -4191,6 +4198,13 @@ static const menuitem_t  menu_lowoutput_settings[] = {
   { MT_FORM | MT_SUBMENU,  255, S_RARROW"Config", menu_config},
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
+
+static const menuitem_t  menu_lowoutput_settings_max[] = {
+  { MT_FORM | MT_ADV_CALLBACK,  0,              "Cleanest signal, max 6.3GHz",       menu_lowoutput_settings_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  1,              "Highest accuracy, max 7.3GHz",    menu_lowoutput_settings_acb},
+  { MT_FORM | MT_SUBMENU,  255, S_RARROW"Config", menu_config},
+  { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
+};
 #endif
 
 char low_level_help_text[12] = "-76..-6";
@@ -4737,6 +4751,15 @@ static const menuitem_t menu_calibrate_harmonic[] =
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
+static const menuitem_t menu_calibrate_harmonic_max[] =
+{
+  { MT_FORM | MT_TITLE,      0, "Connect 7.25GHz at -50 to -10dBm",  NULL},
+#ifdef TINYSA4
+  { MT_FORM | MT_CALLBACK,   3, "CALIBRATE",        menu_calibrate_cb},
+#endif
+  { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+
 static const menuitem_t menu_calibrate_normal[] =
 {
   { MT_FORM | MT_TITLE,      0, "Connect CAL and RF",  NULL},
@@ -4750,6 +4773,14 @@ static const menuitem_t menu_calibrate[] =
 {
   { MT_FORM | MT_SUBMENU,   1, "CALIBRATE 100kHz to 5.34GHz",   menu_calibrate_normal},
   { MT_FORM | MT_SUBMENU,   1, "CALIBRATE above 5.34GHz",       menu_calibrate_harmonic},
+  { MT_FORM | MT_CALLBACK,   2, "RESET CALIBRATION",            menu_calibrate_cb},
+  { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+
+static const menuitem_t menu_calibrate_max[] =
+{
+  { MT_FORM | MT_SUBMENU,   1, "CALIBRATE 100kHz to 7.25GHz",   menu_calibrate_normal},
+  { MT_FORM | MT_SUBMENU,   1, "CALIBRATE above 7.25GHz",       menu_calibrate_harmonic_max},
   { MT_FORM | MT_CALLBACK,   2, "RESET CALIBRATION",            menu_calibrate_cb},
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
@@ -4831,7 +4862,11 @@ static const menuitem_t menu_config[] = {
   { MT_SUBMENU,  0,                        "TOUCH",     menu_touch},
   { MT_CALLBACK, CONFIG_MENUITEM_SELFTEST, "SELF TEST", menu_config_cb},
 #ifdef __CALIBRATE__
+#ifdef TINYSA4
+  { MT_CALLBACK, CONFIG_MENUITEM_CALIBRATE, "LEVEL CAL", menu_config_cb},
+#else
   { MT_SUBMENU,  0,                        "LEVEL CAL", menu_calibrate},
+#endif
 #endif
   { MT_CALLBACK, CONFIG_MENUITEM_VERSION,  "VERSION",   menu_config_cb},
 #ifdef __SPUR__
