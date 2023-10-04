@@ -1140,7 +1140,7 @@ config_t config = {
 
 //properties_t current_props;
 //properties_t *active_props = &current_props;
-
+#ifdef TINYSA4
 const freq_t v5_2_correction_frequency[CORRECTION_SIZE][CORRECTION_POINTS]=
 {
  /* low */   {   100000,     400000,     1000000,    80000000,   180000000,  260000000,  270000000,  300000000,  320000000,  390000000,  490000000,  660000000,  680000000,  690000000,  750000000,  790000000,  800000000,  810000000,  820000000,  830000000},
@@ -1172,7 +1172,7 @@ const float  v5_2_correction_value[CORRECTION_SIZE][CORRECTION_POINTS]=
 const float v5_2_harmonic_level_offset = 10;
 const float v5_2_lna_level_offset = 7;
 
-
+#endif
 
 static const marker_t def_markers[MARKERS_MAX] = {
     {M_TRACKING, M_ENABLED,               0, TRACE_ACTUAL, 30, 0 },
@@ -2974,6 +2974,7 @@ int main(void)
       clear_backup();
     }
   }
+#ifdef TINYSA4
   if (max2871) {
     ULTRA_MAX_FREQ      = 7250000000ULL + config.overclock;        // Start of harmonic mode
     MAX_LO_FREQ         = 6300000000ULL + config.overclock;
@@ -2986,6 +2987,7 @@ int main(void)
     MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;           // Range to use for below IF
   }
   set_jump_freq( MAX_ABOVE_IF_FREQ, ULTRA_MAX_FREQ);
+#endif
   config.cor_am = 0;        // Should be removed from config
   config.cor_nfm = 0;
   config.cor_wfm = 0;

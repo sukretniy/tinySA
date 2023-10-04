@@ -1428,8 +1428,8 @@ static const struct {
 [KM_LEVELSWEEP]   = {keypads_plusmin     , "LEVEL\nSWEEP"},    // KM_LEVELSWEEP
 [KM_SWEEP_TIME]   = {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
 [KM_OFFSET_DELAY] = {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY #20
-[KM_FAST_SPEEDUP] = {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
-[KM_FASTER_SPEEDUP] = {keypads_positive  , "FASTER\nSPEEDUP"}, // KM_FAST_SPEEDUP
+[KM_FAST_SPEEDUP] = {keypads_positive    , "NARROW\nSPEEDUP"}, // KM_FAST_SPEEDUP
+[KM_FASTER_SPEEDUP] = {keypads_positive  , "WIDE\nSPEEDUP"}, // KM_FAST_SPEEDUP
 [KM_GRIDLINES]    = {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
 [KM_MARKER]       = {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
 [KM_MODULATION]   = {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
@@ -1538,8 +1538,8 @@ static const menuitem_t  menu_settings3[];
 static const menuitem_t  menu_measure_noise_figure[];
 static const menuitem_t  menu_calibrate_harmonic[];
 static const menuitem_t  menu_calibrate_max[];
-static const menuitem_t  menu_calibrate[];
 #endif
+static const menuitem_t  menu_calibrate[];
 static const menuitem_t  menu_sweep[];
 static const menuitem_t  menu_settings[];
 static const menuitem_t  menu_settings2[];
@@ -2209,7 +2209,11 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
     show_version();
     break;
   case CONFIG_MENUITEM_CALIBRATE:
+#ifdef TINYSA4
     menu_push_submenu(max2871?menu_calibrate_max:menu_calibrate);
+#else
+    menu_push_submenu(menu_calibrate);
+#endif
     return;
   }
   ui_mode_normal();
@@ -4493,12 +4497,8 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_ADV_CALLBACK | MT_LOW,SD_FAST,   "FAST",            menu_scanning_speed_acb},
 #endif
  { MT_ADV_CALLBACK,     SD_NOISE_SOURCE,      "NOISE\nSOURCE",   menu_scanning_speed_acb},
-#ifdef TINYSA4
- { MT_KEYPAD,           KM_FAST_SPEEDUP,"SPEEDUP\n\b%s",  "2..20, 0=disable"},
- { MT_KEYPAD,           KM_FASTER_SPEEDUP,"FASTER\n\b%s",  "2..10, 0=disable"},
-#else
- { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"SPEEDUP\n\b%s",  "2..20, 0=disable"},
-#endif
+ { MT_KEYPAD,           KM_FAST_SPEEDUP,"NSPEEDUP\n\b%s",  "2..20, 0=disable"},
+ { MT_KEYPAD,           KM_FASTER_SPEEDUP,"WSPEEDUP\n\b%s",  "2..20, 0=disable"},
  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
