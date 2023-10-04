@@ -1351,7 +1351,7 @@ enum {
   // #15
   KM_REPEAT, KM_EXT_GAIN, KM_TRIGGER, KM_LEVELSWEEP, KM_SWEEP_TIME,
   // #20
-  KM_OFFSET_DELAY, KM_FAST_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
+  KM_OFFSET_DELAY, KM_FAST_SPEEDUP, KM_FASTER_SPEEDUP, KM_GRIDLINES, KM_MARKER, KM_MODULATION,
   // #25
   KM_HIGHOUTLEVEL,
 #ifdef TINYSA4
@@ -1429,6 +1429,7 @@ static const struct {
 [KM_SWEEP_TIME]   = {keypads_time        , "SWEEP\nSECONDS"},    // KM_SWEEP_TIME
 [KM_OFFSET_DELAY] = {keypads_positive    , "OFFSET\nDELAY"}, // KM_OFFSET_DELAY #20
 [KM_FAST_SPEEDUP] = {keypads_positive    , "FAST\nSPEEDUP"}, // KM_FAST_SPEEDUP
+[KM_FASTER_SPEEDUP] = {keypads_positive  , "FASTER\nSPEEDUP"}, // KM_FAST_SPEEDUP
 [KM_GRIDLINES]    = {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
 [KM_MARKER]       = {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
 [KM_MODULATION]   = {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
@@ -4494,6 +4495,7 @@ static const menuitem_t menu_sweep_speed[] =
  { MT_ADV_CALLBACK,     SD_NOISE_SOURCE,      "NOISE\nSOURCE",   menu_scanning_speed_acb},
 #ifdef TINYSA4
  { MT_KEYPAD,           KM_FAST_SPEEDUP,"SPEEDUP\n\b%s",  "2..20, 0=disable"},
+ { MT_KEYPAD,           KM_FASTER_SPEEDUP,"FASTER\n\b%s",  "2..10, 0=disable"},
 #else
  { MT_KEYPAD   | MT_LOW,KM_FAST_SPEEDUP,"SPEEDUP\n\b%s",  "2..20, 0=disable"},
 #endif
@@ -5194,6 +5196,10 @@ static void fetch_numeric_target(uint8_t mode)
     uistat.value = setting.fast_speedup;
     plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
     break;
+  case KM_FASTER_SPEEDUP:
+    uistat.value = setting.faster_speedup;
+    plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
+    break;
   case KM_REPEAT:
     uistat.value = setting.repeat;
     plot_printf(uistat.text, sizeof uistat.text, "%d", ((int32_t)uistat.value));
@@ -5456,6 +5462,9 @@ set_numeric_value(void)
     break;
   case KM_FAST_SPEEDUP:
     set_fast_speedup(uistat.value);
+    break;
+  case KM_FASTER_SPEEDUP:
+    set_faster_speedup(uistat.value);
     break;
   case KM_REPEAT:
     set_repeat(uistat.value);

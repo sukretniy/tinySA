@@ -1238,8 +1238,9 @@ typedef struct setting
   uint8_t test;                // current test number
   uint8_t harmonic;            // used harmonic number 1...5
   uint8_t fast_speedup;        // 0 - 20
+  uint8_t faster_speedup;      // 0 - 20
   uint8_t  _traces;            // enabled traces flags
-  uint8_t   draw_line;          // uses the trigger level setting
+  uint8_t   draw_line;         // uses the trigger level setting
 #ifdef TINYSA4
   uint8_t   lock_display;
 #endif
@@ -1456,7 +1457,7 @@ typedef struct properties {
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC 0x434f4e60 /* 'CONF' */
-#define SETTING_MAGIC 0x434f4e63
+#define SETTING_MAGIC 0x434f4e64
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
@@ -1783,6 +1784,7 @@ void set_trigger_level(float);
 void set_trigger(int);
 void update_rbw(void);
 void set_fast_speedup(int);
+void set_faster_speedup(int);
 //extern int setting_measurement;
 void self_test(int);
 //extern int setting_test;

@@ -682,6 +682,7 @@ void reset_settings(int m)
   setting.trigger_direction = T_UP;
   setting.trigger_mode = T_MID;
   setting.fast_speedup = 0;
+  setting.faster_speedup = 0;
   setting.trigger_level = -150.0;
 #ifdef __TRIGGER_TRACE__
   setting.trigger_trace = 255;
@@ -2036,6 +2037,12 @@ void set_fast_speedup(int s)
   dirty = true;
 }
 
+void set_faster_speedup(int s)
+{
+  setting.faster_speedup = s;
+  dirty = true;
+}
+
 //
 // Table for auto set sweep step/offset delays from RBW
 //
@@ -2129,6 +2136,8 @@ void calculate_step_delay(void)
         SI4432_step_delay += (SI4432_step_delay>>2) ;
       if (setting.fast_speedup >0)
         SI4432_offset_delay = SI4432_step_delay / setting.fast_speedup;
+      if (setting.faster_speedup >0)
+        SI4432_step_delay = SI4432_step_delay / setting.faster_speedup;
     }
     if (setting.offset_delay != 0)      // Override if set
       SI4432_offset_delay = setting.offset_delay;
