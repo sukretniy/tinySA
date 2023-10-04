@@ -27,8 +27,8 @@
 #pragma GCC optimize ("Os")
 #endif
 
-#if 0
-#define TRACE(X)  {     DAC->DHR12R1 = (X*400); }       // Enable for realtime tracing
+#if 1
+#define TRACE(X)  {     DAC->DHR12R1 =(uint32_t) ((X)*400); }       // Enable for realtime tracing
 #else
 #define TRACE(X)  // {     DAC->DHR12R1 = (X*400); }       // Enable for realtime tracing
 #endif
@@ -3645,7 +3645,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
   TRACE(0);
   // ---------------------------------  Pulse at start of low output sweep --------------------------
 
-  if ((setting.mode == M_GENLOW || (setting.pulse && setting.mode == M_LOW)) && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) {// pulse high out
+  if ((setting.mode == M_GENLOW  && ( setting.frequency_step != 0 || setting.level_sweep != 0.0)) || (setting.mode == M_LOW && setting.pulse)) {// pulse high out
 #ifdef __SI4432__
       SI4432_Sel = SI4432_LO ;
 #endif
@@ -4373,7 +4373,7 @@ again:                                                              // Spur redu
         }
         }
 #endif          // __ADF4351__
-        TRACE(8);
+        TRACE(2.5);
         if (setting.harmonic && lf > ( setting.mode == M_GENLOW ? ULTRA_MAX_FREQ + 60000000:ULTRA_MAX_FREQ) ) {
           target_f /= setting.harmonic;
           LO_harmonic = true;
@@ -4465,7 +4465,7 @@ again:                                                              // Spur redu
 #endif
     }       // ----------------- LO's set --------------------------
 
-    TRACE(8)
+    TRACE(2.5)
 #ifdef __MCU_CLOCK_SHIFT__
         if (setting.mode == M_LOW && !in_selftest) {         // Avoid 48MHz spur
           int set_below = false;
@@ -4777,7 +4777,7 @@ again:                                                              // Spur redu
         }
         }
       }
-      TRACE(8);
+      TRACE(5.5);
       my_microsecond_delay(my_step_delay);
       ADF4351_frequency_changed = false;
       SI4463_frequency_changed = false;
@@ -7653,6 +7653,11 @@ void calibrate(void)
 #ifdef TINYSA4
   int old_ultra = config.ultra;
   config.ultra = true;
+  freq_t old_correction = config.setting_frequency_30mhz;
+  config.setting_frequency_30mhz = 3000000000;
+  ADF4351_recalculate_PFDRFout();
+  dirty = true;
+
 //  setting.auto_IF = true;                         // set in selftest
 //  setting.frequency_IF = config.frequency_IF1;    // set in selftest
   float direct_level=0.0;
@@ -7688,18 +7693,30 @@ void calibrate(void)
       setting.rbw_x10 = 3;
       test_path = 3;      // Ultra lna path
       force_signal_path = true;
-      set_reflevel(-95);
+//      set_reflevel(-95);
+    } else if (i == 4) {
+//        set_sweep_points(51);
+        set_sweep_frequency(ST_SPAN,    1000);
+        set_RBW(100);
+//        setting.rbw_x10 = 3;
+        test_path = 3;      // Ultra lna path
+        force_signal_path = true;
+//        set_reflevel(-95);
     } else if (i <= 1) {
       if (i == 1)
         set_RBW(8500);
       set_refer_output(5);          // 2MHz
       setting.spur_removal = S_OFF;
     } else {
-      set_reflevel(-70);
+//      set_reflevel(-70);
       set_refer_output(0);          // 30MHz
       setting.spur_removal = S_AUTO_OFF;
     }
     test_acquire(TEST_JUMP);                        // Acquire test
+    set_reflevel(actual_t[sweep_points/3]+5);
+    plot_into_index(measured);
+    redraw_request |= REDRAW_AREA | REDRAW_CAL_STATUS;
+    draw_all(TRUE);
     set_jump_config(i, get_jump_config(i) + measure_jump(i));
     calibration_busy();
     chThdSleepMilliseconds(500);
@@ -7878,6 +7895,7 @@ low_level:
   setting.below_IF = S_AUTO_OFF;
   in_calibration = false;
 #ifdef TINYSA4
+  config.setting_frequency_30mhz = old_correction;
   config.ultra = old_ultra;
 #endif
 
