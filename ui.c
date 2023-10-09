@@ -3272,7 +3272,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
     setting.waterfall++; if (setting.waterfall>W_BIG)setting.waterfall = W_OFF;
     if (setting.waterfall != W_OFF)
       setting.level_meter = false;
-    set_waterfall();
+    set_level_meter_or_waterfall();
     ui_mode_normal();
   }
 }
@@ -3288,7 +3288,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_level_meter_acb){
   setting.level_meter = !setting.level_meter;
   if (setting.level_meter)
     setting.waterfall = W_OFF;
-  set_level_meter();
+  set_level_meter_or_waterfall();
   ui_mode_normal();
 }
 #endif
@@ -6958,7 +6958,7 @@ leave_ui_mode()
 //  if (menu_button_height*MENU_BUTTON_MAX - area_height > 0)
 //    ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, menu_button_height*MENU_BUTTON_MAX - area_height);
   if (setting.waterfall)
-    set_waterfall();
+    set_level_meter_or_waterfall();
 #ifdef __LEVEL_METER__
   if (setting.level_meter)
     ili9341_fill(LCD_WIDTH-MENU_BUTTON_WIDTH, area_height, MENU_BUTTON_WIDTH, menu_button_height*MENU_BUTTON_MAX - area_height);

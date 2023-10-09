@@ -305,8 +305,7 @@ static char cmd_buffer[256+128];
       update_frequencies();
       set_scale(setting.scale);
       set_reflevel(setting.reflevel);
-      set_waterfall();
-      set_level_meter();
+      set_level_meter_or_waterfall();
     }
     else error = "Format err";
   }

@@ -149,12 +149,8 @@ void update_grid(void)
   }
   if (config.gridlines == 0)
     grid_offset = 0;
-  if (setting.waterfall)
-    set_waterfall();
-#ifdef __LEVEL_METER__
-  if (setting.level_meter)
-    set_level_meter();
-#endif
+//  if (setting.waterfall)
+  set_level_meter_or_waterfall();
   redraw_request |= REDRAW_FREQUENCY | REDRAW_AREA;
 }
 
@@ -2128,6 +2124,8 @@ static void update_waterfall(void){
 #ifdef _USE_WATERFALL_PALETTE
     uint16_t y = _PALETTE_ALIGN(256 - graph_bottom + index[i]); // should be always in range 0 - graph_bottom
 //    y = (uint8_t)i;  // for test
+    if (y > 255)            // at start the index_y_t table could be empty leading to negative y
+      break;
     color = waterfall_palette[y];
 #elif 1
     uint16_t y = index[i]; // should be always in range 0 - graph_bottom
@@ -2173,14 +2171,18 @@ static void update_waterfall(void){
   ili9341_bulk(OFFSETX, graph_bottom+1, w_width, 1);
 //  STOP_PROFILE;
 }
-
+#if 0
 //extern float peakLevel;
 //extern float min_level;
 //int w_max = -130;
 //int w_min = 0;
+uint8_t old_waterfall = 100;
 void
 set_waterfall(void)
 {
+  if (old_waterfall == setting.waterfall)
+    return;
+  old_waterfall = setting.waterfall;
   if (setting.waterfall == W_SMALL)       graph_bottom = SMALL_WATERFALL;
   else if (setting.waterfall == W_BIG)    graph_bottom = BIG_WATERFALL;
   else /*if (setting.waterfall == W_OFF)*/graph_bottom = NO_WATERFALL;
@@ -2192,12 +2194,12 @@ set_waterfall(void)
   }
   request_to_redraw_grid();
 }
-
+#endif
 void
 disable_waterfall(void)
 {
   setting.waterfall = W_OFF;
-  set_waterfall();
+  set_level_meter_or_waterfall();
 }
 
 #ifdef __LEVEL_METER__
@@ -2227,16 +2229,24 @@ static void update_level_meter(void){
 }
 
 void
-set_level_meter(void)
+set_level_meter_or_waterfall(void)
 {
-  if (setting.level_meter)       graph_bottom = BIG_NUMBER_SPACE;
-//  else if (setting.level_meter == W_BIG)    graph_bottom = BIG_WATERFALL;
-  else /*if (setting.level_meter == W_OFF)*/graph_bottom = NO_WATERFALL;
+  if (setting.waterfall == W_BIG
+#ifdef TINYSA4
+      || setting.level_meter
+#endif
+      )                                                 graph_bottom = BIG_WATERFALL;
+  else if (setting.waterfall == W_SMALL
+#ifndef TINYSA4
+      || setting.level_meter
+#endif
+    )                                                    graph_bottom = SMALL_WATERFALL;
+  else                                                   graph_bottom = NO_WATERFALL;
   _grid_y = graph_bottom / NGRIDY;
   area_height = AREA_HEIGHT_NORMAL;
-  if (setting.level_meter){
+  if (setting.waterfall != W_OFF || setting.level_meter){
     ili9341_set_background(LCD_BG_COLOR);
-    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom + 1);
+    ili9341_fill(OFFSETX, graph_bottom, LCD_WIDTH - OFFSETX, CHART_BOTTOM - graph_bottom);
   }
   request_to_redraw_grid();
 }
@@ -2245,7 +2255,7 @@ void
 disable_level_meter(void)
 {
   setting.level_meter = false;
-  set_level_meter();
+  set_level_meter_or_waterfall();
 }
 #endif
 

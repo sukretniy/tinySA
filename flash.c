@@ -235,8 +235,7 @@ caldata_recall(uint16_t id)
   update_frequencies();
   set_scale(setting.scale);
   set_reflevel(setting.reflevel);
-  set_waterfall();
-  set_level_meter();
+  set_level_meter_or_waterfall();
   update_rbw();
   sweep_mode = SWEEP_ENABLE;
 #ifdef __ULTRA__

@@ -445,10 +445,9 @@ void  set_storage(void);
 void  set_clear_storage(void);
 void  set_subtract_storage(void);
 void  toggle_normalize(int);
-void set_waterfall(void);
+void set_level_meter_or_waterfall(void);
 void disable_waterfall(void);
 #ifdef __LEVEL_METER__
-void set_level_meter(void);
 void disable_level_meter(void);
 #endif
 void set_mode(int);
