@@ -197,7 +197,7 @@ VNA_SHELL_FUNCTION(cmd_lna)
 #ifdef __ULTRA__
 VNA_SHELL_FUNCTION(cmd_ultra)
 {
-  const char *ultra_cmd = "off|on|auto|start";
+  const char *ultra_cmd = "off|on|auto|start|harm";
   if (argc<1 || argc>2)
     goto usage;
   if (argv[0][0] == '?')
@@ -221,6 +221,13 @@ VNA_SHELL_FUNCTION(cmd_ultra)
     auto_label:
     config.ultra_start = a;
     ultra_start = a;
+    dirty = true;
+    break;
+  case 4:
+    if (argc != 2)
+      goto usage;
+    a = my_atoui(argv[1]);
+    config.harmonic_start = a;
     dirty = true;
     break;
   default:
@@ -1173,7 +1180,7 @@ VNA_SHELL_FUNCTION(cmd_correction)
 {
   (void)argc;
 #ifdef TINYSA4
-  static const char cmd[] = "low|lna|ultra|ultra_lna|direct|direct_lna|out|out_direct|out_adf|out_ultra|off|on";
+  static const char cmd[] = "low|lna|ultra|ultra_lna|direct|direct_lna|harm|harm_lna|out|out_direct|out_adf|out_ultra|off|on";
   static const char range[] = "0-19";
 #else
   static const char cmd[] = "low|high|out";

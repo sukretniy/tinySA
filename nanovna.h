@@ -18,7 +18,7 @@
  */
 #include "ch.h"
 
-#ifdef TINYSA_F303
+//#ifdef TINYSA_F303
 #ifdef TINYSA_F072
 #error "Remove comment for #ifdef TINYSA_F303"
 #endif
@@ -26,7 +26,7 @@
 #define TINYSA4
 #endif
 #define TINYSA4_PROTO
-#endif
+//#endif
 
 #ifdef TINYSA_F072
 #ifdef TINYSA_F303
@@ -230,11 +230,13 @@ typedef uint32_t freq_t;
  #define CORRECTION_LNA_ULTRA 3
  #define CORRECTION_DIRECT         4
  #define CORRECTION_LNA_DIRECT     5
- #define CORRECTION_LOW_OUT        6    // Must be same order as output path options!!!!!
- #define CORRECTION_LOW_OUT_DIRECT 7
- #define CORRECTION_LOW_OUT_ADF    8
- #define CORRECTION_LOW_OUT_MIXER  9
- #define CORRECTION_SIZE           10
+#define CORRECTION_HARM            6
+#define CORRECTION_LNA_HARM        7
+ #define CORRECTION_LOW_OUT        8    // Must be same order as output path options!!!!!
+ #define CORRECTION_LOW_OUT_DIRECT 9
+ #define CORRECTION_LOW_OUT_ADF    10
+ #define CORRECTION_LOW_OUT_MIXER  11
+ #define CORRECTION_SIZE           12
 
  extern freq_t ULTRA_MAX_FREQ;           // Start of harmonic mode
  extern freq_t MAX_LO_FREQ;
@@ -295,6 +297,7 @@ void resume_once(uint16_t c);
 #ifdef TINYSA4
 void set_deviation(int d);
 void set_depth(int d);
+extern int LO_harmonic;
 #endif
 void toggle_mute(void);
 void toggle_pulse(void);
@@ -513,6 +516,8 @@ void set_10mhz(freq_t);
 #define HIGH_OUT_OFFSET config.high_level_output_offset
 #endif
 #ifdef __ULTRA__
+extern bool debug_level;
+extern void toggle_debug_level(void);
 extern bool debug_spur;
 extern void toggle_debug_spur(void);
 #endif
@@ -825,6 +830,7 @@ typedef struct config {
 #endif
 #ifdef __ULTRA__
   freq_t ultra_start;
+  freq_t harmonic_start;
   freq_t direct_start;
   freq_t direct_stop;
   freq_t overclock;
@@ -1455,7 +1461,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e60 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e61 /* 'CONF' */
 #define SETTING_MAGIC 0x434f4e64
 
 extern int16_t lastsaveid;
@@ -1818,8 +1824,8 @@ extern void SI4432_Listen(int s);
 // si4432.c
 
 
-enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HIGH};  // must be same order as correction tables!!!!
-#define PATH_TEXT {"OFF", "LOW", "DIRECT", "ADF", "ULTRA", "High"}
+enum {PATH_OFF, PATH_LOW, PATH_DIRECT, PATH_LEAKAGE, PATH_ULTRA, PATH_HARM, PATH_HIGH};  // must be same order as correction tables!!!!
+#define PATH_TEXT {"OFF", "LOW", "DIRECT", "ADF", "ULTRA", "HARM", "High"}
 extern const char * const path_text[];
 extern int signal_path;
 extern int test_path;

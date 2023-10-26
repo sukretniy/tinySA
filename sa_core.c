@@ -60,6 +60,7 @@ bool debug_avoid_second = false;
 bool progress_bar = true;
 #ifdef __ULTRA__
 bool debug_spur = false;
+bool debug_level = false;
 #endif
 int current_index = -1;
 
@@ -80,7 +81,7 @@ uint16_t current_band = 0;
 #ifdef __ULTRA__
 freq_t ultra_start;
 //bool ultra;
-static int LO_harmonic;
+int LO_harmonic;
 #endif
 #ifdef TINYSA4
 bool direct_test;
@@ -126,7 +127,7 @@ int actual_drive = -1;
 const float si_drive_dBm []     = {-44.1, -30, -21.6, -17, -14, -11.7, -9.9, -8.4, -7.1, -6, -5, -4.2, -3.4, -2.7 , -2.1,  -1.5,  -1, -0.47, 0};
 //const float adf_drive_dBm[]     = {-13,-7.5,-4.2, 0};
 //const float adf_drive_dBm[]     = {-9, -4, 0, 0};
-const float adf_drive_dBm[]     = {0, 5, 0, 0};     // Only use drive 0 and 1
+const float adf_drive_dBm[]     = {0, 0, 0, 0};     // Only use drive 0
 const uint8_t drive_register[]  = {0,   1,   2,   3,   4,   5,  6,   6,    8,    9,    10,   11,   12,   13,   14,  15,  16,  17,   18};
 float *drive_dBm = (float *) si_drive_dBm;
 const int min_drive = 0;
@@ -169,9 +170,11 @@ const char *const path_text[]=PATH_TEXT;
 
 void set_output_drive(int d)
 {
-  if (signal_path == PATH_LEAKAGE)
+  if (signal_path == PATH_LEAKAGE) {
+    if (max2871 && d == 0)
+      d = 3;
     ADF4351_drive(d);
-  else {
+  } else {
 #ifdef __SI4432__
     SI4432_Sel = SI4432_RX ;
     SI4432_Drive(d);
@@ -204,6 +207,7 @@ void set_output_step_atten(int s)
 
 void set_output_path(freq_t f, float level)
 {
+  LO_harmonic = false;
   if (depth_error) { depth_error = false; redraw_request |= REDRAW_CAL_STATUS; draw_all(true);}
   if (force_signal_path) {
     signal_path = test_path;
@@ -212,6 +216,11 @@ void set_output_path(freq_t f, float level)
       setting.atten_step = test_output_switch;
       set_output_drive(test_output_drive);
       PE4302_Write_Byte(test_output_attenuate);
+      if (debug_level && SDU1.config->usbp->state == USB_ACTIVE) {
+        shell_printf ("d=%d, a=%d, s=%d\r\n",test_output_drive, test_output_attenuate,  (setting.atten_step ? 1 : 0));
+        osalThreadSleepMilliseconds(100);
+      }
+
       goto set_path;
     }
   } else if (MODE_HIGH(setting.mode))
@@ -249,7 +258,7 @@ void set_output_path(freq_t f, float level)
     return;                 //TODO setup high path
   }
 
-  float ATTENUATION_RESERVE = 3.0;
+  float ATTENUATION_RESERVE = 0.0;
   if (signal_path == PATH_LEAKAGE) {
     ATTENUATION_RESERVE = 0;
   }
@@ -321,10 +330,8 @@ void set_output_path(freq_t f, float level)
   a = -a - 0.25;        // Rounding
   setting.attenuate_x2 = (int)(a * 2);
   PE4302_Write_Byte(setting.attenuate_x2);
-#if 0
-  if (SDU1.config->usbp->state == USB_ACTIVE)
-    shell_printf ("level=%f, drive=%d, atten=%f, switch=%d\r\n", level, d, a, (setting.atten_step ? 1 : 0));
-#endif
+  if (debug_level && SDU1.config->usbp->state == USB_ACTIVE)
+    shell_printf ("level=%.2f, d=%d, a=%d, s=%d, f=%.2f\r\n", level, d, setting.attenuate_x2, (setting.atten_step ? 1 : 0), PURE_TO_float(get_frequency_correction(f)));
 
   enable_extra_lna(false);
   if (setting.mute)
@@ -384,12 +391,14 @@ void set_output_path(freq_t f, float level)
 static void calculate_static_correction(void);
 void set_input_path(freq_t f)
 {
+  LO_harmonic = false;
   if (force_signal_path) {
     setting.extra_lna = test_path & 0x01;
     switch ((test_path & 0xFE)>>1) {
     case 0: signal_path = PATH_LOW; break;
     case 1: signal_path = PATH_ULTRA; break;
     case 2: signal_path = PATH_DIRECT; break;
+    case 3: signal_path = PATH_ULTRA; LO_harmonic = true; break;
     }
   }
   else if (MODE_HIGH(setting.mode))
@@ -398,9 +407,10 @@ void set_input_path(freq_t f)
     signal_path = PATH_DIRECT;
   else if (config.direct && f >= config.direct_start && f < config.direct_stop)
     signal_path = PATH_DIRECT;
-  else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start)))
-      signal_path = PATH_ULTRA;
-  else
+  else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start))) {
+    LO_harmonic = (f > (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
+    signal_path = PATH_ULTRA;
+  } else
     signal_path = PATH_LOW;
 
   if (signal_path == PATH_HIGH) {
@@ -509,10 +519,17 @@ void update_min_max_freq(void)
     minFreq = 0;
 #ifdef TINYSA4
 #ifdef __ULTRA_OUT__
-    if (setting.mixer_output)
-      maxFreq = ULTRA_MAX_FREQ+60000000; // Add 60MHz to go to 5.40GHz
-    else
-      maxFreq = MAX_LO_FREQ+config.overclock; // 4.4GHz
+    if (setting.mixer_output) {
+      if (setting.harmonic)
+        maxFreq = setting.harmonic * MAX_LO_FREQ - DEFAULT_IF; // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
+      else
+        maxFreq = ULTRA_MAX_FREQ+60000000; // Add 60MHz to go to 5.40GHz
+    } else {
+      if (setting.harmonic)
+        maxFreq = setting.harmonic * (MAX_LO_FREQ+config.overclock); // ULTRA_MAX_FREQ;  // make use of harmonic mode above ULTRA_MAX_FREQ
+      else
+        maxFreq = MAX_LO_FREQ+config.overclock; // 4.4GHz
+    }
 #else
     maxFreq = MAX_LOW_OUTPUT_FREQ;
 #endif
@@ -725,7 +742,10 @@ void reset_settings(int m)
   case M_GENLOW:
 #ifdef TINYSA4
     setting.rx_drive= MAX_DRIVE;
-    setting.lo_drive=1;
+    if (max2871)
+      setting.lo_drive= 2;
+    else
+      setting.lo_drive= 1;
 #else
 //    setting.rx_drive=8;
 	setting.lo_drive=13;
@@ -1015,6 +1035,13 @@ void toggle_debug_spur(void)
 #endif
 
 #ifdef TINYSA4
+void toggle_debug_level(void)
+{
+  debug_level = !debug_level;
+  dirty = true;
+}
+
+
 #ifndef __NEW_SWITCHES__
 void toggle_high_out_adf4350(void)
 {
@@ -1232,8 +1259,8 @@ float low_out_offset(void)
 {
   if (config.output_is_calibrated)
     return config.low_level_output_offset;
-  if (config.input_is_calibrated)
-    return - config.low_level_offset;
+//  if (config.input_is_calibrated)
+//    return - config.low_level_offset;
   return 0;
 }
 #endif
@@ -2237,6 +2264,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
     case PATH_ULTRA:
       c = CORRECTION_LOW_ULTRA;
       if (LO_harmonic) {
+        c = CORRECTION_HARM;
         cv += float_TO_PURE_RSSI(config.harmonic_level_offset);                                        // +10.5dB correction.
       } else if (f>MAX_ABOVE_IF_FREQ) {
         cv += float_TO_PURE_RSSI(config.shift3_level_offset);
@@ -3772,7 +3800,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
             set_switch_transmit();
           PE4302_Write_Byte(setting.attenuate_x2);
 #if 0
-          if (SDU1.config->usbp->state == USB_ACTIVE)
+          if (debug_level && SDU1.config->usbp->state == USB_ACTIVE)
              shell_printf ("level=%f, d=%d, a=%d, s=%d\r\n", setting.level, d, setting.attenuate_x2, (setting.atten_step ? 1 : 0));
 #endif
         }
@@ -3997,7 +4025,7 @@ again:                                                              // Spur redu
     LO_shifting = false;
 #endif
 #ifdef __ULTRA__
-    LO_harmonic = false;
+//    LO_harmonic = false;
 #endif
     if (MODE_LOW(setting.mode)){                                       // All low mode
       if (!setting.auto_IF)
@@ -4224,14 +4252,14 @@ again:                                                              // Spur redu
 #endif
 #endif
 #ifdef __ULTRA__
-      if (setting.harmonic && lf > ULTRA_MAX_FREQ) {
+      if (LO_harmonic) {
         target_f /= setting.harmonic;
 #ifdef TINYSA3
         if (target_f > MAX_LO_FREQ) {
           target_f = (lf - local_IF) / setting.harmonic;
         }
 #endif
-        LO_harmonic = true;
+//        LO_harmonic = true;
       }
 #endif
       set_freq (SI4432_LO, target_f);                                                 // otherwise to above IF
@@ -4383,9 +4411,8 @@ again:                                                              // Spur redu
         }
 #endif          // __ADF4351__
         TRACE(2.5);
-        if (setting.harmonic && lf > ( setting.mode == M_GENLOW ? ULTRA_MAX_FREQ + 60000000:ULTRA_MAX_FREQ) ) {
+        if (LO_harmonic) {
           target_f /= setting.harmonic;
-          LO_harmonic = true;
         }
         // ----------------------------- set mixer drive --------------------------------------------
         if (setting.mode == M_LOW || setting.mode == M_GENLOW) {
@@ -4456,8 +4483,12 @@ again:                                                              // Spur redu
           set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
           if (setting.tracking_output)
             set_freq (ADF4351_LO, lf);
-        } else
+        } else {
+          freq_t target_f = lf;
+          if (setting.harmonic && lf > 6300000000ULL)
+            target_f /= setting.harmonic;
           set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
+        }
         local_IF = 0;
       } else if (setting.mode == M_GENHIGH) {
         local_IF = 0;

@@ -1364,6 +1364,7 @@ enum {
   KM_ATTACK,
 #ifdef __ULTRA__
   KM_ULTRA_START,
+  KM_HARM_START,
 #endif
 #ifdef TINYSA4
   KM_EXP_AVER,
@@ -1448,6 +1449,7 @@ static const struct {
 [KM_ATTACK]       = {keypads_positive    , "ATTACK"},    // KM_ATTACK
 #ifdef __ULTRA__
 [KM_ULTRA_START]  = {keypads_freq        , "ULTRA\nSTART"}, // KM_ULTRA_START
+[KM_HARM_START]   = {keypads_freq        , "HARM\nSTART"}, // KM_HARM_START
 #endif
 #ifdef TINYSA4
 [KM_EXP_AVER]     = {keypads_positive    , "EXPONENTIAL\nAVERAGING"}, //KM_EXP_AVER
@@ -1682,6 +1684,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     reset_settings(old_m);
     }
     break;
+  case CORRECTION_LNA_HARM:
   case CORRECTION_LNA:
   case CORRECTION_LNA_ULTRA:
     reset_settings(M_LOW);
@@ -1720,6 +1723,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
 #endif
 
 #ifdef TINYSA4
+  case CORRECTION_HARM:
   case CORRECTION_LOW_ULTRA:
     goto common;
 #else
@@ -2472,6 +2476,19 @@ static UI_FUNCTION_ADV_CALLBACK(menu_debug_spur_acb)
     return;
   }
   toggle_debug_spur();
+  //  menu_move_back();
+  ui_mode_normal();
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_debug_level_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = debug_level == 0 ? BUTTON_ICON_NOCHECK : BUTTON_ICON_CHECK;
+    return;
+  }
+  toggle_debug_level();
   //  menu_move_back();
   ui_mode_normal();
 }
@@ -4595,6 +4612,7 @@ static const menuitem_t menu_settings4[] =
  { MT_ADV_CALLBACK,     0,     "DEBUG\nFREQ",          menu_debug_freq_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nAVOID",          menu_debug_avoid_acb},
  { MT_ADV_CALLBACK,     0,     "DEBUG\nSPUR",        menu_debug_spur_acb},
+ { MT_ADV_CALLBACK,     0,     "DEBUG\nLEVEL",        menu_debug_level_acb},
  { MT_ADV_CALLBACK,     0,     "HIDE\n21MHz",        menu_hide_21MHz_acb},
  { MT_KEYPAD,           KM_OVERCLOCK,  "OVERCLOCK\n\b%s", "Enter overclock amount"},
 
@@ -4618,6 +4636,7 @@ static const menuitem_t menu_settings3[] =
   { MT_ADV_CALLBACK,     0,     "ADF OUT",          menu_adf_out_acb},
 #endif
   { MT_KEYPAD,   KM_ULTRA_START,"ULTRASTART\n\b%s",   "10G=auto"},
+  { MT_KEYPAD,   KM_HARM_START,"HARM START\n\b%s",    "0=auto"},
 //  { MT_KEYPAD | MT_LOW, KM_IF2,  "IF2 FREQ",           "Set to zero for no IF2"},
   { MT_KEYPAD,  KM_R,  "R\n\b%s",           "Set R"},
   { MT_KEYPAD,  KM_MOD,  "MODULO\n\b%s",           "Set MODULO"},
@@ -5245,6 +5264,13 @@ static void fetch_numeric_target(uint8_t mode)
     else
       plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value );
     break;
+  case KM_HARM_START:
+    uistat.freq_value = config.harmonic_start;
+    if (config.harmonic_start == 0)
+      plot_printf(uistat.text, sizeof uistat.text, "AUTO");
+    else
+      plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value );
+    break;
   case KM_DIRECT_START:
     uistat.freq_value = config.direct_start;
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
@@ -5486,6 +5512,12 @@ set_numeric_value(void)
 #ifdef __ULTRA__
   case KM_ULTRA_START:
     config.ultra_start = uistat.freq_value;
+    reset_settings(setting.mode);
+//    config_save(); // TODO not now
+    //ultra_start = config.ultra_start;
+    break;
+  case KM_HARM_START:
+    config.harmonic_start = uistat.freq_value;
     reset_settings(setting.mode);
 //    config_save(); // TODO not now
     //ultra_start = config.ultra_start;
@@ -5988,7 +6020,7 @@ redraw_cal_status:
 
   if (force_signal_path){
     ili9341_set_foreground(LCD_BRIGHT_COLOR_RED);
-    lcd_printf(x, y, "Path:\n%s", path_text[signal_path]);
+    lcd_printf(x, y, "Path:\n%s", path_text[signal_path+(LO_harmonic?1:0)]);
     y += 2*YSTEP + YSTEP/2;
   }
 
@@ -6040,7 +6072,7 @@ redraw_cal_status:
   // Compact status string
 //  ili9341_set_background(LCD_FG_COLOR);
   ili9341_set_foreground(LCD_FG_COLOR);
-  strncpy(buf,"     ",BLEN-1);
+  strncpy(buf,"      ",BLEN-1);
   if (setting.auto_IF)
     buf[0] = 'f';
   else
@@ -6062,6 +6094,8 @@ redraw_cal_status:
     buf[4] = 's';
   else if (S_STATE(setting.spur_removal))
     buf[4] = 'S';
+  if (LO_harmonic)
+    buf[5] = 'H';
 #endif
   ili9341_drawstring(buf, x, y);
 
