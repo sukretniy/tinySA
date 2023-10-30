@@ -435,7 +435,7 @@ void sendConfig(void) {
 
     // reg 2                                                                                                                                                 cp three     reset
     //     LD speed   noise mode         muxout         ref dbr            ref div2        R         DB        CP current        LDF       LDP      PD pol   powerdown    state    counter   register 2
-    reg = (LDS<<31) | (noiseMode<<29) | (mux<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (0<<13) | (cpCurrent<<9) | (LDF<<8) | (LDP<<7) | (1<<6) | (pdwn<<5)  | (0<<4) |  (0<<3) |   0b010;
+    reg = (LDS<<31) | (LD_LOW_SPUR1<<29) | (mux<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (0<<13) | (cpCurrent<<9) | (LDF<<8) | (LDP<<7) | (1<<6) | (pdwn<<5)  | (0<<4) |  (0<<3) |   0b010;
     if (reg!=reg_2) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
 
     // reg 1
@@ -472,7 +472,7 @@ void sendConfig(void) {
 
     // reg 2                                                                                                                                                 cp three    reset
     //     noise mode        muxout         ref dbr            ref div2        R         DB        CP current        LDF       LDP       PD pol   powerdown    state    counter   register 2
-    reg = (noiseMode<<29) | (mux<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (0<<13) | (cpCurrent<<9) | (LDF<<8) | (LDP<<7) | (1<<6) | (pdwn<<5)  | (0<<4) |  (0<<3) |   0b010;
+    reg = (LD_LOW_NOISE<<29) | (mux<<26) | (refDouble<<25) | (refDiv2 << 24) | (R<<14) | (0<<13) | (cpCurrent<<9) | (LDF<<8) | (LDP<<7) | (1<<6) | (pdwn<<5)  | (0<<4) |  (0<<3) |   0b010;
     if (reg!=reg_2) {ADF4351_Latch(); ADF4351_WriteRegister32(id, reg); reg_2 = reg;}
 
     // reg 1
