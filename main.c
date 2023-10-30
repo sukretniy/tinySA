@@ -174,7 +174,7 @@ static THD_FUNCTION(Thread1, arg)
       b.mode = setting.mode;
       b.checksum = 0;
       uint8_t *c = (uint8_t *)&b;
-      int ci = USED_BACKUP_SIZE*4;
+      int ci = sizeof(backup_t)-1;  // Exclude checksum
       uint8_t checksum = 0x55;
       while (ci--) {
         checksum ^= *c++;
@@ -3057,7 +3057,7 @@ int main(void)
     while (i--)
       *t++ = *f++;
     uint8_t *c = (uint8_t *)&b;
-    int ci = USED_BACKUP_SIZE*3;
+    int ci = sizeof(backup_t)-1;
     uint8_t checksum = 0x55;
     while (ci--) {
       checksum ^= *c++;
@@ -3088,20 +3088,20 @@ int main(void)
           set_sweep_frequency(ST_SPAN, (b.frequency1 - b.frequency0));
           ui_mode_menu();
         }
-        if (b.attenuation == 0)
+        if (b.attenuation == 0) {
           set_auto_attenuation();
-        else {
+        } else {
           set_attenuation((b.attenuation - 1)/2.0);
         }
-        if (b.reflevel == 0)
+        if (b.reflevel == 0) {
           set_auto_reflevel(true);
-        else {
+        } else {
           set_auto_reflevel(false);
           user_set_reflevel((float)(b.reflevel-140));
         }
-        if (b.RBW == 0)
+        if (b.RBW == 0) {
           setting.rbw_x10 = 0;
-        else {
+        } else {
           set_RBW(force_rbw(b.RBW-1));
         }
       }

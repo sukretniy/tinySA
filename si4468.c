@@ -290,7 +290,7 @@ uint16_t R = 1;
 int old_R = 0;
 uint16_t N = 1;
 uint16_t frac = 0;
-uint16_t modulus = 32;
+uint16_t modulus = 200;
 uint16_t out_div = 0;
 uint16_t mux = 0;
 uint16_t csr = 1;  // cycle slip reduction, if enabled cp must be lowest value
@@ -310,7 +310,7 @@ bool pdwn = false;
 uint16_t powerDown = 0;
 
 
-static const uint8_t auxPower = 0b00;
+static const uint8_t auxPower = 0b11;
 
 // band select divider. 1 to 255.
 volatile uint16_t  bsDivider = 100; // For set internal logic clock (24M / 192 = 125k) max 125k
@@ -349,7 +349,7 @@ static enum {
     LD_LOW_NOISE = 0b00,
     LD_LOW_SPUR1 = 0b10,
     LD_LOW_SPUR2 = 0b11
-} noiseMode = LD_LOW_NOISE;
+} noiseMode = LD_LOW_SPUR1;
 
 /*
 static const enum {
@@ -617,7 +617,7 @@ uint16_t ADF4351_get_modulo(void)
 
 void ADF4351_spur_mode(int S)
 {
-  noiseMode = S;
+//  noiseMode = S;
 }
 
 void ADF4351_R_counter(int new_R)

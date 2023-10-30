@@ -4071,7 +4071,7 @@ again:                                                              // Spur redu
 
 #ifdef __ULTRA__
           if (S_IS_AUTO(setting.below_IF)) {
-            if ((freq_t)lf > MAX_ABOVE_IF_FREQ && lf <= ULTRA_MAX_FREQ )
+            if ((freq_t)lf > MAX_ABOVE_IF_FREQ && lf <= ULTRA_MAX_FREQ && !LO_harmonic)
               setting.below_IF = S_AUTO_ON; // Only way to reach this range. Use below IF in harmonic mode
             else
               setting.below_IF = S_AUTO_OFF; // default is above IF, Use below IF in harmonic mode
@@ -4337,11 +4337,12 @@ again:                                                              // Spur redu
             }
           } else if (lf < 25000000 && max2871) {
             ADF4351_R_counter(-1);
+            ADF4351_modulo(200);
           } else if (lf > 8000000 && lf < 3000000000 && MODE_INPUT(setting.mode)) {
             if (max2871)
             if (local_modulo == 0) {
               if (max2871)
-                ADF4351_modulo(4000);
+                ADF4351_modulo(100);
               else
                 ADF4351_modulo(4000);
             }
@@ -4384,8 +4385,11 @@ again:                                                              // Spur redu
                   ADF4351_R_counter(3);     // To avoid PLL Loop shoulders
               } else
                 ADF4351_R_counter(1);
-            } else
+            }
+            else if (max2871)
               ADF4351_R_counter(1);
+            else
+              ADF4351_R_counter(2);
 
           } else {                          // Input above 800 MHz
             if (local_modulo == 0) {
@@ -4403,10 +4407,13 @@ again:                                                              // Spur redu
               ADF4351_R_counter(3);
             } else
 #endif
+            if (max2871)
               ADF4351_R_counter(1); // Used to be 1
+            else
+              ADF4351_R_counter(2); // Used to be 1
           }
         } else {
-          ADF4351_R_counter(setting.R);
+          ADF4351_R_counter(setting.R%1000);
         }
         }
 #endif          // __ADF4351__
@@ -4610,14 +4617,15 @@ again:                                                              // Spur redu
      }
      char shifted = ( LO_spur_shifted ? '>' : ' ');
      if (SDU1.config->usbp->state == USB_ACTIVE)
-       shell_printf ("%d:%c%c%c%cLO=%11.6Lq:%11.6Lq\tIF=%11.6Lq:%11.6Lq\tOF=%11.6d\tF=%11.6Lq:%11.6Lq\tD=%.2f:%.2f %c%c%c %d\r\n",
+       shell_printf ("%d:%c%c%c%cLO=%11.6Lq:%11.6Lq\tIF=%11.6Lq:%11.6Lq\tOF=%11.6d\tF=%11.6Lq:%11.6Lq\tD=%.2f:%.2f %c%c%c %d R=%d mod=%d, d=%d\r\n",
                      i,   spur, shifted,(LO_mirrored ? 'm' : ' '), (LO_harmonic ? 'h':' ' ),
                      old_freq[ADF4351_LO],real_old_freq[ADF4351_LO],
                      old_freq[SI4463_RX], real_old_freq[SI4463_RX], (int32_t)real_offset, f_low, f_high , f_error_low, f_error_high,
                      (ADF4351_frequency_changed? 'A' : ' '),
                      (SI4463_frequency_changed? 'S' : ' '),
                      (SI4463_offset_changed? 'O' : ' '),
-                     correct_RSSI_freq
+                     correct_RSSI_freq,
+                     R, ADF4351_get_modulo(),rfPower
                     );
      osalThreadSleepMilliseconds(100);
     }

@@ -1831,7 +1831,8 @@ extern int signal_path;
 extern int test_path;
 extern int force_signal_path;
 
-
+extern uint16_t R;
+extern uint8_t rfPower;
 extern void ADF4351_mux(int R);
 extern void ADF4351_force_refresh(void);
 extern void ADF4351_CP(int p);
