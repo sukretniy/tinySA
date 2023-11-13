@@ -1539,6 +1539,7 @@ static const menuitem_t  menu_curve_confirm[];
 static const menuitem_t  menu_settings3[];
 static const menuitem_t  menu_measure_noise_figure[];
 static const menuitem_t  menu_calibrate_harmonic[];
+static const menuitem_t  menu_calibrate_normal[];
 static const menuitem_t  menu_calibrate_max[];
 #endif
 static const menuitem_t  menu_calibrate[];
@@ -1684,6 +1685,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     reset_settings(old_m);
     }
     break;
+  case CORRECTION_LNA_DIRECT:
   case CORRECTION_LNA_HARM:
   case CORRECTION_LNA:
   case CORRECTION_LNA_ULTRA:
@@ -1723,6 +1725,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
 #endif
 
 #ifdef TINYSA4
+  case CORRECTION_DIRECT:
   case CORRECTION_HARM:
   case CORRECTION_LOW_ULTRA:
     goto common;
@@ -1739,6 +1742,8 @@ static UI_FUNCTION_ADV_CALLBACK(menu_curve_acb)
     setting.step_delay_mode = SD_PRECISE;
     setting.repeat = 10;
     current_curve_index = data;
+    force_signal_path = true;
+    test_path = current_curve;
     menu_push_submenu(menu_curve_confirm);
     break;
   }
@@ -1756,6 +1761,7 @@ UI_FUNCTION_CALLBACK(menu_curve_confirm_cb)
       config_save();
     }
   }
+  force_signal_path = false;
   menu_move_back(false);
 }
 
@@ -1781,7 +1787,6 @@ UI_FUNCTION_CALLBACK(menu_noise_figure_confirm_cb)
 static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
 {
   (void)item;
-  (void)data;
 #ifdef TINYSA4
   if (!input_is_calibrated())
     return;
@@ -1791,7 +1796,7 @@ static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
   ui_mode_keypad(KM_LEVEL);
   if (kp_buf[0] != 0) {
     local_actual_level = uistat.value;
-    current_curve = CORRECTION_LOW_IN;
+    current_curve = data;
     menu_push_submenu(menu_curve);
   }
 }
@@ -1815,7 +1820,7 @@ static UI_FUNCTION_CALLBACK(menu_high_curve_prepare_cb)
 }
 
 #endif
-#ifdef TINYSA4
+#if 0
 static UI_FUNCTION_CALLBACK(menu_lna_curve_prepare_cb)
 {
   (void)item;
@@ -1848,6 +1853,22 @@ static UI_FUNCTION_CALLBACK(menu_lna_u_curve_prepare_cb)
   }
 }
 
+static UI_FUNCTION_CALLBACK(menu_lna_h_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (!input_is_calibrated())
+    return;
+  kp_help_text = "Enter actual input level";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    local_actual_level = uistat.value;
+    current_curve = CORRECTION_LNA_HARM;
+    menu_push_submenu(menu_curve);
+  }
+}
+
 static UI_FUNCTION_CALLBACK(menu_ultra_curve_prepare_cb)
 {
   (void)item;
@@ -1864,16 +1885,50 @@ static UI_FUNCTION_CALLBACK(menu_ultra_curve_prepare_cb)
   }
 }
 
+static UI_FUNCTION_CALLBACK(menu_direct_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (!input_is_calibrated())
+    return;
+  kp_help_text = "Enter actual input level";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    local_actual_level = uistat.value;
+    current_curve = CORRECTION_LOW_ULTRA;
+    menu_push_submenu(menu_curve);
+  }
+}
+
+static UI_FUNCTION_CALLBACK(menu_harm_curve_prepare_cb)
+{
+  (void)item;
+  (void)data;
+  if (!input_is_calibrated())
+    return;
+  kp_help_text = "Enter actual input level";
+  kp_buf[0]=0;
+  ui_mode_keypad(KM_LEVEL);
+  if (kp_buf[0] != 0) {
+    local_actual_level = uistat.value;
+    current_curve = CORRECTION_HARM;
+    menu_push_submenu(menu_curve);
+  }
+}
+#endif
+
 static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
 {
   (void)item;
   (void)data;
   if (!output_is_calibrated())
     return;
-  current_curve = CORRECTION_LOW_OUT;
+  current_curve = data;
   menu_push_submenu(menu_curve);
 }
 
+#if 0
 static UI_FUNCTION_CALLBACK(menu_output_ultra_curve_prepare_cb)
 {
   (void)item;
@@ -1903,14 +1958,6 @@ static UI_FUNCTION_CALLBACK(menu_output_adf_curve_prepare_cb)
   current_curve = CORRECTION_LOW_OUT_ADF;
   menu_push_submenu(menu_curve);
 }
-#else
-static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
-{
-  (void)item;
-  current_curve = data;
-  menu_push_submenu(menu_curve);
-}
-
 #endif
 #endif
 
@@ -2145,6 +2192,33 @@ static UI_FUNCTION_CALLBACK(menu_scale_cb)
     ui_mode_keypad(KM_SCALE);
   ui_mode_normal();
 }
+#ifdef TINYSA4
+//char hstart[6];
+
+static UI_FUNCTION_ADV_CALLBACK(menu_calibrate_normal_acb)
+{
+  (void)item;
+  if(b){
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
+    b->param_1.text = uistat.text;
+    return;
+  }
+  if (data == 0)
+    menu_push_submenu(menu_calibrate_normal);
+}
+
+static UI_FUNCTION_ADV_CALLBACK(menu_calibrate_harmonic_acb)
+{
+  (void)item;
+  if(b){
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
+    b->param_1.text = uistat.text;
+    return;
+  }
+  if (data == 0)
+    menu_push_submenu(menu_calibrate_harmonic);
+}
+#endif
 
 #ifdef __CALIBRATE__
 static UI_FUNCTION_CALLBACK(menu_calibrate_cb)
@@ -2213,11 +2287,11 @@ static UI_FUNCTION_CALLBACK(menu_config_cb)
     show_version();
     break;
   case CONFIG_MENUITEM_CALIBRATE:
-#ifdef TINYSA4
-    menu_push_submenu(max2871?menu_calibrate_max:menu_calibrate);
-#else
+//#ifdef TINYSA4
+//    menu_push_submenu(max2871?menu_calibrate_max:menu_calibrate);
+//#else
     menu_push_submenu(menu_calibrate);
-#endif
+//#endif
     return;
   }
   ui_mode_normal();
@@ -2871,9 +2945,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_CENTER);
       set_marker_frequency(0, uistat.value);
 #ifdef TINYSA4
-      kp_help_text = "Modulation frequency: 500Hz .. 10kHz";
+      kp_help_text = "Modulation frequency: 500Hz .. 20kHz";
       ui_mode_keypad(KM_SPAN);
-      if (uistat.value < 500 || uistat.value > 10000)
+      if (uistat.value < 500 || uistat.value > 20000)
         goto no_measurement;
       set_RBW(uistat.value/300);
 #else
@@ -4573,7 +4647,43 @@ static const menuitem_t menu_curve_confirm[] = {
   { MT_CALLBACK, 0,               "CANCEL",   menu_curve_confirm_cb },
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
+
+
+#define CORRECTION_LOW_IN   0
+#define CORRECTION_LNA      1
+#define CORRECTION_LOW_ULTRA 2
+#define CORRECTION_LNA_ULTRA 3
+#define CORRECTION_DIRECT         4
+#define CORRECTION_LNA_DIRECT     5
+#define CORRECTION_HARM            6
+#define CORRECTION_LNA_HARM        7
+
+
+static const menuitem_t menu_actual_in_power[] =
+{
+ { MT_CALLBACK,     CORRECTION_LOW_IN,      "IN\nCURVE",            menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LNA,         "IN LNA\nCURVE",        menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LOW_ULTRA,   "IN ULTRA\nCURVE",      menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LNA_ULTRA,   "IN ULTRA\nLNA CURVE",  menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_DIRECT,      "IN DIRECT\nCURVE",     menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LNA_DIRECT,  "IN DIRECT\nLNA CURVE", menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_HARM,        "IN HARM\nCURVE",       menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LNA_HARM,    "IN HARM\nLNA CURVE",   menu_input_curve_prepare_cb},
+ { MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
+
+
+static const menuitem_t menu_actual_out_power[] =
+{
+ { MT_CALLBACK,     CORRECTION_LOW_OUT,         "OUT\nCURVE",       menu_output_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LOW_OUT_DIRECT,  "OUT DIR\nCURVE",   menu_output_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LOW_OUT_ADF,     "OUT ADF\nCURVE",   menu_output_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LOW_OUT_MIXER,   "OUT MIXER\nCURVE", menu_output_curve_prepare_cb},
+ { MT_NONE,     0, NULL, menu_back} // next-> menu_back
+};
 #endif
+
+
 static const menuitem_t menu_actual_power[] =
 {
  { MT_KEYPAD,           KM_ACTUALPOWER, "INPUT\nLEVEL",  "Enter actual level under marker"},
@@ -4584,18 +4694,13 @@ static const menuitem_t menu_actual_power[] =
 #endif
 #ifdef __CURVE_EDIT__
 #ifdef TINYSA4
- { MT_CALLBACK,     0,                  "IN\nCURVE",  menu_input_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "IN LNA\nCURVE",    menu_lna_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "IN ULTRA\nCURVE",  menu_ultra_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "IN ULTRA\nLNA CURVE",    menu_lna_u_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "OUT\nCURVE", menu_output_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "OUT DIR\nCURVE", menu_output_direct_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "OUT ADF\nCURVE", menu_output_adf_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "OUT MIXER\nCURVE", menu_output_ultra_curve_prepare_cb},
+ { MT_SUBMENU,      0,                  "INPUT\nCURVES", menu_actual_in_power},
+ { MT_SUBMENU,      0,                  "OUTPUT\nCURVES", menu_actual_out_power},
+
 #else
- { MT_CALLBACK,     0,                  "IN LOW\nCURVE",  menu_input_curve_prepare_cb},
- { MT_CALLBACK,     0,                  "IN HIGH\nCURVE",  menu_high_curve_prepare_cb},
- { MT_CALLBACK,     CORRECTION_LOW_OUT, "OUT LOW\nCURVE", menu_output_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LOW_IN,  "IN LOW\nCURVE",    menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_HIGH_IN, "IN HIGH\nCURVE",   menu_input_curve_prepare_cb},
+ { MT_CALLBACK,     CORRECTION_LOW_OUT, "OUT LOW\nCURVE",   menu_output_curve_prepare_cb},
 // { MT_CALLBACK,     CORRECTION_HIGH_OUT,"OUT HIGH\nCURVE", menu_output_curve_prepare_cb},
 #endif
 #endif
@@ -4765,13 +4870,15 @@ static const menuitem_t menu_measure[] = {
 #ifdef TINYSA4
 static const menuitem_t menu_calibrate_harmonic[] =
 {
-  { MT_FORM | MT_TITLE,      0, "Connect 5.34GHz at -50 to -10dBm",  NULL},
+ { MT_FORM | MT_TITLE,      1, "Connect %sHz at -50 to -10dBm",  menu_calibrate_harmonic_acb},      // Titles can have advanced callback for title format
+// { MT_FORM | MT_TITLE,      0, "Connect 5.34GHz at -50 to -10dBm",  NULL},
 #ifdef TINYSA4
   { MT_FORM | MT_CALLBACK,   3, "CALIBRATE",        menu_calibrate_cb},
 #endif
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
 
+#if 0
 static const menuitem_t menu_calibrate_harmonic_max[] =
 {
   { MT_FORM | MT_TITLE,      0, "Connect 7.25GHz at -50 to -10dBm",  NULL},
@@ -4780,6 +4887,7 @@ static const menuitem_t menu_calibrate_harmonic_max[] =
 #endif
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
+#endif
 
 static const menuitem_t menu_calibrate_normal[] =
 {
@@ -4792,12 +4900,12 @@ static const menuitem_t menu_calibrate_normal[] =
 
 static const menuitem_t menu_calibrate[] =
 {
-  { MT_FORM | MT_SUBMENU,   1, "CALIBRATE 100kHz to 5.34GHz",   menu_calibrate_normal},
-  { MT_FORM | MT_SUBMENU,   1, "CALIBRATE above 5.34GHz",       menu_calibrate_harmonic},
-  { MT_FORM | MT_CALLBACK,   2, "RESET CALIBRATION",            menu_calibrate_cb},
+  { MT_FORM | MT_ADV_CALLBACK,  0, "CALIBRATE 100kHz to %sHz",  menu_calibrate_normal_acb},
+  { MT_FORM | MT_ADV_CALLBACK,  0, "CALIBRATE above %sHz",   menu_calibrate_harmonic_acb},
+  { MT_FORM | MT_CALLBACK,      2, "RESET CALIBRATION",         menu_calibrate_cb},
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
-
+#if 0
 static const menuitem_t menu_calibrate_max[] =
 {
   { MT_FORM | MT_SUBMENU,   1, "CALIBRATE 100kHz to 7.25GHz",   menu_calibrate_normal},
@@ -4805,6 +4913,7 @@ static const menuitem_t menu_calibrate_max[] =
   { MT_FORM | MT_CALLBACK,   2, "RESET CALIBRATION",            menu_calibrate_cb},
   { MT_FORM | MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
+#endif
 
 #else
 static const menuitem_t menu_calibrate[] =
@@ -5266,10 +5375,7 @@ static void fetch_numeric_target(uint8_t mode)
     break;
   case KM_HARM_START:
     uistat.freq_value = config.harmonic_start;
-    if (config.harmonic_start == 0)
-      plot_printf(uistat.text, sizeof uistat.text, "AUTO");
-    else
-      plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value );
+    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz",(config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ) );
     break;
   case KM_DIRECT_START:
     uistat.freq_value = config.direct_start;
@@ -5518,9 +5624,8 @@ set_numeric_value(void)
     break;
   case KM_HARM_START:
     config.harmonic_start = uistat.freq_value;
-    reset_settings(setting.mode);
-//    config_save(); // TODO not now
-    //ultra_start = config.ultra_start;
+    config_save();
+    set_freq_boundaries();
     break;
   case KM_DIRECT_START:
     config.direct_start = uistat.freq_value;
@@ -6124,6 +6229,11 @@ redraw_cal_status:
   buf[6] = 0;
   ili9341_drawstring(buf, x, y);
 
+#ifdef TINYSA4
+  y += YSTEP;
+  ili9341_drawstring(&(get_hw_version_text()[3]),x, y);
+#endif
+
 #ifdef __USE_RTC__
   y += YSTEP + YSTEP/2 ;
   uint32_t dr = rtc_get_dr_bin(); // DR read second
@@ -6629,7 +6739,11 @@ draw_menu_buttons(const menuitem_t *menu, uint32_t mask)
     menu_item_modify_attribute(menu, i, &button);      // before plot_printf to create status text
     char *text;
     // MT_ADV_CALLBACK - allow change button data in callback, more easy and correct
-    if (MT_MASK(m->type) == MT_ADV_CALLBACK){
+    if (MT_MASK(m->type) == MT_ADV_CALLBACK
+#ifdef TINYSA4
+        || (MT_MASK(m->type) == MT_TITLE && m->reference != 0 )     // Only for tinySA4
+#endif
+        ){
       menuaction_acb_t cb = (menuaction_acb_t)m->reference;
       if (cb) (*cb)(i, (m->type & MT_REPEATS) ? (m->data & 0x0f)+sub_item : m->data, &button);
       // Apply custom text, from button label and

@@ -1573,10 +1573,17 @@ float set_actual_power(float target_level)              // Set peak level to kno
 //    if (in_calibration && SDU1.config->usbp->state == USB_ACTIVE)
 //      shell_printf ("stage=%d, target=%5.2f, actual=%5.2f, correction=%5.2f, old correction=%5.2f\r\n", calibration_stage, target_level, actual_level, offset_correction, get_level_offset());
     if (signal_path == PATH_ULTRA) {
-      if (setting.extra_lna)
-        config.ultra_lna_level_offset += offset_correction;
-      else
-        config.ultra_level_offset += offset_correction;
+      if (LO_harmonic) {
+        if (setting.extra_lna)
+          config.harmonic_lna_level_offset += offset_correction;
+        else
+        config.harmonic_level_offset += offset_correction;
+      } else {
+        if (setting.extra_lna)
+          config.ultra_lna_level_offset += offset_correction;
+        else
+          config.ultra_level_offset += offset_correction;
+      }
     } else if (signal_path == PATH_DIRECT) {
       if (setting.extra_lna)
         config.direct_lna_level_offset += offset_correction;
@@ -1599,6 +1606,8 @@ float set_actual_power(float target_level)              // Set peak level to kno
 
 float get_level_offset(void)
 {
+  if (setting.disable_correction)
+    return 0;
   if (setting.mode == M_HIGH) {
     if (config.high_level_offset == 100)        // Offset of 100 means not calibrated
       return 0;
@@ -1615,10 +1624,17 @@ float get_level_offset(void)
       else
         lev = config.direct_level_offset;
     } else if (signal_path == PATH_ULTRA) {
-      if (setting.extra_lna)
-        lev = config.ultra_lna_level_offset;
-      else
-        lev = config.ultra_level_offset;
+      if (LO_harmonic) {
+        if (setting.extra_lna)
+          lev = config.harmonic_lna_level_offset;
+        else
+          lev = config.harmonic_level_offset;
+      } else {
+        if (setting.extra_lna)
+          lev = config.ultra_lna_level_offset;
+        else
+          lev = config.ultra_level_offset;
+      }
     } else if (setting.extra_lna)
       lev = config.lna_level_offset;
     else
@@ -2238,7 +2254,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
       if (LO_harmonic)
         actual_drive = 3;
 //      else if (f <  DRIVE0_MAX_FREQ)       // below 600MHz
-//        actual_drive = 0;
+//        actual_drive = 0;                     // Never use drive zero
       else if (f < DRIVE1_MAX_FREQ) // below 1.2GHz
         actual_drive = 1;
       else if (f < DRIVE2_MAX_FREQ)  // below 2.1GHz
@@ -2250,24 +2266,23 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
     //  ----------------- end duplication of code
     //
 
-    if (actual_drive >= 1)
-      cv += float_TO_PURE_RSSI(config.drive1_level_offset);
-    if (actual_drive >= 2)
-      cv += float_TO_PURE_RSSI(config.drive2_level_offset);
-    if (actual_drive >= 3)
-      cv += float_TO_PURE_RSSI(config.drive3_level_offset);
-
     switch (signal_path) {
     case PATH_LOW:
       c = CORRECTION_LOW_IN;
       break;
     case PATH_ULTRA:
-      c = CORRECTION_LOW_ULTRA;
       if (LO_harmonic) {
         c = CORRECTION_HARM;
-        cv += float_TO_PURE_RSSI(config.harmonic_level_offset);                                        // +10.5dB correction.
-      } else if (f>MAX_ABOVE_IF_FREQ) {
-        cv += float_TO_PURE_RSSI(config.shift3_level_offset);
+      } else {
+        c = CORRECTION_LOW_ULTRA;
+  //    if (actual_drive >= 1)
+  //      cv += float_TO_PURE_RSSI(config.drive1_level_offset);           // always zero
+        if (actual_drive >= 2)
+          cv += float_TO_PURE_RSSI(config.drive2_level_offset);
+        if (actual_drive >= 3)
+          cv += float_TO_PURE_RSSI(config.drive3_level_offset);
+        if (f>MAX_ABOVE_IF_FREQ)
+          cv += float_TO_PURE_RSSI(config.shift3_level_offset);
       }
 
       break;
@@ -2358,7 +2373,11 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
   float multi = (setting.correction_value[i] - setting.correction_value[i-1]) * (1 << (SCALE_FACTOR -1)) / (float)m;
   float cv = setting.correction_value[i-1] + ((f >> SCALE_FACTOR) * multi) / (float)(1 << (SCALE_FACTOR -1)) ;
 #else
+#ifdef TINYSA4
+  int64_t scaled_f = f >> FREQ_SCALE_FACTOR;
+#else
   int32_t scaled_f = f >> FREQ_SCALE_FACTOR;
+#endif
   int32_t scaled_f_divider = (config.correction_frequency[c][i] - config.correction_frequency[c][i-1]) >> FREQ_SCALE_FACTOR;
   if (scaled_f_divider!=0)
     cv += (scaled_correction_value[c][i-1] + ((scaled_f * scaled_correction_multi[c][i])/scaled_f_divider)) >> (SCALE_FACTOR - 5) ;
@@ -4284,7 +4303,6 @@ again:                                                              // Spur redu
 #ifdef __SI5351__
         if (si5351_available) {
         if (setting.R == 0) {
-          setting.increased_R = false;
           if (setting.mode == M_GENLOW) {
             if (local_modulo == 0) ADF4351_modulo(1000);
             ADF4350_shift_ref(false);
@@ -4302,7 +4320,6 @@ again:                                                              // Spur redu
           } else
           if (get_sweep_frequency(ST_SPAN)<5000000) { // When scanning less then 5MHz
             if (actual_rbw_x10 <= 3000) {
-              setting.increased_R = true;
               freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
               if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
                 ADF4351_R_counter(2);    // To avoid PLL Loop shoulders at multiple of 10MHz
@@ -4326,7 +4343,6 @@ again:                                                              // Spur redu
 #endif
         {
         if (setting.R == 0) {
-          setting.increased_R = false;
           if (setting.mode == M_GENLOW) {
             if (max2871) {
               if (local_modulo == 0) ADF4351_modulo(1000);
@@ -4338,8 +4354,7 @@ again:                                                              // Spur redu
           } else if (lf < 25000000 && max2871) {
             ADF4351_R_counter(-1);
             ADF4351_modulo(200);
-          } else if (lf > 8000000 && lf < 3000000000 && MODE_INPUT(setting.mode)) {
-            if (max2871)
+          } else if (lf > 8000000 /* && lf < 3000000000*/  && MODE_INPUT(setting.mode)) {
             if (local_modulo == 0) {
               if (max2871)
                 ADF4351_modulo(100);
@@ -4348,13 +4363,12 @@ again:                                                              // Spur redu
             }
             freq_t tf = ((lf + actual_rbw_x10*AVOID_MULTI) / TCXO) * TCXO;
             if (tf + actual_rbw_x10*AVOID_MULTI >= lf  && tf < lf + actual_rbw_x10*AVOID_MULTI /* && tf != 180000000 */ ) {   // 30MHz
-              setting.increased_R = true;
               if (max2871) {
-                if (lf > 59000000 && lf <390000000) {
+                if (lf > 59000000) {
 //                  if (tf == 180000000) {
 //                    ADF4351_R_counter(7);
 //                  } else
-                    ADF4351_R_counter(8);
+                  ADF4351_R_counter(8);
                 }
               } else {
                 if ( (tf / TCXO) & 1 ) {    // Odd harmonic of 30MHz
@@ -4368,16 +4382,13 @@ again:                                                              // Spur redu
             else if (actual_rbw_x10 < 1000) {
               freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
               if (tf + actual_rbw_x10*100 >= lf  && tf < lf + actual_rbw_x10*100) // 10MHz
-                setting.increased_R = true;
-              ADF4351_R_counter(4);
+                ADF4351_R_counter(4);
               else
-                setting.increased_R = true;
-              ADF4351_R_counter(3);
+                ADF4351_R_counter(3);
             }
 #endif
             else if (get_sweep_frequency(ST_SPAN)<5000000) { // When scanning less then 5MHz
               if (actual_rbw_x10 <= 3000) {
-                setting.increased_R = true;
                 freq_t tf = ((lf + actual_rbw_x10*1000) / TXCO_DIV3) * TXCO_DIV3;
                 if (tf + actual_rbw_x10*1000 >= lf  && tf < lf + actual_rbw_x10*1000) // 10MHz
                   ADF4351_R_counter(-4);    // To avoid PLL Loop shoulders at multiple of 10MHz
@@ -4389,7 +4400,7 @@ again:                                                              // Spur redu
             else if (max2871)
               ADF4351_R_counter(1);
             else
-              ADF4351_R_counter(2);
+              ADF4351_R_counter(1);
 
           } else {                          // Input above 800 MHz
             if (local_modulo == 0) {
@@ -4403,14 +4414,13 @@ again:                                                              // Spur redu
             }
 #if 0
             if (setting.frequency_step < 100000) {
-              setting.increased_R = true;
               ADF4351_R_counter(3);
             } else
 #endif
             if (max2871)
               ADF4351_R_counter(1); // Used to be 1
             else
-              ADF4351_R_counter(2); // Used to be 1
+              ADF4351_R_counter(1); // Used to be 1
           }
         } else {
           ADF4351_R_counter(setting.R%1000);
@@ -7628,7 +7638,7 @@ float get_jump_config(int i) {
   return 0;
 }
 
-enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_MAX };
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_HARMONIC, CS_HARMONIC_LNA, CS_MAX };
 #define ULTRA_HARMONIC_CAL_FREQ 5340000000
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
@@ -7850,6 +7860,14 @@ void calibrate(void)
           test_path = 5;      // Direct lna path at 900MHz
           force_signal_path = true;
           config.direct_lna_level_offset += 1.0;
+          break;
+        case CS_HARMONIC:
+          test_path = 6;      // harmonic path
+          force_signal_path = true;
+          break;
+        case CS_HARMONIC_LNA:
+          test_path = 7;      // harmonic lna path
+          force_signal_path = true;
           break;
 #endif
         }

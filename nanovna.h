@@ -243,7 +243,7 @@ typedef uint32_t freq_t;
  extern freq_t MAX_ABOVE_IF_FREQ;           // Range to use for below IF
  extern freq_t MIN_BELOW_IF_FREQ;          // Range to use for below IF
  extern int max2871;
-
+ extern void set_freq_boundaries(void);
 #endif
 typedef float measurement_t[TRACES_MAX][POINTS_COUNT];
 extern measurement_t measured;
@@ -275,6 +275,7 @@ freq_t my_atoui(const char *p);
 int shell_printf(const char *fmt, ...);
 int usage_printf(const char *fmt, ...);
 void clear_backup(void);
+const char *get_hw_version_text(void);
 
 #ifdef __REMOTE_DESKTOP__
 extern uint8_t remote_mouse_down;
@@ -798,6 +799,7 @@ typedef struct config {
   float out_switch_offset;
   float lna_level_offset;
   float harmonic_level_offset;
+  float harmonic_lna_level_offset;
   float shift1_level_offset;
   float shift2_level_offset;
   float shift3_level_offset;
@@ -1461,7 +1463,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e61 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e65 /* 'CONF' */
 #define SETTING_MAGIC 0x434f4e64
 
 extern int16_t lastsaveid;

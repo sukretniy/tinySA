@@ -633,6 +633,10 @@ void ADF4351_R_counter(int new_R)
   if (new_R<1)
     return;
   R = new_R;
+  if (R>1)
+    setting.increased_R = true;
+  else
+    setting.increased_R = false;
   clear_frequency_cache();                              // When R changes the possible frequencies will change
 }
 
