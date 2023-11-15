@@ -779,6 +779,7 @@ float marker_to_value(const int i);
 #define _MODE_DONT_SAVE_STATE   0x08
 // auto name
 #define _MODE_AUTO_FILENAME    0x10
+#define _MODE_MHZ_CSV          0x20
 
 #pragma pack(push, 4)
 typedef struct config {

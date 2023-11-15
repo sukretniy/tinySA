@@ -1020,7 +1020,7 @@ config_t config = {
 #ifdef TINYSA4
   .touch_cal =          { 444, 715, 3552, 3499 }, // 4 inch panel
 #endif
-  ._mode     = _MODE_USB,
+  ._mode     = _MODE_USB | _MODE_MHZ_CSV,
   ._serial_speed = SERIAL_DEFAULT_BITRATE,
   .lcd_palette = LCD_DEFAULT_PALETTE,
 #ifdef TINYSA3

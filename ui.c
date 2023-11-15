@@ -4206,6 +4206,18 @@ static UI_FUNCTION_ADV_CALLBACK(menu_autoname_acb)
   config_save();
 }
 
+static UI_FUNCTION_ADV_CALLBACK(menu_mhz_csv_acb)
+{
+  (void)item;
+  (void)data;
+  if (b){
+    b->icon = config._mode & _MODE_MHZ_CSV ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  config._mode^= _MODE_MHZ_CSV;
+  config_save();
+}
+
 #ifdef __SD_FILE_BROWSER__
 #include "vna_browser.c"
 #endif
@@ -5166,6 +5178,7 @@ static const menuitem_t menu_storage[] = {
   { MT_CALLBACK,    FMT_BMP_FILE,   "SAVE\nCAPTURE",        menu_sdcard_cb},
   { MT_CALLBACK,    FMT_PRS_FILE,   "SAVE\nSETTINGS",       menu_sdcard_cb},
   { MT_CALLBACK,    FMT_CFG_FILE,   "SAVE\nCONFIG",         menu_sdcard_cb},
+  { MT_ADV_CALLBACK, 0,             "MHz\nCSV",            menu_mhz_csv_acb },
   { MT_CALLBACK,    FMT_CSV_FILE,   "SAVE\nTRACES",         menu_save_traces_cb},
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
@@ -7692,7 +7705,12 @@ static void sa_save_file(uint8_t format) {
       case FMT_CSV_FILE:
         for (i = 0; i < sweep_points && res == FR_OK; i++) {
           char *buf = (char *)spi_buffer;
-          if (file_mask & 1)  buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
+          if (file_mask & 1) {
+            if (config._mode & _MODE_MHZ_CSV)
+              buf += plot_printf(buf, 100, "%.6f,", ((float)getFrequency(i))/1000000);
+            else
+              buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
+          }
           if (file_mask & 2)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
           if (file_mask & 4)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
           if (file_mask & 8)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED2][i]));
