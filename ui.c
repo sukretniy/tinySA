@@ -2199,7 +2199,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_calibrate_normal_acb)
 {
   (void)item;
   if(b){
-    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
+    plot_printf(uistat.text, sizeof uistat.text, "%.3Q", (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
     b->param_1.text = uistat.text;
     return;
   }
@@ -2211,7 +2211,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_calibrate_harmonic_acb)
 {
   (void)item;
   if(b){
-    plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
+    plot_printf(uistat.text, sizeof uistat.text, "%.3Q", (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
     b->param_1.text = uistat.text;
     return;
   }
@@ -4278,7 +4278,7 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_AM,      "AM",    menu_modulation_acb},
 #ifdef TINYSA4
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              "FM",               menu_modulation_acb},
-  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..3.5kHz"},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "1Hz..3.5kHz"},
   { MT_FORM | MT_KEYPAD,   KM_DEPTH,               "AM DEPTH: %s%%",         "0..100"},
   { MT_FORM | MT_KEYPAD,   KM_DEVIATION,            "FM DEVIATION: %s",         "1kHz..300kHz"},
 //  { MT_FORM | MT_ADV_CALLBACK, MO_NFM2,              MT_CUSTOM_LABEL,    menu_modulation_acb},
@@ -4287,7 +4287,7 @@ static const menuitem_t  menu_modulation[] = {
   { MT_FORM | MT_ADV_CALLBACK, MO_NFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK, MO_WFM,              MT_CUSTOM_LABEL,    menu_modulation_acb},
   { MT_FORM | MT_ADV_CALLBACK | MT_LOW, MO_EXTERNAL,MT_CUSTOM_LABEL,    menu_modulation_acb},
-  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "50Hz..5kHz"},
+  { MT_FORM | MT_KEYPAD,   KM_MODULATION,           "FREQ: %s",         "1Hz..5kHz"},
 #endif
   { MT_FORM | MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };

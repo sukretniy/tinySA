@@ -1138,8 +1138,8 @@ void set_depth(int d)
 
 void set_modulation_frequency(int f)
 {
-  if (f < 50)
-    f = 50;
+  if (f < 1)
+    f = 1;
   if (f > 10000)
     f = 10000;
 #ifdef TINYSA4
