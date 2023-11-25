@@ -2817,7 +2817,11 @@ void my_microsecond_delay(int t)
 
 void my_veryfast_delay(int t) // In 8MHz ticks
 {
-  if (t>0) gptPolledDelay(&DELAY_TIMER, t);
+  while (t >= 0x1000) { // 16 bit timer
+    gptPolledDelay(&DELAY_TIMER, 0x1000); // t us delay
+    t -= 0x1000;
+  }
+  if (t>1) gptPolledDelay(&DELAY_TIMER, t); // t us delay
 }
 
 /* Main thread stack size defined in makefile USE_PROCESS_STACKSIZE = 0x200

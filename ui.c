@@ -1922,8 +1922,10 @@ static UI_FUNCTION_CALLBACK(menu_output_curve_prepare_cb)
 {
   (void)item;
   (void)data;
+#ifdef TINYSA4
   if (!output_is_calibrated())
     return;
+#endif
   current_curve = data;
   menu_push_submenu(menu_curve);
 }
@@ -4660,6 +4662,7 @@ static const menuitem_t menu_curve_confirm[] = {
   { MT_NONE, 0, NULL, NULL } // sentinel
 };
 
+#ifdef TINYSA4
 
 #define CORRECTION_LOW_IN   0
 #define CORRECTION_LNA      1
@@ -4693,6 +4696,7 @@ static const menuitem_t menu_actual_out_power[] =
  { MT_CALLBACK,     CORRECTION_LOW_OUT_MIXER,   "OUT MIXER\nCURVE", menu_output_curve_prepare_cb},
  { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
+#endif
 #endif
 
 
