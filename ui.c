@@ -1433,7 +1433,7 @@ static const struct {
 [KM_FASTER_SPEEDUP] = {keypads_positive  , "WIDE\nSPEEDUP"}, // KM_FAST_SPEEDUP
 [KM_GRIDLINES]    = {keypads_positive    , "MINIMUM\nGRIDLINES"}, // KM_GRIDLINES
 [KM_MARKER]       = {keypads_freq        , "MARKER\nFREQ"}, // KM_MARKER
-[KM_MODULATION]   = {keypads_freq        , "MODULATION\nFREQ"}, // KM_MODULATION
+[KM_MODULATION]   = {keypads_positive    , "MODULATION\nFREQ"}, // KM_MODULATION
 [KM_HIGHOUTLEVEL] = {keypads_plusmin     , "OUTPUT\nLEVEL"},    // KM_HIGHOUTLEVEL #25
 #ifdef TINYSA4
 [KM_COR_AM]       = {keypads_plusmin     , "COR\nAM"},    // KM_COR_AM
@@ -2412,9 +2412,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_smodulation_acb){
     else {
 #ifdef TINYSA4
       if (setting.modulation == MO_AM)
-        plot_printf(b->text, sizeof b->text, "MOD: %4dHz AM %d%%", (int)(setting.modulation_frequency), setting.modulation_depth_x100);
+        plot_printf(b->text, sizeof b->text, "MOD: %8.4FHz AM %d%%", setting.modulation_frequency, setting.modulation_depth_x100);
       else
-        plot_printf(b->text, sizeof b->text, "MOD: %4dHz FM %4QHz", (int)(setting.modulation_frequency), (freq_t)(setting.modulation_deviation_div100*100));
+        plot_printf(b->text, sizeof b->text, "MOD: %8.4FHz FM %4QHz", setting.modulation_frequency, (freq_t)(setting.modulation_deviation_div100*100));
 #else
       plot_printf(b->text, sizeof b->text, "MOD: %4dHz %s", (int)(setting.modulation_frequency), menu_modulation_text[setting.modulation]);
 #endif
@@ -5497,7 +5497,7 @@ static void fetch_numeric_target(uint8_t mode)
   case KM_MODULATION:
     if (active_marker >=0) {
       uistat.value = setting.modulation_frequency;
-      plot_printf(uistat.text, sizeof uistat.text, "%7.0fHz", uistat.value);
+      plot_printf(uistat.text, sizeof uistat.text, "%8.4FHz", uistat.value);
     }
     break;
 #ifdef TINYSA4
@@ -5766,7 +5766,7 @@ set_numeric_value(void)
     set_marker_time(active_marker, uistat.value);
     break;
   case KM_MODULATION:
-    set_modulation_frequency((int)uistat.value);
+    set_modulation_frequency(uistat.value);
     break;
 #ifdef TINYSA4
   case KM_COR_AM:

@@ -1136,7 +1136,7 @@ void set_depth(int d)
 }
 #endif
 
-void set_modulation_frequency(int f)
+void set_modulation_frequency(float f)
 {
   if (f < 1)
     f = 1;
@@ -3637,7 +3637,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         int sine_wave_index = 1;
         config.cor_am = INITIAL_MODULATION_CORRECTION;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
-        while ( (modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
+        while ( (modulation_delay = ((float)8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am) < 20 && modulation_steps > 4) {
           sine_wave_index <<= 1;
           modulation_steps >>= 1;
         }
@@ -3661,7 +3661,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
         config.cor_am = INITIAL_MODULATION_CORRECTION;        // Initialize with some spare
         modulation_steps = MAX_MODULATION_STEPS; // Search modulation steps that fit frequency
         //modulation_steps = 8;  // <-----------------TEMP!!!!!
-        while ( ((modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am)) < 900 && modulation_steps >= 4) {
+        while ( ((modulation_delay = ((float)8000000/ modulation_steps ) / setting.modulation_frequency + config.cor_am)) < 900 && modulation_steps >= 4) {
           sine_wave_index <<= 1;
           modulation_steps >>= 1;
         }
@@ -3897,7 +3897,7 @@ pureRSSI_t perform(bool break_on_operation, int i, freq_t f, int tracking)     /
     if (setting.modulation != MO_NONE && setting.modulation != MO_EXTERNAL && setting.modulation_frequency != 0) {
       modulation_counter = 0;
       cycle_counter = 0;
-      modulation_delay = (8000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 8MHz/8
+      modulation_delay = ((float)8000000/ modulation_steps ) / setting.modulation_frequency;     // 8 steps so 8MHz/8
       modulation_delay += config.cor_am;
 #ifdef TINYSA3
       if (setting.modulation == MO_WFM)
@@ -3952,10 +3952,11 @@ modulation_again:
       modulation_counter = 0;
       cycle_counter++;
       if (config.cor_am == INITIAL_MODULATION_CORRECTION) {
-        if (chVTGetSystemTimeX() - start_of_sweep_timestamp > 1000) {    // 100 ms, System tick 10000 per second
+        int cycle_time = chVTGetSystemTimeX() - start_of_sweep_timestamp;
+        if (cycle_time > 1000) {    // 100 ms, System tick 10000 per second
          start_of_sweep_timestamp = chVTGetSystemTimeX();
           modulation_delay -= config.cor_am;
-          int actual_delay = 800000 / cycle_counter / modulation_steps;           // In units of 1/8 microsecond
+          int actual_delay = 800 * cycle_time / cycle_counter / modulation_steps;           // In units of 1/8 microsecond
           config.cor_am += modulation_delay - actual_delay;
           if (config.cor_am >0)
             config.cor_am = 0;

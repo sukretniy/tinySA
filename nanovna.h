@@ -474,7 +474,7 @@ void set_noise(int);
 void toggle_tracking_output(void);
 extern int32_t frequencyExtra;
 void set_modulation(int);
-void set_modulation_frequency(int);
+void set_modulation_frequency(float);
 int search_maximum(int m, freq_t center, int span);
 //extern int setting.modulation;
 void set_measurement(int);
@@ -1270,7 +1270,6 @@ typedef struct setting
   uint16_t freq_mode;           //  0...1!!! need convert to bool or bit field
   int16_t  refer;               // -1 disabled
 
-  uint16_t modulation_frequency;  // 50...6000
 #ifdef TINYSA4
   uint16_t modulation_depth_x100;      // AM (30% - 100%) multiplied by 100
   uint16_t modulation_deviation_div100;  // FM (2.5kHz to 100kHz) divided by 100
@@ -1285,6 +1284,7 @@ typedef struct setting
   uint32_t vbw_x100;
   uint32_t scan_after_dirty[TRACES_MAX];
 
+  float modulation_frequency;  // 50...6000
   float reflevel;
   float scale;
   float external_gain;
@@ -1465,7 +1465,7 @@ typedef struct properties {
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC 0x434f4e65 /* 'CONF' */
-#define SETTING_MAGIC 0x434f4e64
+#define SETTING_MAGIC 0x434f4e65
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;
