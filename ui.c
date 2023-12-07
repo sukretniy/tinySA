@@ -1755,11 +1755,11 @@ UI_FUNCTION_CALLBACK(menu_curve_confirm_cb)
 {
   (void)item;
   if (data) {
-    float new_offset = local_actual_level - peakLevel + config.correction_value[current_curve][current_curve_index];        // calculate offset based on difference between measured peak level and known peak level
-    if (new_offset > -30 && new_offset < 30) {
-      config.correction_value[current_curve][current_curve_index] = new_offset;
-      config_save();
-    }
+    set_actual_correction_value(current_curve,current_curve_index, local_actual_level);
+//    float new_offset = local_actual_level - peakLevel + config.correction_value[current_curve][current_curve_index];        // calculate offset based on difference between measured peak level and known peak level
+//    if (new_offset > -30 && new_offset < 30) {
+//      config.correction_value[current_curve][current_curve_index] = new_offset;
+    config_save();
   }
   force_signal_path = false;
   menu_move_back(false);

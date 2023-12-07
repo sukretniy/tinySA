@@ -726,7 +726,7 @@ void reset_settings(int m)
     set_sweep_frequency(ST_STOP, maxFreq);
 #ifdef TINYSA4
     set_sweep_frequency(ST_STOP,  DEFAULT_MAX_FREQ);    // TODO <----------------- temp ----------------------
-    setting.attenuate_x2 = 10;
+    setting.attenuate_x2 = 0;
 #else
     setting.attenuate_x2 = 60;
 #endif
@@ -1604,6 +1604,13 @@ float set_actual_power(float target_level)              // Set peak level to kno
   // dirty = true;             // No HW update required, only status panel refresh
 }
 
+void set_actual_correction_value(int current_curve,int current_curve_index, float actual_level){
+  float new_offset = actual_level - marker_to_value(0) + config.correction_value[current_curve][current_curve_index];        // calculate offset based on difference between measured peak level and known peak level
+  if (new_offset > -30 && new_offset < 30) {
+    config.correction_value[current_curve][current_curve_index] = new_offset;
+  }
+}
+
 float get_level_offset(void)
 {
   if (setting.disable_correction)
@@ -2294,7 +2301,7 @@ pureRSSI_t get_frequency_correction(freq_t f)      // Frequency dependent RSSI c
     }
     if (setting.extra_lna)
       c += 1;
-//    if (LO_shifting)
+//    if (LO_shifting && signal_path != PATH_DIRECT)
 //      cv += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : config.shift1_level_offset);
 
   } else if (setting.mode == M_GENLOW){
@@ -3486,9 +3493,11 @@ static void calculate_static_correction(void)                   // Calculate the
 #endif
 #ifdef __SI4463__
       getSI4463_RSSI_correction()
+
 #endif
-      - get_signal_path_loss()
-      + float_TO_PURE_RSSI(
+      - get_signal_path_loss();
+
+  pureRSSI_t temp = float_TO_PURE_RSSI(
 #ifndef TINYSA4
           + get_level_offset()          // Moved to frequency dependent part
 #endif
@@ -3500,6 +3509,7 @@ static void calculate_static_correction(void)                   // Calculate the
           + (setting.mode == M_GENLOW ? (old_temp - 35.0) / 13.0 : (old_temp - 35.0) / 20.0)      // About 7.7dB per 10 degrees C in output mode, 1 dB per 20 degrees in input mode
 #endif		  
           - setting.external_gain);
+  correct_RSSI += temp;
 }
 
 int hsical = -1;
@@ -4745,7 +4755,7 @@ again:                                                              // Spur redu
 #endif
 #ifdef __SI4463__
         pureRSSI = Si446x_RSSI(break_on_operation);
-        if (LO_shifting)
+        if (LO_shifting && signal_path != PATH_DIRECT)
           pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : (lf < LOW_SHIFT_FREQ ? config.shift1_level_offset: 0.0));
 
 #endif
@@ -4857,7 +4867,7 @@ again:                                                              // Spur redu
         pureRSSI = 0;
       else {
         pureRSSI = Si446x_RSSI(break_on_operation);
-        if (LO_shifting)
+        if (LO_shifting && signal_path != PATH_DIRECT)
           pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : (lf < LOW_SHIFT_FREQ ? config.shift1_level_offset: 0.0));
       }
       if (setting.unit == U_RAW)
@@ -7591,12 +7601,13 @@ const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 
 #ifdef TINYSA4
 
-#define JUMP_FREQS 6
-freq_t jump_freqs[JUMP_FREQS] = {LOW_SHIFT_FREQ, LOW_SHIFT_FREQ, DRIVE1_MAX_FREQ, DRIVE2_MAX_FREQ, 0, 0};
+#define JUMP_FREQS 7
+freq_t jump_freqs[JUMP_FREQS] = {LOW_SHIFT_FREQ, LOW_SHIFT_FREQ, DRIVE1_MAX_FREQ, DRIVE2_MAX_FREQ, 0, 0, 0};
 
-void set_jump_freq(freq_t a, freq_t b) {
+void set_jump_freq(freq_t a, freq_t b, freq_t c) {
   jump_freqs[4] = a;
   jump_freqs[5] = b;
+  jump_freqs[6] = c;
 }
 
 void set_jump_config(int i, float v) {
@@ -7618,6 +7629,9 @@ void set_jump_config(int i, float v) {
     break;
   case 5:
     config.harmonic_level_offset = v;
+    break;
+  case 6:
+    break;
   }
 }
 
@@ -7635,11 +7649,13 @@ float get_jump_config(int i) {
     return config.shift3_level_offset;
   case 5:
     return config.harmonic_level_offset;
+  case 6:
+    return 0.0;
   }
   return 0;
 }
 
-enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_HARMONIC, CS_HARMONIC_LNA, CS_MAX };
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_HARMONIC, CS_HARMONIC_LNA, /* CS_BPF_REF, CS_BPF, */ CS_CORRECTION_REF, CS_CORRECTION_LNA, CS_MAX };
 #define ULTRA_HARMONIC_CAL_FREQ 5340000000
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
@@ -7778,11 +7794,11 @@ void calibrate(void)
     draw_all(TRUE);
     set_jump_config(i, get_jump_config(i) + measure_jump(i));
     calibration_busy();
-    chThdSleepMilliseconds(500);
+    chThdSleepMilliseconds(100);
     test_acquire(TEST_JUMP);                        // Acquire test
     set_jump_config(i, get_jump_config(i) + measure_jump(i));
     calibration_busy();
-    chThdSleepMilliseconds(500);
+    chThdSleepMilliseconds(100);
   }
   setting.scale = 10;
   set_trace_scale(10);
@@ -7793,8 +7809,9 @@ void calibrate(void)
 #endif
   reset_calibration();
   in_calibration = true;
+  int current_correction_calibration = 0;
   for (calibration_stage = CS_NORMAL; calibration_stage < CS_MAX ; calibration_stage++) {
-    for (int k = 0; k<3; k++) {
+    for (int k = 0; k<3; k++) {     // max 3 retries
       float offset = 0.0;
       for (int j= 0; j < CALIBRATE_RBWS; j++ ) {
 #if 1
@@ -7870,6 +7887,18 @@ void calibrate(void)
           test_path = 7;      // harmonic lna path
           force_signal_path = true;
           break;
+        case CS_CORRECTION_REF:
+          if (!max2871)
+            goto done;
+          set_sweep_frequency(ST_CENTER, config.correction_frequency[1][to_calibrate[current_correction_calibration]]);
+          test_path = 0;
+          force_signal_path = true;
+          break;
+        case CS_CORRECTION_LNA:
+          set_sweep_frequency(ST_CENTER, config.correction_frequency[1][to_calibrate[current_correction_calibration]]);
+          test_path = 1;
+          force_signal_path = true;
+          break;
 #endif
         }
         set_average(0, AV_100);
@@ -7940,7 +7969,17 @@ low_level:
           goto quit;
         }
 #ifdef TINYSA4
-        if (calibration_stage == CS_DIRECT_REF)
+        if (calibration_stage == CS_CORRECTION_REF) {
+          direct_level = marker_to_value(0);
+        } else if (calibration_stage == CS_CORRECTION_LNA) {
+          if (direct_level > -90) // Check if on harmonic
+            set_actual_correction_value(1,to_calibrate[current_correction_calibration], direct_level);
+          if ((unsigned int) current_correction_calibration < sizeof(to_calibrate)/sizeof(int) - 1) {
+            current_correction_calibration++;
+            calibration_stage -= 2;             // skip back to REF measurement
+          }
+        }
+        else if (calibration_stage == CS_DIRECT_REF)
           direct_level = marker_to_value(0);
         else if (calibration_stage == CS_DIRECT){
           config.direct_level_offset += 1.0;
@@ -7953,12 +7992,13 @@ low_level:
 #endif
           offset = set_actual_power(CAL_LEVEL);           // Should be -23.5dBm (V0.2) OR 25 (V0.3)
         calibration_busy();
-        chThdSleepMilliseconds(500);
+        chThdSleepMilliseconds(100);
       }
       if (offset > -0.2 && offset < 0.2)
         k = 3;
     }
   }
+done:
   setting.below_IF = S_AUTO_OFF;
   in_calibration = false;
 #ifdef TINYSA4

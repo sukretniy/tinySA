@@ -1143,13 +1143,16 @@ config_t config = {
 #endif
 };
 
+
+const int to_calibrate[5] = {8,9,10,11,12};
+
 //properties_t current_props;
 //properties_t *active_props = &current_props;
 #ifdef TINYSA4
 const freq_t v5_2_correction_frequency[CORRECTION_SIZE][CORRECTION_POINTS]=
-{
+{                                                                                                           // *            *           *           *
  /* low */   {   10000,  100000,     300000,     600000,     2000000,    3000000,    30000000,   60000000,   80000000,   120000000,  230000000,  360000000,  520000000,  560000000,  640000000,  750000000,  800000000,  810000000,  820000000,  830000000},
- /* low lna */   {   10000,  30000,  100000,     300000,     1000000,    5000000,    40000000,   70000000,   180000000,  210000000,  250000000,  270000000,  290000000,  480000000,  650000000,  740000000,  790000000,  810000000,  820000000,  830000000},
+ /* low lna */   {   10000,  30000,  100000,     300000,     1000000,    5000000,    40000000,   70000000,   210000000,  240000000,  270000000,  300000000,  330000000,  480000000,  650000000,  740000000,  790000000,  810000000,  820000000,  830000000},
  /* ultra */ {   30000000,   700000000,  980000000,  1910000000,     2550000000,     2800000000,     2810000000,     3020000000,     3120000000,     3430000000,     3750000000,     4230000000,     4480000000,     4810000000,     5430000000,     5640000000,     6390000000,     6660000000,     6980000000,     7250000000},
  /* ultra lna */ {   30000000,   700000000,  1130000000,     1840000000,     2490000000,     2800000000,     2810000000,     3110000000,     3500000000,     3940000000,     4480000000,     4610000000,     4940000000,     5450000000,     6030000000,     6200000000,     6580000000,     6650000000,     7150000000,     7250000000},
  /* direct */    {   140000000,  150000000,  160000000,  180000000,  280000000,  290000000,  300000000,  330000000,  340000000,  350000000,  410000000,  480000000,  560000000,  823000000,  830000000,  850000000,  890000000,  950000000,  1090000000,     1120000000},
@@ -2842,7 +2845,7 @@ static void dac_init(void){
 
 #ifdef TINYSA4
 void set_freq_boundaries(void) {
-  if (max2871) {
+  if (max2871) {    // must all be harmonics of 30MHz
     MAX_LO_FREQ         = 6300000000ULL + config.overclock;
     MAX_ABOVE_IF_FREQ   = 4470000000ULL + config.overclock;         // Range to use for below IF
     MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;         // Range to use for below IF
@@ -2851,7 +2854,7 @@ void set_freq_boundaries(void) {
     MAX_ABOVE_IF_FREQ   = 3360000000ULL + config.overclock;           // Range to use for below IF
     MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;           // Range to use for below IF
   }
-  set_jump_freq( MAX_ABOVE_IF_FREQ, (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
+  set_jump_freq( MAX_ABOVE_IF_FREQ, (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ), MIN_BELOW_IF_FREQ);
 }
 #endif
 int main(void)

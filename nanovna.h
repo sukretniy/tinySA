@@ -421,6 +421,8 @@ void set_auto_attenuation(void);
 void set_auto_reflevel(bool);
 int is_paused(void);
 float set_actual_power(float);
+void set_actual_correction_value(int current_curve,int current_curve_index, float local_actual_level);
+extern const int to_calibrate[5];
 void SetGenerate(int);
 void set_RBW(uint32_t rbw_x10);
 #ifdef __VBW__
@@ -495,7 +497,7 @@ void toggle_high_out_adf4350(void);
 extern int high_out_adf4350;
 #endif
 int set_actual_freq(freq_t);
-void set_jump_freq(freq_t a, freq_t b);
+void set_jump_freq(freq_t a, freq_t b, freq_t c);
 int set_freq_corr(int);
 void set_IF2(int f);
 void set_R(int f);
