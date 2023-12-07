@@ -1801,6 +1801,7 @@ static UI_FUNCTION_CALLBACK(menu_input_curve_prepare_cb)
   }
 }
 #ifdef TINYSA3
+#if 0   // Not enabled currently
 static UI_FUNCTION_CALLBACK(menu_high_curve_prepare_cb)
 {
   (void)item;
@@ -1818,7 +1819,7 @@ static UI_FUNCTION_CALLBACK(menu_high_curve_prepare_cb)
     menu_push_submenu(menu_curve);
   }
 }
-
+#endif
 #endif
 #if 0
 static UI_FUNCTION_CALLBACK(menu_lna_curve_prepare_cb)

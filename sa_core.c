@@ -7809,7 +7809,9 @@ void calibrate(void)
 #endif
   reset_calibration();
   in_calibration = true;
+#ifdef TINYSA4
   int current_correction_calibration = 0;
+#endif
   for (calibration_stage = CS_NORMAL; calibration_stage < CS_MAX ; calibration_stage++) {
     for (int k = 0; k<3; k++) {     // max 3 retries
       float offset = 0.0;
@@ -7998,7 +8000,9 @@ low_level:
         k = 3;
     }
   }
+#ifdef TINYSA4
 done:
+#endif
   setting.below_IF = S_AUTO_OFF;
   in_calibration = false;
 #ifdef TINYSA4

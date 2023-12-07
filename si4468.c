@@ -617,6 +617,7 @@ uint16_t ADF4351_get_modulo(void)
 
 void ADF4351_spur_mode(int S)
 {
+  (void) S;
 //  noiseMode = S;
 }
 
