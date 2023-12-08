@@ -7602,6 +7602,7 @@ const int power_rbw [5] = { 100, 300, 30, 10, 3 };
 #ifdef TINYSA4
 
 #define JUMP_FREQS 7
+#define HARMONIC_JUMP   5
 freq_t jump_freqs[JUMP_FREQS] = {LOW_SHIFT_FREQ, LOW_SHIFT_FREQ, DRIVE1_MAX_FREQ, DRIVE2_MAX_FREQ, 0, 0, 0};
 
 void set_jump_freq(freq_t a, freq_t b, freq_t c) {
@@ -7678,10 +7679,10 @@ void calibrate_harmonic(void)
   set_sweep_points(450);
 //  setting.scale = 1;
 //  set_trace_scale(1);
-  int i = JUMP_FREQS - 1;
+
   {
-    test_freq = jump_freqs[i];
-    set_jump_config(i, -2);
+    test_freq = jump_freqs[HARMONIC_JUMP];
+    set_jump_config(HARMONIC_JUMP, -2);
     test_prepare(TEST_JUMP_HARMONIC);
     set_RBW(1000);
 //    set_auto_reflevel(true);
@@ -7693,11 +7694,11 @@ void calibrate_harmonic(void)
       ili9341_drawstring_7x13("Signal level too low or not on frequency", 30, 200);
       goto quit;
     }
-    set_jump_config(i, get_jump_config(i) + measure_jump(i));
+    set_jump_config(HARMONIC_JUMP, get_jump_config(HARMONIC_JUMP) + measure_jump(HARMONIC_JUMP));
     calibration_busy();
     chThdSleepMilliseconds(500);
     test_acquire(TEST_JUMP_HARMONIC);                        // Acquire test
-    set_jump_config(i, get_jump_config(i) + measure_jump(i));
+    set_jump_config(HARMONIC_JUMP, get_jump_config(HARMONIC_JUMP) + measure_jump(HARMONIC_JUMP));
     calibration_busy();
     chThdSleepMilliseconds(500);
   }
