@@ -1613,8 +1613,8 @@ void set_actual_correction_value(int current_curve,int current_curve_index, floa
 
 float get_level_offset(void)
 {
-  if (setting.disable_correction)
-    return 0;
+//  if (setting.disable_correction)
+//    return 0;
   if (setting.mode == M_HIGH) {
     if (config.high_level_offset == 100)        // Offset of 100 means not calibrated
       return 0;
@@ -6208,7 +6208,7 @@ enum {
 enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_30MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH,
 #ifdef TINYSA4
-  TP_30MHZ_ULTRA, TP_30MHZ_DIRECT, TP_30MHZ_LNA,TP_SILENT_LNA
+  TP_30MHZ_ULTRA, TP_30MHZ_DIRECT, TP_30MHZ_LNA,TP_SILENT_LNA,  TP_15MHZ_LNA
 #endif
 };
 
@@ -6256,33 +6256,34 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 11 test display
  TEST_CASE_STRUCT(TC_ATTEN,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 12 Measure atten step accuracy
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_LNA,       30,     5,      CAL_LEVEL,   10,     -75),      // 13 Measure LNA
-#define TEST_END 13
+ TEST_CASE_STRUCT(TC_SIGNAL,    TP_15MHZ_LNA,   30,     5,      CAL_LEVEL,   10,     -90),      // 14 LPF flatness
+#define TEST_END 14
  TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
-#define TEST_POWER  14
+#define TEST_POWER  15
  TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       30,     50,      CAL_LEVEL,   10,     -55),      // 12 Measure power level and noise
  TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       270,    4,      -50,    10,     -75),       // 13 Measure powerlevel and noise
  TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      270,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
  TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
-#define TEST_RBW    18
+#define TEST_RBW    19
  TEST_CASE_STRUCT(TC_MEASURE,   TP_30MHZ,       30,     1,      CAL_LEVEL,    10,     -60),      // 16 Measure RBW step time
  TEST_CASE_STRUCT(TC_END,       0,              0,      0,      0,      0,      0),
  TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ,      300,    4,      -48,    10,     -65),       // 14 Calibrate power high mode
  TEST_CASE_STRUCT(TC_MEASURE,   TPH_30MHZ_SWITCH,300,    4,      -40,    10,     -65),       // 14 Calibrate power high mode
-#define TEST_ATTEN    22
+#define TEST_ATTEN    23
  TEST_CASE_STRUCT(TC_ATTEN,      TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 20 Measure atten step accuracy
-#define TEST_SPUR    23
+#define TEST_SPUR    24
  TEST_CASE_STRUCT(TC_BELOW,      TP_SILENT,     144,     8,      -95,    0,     0),       // 22 Measure 48MHz spur
-#define TEST_LEVEL  24
+#define TEST_LEVEL  25
  TEST_CASE_STRUCT(TC_LEVEL,     TP_30MHZ,       30.000,     0,      CAL_LEVEL,   50,     -55),      // 23 Measure level
  TEST_CASE_STRUCT(TC_LEVEL,     TP_30MHZ_LNA,   30.000,     0,      CAL_LEVEL,   50,     -55),      // 23 Measure level
  TEST_CASE_STRUCT(TC_LEVEL,     TPH_30MHZ,      150,     0,      CAL_LEVEL-30,   50,     -55),      // 23 Measure level
-#define TEST_NOISE  27
+#define TEST_NOISE  28
  TEST_CASE_STRUCT(TC_LEVEL,     TP_SILENT,       201.000,     0,      -166,   50,     -166),      // 23 Measure level
-#define TEST_NOISE_RBW  28
+#define TEST_NOISE_RBW  29
  TEST_CASE_STRUCT(TC_MEASURE,   TP_SILENT,       201,     1,      -166,    10,     -166),      // 16 Measure RBW step time
-#define TEST_JUMP 29
+#define TEST_JUMP 30
  TEST_CASE_STRUCT(TC_JUMP,      TP_30MHZ_LNA,   30,     0.001,      -40,    0,     CAL_LEVEL),      // 16 Measure jumps
-#define TEST_JUMP_HARMONIC 30
+#define TEST_JUMP_HARMONIC 31
  TEST_CASE_STRUCT(TC_JUMP,      TP_30MHZ,       30,     0.001,      -40,    0,     CAL_LEVEL),      // 16 Measure jumps
 };
 #else
@@ -6353,6 +6354,25 @@ void determine_direct_test_freq(void) {
   }
   config.ultra = old_ultra;
 }
+
+static float lpf_test_level = 0;
+#define LPF_TEST_FREQ 795000000
+void determine_lpf_test_level(void) {
+  int old_ultra = config.ultra;
+  config.ultra = true;
+  int old_lna = setting.extra_lna;
+  setting.extra_lna = true;
+  force_signal_path = true;
+  test_path = 3;
+  set_refer_output(1);
+  dirty = true;
+  lpf_test_level = PURE_TO_float(perform(false, 0, (freq_t)LPF_TEST_FREQ, false));
+  dirty = true;
+  force_signal_path = false;
+  config.ultra = old_ultra;
+  setting.extra_lna = old_lna;
+}
+
 #endif
 
 static void test_acquire(int i)
@@ -6420,10 +6440,18 @@ void cell_draw_test_info(int x0, int y0)
 int validate_signal_within(int i, float margin)
 {
   test_fail_cause[i] = "Signal level ";
-  if (fabsf(peakLevel-test_case[i].pass) > 2*margin) {
+  float test_level = test_case[i].pass;
+#ifdef TINYSA4
+  if (test_case[i].setup == TP_15MHZ_LNA) {
+    test_level = lpf_test_level;
+    margin = 5;
+  }
+#endif
+
+  if (fabsf(peakLevel-test_level) > 2*margin) {
     return TS_FAIL;
   }
-  if (fabsf(peakLevel-test_case[i].pass) > margin) {
+  if (fabsf(peakLevel-test_level) > margin) {
     return TS_CRITICAL;
   }
   if (setting.measurement == M_PASS_BAND) {
@@ -6444,6 +6472,8 @@ int validate_signal_within(int i, float margin)
 #ifdef TINYSA4
   if (test_case[i].setup == TP_30MHZ_DIRECT)
     c_freq = direct_test_freq;
+  if (test_case[i].setup == TP_15MHZ_LNA)
+    c_freq = LPF_TEST_FREQ;
 #endif
   test_fail_cause[i] = "Frequency ";
   if (peakFreq < c_freq - 500000 || c_freq + 500000 < peakFreq )
@@ -6741,15 +6771,25 @@ common_silent:
 #else
       stored_t[j] = test_case[i].stop - (i == 6?3:0);
 #endif
-    for (int j = setting._sweep_points/2 - W2P(test_case[i].width); j < setting._sweep_points/2 + W2P(test_case[i].width); j++)
+    for (int j = setting._sweep_points/2 - W2P(test_case[i].width); j < setting._sweep_points/2 + W2P(test_case[i].width); j++) {
+#ifdef TINYSA4
+      if (test_case[i].setup == TP_15MHZ_LNA)
+        stored_t[j] = lpf_test_level;
+      else
+#endif
       stored_t[j] = test_case[i].pass;
+    }
     break;
 #ifdef TINYSA4
+  case TP_15MHZ_LNA:
+    determine_lpf_test_level();
+    goto simple;
   case TP_30MHZ_DIRECT:
   case TP_30MHZ_ULTRA:
   case TP_30MHZ_LNA:
 #endif
   case TP_30MHZ:
+    simple:
     set_mode(M_LOW);
 #ifdef TINYSA4
     maxFreq = 9900000000ULL;            // needed to measure the LPF rejection
@@ -6785,6 +6825,10 @@ common_silent:
   case TP_30MHZ_LNA:
     setting.extra_lna = true;
     break;
+  case TP_15MHZ_LNA:
+    set_refer_output(1);
+    setting.extra_lna = true;
+    break;
 #endif
   case TP_30MHZ_SWITCH:
     set_attenuation(32);                        // This forces the switch to transmit so isolation can be tested
@@ -6811,6 +6855,8 @@ common_silent:
 #ifdef TINYSA4
     if (test_case[i].setup == TP_30MHZ_DIRECT)
       c_freq = direct_test_freq;
+    if (test_case[i].setup == TP_15MHZ_LNA)
+      c_freq = LPF_TEST_FREQ;
 #endif
     set_sweep_frequency(ST_CENTER, c_freq);
   }
