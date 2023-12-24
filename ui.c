@@ -7715,12 +7715,12 @@ static void sa_save_file(uint8_t format) {
             if (config._mode & _MODE_MHZ_CSV)
               buf += plot_printf(buf, 100, "%.6f,", ((float)getFrequency(i))/1000000);
             else
-              buf += plot_printf(buf, 100, "%U, ", getFrequency(i));
+              buf += plot_printf(buf, 100, "%U,", getFrequency(i));
           }
-          if (file_mask & 2)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_ACTUAL][i]));
-          if (file_mask & 4)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED][i]));
-          if (file_mask & 8)  buf += plot_printf(buf, 100, "%f ", value(measured[TRACE_STORED2][i]));
-          if (file_mask & 16) buf += plot_printf(buf, 100, "%f", value(measured[TRACE_TEMP][i]));
+          if (file_mask & 2)  buf += plot_printf(buf, 100, "%f", value(measured[TRACE_ACTUAL][i]));
+          if (file_mask & 4)  buf += plot_printf(buf, 100, " %f ", value(measured[TRACE_STORED][i]));
+          if (file_mask & 8)  buf += plot_printf(buf, 100, " %f ", value(measured[TRACE_STORED2][i]));
+          if (file_mask & 16) buf += plot_printf(buf, 100, " %f", value(measured[TRACE_TEMP][i]));
           buf += plot_printf(buf, 100, "\r\n");
           res = f_write(fs_file, (char *)spi_buffer, buf - (char *)spi_buffer, &size);
         }
