@@ -757,9 +757,9 @@ enum trace_type {
 // Electrical Delay
 // Phase
 
-#define MAX_UNIT_TYPE 6     // Index of U_DBC
+#define MAX_UNIT_TYPE 7     // Index of U_DBC
 enum unit_type {
-  U_DBM=0, U_DBMV, U_DBUV, U_RAW, U_VOLT, U_WATT, U_DBC //  dBc only for displaying delta marker info
+  U_DBM=0, U_DBMV, U_DBUV, U_RAW, U_VOLT, U_VPP, U_WATT, U_DBC //  dBc only for displaying delta marker info
 };
 
 #define UNIT_IS_LINEAR(T) ( T >= U_VOLT ? true : false)
@@ -1466,7 +1466,7 @@ typedef struct properties {
 
 //sizeof(properties_t) == 0x1200
 
-#define CONFIG_MAGIC 0x434f4e65 /* 'CONF' */
+#define CONFIG_MAGIC 0x434f4e66 /* 'CONF' */
 #define SETTING_MAGIC 0x434f4e65
 
 extern int16_t lastsaveid;

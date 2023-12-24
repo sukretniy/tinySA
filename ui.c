@@ -1117,7 +1117,7 @@ const uint8_t right_icons [] =
 #define KP_n         23
 #define KP_p         24
 #define KP_ENTER     25
-#define KP_EMPTY     26
+#define KP_EMPTY     99
 
 #define KP_0    31
 #define KP_1    32
@@ -5101,7 +5101,8 @@ static const menuitem_t menu_unit[] =
   { MT_ADV_CALLBACK,U_DBM,   "dBm",             menu_unit_acb},
   { MT_ADV_CALLBACK,U_DBMV,  "dBmV",            menu_unit_acb},
   { MT_ADV_CALLBACK,U_DBUV,  "dB"S_MICRO"V",    menu_unit_acb},
-  { MT_ADV_CALLBACK,U_VOLT,  "Volt",            menu_unit_acb},
+  { MT_ADV_CALLBACK,U_VOLT,  "Vrms",            menu_unit_acb},
+  { MT_ADV_CALLBACK,U_VPP,   "Vpp",             menu_unit_acb},
 //{ MT_ADV_CALLBACK,U_UVOLT, S_MICRO"Volt",     menu_unit_acb},
   { MT_ADV_CALLBACK,U_WATT,  "Watt",            menu_unit_acb},
 //{ MT_ADV_CALLBACK,U_UWATT, S_MICRO"Watt",     menu_unit_acb},
@@ -5881,7 +5882,7 @@ float my_round(float v)
   }
   return v;
 }
-const char * const unit_string[MAX_UNIT_TYPE*2] = { "dBm", "dBmV", "dB"S_MICRO"V", "RAW", "V", "W", "dB", "dB", "dB", "RAW", "V", "W" }; // unit + 6 is delta unit
+const char * const unit_string[MAX_UNIT_TYPE*2] = { "dBm", "dBmV", "dB"S_MICRO"V", "RAW", "Vrms", "Vpp", "W", "dB", "dB", "dB", "RAW", "Vrms", "Vpp", "W" }; // unit + 6 is delta unit
 
 //static const float scale_value[]={50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20,10,5,2,1,0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.002, 0.001,0.0005,0.0002, 0.0001};
 //static const char * const scale_vtext[]= {"50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50", "20","10","5","2","1","0.5","0.2","0.1","0.05","0.02","0.01", "0.005","0.002","0.001", "0.0005","0.0002","0.0001"};

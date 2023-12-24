@@ -100,7 +100,7 @@ static long real_offset = 0;
 static float old_temp = 0.0;
 static int LO_spur_shifted;
 static int LO_mirrored;
-static volatile int LO_shifting;
+static int LO_shifting;
 
 void clear_frequency_cache(void)
 {
@@ -4636,7 +4636,7 @@ again:                                                              // Spur redu
        if (delta < actual_rbw_x10*100)
          spur = '!';
      }
-     char shifted = ( LO_spur_shifted ? '>' : ' ');
+     char shifted =  (LO_shifting ? '/' : ( LO_spur_shifted ? '>' : ' '));
      if (SDU1.config->usbp->state == USB_ACTIVE)
        shell_printf ("%d:%c%c%c%cLO=%11.6Lq:%11.6Lq\tIF=%11.6Lq:%11.6Lq\tOF=%11.6d\tF=%11.6Lq:%11.6Lq\tD=%.2f:%.2f %c%c%c %d R=%d mod=%d, d=%d\r\n",
                      i,   spur, shifted,(LO_mirrored ? 'm' : ' '), (LO_harmonic ? 'h':' ' ),
