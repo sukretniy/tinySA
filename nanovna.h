@@ -422,7 +422,7 @@ void set_auto_reflevel(bool);
 int is_paused(void);
 float set_actual_power(float);
 void set_actual_correction_value(int current_curve,int current_curve_index, float local_actual_level);
-extern const int to_calibrate[5];
+extern const int to_calibrate[6];
 void SetGenerate(int);
 void set_RBW(uint32_t rbw_x10);
 #ifdef __VBW__
@@ -575,6 +575,7 @@ extern  uint16_t _grid_y;
 #define GRIDY  _grid_y
 extern uint16_t graph_bottom;
 #ifdef TINYSA4
+#define SUPER_WATERFALL  90
 #define BIG_WATERFALL   180
 #define SMALL_WATERFALL 240
 #define BIG_NUMBER_SPACE BIG_WATERFALL
@@ -1225,6 +1226,9 @@ typedef struct setting
 #ifdef __BEEP__
   uint8_t trigger_beep;
 #endif
+#ifdef TINYSA4
+  uint8_t trigger_auto_save;
+#endif
   uint8_t step_delay_mode;     // enum
   uint8_t waterfall;           // enum
 #ifdef __LEVEL_METER__
@@ -1329,6 +1333,7 @@ typedef struct setting
   int32_t exp_aver;
   bool increased_R;
   bool mixer_output;
+  uint32_t interval;
 #endif
   int64_t test_argument;            // used for tests
   uint32_t checksum;            // must be last and at 4 byte boundary
@@ -1349,7 +1354,7 @@ enum { S_OFF=0, S_ON=1, S_AUTO_OFF=2, S_AUTO_ON=3 };
 
 enum { SD_NORMAL, SD_PRECISE, SD_FAST, SD_NOISE_SOURCE, SD_MANUAL };
 
-enum {W_OFF, W_SMALL, W_BIG};
+enum {W_OFF, W_SMALL, W_BIG, W_SUPER};
 
 #ifdef __FAST_SWEEP__
 #define MINIMUM_SWEEP_TIME  1800U    // Minimum sweep time on zero span in uS
@@ -1573,6 +1578,7 @@ extern int si5351_available;
 #define OP_CONSOLE    0x04
 //#define OP_FREQCHANGE 0x04
 extern volatile uint8_t operation_requested;
+extern volatile uint8_t break_execute;
 
 // lever_mode
 enum lever_mode {
@@ -1705,6 +1711,8 @@ void SD_PowerOff(void);
 #endif
 void testLog(void);        // debug log
 void sd_card_load_config(char *filename);
+extern systime_t last_auto_save;
+void save_csv(uint8_t mask);
 #endif
 
 /*
@@ -1816,7 +1824,7 @@ enum {
 #define MEASUREMENT_TEXT "OFF","HARM","OIP3","PN","SNR","PASS","LIN","AM","FM","THD","CP","NF T","NF S","NF V","NF A", "DECONF"
 
 enum {
-  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID, T_BEEP,
+  T_AUTO, T_NORMAL, T_SINGLE, T_DONE, T_UP, T_DOWN, T_MODE, T_PRE, T_POST, T_MID, T_BEEP, T_AUTO_SAVE,
 };
 
 //!!! Warning can show not correct results on CH_CFG_ST_FREQUENCY not round by 1000 or > 1000000UL

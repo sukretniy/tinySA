@@ -70,6 +70,7 @@ static uint16_t menu_button_height = MENU_BUTTON_HEIGHT_N(MENU_BUTTON_MIN);
 #endif
 
 volatile uint8_t operation_requested = OP_NONE;
+volatile uint8_t break_execute = false;
 
 int8_t previous_marker = MARKER_INVALID;
 
@@ -161,9 +162,9 @@ static void menu_move_back(bool leave_ui);
 static void draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui_button_t *b);
 //static const menuitem_t menu_marker_type[];
 
-#ifdef __USE_SD_CARD__
-static void save_csv(uint8_t mask);
-#endif
+//#ifdef __USE_SD_CARD__
+//svoid save_csv(uint8_t mask);
+//#endif
 
 bool isFullScreenMode(void) {
 #ifdef __SD_FILE_BROWSER__
@@ -1390,6 +1391,7 @@ enum {
 #ifdef __USE_RTC__
   KM_RTC_DATE,
   KM_RTC_TIME,
+  KM_INTERVAL,
 #endif
 #endif
   KM_CODE,
@@ -1479,6 +1481,7 @@ static const struct {
 #ifdef __USE_RTC__
 [KM_RTC_DATE]     = {keypads_positive    , "SET DATE\n YYMMDD"}, // Date
 [KM_RTC_TIME]     = {keypads_positive    , "SET TIME\n HHMMSS"}, // Time
+[KM_INTERVAL]     = {keypads_positive    , "SET INTERVAL\n HHMMSS"}, // Interval
 #endif
 #endif
 [KM_CODE]         = {keypads_positive    , "CODE"},              // KM_CODE
@@ -3363,7 +3366,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_waterfall_acb){
   } else
 #endif
   {
-    setting.waterfall++; if (setting.waterfall>W_BIG)setting.waterfall = W_OFF;
+#ifdef TINYSA4
+#define BIGGEST W_SUPER
+#else
+#define BIGGEST W_BIG
+#endif
+    setting.waterfall++; if (setting.waterfall>BIGGEST)setting.waterfall = W_OFF;
     if (setting.waterfall != W_OFF)
       setting.level_meter = false;
     set_level_meter_or_waterfall();
@@ -3718,6 +3726,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
     else if (data == T_BEEP)
       b->icon = setting.trigger_beep ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
 #endif
+#ifdef TINYSA4
+    else if (data == T_AUTO_SAVE)
+      b->icon = setting.trigger_auto_save ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+#endif
     else
       b->icon = setting.trigger == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
     return;
@@ -3730,6 +3742,11 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_acb)
 #ifdef __BEEP__
   } else if (data == T_BEEP) {
     setting.trigger_beep = !setting.trigger_beep;
+#endif
+#ifdef TINYSA4
+  } else if (data == T_AUTO_SAVE) {
+    setting.trigger_auto_save = !setting.trigger_auto_save;
+    last_auto_save = 0;
 #endif
   } else if (data == T_UP || data == T_DOWN) {
     if (setting.trigger_direction == T_UP)
@@ -5133,6 +5150,7 @@ static const menuitem_t menu_trigger[] = {
 #ifdef __BEEP__
   { MT_ADV_CALLBACK, T_BEEP,     "BEEP",       menu_trigger_acb},
 #endif
+  { MT_ADV_CALLBACK, T_AUTO_SAVE,     "AUTO SAVE",       menu_trigger_acb},
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
@@ -5184,8 +5202,9 @@ static const menuitem_t menu_storage[] = {
   { MT_CALLBACK,    FMT_BMP_FILE,   "SAVE\nCAPTURE",        menu_sdcard_cb},
   { MT_CALLBACK,    FMT_PRS_FILE,   "SAVE\nSETTINGS",       menu_sdcard_cb},
   { MT_CALLBACK,    FMT_CFG_FILE,   "SAVE\nCONFIG",         menu_sdcard_cb},
-  { MT_ADV_CALLBACK, 0,             "MHz\nCSV",            menu_mhz_csv_acb },
+  { MT_ADV_CALLBACK, 0,             "MHz\nCSV",             menu_mhz_csv_acb },
   { MT_CALLBACK,    FMT_CSV_FILE,   "SAVE\nTRACES",         menu_save_traces_cb},
+  { MT_KEYPAD,      KM_INTERVAL,    "INTERVAL\n\b%s",       NULL },
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 #endif
@@ -5527,13 +5546,22 @@ static void fetch_numeric_target(uint8_t mode)
     break;
 #endif
 #ifdef __USE_RTC__
+  case KM_INTERVAL:
+  {
+    uint32_t interv = setting.interval;
+    plot_printf(uistat.text, sizeof uistat.text, "%02d:%02d:%02d",
+      interv / (60*60),
+      (interv / 60) % 60,
+      interv % 60);
+  }
+  break;
   case KM_RTC_TIME:
   {
     uint32_t tr = rtc_get_tr_bin(); // TR read first
     plot_printf(uistat.text, sizeof uistat.text, "%02d:%02d:%02d",
-      RTC_TR_HOUR(dr),
-      RTC_TR_MIN(dr),
-      RTC_TR_SEC(dr));
+      RTC_TR_HOUR(tr),
+      RTC_TR_MIN(tr),
+      RTC_TR_SEC(tr));
   }
   break;
   case KM_RTC_DATE:
@@ -5804,6 +5832,15 @@ set_numeric_value(void)
     break;
 #endif
 #ifdef __USE_RTC__
+  case KM_INTERVAL:
+  {
+    int i=0;
+    for (; i < 6 && kp_buf[i]!=0; i++) kp_buf[i]-= '0';
+    for (; i < 6                ; i++) kp_buf[i] =   0;
+    setting.interval = (60*60)*(kp_buf[0]*10+kp_buf[1]) + 60*(kp_buf[2]*10+kp_buf[3]) + (kp_buf[4]*10+kp_buf[5]);
+//    set_autosave();
+  }
+    break;
   case KM_RTC_DATE:
   case KM_RTC_TIME:
     {
@@ -7809,7 +7846,7 @@ static void sa_save_file(uint8_t format) {
   ui_mode_normal();
 }
 
-static void save_csv(uint8_t mask) {
+void save_csv(uint8_t mask) {
   file_mask = mask;
   menu_sdcard_cb(0, FMT_CSV_FILE);
 }
@@ -7960,11 +7997,42 @@ void ui_process_touch(void)
   }
 }
 
+
+
 static uint16_t previous_button_state = 0;
+
+#ifdef TINYSA4
+uint64_t time_since_start = 0;
+uint64_t interval_stop_time = 0;
+
+systime_t old_ticks;
+void set_interval_stop_time(void)
+{
+  if (setting.interval == 0) {
+    interval_stop_time = 0;
+  } else {
+    interval_stop_time = time_since_start + CH_CFG_ST_FREQUENCY * (uint64_t)setting.interval;
+  }
+}
+#endif
+
 
 void
 ui_process(void)
 {
+#ifdef TINYSA4
+  systime_t ticks = chVTGetSystemTimeX();
+  if (ticks < old_ticks)
+    time_since_start += 0x100000000;
+  old_ticks = ticks;
+  time_since_start = (time_since_start & 0xffffffff00000000) | ticks;
+
+  if (interval_stop_time != 0 && interval_stop_time < time_since_start) {
+    set_interval_stop_time();
+  }
+
+#endif
+
   int button_state = READ_PORT() & BUTTON_MASK;
   if (ui_mode == UI_NORMAL && current_menu_is_form()) {     //   Force into menu mode
     selection = -1; // hide keyboard mode selection
@@ -7991,8 +8059,10 @@ static void extcb1(EXTDriver *extp, expchannel_t channel)
   if (channel == 12)
     SD_PowerOff();
 #endif
-  if (channel < 9)
+  if (channel < 9) {
     operation_requested|=OP_LEVER;
+    break_execute = true;
+  }
   // cur_button = READ_PORT() & BUTTON_MASK;
 }
 

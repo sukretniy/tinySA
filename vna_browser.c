@@ -104,7 +104,8 @@ repeat:
 
   // Delete file if in delete mode
   if (sel_mode) {f_unlink(fno.fname); return;}
-
+run_file:
+  {}
   const char *error = NULL;
   bool leave_show = true;
   UINT size;
@@ -242,17 +243,31 @@ static char cmd_buffer[256+128];
     char *buf_8 = cmd_buffer; // (char *)spi_buffer; // must be greater then buffer_size + line_size
     char *line  = buf_8 + buffer_size;
     uint16_t j = 0, i;
+    break_execute = false;
     while (f_read(fs_file, buf_8, buffer_size, &size) == FR_OK && size > 0) {
       for (i = 0; i < size; i++) {
+        if (break_execute) goto done;
         uint8_t c = buf_8[i];
         if (c == '\r') {                             // New line (Enter)
           line[j] = 0; j = 0;
+          if (line[0] == 'r' && line[1] == 'u' && line[2] == 'n') {
+            j = 4;
+            while (line[j] == ' ' || line[j] == '"')
+              j++;
+            i = 0;
+            while (line[j] != '"' && line[j] != 0)
+              fno.fname[i++] = line[j++];
+            fno.fname[i] = 0;
+            f_close(fs_file);
+            goto run_file;
+          }
           shell_executeCMDLine(line);
         }
         else if (c < 0x20) continue;                 // Others (skip)
         else if (j < line_size) line[j++] = (char)c; // Store
       }
     }
+    done:
     break;
   }
   /*

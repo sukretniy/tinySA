@@ -6338,8 +6338,9 @@ static volatile int test_wait = false;
 static float test_value;
 
 #ifdef TINYSA4
-static freq_t direct_test_freq = 0;
+static freq_t direct_test_freq = 900000000;
 void determine_direct_test_freq(void) {
+  return;
   int old_ultra = config.ultra;
   config.ultra = true;
   float max_level = -150;
@@ -6789,7 +6790,9 @@ common_silent:
   case TP_30MHZ_LNA:
 #endif
   case TP_30MHZ:
+#ifdef TINYSA4
     simple:
+#endif
     set_mode(M_LOW);
 #ifdef TINYSA4
     maxFreq = 9900000000ULL;            // needed to measure the LPF rejection
@@ -7920,13 +7923,13 @@ void calibrate(void)
           set_sweep_frequency(ST_CENTER, direct_test_freq);
           test_path = 4;      // Direct path at 900MHz
           force_signal_path = true;
-          config.direct_level_offset -= 1.0;
+ //         config.direct_level_offset -= 1.0;
           break;
         case CS_DIRECT_LNA:
           set_sweep_frequency(ST_CENTER, direct_test_freq);
           test_path = 5;      // Direct lna path at 900MHz
           force_signal_path = true;
-          config.direct_lna_level_offset += 1.0;
+//          config.direct_lna_level_offset += 1.0;
           break;
         case CS_HARMONIC:
           test_path = 6;      // harmonic path
@@ -7942,11 +7945,13 @@ void calibrate(void)
           set_sweep_frequency(ST_CENTER, config.correction_frequency[1][to_calibrate[current_correction_calibration]]);
           test_path = 0;
           force_signal_path = true;
+          set_refer_output(2);
           break;
         case CS_CORRECTION_LNA:
           set_sweep_frequency(ST_CENTER, config.correction_frequency[1][to_calibrate[current_correction_calibration]]);
           test_path = 1;
           force_signal_path = true;
+          set_refer_output(2);
           break;
 #endif
         }
@@ -8031,10 +8036,10 @@ low_level:
         else if (calibration_stage == CS_DIRECT_REF)
           direct_level = marker_to_value(0);
         else if (calibration_stage == CS_DIRECT){
-          config.direct_level_offset += 1.0;
+//         config.direct_level_offset += 1.0;
           offset = set_actual_power(direct_level);
         } else if (calibration_stage == CS_DIRECT_LNA){
-          config.direct_lna_level_offset -= 1.0;
+//          config.direct_lna_level_offset -= 1.0;
           offset = set_actual_power(direct_level);
         }
         else

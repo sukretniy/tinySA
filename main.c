@@ -54,9 +54,9 @@ typedef void (*vna_shellcmd_t)(int argc, char *argv[]);
       static void command_name(int argc, char *argv[])
 
 // Shell command line buffer, args, nargs, and function ptr
-static char shell_line[VNA_SHELL_MAX_LENGTH];
-static char *shell_args[VNA_SHELL_MAX_ARGUMENTS + 1];
-static uint16_t shell_nargs;
+char shell_line[VNA_SHELL_MAX_LENGTH];
+char *shell_args[VNA_SHELL_MAX_ARGUMENTS + 1];
+uint16_t shell_nargs;
 static volatile vna_shellcmd_t  shell_function = 0;
 
 //#define ENABLED_DUMP
@@ -124,6 +124,9 @@ void clear_backup(void) {
     *f++ = 0;
 }
 
+#ifdef __USE_SD_CARD__
+systime_t last_auto_save = 0;
+#endif
 
 #ifdef TINYSA4
 static THD_WORKING_AREA(waThread1, 1224);
@@ -194,6 +197,16 @@ static THD_FUNCTION(Thread1, arg)
 #endif
       {
         completed = sweep(true);
+#ifdef __USE_SD_CARD__
+        if (setting.trigger_auto_save && (last_auto_save == 0 ||  chVTGetSystemTimeX() - last_auto_save > S2ST(30)) ) { // once every 30 seconds max
+          uint16_t old_mode = config._mode;
+          config._mode |= _MODE_AUTO_FILENAME;
+          save_csv(1+(2<<0));      // frequencies + trace 1
+          last_auto_save = chVTGetSystemTimeX();
+          config._mode = old_mode;
+        }
+#endif
+
         if (sweep_once_count>1) {
           sweep_once_count--;
         } else
@@ -388,6 +401,8 @@ static int get_str_index(const char *v, const char *list)
   return -1;
 }
 
+
+
 VNA_SHELL_FUNCTION(cmd_pause)
 {
   (void)argc;
@@ -419,6 +434,33 @@ VNA_SHELL_FUNCTION(cmd_resume)
     resume_once(c) ;
   } else
     resume_sweep();
+}
+
+VNA_SHELL_FUNCTION(cmd_wait)
+{
+  (void)argc;
+  (void)argv;
+  if (argc == 1 && argv[0][0] == '?') {
+    usage_printf("wait {seconds}\r\n");
+    return;
+  }
+  break_execute = false;
+  drawMessageBox("Info", "Waiting", 0) ;
+  if (argc == 1) {
+    uint32_t t = my_atoi(argv[0]);
+    while (t > 0 && !break_execute) {
+      chThdSleepMilliseconds(1000);
+      t -= 1;
+    }
+  } else {
+    pause_sweep();
+    resume_once(1) ;
+    while (!is_paused() && !break_execute) {
+      chThdSleepMilliseconds(100);
+    }
+  }
+  redraw_request|= REDRAW_AREA|REDRAW_FREQUENCY;
+  draw_all(true);
 }
 
 VNA_SHELL_FUNCTION(cmd_repeat)
@@ -1144,7 +1186,7 @@ config_t config = {
 };
 
 
-const int to_calibrate[5] = {8,9,10,11,12};
+const int to_calibrate[6] = {9,10,11,12,13,14};
 
 //properties_t current_props;
 //properties_t *active_props = &current_props;
@@ -2278,6 +2320,7 @@ static const VNAShellCommand commands[] =
     {"touchtest"   , cmd_touchtest   , CMD_WAIT_MUTEX},
     {"pause"       , cmd_pause       , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
     {"resume"      , cmd_resume      , CMD_WAIT_MUTEX | CMD_RUN_IN_LOAD},
+    {"wait"        , cmd_wait        , CMD_RUN_IN_LOAD},                                 // This lets the sweep continue
     {"repeat"      , cmd_repeat      , CMD_RUN_IN_LOAD},
     {"status"      , cmd_status      , CMD_RUN_IN_LOAD},
     {"caloutput"   , cmd_caloutput   , CMD_RUN_IN_LOAD},
@@ -2585,7 +2628,7 @@ int parse_line(char *line, char* args[], int max_cnt) {
   return nargs;
 }
 
-static const VNAShellCommand *VNAShell_parceLine(char *line){
+const VNAShellCommand *VNAShell_parceLine(char *line){
   // Parse and execute line
   shell_nargs = parse_line(line, shell_args, ARRAY_COUNT(shell_args));
   if (shell_nargs > ARRAY_COUNT(shell_args)) {
@@ -2627,7 +2670,7 @@ static int VNAShell_readLine(char *line, int max_size)
     }
     // Others (skip) or too long - skip
     if (c < ' ' || j >= max_size - 1) continue;
-    streamPut(shell_stream, c); // Echo
+    if (shell_stream) streamPut(shell_stream, c); // Echo
     line[j++] = (char)c;
   }
   return 0;

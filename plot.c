@@ -2257,6 +2257,9 @@ set_level_meter_or_waterfall(void)
       || setting.level_meter
 #endif
     )                                                    graph_bottom = SMALL_WATERFALL;
+#ifdef TINYSA4
+  else if (setting.waterfall == W_SUPER)                 graph_bottom = SUPER_WATERFALL;
+#endif
   else                                                   graph_bottom = NO_WATERFALL;
   _grid_y = graph_bottom / NGRIDY;
   area_height = AREA_HEIGHT_NORMAL;

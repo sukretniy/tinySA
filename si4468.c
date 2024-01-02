@@ -1859,7 +1859,7 @@ static uint16_t buf_end = 0;
 static bool  buf_read = false;
 
 static char Si446x_readRSSI(void){
-  char rssi;
+  uint8_t rssi;
 #ifdef __USE_FRR_FOR_RSSI__
 #if 0               // Restart RX, not needed as modem stays in RX mode
   SI4463_WAIT_CTS;                       // Wait for CTS
@@ -1909,6 +1909,8 @@ static char Si446x_readRSSI(void){
   data[0] = SI446X_CMD_GET_MODEM_STATUS;
   SI4463_do_api(data, 1, data, 3);
   rssi = data[2];
+  if (rssi > 197)
+    rssi -= 1;
 #endif
   return rssi;
 }
