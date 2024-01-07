@@ -4867,8 +4867,12 @@ again:                                                              // Spur redu
         pureRSSI = 0;
       else {
         pureRSSI = Si446x_RSSI(break_on_operation);
-        if (LO_shifting && signal_path != PATH_DIRECT)
-          pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : (lf < LOW_SHIFT_FREQ ? config.shift1_level_offset: 0.0));
+        if (LO_shifting && (signal_path != PATH_DIRECT)) {
+          if (f < 5000000)
+            pureRSSI += float_TO_PURE_RSSI(actual_rbw_x10>USE_SHIFT2_RBW ? config.shift2_level_offset : (lf < LOW_SHIFT_FREQ ? config.shift1_level_offset: 0.0));
+          else
+            pureRSSI += float_TO_PURE_RSSI(config.shift_level_offset);
+        }
       }
       if (setting.unit == U_RAW)
         pureRSSI += - float_TO_PURE_RSSI(120); // don't add correction;
@@ -6218,9 +6222,7 @@ enum {
 
 #ifdef TINYSA4
 freq_t test_freq = 0;
-//#define CAL_LEVEL   -23.5
-//#define CAL_LEVEL   -24.2
-#define CAL_LEVEL -35.60
+#define CAL_LEVEL -35.30
 #else
 #define CAL_LEVEL   (has_esd ? -26.2 : -25)
 #endif
@@ -6338,7 +6340,9 @@ static volatile int test_wait = false;
 static float test_value;
 
 #ifdef TINYSA4
-static freq_t direct_test_freq = 900000000;
+static freq_t spur_test_freq = 900000000;
+static freq_t direct_test_freq = 180000000;
+
 void determine_direct_test_freq(void) {
   return;
   int old_ultra = config.ultra;
@@ -7705,7 +7709,7 @@ float get_jump_config(int i) {
   return 0;
 }
 
-enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_HARMONIC, CS_HARMONIC_LNA, /* CS_BPF_REF, CS_BPF, */ CS_CORRECTION_REF, CS_CORRECTION_LNA, CS_MAX };
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, /* CS_DIRECT,*/ CS_DIRECT_LNA, CS_SPUR_REF, CS_SPUR_ERROR, CS_HARMONIC, CS_HARMONIC_LNA, /* CS_BPF_REF, CS_BPF, */ CS_CORRECTION_REF, CS_CORRECTION_LNA, CS_MAX };
 #define ULTRA_HARMONIC_CAL_FREQ 5340000000
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
@@ -7826,6 +7830,7 @@ void calibrate(void)
 //        setting.rbw_x10 = 3;
         test_path = 3;      // Ultra lna path
         force_signal_path = true;
+        setting.spur_removal = S_OFF;
 //        set_reflevel(-95);
     } else if (i <= 1) {
       if (i == 1)
@@ -7837,6 +7842,7 @@ void calibrate(void)
       set_refer_output(0);          // 30MHz
       setting.spur_removal = S_AUTO_OFF;
     }
+
     test_acquire(TEST_JUMP);                        // Acquire test
     set_reflevel(actual_t[sweep_points/3]+5);
     plot_into_index(measured);
@@ -7914,23 +7920,33 @@ void calibrate(void)
           test_path = 1;      // Normal lna path
           force_signal_path = true;
           break;
-        case CS_DIRECT_REF:
-          set_sweep_frequency(ST_CENTER, direct_test_freq);
+
+        case CS_SPUR_REF:
+          setting.spur_removal = S_OFF;
+          goto spur_common;
+        case CS_SPUR_ERROR:
+          setting.spur_removal = S_AUTO_OFF;
+          config.shift_level_offset = 0;
+          spur_common:
+          set_sweep_frequency(ST_CENTER, spur_test_freq);
           test_path = 2;      // Ultra
           force_signal_path = true;
           break;
+        case CS_DIRECT_REF:
+          test_path = 0;      // Normal
+          setting.spur_removal = S_OFF;
+          direct_common:
+          set_sweep_frequency(ST_CENTER, direct_test_freq);
+          force_signal_path = true;
+          break;
+#if 0
         case CS_DIRECT:
-          set_sweep_frequency(ST_CENTER, direct_test_freq);
           test_path = 4;      // Direct path at 900MHz
-          force_signal_path = true;
- //         config.direct_level_offset -= 1.0;
-          break;
+          goto direct_common;
+#endif
         case CS_DIRECT_LNA:
-          set_sweep_frequency(ST_CENTER, direct_test_freq);
           test_path = 5;      // Direct lna path at 900MHz
-          force_signal_path = true;
-//          config.direct_lna_level_offset += 1.0;
-          break;
+          goto direct_common;
         case CS_HARMONIC:
           test_path = 6;      // harmonic path
           force_signal_path = true;
@@ -8005,7 +8021,7 @@ void calibrate(void)
 #ifdef TINYSA4
             || (calibration_stage == CS_LNA && peakLevel < -40)
             || (calibration_stage == CS_ULTRA && peakLevel < -40)
-            || (calibration_stage == CS_DIRECT && peakLevel < direct_level - 10)
+            || (calibration_stage == CS_DIRECT_LNA && peakLevel < direct_level - 10)
 #endif
         ) {
 #ifdef TINYSA4
@@ -8033,14 +8049,17 @@ low_level:
             calibration_stage -= 2;             // skip back to REF measurement
           }
         }
+        else if (calibration_stage == CS_SPUR_REF)
+          direct_level = marker_to_value(0);                // Re-use direct_level;
+        else if (calibration_stage == CS_SPUR_ERROR)
+           config.shift_level_offset = direct_level -  marker_to_value(0);
         else if (calibration_stage == CS_DIRECT_REF)
           direct_level = marker_to_value(0);
-        else if (calibration_stage == CS_DIRECT){
-//         config.direct_level_offset += 1.0;
+//        else if (calibration_stage == CS_DIRECT)
+//          offset = set_actual_power(direct_level);
+        else if (calibration_stage == CS_DIRECT_LNA){
           offset = set_actual_power(direct_level);
-        } else if (calibration_stage == CS_DIRECT_LNA){
-//          config.direct_lna_level_offset -= 1.0;
-          offset = set_actual_power(direct_level);
+          config.direct_level_offset = config.direct_lna_level_offset - (config.low_level_offset - config.lna_level_offset);
         }
         else
 #endif

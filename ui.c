@@ -5150,7 +5150,9 @@ static const menuitem_t menu_trigger[] = {
 #ifdef __BEEP__
   { MT_ADV_CALLBACK, T_BEEP,     "BEEP",       menu_trigger_acb},
 #endif
+#ifdef TINYSA4
   { MT_ADV_CALLBACK, T_AUTO_SAVE,     "AUTO SAVE",       menu_trigger_acb},
+#endif
   { MT_NONE,   0, NULL, menu_back} // next-> menu_back
 };
 
@@ -5204,7 +5206,7 @@ static const menuitem_t menu_storage[] = {
   { MT_CALLBACK,    FMT_CFG_FILE,   "SAVE\nCONFIG",         menu_sdcard_cb},
   { MT_ADV_CALLBACK, 0,             "MHz\nCSV",             menu_mhz_csv_acb },
   { MT_CALLBACK,    FMT_CSV_FILE,   "SAVE\nTRACES",         menu_save_traces_cb},
-  { MT_KEYPAD,      KM_INTERVAL,    "INTERVAL\n\b%s",       NULL },
+//  { MT_KEYPAD,      KM_INTERVAL,    "INTERVAL\n\b%s",       NULL },
   { MT_NONE,    0, NULL, menu_back} // next-> menu_back
 };
 #endif

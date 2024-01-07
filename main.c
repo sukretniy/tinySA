@@ -1114,6 +1114,7 @@ config_t config = {
   .high_level_output_offset =  0,    // Uncalibrated, but checking code is not yet present
   .harmonic_level_offset = 0, // 10.5, should be in correction table now
   .harmonic_lna_level_offset = 0, // 10.5, should be in correction table now
+  .shift_level_offset = 0,
   .shift1_level_offset = 0.5,
   .shift2_level_offset = 3,
   .shift3_level_offset = 0,
@@ -1721,6 +1722,7 @@ VNA_SHELL_FUNCTION(cmd_sweep)
   int type = get_str_index(argv[0], sweep_cmd);
   if (type >=0) {
     set_sweep_frequency(type, value1);
+    dirty = true;
     return;
   }
   // Parse sweep {go|abort}
@@ -1735,6 +1737,7 @@ VNA_SHELL_FUNCTION(cmd_sweep)
     set_sweep_frequency(ST_STOP, value1);
   if (value2)
     set_sweep_points(value2);
+  dirty = true;
   return;
 usage:
   usage_printf("sweep {start(Hz)} [stop(Hz)] [points]\r\n"\
