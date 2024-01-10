@@ -84,7 +84,7 @@ enum {
 
 #define NUMINPUT_LEN 12
 #ifdef FF_USE_LFN
-#define TXTINPUT_LEN (FF_MAX_LFN - 4)
+#define TXTINPUT_LEN (FF_MAX_LFN - 5)
 #else
 #define TXTINPUT_LEN (8)
 #endif
@@ -7917,12 +7917,26 @@ touch_lever_mode_select(int touch_x, int touch_y)
 static int
 touch_marker_select(int touch_x, int touch_y)
 {
+#ifdef TINYSA4
+  int active_markers = 0;
+  for (int i = 0; i<MARKER_COUNT; i++ ) {
+       if (markers[i].enabled)
+         active_markers++;
+  }
+  int max_y = (active_markers>>1) * 15 + 15;
+#endif
   int selected_marker = 0;
+#ifdef TINYSA4
+  if (current_menu_is_form() || touch_x > LCD_WIDTH-MENU_BUTTON_WIDTH || touch_x < 25 || touch_y > max_y)
+    return FALSE;
+  selected_marker = (touch_y/15)<<1;
+#else
   if (current_menu_is_form() || touch_x > LCD_WIDTH-MENU_BUTTON_WIDTH || touch_x < 25 || touch_y > 30)
     return FALSE;
   if (touch_y > 15)
     selected_marker = 2;
-  selected_marker += (touch_x >150 ? 1 : 0);
+#endif
+  selected_marker += (touch_x >(LCD_WIDTH/2)-10 ? 1 : 0);
   for (int i = 0; i < MARKERS_MAX; i++) {
     if (markers[i].enabled) {
       if (selected_marker == 0) {

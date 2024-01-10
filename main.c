@@ -91,7 +91,7 @@ uint16_t redraw_request = 0; // contains REDRAW_XXX flags
 // Version text, displayed in Config->Version menu, also send by info command
 const char * const info_about[]={
   BOARD_NAME,
-  "2019-2022 Copyright @Erik Kaashoek",
+  "2019-2024 Copyright @Erik Kaashoek",
   "2016-2020 Copyright @edy555",
   "SW licensed under GPL. See: https://github.com/erikkaashoek/tinySA",
   "Version: " VERSION,
@@ -2894,11 +2894,11 @@ void set_freq_boundaries(void) {
   if (max2871) {    // must all be harmonics of 30MHz
     MAX_LO_FREQ         = 6300000000ULL + config.overclock;
     MAX_ABOVE_IF_FREQ   = 4470000000ULL + config.overclock;         // Range to use for below IF
-    MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;         // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 2430000000ULL + config.overclock;         // Range to use for below IF
   } else {
     MAX_LO_FREQ         = 4350000000ULL + config.overclock;
     MAX_ABOVE_IF_FREQ   = 3030000000ULL + config.overclock;           // Range to use for below IF
-    MIN_BELOW_IF_FREQ   = 2310000000ULL + config.overclock;           // Range to use for below IF
+    MIN_BELOW_IF_FREQ   = 2430000000ULL + config.overclock;           // Range to use for below IF
   }
   set_jump_freq( MAX_ABOVE_IF_FREQ, (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ), MIN_BELOW_IF_FREQ);
 }

@@ -152,7 +152,7 @@ int max_drive = 18;
 
 #define SL_GENHIGH_LEVEL_MAX    drive_dBm[MAX_DRIVE]
 
-#define SL_GENLOW_LEVEL_MIN    -124
+#define SL_GENLOW_LEVEL_MIN    -115
 #define SL_GENLOW_LEVEL_MAX   -18.5
 #ifdef TINYSA4_4
 #define MAX_ATTENUATE (setting.extra_lna ? 0 : 31.5)
@@ -6250,7 +6250,7 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 30,    1,      CAL_LEVEL,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
- TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,990,   10,    -90,    0,      -90),         // 6 Direct path with harmonic
+ TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,900,   10,    -90,    0,      -90),         // 6 Direct path with harmonic
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    26,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -28,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       880,    1,     -95,    0,      -100),       // 9 LPF cutoff
