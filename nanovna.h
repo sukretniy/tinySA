@@ -890,7 +890,7 @@ void shell_executeCMDLine(char *line);
 
 // marker
 enum {
-  M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_STORED=8, M_AVER=16, M_TRACKING=32, M_DELETE=64  // Tracking must be last.
+  M_NORMAL=0,M_REFERENCE=1, M_DELTA=2, M_NOISE=4, M_STORED=8, M_AVER=16, M_TRACKING=32, M_DELETE=64 // Tracking must be last.
 };
 
 enum {
@@ -1258,6 +1258,7 @@ typedef struct setting
   uint8_t   draw_line;         // uses the trigger level setting
 #ifdef TINYSA4
   uint8_t   lock_display;
+  uint8_t   jog_jump;
 #endif
 #ifdef __BANDS__
   uint8_t multi_band;
@@ -1473,7 +1474,7 @@ typedef struct properties {
 //sizeof(properties_t) == 0x1200
 
 #define CONFIG_MAGIC  0x434f4e67
-#define SETTING_MAGIC 0x434f4e66
+#define SETTING_MAGIC 0x434f4e67
 
 extern int16_t lastsaveid;
 //extern properties_t *active_props;

@@ -854,10 +854,10 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_cb)
       markers[active_marker].frequency = getFrequency(i);
   }
   redraw_marker(active_marker);
-//  if (data == 4)
-    select_lever_mode(LM_MARKER);   // Allow any position with level
-//  else
+//  if (setting.jog_jump)
 //    select_lever_mode(LM_SEARCH); // Jump from maximum to maximum
+//  else
+    select_lever_mode(LM_MARKER);   // Allow any position with level
 }
 
 #if 0
@@ -2341,6 +2341,17 @@ static UI_FUNCTION_ADV_CALLBACK(menu_listen_acb)
 #endif
 #ifdef TINYSA4
 
+static UI_FUNCTION_ADV_CALLBACK(menu_jog_jump_acb)
+{
+  (void)data;
+  (void)item;
+  if (b){
+    b->icon = (setting.jog_jump) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
+    return;
+  }
+  setting.jog_jump = !setting.jog_jump;
+  ui_mode_normal();
+}
 
 static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
 {
@@ -4441,6 +4452,7 @@ const menuitem_t menu_marker_search[] = {
   { MT_ADV_CALLBACK, 0, "ENTER\n%s",          menu_enter_marker_acb},
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING",menu_marker_modify_acb },
 #ifdef TINYSA4
+  { MT_ADV_CALLBACK, 0,    "JOG JUMP\nMAX",menu_jog_jump_acb },
   { MT_KEYPAD,   KM_NOISE,      "PEAK\n\b%s",   "2..20 dB"},
 #endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
@@ -7254,13 +7266,13 @@ lever_search_marker(int status)
   int i = -1;
   if (active_marker != MARKER_INVALID) {
     if (status & EVT_DOWN)
-      i = marker_search_left_max(markers[active_marker].index);
+      i = marker_search_left_max(active_marker);
     else if (status & EVT_UP)
-      i = marker_search_right_max(markers[active_marker].index);
+      i = marker_search_right_max(active_marker);
     if (i != -1) {
       markers[active_marker].index = i;
       interpolate_maximum(active_marker);
-//      markers[active_marker].frequency = frequencies[i];
+      markers[active_marker].mtype &= ~M_TRACKING;
     }
     redraw_marker(active_marker);
   }
@@ -7335,7 +7347,14 @@ ui_process_normal_lever(void)
       ui_mode_menu();
     } else {
       switch (uistat.lever_mode) {
-      case LM_MARKER: lever_move_marker(status);   break;
+      case LM_MARKER:
+      {
+#ifdef TINYSA4
+        if (setting.jog_jump) lever_search_marker(status); else
+#endif
+          lever_move_marker(status);
+      }
+        break;
       case LM_SEARCH: lever_search_marker(status); break;
       case LM_CENTER: lever_move(status, FREQ_IS_STARTSTOP() ? ST_START : ST_CENTER); break;
       case LM_SPAN:
