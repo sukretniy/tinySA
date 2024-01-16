@@ -3175,7 +3175,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_trigger_level_acb)
     setting.trigger_trace = data;
     if (!setting.multi_band)
       ui_mode_keypad(KM_TRIGGER);
-    return;
+//    return;
   } else {
     if (IS_TRACE_ENABLE(data) && data != setting.trigger_trace)
       return;
@@ -3908,6 +3908,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_settings_draw_line_acb){
   if (setting.draw_line) {
     kp_help_text = "Level";
     ui_mode_keypad(KM_TRIGGER);
+    setting.draw_line = true;
     set_trigger(T_AUTO);
   }
 }
@@ -5779,8 +5780,8 @@ set_numeric_value(void)
     update_grid();
     break;
   case KM_TRIGGER:
-    if (setting.trigger == T_AUTO )
-      set_trigger(T_NORMAL);
+//    if (setting.trigger == T_AUTO)
+//      set_trigger(T_NORMAL);
     set_trigger_level(to_dBm(uistat.value));
     completed = true;
     break;

@@ -596,7 +596,7 @@ static uint16_t get_trigger_level(
     setting.trigger_level = measured[setting.trigger_trace][x];
 #endif
 #ifdef __BANDS__
-  else if (setting.multi_band && !setting.multi_trace) {
+  else if (!setting.draw_line && setting.multi_band && !setting.multi_trace) {
     int b = getBand(x);
     setting.trigger_level = setting.bands[b].level;
   }

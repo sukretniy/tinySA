@@ -2058,6 +2058,8 @@ void set_trigger(int trigger)
     setting.trigger = trigger;
   } else {
     sweep_mode = SWEEP_ENABLE;
+    if (trigger != T_AUTO)
+      setting.draw_line = false;
     setting.trigger = trigger;
   }
   redraw_request|=REDRAW_TRIGGER | REDRAW_CAL_STATUS;
@@ -5010,7 +5012,8 @@ static bool sweep(bool break_on_operation)
       set_frequencies(0,0,sweep_points);
       update_rbw();
       current_band = getBand(0);
-      setting.trigger_level = setting.bands[current_band].level;
+      if (setting.trigger != T_AUTO)
+        setting.trigger_level = setting.bands[current_band].level;
     }
 #endif
     sweep_counter = 0;
@@ -5060,7 +5063,8 @@ static bool sweep(bool break_on_operation)
 //      set_step_delay(SD_FAST);
 //      set_rbw(8000);
 //      set_sweep_points((setting.bands[current_band].end - setting.bands[current_band].start) / 800000);
-      setting.trigger_level = setting.bands[current_band].level;
+      if (setting.trigger != T_AUTO)
+        setting.trigger_level = setting.bands[current_band].level;
       setting.auto_attenuation = false;
     }
   } else {
@@ -5111,6 +5115,7 @@ static bool sweep(bool break_on_operation)
       int new_band = getBand(i);
       if (current_band != new_band) {
         current_band = new_band;
+        if (setting.trigger != T_AUTO)
         setting.trigger_level = setting.bands[current_band].level;
       }
     }
