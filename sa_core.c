@@ -27,7 +27,7 @@
 #pragma GCC optimize ("Os")
 #endif
 
-#if 1
+#if 0
 #define TRACE(X)  {     DAC->DHR12R1 =(uint32_t) ((X)*400); }       // Enable for realtime tracing
 #else
 #define TRACE(X)  // {     DAC->DHR12R1 = (X*400); }       // Enable for realtime tracing
@@ -857,7 +857,7 @@ void set_attack(int d)
 
 void set_noise(int d)
 {
-  if (d < 2 || d > 50)
+  if (d < 2 || d > 120)
     return;
   setting.noise = d;
   dirty = true;

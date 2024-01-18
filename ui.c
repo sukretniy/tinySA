@@ -4453,7 +4453,7 @@ const menuitem_t menu_marker_search[] = {
   { MT_ADV_CALLBACK, M_TRACKING,    "TRACKING",menu_marker_modify_acb },
 #ifdef TINYSA4
   { MT_ADV_CALLBACK, 0,    "JOG JUMP\nMAX",menu_jog_jump_acb },
-  { MT_KEYPAD,   KM_NOISE,      "PEAK\n\b%s",   "2..20 dB"},
+  { MT_KEYPAD,   KM_NOISE,      "PEAK\n\b%s",   "2..120 dB"},
 #endif
   { MT_NONE, 0, NULL, menu_back} // next-> menu_back
 };
@@ -7264,18 +7264,21 @@ static void
 lever_search_marker(int status)
 {
   int i = -1;
-  if (active_marker != MARKER_INVALID) {
-    if (status & EVT_DOWN)
-      i = marker_search_left_max(active_marker);
-    else if (status & EVT_UP)
-      i = marker_search_right_max(active_marker);
-    if (i != -1) {
-      markers[active_marker].index = i;
-      interpolate_maximum(active_marker);
-      markers[active_marker].mtype &= ~M_TRACKING;
+  do {
+    if (active_marker != MARKER_INVALID) {
+      if (status & EVT_DOWN)
+        i = marker_search_left_max(active_marker);
+      else if (status & EVT_UP)
+        i = marker_search_right_max(active_marker);
+      if (i != -1) {
+        markers[active_marker].index = i;
+        interpolate_maximum(active_marker);
+        markers[active_marker].mtype &= ~M_TRACKING;
+      }
+      redraw_marker(active_marker);
     }
-    redraw_marker(active_marker);
-  }
+    status = btn_wait_release();
+  } while (status != 0);
 }
 
 // ex. 10942 -> 10000
@@ -7343,6 +7346,12 @@ ui_process_normal_lever(void)
 {
   int status = btn_check();
   if (status != 0) {
+#ifdef TINYSA
+    if (status & EVT_BUTTON_LONG_DOWN) {
+      setting.jog_jump != setting.jog_jump;
+    }
+    else
+#endif
     if (status & EVT_BUTTON_SINGLE_CLICK) {
       ui_mode_menu();
     } else {
