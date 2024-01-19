@@ -2903,6 +2903,7 @@ void set_freq_boundaries(void) {
   set_jump_freq( MAX_ABOVE_IF_FREQ, (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ), MIN_BELOW_IF_FREQ);
 }
 #endif
+
 int main(void)
 {
   halInit();

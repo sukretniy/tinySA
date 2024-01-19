@@ -43,9 +43,10 @@ uistat_t uistat = {
 #define EVT_BUTTON_SINGLE_CLICK     0x01
 #define EVT_BUTTON_DOUBLE_CLICK     0x02
 #define EVT_BUTTON_DOWN_LONG        0x04
-#define EVT_UP                  0x10
-#define EVT_DOWN                0x20
-#define EVT_REPEAT              0x40
+#define EVT_BUTTON_CLICK_RELEASE    0x08
+#define EVT_UP                      0x10
+#define EVT_DOWN                    0x20
+#define EVT_REPEAT                  0x40
 
 #define BUTTON_DOWN_LONG_TICKS      MS2ST(500)   // 500ms
 #define BUTTON_DOUBLE_TICKS         MS2ST(250)   // 250ms
@@ -7264,18 +7265,25 @@ static void
 lever_search_marker(int status)
 {
   int i = -1;
+  int wait_count = 0;
   do {
     if (active_marker != MARKER_INVALID) {
-      if (status & EVT_DOWN)
-        i = marker_search_left_max(active_marker);
-      else if (status & EVT_UP)
-        i = marker_search_right_max(active_marker);
-      if (i != -1) {
-        markers[active_marker].index = i;
-        interpolate_maximum(active_marker);
-        markers[active_marker].mtype &= ~M_TRACKING;
+#define WAIT_COUNT 3
+      if (wait_count == 0)
+        wait_count = WAIT_COUNT;
+      if (wait_count == WAIT_COUNT) {
+        if (status & EVT_DOWN)
+          i = marker_search_left_max(active_marker);
+        else if (status & EVT_UP)
+          i = marker_search_right_max(active_marker);
+        if (i != -1) {
+          markers[active_marker].index = i;
+          interpolate_maximum(active_marker);
+          markers[active_marker].mtype &= ~M_TRACKING;
+        }
+        redraw_marker(active_marker);
       }
-      redraw_marker(active_marker);
+      wait_count --;
     }
     status = btn_wait_release();
   } while (status != 0);

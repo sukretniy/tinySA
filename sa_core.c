@@ -6217,7 +6217,7 @@ enum {
 enum {
   TP_SILENT, TPH_SILENT, TP_10MHZ, TP_10MHZEXTRA, TP_30MHZ_SWITCH, TP_30MHZ, TPH_30MHZ, TPH_30MHZ_SWITCH,
 #ifdef TINYSA4
-  TP_30MHZ_ULTRA, TP_30MHZ_DIRECT, TP_30MHZ_LNA,TP_SILENT_LNA,  TP_15MHZ_LNA
+  TP_30MHZ_ULTRA, TP_30MHZ_DIRECT, TP_30MHZ_LNA,TP_SILENT_LNA,  TP_15MHZ_LNA, TP_15MHZ_LNA2
 #endif
 };
 
@@ -6258,7 +6258,7 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,900,   10,    -90,    0,      -90),         // 6 Direct path with harmonic
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    26,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -28,    9,     -60),       // 8 BPF pass band flatness
- TEST_CASE_STRUCT(TC_BELOW,     TP_30MHZ,       880,    1,     -95,    0,      -100),       // 9 LPF cutoff
+ TEST_CASE_STRUCT(TC_BELOW,     TP_15MHZ_LNA2,   855,    1,     -90,    0,      -90),       // 9 LPF cutoff
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_15MHZ_LNA,   30,     5,      CAL_LEVEL,   10,     -90),      // 10 Flatness
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_SWITCH,30,     7,      CAL_LEVEL,    10,     -50),      // 11 Switch isolation using high attenuation
  TEST_CASE_STRUCT(TC_DISPLAY,     TP_30MHZ,       30,     0,      CAL_LEVEL,    50,     -60),      // 12 test display
@@ -6456,8 +6456,9 @@ int validate_signal_within(int i, float margin)
     test_level = lpf_test_level;
     margin = 5;
   }
+  if (fabsf(config.low_level_offset) > 10)
+    return(TS_FAIL);
 #endif
-
   if (fabsf(peakLevel-test_level) > 2*margin) {
     return TS_FAIL;
   }
@@ -6707,6 +6708,7 @@ void test_prepare(int i)
   setting.tracking = false; //Default test setup
   setting.atten_step = false;
 #ifdef TINYSA4
+  force_signal_path = false;
   setting.frequency_IF = config.frequency_IF1;                // Default frequency
   setting.extra_lna = false;
 #else
@@ -6794,6 +6796,10 @@ common_silent:
   case TP_15MHZ_LNA:
     determine_lpf_test_level();
     goto simple;
+  case TP_15MHZ_LNA2:
+    force_signal_path = true;
+    test_path = 1;
+    goto simple;
   case TP_30MHZ_DIRECT:
   case TP_30MHZ_ULTRA:
   case TP_30MHZ_LNA:
@@ -6838,6 +6844,7 @@ common_silent:
     setting.extra_lna = true;
     break;
   case TP_15MHZ_LNA:
+  case TP_15MHZ_LNA2:
     set_refer_output(1);
     setting.extra_lna = true;
     break;
@@ -6969,6 +6976,10 @@ void self_test(int test)
 #ifdef TINYSA4
   bool old_ultra = config.ultra;
   config.ultra = true;
+  if (adc_vbat_read() < 3800) {
+    drawMessageBox("Battery low", "Charge before testing", 2000);
+    goto quit;
+  }
 #endif
 //  set_sweep_points(POINTS_COUNT);
   if (test == 0) {
