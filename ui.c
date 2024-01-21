@@ -7268,7 +7268,7 @@ lever_search_marker(int status)
   int wait_count = 0;
   do {
     if (active_marker != MARKER_INVALID) {
-#define WAIT_COUNT 3
+#define WAIT_COUNT 4
       if (wait_count == 0)
         wait_count = WAIT_COUNT;
       if (wait_count == WAIT_COUNT) {
