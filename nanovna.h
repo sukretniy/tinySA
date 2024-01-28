@@ -1186,7 +1186,9 @@ void spi_init(void);
 
 #ifdef __BANDS__
 #define BANDS_MAX   8
+#define BAND_NAME_SIZE  9
 typedef struct {
+  char      name[BAND_NAME_SIZE];
   bool      enabled;
   freq_t    start;
   freq_t    end;
@@ -1336,6 +1338,8 @@ typedef struct setting
   bool increased_R;
   bool mixer_output;
   uint32_t interval;
+#define PRESET_NAME_LENGTH  10
+  char preset_name[PRESET_NAME_LENGTH];
 #endif
   int64_t test_argument;            // used for tests
   uint32_t checksum;            // must be last and at 4 byte boundary

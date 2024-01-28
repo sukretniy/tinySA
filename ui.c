@@ -1376,7 +1376,7 @@ enum {
   KM_LIMIT_FREQ, KM_LIMIT_LEVEL,
 #endif
 #ifdef __BANDS__
-  KM_BAND_START, KM_BAND_END, KM_BAND_CENTER, KM_BAND_SPAN, KM_BAND_LEVEL,
+  KM_BAND_START, KM_BAND_END, KM_BAND_CENTER, KM_BAND_SPAN, KM_BAND_LEVEL,KM_BAND_NAME,
 #endif
   KM_MARKER_TIME,
   // #35
@@ -1393,6 +1393,7 @@ enum {
   KM_RTC_DATE,
   KM_RTC_TIME,
   KM_INTERVAL,
+  KM_PRESET_NAME,
 #endif
 #endif
   KM_CODE,
@@ -1468,6 +1469,7 @@ static const struct {
 [KM_BAND_CENTER]  = {keypads_freq         , "CENTER\nFREQ"},  // KM_BAND_CENTER
 [KM_BAND_SPAN]   = {keypads_freq         , "SPAN\nFREQ"},  // KM_BAND_SPAN
 [KM_BAND_LEVEL]  = {keypads_plusmin_unit , "LEVEL"},  // KM_BAND_LEVEL
+[KM_BAND_NAME]   = {keypads_text ,          "NAME"},  // KM_BAND_NAME
 #endif
 [KM_MARKER_TIME]  = {keypads_time        , "MARKER\nTIME"}, // KM_MARKER_TIME
 [KM_VAR]          = {keypads_freq        , "JOG\nSTEP"}, // jog step
@@ -1484,6 +1486,7 @@ static const struct {
 [KM_RTC_TIME]     = {keypads_positive    , "SET TIME\n HHMMSS"}, // Time
 [KM_INTERVAL]     = {keypads_positive    , "SET INTERVAL\n HHMMSS"}, // Interval
 #endif
+[KM_PRESET_NAME]   = {keypads_text ,          "NAME"},  // KM_PRESET_NAME
 #endif
 [KM_CODE]         = {keypads_positive    , "CODE"},              // KM_CODE
 #ifdef __USE_SD_CARD__
@@ -2120,9 +2123,14 @@ static UI_FUNCTION_ADV_CALLBACK(menu_load_preset_acb)
   (void)item;
   if(b){
     setting_t *p = caldata_pointer(data);
-    if (p)
-      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)p->frequency0, (float)p->frequency1);
-    else
+    if (p) {
+#ifdef TINYSA4
+      if (p->preset_name[0])
+        plot_printf(b->text, sizeof(b->text), "LOAD\n\b%s", p->preset_name);
+      else
+#endif
+        plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)p->frequency0, (float)p->frequency1);
+    } else
       plot_printf(b->text, sizeof(b->text), "EMPTY %d", (int)data);
     return;
   }
@@ -2139,9 +2147,14 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
   if(b){
 #if 1
     setting_t *p = caldata_pointer(data);
-    if (p)
-      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)p->frequency0, (float)p->frequency1);
-    else
+    if (p) {
+#ifdef TINYSA4
+      if (p->preset_name[0])
+        plot_printf(b->text, sizeof(b->text), "STORE\n\b%s", p->preset_name);
+      else
+#endif
+        plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)p->frequency0, (float)p->frequency1);
+    } else
       plot_printf(b->text, sizeof(b->text), "STORE %d", (int)data);
 #else
     b->param_1.u = data;
@@ -2155,6 +2168,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_store_preset_acb)
     if (data == 101) clear_backup();
     data = 0;
   }
+#ifdef TINYSA4
+  else {
+    kp_help_text = "Preset name";
+    ui_mode_keypad(KM_PRESET_NAME);
+  }
+#endif
   caldata_save(data);
   menu_move_back(true);
 }
@@ -2826,6 +2845,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
           setting.bands[i].start = fundamental*(i+1) - half_span;
           setting.bands[i].end = fundamental*(i+1) + half_span;
           setting.bands[i].enabled = true;
+          setting.bands[i].name[0] = 0;
         }
         setting.multi_band = true;
         setting.multi_trace = false;
@@ -3440,7 +3460,10 @@ static UI_FUNCTION_ADV_CALLBACK(menu_band_select_acb)
     for (int i=0;i<BANDS_MAX;i++) {if (setting.bands[i].enabled) count++; }
     if (count == 0) setting.bands[0].enabled = true;
     b->icon = (setting.bands[data].enabled?BUTTON_ICON_CHECK:BUTTON_ICON_NOCHECK) ;
-    plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)setting.bands[data].start, (float)setting.bands[data].end);
+    if (setting.bands[data].name[0])
+      plot_printf(b->text, sizeof(b->text), "%s", setting.bands[data].name);
+    else
+      plot_printf(b->text, sizeof(b->text), "%.6FHz\n%.6FHz", (float)setting.bands[data].start, (float)setting.bands[data].end);
     reset_band();
     return;
   }
@@ -3641,6 +3664,7 @@ static UI_FUNCTION_CALLBACK(menu_BAND_disable_cb)
 
   if (active_band<BANDS_MAX){
     setting.bands[active_band].enabled = false;
+    setting.bands[active_band].name[0] = 0;
     dirty = true;
     update_frequencies();
     update_grid();
@@ -4506,10 +4530,11 @@ static const menuitem_t menu_limit_select[] = {
 static const menuitem_t menu_band_modify[] =
 {
  { MT_KEYPAD,  KM_BAND_START,     "START\n\b%s",          "Start"},
- { MT_KEYPAD,  KM_BAND_END,       "STOP\n\b%s",            "Stop"},
- { MT_KEYPAD,  KM_BAND_CENTER,    "CENTER\n\b%s",          "Center"},
- { MT_KEYPAD,  KM_BAND_SPAN,      "SPAN\n\b%s",            "Span"},
-  { MT_KEYPAD,  KM_BAND_LEVEL,     "LEVEL\n\b%s",          "Level"},
+ { MT_KEYPAD,  KM_BAND_END,       "STOP\n\b%s",           "Stop"},
+ { MT_KEYPAD,  KM_BAND_CENTER,    "CENTER\n\b%s",         "Center"},
+ { MT_KEYPAD,  KM_BAND_SPAN,      "SPAN\n\b%s",           "Span"},
+ { MT_KEYPAD,  KM_BAND_LEVEL,     "LEVEL\n\b%s",          "Level"},
+ { MT_KEYPAD,  KM_BAND_NAME,      "NAME\n\b%s",           "Name"},
   { MT_CALLBACK,0,                 "DISABLE",              menu_BAND_disable_cb},
   { MT_NONE,     0, NULL, menu_back} // next-> menu_back
 };
@@ -5475,6 +5500,12 @@ static void fetch_numeric_target(uint8_t mode)
     uistat.value = value(setting.bands[active_band].level);
     plot_printf(uistat.text, sizeof uistat.text, "%.1f", uistat.value);
     break;
+  case KM_BAND_NAME:
+    plot_printf(uistat.text, sizeof uistat.text, "%s", setting.bands[active_band].name);
+    break;
+  case KM_PRESET_NAME:
+    plot_printf(uistat.text, sizeof uistat.text, "%s", setting.preset_name);
+    break;
 #endif
   case KM_NOISE:
     uistat.value = setting.noise;
@@ -5768,6 +5799,11 @@ set_numeric_value(void)
     update_grid();
 //    BANDs_update();
     break;
+  case KM_BAND_NAME:
+    plot_printf(setting.bands[active_band].name, sizeof setting.bands[active_band].name, "%s", kp_buf);
+    dirty = true;
+//    BANDs_update();
+    break;
 #endif
   case KM_NOISE:
     set_noise(uistat.value);
@@ -5835,6 +5871,9 @@ set_numeric_value(void)
     break;
   case KM_DEPTH:
     set_depth((int)uistat.value);
+    break;
+  case KM_PRESET_NAME:
+    plot_printf(setting.preset_name, sizeof setting.preset_name, "%s", kp_buf);
     break;
 #endif
   case KM_VAR:
@@ -7521,7 +7560,10 @@ static int
 full_keypad_click(int c, int kp_index)
 {
   if (c == S_ENTER[0]) { // Enter
-    return kp_index == 0 ? KP_CANCEL : KP_DONE;
+    if (kp_index == 0)
+      return KP_CANCEL;
+    set_numeric_value();            // Also for text values
+    return KP_DONE;
   }
   if (c == S_LARROW[0]) { // Backspace
     if (kp_index == 0)

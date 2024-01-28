@@ -8037,7 +8037,7 @@ void calibrate(void)
 #ifdef TINYSA4
             || (calibration_stage == CS_LNA && peakLevel < -40)
             || (calibration_stage == CS_ULTRA && peakLevel < -40)
-            || (calibration_stage == CS_DIRECT_LNA && peakLevel < direct_level - 20)
+            || (calibration_stage == CS_DIRECT_LNA && peakLevel < direct_level - 50)
 #endif
         ) {
 #ifdef TINYSA4

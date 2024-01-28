@@ -1918,10 +1918,14 @@ draw_frequencies(void)
       int b = getBand(idx);
       while (b == getBand(++next_idx));
 //      plot_printf(buf1, sizeof(buf1), "%.3QHz-%.3QHz %5.1QHz/", setting.bands[b].start + (setting.frequency_offset - FREQUENCY_SHIFT),  setting.bands[b].end + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
-      if (next_idx - idx < sweep_points/4-20)
-        plot_printf(buf1, sizeof(buf1), "%.3QHz", (setting.bands[b].start+setting.bands[b].end)/2 + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
-      else
-        plot_printf(buf1, sizeof(buf1), "%.3QHz %5.1QHz/", setting.bands[b].start + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
+      if (setting.bands[b].name[0])
+        plot_printf(buf1, sizeof(buf1), "%s", setting.bands[b].name);
+      else {
+        if (next_idx - idx < sweep_points/4-20)
+          plot_printf(buf1, sizeof(buf1), "%.3QHz", (setting.bands[b].start+setting.bands[b].end)/2 + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
+        else
+          plot_printf(buf1, sizeof(buf1), "%.3QHz %5.1QHz/", setting.bands[b].start + (setting.frequency_offset - FREQUENCY_SHIFT), grid_span);
+      }
       ili9341_drawstring(buf1, FREQUENCIES_XPOS1+idx, FREQUENCIES_YPOS);
       idx = next_idx;
     } while (idx < sweep_points - 10);
