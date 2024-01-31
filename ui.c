@@ -186,6 +186,7 @@ int btn_side(void)
 static int btn_check(void)
 {
   systime_t ticks;
+  wdgReset(&WDGD1);
   // Debounce input
   while(TRUE){
     ticks = chVTGetSystemTimeX();
@@ -212,6 +213,7 @@ static int btn_check(void)
 static int btn_wait_release(void)
 {
   while (TRUE) {
+    wdgReset(&WDGD1);
     systime_t ticks = chVTGetSystemTimeX();
     systime_t dt = ticks - last_button_down_ticks;
     // Debounce input
@@ -299,6 +301,7 @@ touch_measure_x(void)
 static inline int
 touch_status(void)
 {
+  wdgReset(&WDGD1);
   return adc_single_read(ADC_TOUCH_Y) > TOUCH_THRESHOLD;
 }
 
@@ -654,6 +657,8 @@ extern const char *states[];
       break;
     chThdSleepMilliseconds(40);
     if ((cnt++)&0x07) continue; // Not update time so fast
+
+    wdgReset(&WDGD1);
 
 #ifdef TINYSA4
 #ifdef __USE_RTC__
@@ -7798,6 +7803,7 @@ static void sa_save_file(uint8_t format) {
 #else
     plot_printf(fs_filename, FF_LFN_BUF, "%08x.%s", rtc_get_FAT(), file_ext[format]);
 #endif
+    wdgReset(&WDGD1);
   }
   else {
     ui_mode_keypad(KM_FILENAME);

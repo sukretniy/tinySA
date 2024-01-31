@@ -285,6 +285,7 @@ static THD_FUNCTION(Thread1, arg)
     // plot trace and other indications as raster
     draw_all(completed);  // flush markmap only if scan completed to prevent
                           // remaining traces
+    wdgReset(&WDGD1);
 //    STOP_PROFILE
   }
 
@@ -3102,6 +3103,13 @@ int main(void)
   set_sweep_frequency(ST_STOP, (freq_t) 4000000);
   sweep(false);
 #endif
+  static const WDGConfig scan_wdgcfg = {
+    STM32_IWDG_PR_256,
+    STM32_IWDG_RL(1 * (40000 / 256)), /* 1 second */
+    STM32_IWDG_WIN_DISABLED
+  };
+  wdgInit();
+  wdgStart(&WDGD1, &scan_wdgcfg);
 
   if (reset_state|| (caldata_recall(0) == -1)) {
     load_LCD_properties();
