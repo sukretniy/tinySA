@@ -2379,11 +2379,13 @@ static UI_FUNCTION_ADV_CALLBACK(menu_lowoutput_settings_acb)
   (void)item;
   if (b){
     if (data == 255) {
-      plot_printf(mode_string, sizeof mode_string, "%s %s %s %s",
+      plot_printf(mode_string, sizeof mode_string, "%s%s%s%s%s",
                   (!force_signal_path ? "" : path_text[test_path]),
-                  (get_sweep_frequency(ST_START) < MINIMUM_DIRECT_FREQ ? "SINE" : "" ),
-                  (get_sweep_frequency(ST_STOP) >= MINIMUM_DIRECT_FREQ ? "SQUARE WAVE" : ""),
-                  (get_sweep_frequency(ST_STOP) > MAX_LOW_OUTPUT_FREQ && setting.mixer_output ? "MIXER" : ""));
+                  (get_sweep_frequency(ST_START) < MINIMUM_DIRECT_FREQ ? " SINE" : "" ),
+                  (get_sweep_frequency(ST_STOP) >= MINIMUM_DIRECT_FREQ ? " SQUARE WAVE" : ""),
+                  (get_sweep_frequency(ST_STOP) > MAX_LOW_OUTPUT_FREQ && setting.mixer_output ? " MIXER" : ""),
+                  (LO_harmonic ? " HARM" : "")
+                  );
       b->param_1.text = mode_string;
       return; }
     b->icon = data == setting.mixer_output ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
@@ -2983,9 +2985,9 @@ static UI_FUNCTION_ADV_CALLBACK(menu_measure_acb)
       ui_mode_keypad(KM_CENTER);
       set_marker_frequency(0, uistat.value);
 #ifdef TINYSA4
-      kp_help_text = "Modulation frequency: 500Hz .. 20kHz";
+      kp_help_text = "Modulation frequency: 50Hz .. 20kHz";
       ui_mode_keypad(KM_SPAN);
-      if (uistat.value < 500 || uistat.value > 20000)
+      if (uistat.value < 50 || uistat.value > 20000)
         goto no_measurement;
       set_RBW(uistat.value/300);
 #else
@@ -5493,7 +5495,7 @@ static void fetch_numeric_target(uint8_t mode)
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_BAND_SPAN:
-    uistat.freq_value = setting.bands[active_band].end-setting.bands[active_band].start;
+    uistat.freq_value = abs(setting.bands[active_band].end-setting.bands[active_band].start);
     plot_printf(uistat.text, sizeof uistat.text, "%.3QHz", uistat.freq_value);
     break;
   case KM_BAND_LEVEL:
@@ -5756,6 +5758,8 @@ set_numeric_value(void)
 #ifdef __BANDS__
   case KM_BAND_START:
     setting.bands[active_band].start = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    if (setting.bands[active_band].end < setting.bands[active_band].start)
+      setting.bands[active_band].end = setting.bands[active_band].start;
     update_frequencies();
     dirty = true;
     update_grid();
@@ -5763,6 +5767,8 @@ set_numeric_value(void)
     break;
   case KM_BAND_END:
     setting.bands[active_band].end = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
+    if (setting.bands[active_band].start > setting.bands[active_band].end)
+      setting.bands[active_band].start = setting.bands[active_band].end;
     update_frequencies();
     dirty = true;
     update_grid();
@@ -5770,7 +5776,7 @@ set_numeric_value(void)
     break;
   case KM_BAND_CENTER:
   {
-    freq_t span = (setting.bands[active_band].end - setting.bands[active_band].start);
+    freq_t span = abs(setting.bands[active_band].end - setting.bands[active_band].start);
     freq_t center = uistat.freq_value - (setting.frequency_offset - FREQUENCY_SHIFT);
     setting.bands[active_band].start = center - span/2;
     setting.bands[active_band].end = center + span/2;
@@ -7475,6 +7481,7 @@ ui_process_menu_lever(void)
 static int
 num_keypad_click(int c, int kp_index)
 {
+  if (c == KP_EMPTY) return KP_CONTINUE;
   if (c == KP_ENTER) c = KP_X1;
   if ((c >= KP_X1 && c <= KP_G) || c == KP_m || c == KP_u || c == KP_n) {
 #if 0

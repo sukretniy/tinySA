@@ -225,11 +225,13 @@ void set_output_path(freq_t f, float level)
     }
   } else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
-  else if (setting.mixer_output && (f >= MAX_LOW_OUTPUT_FREQ || (config.ultra_start != ULTRA_AUTO && f > config.ultra_start)))
+  else if (setting.mixer_output && (f >= MAX_LOW_OUTPUT_FREQ || (config.ultra_start != ULTRA_AUTO && f > config.ultra_start))) {
     signal_path = PATH_ULTRA;
-  else if (!setting.mixer_output && (f >= MAX_LOW_OUTPUT_FREQ || (config.ultra_start != ULTRA_AUTO && f > config.ultra_start)))
+    LO_harmonic = (f > ULTRA_MAX_FREQ);
+  } else if (!setting.mixer_output && (f >= MAX_LOW_OUTPUT_FREQ || (config.ultra_start != ULTRA_AUTO && f > config.ultra_start))) {
     signal_path = PATH_LEAKAGE;
-  else if (f > MINIMUM_DIRECT_FREQ)
+    LO_harmonic = (f > MAX_LO_FREQ);
+  } else if (f > MINIMUM_DIRECT_FREQ)
     signal_path = PATH_DIRECT;
   else
     signal_path = PATH_LOW;
@@ -4469,7 +4471,7 @@ again:                                                              // Spur redu
           if (signal_path == PATH_LOW || signal_path == PATH_ULTRA) ADF4351_drive(actual_drive);       // Max drive
         }
         if (signal_path == PATH_LEAKAGE)
-          set_freq(ADF4351_LO, target_f);
+          set_freq(ADF4351_LO, target_f);       // Never used as leakage is taken care under direct
         else {
 #define MAX_COMPENSATION    50000
           if ( target_f < real_old_freq[ADF4351_LO] - MAX_COMPENSATION || target_f > real_old_freq[ADF4351_LO] + MAX_COMPENSATION )
@@ -4508,16 +4510,16 @@ again:                                                              // Spur redu
         }
         }
 #endif
-      } else if (setting.mode == M_HIGH || direct) {
+      } else if (setting.mode == M_HIGH || direct) {        // direct means PATH_DIRECT or PATH_LEAKAGE
         if (signal_path == PATH_DIRECT) {
           set_freq (SI4463_RX, lf); // sweep RX, local_IF = 0 in high mode
           if (setting.tracking_output)
             set_freq (ADF4351_LO, lf);
-        } else {
+        } else {   //PATH_LEAKAGE
           freq_t target_f = lf;
-          if (setting.harmonic && lf > 6300000000ULL)
+          if (LO_harmonic)
             target_f /= setting.harmonic;
-          set_freq (ADF4351_LO, lf); // sweep LO, local_IF = 0 in high mode
+          set_freq (ADF4351_LO, target_f); // sweep LO, local_IF = 0 in high mode
         }
         local_IF = 0;
       } else if (setting.mode == M_GENHIGH) {
@@ -5908,9 +5910,18 @@ static volatile int dummy;
     // Position phase noise marker at requested offset
     set_marker_index(1, markers[0].index + (setting.mode == M_LOW ? WIDTH/4 : -WIDTH/4));
   } else if ((setting.measurement == M_PASS_BAND || setting.measurement == M_FM)  && markers[0].index > 10) {      // ----------------Pass band measurement
-    int t1 = 0;
-    int t2 = 0;
-    float v = actual_t[markers[0].index] - (in_selftest ? 6.0 : 3.0);
+    int t1;
+    int t2;
+    float v = -200;
+    t1 = (setting._sweep_points>>2);
+    t2 = (t1<<1) + t1;
+    for (int i=t1; i<t2; i++) {
+      if (v < actual_t[i])
+        v = actual_t[i];
+    }
+    t1 = 0;
+    t2 = 0;
+    v = v - (in_selftest ? 6.0 : 3.0);
     while (t1 < markers[0].index && actual_t[t1+1] < v)                                        // Find left -3dB point
       t1++;
     if (t1< markers[0].index)
