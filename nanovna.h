@@ -65,15 +65,15 @@
 #define __LINEARITY__             // Not available
 #define __SELFTEST__              // Add selftest option (not fully disable it)
 #define __CALIBRATE__             // Add calibration menu and functions
-#define __WATCHDOG__
-#ifdef __WATCHDOG__
+//#define __WATCHDOG__
+//#ifdef __WATCHDOG__  // still resets when entering the Ultra code
 //#if (HAL_USE_WDG != TRUE)
 //#error "HAL_USE_WDG must be set to true"
 //#endif
 //#if (STM32_WDG_USE_IWDG != TRUE)
 //#error "STM32_WDG_USE_IWDG must be set to true"
 //#endif
-#endif
+//#endif
 #define __FAST_SWEEP__            // Pre-fill SI4432 RSSI buffer  to get fastest sweep in zero span mode
 // #define __AUDIO__
 #define __SPUR__                  // Does spur reduction by shifting IF
