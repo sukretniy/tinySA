@@ -4932,7 +4932,9 @@ again:                                                              // Spur redu
     t++;                                                    // one subscan done
     if (break_on_operation && operation_requested)          // break subscanning if requested
       break;         // abort
+#ifdef __WATCHDOG__
     wdgReset(&WDGD1);
+#endif
   } while (t < local_vbw_steps);  // till all sub steps done
   TRACE(7);
 #ifdef TINYSA4

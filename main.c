@@ -285,7 +285,9 @@ static THD_FUNCTION(Thread1, arg)
     // plot trace and other indications as raster
     draw_all(completed);  // flush markmap only if scan completed to prevent
                           // remaining traces
+#ifdef __WATCHDOG__
     wdgReset(&WDGD1);
+#endif
 //    STOP_PROFILE
   }
 
@@ -3103,6 +3105,7 @@ int main(void)
   set_sweep_frequency(ST_STOP, (freq_t) 4000000);
   sweep(false);
 #endif
+#ifdef __WATCHDOG__
   static const WDGConfig scan_wdgcfg = {
     STM32_IWDG_PR_256,
     STM32_IWDG_RL(1 * (40000 / 256)), /* 1 second */
@@ -3110,7 +3113,7 @@ int main(void)
   };
   wdgInit();
   wdgStart(&WDGD1, &scan_wdgcfg);
-
+#endif
   if (reset_state|| (caldata_recall(0) == -1)) {
     load_LCD_properties();
   }
