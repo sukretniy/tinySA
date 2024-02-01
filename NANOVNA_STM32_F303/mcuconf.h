@@ -92,7 +92,7 @@
 #else
 // Use 32768Hz LSE
 #define STM32_LSE_ENABLED                   TRUE
-#define STM32_LSI_ENABLED                   FALSE
+#define STM32_LSI_ENABLED                   TRUE
 #define STM32_RTCSEL                        STM32_RTCSEL_LSE
 #define STM32_RTC_PRESA_VALUE               32
 #define STM32_RTC_PRESS_VALUE               1024
@@ -265,6 +265,6 @@
 /*
  * WDG driver system settings.
  */
-#define STM32_WDG_USE_IWDG                  FALSE
+#define STM32_WDG_USE_IWDG                  TRUE
 
 #endif /* MCUCONF_H */
