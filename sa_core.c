@@ -387,7 +387,7 @@ void set_output_path(freq_t f, float level)
       SI4463_init_tx();
     break;
   }
-
+  setting.spur_removal &= 0xFE;
 }
 
 static void calculate_static_correction(void);
@@ -405,21 +405,22 @@ void set_input_path(freq_t f)
   }
   else if (MODE_HIGH(setting.mode))
       signal_path = PATH_HIGH;
-  else if (direct_test && f >= 900000000 && f < 1100000000)
+  else if (direct_test && f >= 830000000 && f < 1130000000)
     signal_path = PATH_DIRECT;
   else if (config.direct && f >= config.direct_start && f < config.direct_stop)
     signal_path = PATH_DIRECT;
   else if(config.ultra && ((config.ultra_start == ULTRA_AUTO && f > ultra_start) || (config.ultra_start != ULTRA_AUTO && f >config.ultra_start))) {
     LO_harmonic = (f > (config.harmonic_start?config.harmonic_start:ULTRA_MAX_FREQ));
     signal_path = PATH_ULTRA;
-  } else
+  } else {
     signal_path = PATH_LOW;
-
+  }
   if (signal_path == PATH_HIGH) {
     return;                 // TODO setup high input path
   }
   enable_rx_output(setting.atten_step);
 
+  bool mirrors = false;
   switch(signal_path) {
   case PATH_LOW:
     enable_ultra(false);
@@ -441,19 +442,26 @@ void set_input_path(freq_t f)
 
     goto common2;
   case PATH_ULTRA:
+    mirrors = true;
     enable_ultra(true);
     enable_high(false);
     enable_direct(false);
     enable_extra_lna(setting.extra_lna);
-    common:
+  common:
     enable_ADF_output(true, setting.tracking_output);
-    common2:
+  common2:
     if (SI4463_is_in_tx_mode())
       SI4463_init_rx();
     break;
   }
   if (force_signal_path)
     calculate_static_correction();
+  if (S_IS_AUTO(setting.spur_removal)) {
+    if (mirrors)
+      setting.spur_removal |= 0x01;
+    else
+      setting.spur_removal &= 0xFE;
+  }
 }
 #endif
 
@@ -536,7 +544,7 @@ void update_min_max_freq(void)
     maxFreq = MAX_LOW_OUTPUT_FREQ;
 #endif
 #else
-   maxFreq = NORMAL_MAX_FREQ;
+   maxFreq = DEFAULT_MAX_FREQ;
 #endif
     break;
   case M_HIGH:
@@ -3061,7 +3069,7 @@ static  const freq_t spur_table[] =                                 // Frequenci
 const int spur_table_size = (sizeof spur_table)/sizeof(freq_t);
 #endif
 #ifdef TINYSA4
-#define static_spur_IF  DEFAULT_IF    // The IF frequency for which the spur table is value
+#define static_spur_IF  977400000; // DEFAULT_IF    // The IF frequency for which the spur table is value
 #define STATIC_SPUR_TABLE_SIZE 56
 static  const freq_t static_spur_table[STATIC_SPUR_TABLE_SIZE] =     // Valid for IF=977.4MHz
 {
@@ -3138,6 +3146,7 @@ static  const freq_t static_spur_table_plus[] =     // Valid for IF=977.4MHz
 #define MAX_DYNAMIC_SPUR_TABLE_SIZE 100
 static  freq_t dynamic_spur_table[MAX_DYNAMIC_SPUR_TABLE_SIZE];       // Frequencies to be calculated
 static int dynamic_spur_table_size = 0;
+freq_t dynamic_spur_IF = 0;
 static int always_use_dynamic_table = false;
 
 static  freq_t *spur_table = (freq_t *)static_spur_table;
@@ -3229,36 +3238,41 @@ void fill_spur_table(void)
 {
   freq_t corr_IF;
 
-  if (always_use_dynamic_table) {
+  if (always_use_dynamic_table) {       // Only after doing selftest 1
     spur_table = dynamic_spur_table;
     spur_table_size = dynamic_spur_table_size;
     return;
   }
-  if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE) {         // if less then 1100kHz use static table
+  if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE && !hw_if) {         // if less then 1100kHz use static table
+#if 0
     if (hw_if) {
       spur_table = (freq_t *)static_spur_table_plus;
       spur_table_size = STATIC_SPUR_TABLE_SIZE_PLUS;
       spur_IF = static_spur_IF_plus;
-    } else {
+    } else
+#endif
+    {
       spur_table = (freq_t *)static_spur_table;
       spur_table_size = STATIC_SPUR_TABLE_SIZE;
       spur_IF = static_spur_IF;
     }
     return;
   }
-  if (!setting.auto_IF)
-    corr_IF = setting.frequency_IF;
-  else {
-    corr_IF = config.frequency_IF1;
-  }
+  corr_IF = setting.frequency_IF;
+  if (dynamic_spur_IF == corr_IF)
+    return;
+  dynamic_spur_IF = corr_IF;
   dynamic_spur_table_size = 0;
 //  dynamic_spur_table[dynamic_spur_table_size++] = 132000000;
 //  dynamic_spur_table[dynamic_spur_table_size++] = 153000000;
 //  dynamic_spur_table[dynamic_spur_table_size++] = 174600000;
 //  dynamic_spur_table[dynamic_spur_table_size++] = 219000000;
   dynamic_spur_table[dynamic_spur_table_size++] = corr_IF/4 -SPUR_FACTOR/2;
+  dynamic_spur_table[dynamic_spur_table_size++] = corr_IF/4 -SPUR_FACTOR/2 + 60000;
 //  dynamic_spur_table[dynamic_spur_table_size++] = 266000000;
   dynamic_spur_table[dynamic_spur_table_size++] = corr_IF/2 -SPUR_FACTOR;
+  if (actual_rbw_x10 < 3000)
+      dynamic_spur_table[dynamic_spur_table_size++] = corr_IF/2 -SPUR_FACTOR + 120000;
   dynamic_spur_table[dynamic_spur_table_size++] = corr_IF*2/3 -SPUR_FACTOR*2/3;
   spur_table = dynamic_spur_table;
   spur_table_size = dynamic_spur_table_size;
@@ -3355,7 +3369,7 @@ int avoid_spur(freq_t f)                   // find if this frequency should be a
 #ifdef TINYSA4
 #if 1
   if (!setting.auto_IF && setting.frequency_IF-2000000 < f && f < setting.frequency_IF -200000)
-    return true;
+    return F_AT_SPUR;
   if(config.frequency_IF1+200000 > f && config.frequency_IF1 < f+200000)
     return F_AT_SPUR;
 #endif
@@ -4083,29 +4097,23 @@ again:                                                              // Spur redu
 #ifdef __ULTRA__
 //    LO_harmonic = false;
 #endif
-    if (MODE_LOW(setting.mode)){                                       // All low mode
+    if (MODE_LOW(setting.mode) && !direct){                                       // All low input/output mode except direct that require setting of IF
       if (!setting.auto_IF)
         local_IF = setting.frequency_IF;
       else
       {
 #ifdef TINYSA4
-        if (actual_rbw_x10 < RBW_FOR_STATIC_TABLE && setting.mode == M_LOW && lf > static_spur_table[0] -  RBW_FOR_STATIC_TABLE * 100)
+        if (!hw_if && actual_rbw_x10 < RBW_FOR_STATIC_TABLE && setting.mode == M_LOW && lf > static_spur_table[0] -  RBW_FOR_STATIC_TABLE * 100)
           local_IF = spur_IF; // static spur table IF
-        else
-          local_IF = config.frequency_IF1;
-#if 0
-        if ( S_IS_AUTO(setting.below_IF)) {
-//          if (f < 2000000 && S_IS_AUTO(setting.spur_removal))
-//            local_IF += DEFAULT_SPUR_OFFSET;
-//          else // if (lf > ULTRA_MAX_FREQ || lf < local_IF/2  || ( lf + (uint64_t)local_IF< MAX_LO_FREQ && lf > 136000000ULL + local_IF) )
-            local_IF += DEFAULT_SPUR_OFFSET/2;
+        else {
+          local_IF = (hw_if? config.frequency_IF1 - 500000 : config.frequency_IF1 - 500000);
+          setting.frequency_IF = local_IF;
         }
-#endif
 #else
         local_IF = DEFAULT_IF;
 #endif
       }
-      if (setting.mode == M_LOW && !direct) {
+      if (setting.mode == M_LOW) {       // Low input mode
         if (tracking) {                                // VERY SPECIAL CASE!!!!!   Measure BPF
 #if 0                                                               // Isolation test
           local_IF = lf;
@@ -4123,9 +4131,6 @@ again:                                                              // Spur redu
               setting.spur_removal= S_AUTO_OFF;
             }
           }
-#endif
-
-#ifdef __ULTRA__
           if (S_IS_AUTO(setting.below_IF)) {
             if ((freq_t)lf > MAX_ABOVE_IF_FREQ && lf <= ULTRA_MAX_FREQ && !LO_harmonic)
               setting.below_IF = S_AUTO_ON; // Only way to reach this range. Use below IF in harmonic mode
@@ -4154,16 +4159,13 @@ again:                                                              // Spur redu
                 setting.below_IF = S_AUTO_OFF;               // use below IF in second pass
               }
             }
-            else // if (setting.auto_IF)
+            else // if (setting.auto_IF)   // spur reduction is on and can not do above/below IF
             {
               if ((debug_avoid && debug_avoid_second) || spur_second_pass) {
 #ifdef TINYSA4
                 local_IF  = local_IF + DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);    // apply IF spur shift
                 LO_spur_shifted = true;
-#ifdef TINYSA4
                 LO_shifting = true;
-#endif
-
               } else {
                 local_IF  = local_IF; // - (actual_rbw_x10 > 5000 ? 200000 : 0);// - DEFAULT_SPUR_OFFSET/2;    // apply IF spur shift
               }
@@ -4172,33 +4174,9 @@ again:                                                              // Spur redu
               }
 #endif
             }
-          } else {
+          } else {                  // No spur removal
             int spur_flag = avoid_spur(lf);
 #ifdef TINYSA4
-#if 0
-            if (debug_avoid) {
-              if (spur_flag == F_NEAR_SPUR) {
-                stored_t[i] = -70.0;                                       // Display when to do spur shift in the stored trace
-  //              local_IF -= DEFAULT_SPUR_OFFSET/2;
-              } else if (spur_flag == F_AT_SPUR){
-                stored_t[i] = -60.0;
-                // Display when to do spur shift in the stored trace
-                if (debug_avoid_second) {
-                  if (S_IS_AUTO(setting.below_IF) && lf < local_IF/2 - 2000000) {
-                    setting.below_IF = S_AUTO_ON;
-                    local_IF = local_IF;                          // No spur removal and no spur, center in IF
-                  } else if (setting.auto_IF) {
-                    local_IF = local_IF + DEFAULT_SPUR_OFFSET/2;
-                    //                if (actual_rbw_x10 == 6000 )
-                    //                  local_IF = local_IF + 50000;
-                    LO_spur_shifted = true;
-                  }
-                }
-              } else {
-                stored_t[i] = -90.0;                                  // Display when to do spur shift in the stored trace
-              }
-            } else
-#endif
             if(spur_flag) {         // check if alternate IF is needed to avoid spur.
               if (spur_flag == F_NEAR_SPUR) {
                 if (debug_avoid) stored_t[i] = -70.0;                                  // Display when to do spur shift in the stored trace
@@ -4213,7 +4191,7 @@ again:                                                              // Spur redu
                 } else
 #endif
                 if (setting.auto_IF) {
-                  local_IF = local_IF + (actual_rbw_x10 > 2000 ? DEFAULT_SPUR_OFFSET : DEFAULT_SPUR_OFFSET/2); // TODO find better way to shift spur away at large RBW/2;
+                  local_IF = local_IF + (actual_rbw_x10 > 2000  || hw_if ? DEFAULT_SPUR_OFFSET : DEFAULT_SPUR_OFFSET/2); // TODO find better way to shift spur away at large RBW/2;
                   //                if (actual_rbw_x10 == 6000 )
                   //                  local_IF = local_IF + 50000;
                   LO_spur_shifted = true;
@@ -4237,7 +4215,7 @@ again:                                                              // Spur redu
               if (lf<LOW_SHIFT_FREQ) {   // below 2MHz
                 local_IF += DEFAULT_SPUR_OFFSET-(actual_rbw_x10 > 1000 ? 200000 : 0);                  // Shift to avoid zero Hz peak
                 LO_shifting = true;
-              }
+              } else
               if (config.hide_21MHz && S_IS_AUTO(setting.below_IF)) {
                 if (binary_search_table(lf, additional_spur_table, ADDITIONAL_SPUR_TABLE_SIZE, ADDITIONAL_SPUR_TABE_GATE))
                 {
@@ -4246,6 +4224,8 @@ again:                                                              // Spur redu
                   setting.below_IF= S_AUTO_OFF;
                 }
               }
+              else if (hw_if && actual_rbw_x10 < 8500)
+                local_IF += 250000;
 
 #else
               local_IF = local_IF; // + DEFAULT_SPUR_OFFSET/2;                  // No spure removal and no spur, center in IF
@@ -4265,7 +4245,7 @@ again:                                                              // Spur redu
         if (setting.modulation == MO_EXTERNAL)    // VERY SPECIAL CASE !!!!!! LO input via high port
           local_IF += lf;
       }
-    } // --------------- END IF calculation ------------------------
+    } // --------------- END IF calculation ------------------------ all low input/output modes with IF setting
   TRACE(2);
     // ------------- Set LO ---------------------------
 
@@ -4412,7 +4392,7 @@ again:                                                              // Spur redu
                   ADF4351_R_counter(-3);
                 } else {
                   if (hw_if)
-                    ADF4351_R_counter(7);
+                    ADF4351_R_counter(4);
                   else
                     ADF4351_R_counter(4);
                 }
@@ -4487,6 +4467,8 @@ again:                                                              // Spur redu
               actual_drive = 3;
 //            else if (lf <  DRIVE0_MAX_FREQ)       // below 600MHz
 //              actual_drive = 0;
+            else if (setting.mode == M_GENLOW && hw_if)
+              actual_drive = 0;
             else if (lf < DRIVE1_MAX_FREQ || hw_if) // below 1.2GHz
               actual_drive = 1;
             else if (lf < DRIVE2_MAX_FREQ)  // below 2GHz
@@ -6300,7 +6282,7 @@ const test_case_t test_case [] =
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_30MHZ_ULTRA, 30,    1,      CAL_LEVEL,    10,     -85),      // 4 Test Ultra mode
 #define TEST_SILENCE 4
  TEST_CASE_STRUCT(TC_BELOW,     TP_SILENT,      200,    100,    -70,    0,      0),         // 5  Wide band noise floor low mode
- TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,900,   10,    -90,    0,      -90),         // 6 Direct path with harmonic
+ TEST_CASE_STRUCT(TC_ABOVE,     TP_30MHZ_DIRECT,900,   10,    -60,    0,      -80),         // 6 Direct path with harmonic
  TEST_CASE_STRUCT(TC_SIGNAL,    TP_10MHZEXTRA,  30,     14,      CAL_LEVEL,    26,     -45),      // 7 BPF loss and stop band
  TEST_CASE_STRUCT(TC_FLAT,      TP_10MHZEXTRA,  30,     14,      -28,    9,     -60),       // 8 BPF pass band flatness
  TEST_CASE_STRUCT(TC_BELOW,     TP_15MHZ_LNA2,    855,    1,     -80,    0,      -80),       // 9 LPF cutoff
@@ -6390,19 +6372,18 @@ static volatile int test_wait = false;
 static float test_value;
 
 #ifdef TINYSA4
-static freq_t spur_test_freq = 900000000;
-static freq_t direct_test_freq = 180000000;
+static freq_t spur_test_freq = 930000000;
+static freq_t direct_test_freq = 990000000; // 180000000;
 
 void determine_direct_test_freq(void) {
-  if (hw_if)
-    direct_test_freq = 870000000;
-  return;
+  if (!hw_if)
+    return;
 
   int old_ultra = config.ultra;
   config.ultra = true;
   float max_level = -150;
   set_refer_output(0);
-  for (freq_t test_freq = 900000000UL; test_freq < 1000000000UL; test_freq += 30000000) {
+  for (freq_t test_freq = 1020000000UL; test_freq < 1100000000UL; test_freq += 30000000) {
     dirty = true;
     float v = PURE_TO_float(perform(false, 0, test_freq, false));
     if (v > max_level) {
@@ -6414,7 +6395,10 @@ void determine_direct_test_freq(void) {
 }
 
 static float lpf_test_level = 0;
-#define LPF_TEST_FREQ 795000000
+#define LPF_TEST_FREQ (hw_if ? 915000000 : 795000000)
+#define LPF_TEST_FREQ2 (hw_if ? 1005000000 : 855000000)
+
+
 void determine_lpf_test_level(void) {
   int old_ultra = config.ultra;
   config.ultra = true;
@@ -6535,7 +6519,7 @@ int validate_signal_within(int i, float margin)
     c_freq = LPF_TEST_FREQ;
 #endif
   test_fail_cause[i] = "Frequency ";
-  if (peakFreq < c_freq - 500000 || c_freq + 500000 < peakFreq )
+  if ((peakFreq < c_freq - 500000 || c_freq + 500000 < peakFreq) && setting.measurement != M_PASS_BAND)
     return TS_FAIL;
   test_fail_cause[i] = "";
   return TS_PASS;
@@ -6797,10 +6781,10 @@ common_silent:
     setting.tracking = true; //Sweep BPF
     setting.auto_IF = false;
 #ifdef TINYSA4
-    setting.frequency_IF = config.frequency_IF1 + STATIC_DEFAULT_SPUR_OFFSET/3;  // This is the place where the
+    setting.frequency_IF = config.frequency_IF1;  // Center on SAW filter
     set_refer_output(0);
 #else
-    setting.frequency_IF = DEFAULT_IF+210000;                // Center on SAW filters
+    setting.frequency_IF = DEFAULT_IF + 210000;                // Center on SAW filters
     set_refer_output(2);
 #endif
     markers[1].enabled = M_ENABLED;
@@ -6842,6 +6826,8 @@ common_silent:
     break;
 #ifdef TINYSA4
   case TP_15MHZ_LNA:
+    force_signal_path = true;
+    test_path = 1;
     determine_lpf_test_level();
     goto simple;
   case TP_15MHZ_LNA2:
@@ -6849,6 +6835,9 @@ common_silent:
     test_path = 1;
     goto simple;
   case TP_30MHZ_DIRECT:
+    force_signal_path = true;
+    test_path = 4;
+    goto simple;
   case TP_30MHZ_ULTRA:
   case TP_30MHZ_LNA:
 #endif
@@ -6910,23 +6899,20 @@ common_silent:
   TRACE_ENABLE(TRACE_STORED_FLAG);
   setting.stored[TRACE_STORED] = true;
   set_reflevel(test_case[i].pass+10);
+  freq_t c_freq = (freq_t)(test_case[i].center * 1000000);
 #ifdef TINYSA4
   if (test_case[i].kind == TC_JUMP) {
-    set_sweep_frequency(ST_CENTER, test_freq);
+    c_freq = test_freq;
     setting.repeat = 10;
   }
-  else
-#endif
-  {
-    freq_t c_freq = (freq_t)(test_case[i].center * 1000000);
-#ifdef TINYSA4
-    if (test_case[i].setup == TP_30MHZ_DIRECT)
+  else if (test_case[i].setup == TP_15MHZ_LNA2)
+    c_freq = LPF_TEST_FREQ2;
+  else if (test_case[i].setup == TP_30MHZ_DIRECT)
       c_freq = direct_test_freq;
-    if (test_case[i].setup == TP_15MHZ_LNA)
+  else if (test_case[i].setup == TP_15MHZ_LNA)
       c_freq = LPF_TEST_FREQ;
 #endif
-    set_sweep_frequency(ST_CENTER, c_freq);
-  }
+  set_sweep_frequency(ST_CENTER, c_freq);
   set_sweep_frequency(ST_SPAN, (freq_t)(test_case[i].span * 1000000));
   draw_cal_status();
 }
@@ -7018,16 +7004,16 @@ void sort_spur_count(void) {
 //static bool test_wait = false;
 static int test_step = 0;
 
-void self_test(int test)
+void selftest(int test)
 {
   bool no_wait = false;
 #ifdef TINYSA4
   bool old_ultra = config.ultra;
   config.ultra = true;
-  if (adc_vbat_read() < 3800) {
-    drawMessageBox("Battery low", "Charge before testing", 2000);
-    goto quit;
-  }
+//  if (adc_vbat_read() < 3800) {
+//    drawMessageBox("Battery low", "Charge before testing", 2000);
+//    goto quit;
+//  }
 #endif
   setting.external_gain = 0;                  // Must be 0
 //  set_sweep_points(POINTS_COUNT);
@@ -7774,7 +7760,7 @@ float get_jump_config(int i) {
   return 0;
 }
 
-enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, /* CS_DIRECT,*/ CS_DIRECT_LNA, CS_SPUR_REF, CS_SPUR_ERROR, CS_HARMONIC, CS_HARMONIC_LNA, /* CS_BPF_REF, CS_BPF, */ CS_CORRECTION_REF, CS_CORRECTION_LNA, CS_MAX };
+enum {CS_NORMAL, CS_LNA, CS_SWITCH, CS_ULTRA, CS_ULTRA_LNA, CS_DIRECT_REF, CS_DIRECT, CS_DIRECT_LNA, CS_SPUR_REF, CS_SPUR_ERROR, CS_HARMONIC, CS_HARMONIC_LNA, /* CS_BPF_REF, CS_BPF, */ CS_CORRECTION_REF, CS_CORRECTION_LNA, CS_MAX };
 #define ULTRA_HARMONIC_CAL_FREQ 5340000000
 #else
 enum {CS_NORMAL, CS_SWITCH, CS_MAX };
@@ -7856,9 +7842,9 @@ void calibrate(void)
 //  setting.frequency_IF = config.frequency_IF1;    // set in selftest
   float direct_level=0.0;
   setting.test_argument = -7;
-  self_test(0);
+  selftest(0);
   int if_error = peakFreq - 30000000;
-  if (if_error > -1000000 && if_error < 1000000) {
+  if (if_error > -2000000 && if_error < 2000000) {
     config.frequency_IF1 += if_error;
     setting.auto_IF = true;
     setting.frequency_IF = config.frequency_IF1;
@@ -7998,13 +7984,13 @@ void calibrate(void)
           force_signal_path = true;
           break;
         case CS_DIRECT_REF:
-          test_path = 0;      // Normal
+          test_path = 3;      // Ultra LNA
           setting.spur_removal = S_OFF;
           direct_common:
           set_sweep_frequency(ST_CENTER, direct_test_freq);
           force_signal_path = true;
           break;
-#if 0
+#if 1
         case CS_DIRECT:
           test_path = 4;      // Direct path at 900MHz
           goto direct_common;
@@ -8120,11 +8106,11 @@ low_level:
            config.shift_level_offset = direct_level -  marker_to_value(0);
         else if (calibration_stage == CS_DIRECT_REF)
           direct_level = marker_to_value(0);
-//        else if (calibration_stage == CS_DIRECT)
-//          offset = set_actual_power(direct_level);
+        else if (calibration_stage == CS_DIRECT)
+          offset = set_actual_power(direct_level);
         else if (calibration_stage == CS_DIRECT_LNA){
           offset = set_actual_power(direct_level);
-          config.direct_level_offset = config.direct_lna_level_offset - (config.low_level_offset - config.lna_level_offset);
+//          config.direct_level_offset = config.direct_lna_level_offset - (config.low_level_offset - config.lna_level_offset);
         }
         else
 #endif
