@@ -2596,6 +2596,9 @@ void shell_update_speed(void){
 }
 
 void shell_reset_console(void){
+#ifdef __TRIGGER_PINS__
+  initPinOutTrigger(); // pinout use USART Rx / Tx pins, reconfigure it
+#endif
   // Reset I/O queue over USB (for USB need also connect/disconnect)
   if (usb_IsActive()){
     if (config._mode & _MODE_SERIAL)
@@ -2642,6 +2645,7 @@ static void shell_init_connection(void) {
  *  Set I/O stream (SDU1 or SD1) for shell
  */
   PREPARE_STREAM;
+  shell_reset_console();
 }
 
 #else

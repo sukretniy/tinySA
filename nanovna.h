@@ -114,6 +114,7 @@
 #define __NOISE_FIGURE__
 #define __VBW__
 #define __SWEEP_RESTART__
+#define __TRIGGER_PINS__         // Set output pins in HIGH state on trigger event (depend from band trigger different pins)
 // #define DIRECT_CORRECTION        // Not enough space for config in one flash page.
 #define DB_PER_DEGREE_BELOW               0.056
 #define DB_PER_DEGREE_ABOVE               0.069
@@ -1337,7 +1338,9 @@ typedef struct setting
   systime_t measure_sweep_time_us;
   systime_t actual_sweep_time_us;
   systime_t additional_step_delay_us;
-
+#ifdef __TRIGGER_PINS__
+  systime_t pinout_time_s;
+#endif
   uint32_t trigger_grid;
 
 //  freq_t  *correction_frequency;

@@ -1414,6 +1414,9 @@ enum {
   KM_FILENAME,
 #endif
   KM_TRIGGER_GRID,
+#ifdef __TRIGGER_PINS__
+  KM_PIN_TRIGGER_TIME,
+#endif
   KM_NONE // always at enum end
 };
 
@@ -1506,6 +1509,9 @@ static const struct {
 [KM_FILENAME]     = {keypads_text        , "NAME"},  // filename
 #endif
 [KM_TRIGGER_GRID] = {keypads_time        , "INTERVAL"},              // KM_CODE
+#ifdef __TRIGGER_PINS__
+[KM_PIN_TRIGGER_TIME] = {keypads_time    , "OUT PIN\nTIME"},   // Pin hold time
+#endif
 };
 
 #if 0 // Not used
@@ -5214,6 +5220,9 @@ static const menuitem_t menu_trigger[] = {
 #endif
   { MT_ADV_CALLBACK, T_MODE,     "TRIGGER\n\b%s",  menu_trigger_acb},
   { MT_KEYPAD,       KM_TRIGGER_GRID, "INTERVAL\n\b%ss", NULL},
+#ifdef __TRIGGER_PINS__
+  { MT_KEYPAD,       KM_PIN_TRIGGER_TIME, "PIN OUT\nTIME \b%ss", NULL},
+#endif
 #ifdef __BEEP__
   { MT_ADV_CALLBACK, T_BEEP,     "BEEP",       menu_trigger_acb},
 #endif
@@ -5595,7 +5604,12 @@ static void fetch_numeric_target(uint8_t mode)
     uistat.value =  ((float)setting.trigger_grid) / CH_CFG_ST_FREQUENCY; // ((float)ST2US(setting.trigger_grid))/1000000.0;
     plot_printf(uistat.text, sizeof uistat.text, "%.3F", uistat.value);
     break;
-
+#ifdef __TRIGGER_PINS__
+  case KM_PIN_TRIGGER_TIME:
+    uistat.value =  setting.pinout_time_s;
+    plot_printf(uistat.text, sizeof uistat.text, "%.3F", uistat.value);
+    break;
+#endif
   case KM_MARKER:
     if (active_marker >=0) {
       uistat.freq_value = markers[active_marker].frequency;
@@ -5886,6 +5900,12 @@ set_numeric_value(void)
     setting.trigger_grid = (uistat.value + 0.5/(float)CH_CFG_ST_FREQUENCY)* CH_CFG_ST_FREQUENCY; // US2ST(uistat.value*1000000.0) ;
     completed = true;
     break;
+#ifdef __TRIGGER_PINS__
+  case KM_PIN_TRIGGER_TIME:
+    setting.pinout_time_s = uistat.value;
+    completed = true;
+    break;
+#endif
   case KM_GRIDLINES:
     set_gridlines(uistat.value);
     break;

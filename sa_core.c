@@ -607,6 +607,9 @@ void reset_settings(int m)
     setting.bands[i].level = 0;
   }
 #endif
+#ifdef __TRIGGER_PINS__
+  setting.pinout_time_s = 30;
+#endif
 #ifdef __ULTRA__
   ultra_start = (config.ultra_start == ULTRA_AUTO ? ULTRA_THRESHOLD : config.ultra_start);
 #endif
@@ -4978,6 +4981,79 @@ void reset_band(void) {
 }
 #endif
 
+#ifdef __TRIGGER_PINS__
+//=============================================================================================================
+// Trigger Pin control
+//=============================================================================================================
+#define PINOUT_MAX                4                     // Pin count
+// Active pins (defined in NANOVNA_STM32_F303\board.h)
+static const uint32_t pinout_lines[PINOUT_MAX] = {
+  LINE_PINOUT_1,
+  LINE_PINOUT_2,
+  LINE_PINOUT_3,
+  LINE_PINOUT_4,
+//LINE_PINOUT_5,
+//LINE_PINOUT_6,
+//LINE_PINOUT_7,
+//LINE_PINOUT_8,
+};
+// Active pin delay after trigger (get from config)
+#define ACTIVE_PINOUT_TIME_S     setting.pinout_time_s
+static systime_t pinout_timers[PINOUT_MAX];  // Timers count after trigger
+static uint16_t  active_pins;                // Active pins
+
+void initPinOutTrigger(void) {
+  active_pins = 0;
+  for(uint32_t band = 0; band < ARRAY_COUNT(pinout_lines); band++) {
+    uint32_t pal = pinout_lines[band];
+    palSetPadMode(PAL_PORT(pal), PAL_PAD(pal), PAL_MODE_OUTPUT_PUSHPULL);
+    palClearLine(pal);
+  }
+#ifdef __USE_SERIAL_CONSOLE__
+  if (config._mode & _MODE_SERIAL) { // Setup pads for USART if serial connection active
+    palSetPadMode(GPIO_UART_TX_PORT, GPIO_UART_TX, PAL_MODE_ALTERNATE(7));
+    palSetPadMode(GPIO_UART_RX_PORT, GPIO_UART_RX, PAL_MODE_ALTERNATE(7));
+  }
+#endif
+}
+
+// Trigger activate in band (in multi band mode) or in 0
+static void startPinout(uint16_t band) {
+  if (band >= ARRAY_COUNT(pinout_lines)) return;
+  systime_t r_time = chVTGetSystemTimeX(); // get system time
+  if (!(active_pins & (1<<band))) {        // Pin not active
+    active_pins|= (1<<band);               // Set pin as active
+    pinout_timers[band] = r_time;          // Stup activation time
+    palSetLine(pinout_lines[band]);        // Set pin state as HIGH
+  }
+#if 0    // Debug
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
+  lcd_printf(180, 310, "%02x ",  active_pins);
+#endif
+}
+
+// Check pin activation end time
+static void updatePinout(void) {
+  systime_t r_time = chVTGetSystemTimeX(), t;     // get system time
+  for(uint16_t band = 0; band < ARRAY_COUNT(pinout_lines) && active_pins != 0; band++) {
+    if (!(active_pins & (1<<band))) continue;     // not active
+    t = r_time - pinout_timers[band];             // check active time
+    if (t < S2ST(ACTIVE_PINOUT_TIME_S)) continue; // not complete
+    active_pins&=~(1<<band);                      // timeout, deactivate
+    palClearLine(pinout_lines[band]);             // Set pin state as LOW
+  }
+#if 0   // Debug
+  ili9341_set_foreground(LCD_FG_COLOR);
+  ili9341_set_background(LCD_BG_COLOR);
+  lcd_printf(180, 310, "%02x ",  active_pins);
+#endif
+}
+#else // Empty functions
+#define updatePinout()
+#define startPinout(band)
+#endif
+
 // main loop for measurement
 static bool sweep(bool break_on_operation)
 {
@@ -5022,7 +5098,7 @@ static bool sweep(bool break_on_operation)
     config.cor_wfm = -14;
   }
 #endif
-
+  updatePinout();
   if (dirty) {                    // Calculate new scanning solution
 #ifdef __BANDS__
     if (setting.multi_band && ! setting.multi_trace) {
@@ -5446,6 +5522,7 @@ static volatile int dummy;
             )
         {
           triggered = true;
+          startPinout(current_band);
 #ifdef __BEEP__
           if (setting.trigger_beep) pwm_start(4000);
 #endif

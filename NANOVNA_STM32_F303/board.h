@@ -81,6 +81,11 @@
 #define GPIO_PE_SEL             15
 #define LINE_PE_SEL             PAL_LINE(GPIOA,GPIO_PE_SEL)
 
+#define LINE_PINOUT_1           PAL_LINE(GPIOB,13)  // PB13 Pin 1
+#define LINE_PINOUT_2           PAL_LINE(GPIOB,14)  // PA14 Pin 2
+#define LINE_PINOUT_3           PAL_LINE(GPIOA, 9)  // PA9  Pin 3
+#define LINE_PINOUT_4           PAL_LINE(GPIOA,10)  // PA10 Pin 4
+
 #define GPIOB_XN                0
 #define GPIOB_YN                1
 #define GPIO_LCD_RESET          2
