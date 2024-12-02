@@ -4350,7 +4350,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_mhz_csv_acb)
 // Back button submenu list
 
 static const menuitem_t menu_back[] = {
-  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
+  { MT_CANCEL,   0, S_LARROW" BACK!!!", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
@@ -4532,7 +4532,7 @@ static const menuitem_t menu_atten[] = {
 static const menuitem_t menu_reflevel[] = {
   { MT_ADV_CALLBACK,0,        "AUTO",    menu_reflevel_acb},
   { MT_KEYPAD,  KM_REFLEVEL,  "MANUAL\n\b%s",  NULL},
-  { MT_CANCEL, 0,      S_LARROW" BACK", NULL },
+  { MT_CANCEL, 0,      S_LARROW" BACK!!!", NULL },
   { MT_NONE,   0, NULL, NULL } // sentinel
 };
 
