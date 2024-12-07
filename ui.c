@@ -4350,7 +4350,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_mhz_csv_acb)
 // Back button submenu list
 
 static const menuitem_t menu_back[] = {
-  { MT_CANCEL,   0, S_LARROW" BACK!!!", NULL },
+  { MT_CANCEL,   0, S_LARROW" BACK", NULL },
   { MT_NONE,     0, NULL, NULL } // sentinel
 };
 
